@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 export const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL ||
   "http://127.0.0.1:4173/admin/";
 export const GAME_ID = "00000000-0000-4000-8000-000000000001";
+const SECONDARY_GAME_ID = "00000000-0000-4000-8000-000000000099";
 const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 const CSRF_TOKEN = "C".repeat(43);
 const BROWSER_ORIGIN = "http://127.0.0.1:4173";
@@ -233,7 +234,7 @@ function corsHeaders() {
   };
 }
 
-function assertBffRequest(request, errors) {
+function assertBffRequest(request, errors, allowedGameIds) {
   const headers = request.headers();
   if (headers.authorization !== undefined) {
     errors.push(`${request.method()} ${request.url()} exposed Staff Authorization`);
@@ -241,8 +242,9 @@ function assertBffRequest(request, errors) {
   if (!headers.apikey) {
     errors.push(`${request.method()} ${request.url()} omitted publishable application identity`);
   }
-  if (headers["x-econovaria-game-id"] !== GAME_ID) {
-    errors.push(`${request.method()} ${request.url()} omitted game scope`);
+  const gameId = headers["x-econovaria-game-id"];
+  if (!gameId || !allowedGameIds.has(gameId)) {
+    errors.push(`${request.method()} ${request.url()} omitted or exceeded game scope`);
   }
   if (
     !["GET", "HEAD", "OPTIONS"].includes(request.method()) &&
@@ -252,7 +254,38 @@ function assertBffRequest(request, errors) {
   }
 }
 
-function attendanceSuccess() {
+function attendanceSuccess(name) {
+  if (name === "attendance-reward-settings") {
+    return {
+      ok: true,
+      player: {
+        id: "00000000-0000-4000-8000-000000000003",
+        displayName: "Lumenor Player",
+        playerIdentifier: "LUM-001",
+        rosterLabel: "Lumenor roster",
+        status: "active",
+      },
+      attendance: {
+        id: "00000000-0000-4000-8000-000000000004",
+        status: "present",
+        attendanceDate: "2026-07-16",
+        clockedInAt: "2026-07-15T23:42:00.000Z",
+        wasCreated: true,
+        timezone: "Asia/Seoul",
+      },
+      reward: {
+        amount: 1.2,
+        currencyCode: "LUM",
+        ledgerEntryId: "00000000-0000-4000-8000-000000000005",
+        configuredBaseAmount: 1,
+        baseCurrencyCode: "ECO",
+        currencyMode: "player_country",
+        countryCode: "LUMENOR",
+        incomeModifier: 1,
+        exchangeRateIndex: 1.2,
+      },
+    };
+  }
   return {
     ok: true,
     player: {
@@ -294,6 +327,11 @@ export async function createQualityHarness(name) {
     injectSettingsReadFailure: name === "attendance-reward-settings",
     settingsWriteCount: 0,
     settingsReadFailureInjected: false,
+    allowedGameIds: new Set(
+      name === "attendance-reward-settings"
+        ? [GAME_ID, SECONDARY_GAME_ID]
+        : [GAME_ID],
+    ),
   };
 
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
@@ -353,7 +391,7 @@ export async function createQualityHarness(name) {
       return;
     }
 
-    assertBffRequest(request, errors);
+    assertBffRequest(request, errors, state.allowedGameIds);
     const pathname = new URL(request.url()).pathname;
     const marker = "/functions/v1/web-session-api/proxy";
     const path = pathname.startsWith(marker)
@@ -410,7 +448,7 @@ export async function createQualityHarness(name) {
           body: JSON.stringify(
             state.failScan
               ? { message: "Player code was not found." }
-              : attendanceSuccess(),
+              : attendanceSuccess(name),
           ),
         });
         return;
