@@ -108,9 +108,81 @@ if (reconciledSource === redirectedSource) {
   throw new Error("Mounted modal focus reconciliation contract changed.");
 }
 
+const controllerHelperSource = `async function controllerDialogForSurface(page, surface, markerName, label) {
+  await surface.waitFor({ state: "visible", timeout: 5000 });
+  const ownership = await surface.evaluate((root, marker) => {
+    const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+    const dialog = controller?.dialog;
+    const related = dialog instanceof HTMLElement && (
+      dialog === root || root.contains(dialog) || dialog.contains(root)
+    );
+    if (related) dialog.dataset[marker] = "true";
+    return {
+      related,
+      surfaceTag: root.tagName,
+      surfaceClass: root.className,
+      surfaceRole: root.getAttribute("role") || "",
+      controllerDialogTag: dialog?.tagName || "",
+      controllerDialogClass: dialog?.className || "",
+    };
+  }, markerName);
+  assert(ownership.related, label + " is not owned by the shared modal controller: " + JSON.stringify(ownership) + ".");
+  return {
+    dialog: page.locator(\`[data-\${markerName.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase())}="true"]\`),
+    ownership,
+  };
+}`;
+
+const stabilizedControllerHelper = `async function controllerDialogForSurface(page, surface, markerName, label) {
+  await surface.waitFor({ state: "visible", timeout: 5000 });
+  await surface.evaluate(async (root, input) => {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+      const dialog = controller?.dialog;
+      const related = dialog instanceof HTMLElement && (
+        dialog === root || root.contains(dialog) || dialog.contains(root)
+      );
+      if (related) {
+        dialog.dataset[input.markerName] = "true";
+        return;
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    throw new Error(input.label + " did not become owned by the shared modal controller.");
+  }, { markerName, label });
+  const ownership = await surface.evaluate((root) => {
+    const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+    const dialog = controller?.dialog;
+    const related = dialog instanceof HTMLElement && (
+      dialog === root || root.contains(dialog) || dialog.contains(root)
+    );
+    return {
+      related,
+      surfaceTag: root.tagName,
+      surfaceClass: root.className,
+      surfaceRole: root.getAttribute("role") || "",
+      controllerDialogTag: dialog?.tagName || "",
+      controllerDialogClass: dialog?.className || "",
+    };
+  });
+  assert(ownership.related, label + " is not owned by the shared modal controller: " + JSON.stringify(ownership) + ".");
+  return {
+    dialog: page.locator(\`[data-\${markerName.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase())}="true"]\`),
+    ownership,
+  };
+}`;
+
+const controllerReconciledSource = reconciledSource.replace(
+  controllerHelperSource,
+  stabilizedControllerHelper,
+);
+if (controllerReconciledSource === reconciledSource) {
+  throw new Error("Mounted modal controller ownership fixture contract changed.");
+}
+
 try {
   writeFileSync(modalRuntimePath, deterministicModalSource);
-  writeFileSync(runtimePath, reconciledSource);
+  writeFileSync(runtimePath, controllerReconciledSource);
   const result = spawnSync(process.execPath, [runtimePath], {
     cwd: process.cwd(),
     env: process.env,
