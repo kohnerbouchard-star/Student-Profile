@@ -78,22 +78,61 @@ test("Messages page exposes safe public-ID lifecycle controls without attachment
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("Unread conversation clicks submit the secure read form exactly once", async ({ page }) => {
+test("Unread conversation clicks execute one authenticated read, refresh, and selection", async ({ page }) => {
   const fixture = await mountMessagingFixture(page);
-  await page.evaluate(() => {
-    globalThis.__messageReadSubmitCount = 0;
-    const form = document.querySelector('#playerMessagingBrowserFixture form[data-endpoint="messageRead"]');
-    form?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      globalThis.__messageReadSubmitCount += 1;
-    });
-  });
+  await page.evaluate(async ({ threadId }) => {
+    const { installMessageReadController } = await import("/src/features/messages/message-read-controller.js");
+    const mount = document.getElementById("playerMessagingBrowserFixture");
+    globalThis.__messageReadExecuteCount = 0;
+    globalThis.__messageReadRefreshCount = 0;
+    globalThis.__messageReadSelectionCount = 0;
 
-  const unread = fixture.locator('form[data-endpoint="messageRead"] [data-player-message-thread]').first();
+    mount.addEventListener("click", (event) => {
+      const control = event.target.closest?.("[data-player-message-thread]");
+      if (control && !control.closest('form[data-endpoint="messageRead"]')) {
+        globalThis.__messageReadSelectionCount += 1;
+      }
+    });
+
+    const api = {
+      setSession() {},
+      async execute(endpointKey, payload, params) {
+        if (endpointKey !== "messageRead" || payload.threadId !== threadId || params.threadId !== threadId) {
+          throw new Error("Message read controller forwarded an invalid request.");
+        }
+        globalThis.__messageReadExecuteCount += 1;
+        return { result: { unread: 0 }, invalidatedResources: ["messages", "notifications", "dashboard"] };
+      },
+    };
+    const terminal = {
+      getState() {
+        return { data: { capabilities: { actions: { messageSend: true } } } };
+      },
+      async refresh() {
+        globalThis.__messageReadRefreshCount += 1;
+        const form = mount.querySelector('form[data-endpoint="messageRead"]');
+        const control = form?.querySelector("[data-player-message-thread]");
+        if (form && control) form.replaceWith(control);
+      },
+      showToast() {},
+    };
+    globalThis.__messageReadController = installMessageReadController({
+      mount,
+      terminal,
+      config: {},
+      api,
+    });
+  }, { threadId: THREAD });
+
+  const unread = fixture.locator('[data-player-message-thread]').first();
   await unread.click();
-  await expect.poll(() => page.evaluate(() => globalThis.__messageReadSubmitCount)).toBe(1);
-  await unread.click();
+  await expect.poll(() => page.evaluate(() => globalThis.__messageReadExecuteCount)).toBe(1);
+  await expect.poll(() => page.evaluate(() => globalThis.__messageReadRefreshCount)).toBe(1);
+  await expect.poll(() => page.evaluate(() => globalThis.__messageReadSelectionCount)).toBe(1);
+  await expect(fixture.locator('form[data-endpoint="messageRead"]')).toHaveCount(0);
+
+  await fixture.locator('[data-player-message-thread]').first().click();
   await page.waitForTimeout(100);
-  expect(await page.evaluate(() => globalThis.__messageReadSubmitCount)).toBe(1);
-  await expect(fixture.locator('form[data-endpoint="messageRead"]')).toHaveAttribute("data-message-read-submitting", "true");
+  expect(await page.evaluate(() => globalThis.__messageReadExecuteCount)).toBe(1);
+  expect(await page.evaluate(() => globalThis.__messageReadSelectionCount)).toBe(2);
 });
