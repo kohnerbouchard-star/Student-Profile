@@ -158,8 +158,9 @@ async function creditPlayer(admin, player, currencyCode) {
       body: {
         amount: CREDIT_AMOUNT,
         reason: "Disposable connected commerce acceptance fixture",
-        accountType: "cash",
+        accountType: "checking",
         currencyCode,
+        idempotencyKey,
       },
     },
   );
