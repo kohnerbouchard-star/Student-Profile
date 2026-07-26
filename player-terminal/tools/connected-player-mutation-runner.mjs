@@ -217,32 +217,62 @@ async function createThread(sender, recipient) {
 }
 
 async function receiveReadAndReply(recipientSession, initial) {
-  await recipientSession.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await recipientSession.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
+  const { page } = recipientSession;
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMessages(recipientSession);
 
-  const threadControl = threadByTitle(recipientSession.page, initial.title);
+  const threadControl = threadByTitle(page, initial.title);
   await threadControl.waitFor({ state: "visible", timeout: 30_000 });
+  const threadId = String(await threadControl.getAttribute("data-player-message-thread") || "").trim();
+  if (!/^thr_[0-9a-f]{32}$/.test(threadId)) throw new Error("Unread conversation did not expose a bounded public thread ID.");
+
+  const committedRead = page.evaluate(() => new Promise((resolve, reject) => {
+    const mount = document.getElementById("playerTerminal");
+    if (!mount) {
+      reject(new Error("Player Terminal mount is unavailable."));
+      return;
+    }
+    const timer = setTimeout(() => reject(new Error("Message read reconciliation event timed out.")), 60_000);
+    mount.addEventListener("econovaria:player-message-read-committed", (event) => {
+      clearTimeout(timer);
+      resolve(event.detail || {});
+    }, { once: true });
+  }));
   const requestIndex = evidence.requests.length;
-  const readResponse = recipientSession.page.waitForResponse(
+  const readResponse = page.waitForResponse(
     (response) => /\/players\/me\/messages\/threads\/thr_[0-9a-f]{32}\/read$/.test(new URL(response.url()).pathname) && response.request().method() === "POST",
     { timeout: 60_000 },
   );
   await threadControl.click();
   const read = await readResponse;
   if (!read.ok()) throw new Error(`Mark message thread read returned ${read.status()}.`);
+  const committed = await committedRead;
+  if (String(committed?.threadId || "") !== threadId) {
+    throw new Error("Message read reconciliation committed a different public thread.");
+  }
   assertNoFailedRequests("Mark message thread read", requestIndex);
   evidence.messaging.recipientMarkedRead = true;
 
-  await messageInLog(recipientSession.page, initial.message).waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForFunction((expectedThreadId) => {
+    const controls = [...document.querySelectorAll("[data-player-message-thread]")];
+    const control = controls.find((item) => item.getAttribute("data-player-message-thread") === expectedThreadId);
+    const surface = control?.closest(".player-terminal-messages-page");
+    return Boolean(
+      control &&
+      !control.closest('form[data-endpoint="messageRead"]') &&
+      surface?.getAttribute("aria-busy") !== "true",
+    );
+  }, threadId, { timeout: 60_000 });
+  await messageInLog(page, initial.message).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.recipientObservedThread = true;
 
   const reply = `Connected mutation reply ${Date.now()}`;
-  const form = recipientSession.page.locator('form[data-endpoint="messageSend"]:visible').first();
+  const form = page.locator(`form[data-endpoint="messageSend"][data-thread-id="${threadId}"]:visible`);
   await form.waitFor({ state: "visible", timeout: 30_000 });
   await form.locator('[name="body"]').fill(reply);
   const sendIndex = evidence.requests.length;
-  const sendResponse = recipientSession.page.waitForResponse(
+  const sendResponse = page.waitForResponse(
     (response) => /\/players\/me\/messages\/threads\/thr_[0-9a-f]{32}\/messages$/.test(new URL(response.url()).pathname) && response.request().method() === "POST",
     { timeout: 60_000 },
   );
@@ -250,7 +280,7 @@ async function receiveReadAndReply(recipientSession, initial) {
   const sent = await sendResponse;
   if (![200, 201].includes(sent.status())) throw new Error(`Send message returned ${sent.status()}.`);
   assertNoFailedRequests("Send message reply", sendIndex);
-  await messageInLog(recipientSession.page, reply).waitFor({ state: "visible", timeout: 30_000 });
+  await messageInLog(page, reply).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.replySent = true;
   return reply;
 }
