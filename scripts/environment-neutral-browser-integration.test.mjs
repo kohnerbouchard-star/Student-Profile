@@ -35,11 +35,25 @@ function assertOrdered(source, orderedFragments, label) {
 }
 
 test("deployable browser surface contains no committed production binding", () => {
-  const files = ["index.html", ...walk("frontend"), ...walk("auth"), ...walk("admin"), ...walk("player-terminal")];
+  const files = [
+    "index.html",
+    ...walk("frontend"),
+    ...walk("auth"),
+    ...walk("admin"),
+    ...walk("player-terminal"),
+  ];
   for (const relativePath of files) {
     const source = read(relativePath);
-    assert.equal(source.includes(productionProjectRef), false, `${relativePath} embeds the production project ref`);
-    assert.equal(source.includes(productionPublishableKey), false, `${relativePath} embeds the production publishable key`);
+    assert.equal(
+      source.includes(productionProjectRef),
+      false,
+      `${relativePath} embeds the production project ref`,
+    );
+    assert.equal(
+      source.includes(productionPublishableKey),
+      false,
+      `${relativePath} embeds the production publishable key`,
+    );
   }
 });
 
@@ -53,7 +67,11 @@ test("all browser API consumers use the validated runtime authority", () => {
     "admin/admin-auth.js",
     "admin/classroom-write-fallback.js",
   ]) {
-    assert.match(read(relativePath), /EconovariaRuntimeConfig/, `${relativePath} does not consume runtime config`);
+    assert.match(
+      read(relativePath),
+      /EconovariaRuntimeConfig/,
+      `${relativePath} does not consume runtime config`,
+    );
   }
 });
 
@@ -80,7 +98,25 @@ test("entry points load deployment config and validator before consumers", () =>
   ], "admin console");
 });
 
-test("admin API metadata is populated only by validated runtime config", () => {
-  assert.match(read("admin/index.html"), /name="econovaria-admin-api-base" content=""/);
-  assert.match(read("frontend/src/core/runtime-config.js"), /adminApiMeta\.content = runtimeConfig\.adminApiUrl/);
+test("Admin metadata is populated only with the validated BFF authority", () => {
+  assert.match(
+    read("admin/index.html"),
+    /name="econovaria-admin-api-base" content=""/,
+  );
+  const runtime = read("frontend/src/core/runtime-config.js");
+  assert.match(runtime, /adminApiMeta\.content = runtimeConfig\.adminBffApiUrl/);
+  assert.doesNotMatch(runtime, /adminApiMeta\.content = runtimeConfig\.adminApiUrl/);
+});
+
+test("recovery and Admin browser consumers use dedicated reviewed boundaries", () => {
+  const runtime = read("frontend/src/core/runtime-config.js");
+  const reset = read("auth/reset-password.js");
+  const adminAuth = read("admin/admin-auth.js");
+  assert.match(runtime, /passwordResetApiUrl/);
+  assert.match(runtime, /webSessionApiUrl/);
+  assert.match(runtime, /adminBffApiUrl/);
+  assert.match(reset, /runtimeConfig\.passwordResetApiUrl/);
+  assert.doesNotMatch(reset, /\/auth\/v1\/user/);
+  assert.match(adminAuth, /runtimeConfig\.adminBffApiUrl/);
+  assert.doesNotMatch(adminAuth, /runtimeConfig\.adminApiUrl/);
 });
