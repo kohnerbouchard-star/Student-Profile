@@ -34,20 +34,8 @@ interface FilterBuilder
   limit(count: number): FilterBuilder;
 }
 
-interface DeleteBuilder
-  extends PromiseLike<QueryResponse<readonly Record<string, unknown>[]>> {
-  eq(column: string, value: unknown): DeleteBuilder;
-  select(columns: string): PromiseLike<
-    QueryResponse<readonly Record<string, unknown>[]>
-  >;
-}
-
 interface QueryBuilder {
   select(columns: string): FilterBuilder;
-  insert(values: unknown): PromiseLike<
-    QueryResponse<readonly Record<string, unknown>[]>
-  >;
-  delete(): DeleteBuilder;
 }
 
 interface PlayerStockWatchlistClient {
@@ -55,9 +43,20 @@ interface PlayerStockWatchlistClient {
     tableName: "player_stock_watchlist" | "game_session_stock_assets",
   ): QueryBuilder;
   rpc<T>(
-    functionName: string,
+    functionName:
+      | "read_latest_stock_market_ticks_for_game"
+      | "set_player_stock_watchlist_v1",
     args?: unknown,
   ): PromiseLike<QueryResponse<T>>;
+}
+
+interface WatchlistMutationRpcRow {
+  readonly game_session_id: unknown;
+  readonly player_id: unknown;
+  readonly stock_asset_id: unknown;
+  readonly ticker: unknown;
+  readonly is_watchlisted: unknown;
+  readonly changed: unknown;
 }
 
 const WATCHLIST_SELECT =
@@ -162,97 +161,42 @@ export class SupabasePlayerStockWatchlistRepository
     readonly ticker: string;
     readonly isWatchlisted: boolean;
   }): Promise<PlayerStockWatchlistMutationRepositoryResult> {
-    const asset = await this.resolveAsset(
-      input.gameId,
-      input.ticker,
-      input.isWatchlisted,
+    const response = await this.client.rpc<readonly WatchlistMutationRpcRow[]>(
+      "set_player_stock_watchlist_v1",
+      {
+        p_game_session_id: input.gameId,
+        p_player_id: input.playerUuid,
+        p_ticker: input.ticker,
+        p_is_watchlisted: input.isWatchlisted,
+      },
     );
 
-    const changed = input.isWatchlisted
-      ? await this.addEntry(input.gameId, input.playerUuid, asset.id)
-      : await this.removeEntry(input.gameId, input.playerUuid, asset.id);
-
-    return {
-      gameId: input.gameId,
-      playerUuid: input.playerUuid,
-      internalAssetUuid: asset.id,
-      ticker: asset.ticker,
-      isWatchlisted: input.isWatchlisted,
-      changed,
-    };
-  }
-
-  private async resolveAsset(
-    gameId: string,
-    ticker: string,
-    requireActive: boolean,
-  ): Promise<{ readonly id: string; readonly ticker: string }> {
-    let query = this.client
-      .from("game_session_stock_assets")
-      .select("id,game_session_id,ticker,is_active")
-      .eq("game_session_id", gameId)
-      .eq("ticker", ticker);
-
-    if (requireActive) query = query.eq("is_active", true);
-
-    const response = await query
-      .order("id", { ascending: true })
-      .range(0, 1);
-
     if (response.error) {
-      throw mapPersistenceError(response.error, "read");
+      throw mapPersistenceError(response.error, "write");
     }
 
     const rows = response.data ?? [];
-    if (rows.length === 0) throw assetNotFound();
-    if (rows.length !== 1) throw readFailed();
-
+    if (rows.length !== 1) throw writeFailed();
     const row = rows[0];
-    if (requireUuid(row.game_session_id) !== gameId) throw readFailed();
-    const resolvedTicker = requireTicker(row.ticker);
-    if (resolvedTicker !== ticker) throw readFailed();
-    if (requireActive && row.is_active !== true) throw assetNotFound();
+    const result = {
+      gameId: requireUuid(row.game_session_id),
+      playerUuid: requireUuid(row.player_id),
+      internalAssetUuid: requireUuid(row.stock_asset_id),
+      ticker: requireTicker(row.ticker),
+      isWatchlisted: requireBoolean(row.is_watchlisted),
+      changed: requireBoolean(row.changed),
+    };
 
-    return { id: requireUuid(row.id), ticker: resolvedTicker };
-  }
-
-  private async addEntry(
-    gameId: string,
-    playerUuid: string,
-    internalAssetUuid: string,
-  ): Promise<boolean> {
-    const response = await this.client
-      .from("player_stock_watchlist")
-      .insert({
-        game_session_id: gameId,
-        player_id: playerUuid,
-        stock_asset_id: internalAssetUuid,
-      });
-
-    if (response.error?.code === "23505") return false;
-    if (response.error) {
-      throw mapPersistenceError(response.error, "write");
+    if (
+      result.gameId !== input.gameId ||
+      result.playerUuid !== input.playerUuid ||
+      result.ticker !== input.ticker ||
+      result.isWatchlisted !== input.isWatchlisted
+    ) {
+      throw writeFailed();
     }
-    return true;
-  }
 
-  private async removeEntry(
-    gameId: string,
-    playerUuid: string,
-    internalAssetUuid: string,
-  ): Promise<boolean> {
-    const response = await this.client
-      .from("player_stock_watchlist")
-      .delete()
-      .eq("game_session_id", gameId)
-      .eq("player_id", playerUuid)
-      .eq("stock_asset_id", internalAssetUuid)
-      .select("id");
-
-    if (response.error) {
-      throw mapPersistenceError(response.error, "write");
-    }
-    return (response.data ?? []).length > 0;
+    return result;
   }
 }
 
@@ -342,6 +286,13 @@ function readFailed(): PlayerStockWatchlistPersistenceError {
   );
 }
 
+function writeFailed(): PlayerStockWatchlistPersistenceError {
+  return new PlayerStockWatchlistPersistenceError(
+    "player_stock_watchlist_write_failed",
+    "Player stock watchlist could not be updated.",
+  );
+}
+
 function requireText(value: unknown): string {
   if (typeof value === "string" && value.trim()) return value.trim();
   throw readFailed();
@@ -394,4 +345,9 @@ function requireNonNegativeInteger(value: unknown): number {
   const number = requireFiniteNumber(value);
   if (!Number.isSafeInteger(number) || number < 0) throw readFailed();
   return number;
+}
+
+function requireBoolean(value: unknown): boolean {
+  if (value === true || value === false) return value;
+  throw writeFailed();
 }
