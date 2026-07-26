@@ -283,7 +283,11 @@ export async function readPlayerLoginRequestBody(
     "accessCode is required.",
   );
 
-  if (gameJoinCode.length > 32 || playerIdentifier.length > 128 || accessCode.length > 128) {
+  if (
+    gameJoinCode.length > 32 ||
+    playerIdentifier.length > 128 ||
+    accessCode.length > 128
+  ) {
     throw new EdgeActivationError(
       "login_field_too_long",
       "One or more login fields exceed the allowed length.",
@@ -364,27 +368,28 @@ async function createPlayerSession(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const sessionToken = (options.generateSessionToken ?? generateSessionToken)();
     const sessionTokenHash = await options.hashValue(sessionToken);
-    const expiresAt = new Date(
+    const requestedExpiresAt = new Date(
       (options.now ?? Date.now)() + 12 * 60 * 60 * 1000,
     ).toISOString();
 
-    const sessionResponse = await serviceClient
-      .from("player_sessions")
-      .insert({
-        game_session_id: gameSessionId,
-        player_id: playerId,
-        session_token_hash: sessionTokenHash,
-        status: "active",
-        expires_at: expiresAt,
-      })
-      .select("expires_at")
-      .single();
+    const sessionResponse = await serviceClient.rpc<readonly {
+      readonly session_id: string;
+      readonly expires_at: string;
+    }[]>("create_player_session_v2", {
+      p_game_session_id: gameSessionId,
+      p_player_id: playerId,
+      p_session_token_hash: sessionTokenHash,
+      p_expires_at: requestedExpiresAt,
+    });
+    const row = Array.isArray(sessionResponse.data)
+      ? sessionResponse.data[0]
+      : sessionResponse.data;
 
-    if (!sessionResponse.error && sessionResponse.data?.expires_at) {
+    if (!sessionResponse.error && row?.expires_at) {
       return {
         ok: true,
         sessionToken,
-        expiresAt: sessionResponse.data.expires_at,
+        expiresAt: row.expires_at,
       };
     }
 
