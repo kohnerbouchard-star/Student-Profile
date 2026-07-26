@@ -61,4 +61,25 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify password, TOTP enrollment, and AAL2 elevation
-        run: node scripts/admin-mfa-browser-smoke.mjs
+        id: mfa-browser
+        shell: bash
+        run: |
+          set +e
+          node scripts/admin-mfa-browser-smoke.mjs 2>&1 | tee "$RUNNER_TEMP/admin-mfa-browser.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload Admin MFA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-mfa-browser-diagnostics
+          path: |
+            ${{ runner.temp }}/admin-mfa-browser.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce Admin MFA browser journey
+        shell: bash
+        run: test "${{ steps.mfa-browser.outputs.status }}" = "0"
