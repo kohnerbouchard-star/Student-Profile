@@ -246,14 +246,10 @@
   }
 
   async function signOut() {
-    if (signingOut) {
-      clear();
-      return;
-    }
+    if (signingOut) return;
     signingOut = true;
-    let logoutRequest = Promise.resolve(null);
     try {
-      logoutRequest = nativeFetch(`${WEB_SESSION_API}/logout`, {
+      await nativeFetch(`${WEB_SESSION_API}/logout`, {
         method: "POST",
         headers: {
           apikey: PUBLISHABLE_KEY,
@@ -265,12 +261,7 @@
         redirect: "error",
         referrerPolicy: "no-referrer",
         keepalive: true
-      });
-    } finally {
-      clear();
-    }
-    try {
-      await logoutRequest;
+      }).catch(() => null);
     } finally {
       clear();
     }
