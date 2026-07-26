@@ -66,9 +66,14 @@ interface RefreshBody {
   readonly expires_at?: number;
 }
 
+interface CurrentSession {
+  readonly ok: true;
+  readonly payload: WebAdminSessionPayload;
+  readonly refreshed: boolean;
+}
+
 Deno.serve(async (request: Request) => {
-  const url = new URL(request.url);
-  const route = routePath(url.pathname);
+  const route = routePath(new URL(request.url).pathname);
 
   if (request.method === "OPTIONS") return preflightResponse(request);
   if (route === "/health" && request.method === "GET") {
@@ -85,21 +90,13 @@ Deno.serve(async (request: Request) => {
   if (publishableFailure) return withCors(request, publishableFailure);
 
   const env = readEdgeSupabaseEnv();
-  if (!env.ok) {
-    return json(request, 503, errorBody(
-      "web_session_unavailable",
-      "Administrator web sessions are unavailable.",
-    ));
-  }
+  if (!env.ok) return serviceUnavailable(request);
 
   let key: Uint8Array;
   try {
     key = readWebAdminSessionKey();
   } catch {
-    return json(request, 503, errorBody(
-      "web_session_unavailable",
-      "Administrator web sessions are unavailable.",
-    ));
+    return serviceUnavailable(request);
   }
 
   try {
@@ -115,7 +112,12 @@ Deno.serve(async (request: Request) => {
     }
     if (route === "/logout") {
       return request.method === "POST"
-        ? handleLogout(request, key, env.value.supabaseUrl, env.value.supabaseAnonKey)
+        ? handleLogout(
+          request,
+          key,
+          env.value.supabaseUrl,
+          env.value.supabaseAnonKey,
+        )
         : methodNotAllowed(request, "POST");
     }
     if (route.startsWith("/proxy/")) {
@@ -160,14 +162,13 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
     ));
   }
 
-  const accessExpiresAt = parseAccessExpiry(
-    login.session.expiresAt,
-    login.session.accessToken,
-  );
   const payload = createWebAdminSessionPayload({
     accessToken: login.session.accessToken,
     refreshToken: login.session.refreshToken,
-    accessExpiresAt,
+    accessExpiresAt: parseAccessExpiry(
+      login.session.expiresAt,
+      login.session.accessToken,
+    ),
     csrfToken: randomWebAdminCsrfToken(),
     user: {
       id: login.user.id,
@@ -188,7 +189,11 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
 
   return sessionJson(request, 200, {
     ok: true,
-    session: publicSession(payload, login.session.assuranceLevel, login.session.mfaRequired),
+    session: publicSession(
+      payload,
+      login.session.assuranceLevel,
+      login.session.mfaRequired,
+    ),
     user: {
       id: login.user.id,
       email: login.user.email,
@@ -203,23 +208,23 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
 }
 
 async function handleStatus(request: Request, key: Uint8Array): Promise<Response> {
-  const resolved = await resolveSession(request, key);
+  const resolved = await resolveCurrentSession(request, key);
   if (!resolved.ok) return clearSessionResponse(request, 401, resolved.code);
-  const current = await refreshIfNeeded(resolved.payload);
-  if (!current.ok) return clearSessionResponse(request, 401, current.code);
-  const bootstrap = await loadStaffBootstrap(current.payload.accessToken);
-  if (!bootstrap.ok) return clearSessionResponse(request, 401, "staff_session_invalid");
+  const bootstrap = await loadStaffBootstrap(resolved.payload.accessToken);
+  if (!bootstrap.ok) {
+    return clearSessionResponse(request, 401, "staff_session_invalid");
+  }
 
   return sessionJson(request, 200, {
     ok: true,
-    session: publicSession(current.payload),
+    session: publicSession(resolved.payload),
     user: {
-      ...current.payload.user,
+      ...resolved.payload.user,
       displayName: bootstrap.body.staff.displayName,
     },
     activeGameSessions: bootstrap.body.activeGameSessions,
-    csrfToken: current.payload.csrfToken,
-  }, current.payload, key, current.refreshed);
+    csrfToken: resolved.payload.csrfToken,
+  }, resolved.payload, key, resolved.refreshed);
 }
 
 async function handleLogout(
@@ -249,21 +254,14 @@ async function handleProxy(
   supabaseUrl: string,
   publishableKey: string,
 ): Promise<Response> {
-  if (
-    !suffix.startsWith("/") ||
-    suffix.includes("\\") ||
-    suffix.split("/").includes("..") ||
-    new TextEncoder().encode(suffix).byteLength > MAX_PROXY_PATH_BYTES
-  ) {
+  if (!validProxyPath(suffix)) {
     return json(request, 400, errorBody(
       "invalid_proxy_path",
       "Administrator request path is invalid.",
     ));
   }
 
-  const resolved = await resolveSession(request, key);
-  if (!resolved.ok) return clearSessionResponse(request, 401, resolved.code);
-  let current = await refreshIfNeeded(resolved.payload);
+  let current = await resolveCurrentSession(request, key);
   if (!current.ok) return clearSessionResponse(request, 401, current.code);
 
   const method = request.method.toUpperCase();
@@ -299,8 +297,15 @@ async function handleProxy(
     selectedGameId,
   );
   if (upstream.status === 401 && current.payload.refreshToken) {
-    current = await refreshSession(current.payload, supabaseUrl, publishableKey);
-    if (!current.ok) return clearSessionResponse(request, 401, current.code);
+    const refreshed = await refreshSession(
+      current.payload,
+      supabaseUrl,
+      publishableKey,
+    );
+    if (!refreshed.ok) {
+      return clearSessionResponse(request, 401, refreshed.code);
+    }
+    current = refreshed;
     upstream = await sendAdminRequest(
       target,
       request,
@@ -311,20 +316,34 @@ async function handleProxy(
     );
   }
 
-  if (upstream.status === 401 || upstream.status === 403) {
-    return clearSessionResponse(request, upstream.status, "staff_session_invalid");
+  if (upstream.status === 401) {
+    return clearSessionResponse(request, 401, "staff_session_invalid");
   }
 
-  const responseBody = await readBoundedResponse(upstream);
+  const responseBody = await readBoundedResponse(request, upstream);
   if (!responseBody.ok) return responseBody.response;
   const headers = responseHeaders(request, upstream.headers.get("content-type"));
   const retryAfter = normalizeRetryAfter(upstream.headers.get("retry-after"));
   if (retryAfter) headers.set("Retry-After", retryAfter);
-  if (current.refreshed) appendSessionCookie(headers, current.payload, key, request);
+  if (current.refreshed) {
+    await appendSessionCookie(headers, current.payload, key, request);
+  }
   return new Response(method === "HEAD" ? null : responseBody.body, {
     status: upstream.status,
     headers,
   });
+}
+
+async function resolveCurrentSession(
+  request: Request,
+  key: Uint8Array,
+): Promise<
+  | CurrentSession
+  | { readonly ok: false; readonly code: string }
+> {
+  const resolved = await resolveSession(request, key);
+  if (!resolved.ok) return resolved;
+  return refreshIfNeeded(resolved.payload);
 }
 
 async function sendAdminRequest(
@@ -388,7 +407,7 @@ async function resolveSession(
 }
 
 async function refreshIfNeeded(payload: WebAdminSessionPayload): Promise<
-  | { readonly ok: true; readonly payload: WebAdminSessionPayload; readonly refreshed: boolean }
+  | CurrentSession
   | { readonly ok: false; readonly code: string }
 > {
   const now = Math.floor(Date.now() / 1000);
@@ -405,7 +424,7 @@ async function refreshSession(
   supabaseUrl: string,
   publishableKey: string,
 ): Promise<
-  | { readonly ok: true; readonly payload: WebAdminSessionPayload; readonly refreshed: true }
+  | CurrentSession
   | { readonly ok: false; readonly code: string }
 > {
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
@@ -453,6 +472,13 @@ function routePath(pathname: string): string {
   return index >= 0 ? pathname.slice(index + marker.length) || "/" : pathname;
 }
 
+function validProxyPath(suffix: string): boolean {
+  return suffix.startsWith("/") &&
+    !suffix.includes("\\") &&
+    !suffix.split("/").includes("..") &&
+    new TextEncoder().encode(suffix).byteLength <= MAX_PROXY_PATH_BYTES;
+}
+
 function requireAllowedOrigin(request: Request): Response | null {
   const origin = String(request.headers.get("origin") || "").trim();
   if (!origin || !allowedOrigins().has(origin)) {
@@ -478,7 +504,7 @@ function allowedOrigins(): ReadonlySet<string> {
 
 function publicSession(
   payload: WebAdminSessionPayload,
-  assuranceLevel = parseJwtClaim(payload.accessToken, "aal") || "aal1",
+  assuranceLevel = String(parseJwtClaim(payload.accessToken, "aal") || "aal1"),
   mfaRequired = true,
 ) {
   return {
@@ -536,19 +562,19 @@ async function readBoundedBody(request: Request): Promise<
   return { ok: true, body: bytes };
 }
 
-async function readBoundedResponse(response: Response): Promise<
+async function readBoundedResponse(
+  request: Request,
+  response: Response,
+): Promise<
   | { readonly ok: true; readonly body: Uint8Array }
   | { readonly ok: false; readonly response: Response }
 > {
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_BODY_BYTES) {
-    return { ok: false, response: new Response(JSON.stringify(errorBody(
+    return { ok: false, response: json(request, 502, errorBody(
       "upstream_response_too_large",
       "Administrator response was too large.",
-    )), {
-      status: 502,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    }) };
+    )) };
   }
   return { ok: true, body: bytes };
 }
@@ -651,6 +677,13 @@ function methodNotAllowed(request: Request, expected: string): Response {
   return json(request, 405, errorBody(
     "method_not_allowed",
     `Use ${expected} for this administrator web-session route.`,
+  ));
+}
+
+function serviceUnavailable(request: Request): Response {
+  return json(request, 503, errorBody(
+    "web_session_unavailable",
+    "Administrator web sessions are unavailable.",
   ));
 }
 
