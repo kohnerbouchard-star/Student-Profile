@@ -75,7 +75,9 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     if (!(form instanceof HTMLFormElement)) return true;
 
     event.preventDefault();
-    form.requestSubmit(control);
+    runtime.queueMicrotask(() => {
+      if (!destroyed && form.isConnected && control.isConnected) form.requestSubmit(control);
+    });
     return true;
   }
 
