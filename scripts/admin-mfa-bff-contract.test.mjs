@@ -76,7 +76,9 @@ test("Staff MFA direct service remains platform-JWT verified", async () => {
   ]);
 
   assert.match(config, /\[functions\.staff-mfa-api\]\s*verify_jwt = true/s);
-  assert.match(source, /resolveStaffForRequest/);
+  assert.match(source, /resolveStaffSessionForRequest/);
+  assert.match(source, /requiredRole: "game_admin"/);
+  assert.match(source, /requiredAssuranceLevel: requiredAal/);
   assert.match(source, /mfa\.challengeAndVerify/);
   assert.match(source, /createFactorHandle/);
   assert.match(source, /ECONOVARIA_MFA_HANDLE_KEY/);
