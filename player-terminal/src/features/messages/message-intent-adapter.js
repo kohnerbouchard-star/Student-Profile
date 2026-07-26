@@ -1,5 +1,7 @@
 const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
 const UNREAD_THREAD = '[data-player-message-thread][data-player-message-unread="true"]';
+const REPLY_CONTROL = "[data-player-message-send]";
+const MESSAGE_SEND_FORM = 'form[data-endpoint="messageSend"]';
 const COMMIT_EVENT = "econovaria:player-message-read-committed";
 const COMMAND_TIMEOUT_MS = 60_000;
 const COMMIT_POLL_MS = 50;
@@ -65,8 +67,19 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     if (state) state.pollId = runtime.setTimeout(() => pollForCommit(threadId), COMMIT_POLL_MS);
   }
 
-  function handleClick(event) {
-    const target = event.target instanceof Element ? event.target : null;
+  function dispatchReplyIntent(event, target) {
+    const control = target?.closest(REPLY_CONTROL);
+    if (!(control instanceof HTMLButtonElement) || !mount.contains(control)) return false;
+    if (control.disabled || control.getAttribute("aria-disabled") === "true") return true;
+    const form = control.closest(MESSAGE_SEND_FORM);
+    if (!(form instanceof HTMLFormElement)) return true;
+
+    event.preventDefault();
+    form.requestSubmit(control);
+    return true;
+  }
+
+  function dispatchReadIntent(target) {
     const control = target?.closest(UNREAD_THREAD);
     if (!(control instanceof HTMLButtonElement) || !mount.contains(control)) return;
     if (control.disabled || control.getAttribute("aria-disabled") === "true") return;
@@ -86,6 +99,12 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     } finally {
       runtime.queueMicrotask(() => form.remove());
     }
+  }
+
+  function handleClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (dispatchReplyIntent(event, target)) return;
+    dispatchReadIntent(target);
   }
 
   mount.addEventListener("click", handleClick, true);
