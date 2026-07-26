@@ -9,9 +9,9 @@ const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@ex
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
 const PLAYER = Object.freeze({
-  displayName: "Browser Player Alpha",
-  playerIdentifier: "BROWSER-PLAYER-ALPHA",
-  accessCode: "BROWSER-ALPHA-ACCESS-001",
+  displayName: "Browser Player Beta",
+  playerIdentifier: "BROWSER-PLAYER-BETA",
+  accessCode: "BROWSER-BETA-ACCESS-002",
 });
 const COMPANY_NAME = "Connected Browser Industries";
 const PRODUCT_NAME = "Connected Classroom Kit";
@@ -216,7 +216,7 @@ async function login(browser, gameCode) {
   );
   await page.locator("#playerForm button[type='submit']").click();
   const response = await responsePromise;
-  if (response.status() !== 200) throw new Error(`Player login returned ${response.status()}.`);
+  if (response.status() !== 200) throw new Error(`Player login returned ${response.status}.`);
   await page.waitForURL(/\/player-terminal\/(?:index\.html)?(?:#.*)?$/, { timeout: 120_000 });
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   return { context, page };
