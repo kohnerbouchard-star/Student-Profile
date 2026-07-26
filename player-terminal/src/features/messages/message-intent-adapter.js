@@ -1,7 +1,7 @@
 const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
 const UNREAD_THREAD = '[data-player-message-thread][data-player-message-unread="true"]';
-const REPLY_CONTROL = "[data-player-message-send]";
 const MESSAGE_SEND_FORM = 'form[data-endpoint="messageSend"]';
+const REPLY_CONTROL = `${MESSAGE_SEND_FORM} button[type="submit"]`;
 const COMMIT_EVENT = "econovaria:player-message-read-committed";
 const COMMAND_TIMEOUT_MS = 60_000;
 const COMMIT_POLL_MS = 50;
@@ -89,11 +89,8 @@ export function installMessageIntentAdapter({ mount, drafts = null, runtime = gl
 
   function handleDiagnosticApiRequest(event) {
     if (event?.detail?.endpointKey !== "messageSend") return;
-    const next = [...diagnostics.entries()].find(([, diagnostic]) => !diagnostic.apiDispatchObserved);
-    if (!next) return;
-    const [id, diagnostic] = next;
-    diagnostic.apiDispatchObserved = true;
-    completeDiagnostic(id);
+    const next = [...diagnostics.values()].find((diagnostic) => !diagnostic.apiDispatchObserved);
+    if (next) next.apiDispatchObserved = true;
   }
 
   function release(threadId) {
