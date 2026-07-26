@@ -158,8 +158,34 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     }
   }
 
-  function handleUnreadThreadClick(event) {
+  function beginSend(event, form, button) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const threadId = publicThreadId(null, form);
+    const bodyField = form.elements.namedItem("body");
+    const body = String(bodyField?.value || "").trim();
+    if (!threadId || !body) {
+      bodyField?.setCustomValidity?.("Enter a message before sending.");
+      bodyField?.focus?.();
+      terminal.showToast?.("Enter a message before sending.", "red");
+      return;
+    }
+
+    const operationKey = `send:${threadId}`;
+    if (pending.has(operationKey) || form.dataset.messageSendSubmitting === "true") return;
+    bodyField?.setCustomValidity?.("");
+    void commitSend(form, button, threadId, body);
+  }
+
+  function handleMessagingClick(event) {
     const target = event.target instanceof Element ? event.target : null;
+    const sendButton = target?.closest(`${MESSAGE_SEND_FORM} button[type="submit"]`);
+    const sendForm = sendButton?.closest(MESSAGE_SEND_FORM);
+    if (sendButton instanceof HTMLButtonElement && sendForm instanceof HTMLFormElement && mount.contains(sendForm)) {
+      beginSend(event, sendForm, sendButton);
+      return;
+    }
+
     const control = target?.closest(MESSAGE_THREAD_CONTROL);
     const form = control?.closest(MESSAGE_READ_FORM);
     if (!(control instanceof HTMLButtonElement) || !(form instanceof HTMLFormElement)) return;
@@ -178,32 +204,16 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     const target = event.target instanceof Element ? event.target : null;
     const form = target?.closest(MESSAGE_SEND_FORM);
     if (!(form instanceof HTMLFormElement) || !mount.contains(form)) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const threadId = publicThreadId(null, form);
-    const bodyField = form.elements.namedItem("body");
-    const body = String(bodyField?.value || "").trim();
-    if (!threadId || !body) {
-      bodyField?.setCustomValidity?.("Enter a message before sending.");
-      bodyField?.focus?.();
-      terminal.showToast?.("Enter a message before sending.", "red");
-      return;
-    }
-
-    const operationKey = `send:${threadId}`;
-    if (pending.has(operationKey) || form.dataset.messageSendSubmitting === "true") return;
-    bodyField?.setCustomValidity?.("");
-    void commitSend(form, form.querySelector('button[type="submit"]'), threadId, body);
+    beginSend(event, form, form.querySelector('button[type="submit"]'));
   }
 
-  mount.addEventListener("click", handleUnreadThreadClick, true);
+  mount.addEventListener("click", handleMessagingClick, true);
   mount.addEventListener("submit", handleMessageSendSubmit, true);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
-      mount.removeEventListener("click", handleUnreadThreadClick, true);
+      mount.removeEventListener("click", handleMessagingClick, true);
       mount.removeEventListener("submit", handleMessageSendSubmit, true);
       pending.clear();
     },
