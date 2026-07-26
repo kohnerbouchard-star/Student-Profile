@@ -114,6 +114,7 @@ const exactAllowed = new Set([
   "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql",
   "backend/supabase/migrations/20260726084000_add_player_stock_watchlist_mutation_rpc_v1.sql",
   "backend/supabase/migrations/20260726193000_restore_store_quote_service_role_access_v1.sql",
+  "backend/supabase/migrations/20260726194500_initialize_complete_game_fx_matrix_v1.sql",
   "backend/src/security/playerRateLimitDispatch.ts",
   "backend/src/security/playerRateLimitDispatch.test.ts",
   "backend/src/security/rateLimitKeying.ts",
