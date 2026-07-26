@@ -210,7 +210,7 @@ export async function authorizeInternalRunnerRequest(
     request: new Request(request.url, {
       method: "POST",
       headers,
-      body: bodyBytes,
+      body: ownedArrayBuffer(bodyBytes),
       redirect: "manual",
     }),
     nonceHash,
@@ -254,7 +254,7 @@ async function verifyHmacSha256(
 
   const key = await crypto.subtle.importKey(
     "raw",
-    TEXT_ENCODER.encode(secret),
+    ownedArrayBuffer(TEXT_ENCODER.encode(secret)),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["verify"],
@@ -262,14 +262,22 @@ async function verifyHmacSha256(
   return crypto.subtle.verify(
     "HMAC",
     key,
-    signature,
-    TEXT_ENCODER.encode(payload),
+    ownedArrayBuffer(signature),
+    ownedArrayBuffer(TEXT_ENCODER.encode(payload)),
   );
 }
 
 async function sha256Hex(value: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", value));
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", ownedArrayBuffer(value)),
+  );
   return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function ownedArrayBuffer(value: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(value.byteLength);
+  copy.set(value);
+  return copy.buffer;
 }
 
 function decodeBase64Url(value: string): Uint8Array {
