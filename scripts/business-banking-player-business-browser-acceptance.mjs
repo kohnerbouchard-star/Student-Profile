@@ -25,6 +25,8 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
+  rosterCurrencyCode: "",
+  businessCurrencyCode: "",
   fixtureCreditApplied: false,
   fixtureCreditVisible: false,
   mutations: {
@@ -159,11 +161,11 @@ async function resolveAdminFixture() {
     gameId,
     gameCode,
     playerId,
-    currencyCode: assignedCurrency(player),
+    rosterCurrencyCode: assignedCurrency(player),
   };
 }
 
-async function creditPlayer(admin) {
+async function creditPlayer(admin, currencyCode) {
   const idempotencyKey = `business-fixture-${Date.now()}`;
   const response = await request(
     `/functions/v1/admin-api/games/${encodeURIComponent(admin.gameId)}/players/${encodeURIComponent(admin.playerId)}/ledger-adjustments`,
@@ -177,7 +179,7 @@ async function creditPlayer(admin) {
         amount: FIXTURE_CREDIT,
         reason: "Disposable connected Business acceptance fixture",
         accountType: "checking",
-        currencyCode: admin.currencyCode,
+        currencyCode,
         idempotencyKey,
       },
     },
@@ -188,7 +190,7 @@ async function creditPlayer(admin) {
     response.status !== 200 ||
     !applied ||
     adjustment?.ledger?.accountType !== "checking" ||
-    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== admin.currencyCode
+    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== currencyCode
   ) {
     throw new Error(`Business fixture credit returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
   }
@@ -268,6 +270,18 @@ async function openBusiness(page) {
     await page.locator('[data-route="business"]:visible').first().waitFor({ state: "visible", timeout: 30_000 });
   }
   await openRoute(page, "business", ".player-terminal-business-page");
+}
+
+async function renderedBusinessCurrency(page) {
+  await openBusiness(page);
+  const label = page.locator('form[data-endpoint="businessCreate"] label').filter({ hasText: "STARTING CAPITAL" }).first();
+  await label.waitFor({ state: "visible", timeout: 30_000 });
+  const labelText = String(await label.innerText()).toUpperCase();
+  const currencyCode = labelText.match(/STARTING CAPITAL\s*\(([A-Z][A-Z0-9_]{2,15})\)/)?.[1] || "";
+  if (!CURRENCY_PATTERN.test(currencyCode)) {
+    throw new Error(`The Business formation control did not expose a valid operating currency: ${redact(labelText)}.`);
+  }
+  return currencyCode;
 }
 
 function form(page, endpoint) {
@@ -471,11 +485,14 @@ try {
   browser = await chromium.launch({ headless: true });
   const player = await login(browser, admin.gameCode);
   context = player.context;
-  const balanceBeforeCredit = await checkingBalance(player.page, admin.currencyCode, { optional: true });
-  await creditPlayer(admin);
+  evidence.rosterCurrencyCode = admin.rosterCurrencyCode;
+  const businessCurrencyCode = await renderedBusinessCurrency(player.page);
+  evidence.businessCurrencyCode = businessCurrencyCode;
+  const balanceBeforeCredit = await checkingBalance(player.page, businessCurrencyCode, { optional: true });
+  await creditPlayer(admin, businessCurrencyCode);
   await player.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await player.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const balanceAfterCredit = await checkingBalance(player.page, admin.currencyCode);
+  const balanceAfterCredit = await checkingBalance(player.page, businessCurrencyCode);
   if (balanceAfterCredit < balanceBeforeCredit + FIXTURE_CREDIT) {
     throw new Error(`Business fixture credit did not become Player-visible: ${balanceBeforeCredit} -> ${balanceAfterCredit}.`);
   }
@@ -509,6 +526,8 @@ try {
   }
   if (!evidence.fixtureCreditApplied || !evidence.fixtureCreditVisible || !Object.values(evidence.mutations).every(Boolean)) {
     throw new Error(`Connected Player Business evidence is incomplete: ${JSON.stringify({
+      rosterCurrencyCode: evidence.rosterCurrencyCode,
+      businessCurrencyCode: evidence.businessCurrencyCode,
       fixtureCreditApplied: evidence.fixtureCreditApplied,
       fixtureCreditVisible: evidence.fixtureCreditVisible,
       mutations: evidence.mutations,
@@ -532,6 +551,8 @@ if (failure) throw failure;
 
 console.log(JSON.stringify({
   ok: true,
+  rosterCurrencyCode: evidence.rosterCurrencyCode,
+  businessCurrencyCode: evidence.businessCurrencyCode,
   fixtureCreditApplied: evidence.fixtureCreditApplied,
   fixtureCreditVisible: evidence.fixtureCreditVisible,
   mutations: evidence.mutations,
