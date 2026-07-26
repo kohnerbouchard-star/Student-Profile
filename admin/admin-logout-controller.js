@@ -87,16 +87,9 @@
   }
 
   function revokeServerSession() {
-    const authSession = window.EconovariaAdminAuthSession;
-    if (typeof authSession?.signOut === "function") {
-      try {
-        return Promise.resolve(authSession.signOut());
-      } catch (_) {
-        clearSessionSynchronously();
-        return fallbackWebSessionLogout();
-      }
-    }
-    clearSessionSynchronously();
+    // The logout controller owns the transition. It waits for the cookie-backed
+    // revocation request before deleting the sanitized local summary so session
+    // guards cannot navigate away and abort the server request mid-flight.
     return fallbackWebSessionLogout();
   }
 
