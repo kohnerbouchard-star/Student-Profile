@@ -18,11 +18,15 @@ export class PlayerStockAssetListService {
     try {
       const result = await this.repository.listAssets({
         gameId: scope.gameId,
+        playerUuid: scope.playerUuid,
         limit: query.limit + 1,
         offset: query.offset,
       });
 
-      if (result.gameId !== scope.gameId) throw scopeViolation();
+      if (
+        result.gameId !== scope.gameId ||
+        result.playerUuid !== scope.playerUuid
+      ) throw scopeViolation();
       if (
         result.assets.some((asset) => asset.gameId !== scope.gameId) ||
         result.latestTicks.some((tick) => tick.gameId !== scope.gameId)
@@ -36,6 +40,15 @@ export class PlayerStockAssetListService {
       );
       const publicIds = ordered.map((asset) => asset.ticker);
       if (new Set(publicIds).size !== publicIds.length) throw scopeViolation();
+
+      const allAssetUuids = new Set(ordered.map((asset) => asset.internalAssetUuid));
+      const watchlistedAssetUuids = new Set(result.watchlistedAssetUuids);
+      if (
+        watchlistedAssetUuids.size !== result.watchlistedAssetUuids.length ||
+        result.watchlistedAssetUuids.some((assetUuid) => !allAssetUuids.has(assetUuid))
+      ) {
+        throw scopeViolation();
+      }
 
       const page = ordered.slice(0, query.limit);
       const hasMore = ordered.length > query.limit;
@@ -58,6 +71,7 @@ export class PlayerStockAssetListService {
         toPlayerStockAssetDto(
           asset,
           latestByAssetUuid.get(asset.internalAssetUuid)?.volume ?? 0,
+          watchlistedAssetUuids.has(asset.internalAssetUuid),
         )
       );
       const sectors = [...new Set(assets.map((asset) => asset.sector))]
