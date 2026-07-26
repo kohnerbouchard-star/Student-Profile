@@ -57,21 +57,33 @@ test("deployable browser surface contains no committed production binding", () =
   }
 });
 
-test("all browser API consumers use the validated runtime authority", () => {
+test("browser URL owners use the validated runtime authority", () => {
   for (const relativePath of [
     "frontend/src/core/constants.js",
+    "frontend/src/core/api.js",
     "auth/reset-password.js",
     "admin/auth-session-manager.js",
     "player-terminal/host-runtime.js",
-    "admin/player-access-code-bridge.js",
     "admin/admin-auth.js",
-    "admin/classroom-write-fallback.js",
   ]) {
     assert.match(
       read(relativePath),
       /EconovariaRuntimeConfig/,
       `${relativePath} does not consume runtime config`,
     );
+  }
+});
+
+test("same-origin Admin adapters do not create independent remote authorities", () => {
+  for (const relativePath of [
+    "admin/player-access-code-bridge.js",
+    "admin/classroom-write-fallback.js",
+  ]) {
+    const source = read(relativePath);
+    assert.doesNotMatch(source, /supabase\.co/);
+    assert.doesNotMatch(source, /sb_publishable_/);
+    assert.doesNotMatch(source, /Authorization/);
+    assert.match(source, /\/api\/admin/);
   }
 });
 
