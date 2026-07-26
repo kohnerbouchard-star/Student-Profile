@@ -169,7 +169,26 @@ jobs:
         run: node --test scripts/admin-mfa-bff-contract.test.mjs
 
       - name: Validate Admin session manager boundary
-        run: node scripts/admin-session-manager-smoke.mjs
+        id: admin_session_manager
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-session-manager-smoke.mjs 2>&1 | tee "$RUNNER_TEMP/admin-session-manager.log"
+
+      - name: Upload Admin session-manager diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-session-manager-diagnostics
+          path: ${{ runner.temp }}/admin-session-manager.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce Admin session-manager boundary
+        if: always()
+        shell: bash
+        run: test "${{ steps.admin_session_manager.outcome }}" = "success"
 
       - name: Validate local gateway boundary
         run: node --test scripts/local-staging-gateway-contract.test.mjs
