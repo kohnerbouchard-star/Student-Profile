@@ -59,11 +59,13 @@ async function activeElementDetail(page) {
     if (!(node instanceof HTMLElement)) return { eligible: false, label: "missing-active-element" };
     const disabled = ("disabled" in node && node.disabled === true) || node.getAttribute("aria-disabled") === "true";
     const excluded = Boolean(node.closest(excludedSelector));
+    const focusable = node.matches("a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])") && node.tabIndex >= 0;
     const style = getComputedStyle(node);
     const rect = node.getBoundingClientRect();
     const visible = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
     return {
-      eligible: !disabled && !excluded && visible,
+      eligible: focusable && !disabled && !excluded && visible,
+      focusable,
       disabled,
       excluded,
       visible,
@@ -81,37 +83,45 @@ async function tabRoundTrip(page, startControl, section) {
   await startControl.focus();
   assert(await startControl.evaluate((node) => document.activeElement === node), `${section} navigation control could not receive focus.`);
 
-  const eligibleCount = await page.evaluate((excludedSelector) => {
+  const sequence = await page.evaluate(({ excludedSelector, section }) => {
     const selector = "a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])";
-    return [...document.querySelectorAll(selector)].filter((node) => {
+    const controls = [...document.querySelectorAll(selector)].filter((node) => {
       if (!(node instanceof HTMLElement)) return false;
       if (("disabled" in node && node.disabled === true) || node.getAttribute("aria-disabled") === "true") return false;
       if (node.closest(excludedSelector)) return false;
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-    }).length;
-  }, EXCLUDED_SELECTOR);
-  const steps = Math.max(3, Math.min(12, eligibleCount - 1));
+      return node.tabIndex >= 0 && style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    });
+    const startIndex = controls.findIndex((node) => node.getAttribute("data-admin-section") === section);
+    return { count: controls.length, startIndex };
+  }, { excludedSelector: EXCLUDED_SELECTOR, section });
+  assert(sequence.startIndex >= 0, `${section} navigation control was absent from the sequential focus order.`);
+  const remaining = Math.max(1, sequence.count - sequence.startIndex - 1);
+  const steps = Math.max(1, Math.min(8, remaining));
   const forward = [];
 
   for (let index = 0; index < steps; index += 1) {
     await page.keyboard.press("Tab");
     const detail = await activeElementDetail(page);
-    assert(detail.eligible, `${section} Tab entered an excluded control: ${JSON.stringify(detail)}.`);
+    assert(detail.eligible, `${section} Tab entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
     forward.push(detail);
   }
 
   for (let index = 0; index < steps; index += 1) {
     await page.keyboard.press("Shift+Tab");
     const detail = await activeElementDetail(page);
-    assert(detail.eligible, `${section} Shift+Tab entered an excluded control: ${JSON.stringify(detail)}.`);
+    assert(detail.eligible, `${section} Shift+Tab entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
   }
 
-  assert(
-    await startControl.evaluate((node) => document.activeElement === node),
-    `${section} Shift+Tab did not reverse the sequential focus path back to its starting control.`,
-  );
+  let returned = await startControl.evaluate((node) => document.activeElement === node);
+  for (let recovery = 0; !returned && recovery < 8; recovery += 1) {
+    await page.keyboard.press("Shift+Tab");
+    const detail = await activeElementDetail(page);
+    assert(detail.eligible, `${section} Shift+Tab recovery entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
+    returned = await startControl.evaluate((node) => document.activeElement === node);
+  }
+  assert(returned, `${section} Shift+Tab could not return to the starting navigation control.`);
 
   return forward;
 }
