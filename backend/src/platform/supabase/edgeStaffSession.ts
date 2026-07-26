@@ -303,8 +303,9 @@ export async function resolveStaffSessionForRequest(
   }
 
   const assuranceLevel = readJwtAssuranceLevel(accessToken);
+  const isMutation = !["GET", "HEAD"].includes(request.method.toUpperCase());
   const requiredAssuranceLevel = options.requiredAssuranceLevel ??
-    (["GET", "HEAD"].includes(request.method.toUpperCase()) ? "aal1" : "aal2");
+    (isMutation && row.mfa_required !== false ? "aal2" : "aal1");
   if (requiredAssuranceLevel === "aal2" && assuranceLevel !== "aal2") {
     return authorizationFailure(
       403,
