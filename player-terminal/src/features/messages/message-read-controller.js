@@ -72,6 +72,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
   const api = injectedApi || new PlayerApi(config);
   const pending = new Set();
+  const replyDrafts = new Map();
   let destroyed = false;
 
   async function refreshCommittedThread(threadId, options = {}) {
@@ -129,6 +130,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
       }));
       const operation = await api.execute("messageSend", { body }, { threadId });
       if (destroyed) return;
+      replyDrafts.delete(threadId);
       await refreshCommittedThread(threadId, {
         invalidatedResources: operation?.invalidatedResources,
       });
@@ -158,7 +160,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     event.stopImmediatePropagation();
     const threadId = publicThreadId(null, form);
     const bodyField = form.elements.namedItem("body");
-    const body = String(bodyField?.value || "").trim();
+    const currentBody = String(bodyField?.value || "").trim();
+    const body = currentBody || String(replyDrafts.get(threadId) || "").trim();
     if (!threadId || !body) {
       bodyField?.setCustomValidity?.("Enter a message before sending.");
       bodyField?.focus?.();
@@ -168,8 +171,21 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
     const operationKey = `send:${threadId}`;
     if (pending.has(operationKey) || form.dataset.messageSendSubmitting === "true") return;
+    if (bodyField && !currentBody) bodyField.value = body;
     bodyField?.setCustomValidity?.("");
+    replyDrafts.set(threadId, body);
     void commitSend(form, button, threadId, body);
+  }
+
+  function handleMessagingInput(event) {
+    const field = event.target instanceof HTMLTextAreaElement ? event.target : null;
+    const form = field?.closest(MESSAGE_SEND_FORM);
+    if (!(form instanceof HTMLFormElement) || field.name !== "body") return;
+    const threadId = publicThreadId(null, form);
+    if (!threadId) return;
+    const body = String(field.value || "").slice(0, 1000);
+    if (body) replyDrafts.set(threadId, body);
+    else replyDrafts.delete(threadId);
   }
 
   function handleMessagingClick(event) {
@@ -204,15 +220,18 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     beginSend(event, form, form.querySelector(MESSAGE_SEND_CONTROL));
   }
 
+  mount.addEventListener("input", handleMessagingInput, true);
   mount.addEventListener("click", handleMessagingClick, true);
   mount.addEventListener("submit", handleMessageSendSubmit, true);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
+      mount.removeEventListener("input", handleMessagingInput, true);
       mount.removeEventListener("click", handleMessagingClick, true);
       mount.removeEventListener("submit", handleMessageSendSubmit, true);
       pending.clear();
+      replyDrafts.clear();
     },
   });
 }
