@@ -227,7 +227,19 @@ async function loginPlayer(browser, gameCode, player) {
 }
 
 async function openRoute(session, route, selector) {
-  await session.page.locator(`[data-route="${route}"]:visible`).first().click();
+  const nav = session.page.locator(`[data-route="${route}"]:visible`).first();
+  if (await nav.count()) {
+    await nav.click();
+  } else {
+    await session.page.evaluate((target) => {
+      const nextHash = `#${target}`;
+      if (location.hash === nextHash) {
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      } else {
+        location.hash = nextHash;
+      }
+    }, route);
+  }
   await session.page.waitForFunction((target) => location.hash === `#${target}`, route, { timeout: 30_000 });
   await session.page.locator(selector).waitFor({ state: "visible", timeout: 30_000 });
 }
