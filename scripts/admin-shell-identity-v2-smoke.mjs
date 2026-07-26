@@ -94,8 +94,17 @@ assert(auth.includes("x-econovaria-csrf-token"), "Admin mutations do not carry t
 assert(auth.includes('credentials: "include"'), "Admin requests omit the HttpOnly session cookie.");
 assert(!auth.includes("Bearer"), "Admin shell still constructs a bearer credential.");
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Authenticated Admin bootstrap completion is missing.");
+
 assert(fallback.includes("econovaria:admin-request-lifecycle"), "Admin requests do not publish explicit lifecycle events.");
 assert(fallback.includes("requestId") && fallback.includes('phase: "started"'), "Admin request correlation is incomplete.");
+assert(fallback.includes("legacyClassroomFallbackRetired: true"), "Legacy classroom browser fallback retirement is not declared.");
+assert(!fallback.includes("CLASSROOM_API_BASE"), "Admin browser still owns classroom-api authority.");
+assert(!fallback.includes("classroom-api"), "Admin browser still references classroom-api.");
+assert(!fallback.includes("accessToken"), "Admin browser write adapter still reads a Staff token.");
+assert(!/headers\s*:\s*\{[^}]*Authorization\s*:/s.test(fallback), "Admin write adapter constructs bearer authorization.");
+assert(!/headers\.(?:set|append)\(\s*["']Authorization["']/i.test(fallback), "Admin write adapter mutates bearer authorization.");
+assert(!fallback.includes("retryStatuses"), "Admin write adapter still retries through a legacy boundary.");
+
 assert(createAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")'), "Create Player omits Player ID.");
 assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Create Player omits Access Code.");
 assert(credentialBridge.includes("econovaria:player-access-code-issued"), "One-time Player credential event is missing.");
@@ -125,4 +134,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell HttpOnly BFF identity, granular authorization, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
+console.log("Admin shell HttpOnly BFF identity, granular authorization, retired classroom fallback, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
