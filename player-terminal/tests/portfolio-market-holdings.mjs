@@ -82,7 +82,7 @@ function terminalData(portfolioModel, marketAsset = asset) {
 
 const boughtHtml = renderMarketPage(terminalData(portfolio), {});
 assert.match(boughtHtml, />2 shares</, "Market must render the authoritative purchased quantity.");
-assert.match(boughtHtml, />ECO100\.00</, "Market must render the authoritative average cost.");
+assert.match(boughtHtml, />ECO 100</, "Market must render the authoritative average cost.");
 
 const soldHtml = renderMarketPage(
   terminalData({ ...portfolio, holdings: [] }, { ...asset, owned: 2, averageCost: 100 }),
