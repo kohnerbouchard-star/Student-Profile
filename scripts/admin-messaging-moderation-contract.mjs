@@ -69,7 +69,9 @@ assert.match(adminBootstrap, /name:\s*"operational-surfaces"/);
 
 assert.match(messagesPage, /data-endpoint="messageThreadCreate"/);
 assert.match(messagesPage, /data-endpoint="messageSend"/);
-assert.match(messagesPage, /data-endpoint="messageRead"/);
+assert.match(messagesPage, /data-player-message-unread="true"/);
+assert.match(messagesPage, /aria-label="Open\$\{unreadLabel\} conversation/);
+assert.doesNotMatch(messagesPage, /data-endpoint="messageRead"/);
 assert.match(messagesPage, /maxlength="1000"/);
 assert.match(messagesPage, /Attachments are disabled/);
 assert.match(messagesPage, /escapeHtml\(message\.body\)/);
@@ -89,4 +91,4 @@ assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, privacy, capability, hardened bootstrap, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, automatic read-on-open, privacy, capability, hardened bootstrap, and attachment-disablement contracts passed.");
