@@ -160,7 +160,7 @@ const allowedPatterns = [
   /^backend\/src\/domains\/contracts\/api\/playerContractPublic(List|Submit)[A-Za-z0-9.-]*\.ts$/,
   /^backend\/src\/domains\/contracts\/contracts\/playerContractPublicListContracts(\.test)?\.ts$/,
   /^backend\/src\/domains\/players\/contracts\/playerCapabilityManifestContracts(\.test)?\.ts$/,
-  /^backend\/src\/domains\/stocks\/api\/playerStockMarket[A-Za-z0-9.-]*\.ts$/,
+  /^backend\/src\/domains\/stocks\/api\/playerStock(Market|AssetList)[A-Za-z0-9.-]*\.ts$/,
   /^backend\/src\/domains\/stocks\/(contracts\/playerStockAssetListContracts|infrastructure\/supabasePlayerStockAssetListRepository(\.test)?|services\/playerStockAsset(ListService(\.test)?|DtoMapper))\.ts$/,
   /^backend\/src\/domains\/store\/api\/playerStorePublic[A-Za-z0-9.-]*\.ts$/,
   /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*\.ts$/,
