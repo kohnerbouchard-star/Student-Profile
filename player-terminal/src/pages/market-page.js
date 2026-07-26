@@ -45,7 +45,7 @@ export function renderMarketPage(data, ui) {
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
   const composite = market.assets.find((asset) => asset.id === "cel-index");
   const compositeChange = Number(composite?.change) || 0;
-  const availableCash = bankingUnavailable ? "Unavailable" : formatCurrency(data.banking.checking.available, currencyCode);
+  const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(data.banking.checking.available, currencyCode);
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
@@ -56,7 +56,7 @@ export function renderMarketPage(data, ui) {
     <div class="player-terminal-market-summary">
       <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
       <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, currencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
-      <article><small>AVAILABLE CASH</small><strong>${escapeHtml(availableCash)}</strong><span>${bankingUnavailable ? "Balance service unavailable" : "Ready to trade"}</span></article>
+      <article><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong><span>${bankingUnavailable ? "Balance service unavailable" : "Ready to trade"}</span></article>
       <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
     </div>
 
@@ -117,10 +117,10 @@ export function renderMarketPage(data, ui) {
           <label>LIMIT PRICE<input name="limitPrice" type="number" min="0" step="0.01" placeholder="Optional for limit order" /></label>
           <div class="player-terminal-order-review">
             <span><small>ESTIMATED VALUE</small><strong data-player-market-estimated-value>${escapeHtml(formatCurrency(selected.price * 10, currencyCode))}</strong></span>
-            <span><small>AVAILABLE CASH</small><strong>${escapeHtml(availableCash)}</strong></span>
+            <span><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong></span>
             <span><small>ESTIMATED FEES</small><strong data-player-market-estimated-fees>${escapeHtml(formatCurrency(selected.price * 10 * 0.0025, currencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>${bankingUnavailable ? "Available cash could not be pre-validated. The backend will perform the authoritative balance check." : "Price, fees, available funds, and final holdings update only after the order is confirmed."}</small></div>
+          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>${bankingUnavailable ? "Available checking funds could not be pre-validated. The backend will perform the authoritative balance check." : "Price, fees, available funds, and final holdings update only after the order is confirmed."}</small></div>
           <button class="player-terminal-primary-button" type="submit">${icon("send")} Send order for processing</button>
         </form>
       </section>
