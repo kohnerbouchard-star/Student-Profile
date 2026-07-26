@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "./playerApiRouteSegments.ts";
 import { readPlayerCapabilityManifestRoutePath } from "./playerCapabilityManifestRoutePaths.ts";
 
 declare const Deno: {
@@ -67,6 +68,41 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
   );
   assertEquals(
     readPlayerCapabilityManifestRoutePath("/players/me/inventory"),
+    null,
+  );
+});
+
+Deno.test("shared Player route prefix parser accepts bounded services and rejects spoofing", () => {
+  assertEquals(readPlayerApiRouteSegments("/players/me/inventory"), [
+    "players",
+    "me",
+    "inventory",
+  ]);
+  assertEquals(readPlayerApiRouteSegments("/player-api/players/me/inventory"), [
+    "players",
+    "me",
+    "inventory",
+  ]);
+  assertEquals(
+    readPlayerApiRouteSegments("/functions/v1/player-api/players/me/inventory"),
+    ["players", "me", "inventory"],
+  );
+  assertEquals(
+    readPlayerApiRouteSegments("/classroom-api/players/me/inventory"),
+    ["players", "me", "inventory"],
+  );
+  assertEquals(
+    readPlayerApiRouteSegments(
+      "/functions/v1/classroom-api/players/me/inventory",
+    ),
+    ["players", "me", "inventory"],
+  );
+  assertEquals(
+    readPlayerApiRouteSegments("/spoof/player-api/players/me/inventory"),
+    null,
+  );
+  assertEquals(
+    readPlayerApiRouteSegments("/functions/v1/player-api/spoof/players/me"),
     null,
   );
 });
