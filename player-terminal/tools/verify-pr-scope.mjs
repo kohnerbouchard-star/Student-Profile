@@ -108,6 +108,7 @@ const exactAllowed = new Set([
   "backend/src/domains/store/contracts/playerStorePublicContracts.ts",
   "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts",
   "backend/supabase/functions/admin-api/index.ts",
+  "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts",
   "backend/supabase/functions/classroom-api/index.ts",
   "backend/supabase/functions/classroom-api/messagingDispatch.ts",
   "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql",
