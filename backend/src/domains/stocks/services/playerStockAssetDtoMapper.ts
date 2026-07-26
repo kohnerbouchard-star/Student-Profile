@@ -6,7 +6,7 @@ import type {
 export function toPlayerStockAssetDto(
   asset: PlayerStockAssetRecord,
   volume: number,
-  isWatchlisted: boolean,
+  isWatchlisted = false,
 ): PlayerStockAssetDto {
   const changePct = asset.previousClose > 0
     ? ((asset.currentPrice - asset.previousClose) / asset.previousClose) * 100
