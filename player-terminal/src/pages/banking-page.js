@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
+import { isEndpointEnabled } from "../api/capabilities.js";
 
 function hasNumericValue(value) {
   return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
@@ -53,7 +54,8 @@ export function renderBankingPage(data) {
   const currencyCode = data.session.currencyCode;
   const savingsConfigured = bank.savings?.configured !== false && hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true && hasNumericValue(bank.creditScore);
-  const transfersConfigured = bank.transfersConfigured === true;
+  const bankTransferConfigured = isEndpointEnabled(data.capabilities, "bankTransfer");
+  const savingsTransferConfigured = savingsConfigured && isEndpointEnabled(data.capabilities, "savingsTransfer");
   const transferLimitAvailable = hasNumericValue(bank.transferLimit);
   const transferLimit = transferLimitAvailable ? Number(bank.transferLimit) : null;
   const transferMax = transferLimitAvailable && transferLimit > 0 ? ` max="${escapeHtml(transferLimit)}"` : "";
@@ -85,23 +87,23 @@ export function renderBankingPage(data) {
 
     <div class="player-terminal-bank-layout">
       <section class="player-terminal-panel player-terminal-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill(savingsConfigured && transfersConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", savingsConfigured && transfersConfigured ? "cyan" : "amber")}</header>
+        <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill(savingsTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", savingsTransferConfigured ? "cyan" : "amber")}</header>
         <details class="player-terminal-disclosure" open><summary><span>${icon("arrowSwap")}</span><div><strong>Transfer between your accounts</strong><small>${savingsConfigured ? "Move funds between checking and savings" : "Savings account support is not configured"}</small></div>${icon("chevronRight")}</summary><form data-player-form="savings-transfer" data-endpoint="savingsTransfer">
           <label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label>
           <label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option></select></label>
           <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label>
           <label>NOTE<input name="note" type="text" maxlength="100" placeholder="Optional transfer note" ${savingsConfigured ? "" : "disabled"}/></label>
-          <button class="player-terminal-primary-button" type="submit" ${savingsConfigured && transfersConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button>
+          <button class="player-terminal-primary-button" type="submit" ${savingsTransferConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button>
         </form></details>
       </section>
 
       <section class="player-terminal-panel player-terminal-external-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill(transfersConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", "amber")}</header>
+        <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill(bankTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", bankTransferConfigured ? "cyan" : "amber")}</header>
         <details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The mutable Player ID will be resolved to the recipient UUID by the backend before funds move</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer">
           <label>RECIPIENT PLAYER ID<input name="recipientPlayerIdentifier" type="text" required maxlength="160" autocomplete="off" autocapitalize="characters" placeholder="Enter the current Player ID" /></label>
           <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" /></label>
           <label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label>
-          <button class="player-terminal-primary-button" type="submit" ${transfersConfigured ? "" : "disabled"}>${icon("send")} Send transfer</button>
+          <button class="player-terminal-primary-button" type="submit" ${bankTransferConfigured ? "" : "disabled"}>${icon("send")} Send transfer</button>
         </form></details>
       </section>
 
