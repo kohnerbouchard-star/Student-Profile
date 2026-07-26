@@ -43,6 +43,10 @@ async function parseJson(response) {
   return response.json().catch(() => null);
 }
 
+function responseData(payload) {
+  return payload?.data && typeof payload.data === "object" ? payload.data : payload;
+}
+
 async function runtimeConfig() {
   const response = await fetch(`${BASE_URL}/runtime-config.env.js`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Runtime configuration returned ${response.status}.`);
@@ -185,6 +189,7 @@ async function fillBalanceModal(modal) {
   await amount.fill(String(ADJUSTMENT));
 
   const reason = modal.locator([
+    'textarea[name="ledgerNote"]:visible',
     'textarea[name="reason"]:visible',
     'input[name="reason"]:visible',
     'textarea[name*="reason" i]:visible',
@@ -224,7 +229,8 @@ async function submitBalanceMutation(page, modal) {
   await submit.click();
   const response = await responsePromise;
   const payload = await parseJson(response);
-  if (response.status() !== 200 || payload?.ok !== true || payload?.outcome !== "applied") {
+  const result = responseData(payload);
+  if (response.status() !== 200 || result?.adjusted !== true || result?.outcome !== "applied") {
     throw new Error(`Admin ledger adjustment returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
   const requestRecord = response.request();
@@ -296,7 +302,8 @@ try {
   evidence.mutation.persistedAfterReload = true;
 
   const replay = await replayMutation(page, original);
-  if (replay.status !== 200 || replay.payload?.ok !== true || replay.payload?.outcome !== "replayed") {
+  const replayResult = responseData(replay.payload);
+  if (replay.status !== 200 || replayResult?.adjusted !== true || replayResult?.outcome !== "replayed") {
     throw new Error(`Idempotent replay was not recognized: ${replay.status} ${redact(JSON.stringify(replay.payload))}`);
   }
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
