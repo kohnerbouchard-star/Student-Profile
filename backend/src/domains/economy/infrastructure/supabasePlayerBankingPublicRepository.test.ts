@@ -29,9 +29,15 @@ Deno.test("public Banking repository uses two bounded scoped queries without sel
   ]);
   assertEquals(page.entries.length, 2);
   assertEquals(page.hasMore, true);
+  assertEquals(page.balances[0].accountType, "checking");
+  assertEquals(page.entries.map((entry) => entry.accountType), [
+    "checking",
+    "checking",
+  ]);
   const serialized = JSON.stringify(page);
   assertEquals(serialized.includes("00000000-0000-4000-8000"), false);
   assertEquals(serialized.includes("sourceId"), false);
+  assertEquals(serialized.includes('"cash"'), false);
 });
 
 class FakeClient {
