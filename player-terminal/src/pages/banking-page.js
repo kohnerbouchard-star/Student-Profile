@@ -19,6 +19,12 @@ function publicAccountType(value) {
   return normalized === "cash" ? "checking" : normalized || "checking";
 }
 
+function publicCheckingAccountId(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized || ["cash", "checking"].includes(normalized.toLowerCase())) return "CHECKING";
+  return normalized;
+}
+
 function renderTransaction(transaction, fallbackCurrencyCode) {
   const positive = transaction.amount >= 0;
   const currencyCode = transaction.currencyCode || fallbackCurrencyCode;
@@ -36,7 +42,9 @@ function renderBalanceCard(balance, bank) {
   const isSavings = accountType === "savings";
   const detail = isSavings && bank.savings?.configured !== false
     ? `${escapeHtml(optionalPercent(bank.savings?.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings?.interestEarned, currencyCode, "Interest unavailable"))} earned`
-    : `Authoritative ${escapeHtml(currencyCode)} checking balance`;
+    : accountType === "checking"
+      ? `Authoritative ${escapeHtml(currencyCode)} checking balance`
+      : `Authoritative ${escapeHtml(currencyCode)} balance`;
   return `<article class="player-terminal-bank-card ${isSavings ? "is-savings" : "is-checking"}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(isSavings ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3><p>${detail}</p></article>`;
 }
 
@@ -61,6 +69,7 @@ export function renderBankingPage(data) {
     }];
   const hasSavingsBalance = balances.some((balance) => balance.accountType === "savings");
   const canLoadMore = bank.pagination?.hasMore === true && Boolean(bank.pagination?.nextCursor);
+  const checkingAccountId = publicCheckingAccountId(bank.checking?.accountId);
 
   return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
     <header class="player-terminal-page-heading">
@@ -78,8 +87,8 @@ export function renderBankingPage(data) {
       <section class="player-terminal-panel player-terminal-transfer-panel">
         <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill(savingsConfigured && transfersConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", savingsConfigured && transfersConfigured ? "cyan" : "amber")}</header>
         <details class="player-terminal-disclosure" open><summary><span>${icon("arrowSwap")}</span><div><strong>Transfer between your accounts</strong><small>${savingsConfigured ? "Move funds between checking and savings" : "Savings account support is not configured"}</small></div>${icon("chevronRight")}</summary><form data-player-form="savings-transfer" data-endpoint="savingsTransfer">
-          <label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(bank.checking.accountId || "CHECKING")}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label>
-          <label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(bank.checking.accountId || "CHECKING")}</option></select></label>
+          <label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label>
+          <label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option></select></label>
           <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label>
           <label>NOTE<input name="note" type="text" maxlength="100" placeholder="Optional transfer note" ${savingsConfigured ? "" : "disabled"}/></label>
           <button class="player-terminal-primary-button" type="submit" ${savingsConfigured && transfersConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button>
