@@ -8,6 +8,7 @@ window.Econovaria.login = window.Econovaria.login || {};
   const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
   const STAFF_PASSWORD_MIN_LENGTH = 15;
   const STAFF_PASSWORD_MAX_LENGTH = 128;
+  const SAFE_CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
   let loginMode = "player";
   let clockTimer = 0;
 
@@ -136,15 +137,36 @@ window.Econovaria.login = window.Econovaria.login || {};
     return record;
   }
 
-  function persistAdminState(result) {
+  function persistSafeAdminStatus(status) {
+    const csrfToken = String(status?.csrfToken || "");
+    if (
+      status?.session?.authenticated !== true ||
+      !SAFE_CSRF_PATTERN.test(csrfToken)
+    ) {
+      throw new Error("Administrator status response is invalid.");
+    }
+    const user = status?.user && typeof status.user === "object"
+      ? {
+        id: String(status.user.id || ""),
+        email: String(status.user.email || ""),
+        displayName: String(status.user.displayName || ""),
+        role: String(status.user.role || "game_admin"),
+        permissionVersion: Number(status.user.permissionVersion || 0),
+        securityVersion: Number(status.user.securityVersion || 0)
+      }
+      : null;
     const record = {
-      authenticated: result?.session?.authenticated === true,
-      expiresAt: String(result?.session?.expiresAt || ""),
-      absoluteExpiresAt: String(result?.session?.absoluteExpiresAt || ""),
-      assuranceLevel: String(result?.session?.assuranceLevel || "aal1"),
-      mfaRequired: result?.session?.mfaRequired !== false,
-      user: result?.user || null,
-      csrfToken: String(result?.csrfToken || ""),
+      authenticated: true,
+      expiresAt: String(status.session.expiresAt || ""),
+      absoluteExpiresAt: String(status.session.absoluteExpiresAt || ""),
+      assuranceLevel: String(status.session.assuranceLevel || "aal1"),
+      mfaRequired: status.session.mfaRequired !== false,
+      user,
+      csrfToken,
+      activeGameSessions: Array.isArray(status.activeGameSessions)
+        ? status.activeGameSessions.map(normalizedGameSession)
+          .filter((session) => session.id)
+        : [],
       storedAt: new Date().toISOString()
     };
     runtime.sessionStorage.setItem(adminStateKey(), JSON.stringify(record));
@@ -228,7 +250,7 @@ window.Econovaria.login = window.Econovaria.login || {};
         showMessage(node, errorMessage(signIn, "Admin sign-in failed."), "bad");
         return;
       }
-      persistAdminState(signIn);
+      clearAdminState();
       renderGameSelection(signIn.activeGameSessions || []);
     } catch (error) {
       showMessage(node, errorMessage(error, "Admin sign-in failed."), "bad");
@@ -409,7 +431,7 @@ window.Econovaria.login = window.Econovaria.login || {};
         );
         return;
       }
-      persistAdminState(signIn);
+      clearAdminState();
       const createdId = String(signup?.activation?.gameSessionId || "");
       const sessions = Array.isArray(signIn.activeGameSessions)
         ? signIn.activeGameSessions
@@ -442,7 +464,7 @@ window.Econovaria.login = window.Econovaria.login || {};
       clearAdminState();
       return;
     }
-    persistAdminState(status);
+    persistSafeAdminStatus(status);
     renderGameSelection(status.activeGameSessions || []);
   }
 
