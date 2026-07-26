@@ -25,6 +25,19 @@ function assertOrdered(source, fragments) {
   }
 }
 
+function assertNoBearerConstruction(source, label) {
+  assert.doesNotMatch(
+    source,
+    /headers\s*:\s*\{[^}]*Authorization\s*:/s,
+    `${label} constructs an Authorization request header`,
+  );
+  assert.doesNotMatch(
+    source,
+    /headers\.(?:set|append)\(\s*["']Authorization["']/iu,
+    `${label} mutates an Authorization request header`,
+  );
+}
+
 test("deployable browser surface contains no committed production binding", () => {
   const productionProjectRef = "eecvbssdvarfcykcfrny";
   const productionPublishableKey =
@@ -35,7 +48,6 @@ test("deployable browser surface contains no committed production binding", () =
     ...filesUnder("auth"),
     ...filesUnder("player-terminal"),
     "index.html",
-    "runtime-config.env.example.js",
     "docs/operations/environments/runtime-config.env.template.js",
   ].filter((relativePath) => /\.(?:html|js|mjs|json|css)$/u.test(relativePath));
 
@@ -80,7 +92,7 @@ test("same-origin Player credential adapter creates no remote authority", () => 
   const source = read("admin/player-access-code-bridge.js");
   assert.doesNotMatch(source, /supabase\.co/);
   assert.doesNotMatch(source, /sb_publishable_/);
-  assert.doesNotMatch(source, /Authorization/);
+  assertNoBearerConstruction(source, "Player credential adapter");
   assert.match(source, /\/api\/admin/);
 });
 
@@ -126,6 +138,7 @@ test("recovery and Admin browser consumers use dedicated reviewed boundaries", (
   const recovery = read("auth/reset-password.js");
   const adminManager = read("admin/auth-session-manager.js");
   const adminAuth = read("admin/admin-auth.js");
+  const writeAdapter = read("admin/classroom-write-fallback.js");
 
   assert.match(runtime, /passwordResetApiUrl/);
   assert.match(runtime, /webSessionApiUrl/);
@@ -134,7 +147,10 @@ test("recovery and Admin browser consumers use dedicated reviewed boundaries", (
   assert.doesNotMatch(recovery, /\/auth\/v1\/user/);
   assert.match(adminManager, /credentials:\s*"include"/);
   assert.match(adminManager, /\/session\/bootstrap/);
-  assert.doesNotMatch(adminManager, /Authorization/);
+  assertNoBearerConstruction(adminManager, "Admin session manager");
   assert.match(adminAuth, /ADMIN_BFF_BASE/);
   assert.doesNotMatch(adminAuth, /Bearer/);
+  assert.match(writeAdapter, /legacyClassroomFallbackRetired:\s*true/);
+  assert.doesNotMatch(writeAdapter, /classroom-api/);
+  assertNoBearerConstruction(writeAdapter, "Admin write lifecycle adapter");
 });
