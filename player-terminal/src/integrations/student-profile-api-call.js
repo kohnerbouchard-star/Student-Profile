@@ -60,7 +60,11 @@ export function headersFor(context) {
     headers.Authorization = `Bearer ${accessToken}`;
     headers.apikey = accessToken;
   }
-  if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
+  if (context.idempotencyKey) {
+    const idempotencyKey = String(context.idempotencyKey);
+    headers["idempotency-key"] = idempotencyKey;
+    headers["x-idempotency-key"] = idempotencyKey;
+  }
   return headers;
 }
 
