@@ -1,21 +1,24 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
+const DATABASE_URL = process.env.DATABASE_URL || "";
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_LOAD_OUTPUT_DIR || "/tmp/econovaria-player-load";
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
 const EXPECTED_PLAYERS = 30;
 const MAX_PLAYERS = 40;
-const CREATE_CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 30_000;
 const LOGIN_P95_LIMIT_MS = 15_000;
 const READ_P95_LIMIT_MS = 8_000;
 const READ_SCHEDULING = "sequential-per-player";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const GAME_CODE_PATTERN = /ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g;
+const CREDENTIAL_PATTERN = /(?:BROWSER|LOAD)-(?:PLAYER|ACCESS)-[A-Z0-9-]+/g;
 const READ_PATHS = Object.freeze([
   "/players/me",
   "/players/me/capabilities",
@@ -51,17 +54,21 @@ function playerAt(index) {
   };
 }
 
-const players = Object.freeze(Array.from({ length: MAX_PLAYERS }, (_, index) => playerAt(index + 1)));
+const players = Object.freeze(
+  Array.from({ length: MAX_PLAYERS }, (_, index) => playerAt(index + 1)),
+);
 
 function percentile(values, quantile) {
   if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = [...values].sort((left, right) => left - right);
   const position = Math.max(0, Math.ceil(sorted.length * quantile) - 1);
   return Math.round(sorted[position] * 100) / 100;
 }
 
 function summarize(values) {
-  if (!values.length) return { count: 0, minMs: 0, p50Ms: 0, p95Ms: 0, maxMs: 0, meanMs: 0 };
+  if (!values.length) {
+    return { count: 0, minMs: 0, p50Ms: 0, p95Ms: 0, maxMs: 0, meanMs: 0 };
+  }
   const total = values.reduce((sum, value) => sum + value, 0);
   return {
     count: values.length,
@@ -76,8 +83,8 @@ function summarize(values) {
 function sanitize(value) {
   return String(value || "")
     .replace(UUID_PATTERN, "[uuid-redacted]")
-    .replace(/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g, "[game-code-redacted]")
-    .replace(/(?:BROWSER|LOAD)-(?:PLAYER|ACCESS)-[A-Z0-9-]+/g, "[credential-redacted]")
+    .replace(GAME_CODE_PATTERN, "[game-code-redacted]")
+    .replace(CREDENTIAL_PATTERN, "[credential-redacted]")
     .slice(0, 500);
 }
 
@@ -168,51 +175,104 @@ async function adminSession(publishableKey) {
   }
   const game = (status.payload.activeGameSessions || []).find((item) => item?.name === GAME_NAME) ||
     status.payload.activeGameSessions?.[0];
-  if (!game?.id || !game?.gameCode) throw new Error("The load-test game or readable Game Code is unavailable.");
-  return {
-    cookie,
-    csrfToken: status.payload.csrfToken,
-    deviceId,
-    gameId: game.id,
-    gameCode: game.gameCode,
-  };
-}
-
-async function runPool(items, concurrency, operation) {
-  const results = new Array(items.length);
-  let cursor = 0;
-  async function worker() {
-    while (cursor < items.length) {
-      const index = cursor;
-      cursor += 1;
-      results[index] = await operation(items[index], index);
-    }
+  if (!game?.id || !game?.gameCode) {
+    throw new Error("The load-test game or readable Game Code is unavailable.");
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
-  return results;
+  return { gameCode: game.gameCode };
 }
 
-async function ensurePlayers({ publishableKey, cookie, csrfToken, deviceId, gameId }) {
-  const additional = players.slice(2);
-  return runPool(additional, CREATE_CONCURRENCY, async (player) => {
-    const response = await requestJson(`/functions/v1/web-session-api/proxy/games/${encodeURIComponent(gameId)}/players`, {
-      method: "POST",
-      headers: publicHeaders(publishableKey, deviceId, {
-        Cookie: cookie,
-        "x-econovaria-csrf-token": csrfToken,
-        "x-econovaria-game-id": gameId,
-        "x-request-id": crypto.randomUUID(),
-      }),
-      body: {
-        displayName: player.displayName,
-        rosterLabel: "Connected load profile",
-        playerIdentifier: player.playerIdentifier,
-        accessCode: player.accessCode,
-      },
-    });
-    if (response.status === 201 || response.status === 409) return { ok: true, status: response.status };
-    return { ok: false, status: response.status, error: sanitize(response.payload?.error?.message || response.payload?.message || response.networkError) };
-  });
+function requireLoopbackDatabase() {
+  let database;
+  try {
+    database = new URL(DATABASE_URL);
+  } catch {
+    throw new Error("A valid local DATABASE_URL is required for load fixtures.");
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(database.protocol) ||
+    !["127.0.0.1", "localhost", "::1"].includes(database.hostname) ||
+    database.port !== "54322"
+  ) {
+    throw new Error("Load fixtures may only be provisioned in the local Supabase database.");
+  }
+}
+
+function sqlLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function seedLocalLoadFixtures() {
+  requireLoopbackDatabase();
+  const gameName = sqlLiteral(GAME_NAME);
+  const sql = `
+DO $load_fixture$
+DECLARE
+  v_game_id uuid;
+  v_index integer;
+  v_suffix text;
+  v_identifier text;
+  v_access_code text;
+BEGIN
+  SELECT id
+  INTO STRICT v_game_id
+  FROM public.game_sessions
+  WHERE name = ${gameName};
+
+  FOR v_index IN 3..40 LOOP
+    v_suffix := lpad(v_index::text, 3, '0');
+    v_identifier := 'LOAD-PLAYER-' || v_suffix;
+    v_access_code := 'LOAD-ACCESS-' || v_suffix || '-2026';
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.players
+      WHERE game_session_id = v_game_id
+        AND player_identifier_normalized = v_identifier
+        AND status = 'active'
+    ) THEN
+      PERFORM 1
+      FROM public.create_player_with_identity_and_credential(
+        v_game_id,
+        'Load Player ' || v_suffix,
+        'Connected load profile',
+        v_identifier,
+        v_identifier,
+        encode(extensions.digest(v_access_code, 'sha256'), 'hex'),
+        jsonb_build_object(
+          'route', 'local.connected.load.fixture',
+          'fixtureOnly', true
+        )
+      );
+    END IF;
+  END LOOP;
+END
+$load_fixture$;
+
+SELECT
+  count(*) FILTER (WHERE p.status = 'active')::text || '|' ||
+  count(*) FILTER (WHERE c.status = 'active')::text
+FROM public.players p
+JOIN public.game_sessions g ON g.id = p.game_session_id
+LEFT JOIN public.player_access_credentials c
+  ON c.game_session_id = p.game_session_id
+ AND c.player_id = p.id
+ AND c.status = 'active'
+WHERE g.name = ${gameName};
+`;
+
+  const result = spawnSync(
+    "psql",
+    [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1"],
+    { input: sql, encoding: "utf8", maxBuffer: 1_048_576 },
+  );
+  if (result.error || result.status !== 0) {
+    throw new Error(`Local load fixture provisioning failed: ${sanitize(result.stderr || result.error?.message)}`);
+  }
+  const counts = String(result.stdout || "").trim().split("|").map(Number);
+  if (counts.length !== 2 || counts[0] !== MAX_PLAYERS || counts[1] !== MAX_PLAYERS) {
+    throw new Error(`Local load fixtures are incomplete: players=${counts[0] || 0}, credentials=${counts[1] || 0}.`);
+  }
+  return { players: counts[0], activeCredentials: counts[1] };
 }
 
 async function loginPlayer(player, gameCode, publishableKey) {
@@ -282,7 +342,9 @@ function assertReadWaveShape(label, wave, playerCount) {
     throw new Error(`${label} executed ${wave.results.length} reads instead of ${expectedRequests}.`);
   }
   for (let player = 1; player <= playerCount; player += 1) {
-    const paths = wave.results.filter((result) => result.player === player).map((result) => result.path);
+    const paths = wave.results
+      .filter((result) => result.player === player)
+      .map((result) => result.path);
     if (JSON.stringify(paths) !== JSON.stringify(READ_PATHS)) {
       throw new Error(`${label} Player ${player} did not execute the reviewed read sequence exactly once.`);
     }
@@ -302,7 +364,9 @@ function assertPhase(label, results, latencyLimitMs) {
     }));
     throw new Error(`${label} produced ${failures.length} failed requests: ${JSON.stringify(summary)}`);
   }
-  if (p95 > latencyLimitMs) throw new Error(`${label} p95 ${Math.round(p95)}ms exceeded ${latencyLimitMs}ms.`);
+  if (p95 > latencyLimitMs) {
+    throw new Error(`${label} p95 ${Math.round(p95)}ms exceeded ${latencyLimitMs}ms.`);
+  }
 }
 
 const evidence = {
@@ -312,10 +376,11 @@ const evidence = {
     maximumConcurrentPlayers: MAX_PLAYERS,
     readPathsPerPlayer: READ_PATHS.length,
     readScheduling: READ_SCHEDULING,
-    adminTransport: "http-only-bff",
+    adminControlTransport: "http-only-bff",
+    fixtureProvisioning: "loopback-postgres-transactional-rpc",
     playerTransport: "player-api",
   },
-  players: { requested: MAX_PLAYERS, createdOrExisting: 0, createFailures: 0 },
+  players: { requested: MAX_PLAYERS, provisioned: 0, activeCredentials: 0 },
   baseline30: null,
   burst40: null,
   secretsRecorded: false,
@@ -327,16 +392,16 @@ let failure;
 try {
   const { publishableKey } = await runtimeConfig();
   const session = await adminSession(publishableKey);
-  const creation = await ensurePlayers({ ...session, publishableKey });
-  const createFailures = creation.filter((result) => !result.ok);
-  evidence.players.createdOrExisting = creation.length - createFailures.length + 2;
-  evidence.players.createFailures = createFailures.length;
-  if (createFailures.length) throw new Error(`Could not create ${createFailures.length} load-test Players.`);
+  const fixtures = seedLocalLoadFixtures();
+  evidence.players.provisioned = fixtures.players;
+  evidence.players.activeCredentials = fixtures.activeCredentials;
 
   const baselineStart = performance.now();
-  const baselineLogins = await Promise.all(players.slice(0, EXPECTED_PLAYERS).map((player) =>
-    loginPlayer(player, session.gameCode, publishableKey)
-  ));
+  const baselineLogins = await Promise.all(
+    players.slice(0, EXPECTED_PLAYERS).map((player) =>
+      loginPlayer(player, session.gameCode, publishableKey)
+    ),
+  );
   assertPhase("30-player concurrent login", baselineLogins, LOGIN_P95_LIMIT_MS);
   const baselineSessions = baselineLogins.map(({ token, deviceId }) => ({ token, deviceId }));
   const baselineReads = await readWave(baselineSessions, publishableKey);
@@ -353,11 +418,16 @@ try {
     requestCount: baselineLogins.length + baselineReads.results.length,
   };
 
-  const remainingLogins = await Promise.all(players.slice(EXPECTED_PLAYERS).map((player) =>
-    loginPlayer(player, session.gameCode, publishableKey)
-  ));
+  const remainingLogins = await Promise.all(
+    players.slice(EXPECTED_PLAYERS).map((player) =>
+      loginPlayer(player, session.gameCode, publishableKey)
+    ),
+  );
   assertPhase("10-player maximum-capacity login", remainingLogins, LOGIN_P95_LIMIT_MS);
-  const allSessions = [...baselineSessions, ...remainingLogins.map(({ token, deviceId }) => ({ token, deviceId }))];
+  const allSessions = [
+    ...baselineSessions,
+    ...remainingLogins.map(({ token, deviceId }) => ({ token, deviceId })),
+  ];
   const burstStart = performance.now();
   const burstReads = await readWave(allSessions, publishableKey);
   assertReadWaveShape("40-player connected read wave", burstReads, MAX_PLAYERS);
@@ -379,11 +449,23 @@ try {
   evidence.completedAt = new Date().toISOString();
   const serialized = JSON.stringify(evidence, null, 2);
   UUID_PATTERN.lastIndex = 0;
+  GAME_CODE_PATTERN.lastIndex = 0;
+  CREDENTIAL_PATTERN.lastIndex = 0;
   evidence.rawInternalIdentifiersRecorded = UUID_PATTERN.test(serialized);
-  if (evidence.rawInternalIdentifiersRecorded) {
-    failure ||= new Error("Load evidence contained a raw internal identifier.");
+  evidence.plaintextGameCodeRecorded = GAME_CODE_PATTERN.test(serialized);
+  evidence.secretsRecorded = CREDENTIAL_PATTERN.test(serialized);
+  if (
+    evidence.rawInternalIdentifiersRecorded ||
+    evidence.plaintextGameCodeRecorded ||
+    evidence.secretsRecorded
+  ) {
+    failure ||= new Error("Load evidence contained sensitive fixture material.");
   }
-  await writeFile(`${OUTPUT_DIR}/player-runtime-load-profile.json`, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  await writeFile(
+    `${OUTPUT_DIR}/player-runtime-load-profile.json`,
+    `${JSON.stringify(evidence, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 if (failure) throw failure;
