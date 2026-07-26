@@ -3,8 +3,9 @@
 
 The browser receives one deployment-scoped ``sb_publishable_`` key in runtime
 configuration. The gateway validates that key in ``apikey``, removes accidental
-publishable-key bearer headers, preserves real staff JWTs, preserves opaque Player
-session headers, and never reads, exposes, or injects the legacy anon JWT.
+publishable-key bearer headers, preserves real staff JWTs and opaque Player
+sessions, overwrites client-IP metadata, and never reads or exposes a privileged
+Supabase credential.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import subprocess
 import sys
 import threading
 import webbrowser
+from dataclasses import dataclass
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Final
@@ -30,11 +32,15 @@ MINIMUM_REQUEST_TIMEOUT_SECONDS = 30.0
 MAXIMUM_REQUEST_TIMEOUT_SECONDS = 300.0
 MAX_PROXY_BODY_BYTES = 1_048_576
 MAX_HEADER_VALUE_BYTES = 8_192
+MAX_REQUEST_TARGET_BYTES = 8_192
 LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 PROXY_PREFIXES: Final[tuple[str, ...]] = ("/functions/v1/", "/auth/v1/")
 HEADER_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$"
+)
+SAFE_REQUEST_ID_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[A-Za-z0-9._:-]{1,128}$"
 )
 HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
     {
@@ -59,16 +65,45 @@ FORWARDED_IP_HEADERS: Final[frozenset[str]] = frozenset(
         "x-client-ip",
     }
 )
+REQUEST_HEADER_ALLOWLIST: Final[dict[str, str]] = {
+    "accept": "Accept",
+    "authorization": "Authorization",
+    "content-type": "Content-Type",
+    "apikey": "apikey",
+    "x-econovaria-device-id": "x-econovaria-device-id",
+    "x-econovaria-game-id": "x-econovaria-game-id",
+    "x-idempotency-key": "x-idempotency-key",
+    "x-player-session-token": "x-player-session-token",
+    "x-request-id": "x-request-id",
+    "x-stock-market-runner-secret": "x-stock-market-runner-secret",
+}
 STATIC_NO_CACHE_HEADERS: Final[tuple[tuple[str, str], ...]] = (
     ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
     ("Pragma", "no-cache"),
     ("Expires", "0"),
     ("X-Econovaria-Local-Gateway", "publishable-only-v2"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("Referrer-Policy", "no-referrer"),
 )
 STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-Modified-Since",
     "If-None-Match",
 )
+CONTENT_TYPE_ALLOWLIST: Final[dict[str, str]] = {
+    "application/json": "application/json; charset=utf-8",
+    "application/problem+json": "application/problem+json; charset=utf-8",
+    "application/octet-stream": "application/octet-stream",
+    "text/csv": "text/csv; charset=utf-8",
+    "text/event-stream": "text/event-stream; charset=utf-8",
+    "text/plain": "text/plain; charset=utf-8",
+}
+
+
+@dataclass(frozen=True)
+class SafeResponseMetadata:
+    content_type: str
+    retry_after: str | None
+    request_id: str | None
 
 
 def clean_path(path: str) -> str:
@@ -76,6 +111,8 @@ def clean_path(path: str) -> str:
 
 
 def is_proxy_path(path: str) -> bool:
+    if len(path.encode("utf-8", errors="strict")) > MAX_REQUEST_TARGET_BYTES:
+        return False
     path_only = clean_path(path)
     return any(path_only.startswith(prefix) for prefix in PROXY_PREFIXES)
 
@@ -124,15 +161,7 @@ def configured_timeout() -> float:
 
 def local_supabase_runtime(root: Path) -> tuple[str, str]:
     result = subprocess.run(
-        [
-            "npx",
-            "supabase",
-            "status",
-            "-o",
-            "env",
-            "--workdir",
-            "backend",
-        ],
+        ["npx", "supabase", "status", "-o", "env", "--workdir", "backend"],
         cwd=root,
         check=False,
         capture_output=True,
@@ -222,37 +251,64 @@ def filtered_request_headers(
             continue
         safe_name, safe_value = pair
         lower_name = safe_name.lower()
-        if lower_name in HOP_BY_HOP_HEADERS or lower_name in {
-            "host",
-            "content-length",
-        }:
+        if lower_name in HOP_BY_HOP_HEADERS or lower_name in FORWARDED_IP_HEADERS:
             continue
-        if lower_name in FORWARDED_IP_HEADERS:
+        canonical_name = REQUEST_HEADER_ALLOWLIST.get(lower_name)
+        if canonical_name is None:
             continue
         if lower_name == "authorization" and safe_value.strip() == prohibited_bearer:
             continue
-        result[safe_name] = safe_value
+        result[canonical_name] = safe_value
     result["Host"] = upstream_host
     result["x-real-ip"] = "127.0.0.1"
     return result
 
 
-def filtered_response_headers(headers) -> list[tuple[str, str]]:
-    result: list[tuple[str, str]] = []
+def normalize_content_type(value: object) -> str:
+    pair = safe_header_pair("Content-Type", value)
+    if pair is None:
+        return "application/octet-stream"
+    media_type = pair[1].split(";", 1)[0].strip().lower()
+    return CONTENT_TYPE_ALLOWLIST.get(media_type, "application/octet-stream")
+
+
+def normalize_retry_after(value: object) -> str | None:
+    pair = safe_header_pair("Retry-After", value)
+    if pair is None:
+        return None
+    candidate = pair[1].strip()
+    if not candidate.isdigit():
+        return None
+    seconds = int(candidate)
+    if not 0 <= seconds <= 86_400:
+        return None
+    return str(seconds)
+
+
+def normalize_request_id(value: object) -> str | None:
+    pair = safe_header_pair("X-Request-Id", value)
+    if pair is None:
+        return None
+    candidate = pair[1].strip()
+    return candidate if SAFE_REQUEST_ID_PATTERN.fullmatch(candidate) else None
+
+
+def filtered_response_headers(headers) -> SafeResponseMetadata:
+    """Reconstruct a tiny response contract; never forward arbitrary header names."""
+    values: dict[str, object] = {}
     for name, value in headers:
-        pair = safe_header_pair(name, value)
-        if pair is None:
-            continue
-        safe_name, safe_value = pair
-        lower_name = safe_name.lower()
-        if lower_name in HOP_BY_HOP_HEADERS or lower_name.startswith("access-control-"):
-            continue
-        result.append((safe_name, safe_value))
-    return result
+        lower_name = str(name).lower()
+        if lower_name in {"content-type", "retry-after", "x-request-id"}:
+            values[lower_name] = value
+    return SafeResponseMetadata(
+        content_type=normalize_content_type(values.get("content-type", "")),
+        retry_after=normalize_retry_after(values.get("retry-after", "")),
+        request_id=normalize_request_id(values.get("x-request-id", "")),
+    )
 
 
 class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaGateway/2.1"
+    server_version = "EconovariaGateway/2.2"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -271,6 +327,9 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
     def _proxy_or_serve(self) -> None:
         if is_proxy_path(self.path):
             self._proxy()
+            return
+        if len(self.path.encode("utf-8", errors="strict")) > MAX_REQUEST_TARGET_BYTES:
+            self._send_json_error(414, "request_target_too_long", "The request target is too long.")
             return
         if self.command in {"GET", "HEAD"}:
             super_method = getattr(super(), f"do_{self.command}")
@@ -302,10 +361,11 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
     def _send_json_error(self, status: int, code: str, message: str) -> None:
         payload = json.dumps({"code": code, "message": message}).encode("utf-8")
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(payload)
@@ -314,6 +374,9 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
         server = self.server  # type: ignore[assignment]
         publishable_key = server.publishable_key  # type: ignore[attr-defined]
 
+        if len(self.path.encode("utf-8", errors="strict")) > MAX_REQUEST_TARGET_BYTES:
+            self._send_json_error(414, "request_target_too_long", "The request target is too long.")
+            return
         if self.command != "OPTIONS":
             supplied_key = str(self.headers.get("apikey") or "").strip()
             if supplied_key != publishable_key:
@@ -363,16 +426,26 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
                 ),
             )
             upstream_response = connection.getresponse()
-            payload = upstream_response.read()
+            payload = upstream_response.read(MAX_PROXY_BODY_BYTES + 1)
+            if len(payload) > MAX_PROXY_BODY_BYTES:
+                self._send_json_error(
+                    502,
+                    "upstream_response_too_large",
+                    "The upstream response exceeded the gateway limit.",
+                )
+                return
+            metadata = filtered_response_headers(upstream_response.getheaders())
 
             self.send_response(upstream_response.status)
-            for name, value in filtered_response_headers(upstream_response.getheaders()):
-                if name.lower() == "content-length":
-                    continue
-                self.send_header(name, value)
+            self.send_header("Content-Type", metadata.content_type)
+            if metadata.retry_after is not None:
+                self.send_header("Retry-After", metadata.retry_after)
+            if metadata.request_id is not None:
+                self.send_header("X-Request-Id", metadata.request_id)
             self.send_header("Content-Length", str(len(payload)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(payload)
@@ -404,6 +477,8 @@ class EconovariaGatewayServer(ThreadingHTTPServer):
         parsed = urlsplit(upstream_url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("upstream_url must be an absolute HTTP(S) URL")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("upstream_url must not contain credentials, query, or fragment")
         self.upstream = parsed
         self.publishable_key = publishable_key
         self.request_timeout = request_timeout
