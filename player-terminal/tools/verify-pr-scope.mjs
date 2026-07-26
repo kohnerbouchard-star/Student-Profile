@@ -181,7 +181,7 @@ const allowedPatterns = [
   /^backend\/supabase\/migrations\/2026072110[0-8]000_/,
   /^backend\/supabase\/migrations\/2026072112[0-9]{4}_[A-Za-z0-9_]+\.sql$/,
   /^backend\/supabase\/migrations\/2026072113[0-9]{4}_[A-Za-z0-9_]+\.sql$/,
-  /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1|2600_fix_marketplace_listing_item_lookup_v1|2700_fix_marketplace_listing_currency_lookup_v1|2800_restore_marketplace_listing_reservation_wrapper_v1|2900_fix_marketplace_listing_legacy_lookups_v1|3000_harden_marketplace_table_return_conflicts_v1|3100_harden_marketplace_table_return_conflicts_v1)\.sql$/,
+  /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1|2600_fix_marketplace_listing_item_lookup_v1|2700_fix_marketplace_listing_currency_lookup_v1|2800_restore_marketplace_listing_reservation_wrapper_v1|2900_fix_marketplace_listing_legacy_lookups_v1|3000_harden_marketplace_legacy_projection_conflicts_v1|3100_harden_marketplace_table_return_conflicts_v1)\.sql$/,
   /^backend\/supabase\/migrations\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+\.sql$/,
   /^admin\/progression-review-(client|loader|surface)\.js$/,
   /^admin\/progression-review\.css$/,
