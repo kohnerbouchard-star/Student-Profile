@@ -8,6 +8,7 @@ import {
 const GAME_CODE = "QUALITY1";
 const GAME_NAME = "Quality Game";
 const ORIGIN = "http://127.0.0.1:4173";
+const LOGOUT_SNAPSHOT_KEY = "econovaria.admin.sidebar-logout-snapshot.v1";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -27,15 +28,27 @@ const harness = await createQualityHarness("game-session-controls");
 const { page, errors, dir } = harness;
 const requests = [];
 const report = {};
+let logoutResponseFulfilled = false;
 
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
 });
 page.on("request", (request) => requests.push(`${request.method()} ${request.url()}`));
 
-await page.addInitScript(({ gameId, gameCode }) => {
+await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
-}, { gameId: GAME_ID, gameCode: GAME_CODE });
+  if (window.__econovariaSidebarLogoutSnapshotInstalled) return;
+  window.__econovariaSidebarLogoutSnapshotInstalled = true;
+  window.addEventListener("beforeunload", () => {
+    try {
+      localStorage.setItem(snapshotKey, JSON.stringify({
+        session: sessionStorage.getItem("econovaria.admin.auth.v1"),
+        selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+        csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
+      }));
+    } catch (_) {}
+  });
+}, { gameId: GAME_ID, gameCode: GAME_CODE, snapshotKey: LOGOUT_SNAPSHOT_KEY });
 
 await page.route("**/functions/v1/web-session-api/logout", async (route) => {
   const request = route.request();
@@ -50,11 +63,13 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
     headers: logoutCorsHeaders(),
     body: JSON.stringify({ ok: true }),
   });
+  logoutResponseFulfilled = true;
 });
 
 try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.evaluate((snapshotKey) => localStorage.removeItem(snapshotKey), LOGOUT_SNAPSHOT_KEY);
   await page.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15_000 });
 
   const card = page.locator("[data-econovaria-game-session-card]").first();
@@ -158,18 +173,24 @@ try {
     logoutButton.click(),
   ]);
 
-  const storageState = await page.evaluate(() => ({
-    session: sessionStorage.getItem("econovaria.admin.auth.v1"),
-    selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
-    csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
-  }));
-  assert(storageState.session === null, "Admin logout left the session summary in storage.");
-  assert(storageState.selectedGame === null, "Admin logout left the selected game in storage.");
-  assert(storageState.csrf === null, "Admin logout left the CSRF token in storage.");
+  const storageState = await page.evaluate((snapshotKey) => {
+    try {
+      return JSON.parse(localStorage.getItem(snapshotKey) || "null");
+    } catch (_) {
+      return null;
+    }
+  }, LOGOUT_SNAPSHOT_KEY);
+  assert(
+    storageState && storageState.session === null,
+    `Admin logout left the session summary before navigation: ${JSON.stringify(storageState)}.`,
+  );
+  assert(storageState.selectedGame === null, "Admin logout left the selected game before navigation.");
+  assert(storageState.csrf === null, "Admin logout left the CSRF token before navigation.");
   assert(
     requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
     `Admin logout did not issue server-mediated revocation: ${JSON.stringify(requests)}`,
   );
+  assert(logoutResponseFulfilled, "The mocked sidebar logout response did not complete.");
 
   Object.assign(report, {
     cardState,
@@ -177,11 +198,14 @@ try {
     logoutHitTarget: { ...logoutHitTarget, ...logoutBox, browserTrialPassed: true },
     storageState,
     serverMediatedLogoutObserved: true,
+    logoutResponseFulfilled,
     errors: [...errors],
   });
   writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
   const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
-  const remainingErrors = errors.filter((error) => !expectedNavigationAbort.test(error));
+  const remainingErrors = errors.filter((error) =>
+    !(logoutResponseFulfilled && expectedNavigationAbort.test(error))
+  );
   assert(remainingErrors.length === 0, remainingErrors.join("\n"));
 
   console.log(JSON.stringify({
@@ -193,6 +217,7 @@ try {
     adminLinkHidden: true,
     logoutButtonClickable: true,
     serverMediatedLogoutObserved: true,
+    logoutResponseFulfilled: true,
     sessionCleared: true,
   }, null, 2));
 } catch (error) {
