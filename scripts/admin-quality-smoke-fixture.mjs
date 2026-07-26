@@ -141,6 +141,33 @@ function safeSession() {
   };
 }
 
+function legacySessionBridge(session) {
+  const staffSession = {
+    staffId: session.user.id,
+    staffEmail: session.user.email,
+    staffDisplayName: session.user.displayName,
+    staffRole: "game_admin",
+    roles: ["game_admin"],
+    permissions: [...PERMISSIONS],
+    activeGameSessions: [game],
+    selectedGameSessionId: GAME_ID,
+  };
+  return {
+    currentSession: {
+      role: "ADMIN",
+      authSource: "http-only-bff",
+      permissions: [...PERMISSIONS],
+      roles: ["game_admin"],
+      adminRole: "game_admin",
+      user: session.user,
+      assuranceLevel: session.assuranceLevel,
+      mfaRequired: true,
+      staffSession,
+    },
+    staffSession,
+  };
+}
+
 function statusPayload() {
   const times = sessionTimes();
   return {
@@ -281,13 +308,22 @@ export async function createQualityHarness(name) {
     errors.push(`${request.method()} ${request.url()} ${failure}`);
   });
 
-  await page.addInitScript(({ session, gameId }) => {
+  const session = safeSession();
+  const bridge = legacySessionBridge(session);
+  await page.addInitScript(({ sessionValue, gameId, bridgeValue }) => {
     sessionStorage.setItem(
       "econovaria.admin.auth.v1",
-      JSON.stringify(session),
+      JSON.stringify(sessionValue),
     );
     sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-  }, { session: safeSession(), gameId: GAME_ID });
+    window.currentSession = bridgeValue.currentSession;
+    window.state = window.state || {};
+    window.state.staffSession = bridgeValue.staffSession;
+  }, {
+    sessionValue: session,
+    gameId: GAME_ID,
+    bridgeValue: bridge,
+  });
 
   await page.route("**/functions/v1/web-session-api/status", async (route) => {
     const request = route.request();
