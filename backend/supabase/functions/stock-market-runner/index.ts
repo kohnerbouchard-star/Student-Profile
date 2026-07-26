@@ -4,7 +4,10 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
-import { jsonError } from "../../../src/platform/supabase/edgeResponse.ts";
+import {
+  jsonError,
+  jsonResponse,
+} from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   authorizeInternalRunnerRequest,
 } from "../../../src/security/internalRunnerAuth.ts";
@@ -20,6 +23,8 @@ const createSupabaseClient = createClient as unknown as (
 ) => EdgeSupabaseClient;
 
 Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return jsonResponse(204, null);
+
   const publishableFailure = await requirePublishableRequest(request);
   if (publishableFailure) return publishableFailure;
 
