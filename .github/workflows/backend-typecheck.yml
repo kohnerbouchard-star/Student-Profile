@@ -6,6 +6,7 @@ on:
       - "backend/**"
       - "api/**"
       - "admin/**"
+      - "auth/**"
       - "frontend/src/core/**"
       - ".github/workflows/backend-typecheck.yml"
   push:
@@ -15,6 +16,7 @@ on:
       - "backend/**"
       - "api/**"
       - "admin/**"
+      - "auth/**"
       - "frontend/src/core/**"
       - ".github/workflows/backend-typecheck.yml"
 
@@ -65,12 +67,16 @@ jobs:
               supabase/functions/staff-api/index.ts \
               supabase/functions/staff-mfa-api/index.ts \
               supabase/functions/player-api/index.ts \
-              supabase/functions/web-session-api/index.ts
+              supabase/functions/web-session-api/index.ts \
+              supabase/functions/password-reset-api/index.ts
             node --check ../api/_admin-bff-proxy.js
             node --check '../api/admin-session/[...path].js'
             node --check '../api/admin/[...path].js'
+            node --check ../api/password-reset.js
             node --check ../admin/auth-session-manager.js
             node --check ../admin/admin-auth.js
+            node --check ../admin/session-timeout-safe-exit.js
+            node --check ../auth/reset-password.js
             node --check ../frontend/src/core/api.js
             node --check ../frontend/src/core/login.js
           } > /tmp/backend-typecheck.log 2>&1
