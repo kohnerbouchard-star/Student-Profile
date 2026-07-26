@@ -68,7 +68,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
   const allocationItems = allocation.length
     ? allocation.slice(0, 4)
     : config.usePreviewData
-      ? [{ label: "Checking", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]
+      ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]
       : [];
   const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(banking.checking.available, currencyCode);
   const unreadMessages = messagesUnavailable ? "—" : String(messages?.unread || 0);
