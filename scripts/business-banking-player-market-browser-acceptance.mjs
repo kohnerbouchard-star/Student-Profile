@@ -349,44 +349,37 @@ try {
   await assertReplaySafe(page, sell, holdingAfterSell, cashAfterSell);
   evidence.sell.replaySafe = true;
 
+  const orderPath = new URL(buy.original.url).pathname;
   const buyBody = JSON.parse(buy.original.body);
-  const stale = await page.evaluate(async ({ url, headers, body }) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        ...body,
-        expectedPrice: body.expectedPrice + 1,
-        idempotencyKey: `${body.idempotencyKey}-stale`,
-      }),
-      cache: "no-store",
-    });
-    return { status: response.status, payload: await response.json().catch(() => null) };
-  }, { url: buy.original.url, headers: buy.original.headers, body: buyBody });
+  const stale = await request(orderPath, {
+    method: "POST",
+    headers: buy.original.headers,
+    body: {
+      ...buyBody,
+      expectedPrice: buyBody.expectedPrice + 1,
+      idempotencyKey: `${buyBody.idempotencyKey}-stale`,
+    },
+  });
   if (stale.status !== 409 || stale.payload?.error?.code !== "stale_stock_price") {
     throw new Error(`Stale-price order was not rejected: ${stale.status} ${redact(JSON.stringify(stale.payload))}`);
   }
   evidence.stalePriceRejected = true;
 
-  const forbidden = await page.evaluate(async ({ url, headers, body }) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        ...body,
-        playerId: "attacker-controlled",
-        idempotencyKey: `${body.idempotencyKey}-scope`,
-      }),
-      cache: "no-store",
-    });
-    return { status: response.status, payload: await response.json().catch(() => null) };
-  }, { url: buy.original.url, headers: buy.original.headers, body: buyBody });
+  const forbidden = await request(orderPath, {
+    method: "POST",
+    headers: buy.original.headers,
+    body: {
+      ...buyBody,
+      playerId: "attacker-controlled",
+      idempotencyKey: `${buyBody.idempotencyKey}-scope`,
+    },
+  });
   if (forbidden.status !== 400 || forbidden.payload?.error?.code !== "invalid_stock_market_trading_request") {
     throw new Error(`Client ownership-field order was not rejected: ${forbidden.status} ${redact(JSON.stringify(forbidden.payload))}`);
   }
   evidence.forbiddenScopeRejected = true;
 
-  const unauthorized = await request(new URL(buy.original.url).pathname, {
+  const unauthorized = await request(orderPath, {
     method: "POST",
     headers: platformHeaders(fixture.key),
     body: buyBody,
