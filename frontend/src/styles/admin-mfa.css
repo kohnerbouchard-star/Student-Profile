@@ -1,0 +1,180 @@
+.econovaria-mfa-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.econovaria-mfa-overlay[hidden] {
+  display: none;
+}
+
+.econovaria-mfa-dialog {
+  width: min(520px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  border-radius: 18px;
+  padding: 24px;
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.99), rgba(17, 24, 39, 0.99));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), 0 0 42px rgba(14, 165, 233, 0.16);
+  color: #e2e8f0;
+}
+
+.econovaria-mfa-eyebrow {
+  margin: 0 0 8px;
+  color: #67e8f9;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.econovaria-mfa-title {
+  margin: 0;
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  line-height: 1.15;
+}
+
+.econovaria-mfa-description {
+  margin: 12px 0 20px;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.econovaria-mfa-setup {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.econovaria-mfa-qr-wrap {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.econovaria-mfa-qr {
+  display: block;
+  width: min(260px, 100%);
+  height: auto;
+}
+
+.econovaria-mfa-secret-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.econovaria-mfa-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #f8fafc;
+  font: 700 0.92rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  user-select: all;
+}
+
+.econovaria-mfa-form {
+  display: grid;
+  gap: 14px;
+}
+
+.econovaria-mfa-form label {
+  display: grid;
+  gap: 7px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.econovaria-mfa-code {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  border-radius: 11px;
+  padding: 13px 14px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #f8fafc;
+  font: 800 1.35rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.econovaria-mfa-code:focus-visible {
+  outline: 3px solid rgba(34, 211, 238, 0.36);
+  outline-offset: 2px;
+}
+
+.econovaria-mfa-message {
+  min-height: 1.5em;
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.econovaria-mfa-message.is-error {
+  color: #fda4af;
+}
+
+.econovaria-mfa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.econovaria-mfa-actions button {
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.econovaria-mfa-submit {
+  flex: 1 1 220px;
+  border: 1px solid #22d3ee;
+  background: linear-gradient(135deg, #0891b2, #2563eb);
+  color: #ffffff;
+}
+
+.econovaria-mfa-cancel {
+  flex: 0 1 auto;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: transparent;
+  color: #cbd5e1;
+}
+
+.econovaria-mfa-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 560px) {
+  .econovaria-mfa-overlay {
+    padding: 12px;
+  }
+
+  .econovaria-mfa-dialog {
+    max-height: calc(100vh - 24px);
+    padding: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .econovaria-mfa-overlay {
+    backdrop-filter: none;
+  }
+}
