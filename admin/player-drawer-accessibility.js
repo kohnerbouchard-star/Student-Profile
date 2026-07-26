@@ -4,6 +4,8 @@
   const DRAWER_SELECTOR = "[data-admin-terminal-player-drawer]";
   const DOSSIER_SELECTOR = ".admin-terminal-player-dossier-v296";
   const OPENER_SELECTOR = '[data-admin-terminal-action="select-player-panel"]';
+  const PLAYER_ROW_SELECTOR = ".admin-terminal-player-row";
+  const LEDGER_MUTATION_PATH = /\/players\/[^/]+\/ledger-adjustments$/;
   const CLOSE_SELECTOR = [
     "[data-admin-player-drawer-close]",
     "[data-admin-terminal-action*='close-player']",
@@ -15,6 +17,7 @@
   const bindings = new Set();
   let lastOpener = null;
   let scheduled = false;
+  let ledgerRefreshScheduled = false;
 
   function visible(element) {
     if (!(element instanceof HTMLElement) || element.hidden) return false;
@@ -116,6 +119,59 @@
     window.setTimeout(reconcile, 120);
   }
 
+  function playersNavigationControl() {
+    const selectors = [
+      '[data-admin-terminal-section="players"]',
+      '[data-admin-terminal-action="open-players"]',
+      '[data-route="players"]',
+    ];
+    for (const selector of selectors) {
+      const control = [...document.querySelectorAll(selector)].find((element) => visible(element) && enabled(element));
+      if (control instanceof HTMLElement) return control;
+    }
+    return [...document.querySelectorAll("button, [role='button']")].find((element) => {
+      return element instanceof HTMLElement && visible(element) && enabled(element) && String(element.textContent || "").trim() === "Players";
+    }) || null;
+  }
+
+  function concealStalePlayerRows() {
+    document.querySelectorAll(PLAYER_ROW_SELECTOR).forEach((row) => {
+      if (!(row instanceof HTMLElement)) return;
+      row.dataset.adminLedgerRefreshStale = "true";
+      row.setAttribute("aria-busy", "true");
+      row.style.visibility = "hidden";
+    });
+  }
+
+  function restoreRowsIfRefreshDidNotMount() {
+    document.querySelectorAll(`${PLAYER_ROW_SELECTOR}[data-admin-ledger-refresh-stale="true"]`).forEach((row) => {
+      if (!(row instanceof HTMLElement)) return;
+      row.removeAttribute("data-admin-ledger-refresh-stale");
+      row.removeAttribute("aria-busy");
+      row.style.removeProperty("visibility");
+    });
+  }
+
+  function scheduleLedgerReconciliation(detail) {
+    if (ledgerRefreshScheduled) return;
+    ledgerRefreshScheduled = true;
+    concealStalePlayerRows();
+    const refresh = () => {
+      const control = playersNavigationControl();
+      if (control) control.click();
+      document.dispatchEvent(new CustomEvent("econovaria:admin-player-ledger-reconcile", {
+        detail: Object.freeze({ requestId: String(detail?.requestId || "") }),
+      }));
+    };
+    window.requestAnimationFrame(refresh);
+    window.setTimeout(refresh, 80);
+    window.setTimeout(() => {
+      ledgerRefreshScheduled = false;
+      restoreRowsIfRefreshDidNotMount();
+      schedule();
+    }, 4000);
+  }
+
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     const opener = target?.closest(OPENER_SELECTOR);
@@ -124,12 +180,20 @@
     schedule();
   }, true);
 
+  document.addEventListener("econovaria:admin-request-lifecycle", (event) => {
+    const detail = event?.detail || {};
+    if (detail.phase !== "committed") return;
+    if (!LEDGER_MUTATION_PATH.test(String(detail.pathname || ""))) return;
+    scheduleLedgerReconciliation(detail);
+  });
+
   document.addEventListener("econovaria:admin-route-mounted", schedule);
   window.addEventListener("load", schedule, { once: true });
   schedule();
 
   window.EconovariaPlayerDrawerAccessibility = Object.freeze({
     reconcile: schedule,
+    reconcileLedger: scheduleLedgerReconciliation,
     getBindingCount: () => bindings.size,
   });
 })();
