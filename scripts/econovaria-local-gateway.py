@@ -11,6 +11,7 @@ Supabase credential.
 from __future__ import annotations
 
 import argparse
+import base64
 import errno
 import http.client
 import json
@@ -33,14 +34,21 @@ MAXIMUM_REQUEST_TIMEOUT_SECONDS = 300.0
 MAX_PROXY_BODY_BYTES = 1_048_576
 MAX_HEADER_VALUE_BYTES = 8_192
 MAX_REQUEST_TARGET_BYTES = 8_192
+MAX_SESSION_ENVELOPE_BYTES = 3_964
 LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 PROXY_PREFIXES: Final[tuple[str, ...]] = ("/functions/v1/", "/auth/v1/")
+WEB_SESSION_PREFIX: Final[str] = "/functions/v1/web-session-api"
+LOCAL_SESSION_COOKIE: Final[str] = "econovaria_admin_session"
+REMOTE_SESSION_COOKIE: Final[str] = "__Host-econovaria_admin_session"
 HEADER_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$"
 )
 SAFE_REQUEST_ID_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[A-Za-z0-9._:-]{1,128}$"
+)
+SESSION_ENVELOPE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^v1\.([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{24,3900})$"
 )
 HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
     {
@@ -70,6 +78,8 @@ REQUEST_HEADER_ALLOWLIST: Final[dict[str, str]] = {
     "authorization": "Authorization",
     "content-type": "Content-Type",
     "apikey": "apikey",
+    "origin": "Origin",
+    "x-econovaria-csrf-token": "x-econovaria-csrf-token",
     "x-econovaria-device-id": "x-econovaria-device-id",
     "x-econovaria-game-id": "x-econovaria-game-id",
     "x-idempotency-key": "x-idempotency-key",
@@ -81,7 +91,7 @@ STATIC_NO_CACHE_HEADERS: Final[tuple[tuple[str, str], ...]] = (
     ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
     ("Pragma", "no-cache"),
     ("Expires", "0"),
-    ("X-Econovaria-Local-Gateway", "publishable-only-v2"),
+    ("X-Econovaria-Local-Gateway", "publishable-only-v3"),
     ("X-Content-Type-Options", "nosniff"),
     ("Referrer-Policy", "no-referrer"),
 )
@@ -104,6 +114,7 @@ class SafeResponseMetadata:
     content_type: str
     retry_after: str | None
     request_id: str | None
+    session_cookie: str | None
 
 
 def clean_path(path: str) -> str:
@@ -115,6 +126,10 @@ def is_proxy_path(path: str) -> bool:
         return False
     path_only = clean_path(path)
     return any(path_only.startswith(prefix) for prefix in PROXY_PREFIXES)
+
+
+def is_web_session_path(path: str) -> bool:
+    return clean_path(path).startswith(WEB_SESSION_PREFIX)
 
 
 def remove_static_conditionals(headers) -> None:
@@ -225,7 +240,6 @@ def runtime_config(
 
 
 def safe_header_pair(name: object, value: object) -> tuple[str, str] | None:
-    """Return a bounded RFC token/value pair or drop untrusted header material."""
     normalized_name = str(name)
     normalized_value = str(value)
     if not HEADER_NAME_PATTERN.fullmatch(normalized_name):
@@ -237,14 +251,70 @@ def safe_header_pair(name: object, value: object) -> tuple[str, str] | None:
     return normalized_name, normalized_value
 
 
+def decode_base64url(value: str) -> bytes | None:
+    try:
+        padded = value + "=" * (-len(value) % 4)
+        return base64.urlsafe_b64decode(padded.encode("ascii"))
+    except (ValueError, UnicodeError):
+        return None
+
+
+def encode_base64url(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def normalized_session_envelope(value: object) -> str | None:
+    candidate = str(value).strip()
+    if len(candidate.encode("utf-8", errors="strict")) > MAX_SESSION_ENVELOPE_BYTES:
+        return None
+    match = SESSION_ENVELOPE_PATTERN.fullmatch(candidate)
+    if not match:
+        return None
+    iv = decode_base64url(match.group(1))
+    encrypted = decode_base64url(match.group(2))
+    if iv is None or encrypted is None or len(iv) != 12 or not 17 <= len(encrypted) <= 3700:
+        return None
+    return f"v1.{encode_base64url(iv)}.{encode_base64url(encrypted)}"
+
+
+def normalized_session_request_cookie(value: object) -> str | None:
+    for segment in str(value).split(";"):
+        name, separator, raw_value = segment.strip().partition("=")
+        if not separator or name not in {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}:
+            continue
+        envelope = normalized_session_envelope(raw_value)
+        if envelope:
+            return f"{LOCAL_SESSION_COOKIE}={envelope}"
+    return None
+
+
+def normalized_session_response_cookie(value: object) -> str | None:
+    first, *_attributes = str(value).split(";")
+    name, separator, raw_value = first.strip().partition("=")
+    if not separator or name not in {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}:
+        return None
+    if raw_value == "":
+        return f"{LOCAL_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
+    envelope = normalized_session_envelope(raw_value)
+    if not envelope:
+        return None
+    return (
+        f"{LOCAL_SESSION_COOKIE}={envelope}; Path=/; Max-Age=28800; "
+        "HttpOnly; SameSite=Strict"
+    )
+
+
 def filtered_request_headers(
     headers,
     upstream_host: str,
     *,
     browser_publishable_key: str,
+    request_path: str = "/",
+    browser_origin: str = "http://127.0.0.1:4173",
 ) -> dict[str, str]:
     result: dict[str, str] = {}
     prohibited_bearer = f"Bearer {browser_publishable_key}"
+    web_session_request = is_web_session_path(request_path)
     for name, value in headers.items():
         pair = safe_header_pair(name, value)
         if pair is None:
@@ -253,12 +323,20 @@ def filtered_request_headers(
         lower_name = safe_name.lower()
         if lower_name in HOP_BY_HOP_HEADERS or lower_name in FORWARDED_IP_HEADERS:
             continue
+        if lower_name == "cookie":
+            if web_session_request:
+                session_cookie = normalized_session_request_cookie(safe_value)
+                if session_cookie:
+                    result["Cookie"] = session_cookie
+            continue
         canonical_name = REQUEST_HEADER_ALLOWLIST.get(lower_name)
         if canonical_name is None:
             continue
         if lower_name == "authorization" and safe_value.strip() == prohibited_bearer:
             continue
         result[canonical_name] = safe_value
+    if web_session_request and "Origin" not in result:
+        result["Origin"] = browser_origin
     result["Host"] = upstream_host
     result["x-real-ip"] = "127.0.0.1"
     return result
@@ -296,19 +374,23 @@ def normalize_request_id(value: object) -> str | None:
 def filtered_response_headers(headers) -> SafeResponseMetadata:
     """Reconstruct a tiny response contract; never forward arbitrary header names."""
     values: dict[str, object] = {}
+    session_cookie: str | None = None
     for name, value in headers:
         lower_name = str(name).lower()
         if lower_name in {"content-type", "retry-after", "x-request-id"}:
             values[lower_name] = value
+        elif lower_name == "set-cookie" and session_cookie is None:
+            session_cookie = normalized_session_response_cookie(value)
     return SafeResponseMetadata(
         content_type=normalize_content_type(values.get("content-type", "")),
         retry_after=normalize_retry_after(values.get("retry-after", "")),
         request_id=normalize_request_id(values.get("x-request-id", "")),
+        session_cookie=session_cookie,
     )
 
 
 class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaGateway/2.2"
+    server_version = "EconovariaGateway/3.0"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -423,6 +505,8 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
                     self.headers,
                     upstream.netloc,
                     browser_publishable_key=publishable_key,
+                    request_path=self.path,
+                    browser_origin=server.browser_origin,  # type: ignore[attr-defined]
                 ),
             )
             upstream_response = connection.getresponse()
@@ -442,6 +526,8 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
                 self.send_header("Retry-After", metadata.retry_after)
             if metadata.request_id is not None:
                 self.send_header("X-Request-Id", metadata.request_id)
+            if metadata.session_cookie is not None:
+                self.send_header("Set-Cookie", metadata.session_cookie)
             self.send_header("Content-Length", str(len(payload)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
@@ -482,6 +568,7 @@ class EconovariaGatewayServer(ThreadingHTTPServer):
         self.upstream = parsed
         self.publishable_key = publishable_key
         self.request_timeout = request_timeout
+        self.browser_origin = f"http://127.0.0.1:{server_address[1]}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -587,7 +674,7 @@ def main() -> int:
     print(f"Player: {address}player-terminal/")
     print(
         "Browser credential contract: publishable apikey only; real staff JWTs "
-        "and opaque Player sessions preserved."
+        "remain server-side in an encrypted HttpOnly session."
     )
     print(f"Gateway upstream request timeout: {server.request_timeout:g} seconds")
     print("Press Ctrl+C to stop.")
