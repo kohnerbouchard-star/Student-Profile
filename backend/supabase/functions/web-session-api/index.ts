@@ -192,6 +192,7 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
       login.session.accessToken,
     ),
     csrfToken: randomWebAdminCsrfToken(),
+    mfaRequired: login.session.mfaRequired,
     user: {
       id: login.user.id,
       email: login.user.email,
@@ -735,7 +736,7 @@ function trustedClientIp(request: Request): string | null {
 function publicSession(
   payload: WebAdminSessionPayload,
   assuranceLevel = String(parseJwtClaim(payload.accessToken, "aal") || "aal1"),
-  mfaRequired = true,
+  mfaRequired = payload.mfaRequired,
 ) {
   return {
     authenticated: true,
