@@ -5,13 +5,28 @@ on:
     paths:
       - ".github/workflows/beta-security-contract.yml"
       - "backend/src/security/**"
+      - "backend/src/platform/supabase/edgeStaffSession.ts"
+      - "backend/src/platform/supabase/edgeResponse.ts"
+      - "backend/src/domains/auth/api/**"
+      - "backend/src/domains/players/api/playerLoginHttpHandler.ts"
+      - "backend/src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts"
       - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
       - "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts"
+      - "backend/supabase/functions/bootstrap-api/**"
+      - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/staff-api/**"
+      - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+      - "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts"
+      - "backend/supabase/migrations/*authentication_throttle*.sql"
+      - "backend/supabase/migrations/*staff_security_state*.sql"
       - "backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql"
       - "backend/package.json"
       - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
+      - "docs/security/**"
       - "docs/operations/beta-security-rate-limit-staging-runbook.md"
       - "docs/operations/staff-access-security-policy.md"
+      - "scripts/auth-boundary-contract.test.mjs"
+      - "scripts/econovaria-local-gateway.py"
       - "scripts/staging/probe-beta-security-http.mjs"
       - "scripts/staging/probe-beta-security-rate-limit-sql.mjs"
       - "scripts/staging/scan-beta-security-evidence.mjs"
@@ -56,13 +71,35 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Run security contracts
+      - name: Run existing security contracts
         working-directory: backend
         run: npm run test:player-security
+
+      - name: Run authentication convergence contracts
+        env:
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_security_contract
+          SUPABASE_SECRET_KEY: sb_secret_security_contract
+        run: |
+          deno test \
+            --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY \
+            --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/src/security/staffPasswordPolicy.test.ts \
+            backend/src/security/authenticationThrottle.test.ts \
+            backend/src/security/edgeRequestBoundary.test.ts \
+            backend/src/domains/auth/api/staffLoginHttpHandler.test.ts \
+            backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts \
+            backend/src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts \
+            backend/supabase/functions/admin-api/adminSecurityGuard.test.ts
 
       - name: Typecheck all backend surfaces
         working-directory: backend
         run: npm run typecheck:all
+
+      - name: Validate browser and gateway auth boundaries
+        run: node --test scripts/auth-boundary-contract.test.mjs
 
       - name: Validate connected probe contracts
         run: npm run test:security-probes
