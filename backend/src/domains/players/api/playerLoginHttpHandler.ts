@@ -29,6 +29,12 @@ import {
   type AuthenticationThrottleBucket,
   type AuthenticationThrottleDecision,
 } from "../../../security/authenticationThrottle.ts";
+import {
+  createPlayerCredentialMaterial,
+  isLegacyPlayerCredential,
+  type PlayerCredentialRecord,
+  verifyPlayerCredential,
+} from "../../../security/playerCredentialHashing.ts";
 
 interface PlayerLoginDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -40,12 +46,20 @@ interface PlayerLoginDependencies {
   readonly checkThrottle?: typeof checkAuthenticationThrottle;
   readonly recordFailure?: typeof recordAuthenticationFailure;
   readonly recordSuccess?: typeof recordAuthenticationSuccess;
+  readonly verifyCredential?: typeof verifyPlayerCredential;
+  readonly createCredentialMaterial?: typeof createPlayerCredentialMaterial;
 }
 
 interface PlayerLoginRequestBody {
   readonly gameJoinCode: string;
   readonly playerIdentifier: string;
   readonly accessCode: string;
+}
+
+interface PlayerCredentialRow extends PlayerCredentialRecord {
+  readonly id: string;
+  readonly player_id: string;
+  readonly status: string;
 }
 
 export async function handlePlayerLoginRequest(
@@ -55,7 +69,7 @@ export async function handlePlayerLoginRequest(
   if (request.method !== "POST") {
     return jsonError(405, {
       code: "method_not_allowed",
-      message: "Use POST for player login.",
+      message: "Use POST for Player login.",
       retryable: false,
     });
   }
@@ -72,6 +86,7 @@ export async function handlePlayerLoginRequest(
 
     const body = await readPlayerLoginRequestBody(request);
     const normalizedJoinCode = normalizeJoinCode(body.gameJoinCode);
+    const normalizedAccessCode = normalizeStudentCode(body.accessCode);
     const playerIdentifierNormalized = normalizePlayerIdentifier(
       body.playerIdentifier,
     );
@@ -92,7 +107,6 @@ export async function handlePlayerLoginRequest(
 
     const hashValue = dependencies.hashValue ?? sha256Hex;
     const gameJoinCodeHash = await hashValue(normalizedJoinCode);
-    const accessCodeHash = await hashValue(normalizeStudentCode(body.accessCode));
 
     const gameResponse = await serviceClient
       .from("game_sessions")
@@ -101,7 +115,6 @@ export async function handlePlayerLoginRequest(
       .eq("game_join_code_status", "active")
       .eq("status", "active")
       .maybeSingle();
-
     if (gameResponse.error) return playerLoginServiceFailure();
 
     const gameSession = gameResponse.data as {
@@ -125,7 +138,6 @@ export async function handlePlayerLoginRequest(
       .eq("player_identifier_normalized", playerIdentifierNormalized)
       .eq("status", "active")
       .maybeSingle();
-
     if (playerResponse.error) return playerLoginServiceFailure();
 
     const player = playerResponse.data as {
@@ -149,21 +161,35 @@ export async function handlePlayerLoginRequest(
 
     const credentialResponse = await serviceClient
       .from("player_access_credentials")
-      .select("id,player_id,status")
+      .select(
+        "id,player_id,status,normalized_student_code_hash,credential_version,credential_salt,credential_verifier,credential_iterations",
+      )
       .eq("game_session_id", gameSession.id)
       .eq("player_id", player.id)
-      .eq("normalized_student_code_hash", accessCodeHash)
       .eq("status", "active")
       .maybeSingle();
-
     if (credentialResponse.error) return playerLoginServiceFailure();
 
-    const credential = credentialResponse.data as {
-      readonly id: string;
-      readonly player_id: string;
-      readonly status: string;
-    } | null;
-    if (!credential?.player_id || credential.player_id !== player.id) {
+    const credential = credentialResponse.data as PlayerCredentialRow | null;
+    if (!credential?.id || credential.player_id !== player.id) {
+      return failedPlayerLoginResponse(
+        serviceClient,
+        throttleBuckets,
+        dependencies,
+      );
+    }
+
+    const credentialVerified = await verifyCredentialAndUpgradeIfNeeded(
+      serviceClient,
+      gameSession.id,
+      player.id,
+      normalizedAccessCode,
+      credential,
+      hashValue,
+      dependencies,
+    );
+    if (!credentialVerified.ok) {
+      if (credentialVerified.serviceFailure) return playerLoginServiceFailure();
       return failedPlayerLoginResponse(
         serviceClient,
         throttleBuckets,
@@ -216,7 +242,6 @@ export async function handlePlayerLoginRequest(
         retryable: error.retryable,
       });
     }
-
     return playerLoginServiceFailure();
   }
 }
@@ -226,8 +251,17 @@ export async function readPlayerLoginRequestBody(
 ): Promise<PlayerLoginRequestBody> {
   let value: unknown;
   try {
-    value = await request.json();
-  } catch {
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > 4_096) {
+      throw new EdgeActivationError(
+        "request_body_too_large",
+        "Player login requests are limited to 4096 bytes.",
+        413,
+      );
+    }
+    value = JSON.parse(raw);
+  } catch (error) {
+    if (error instanceof EdgeActivationError) throw error;
     throw new EdgeActivationError(
       "invalid_request_body",
       "Request body must be a JSON object.",
@@ -296,6 +330,57 @@ export async function readPlayerLoginRequestBody(
   }
 
   return { gameJoinCode, playerIdentifier, accessCode };
+}
+
+async function verifyCredentialAndUpgradeIfNeeded(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  playerId: string,
+  normalizedAccessCode: string,
+  credential: PlayerCredentialRow,
+  hashValue: typeof sha256Hex,
+  dependencies: PlayerLoginDependencies,
+): Promise<{ readonly ok: boolean; readonly serviceFailure: boolean }> {
+  if (credential.credential_version === "pbkdf2-sha256-v2") {
+    const verified = await (
+      dependencies.verifyCredential ?? verifyPlayerCredential
+    )(normalizedAccessCode, credential);
+    return { ok: verified, serviceFailure: false };
+  }
+
+  if (!isLegacyPlayerCredential(credential)) {
+    return { ok: false, serviceFailure: true };
+  }
+
+  const legacyHash = await hashValue(normalizedAccessCode);
+  if (!constantTimeStringEqual(
+    legacyHash,
+    credential.normalized_student_code_hash,
+  )) {
+    return { ok: false, serviceFailure: false };
+  }
+
+  const createMaterial = dependencies.createCredentialMaterial ??
+    createPlayerCredentialMaterial;
+  const material = await createMaterial(normalizedAccessCode);
+  const upgradeResponse = await serviceClient.rpc<boolean>(
+    "upgrade_player_access_credential_v2",
+    {
+      p_credential_id: credential.id,
+      p_game_session_id: gameSessionId,
+      p_player_id: playerId,
+      p_expected_legacy_hash: legacyHash,
+      p_lookup_digest: material.lookupDigest,
+      p_credential_version: material.credentialVersion,
+      p_credential_salt: material.salt,
+      p_credential_verifier: material.verifier,
+      p_credential_iterations: material.iterations,
+    },
+  );
+  if (upgradeResponse.error || upgradeResponse.data !== true) {
+    return { ok: false, serviceFailure: true };
+  }
+  return { ok: true, serviceFailure: false };
 }
 
 async function failedPlayerLoginResponse(
@@ -412,10 +497,21 @@ async function createPlayerSession(
     status: 409,
     error: {
       code: "player_session_generation_conflict",
-      message: "A unique player session could not be generated.",
+      message: "A unique Player session could not be generated.",
       retryable: true,
     },
   };
+}
+
+function constantTimeStringEqual(left: string, right: string): boolean {
+  const leftBytes = new TextEncoder().encode(left);
+  const rightBytes = new TextEncoder().encode(right);
+  const length = Math.max(leftBytes.byteLength, rightBytes.byteLength);
+  let difference = leftBytes.byteLength ^ rightBytes.byteLength;
+  for (let index = 0; index < length; index += 1) {
+    difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
+  return difference === 0;
 }
 
 function generateSessionToken(): string {
