@@ -17,7 +17,19 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
   );
   assertEquals(
     readPlayerCapabilityManifestRoutePath(
+      "/player-api/players/me/capabilities",
+    ),
+    { kind: "manifest" },
+  );
+  assertEquals(
+    readPlayerCapabilityManifestRoutePath(
       "/functions/v1/classroom-api/players/me/capabilities",
+    ),
+    { kind: "manifest" },
+  );
+  assertEquals(
+    readPlayerCapabilityManifestRoutePath(
+      "/functions/v1/player-api/players/me/capabilities",
     ),
     { kind: "manifest" },
   );
@@ -32,12 +44,24 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
     { kind: "malformed" },
   );
   assertEquals(
+    readPlayerCapabilityManifestRoutePath(
+      "/player-api/players/me/capabilities/extra",
+    ),
+    { kind: "malformed" },
+  );
+  assertEquals(
     readPlayerCapabilityManifestRoutePath("/spoof/players/me/capabilities"),
     null,
   );
   assertEquals(
     readPlayerCapabilityManifestRoutePath(
       "/spoof/classroom-api/players/me/capabilities",
+    ),
+    null,
+  );
+  assertEquals(
+    readPlayerCapabilityManifestRoutePath(
+      "/spoof/player-api/players/me/capabilities",
     ),
     null,
   );
