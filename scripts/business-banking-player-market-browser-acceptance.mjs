@@ -251,7 +251,10 @@ async function executeRenderedOrder(page, ticker, side) {
   await openMarket(page);
   await selectTicker(page, ticker);
   const form = page.locator('form[data-endpoint="marketOrder"]');
-  await form.locator(`[name="side"][value="${side}"]`).check();
+  const sideInput = form.locator(`[name="side"][value="${side}"]`);
+  const sideControl = sideInput.locator("xpath=ancestor::label[1]");
+  await sideControl.click();
+  if (!(await sideInput.isChecked())) throw new Error(`Rendered ${side} order control did not select its radio input.`);
   await form.locator('[name="orderType"]').selectOption("market");
   await form.locator('[name="quantity"]').fill("1");
   await form.locator('button[type="submit"]').click();
