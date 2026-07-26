@@ -26,6 +26,29 @@ Deno.test("contract public routes accept direct and exact classroom-api paths", 
   }
 });
 
+Deno.test("contract public route parsers yield sibling operations", () => {
+  for (
+    const prefix of [
+      "",
+      "/classroom-api",
+      "/functions/v1/classroom-api",
+    ]
+  ) {
+    assertEquals(
+      readPlayerContractAcceptanceRoutePath(
+        `${prefix}/players/me/contracts/arrival-orientation/submit`,
+      ),
+      null,
+    );
+    assertEquals(
+      readPlayerContractPublicSubmitRoutePath(
+        `${prefix}/players/me/contracts/arrival-orientation/accept`,
+      ),
+      null,
+    );
+  }
+});
+
 Deno.test("contract public routes reject malformed and spoofed prefixes", () => {
   assertEquals(
     readPlayerContractAcceptanceRoutePath(
