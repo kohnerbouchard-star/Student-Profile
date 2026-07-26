@@ -6,16 +6,22 @@ import {
 import { handleStaffBootstrapRequest } from "../domains/auth/api/staffBootstrapHttpHandler.ts";
 import { handleLicensingActivationRequest } from "../domains/licensing/api/licensingActivationHttpHandler.ts";
 
-type StaffRow = Record<string, string> & {
+interface StaffRow {
   readonly id: string;
   readonly supabase_auth_user_id: string;
   readonly email: string;
   readonly display_name: string;
-};
+  readonly status: "active";
+  readonly role: "game_admin";
+  readonly permission_version: number;
+  readonly security_version: number;
+  readonly mfa_required: boolean;
+}
 
 interface AuthUser {
   readonly id: string;
   readonly email?: string | null;
+  readonly app_metadata?: Record<string, unknown>;
 }
 
 interface QueryError {
@@ -58,11 +64,21 @@ const STAFF: StaffRow = {
   supabase_auth_user_id: "auth-smoke-1",
   email: "staff-smoke@example.test",
   display_name: "Staff Smoke",
+  status: "active",
+  role: "game_admin",
+  permission_version: 1,
+  security_version: 1,
+  mfa_required: true,
 };
 
 const AUTH_USER: AuthUser = {
   id: STAFF.supabase_auth_user_id,
   email: STAFF.email,
+  app_metadata: {
+    econovaria_role: STAFF.role,
+    permission_version: STAFF.permission_version,
+    security_version: STAFF.security_version,
+  },
 };
 
 const tests: readonly [string, () => Promise<void>][] = [
@@ -297,7 +313,6 @@ function createMockClient(options: MockOptions, calls: MockCalls): EdgeSupabaseC
     auth: {
       getUser: async (accessToken: string) => {
         calls.authTokens.push(accessToken);
-
         return {
           data: { user: options.authUser ?? null },
           error: options.authError ?? null,
@@ -307,7 +322,19 @@ function createMockClient(options: MockOptions, calls: MockCalls): EdgeSupabaseC
     from: (tableName: string) => createQuery(tableName, options),
     rpc: async (functionName: string) => {
       calls.rpcNames.push(functionName);
-
+      if (functionName === "consume_request_rate_limits_v1") {
+        return {
+          data: [{
+            allowed: true,
+            retry_after_seconds: 0,
+            limiting_dimension: null,
+            limit_count: 100,
+            remaining_count: 99,
+            reset_at: "2026-07-26T12:05:00.000Z",
+          }],
+          error: null,
+        };
+      }
       return { data: null, error: null };
     },
   } as unknown as EdgeSupabaseClient;
