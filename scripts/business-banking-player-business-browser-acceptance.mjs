@@ -216,7 +216,7 @@ async function login(browser, gameCode) {
   );
   await page.locator("#playerForm button[type='submit']").click();
   const response = await responsePromise;
-  if (response.status() !== 200) throw new Error(`Player login returned ${response.status}.`);
+  if (response.status() !== 200) throw new Error(`Player login returned ${response.status()}.`);
   await page.waitForURL(/\/player-terminal\/(?:index\.html)?(?:#.*)?$/, { timeout: 120_000 });
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   return { context, page };
@@ -240,6 +240,13 @@ async function cashContext(page) {
 }
 
 async function openBusiness(page) {
+  const businessControl = page.locator('[data-route="business"]:visible').first();
+  if (!(await businessControl.count())) {
+    const workControl = page.locator('[data-route="contracts"]:visible').first();
+    await workControl.click();
+    await page.waitForFunction(() => location.hash === "#contracts", { timeout: 30_000 });
+    await page.locator('[data-route="business"]:visible').first().waitFor({ state: "visible", timeout: 30_000 });
+  }
   await openRoute(page, "business", ".player-terminal-business-page");
 }
 
