@@ -77,3 +77,23 @@ test("Messages page exposes safe public-ID lifecycle controls without attachment
   ));
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+test("Unread conversation clicks submit the secure read form exactly once", async ({ page }) => {
+  const fixture = await mountMessagingFixture(page);
+  await page.evaluate(() => {
+    globalThis.__messageReadSubmitCount = 0;
+    const form = document.querySelector('#playerMessagingBrowserFixture form[data-endpoint="messageRead"]');
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      globalThis.__messageReadSubmitCount += 1;
+    });
+  });
+
+  const unread = fixture.locator('form[data-endpoint="messageRead"] [data-player-message-thread]').first();
+  await unread.click();
+  await expect.poll(() => page.evaluate(() => globalThis.__messageReadSubmitCount)).toBe(1);
+  await unread.click();
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => globalThis.__messageReadSubmitCount)).toBe(1);
+  await expect(fixture.locator('form[data-endpoint="messageRead"]')).toHaveAttribute("data-message-read-submitting", "true");
+});
