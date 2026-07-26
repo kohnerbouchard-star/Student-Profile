@@ -55,8 +55,13 @@ test("scheduler sends signatures without transmitting the runner secret", () => 
   );
 });
 
-test("nonce replay ledger is service-role-only and stores no raw nonce", () => {
-  assert.ok(migration.includes("create table if not exists public.internal_runner_nonce_claims"));
+test("nonce replay ledger is private, service-role-only, and stores no raw nonce", () => {
+  assert.ok(migration.includes("create schema if not exists private"));
+  assert.ok(migration.includes("create table if not exists private.internal_runner_nonce_claims"));
+  assert.ok(migration.includes("on private.internal_runner_nonce_claims (expires_at)"));
+  assert.ok(migration.includes("delete from private.internal_runner_nonce_claims"));
+  assert.ok(migration.includes("insert into private.internal_runner_nonce_claims"));
+  assert.ok(migration.includes("set search_path = pg_catalog, private, public"));
   assert.ok(migration.includes("nonce_hash text not null"));
   assert.equal(/\bnonce\s+text\b/i.test(migration), false);
   assert.ok(migration.includes("enable row level security"));
