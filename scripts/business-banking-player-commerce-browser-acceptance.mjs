@@ -164,7 +164,13 @@ async function creditPlayer(admin, player, currencyCode) {
       },
     },
   );
-  if (response.status !== 200 || response.payload?.ok !== true) {
+  const adjustment = response.payload?.data || response.payload;
+  const applied = response.payload?.ok === true || adjustment?.adjusted === true;
+  if (
+    response.status !== 200 ||
+    !applied ||
+    adjustment?.ledger?.accountType !== "checking"
+  ) {
     throw new Error(`Admin fixture credit returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
   }
 }
