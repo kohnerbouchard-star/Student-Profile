@@ -5,8 +5,8 @@ window.Econovaria.core.api = window.Econovaria.core.api || {};
 const ECONOVARIA_DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const ECONOVARIA_DEVICE_HEADER = "x-econovaria-device-id";
 const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
-const ADMIN_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
+const ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
+const ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function getApiRouteUrl(surface, path) {
@@ -64,7 +64,7 @@ function getOrCreateDeviceId() {
 function readSafeAdminState() {
   try {
     const value = JSON.parse(
-      window.sessionStorage.getItem(ADMIN_STATE_STORAGE_KEY) || "null"
+      window.sessionStorage.getItem(ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY) || "null"
     );
     return value && value.authenticated === true &&
         CSRF_PATTERN.test(String(value.csrfToken || ""))
@@ -77,7 +77,7 @@ function readSafeAdminState() {
 
 function readSelectedAdminGameId() {
   return String(
-    window.sessionStorage.getItem(ADMIN_SELECTED_GAME_STORAGE_KEY) || ""
+    window.sessionStorage.getItem(ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY) || ""
   ).trim();
 }
 
@@ -318,7 +318,7 @@ function callStaffSignupApi(input) {
 }
 
 function callLicensingActivationApi(_unusedCredential, input) {
-  return callAdminBffJsonRoute("/licensing/activate", {
+  return callAdminBffJsonRoute("/games/provision", {
     method: "POST",
     body: {
       purchaseCode: String(input?.licenseCode || "").trim(),
