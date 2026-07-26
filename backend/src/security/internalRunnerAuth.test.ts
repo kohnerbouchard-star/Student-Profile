@@ -230,20 +230,32 @@ async function signedRequest({
 async function sign(payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(SECRET),
+    ownedArrayBuffer(new TextEncoder().encode(SECRET)),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
   const signature = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)),
+    await crypto.subtle.sign(
+      "HMAC",
+      key,
+      ownedArrayBuffer(new TextEncoder().encode(payload)),
+    ),
   );
   return encodeBase64Url(signature);
 }
 
 async function sha256Hex(value: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", value));
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", ownedArrayBuffer(value)),
+  );
   return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function ownedArrayBuffer(value: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(value.byteLength);
+  copy.set(value);
+  return copy.buffer;
 }
 
 function encodeBase64Url(value: Uint8Array): string {
