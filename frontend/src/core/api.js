@@ -8,6 +8,9 @@ const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{
 const ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const ADMIN_MFA_MODULE_URL = "frontend/src/core/admin-mfa.js";
+let inMemoryAdminCsrfToken = "";
+let adminMfaModulePromise = null;
 
 function getApiRouteUrl(surface, path) {
   const constants = window.Econovaria?.core?.constants || {};
@@ -75,10 +78,52 @@ function readSafeAdminState() {
   }
 }
 
+function rememberAdminCsrf(result) {
+  const candidate = String(result?.csrfToken || "");
+  if (CSRF_PATTERN.test(candidate)) inMemoryAdminCsrfToken = candidate;
+}
+
+function clearAdminCsrf() {
+  inMemoryAdminCsrfToken = "";
+}
+
+function readAdminCsrf() {
+  return CSRF_PATTERN.test(inMemoryAdminCsrfToken)
+    ? inMemoryAdminCsrfToken
+    : String(readSafeAdminState()?.csrfToken || "");
+}
+
 function readSelectedAdminGameId() {
   return String(
     window.sessionStorage.getItem(ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY) || ""
   ).trim();
+}
+
+function loadAdminMfaModule() {
+  if (window.Econovaria?.adminMfa?.ensureAal2) {
+    return Promise.resolve(window.Econovaria.adminMfa);
+  }
+  if (adminMfaModulePromise) return adminMfaModulePromise;
+
+  adminMfaModulePromise = new Promise((resolve, reject) => {
+    const script = window.document.createElement("script");
+    script.src = new URL(ADMIN_MFA_MODULE_URL, window.document.baseURI).href;
+    script.async = true;
+    script.dataset.econovariaAdminMfaModule = "true";
+    script.addEventListener("load", () => {
+      const module = window.Econovaria?.adminMfa;
+      if (module?.ensureAal2) resolve(module);
+      else reject(new Error("Administrator MFA module did not initialize."));
+    }, { once: true });
+    script.addEventListener("error", () => {
+      reject(new Error("Administrator MFA module could not be loaded."));
+    }, { once: true });
+    window.document.head.append(script);
+  }).catch((error) => {
+    adminMfaModulePromise = null;
+    throw error;
+  });
+  return adminMfaModulePromise;
 }
 
 async function readJsonResponse(response) {
@@ -129,8 +174,8 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       headers["x-player-session-token"] = playerSessionToken;
     }
     if (options.requireCsrf === true) {
-      const state = readSafeAdminState();
-      if (!state) {
+      const csrfToken = readAdminCsrf();
+      if (!CSRF_PATTERN.test(csrfToken)) {
         return {
           ok: false,
           status: 401,
@@ -139,7 +184,7 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
           retryAfterSeconds: 0
         };
       }
-      headers["x-econovaria-csrf-token"] = state.csrfToken;
+      headers["x-econovaria-csrf-token"] = csrfToken;
     }
 
     const requestOptions = {
@@ -156,6 +201,7 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
     if (response.ok && result?.ok === true) {
+      rememberAdminCsrf(result);
       return { status: response.status, ...result };
     }
 
@@ -280,8 +326,8 @@ function callPlayerGameDashboardApi(sessionToken) {
   });
 }
 
-function callSupabasePasswordSignIn(email, password) {
-  return callSupabaseJsonRoute("webSession", "/login", {
+async function callSupabasePasswordSignIn(email, password) {
+  const signIn = await callSupabaseJsonRoute("webSession", "/login", {
     method: "POST",
     credentials: "include",
     body: {
@@ -291,25 +337,48 @@ function callSupabasePasswordSignIn(email, password) {
     fallbackCode: "admin_login_failed",
     fallbackMessage: "Admin email or password is invalid."
   });
+  if (!signIn?.ok) return signIn;
+
+  const status = await callAdminWebSessionStatus();
+  if (!status?.ok) return status;
+  try {
+    const mfa = await loadAdminMfaModule();
+    const elevated = await mfa.ensureAal2(status);
+    rememberAdminCsrf(elevated);
+    return elevated;
+  } catch (error) {
+    clearAdminCsrf();
+    return {
+      ok: false,
+      status: 401,
+      code: "staff_mfa_required",
+      message: String(error?.message || "Administrator MFA verification is required."),
+      retryAfterSeconds: 0
+    };
+  }
 }
 
-function callAdminWebSessionStatus() {
-  return callSupabaseJsonRoute("webSession", "/status", {
+async function callAdminWebSessionStatus() {
+  const result = await callSupabaseJsonRoute("webSession", "/status", {
     method: "GET",
     credentials: "include",
     fallbackCode: "staff_session_invalid",
     fallbackMessage: "The administrator session could not be loaded."
   });
+  if (result?.ok) rememberAdminCsrf(result);
+  return result;
 }
 
-function callAdminWebSessionLogout() {
-  return callSupabaseJsonRoute("webSession", "/logout", {
+async function callAdminWebSessionLogout() {
+  const result = await callSupabaseJsonRoute("webSession", "/logout", {
     method: "POST",
     credentials: "include",
     body: {},
     fallbackCode: "staff_logout_failed",
     fallbackMessage: "The administrator session could not be closed."
   });
+  clearAdminCsrf();
+  return result;
 }
 
 function callAdminMfaStatus() {
@@ -334,8 +403,8 @@ function callAdminMfaEnroll(friendlyName) {
   });
 }
 
-function callAdminMfaVerify(factorHandle, code) {
-  return callSupabaseJsonRoute("webSession", "/mfa/verify", {
+async function callAdminMfaVerify(factorHandle, code) {
+  const result = await callSupabaseJsonRoute("webSession", "/mfa/verify", {
     method: "POST",
     credentials: "include",
     requireCsrf: true,
@@ -346,6 +415,8 @@ function callAdminMfaVerify(factorHandle, code) {
     fallbackCode: "staff_mfa_verification_failed",
     fallbackMessage: "The authenticator code is invalid or expired."
   });
+  if (result?.ok) rememberAdminCsrf(result);
+  return result;
 }
 
 function callStaffSignupApi(input) {
