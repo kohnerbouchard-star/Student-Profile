@@ -4,6 +4,7 @@ import { markResourceInvalidations } from "../../api/invalidation-registry.js";
 
 const MESSAGE_READ_FORM = 'form[data-endpoint="messageRead"]';
 const MESSAGE_THREAD_CONTROL = "[data-player-message-thread]";
+const MESSAGE_SURFACE = ".player-terminal-messages-page";
 const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
 
 function publicThreadId(control, form) {
@@ -17,6 +18,27 @@ function publicThreadId(control, form) {
 
 function nextFrame() {
   return new Promise((resolve) => globalThis.requestAnimationFrame?.(resolve) ?? globalThis.setTimeout(resolve, 0));
+}
+
+function lockMessageSurface(form) {
+  const surface = form.closest(MESSAGE_SURFACE);
+  if (!(surface instanceof HTMLElement)) return () => {};
+  surface.setAttribute("aria-busy", "true");
+  const controls = [...surface.querySelectorAll("button, input, textarea, select")];
+  for (const control of controls) {
+    if (!(control instanceof HTMLButtonElement || control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement)) continue;
+    if (control.disabled) continue;
+    control.dataset.messageReadRefreshLock = "true";
+    control.disabled = true;
+  }
+  return () => {
+    if (surface.isConnected) surface.removeAttribute("aria-busy");
+    for (const control of controls) {
+      if (!control.isConnected || control.dataset.messageReadRefreshLock !== "true") continue;
+      delete control.dataset.messageReadRefreshLock;
+      control.disabled = false;
+    }
+  };
 }
 
 export function installMessageReadController({ mount, terminal, config, api: injectedApi = null }) {
@@ -40,8 +62,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
     pending.add(threadId);
     form.dataset.messageReadSubmitting = "true";
-    control.disabled = true;
     control.setAttribute("aria-busy", "true");
+    const releaseSurface = lockMessageSurface(form);
 
     try {
       api.setSession?.(config);
@@ -68,6 +90,10 @@ export function installMessageReadController({ mount, terminal, config, api: inj
         cancelable: true,
         composed: true,
       }));
+      mount.dispatchEvent(new CustomEvent("econovaria:player-message-read-committed", {
+        bubbles: true,
+        detail: Object.freeze({ threadId }),
+      }));
       terminal.showToast?.("Conversation marked read and refreshed.", "green");
     } catch (error) {
       if (!destroyed) {
@@ -75,11 +101,9 @@ export function installMessageReadController({ mount, terminal, config, api: inj
       }
     } finally {
       pending.delete(threadId);
+      releaseSurface();
       if (form.isConnected) delete form.dataset.messageReadSubmitting;
-      if (control.isConnected) {
-        control.disabled = false;
-        control.removeAttribute("aria-busy");
-      }
+      if (control.isConnected) control.removeAttribute("aria-busy");
     }
   }
 
