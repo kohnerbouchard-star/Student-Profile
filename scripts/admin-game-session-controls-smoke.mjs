@@ -98,8 +98,7 @@ for (const contract of [
 for (const contract of [
   "clearSessionSynchronously",
   "revokeServerSession()",
-  "EconovariaAdminAuthSession",
-  "authSession.signOut()",
+  "return fallbackWebSessionLogout();",
   "fallbackWebSessionLogout",
   "webSessionApiUrl",
   'credentials: "include"',
@@ -112,6 +111,10 @@ for (const contract of [
   );
 }
 assert(
+  !logoutController.includes("authSession.signOut()"),
+  "Admin logout must have one navigation owner and must not delegate to a second teardown path.",
+);
+assert(
   !logoutController.includes("Authorization") &&
     !logoutController.includes("/auth/sign-out") &&
     !logoutController.includes("/auth/v1/logout") &&
@@ -121,7 +124,7 @@ assert(
 assert(
   logoutController.indexOf("logoutPromise = revokeServerSession()") <
     logoutController.indexOf("window.location.replace(loginUrl())"),
-  "Admin web-session revocation must begin before signed-out navigation.",
+  "Admin web-session revocation must settle before signed-out navigation.",
 );
 
 assert(
@@ -143,6 +146,11 @@ assert(
 assert(
   styles.includes("width: min(620px, calc(100vw - 32px))"),
   "Share modal must use the bounded responsive width.",
+);
+assert(
+  styles.includes("@media (max-width: 800px)") &&
+    styles.includes("> .econovaria-admin-game-session-card"),
+  "Narrow Admin layouts must prevent the injected session card from covering content.",
 );
 
 for (const contract of [
@@ -166,5 +174,6 @@ console.log(JSON.stringify({
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
   logoutHttpOnlyWebSession: true,
+  narrowSessionControlsBounded: true,
   backendGameCodeBinding: true,
 }, null, 2));
