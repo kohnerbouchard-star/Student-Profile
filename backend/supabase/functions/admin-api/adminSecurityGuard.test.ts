@@ -2,6 +2,8 @@ import {
   ADMIN_PERMISSIONS,
   guardAdminRequest,
   normalizedAdminAction,
+  requiredAdminPermission,
+  type AdminPermission,
 } from "./adminSecurityGuard.ts";
 import { buildStaffRateLimitBuckets } from "../../../src/security/rateLimitKeying.ts";
 
@@ -14,13 +16,12 @@ const GAME_ID = "22222222-2222-4222-8222-222222222222";
 const RATE_LIMIT_SECRET =
   "EconovariaSecurityConvergenceRateLimitSecret_2026_07";
 
-Deno.test("allows an AAL1 Admin read with matching controlled claims", async () => {
-  const context = contextWith({ aal: "aal1" });
+Deno.test("allows an AAL1 Admin read only with its server grant", async () => {
   const result = await guardAdminRequest(
     new Request(`https://example.test/admin-api/games/${GAME_ID}`, {
       method: "GET",
     }),
-    context,
+    contextWith({ aal: "aal1", permissions: ["game.read"] }),
     `/games/${GAME_ID}`,
     { consumeRateLimit: allowRateLimit },
   );
@@ -28,18 +29,19 @@ Deno.test("allows an AAL1 Admin read with matching controlled claims", async () 
   assertEquals(result.ok, true);
   if (result.ok) {
     assertEquals(result.assuranceLevel, "aal1");
-    assertEquals(result.permissions.includes("economy.adjust"), true);
-    assertEquals(result.permissions.includes("*"), false);
-    assertEquals(result.permissions, ADMIN_PERMISSIONS);
+    assertEquals(result.requiredPermission, "game.read");
+    assertEquals(result.permissions, ["game.read"]);
+    assertEquals(result.permissions.includes("economy.adjust"), false);
+    assertEquals(result.permissions.includes("*" as AdminPermission), false);
   }
 });
 
-Deno.test("requires AAL2 before an Admin mutation", async () => {
+Deno.test("requires AAL2 after the settings grant is verified", async () => {
   const result = await guardAdminRequest(
     new Request(`https://example.test/admin-api/games/${GAME_ID}/settings`, {
       method: "PATCH",
     }),
-    contextWith({ aal: "aal1" }),
+    contextWith({ aal: "aal1", permissions: ["settings.manage"] }),
     `/games/${GAME_ID}/settings`,
     { consumeRateLimit: allowRateLimit },
   );
@@ -51,13 +53,13 @@ Deno.test("requires AAL2 before an Admin mutation", async () => {
   }
 });
 
-Deno.test("allows an AAL2 Admin mutation after the rate gate", async () => {
+Deno.test("allows an AAL2 Player mutation with only players.manage", async () => {
   let capturedAction = "";
   const result = await guardAdminRequest(
     new Request(`https://example.test/admin-api/games/${GAME_ID}/players/99`, {
       method: "POST",
     }),
-    contextWith({ aal: "aal2" }),
+    contextWith({ aal: "aal2", permissions: ["players.manage"] }),
     `/games/${GAME_ID}/players/99`,
     {
       consumeRateLimit: async (_service, input) => {
@@ -68,11 +70,58 @@ Deno.test("allows an AAL2 Admin mutation after the rate gate", async () => {
   );
 
   assertEquals(result.ok, true);
+  if (result.ok) {
+    assertEquals(result.requiredPermission, "players.manage");
+    assertEquals(result.permissions, ["players.manage"]);
+  }
   assertEquals(capturedAction, "staff.admin.write.players");
 });
 
-Deno.test("rejects stale role and security version claims", async () => {
-  const context = contextWith({ aal: "aal2" });
+Deno.test("denies a route when only an unrelated grant exists", async () => {
+  let rateLimitCalls = 0;
+  const result = await guardAdminRequest(
+    new Request(`https://example.test/admin-api/games/${GAME_ID}/players`, {
+      method: "GET",
+    }),
+    contextWith({ aal: "aal2", permissions: ["audit.read"] }),
+    `/games/${GAME_ID}/players`,
+    {
+      consumeRateLimit: async () => {
+        rateLimitCalls += 1;
+        return allowedDecision();
+      },
+    },
+  );
+
+  assertEquals(result.ok, false);
+  if (!result.ok) {
+    assertEquals(result.status, 403);
+    assertEquals(result.code, "staff_permission_denied");
+  }
+  assertEquals(rateLimitCalls, 0);
+});
+
+Deno.test("fails closed when permission grants cannot be loaded", async () => {
+  const result = await guardAdminRequest(
+    new Request("https://example.test/admin-api/games", { method: "GET" }),
+    contextWith({
+      aal: "aal2",
+      permissions: [],
+      permissionError: { message: "permission store unavailable" },
+    }),
+    "/games",
+    { consumeRateLimit: allowRateLimit },
+  );
+
+  assertEquals(result.ok, false);
+  if (!result.ok) {
+    assertEquals(result.status, 503);
+    assertEquals(result.code, "staff_permissions_unavailable");
+  }
+});
+
+Deno.test("rejects stale role and security version claims before grants", async () => {
+  const context = contextWith({ aal: "aal2", permissions: ADMIN_PERMISSIONS });
   context.user.app_metadata.security_version = 2;
   const result = await guardAdminRequest(
     new Request("https://example.test/admin-api/games", { method: "GET" }),
@@ -85,10 +134,10 @@ Deno.test("rejects stale role and security version claims", async () => {
   if (!result.ok) assertEquals(result.code, "staff_claims_outdated");
 });
 
-Deno.test("returns Retry-After metadata when the Admin route is limited", async () => {
+Deno.test("returns Retry-After metadata after authorization succeeds", async () => {
   const result = await guardAdminRequest(
     new Request("https://example.test/admin-api/games", { method: "GET" }),
-    contextWith({ aal: "aal2" }),
+    contextWith({ aal: "aal2", permissions: ["game.read"] }),
     "/games",
     {
       consumeRateLimit: async () => ({
@@ -108,6 +157,24 @@ Deno.test("returns Retry-After metadata when the Admin route is limited", async 
     assertEquals(result.retryAfterSeconds, 45);
     assertEquals(result.resetAt, "2026-07-26T12:05:00.000Z");
   }
+});
+
+Deno.test("maps reviewed Admin resources to explicit grants", () => {
+  assertEquals(requiredAdminPermission("GET", "/games"), "game.read");
+  assertEquals(requiredAdminPermission("POST", "/games"), "game.create");
+  assertEquals(
+    requiredAdminPermission("PATCH", `/games/${GAME_ID}/settings`),
+    "settings.manage",
+  );
+  assertEquals(
+    requiredAdminPermission("GET", `/games/${GAME_ID}/logs`),
+    "audit.read",
+  );
+  assertEquals(
+    requiredAdminPermission("POST", `/games/${GAME_ID}/marketplace/disputes`),
+    "marketplace.moderate",
+  );
+  assertEquals(requiredAdminPermission("GET", "/unreviewed/path"), null);
 });
 
 Deno.test("maps identifiers to one canonical bounded Admin action", () => {
@@ -147,7 +214,11 @@ Deno.test("canonical Admin actions satisfy shared rate-limit keying", async () =
   ]);
 });
 
-function contextWith(options: { readonly aal: "aal1" | "aal2" }) {
+function contextWith(options: {
+  readonly aal: "aal1" | "aal2";
+  readonly permissions: readonly AdminPermission[];
+  readonly permissionError?: { readonly message: string } | null;
+}) {
   return {
     token: jwt(options.aal),
     user: {
@@ -162,23 +233,35 @@ function contextWith(options: { readonly aal: "aal1" | "aal2" }) {
     games: [{ id: GAME_ID }],
     service: {
       from(table: string) {
-        if (table !== "staff_users") throw new Error(`Unexpected table: ${table}`);
-        const response = {
-          data: {
-            status: "active",
-            role: "game_admin",
-            permission_version: 1,
-            security_version: 1,
-            mfa_required: true,
-          },
-          error: null,
-        };
-        const query = {
-          select: () => query,
-          eq: () => query,
-          maybeSingle: async () => response,
-        };
-        return query;
+        if (table === "staff_users") {
+          const response = {
+            data: {
+              status: "active",
+              role: "game_admin",
+              permission_version: 1,
+              security_version: 1,
+              mfa_required: true,
+            },
+            error: null,
+          };
+          const query = {
+            select: () => query,
+            eq: () => query,
+            maybeSingle: async () => response,
+          };
+          return query;
+        }
+        if (table === "staff_permission_grants") {
+          const query = {
+            select: () => query,
+            eq: async () => ({
+              data: options.permissions.map((permission) => ({ permission })),
+              error: options.permissionError ?? null,
+            }),
+          };
+          return query;
+        }
+        throw new Error(`Unexpected table: ${table}`);
       },
       rpc: async () => ({ data: null, error: null }),
     },
