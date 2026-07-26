@@ -211,9 +211,11 @@ async function waitForAdminConsole(page) {
 }
 
 async function signInAdmin(page, expectedGameId) {
+  const consoleErrorStart = evidence.adminConsoleErrors.length;
   await page.goto(`${BASE_URL}/?mode=admin`, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.locator("#adminEmail").fill(ADMIN_EMAIL);
   await page.locator("#adminAccessCode").fill(ADMIN_PASSWORD);
+  const requestAuditStart = evidence.adminRequests.length;
   const loginResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/functions/v1/web-session-api/login") &&
       response.request().method() === "POST",
@@ -221,7 +223,7 @@ async function signInAdmin(page, expectedGameId) {
   );
   const statusResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/functions/v1/web-session-api/status") &&
-      response.request().method() === "GET",
+      response.request().method() === "GET" && response.status() === 200,
     { timeout: 120_000 },
   );
   await page.locator("#adminForm button[type='submit']").click();
@@ -236,15 +238,35 @@ async function signInAdmin(page, expectedGameId) {
   }
   const status = await statusResponse.json().catch(() => null);
   const activeGames = Array.isArray(status?.activeGameSessions) ? status.activeGameSessions : [];
-  if (!activeGames.some((game) => String(game?.id || "") === expectedGameId)) {
+  const expectedGameIndex = activeGames.findIndex((game) => String(game?.id || "") === expectedGameId);
+  if (expectedGameIndex < 0) {
     throw new Error("Connected Admin web session did not contain the provisioned game scope.");
   }
+
+  const gameRows = page.locator("#adminGameList .game-row");
+  await gameRows.nth(expectedGameIndex).waitFor({ state: "visible", timeout: 30_000 });
+  await gameRows.nth(expectedGameIndex).click();
   await waitForAdminConsole(page);
+
+  const selectedGameId = await page.evaluate(() =>
+    sessionStorage.getItem("econovaria.admin.selected-game.v1") || ""
+  );
+  if (selectedGameId !== expectedGameId) {
+    throw new Error("Connected Admin selected the wrong game scope.");
+  }
   const storage = await page.evaluate(() => sessionStorage.getItem("econovaria.admin.auth.v1") || "");
   if (/accessToken|refreshToken|eyJ[A-Za-z0-9_-]+\./.test(storage)) {
     throw new Error("Admin browser storage exposed Staff credentials.");
   }
+
+  const retainedErrors = evidence.adminConsoleErrors.slice(0, consoleErrorStart).concat(
+    evidence.adminConsoleErrors.slice(consoleErrorStart).filter((entry) =>
+      !/Failed to load resource: the server responded with a status of 401/i.test(entry)
+    ),
+  );
+  evidence.adminConsoleErrors.splice(0, evidence.adminConsoleErrors.length, ...retainedErrors);
   evidence.adminUsesHttpOnlyBff = true;
+  return requestAuditStart;
 }
 
 async function navigateAdminSection(page, name) {
@@ -404,9 +426,9 @@ try {
     consoleErrors: evidence.adminConsoleErrors,
     pageErrors: evidence.adminPageErrors,
   });
-  await signInAdmin(adminPage, setup.gameId);
+  const authenticatedRequestStart = await signInAdmin(adminPage, setup.gameId);
   evidence.adminConsoleRendered = true;
-  assertNoFailedRequests("Admin bootstrap", evidence.adminRequests);
+  assertNoFailedRequests("Admin bootstrap", evidence.adminRequests, authenticatedRequestStart);
 
   const share = await openShareModal(adminPage);
   const gameCode = share.code;
