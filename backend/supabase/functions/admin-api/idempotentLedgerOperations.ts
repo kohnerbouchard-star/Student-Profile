@@ -13,6 +13,23 @@ function number(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function storageAccountType(value: unknown): string {
+  const normalized = text(value, "checking").toLowerCase();
+  return normalized === "checking" || normalized === "cash" ? "cash" : normalized;
+}
+
+function publicAccountType(value: unknown): string {
+  const normalized = text(value).toLowerCase();
+  return normalized === "checking" || normalized === "cash" ? "checking" : normalized;
+}
+
+function publicLedgerResult<T extends Record<string, any>>(ledger: T): T {
+  return {
+    ...ledger,
+    accountType: publicAccountType(ledger.accountType),
+  };
+}
+
 function isoDate(value: unknown): string {
   const normalized = text(value);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return "";
@@ -140,7 +157,7 @@ async function adjustAttendanceReward(service: any, input: any) {
       staffUserId: input.staffUserId,
       routeKey: "admin.attendance.reward_adjustment",
       idempotencyKey,
-      accountType: text(body.accountType, "cash"),
+      accountType: storageAccountType(body.accountType),
       amount,
       currencyCode: text(body.currencyCode || body.currency, "ECO").toUpperCase(),
       entryType: amount > 0 ? "credit" : "debit",
@@ -163,7 +180,7 @@ async function adjustAttendanceReward(service: any, input: any) {
           playerId,
           attendanceDate,
           amount,
-          ledger,
+          ledger: publicLedgerResult(ledger),
         },
       },
     };
@@ -217,7 +234,7 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
       staffUserId: input.staffUserId,
       routeKey: "admin.players.ledger_adjustment",
       idempotencyKey,
-      accountType: text(body.accountType, "cash"),
+      accountType: storageAccountType(body.accountType),
       amount,
       currencyCode: text(body.currencyCode || body.currency, "ECO").toUpperCase(),
       entryType: amount > 0 ? "credit" : "debit",
@@ -238,7 +255,7 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
           outcome: ledger.outcome,
           playerId,
           amount,
-          ledger,
+          ledger: publicLedgerResult(ledger),
         },
       },
     };
