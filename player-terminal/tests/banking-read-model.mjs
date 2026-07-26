@@ -82,6 +82,19 @@ assert.ok(html.includes("LUM -4"), "Each ledger entry must use its authoritative
 assert.ok(html.includes("POSTED LEDGER ACTIVITY"));
 assert.ok(html.includes("data-player-banking-load-more"), "A real continuation control must render when the Backend returns a next cursor.");
 
+const fallbackData = structuredClone(data);
+fallbackData.banking.balances = [];
+fallbackData.banking.checking.accountId = "account_public_123";
+const fallbackHtml = renderBankingPage(fallbackData);
+assert.ok(
+  fallbackHtml.includes('data-player-banking-balance="cash:ECO"'),
+  "The checking fallback must retain the semantic cash account type even when the public account key is non-semantic.",
+);
+assert.ok(
+  !fallbackHtml.includes('data-player-banking-balance="account_public_123:ECO"'),
+  "A public account key must not be substituted for the account type used by browser controls and acceptance selectors.",
+);
+
 const ledgerRoute = resolvePlayerBackendRequest({
   endpointKey: "banking",
   method: "GET",
