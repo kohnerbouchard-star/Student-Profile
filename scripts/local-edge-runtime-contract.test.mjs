@@ -8,8 +8,11 @@ const FUNCTION_ROOT = new URL("../backend/supabase/functions/", import.meta.url)
 const FUNCTION_POLICIES = Object.freeze({
   "player-api": false,
   "bootstrap-api": false,
+  "web-session-api": false,
   "staff-api": true,
   "admin-api": true,
+  "staff-mfa-api": true,
+  "password-reset-api": true,
   "classroom-api": true,
   "stock-market-runner": false,
   "stock-market-read": false,
@@ -24,7 +27,7 @@ function section(source, name) {
   return match?.[1] || "";
 }
 
-test("local Supabase starts the declared split Edge Functions runtime", async () => {
+test("local Supabase starts every declared split Edge security boundary", async () => {
   const [config, packageSource] = await Promise.all([
     readFile(CONFIG, "utf8"),
     readFile(PACKAGE, "utf8"),
@@ -59,6 +62,12 @@ test("local Supabase starts the declared split Edge Functions runtime", async ()
 
   assert.match(functionSources["staff-api"], /resolveStaffForRequest/);
   assert.match(functionSources["staff-api"], /handleStaffBootstrapRequest/);
+  assert.match(functionSources["staff-mfa-api"], /resolveStaffForRequest/);
+  assert.match(functionSources["staff-mfa-api"], /mfa\.challengeAndVerify/);
+  assert.match(functionSources["password-reset-api"], /resolveStaffForRequest/);
+  assert.match(functionSources["password-reset-api"], /validateStaffPassword/);
+  assert.match(functionSources["web-session-api"], /WEB_ADMIN_SESSION_COOKIE/);
+  assert.match(functionSources["web-session-api"], /\/functions\/v1\/staff-mfa-api/);
   assert.match(
     functionSources["player-api"],
     /dispatchRateLimitedReviewedPlayerRequest/,
