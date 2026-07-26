@@ -4,11 +4,17 @@ const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
 const RESELECT_TIMEOUT_MS = 15_000;
 
 let pendingThreadId = "";
+let pendingForm = null;
 let observer = null;
 let timeoutId = 0;
 
-function clearPendingSelection() {
+function clearPendingSelection({ releaseForm = false } = {}) {
+  if (releaseForm && pendingForm?.isConnected) {
+    delete pendingForm.dataset.messageReadSubmitting;
+    pendingForm.querySelector('button[type="submit"]')?.removeAttribute("aria-busy");
+  }
   pendingThreadId = "";
+  pendingForm = null;
   observer?.disconnect();
   observer = null;
   if (timeoutId) globalThis.clearTimeout(timeoutId);
@@ -42,9 +48,10 @@ function selectCommittedThread() {
   return true;
 }
 
-function watchForCommittedThread(threadId) {
-  clearPendingSelection();
+function watchForCommittedThread(threadId, form) {
+  clearPendingSelection({ releaseForm: true });
   pendingThreadId = threadId;
+  pendingForm = form;
   observer = new MutationObserver(() => {
     selectCommittedThread();
   });
@@ -52,7 +59,9 @@ function watchForCommittedThread(threadId) {
     childList: true,
     subtree: true,
   });
-  timeoutId = globalThis.setTimeout(clearPendingSelection, RESELECT_TIMEOUT_MS);
+  timeoutId = globalThis.setTimeout(() => {
+    clearPendingSelection({ releaseForm: true });
+  }, RESELECT_TIMEOUT_MS);
   queueMicrotask(selectCommittedThread);
 }
 
@@ -77,7 +86,8 @@ function handleUnreadThreadClick(event) {
   event.preventDefault();
   event.stopImmediatePropagation();
   form.dataset.messageReadSubmitting = "true";
-  watchForCommittedThread(threadId);
+  control.setAttribute("aria-busy", "true");
+  watchForCommittedThread(threadId, form);
   form.requestSubmit();
 }
 
@@ -85,5 +95,5 @@ document.addEventListener("click", handleUnreadThreadClick, true);
 
 export function destroyMessageReadController() {
   document.removeEventListener("click", handleUnreadThreadClick, true);
-  clearPendingSelection();
+  clearPendingSelection({ releaseForm: true });
 }
