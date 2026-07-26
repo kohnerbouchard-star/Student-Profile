@@ -147,23 +147,32 @@ async function resolveAdminFixture() {
 }
 
 async function creditPlayer(admin, currencyCode) {
+  const idempotencyKey = `business-fixture-${Date.now()}`;
   const response = await request(
     `/functions/v1/admin-api/games/${encodeURIComponent(admin.gameId)}/players/${encodeURIComponent(admin.playerId)}/ledger-adjustments`,
     {
       method: "POST",
       headers: headers(admin.publishableKey, admin.token, {
         "X-Econovaria-Game-Id": admin.gameId,
-        "X-Idempotency-Key": `business-fixture-${Date.now()}`,
+        "X-Idempotency-Key": idempotencyKey,
       }),
       body: {
         amount: FIXTURE_CREDIT,
         reason: "Disposable connected Business acceptance fixture",
-        accountType: "cash",
+        accountType: "checking",
         currencyCode,
+        idempotencyKey,
       },
     },
   );
-  if (response.status !== 200 || response.payload?.ok !== true) {
+  const adjustment = response.payload?.data || response.payload;
+  const applied = response.payload?.ok === true || adjustment?.adjusted === true;
+  if (
+    response.status !== 200 ||
+    !applied ||
+    adjustment?.ledger?.accountType !== "checking" ||
+    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== currencyCode
+  ) {
     throw new Error(`Business fixture credit returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
   }
   evidence.fixtureCreditApplied = true;
