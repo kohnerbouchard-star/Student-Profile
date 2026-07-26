@@ -118,6 +118,7 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
   const playerSessionToken = normalizeOpaqueSessionToken(
     options.playerSessionToken
   );
+  const method = String(options.method || "GET").toUpperCase();
 
   try {
     const headers = {
@@ -127,9 +128,22 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     if (playerSessionToken) {
       headers["x-player-session-token"] = playerSessionToken;
     }
+    if (options.requireCsrf === true) {
+      const state = readSafeAdminState();
+      if (!state) {
+        return {
+          ok: false,
+          status: 401,
+          code: "staff_session_invalid",
+          message: "Administrator sign-in is required.",
+          retryAfterSeconds: 0
+        };
+      }
+      headers["x-econovaria-csrf-token"] = state.csrfToken;
+    }
 
     const requestOptions = {
-      method: options.method || "GET",
+      method,
       headers,
       cache: "no-store",
       credentials: options.credentials || "omit"
@@ -298,6 +312,42 @@ function callAdminWebSessionLogout() {
   });
 }
 
+function callAdminMfaStatus() {
+  return callSupabaseJsonRoute("webSession", "/mfa", {
+    method: "GET",
+    credentials: "include",
+    fallbackCode: "staff_mfa_status_failed",
+    fallbackMessage: "Administrator MFA status could not be loaded."
+  });
+}
+
+function callAdminMfaEnroll(friendlyName) {
+  return callSupabaseJsonRoute("webSession", "/mfa/enroll", {
+    method: "POST",
+    credentials: "include",
+    requireCsrf: true,
+    body: {
+      friendlyName: String(friendlyName || "Econovaria Admin").trim()
+    },
+    fallbackCode: "staff_mfa_enrollment_failed",
+    fallbackMessage: "Authenticator enrollment could not be started."
+  });
+}
+
+function callAdminMfaVerify(factorHandle, code) {
+  return callSupabaseJsonRoute("webSession", "/mfa/verify", {
+    method: "POST",
+    credentials: "include",
+    requireCsrf: true,
+    body: {
+      factorHandle: String(factorHandle || "").trim(),
+      code: String(code || "").replace(/\s+/g, "")
+    },
+    fallbackCode: "staff_mfa_verification_failed",
+    fallbackMessage: "The authenticator code is invalid or expired."
+  });
+}
+
 function callStaffSignupApi(input) {
   return callSupabaseJsonRoute("bootstrap", "/staff/signup", {
     method: "POST",
@@ -345,6 +395,9 @@ Object.assign(window.Econovaria.core.api, {
   callSupabasePasswordSignIn,
   callAdminWebSessionStatus,
   callAdminWebSessionLogout,
+  callAdminMfaStatus,
+  callAdminMfaEnroll,
+  callAdminMfaVerify,
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
@@ -359,6 +412,9 @@ Object.assign(window.Econovaria.core, {
   callSupabasePasswordSignIn,
   callAdminWebSessionStatus,
   callAdminWebSessionLogout,
+  callAdminMfaStatus,
+  callAdminMfaEnroll,
+  callAdminMfaVerify,
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
