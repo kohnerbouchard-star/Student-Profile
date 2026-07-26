@@ -3,6 +3,7 @@ import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
+import { jsonResponse } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   handleStockMarketTradingRequest,
 } from "../../../src/domains/stocks/api/stockMarketTradingHttpHandler.ts";
@@ -15,6 +16,8 @@ const createSupabaseClient = createClient as unknown as (
 ) => EdgeSupabaseClient;
 
 Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return jsonResponse(204, null);
+
   const publishableFailure = await requirePublishableRequest(request);
   if (publishableFailure) return publishableFailure;
   return handleStockMarketTradingRequest(request, { createServiceClient });
