@@ -218,6 +218,10 @@ async function selectAvailableContract(page) {
   return { accept, contractKey, title };
 }
 
+function contractDetailHeading(page, title) {
+  return page.locator(".player-terminal-contract-detail h3").filter({ hasText: title }).first();
+}
+
 let browser;
 let context;
 let failure;
@@ -247,7 +251,7 @@ try {
   await reloadContracts(page);
   const activeTab = page.locator('[data-player-contract-tab="Active"]');
   if (await activeTab.count()) await activeTab.click();
-  await page.getByText(selected.title, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
   await page.locator(`form[data-endpoint="contractSubmit"][data-contract-id="${selected.contractKey}"]`).waitFor({ state: "visible", timeout: 30_000 });
   evidence.acceptancePersisted = true;
 
@@ -287,7 +291,7 @@ try {
   await reloadContracts(page);
   const submittedTab = page.locator('[data-player-contract-tab="Submitted"]');
   if (await submittedTab.count()) await submittedTab.click();
-  await page.getByText(selected.title, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
   await page.getByText(SUBMISSION_NOTE, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
   evidence.submissionPersisted = true;
 
@@ -298,7 +302,7 @@ try {
     throw new Error(`Contract submission replay was neither idempotent nor denied: ${submitReplay.status}.`);
   }
   await reloadContracts(page);
-  if (await page.getByText(selected.title, { exact: true }).count() < 1) {
+  if (await contractDetailHeading(page, selected.title).count() < 1) {
     throw new Error("Contract progress disappeared after replay handling.");
   }
   evidence.submissionReplaySafe = true;
