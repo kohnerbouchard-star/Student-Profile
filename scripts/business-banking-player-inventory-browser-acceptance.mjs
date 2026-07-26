@@ -219,11 +219,11 @@ try {
   const original = await capture(response);
   const requestBody = JSON.parse(original.body);
   const keys = Object.keys(requestBody).sort();
-  if (JSON.stringify(keys) !== JSON.stringify(["idempotencyKey", "quantity"])) {
+  if (JSON.stringify(keys) !== JSON.stringify(["idempotencyKey", "note", "quantity"])) {
     throw new Error(`Inventory redemption forwarded unexpected fields: ${keys.join(", ")}.`);
   }
-  if (requestBody.quantity !== 1 || typeof requestBody.idempotencyKey !== "string") {
-    throw new Error("Inventory redemption did not send the bounded quantity and idempotency key.");
+  if (requestBody.quantity !== 1 || requestBody.note !== "" || typeof requestBody.idempotencyKey !== "string") {
+    throw new Error("Inventory redemption did not send the bounded quantity, empty note, and idempotency key.");
   }
   for (const forbidden of ["gameSessionId", "gameId", "playerId", "playerUuid", "playerSessionId", "inventoryHoldingId"]) {
     if (Object.prototype.hasOwnProperty.call(requestBody, forbidden)) throw new Error(`Inventory redemption forwarded forbidden field ${forbidden}.`);
