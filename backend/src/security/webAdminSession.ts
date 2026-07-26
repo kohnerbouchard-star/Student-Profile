@@ -29,7 +29,7 @@ export interface WebAdminSessionPayload {
 }
 
 export function readWebAdminSessionKey(
-  getEnv: (name: string) => string | undefined = Deno.env.get,
+  getEnv: (name: string) => string | undefined = readRuntimeEnvironment,
 ): Uint8Array {
   const encoded = String(
     getEnv("ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY") || "",
@@ -220,6 +220,17 @@ async function importAesKey(
     false,
     [...usages],
   );
+}
+
+function readRuntimeEnvironment(name: string): string | undefined {
+  const runtime = globalThis as unknown as {
+    readonly Deno?: {
+      readonly env?: {
+        get(name: string): string | undefined;
+      };
+    };
+  };
+  return runtime.Deno?.env?.get(name);
 }
 
 function concreteArrayBuffer(bytes: Uint8Array): ArrayBuffer {
