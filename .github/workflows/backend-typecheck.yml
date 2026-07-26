@@ -4,12 +4,18 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "api/**"
+      - "admin/**"
+      - "frontend/src/core/**"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:
       - main
     paths:
       - "backend/**"
+      - "api/**"
+      - "admin/**"
+      - "frontend/src/core/**"
       - ".github/workflows/backend-typecheck.yml"
 
 permissions:
@@ -57,10 +63,19 @@ jobs:
               --frozen \
               supabase/functions/bootstrap-api/index.ts \
               supabase/functions/staff-api/index.ts \
-              supabase/functions/player-api/index.ts
+              supabase/functions/staff-mfa-api/index.ts \
+              supabase/functions/player-api/index.ts \
+              supabase/functions/web-session-api/index.ts
+            node --check ../api/_admin-bff-proxy.js
+            node --check '../api/admin-session/[...path].js'
+            node --check '../api/admin/[...path].js'
+            node --check ../admin/auth-session-manager.js
+            node --check ../admin/admin-auth.js
+            node --check ../frontend/src/core/api.js
+            node --check ../frontend/src/core/login.js
           } > /tmp/backend-typecheck.log 2>&1
           echo $? > /tmp/backend-typecheck.status
-          tail -n 220 /tmp/backend-typecheck.log
+          tail -n 260 /tmp/backend-typecheck.log
           exit 0
 
       - name: Upload backend typecheck diagnostics
