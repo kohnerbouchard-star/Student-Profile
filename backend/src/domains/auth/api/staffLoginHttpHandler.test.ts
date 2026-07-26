@@ -23,6 +23,7 @@ Deno.test("mediated staff login returns controlled role and AAL state", async ()
   assertEquals(body.ok, true);
   assertEquals(body.session.assuranceLevel, "aal2");
   assertEquals(body.session.mfaRequired, true);
+  assertEquals(body.user.id, "staff-user");
   assertEquals(body.user.role, "game_admin");
   assertEquals(body.user.permissionVersion, 1);
   assertEquals(body.user.securityVersion, 1);
