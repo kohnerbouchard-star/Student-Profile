@@ -75,6 +75,7 @@ const exactAllowed = new Set([
   "scripts/admin-world-runtime-console-contract.mjs",
   "scripts/admin-crafting-oversight-contract.mjs",
   "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs",
+  "scripts/admin-mounted-operational-modal-focus-smoke.mjs",
   "scripts/admin-connected-ledger-mutation-browser-acceptance.mjs",
   "scripts/build-physical-economy-runtime-pack.mjs",
   "scripts/simulate-physical-economy-balance.mjs",
