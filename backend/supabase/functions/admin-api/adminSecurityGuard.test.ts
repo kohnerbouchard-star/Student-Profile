@@ -27,7 +27,7 @@ Deno.test("allows an AAL1 Admin read only with its server grant", async () => {
   );
 
   assertEquals(result.ok, true);
-  if (result.ok) {
+  if (result.ok === true) {
     assertEquals(result.assuranceLevel, "aal1");
     assertEquals(result.requiredPermission, "game.read");
     assertEquals(result.permissions, ["game.read"]);
@@ -47,7 +47,7 @@ Deno.test("requires AAL2 after the settings grant is verified", async () => {
   );
 
   assertEquals(result.ok, false);
-  if (!result.ok) {
+  if (result.ok === false) {
     assertEquals(result.status, 403);
     assertEquals(result.code, "staff_mfa_required");
   }
@@ -70,7 +70,7 @@ Deno.test("allows an AAL2 Player mutation with only players.manage", async () =>
   );
 
   assertEquals(result.ok, true);
-  if (result.ok) {
+  if (result.ok === true) {
     assertEquals(result.requiredPermission, "players.manage");
     assertEquals(result.permissions, ["players.manage"]);
   }
@@ -94,7 +94,7 @@ Deno.test("denies a route when only an unrelated grant exists", async () => {
   );
 
   assertEquals(result.ok, false);
-  if (!result.ok) {
+  if (result.ok === false) {
     assertEquals(result.status, 403);
     assertEquals(result.code, "staff_permission_denied");
   }
@@ -114,7 +114,7 @@ Deno.test("fails closed when permission grants cannot be loaded", async () => {
   );
 
   assertEquals(result.ok, false);
-  if (!result.ok) {
+  if (result.ok === false) {
     assertEquals(result.status, 503);
     assertEquals(result.code, "staff_permissions_unavailable");
   }
@@ -131,7 +131,9 @@ Deno.test("rejects stale role and security version claims before grants", async 
   );
 
   assertEquals(result.ok, false);
-  if (!result.ok) assertEquals(result.code, "staff_claims_outdated");
+  if (result.ok === false) {
+    assertEquals(result.code, "staff_claims_outdated");
+  }
 });
 
 Deno.test("returns Retry-After metadata after authorization succeeds", async () => {
@@ -152,7 +154,7 @@ Deno.test("returns Retry-After metadata after authorization succeeds", async () 
   );
 
   assertEquals(result.ok, false);
-  if (!result.ok) {
+  if (result.ok === false) {
     assertEquals(result.status, 429);
     assertEquals(result.retryAfterSeconds, 45);
     assertEquals(result.resetAt, "2026-07-26T12:05:00.000Z");
