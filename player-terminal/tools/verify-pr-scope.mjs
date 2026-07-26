@@ -109,6 +109,8 @@ const exactAllowed = new Set([
   "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql",
   "backend/src/security/playerRateLimitDispatch.ts",
   "backend/src/security/playerRateLimitDispatch.test.ts",
+  "backend/src/security/rateLimitKeying.ts",
+  "backend/src/security/rateLimitKeying.test.ts",
   "backend/src/security/playerBrowserResponsePrivacy.ts",
   "backend/src/security/playerBrowserResponsePrivacy.test.ts",
   "backend/src/security/classroomApiRateLimitDispatch.test.ts",
