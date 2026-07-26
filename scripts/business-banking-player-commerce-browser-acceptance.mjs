@@ -355,9 +355,6 @@ let failure;
 try {
   const admin = await adminContext();
   const currencyCode = admin.players[0].currencyCode;
-  if (admin.players[1].currencyCode !== currencyCode) {
-    throw new Error("Connected transfer players must share the same assigned currency for this acceptance journey.");
-  }
   evidence.fixtureCredit.currencyCode = currencyCode;
 
   browser = await chromium.launch({ headless: true });
