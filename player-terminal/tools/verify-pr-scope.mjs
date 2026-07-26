@@ -98,6 +98,8 @@ const exactAllowed = new Set([
   "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
   "backend/src/domains/contracts/api/playerContractRoutePaths.ts",
   "backend/src/domains/contracts/api/playerContractRoutePaths.test.ts",
+  "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
+  "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts",
   "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
   "backend/src/domains/economy/contracts/playerBankingPublicContracts.ts",
   "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
