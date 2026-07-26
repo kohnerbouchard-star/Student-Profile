@@ -47,7 +47,7 @@ export function renderBankingPage(data) {
   const balances = Array.isArray(bank.balances) && bank.balances.length
     ? bank.balances
     : [{
-      accountType: bank.checking?.accountId || "cash",
+      accountType: "cash",
       balance: bank.checking?.balance,
       currencyCode: bank.checking?.currencyCode || currencyCode,
     }];
