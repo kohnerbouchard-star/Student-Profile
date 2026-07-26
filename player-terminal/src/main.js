@@ -5,7 +5,7 @@ import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js"
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
-import { installMessageReadController } from "./features/messages/message-read-controller.js";
+import { installMessageIntentAdapter } from "./features/messages/message-intent-adapter.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
 import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
@@ -24,6 +24,7 @@ const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent,
 });
+const messageIntents = installMessageIntentAdapter({ mount });
 
 const terminal = createPlayerTerminal({ mount, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
@@ -31,7 +32,6 @@ const logout = installPlayerLogoutController({ terminal, config, mount });
 const localControls = installLocalControlsFlow({ mount, terminal });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
-const messageReads = installMessageReadController({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
@@ -46,10 +46,10 @@ terminal.destroy = () => {
   storyDeliveries.destroy();
   notifications.destroy();
   bankingReads.destroy();
-  messageReads.destroy();
   marketOrders.destroy();
   storePurchases.destroy();
   localControls.destroy();
+  messageIntents.destroy();
   formDrafts.destroy();
   countryFocus.destroy();
   skipLink.destroy();
