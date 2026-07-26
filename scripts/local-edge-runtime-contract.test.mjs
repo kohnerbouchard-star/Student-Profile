@@ -62,7 +62,8 @@ test("local Supabase starts every declared split Edge security boundary", async 
 
   assert.match(functionSources["staff-api"], /resolveStaffForRequest/);
   assert.match(functionSources["staff-api"], /handleStaffBootstrapRequest/);
-  assert.match(functionSources["staff-mfa-api"], /resolveStaffForRequest/);
+  assert.match(functionSources["staff-mfa-api"], /resolveStaffSessionForRequest/);
+  assert.match(functionSources["staff-mfa-api"], /requiredAssuranceLevel/);
   assert.match(functionSources["staff-mfa-api"], /mfa\.challengeAndVerify/);
   assert.match(functionSources["password-reset-api"], /resolveStaffForRequest/);
   assert.match(functionSources["password-reset-api"], /validateStaffPassword/);
