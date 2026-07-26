@@ -12,7 +12,7 @@ async function mountBankingFixture(page) {
     data.banking = {
       ...data.banking,
       checking: {
-        accountId: "CASH",
+        accountId: "CHECKING",
         balance: 1250,
         available: 1250,
         pending: 0,
@@ -28,8 +28,8 @@ async function mountBankingFixture(page) {
         currencyCode: "",
       },
       balances: [
-        { accountType: "cash", balance: 1250, currencyCode: "ECO" },
-        { accountType: "cash", balance: 40, currencyCode: "LUM" },
+        { accountType: "checking", balance: 1250, currencyCode: "ECO" },
+        { accountType: "checking", balance: 40, currencyCode: "LUM" },
       ],
       stale: false,
       pagination: {
@@ -46,7 +46,7 @@ async function mountBankingFixture(page) {
           category: "contracts",
           amount: 25,
           status: "Posted",
-          accountType: "cash",
+          accountType: "checking",
           currencyCode: "ECO",
         },
         {
@@ -56,7 +56,7 @@ async function mountBankingFixture(page) {
           category: "economy",
           amount: -4,
           status: "Posted",
-          accountType: "cash",
+          accountType: "checking",
           currencyCode: "LUM",
         },
       ],
@@ -72,10 +72,12 @@ async function mountBankingFixture(page) {
   return page.getByTestId("banking-browser-fixture");
 }
 
-test("Banking renders every balance currency and a usable continuation control", async ({ page }) => {
+test("Banking renders every checking currency and a usable continuation control", async ({ page }) => {
   const fixture = await mountBankingFixture(page);
-  await expect(fixture.locator('[data-player-banking-balance="cash:ECO"]')).toContainText("ECO 1,250");
-  await expect(fixture.locator('[data-player-banking-balance="cash:LUM"]')).toContainText("LUM 40");
+  await expect(fixture.locator('[data-player-banking-balance="checking:ECO"]')).toContainText("ECO 1,250");
+  await expect(fixture.locator('[data-player-banking-balance="checking:LUM"]')).toContainText("LUM 40");
+  await expect(fixture.getByText("CHECKING ACCOUNT").first()).toBeVisible();
+  await expect(fixture.getByText("CASH ACCOUNT")).toHaveCount(0);
   await expect(fixture.getByText("+ECO 25")).toBeVisible();
   await expect(fixture.getByText("LUM -4")).toBeVisible();
   const loadMore = fixture.locator("[data-player-banking-load-more]");
