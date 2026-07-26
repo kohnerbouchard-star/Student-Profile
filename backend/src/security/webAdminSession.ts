@@ -19,6 +19,7 @@ export interface WebAdminSessionPayload {
   readonly absoluteExpiresAt: number;
   readonly issuedAt: number;
   readonly csrfToken: string;
+  readonly mfaRequired: boolean;
   readonly user: {
     readonly id: string;
     readonly email: string;
@@ -115,6 +116,7 @@ export function createWebAdminSessionPayload(input: {
   readonly refreshToken: string;
   readonly accessExpiresAt: number;
   readonly csrfToken: string;
+  readonly mfaRequired?: boolean;
   readonly nowSeconds?: number;
   readonly user: WebAdminSessionPayload["user"];
 }): WebAdminSessionPayload {
@@ -127,6 +129,7 @@ export function createWebAdminSessionPayload(input: {
     issuedAt,
     absoluteExpiresAt: issuedAt + WEB_ADMIN_SESSION_ABSOLUTE_SECONDS,
     csrfToken: input.csrfToken,
+    mfaRequired: input.mfaRequired !== false,
     user: input.user,
   };
   validatePayload(payload);
@@ -179,6 +182,7 @@ function validatePayload(value: unknown): asserts value is WebAdminSessionPayloa
     !Number.isSafeInteger(payload.issuedAt) ||
     typeof payload.csrfToken !== "string" ||
     !/^[A-Za-z0-9_-]{43}$/u.test(payload.csrfToken) ||
+    typeof payload.mfaRequired !== "boolean" ||
     payload.absoluteExpiresAt! <= payload.issuedAt! ||
     payload.absoluteExpiresAt! - payload.issuedAt! > WEB_ADMIN_SESSION_ABSOLUTE_SECONDS ||
     !payload.user ||
