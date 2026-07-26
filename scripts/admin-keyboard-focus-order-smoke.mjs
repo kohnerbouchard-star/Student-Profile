@@ -64,7 +64,6 @@ const PAGE_ORDERS = Object.freeze({
   ],
   Logs: [
     { selector: '[data-admin-terminal-action="open-export-history"]' },
-    { selector: '[data-admin-terminal-action="export-logs"]' },
   ],
 });
 
@@ -89,7 +88,7 @@ const harness = await createQualityHarness("keyboard-focus-order");
 const { page, errors, writes, state } = harness;
 state.delayReads = false;
 state.writeDelay = 0;
-const report = { pageOrders: [], inFlight: null };
+const report = { pageOrders: [], disabledExport: null, inFlight: null };
 
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
@@ -224,6 +223,29 @@ async function proveOrder(section, definitions) {
   };
 }
 
+async function proveDisabledExportExcluded() {
+  await keyboardActivate(page.locator('[data-admin-section="Logs"]').first());
+  await page.waitForTimeout(300);
+  const history = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
+  const exportLogs = page.locator('[data-admin-terminal-action="export-logs"]:visible').first();
+  await history.waitFor({ state: "visible", timeout: 5000 });
+  await exportLogs.waitFor({ state: "visible", timeout: 5000 });
+
+  const state = await exportLogs.evaluate((control) => ({
+    disabled: control instanceof HTMLButtonElement && control.disabled,
+    ariaDisabled: control.getAttribute("aria-disabled"),
+    title: control.getAttribute("title") || "",
+  }));
+  assert(state.disabled, "Unauthorized Logs export control remained enabled.");
+  assert(state.ariaDisabled === "true", "Unauthorized Logs export control omitted aria-disabled.");
+
+  await history.focus();
+  await page.keyboard.press("Tab");
+  const skipped = await exportLogs.evaluate((control) => document.activeElement !== control);
+  assert(skipped, "Disabled Logs export control remained in sequential keyboard navigation.");
+  return { ...state, excludedFromTabOrder: skipped };
+}
+
 async function proveInFlightExclusion() {
   await keyboardActivate(page.locator('[data-admin-section="Overview"]').first());
   await page.waitForTimeout(300);
@@ -284,6 +306,7 @@ try {
   for (const [section, definitions] of Object.entries(PAGE_ORDERS)) {
     report.pageOrders.push(await proveOrder(section, definitions));
   }
+  report.disabledExport = await proveDisabledExportExcluded();
   report.inFlight = await proveInFlightExclusion();
 
   const keyboardEvidence = await page.evaluate(() => ({
