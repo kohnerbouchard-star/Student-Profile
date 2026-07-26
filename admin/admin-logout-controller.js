@@ -118,6 +118,7 @@
       "button, [role='button'], a, [data-admin-terminal-action]",
     );
     if (!isLogoutControl(control)) return;
+    if (window.EconovariaAdminLogoutConfirmation?.open) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     void beginLogout(control);
@@ -126,6 +127,7 @@
   window.addEventListener("keydown", (event) => {
     if (!["Enter", " "].includes(event.key)) return;
     if (!isLogoutControl(event.target)) return;
+    if (window.EconovariaAdminLogoutConfirmation?.open) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     void beginLogout(event.target);
