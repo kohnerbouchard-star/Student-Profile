@@ -127,6 +127,10 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
     try {
       api.setSession?.(config);
+      mount.dispatchEvent(new CustomEvent("econovaria:player-message-send-started", {
+        bubbles: true,
+        detail: Object.freeze({ threadId }),
+      }));
       const operation = await api.execute("messageSend", { body }, { threadId });
       if (destroyed) return;
       replyDrafts.delete(threadId);
@@ -145,6 +149,14 @@ export function installMessageReadController({ mount, terminal, config, api: inj
       }));
       terminal.showToast?.("Reply sent and refreshed.", "green");
     } catch (error) {
+      mount.dispatchEvent(new CustomEvent("econovaria:player-message-send-failed", {
+        bubbles: true,
+        detail: Object.freeze({
+          threadId,
+          code: String(error?.code || "MESSAGE_SEND_FAILED"),
+          status: Number(error?.status || 0),
+        }),
+      }));
       if (!destroyed) terminal.showToast?.(error?.message || "The reply could not be sent.", "red");
     } finally {
       pending.delete(operationKey);
@@ -161,6 +173,10 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     const bodyField = form.elements.namedItem("body");
     const currentBody = String(bodyField?.value || "").trim();
     const body = currentBody || String(replyDrafts.get(threadId) || "").trim();
+    mount.dispatchEvent(new CustomEvent("econovaria:player-message-send-attempted", {
+      bubbles: true,
+      detail: Object.freeze({ threadId, bodyLength: body.length }),
+    }));
     if (!threadId || !body) {
       bodyField?.setCustomValidity?.("Enter a message before sending.");
       bodyField?.focus?.();
@@ -185,6 +201,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     const click = (event) => beginSend(event, form, button);
     form.addEventListener("submit", submit, true);
     button.addEventListener("click", click, true);
+    form.dataset.playerMessageControllerBound = "true";
+    button.dataset.playerMessageControllerBound = "true";
     boundForms.add(form);
     boundButtons.add(button);
     form.__econovariaMessageSubmit = submit;
