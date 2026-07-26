@@ -43,6 +43,22 @@
     };
   }
 
+  function modelStaffSessionSource(value) {
+    if (value?.staffSession && typeof value.staffSession === "object") {
+      return value.staffSession;
+    }
+    if (window.state?.staffSession && typeof window.state.staffSession === "object") {
+      return window.state.staffSession;
+    }
+    if (
+      window.currentSession?.staffSession &&
+      typeof window.currentSession.staffSession === "object"
+    ) {
+      return window.currentSession.staffSession;
+    }
+    return {};
+  }
+
   function normalizeAuthenticatedModel(value) {
     const next = value && typeof value === "object" ? value : {};
     const authorization = authenticatedAuthorization();
@@ -51,9 +67,10 @@
       permissions: authorization?.permissions || [],
       roles: authorization?.roles || [],
       adminRole: authorization?.adminRole || "",
-      ...(next.staffSession && typeof next.staffSession === "object"
-        ? { staffSession: authorizedStaffSession(next.staffSession, authorization) }
-        : {})
+      staffSession: authorizedStaffSession(
+        modelStaffSessionSource(next),
+        authorization
+      )
     };
   }
 
