@@ -29,7 +29,7 @@ function composer(thread) {
   }
   return `<form class="player-terminal-message-compose" data-player-form="message-send" data-endpoint="messageSend" data-thread-id="${escapeHtml(thread.id)}">
     <label><span>MESSAGE</span><textarea name="body" rows="3" maxlength="1000" required placeholder="Write a message…"></textarea></label>
-    <div><button class="player-terminal-icon-button" type="button" disabled aria-disabled="true" aria-label="Attachments are unavailable">${icon("paperclip")}</button><small>Plain text and links only. Attachments are disabled. Messages remain visible to game administrators.</small><button class="player-terminal-primary-button" type="submit" data-player-message-send>${icon("send")} Send</button></div>
+    <div><button class="player-terminal-icon-button" type="button" disabled aria-disabled="true" aria-label="Attachments are unavailable">${icon("paperclip")}</button><small>Plain text and links only. Attachments are disabled. Messages remain visible to game administrators.</small><button class="player-terminal-primary-button" type="button" data-player-message-send>${icon("send")} Send</button></div>
   </form>`;
 }
 
