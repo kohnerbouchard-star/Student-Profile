@@ -43,13 +43,16 @@ export interface PlayerStockLatestTickRecord {
 
 export interface PlayerStockAssetListRepositoryResult {
   readonly gameId: string;
+  readonly playerUuid: string;
   readonly assets: readonly PlayerStockAssetRecord[];
   readonly latestTicks: readonly PlayerStockLatestTickRecord[];
+  readonly watchlistedAssetUuids: readonly string[];
 }
 
 export interface PlayerStockAssetListRepository {
   listAssets(input: {
     readonly gameId: string;
+    readonly playerUuid: string;
     readonly limit: number;
     readonly offset: number;
   }): Promise<PlayerStockAssetListRepositoryResult>;
@@ -72,6 +75,7 @@ export interface PlayerStockAssetDto {
   readonly currentVolatility: number;
   readonly longRunVolatility: number;
   readonly description: string | null;
+  readonly isWatchlisted: boolean;
 }
 
 export interface PlayerStockAssetListResponseBody {
