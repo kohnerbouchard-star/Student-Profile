@@ -54,7 +54,7 @@ export function renderCraftingPage(data, ui) {
   const equipment = Array.isArray(crafting.equipment) ? crafting.equipment : [];
   const inventoryItems = Array.isArray(data.inventory?.items) ? data.inventory.items : [];
   const usableItems = inventoryItems.filter((item) =>
-    item.itemKey && Number(item.quantityAvailable) > 0 && Array.isArray(item.availableActions) && item.availableActions.includes("use")
+    item.itemKey && Number(item.quantityAvailable) > 0 && Array.isArray(item.availableActions) && item.availableActions.includes("inventory.use")
   );
 
   return `<section class="player-terminal-page player-terminal-crafting-page">
