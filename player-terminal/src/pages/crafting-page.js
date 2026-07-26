@@ -9,9 +9,7 @@ function ingredientLine(item) {
 
 function media(item) {
   const src = String(item?.image || "").trim();
-  return src
-    ? `<img src="${escapeHtml(src)}" alt="" />`
-    : icon("factory");
+  return src ? `<img src="${escapeHtml(src)}" alt="" />` : icon("factory");
 }
 
 function queueJob(job) {
@@ -25,6 +23,24 @@ function queueJob(job) {
   return `<article><span>${icon("clock")}</span><div><strong>${escapeHtml(job.name)}</strong><small>${escapeHtml(job.quantity)} units · ${escapeHtml(job.remaining || job.status)}</small></div><div class="player-terminal-progress-track"><i style="width:${escapeHtml(job.progress || 0)}%"></i></div><div class="player-terminal-heading-actions">${cancel}${claim}</div></article>`;
 }
 
+function equipmentItem(item) {
+  const equipmentKey = escapeHtml(item.equipmentKey || item.id);
+  const allowedSlot = String(item.allowedSlot || "").trim();
+  const equippedSlot = String(item.slot || "").trim();
+  const equip = allowedSlot
+    ? `<form data-player-form="equipment-equip" data-endpoint="equipmentEquip"><input type="hidden" name="equipmentKey" value="${equipmentKey}" /><input type="hidden" name="slot" value="${escapeHtml(allowedSlot)}" /><button type="submit" class="player-terminal-secondary-button">${equippedSlot === allowedSlot ? "Re-equip" : `Equip · ${escapeHtml(allowedSlot)}`}</button></form>`
+    : "";
+  const salvage = equippedSlot
+    ? ""
+    : `<form data-player-form="equipment-salvage" data-endpoint="itemSalvage"><input type="hidden" name="equipmentKey" value="${equipmentKey}" /><button type="submit" class="player-terminal-secondary-button">Salvage</button></form>`;
+  return `<article><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(equippedSlot || "Not equipped")}</small></div><div class="player-terminal-heading-actions">${equip}${salvage}</div></article>`;
+}
+
+function usableEffectItem(item) {
+  const itemKey = escapeHtml(item.itemKey);
+  return `<article><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(formatNumber(item.quantityAvailable))} available · ${escapeHtml(item.category)}</small></div><form data-player-form="item-effect-use" data-endpoint="itemEffectUse"><input type="hidden" name="itemKey" value="${itemKey}" /><button type="submit" class="player-terminal-secondary-button">Use effect item</button></form></article>`;
+}
+
 export function renderCraftingPage(data, ui) {
   const crafting = data.crafting;
   if (!Array.isArray(crafting?.recipes) || !crafting.recipes.length) {
@@ -32,12 +48,14 @@ export function renderCraftingPage(data, ui) {
   }
 
   const selected = crafting.recipes.find((item) => item.id === ui.craftingRecipeId) || crafting.recipes[0];
-  const craftable = selected.enabled !== false &&
-    selected.ingredients.every((item) => Number(item.owned) >= Number(item.required)) &&
-    selected.unlockStatus === "Unlocked";
+  const craftable = selected.enabled !== false && selected.ingredients.every((item) => Number(item.owned) >= Number(item.required)) && selected.unlockStatus === "Unlocked";
   const effects = Array.isArray(crafting.effects) ? crafting.effects : [];
   const history = Array.isArray(crafting.effectHistory) ? crafting.effectHistory : [];
   const equipment = Array.isArray(crafting.equipment) ? crafting.equipment : [];
+  const inventoryItems = Array.isArray(data.inventory?.items) ? data.inventory.items : [];
+  const usableItems = inventoryItems.filter((item) =>
+    item.itemKey && Number(item.quantityAvailable) > 0 && Array.isArray(item.availableActions) && item.availableActions.includes("use")
+  );
 
   return `<section class="player-terminal-page player-terminal-crafting-page">
     <div class="player-terminal-page-heading"><div><small>FABRICATION WORKSHOP</small><h2>Crafting</h2><p>Combine owned materials through authoritative, deterministic recipes.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`${crafting.workshopLevel} WORKSHOP`, "purple")}</div></div>
@@ -68,7 +86,12 @@ export function renderCraftingPage(data, ui) {
 
       <section class="player-terminal-panel">
         <header class="player-terminal-panel-header"><div><span>EQUIPMENT</span><strong>${escapeHtml(equipment.length)} items</strong></div></header>
-        <div>${equipment.length ? equipment.map((item) => `<article><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.slot || "Not equipped")}</small></article>`).join("") : "<p>No crafted equipment is available.</p>"}</div>
+        <div>${equipment.length ? equipment.map(equipmentItem).join("") : "<p>No crafted equipment is available.</p>"}</div>
+      </section>
+
+      <section class="player-terminal-panel">
+        <header class="player-terminal-panel-header"><div><span>USABLE EFFECT ITEMS</span><strong>${escapeHtml(usableItems.length)} available</strong></div></header>
+        <div>${usableItems.length ? usableItems.map(usableEffectItem).join("") : "<p>No server-approved effect items are available.</p>"}</div>
       </section>
 
       <section class="player-terminal-panel">
