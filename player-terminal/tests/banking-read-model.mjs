@@ -9,6 +9,20 @@ import {
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { previewData } from "../src/data/preview-data.js";
 
+function formMarkup(source, endpoint) {
+  const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>[\\s\\S]*?<\\/form>`, "u"));
+  assert.ok(match, `Missing ${endpoint} form.`);
+  return match[0];
+}
+
+function assertSubmitDisabled(source, endpoint, message) {
+  assert.match(formMarkup(source, endpoint), /<button[^>]*type="submit"[^>]*disabled/u, message);
+}
+
+function assertSubmitEnabled(source, endpoint, message) {
+  assert.doesNotMatch(formMarkup(source, endpoint), /<button[^>]*type="submit"[^>]*disabled/u, message);
+}
+
 const data = structuredClone(previewData);
 data.session.currencyCode = "ECO";
 data.capabilities = {
@@ -85,8 +99,8 @@ assert.ok(html.includes('name="recipientPlayerIdentifier"'));
 assert.ok(!html.includes('name="recipientPlayerUuid"'));
 assert.ok(!html.includes('pattern="[A-Za-z]{2}-[0-9]{4}-[0-9]{3}"'));
 assert.ok(html.includes("resolved to the recipient UUID by the backend"));
-assert.match(html, /data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Player transfers must remain visible but disabled without the authenticated bankTransfer grant.");
-assert.match(html, /data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Internal transfers must remain visible but disabled when savings is not configured.");
+assertSubmitDisabled(html, "bankTransfer", "Player transfers must remain visible but disabled without the authenticated bankTransfer grant.");
+assertSubmitDisabled(html, "savingsTransfer", "Internal transfers must remain visible but disabled when savings is not configured.");
 assert.ok(html.includes("+ECO 25"));
 assert.ok(html.includes("LUM -4"), "Each ledger entry must use its authoritative currency code.");
 assert.ok(html.includes("POSTED LEDGER ACTIVITY"));
@@ -195,20 +209,20 @@ assert.ok(configuredHtml.includes("CREDIT 720"));
 assert.ok(configuredHtml.includes("LUM 200"), "Savings must render with the authoritative account currency.");
 assert.ok(configuredHtml.includes('max="500"'));
 assert.ok(!configuredHtml.includes("STALE DATA"));
-assert.ok(!configuredHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "The authenticated bankTransfer grant must enable the Player transfer submit control.");
-assert.ok(!configuredHtml.match(/data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "The authenticated savingsTransfer grant plus a real savings account must enable internal transfers.");
+assertSubmitEnabled(configuredHtml, "bankTransfer", "The authenticated bankTransfer grant must enable the Player transfer submit control.");
+assertSubmitEnabled(configuredHtml, "savingsTransfer", "The authenticated savingsTransfer grant plus a real savings account must enable internal transfers.");
 
 const blockedBankTransferData = structuredClone(configuredData);
 blockedBankTransferData.capabilities.actions.bankTransfer = false;
 const blockedBankTransferHtml = renderBankingPage(blockedBankTransferData);
-assert.match(blockedBankTransferHtml, /data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Player transfer must fail closed when the authenticated bankTransfer grant is absent.");
-assert.ok(!blockedBankTransferHtml.match(/data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "Savings transfer remains independently controlled by its own grant and account provisioning.");
+assertSubmitDisabled(blockedBankTransferHtml, "bankTransfer", "Player transfer must fail closed when the authenticated bankTransfer grant is absent.");
+assertSubmitEnabled(blockedBankTransferHtml, "savingsTransfer", "Savings transfer remains independently controlled by its own grant and account provisioning.");
 
 const blockedSavingsTransferData = structuredClone(configuredData);
 blockedSavingsTransferData.capabilities.actions.savingsTransfer = false;
 const blockedSavingsTransferHtml = renderBankingPage(blockedSavingsTransferData);
-assert.ok(!blockedSavingsTransferHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "Player transfer remains independently controlled by its own grant.");
-assert.match(blockedSavingsTransferHtml, /data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Savings transfer must fail closed when its authenticated grant is absent.");
+assertSubmitEnabled(blockedSavingsTransferHtml, "bankTransfer", "Player transfer remains independently controlled by its own grant.");
+assertSubmitDisabled(blockedSavingsTransferHtml, "savingsTransfer", "Savings transfer must fail closed when its authenticated grant is absent.");
 
 const emptyData = structuredClone(data);
 emptyData.banking.transactions = [];
