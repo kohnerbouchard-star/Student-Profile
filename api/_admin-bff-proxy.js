@@ -1,5 +1,7 @@
 "use strict";
 
+const { isIP } = require("node:net");
+
 const MAX_BODY_BYTES = 1_048_576;
 const MAX_PATH_BYTES = 2_048;
 const SAFE_VALUE_PATTERN = /^[^\r\n\u0000]{0,8192}$/u;
@@ -28,9 +30,16 @@ async function proxyAdminBff(request, response, options) {
       "Administrator request body is too large."
     ));
 
+    const clientIp = trustedClientIp(request);
+    if (!clientIp) return sendJson(response, 400, errorBody(
+      "trusted_client_ip_unavailable",
+      "Trusted client network metadata is unavailable."
+    ));
+
     const headers = new Headers({
       apikey: config.publishableKey,
-      Origin: requestOrigin(request)
+      Origin: requestOrigin(request),
+      "x-real-ip": clientIp
     });
     const cookie = safeHeaderValue(request.headers?.cookie);
     if (cookie) headers.set("Cookie", cookie);
@@ -149,6 +158,24 @@ function requestOrigin(request) {
   return expected;
 }
 
+function trustedClientIp(request) {
+  const candidates = [
+    request.headers?.["x-vercel-forwarded-for"],
+    request.headers?.["x-real-ip"],
+    request.socket?.remoteAddress
+  ];
+  for (const candidate of candidates) {
+    const value = safeHeaderValue(candidate).trim();
+    if (!value || value.includes(",")) continue;
+    const normalized = value.startsWith("::ffff:") ? value.slice(7) : value;
+    const bracketless = normalized.startsWith("[") && normalized.endsWith("]")
+      ? normalized.slice(1, -1)
+      : normalized;
+    if (isIP(bracketless)) return bracketless.toLowerCase();
+  }
+  return "";
+}
+
 function readBody(request) {
   if (["GET", "HEAD"].includes(String(request.method || "GET").toUpperCase())) {
     return { ok: true, value: undefined };
@@ -201,7 +228,10 @@ function normalizedSessionCookie(value) {
   if (separator <= 0) return "";
   const name = first.slice(0, separator).trim();
   const envelope = first.slice(separator + 1).trim();
-  if (!["__Host-econovaria_admin_session", "econovaria_admin_session"].includes(name)) {
+  if (![
+    "__Host-econovaria_admin_session",
+    "econovaria_admin_session"
+  ].includes(name)) {
     return "";
   }
   if (!envelope) {
