@@ -3,6 +3,7 @@ import { isEndpointEnabled } from "../../api/capabilities.js";
 import { markResourceInvalidations } from "../../api/invalidation-registry.js";
 
 const MESSAGE_READ_FORM = 'form[data-endpoint="messageRead"]';
+const MESSAGE_SEND_FORM = 'form[data-endpoint="messageSend"]';
 const MESSAGE_THREAD_CONTROL = "[data-player-message-thread]";
 const MESSAGE_SURFACE = ".player-terminal-messages-page";
 const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
@@ -10,6 +11,7 @@ const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
 function publicThreadId(control, form) {
   const value = String(
     control?.dataset?.playerMessageThread ||
+      form?.dataset?.threadId ||
       form?.elements?.namedItem("threadId")?.value ||
       "",
   ).trim().toLowerCase();
@@ -28,30 +30,56 @@ function lockMessageSurface(form) {
   for (const control of controls) {
     if (!(control instanceof HTMLButtonElement || control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement)) continue;
     if (control.disabled) continue;
-    control.dataset.messageReadRefreshLock = "true";
+    control.dataset.messageRefreshLock = "true";
     control.disabled = true;
   }
   return () => {
     if (surface.isConnected) surface.removeAttribute("aria-busy");
     for (const control of controls) {
-      if (!control.isConnected || control.dataset.messageReadRefreshLock !== "true") continue;
-      delete control.dataset.messageReadRefreshLock;
+      if (!control.isConnected || control.dataset.messageRefreshLock !== "true") continue;
+      delete control.dataset.messageRefreshLock;
       control.disabled = false;
     }
   };
 }
 
+function selectThread(mount, threadId, { requireReadCommitted = false } = {}) {
+  const refreshed = mount.querySelector(
+    `${MESSAGE_THREAD_CONTROL}[data-player-message-thread="${CSS.escape(threadId)}"]`,
+  );
+  if (!(refreshed instanceof HTMLElement)) {
+    throw new Error("The committed conversation could not be restored after refresh.");
+  }
+  if (requireReadCommitted && refreshed.closest(MESSAGE_READ_FORM)) {
+    throw new Error("The conversation remained unread after the server committed the read receipt.");
+  }
+  refreshed.dispatchEvent(new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  }));
+  return refreshed;
+}
+
 export function installMessageReadController({ mount, terminal, config, api: injectedApi = null }) {
   if (!(mount instanceof HTMLElement)) {
-    throw new TypeError("Message read flow requires the Player Terminal mount.");
+    throw new TypeError("Messaging flow requires the Player Terminal mount.");
   }
   if (!terminal || typeof terminal.getState !== "function" || typeof terminal.refresh !== "function") {
-    throw new TypeError("Message read flow requires the live Player Terminal.");
+    throw new TypeError("Messaging flow requires the live Player Terminal.");
   }
 
   const api = injectedApi || new PlayerApi(config);
   const pending = new Set();
   let destroyed = false;
+
+  async function refreshCommittedThread(threadId, options = {}) {
+    markResourceInvalidations(options.invalidatedResources || ["messages", "notifications", "dashboard"]);
+    await terminal.refresh();
+    if (destroyed) return null;
+    await nextFrame();
+    return selectThread(mount, threadId, options);
+  }
 
   async function commitRead(form, control, threadId) {
     const capabilities = terminal.getState()?.data?.capabilities;
@@ -60,7 +88,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
       return;
     }
 
-    pending.add(threadId);
+    const operationKey = `read:${threadId}`;
+    pending.add(operationKey);
     form.dataset.messageReadSubmitting = "true";
     control.setAttribute("aria-busy", "true");
     const releaseSurface = lockMessageSurface(form);
@@ -69,41 +98,63 @@ export function installMessageReadController({ mount, terminal, config, api: inj
       api.setSession?.(config);
       const operation = await api.execute("messageRead", { threadId }, { threadId });
       if (destroyed) return;
-
-      markResourceInvalidations(operation?.invalidatedResources || ["messages", "notifications", "dashboard"]);
-      await terminal.refresh();
-      if (destroyed) return;
-      await nextFrame();
-
-      const refreshed = mount.querySelector(
-        `${MESSAGE_THREAD_CONTROL}[data-player-message-thread="${CSS.escape(threadId)}"]`,
-      );
-      if (!(refreshed instanceof HTMLElement)) {
-        throw new Error("The committed conversation could not be restored after refresh.");
-      }
-      if (refreshed.closest(MESSAGE_READ_FORM)) {
-        throw new Error("The conversation remained unread after the server committed the read receipt.");
-      }
-
-      refreshed.dispatchEvent(new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      }));
+      await refreshCommittedThread(threadId, {
+        requireReadCommitted: true,
+        invalidatedResources: operation?.invalidatedResources,
+      });
       mount.dispatchEvent(new CustomEvent("econovaria:player-message-read-committed", {
         bubbles: true,
         detail: Object.freeze({ threadId }),
       }));
       terminal.showToast?.("Conversation marked read and refreshed.", "green");
     } catch (error) {
-      if (!destroyed) {
-        terminal.showToast?.(error?.message || "The conversation could not be marked read.", "red");
-      }
+      if (!destroyed) terminal.showToast?.(error?.message || "The conversation could not be marked read.", "red");
     } finally {
-      pending.delete(threadId);
+      pending.delete(operationKey);
       releaseSurface();
       if (form.isConnected) delete form.dataset.messageReadSubmitting;
       if (control.isConnected) control.removeAttribute("aria-busy");
+    }
+  }
+
+  async function commitSend(form, button, threadId, body) {
+    const capabilities = terminal.getState()?.data?.capabilities;
+    if (!isEndpointEnabled(capabilities, "messageSend")) {
+      terminal.showToast?.("Message replies are not enabled for this game.", "amber");
+      return;
+    }
+
+    const operationKey = `send:${threadId}`;
+    pending.add(operationKey);
+    form.dataset.messageSendSubmitting = "true";
+    button?.setAttribute("aria-busy", "true");
+    const releaseSurface = lockMessageSurface(form);
+
+    try {
+      api.setSession?.(config);
+      const operation = await api.execute("messageSend", { body }, { threadId });
+      if (destroyed) return;
+      await refreshCommittedThread(threadId, {
+        invalidatedResources: operation?.invalidatedResources,
+      });
+      await nextFrame();
+      const persisted = [...mount.querySelectorAll(".player-terminal-message-log p")]
+        .some((node) => String(node.textContent || "").trim() === body);
+      if (!persisted) {
+        throw new Error("The committed reply was not present after authoritative refresh.");
+      }
+      mount.dispatchEvent(new CustomEvent("econovaria:player-message-send-committed", {
+        bubbles: true,
+        detail: Object.freeze({ threadId }),
+      }));
+      terminal.showToast?.("Reply sent and refreshed.", "green");
+    } catch (error) {
+      if (!destroyed) terminal.showToast?.(error?.message || "The reply could not be sent.", "red");
+    } finally {
+      pending.delete(operationKey);
+      releaseSurface();
+      if (form.isConnected) delete form.dataset.messageSendSubmitting;
+      if (button?.isConnected) button.removeAttribute("aria-busy");
     }
   }
 
@@ -118,16 +169,42 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (pending.has(threadId) || form.dataset.messageReadSubmitting === "true") return;
+    const operationKey = `read:${threadId}`;
+    if (pending.has(operationKey) || form.dataset.messageReadSubmitting === "true") return;
     void commitRead(form, control, threadId);
   }
 
+  function handleMessageSendSubmit(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const form = target?.closest(MESSAGE_SEND_FORM);
+    if (!(form instanceof HTMLFormElement) || !mount.contains(form)) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const threadId = publicThreadId(null, form);
+    const bodyField = form.elements.namedItem("body");
+    const body = String(bodyField?.value || "").trim();
+    if (!threadId || !body) {
+      bodyField?.setCustomValidity?.("Enter a message before sending.");
+      bodyField?.focus?.();
+      terminal.showToast?.("Enter a message before sending.", "red");
+      return;
+    }
+
+    const operationKey = `send:${threadId}`;
+    if (pending.has(operationKey) || form.dataset.messageSendSubmitting === "true") return;
+    bodyField?.setCustomValidity?.("");
+    void commitSend(form, form.querySelector('button[type="submit"]'), threadId, body);
+  }
+
   mount.addEventListener("click", handleUnreadThreadClick, true);
+  mount.addEventListener("submit", handleMessageSendSubmit, true);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
       mount.removeEventListener("click", handleUnreadThreadClick, true);
+      mount.removeEventListener("submit", handleMessageSendSubmit, true);
       pending.clear();
     },
   });
