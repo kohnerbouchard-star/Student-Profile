@@ -11,22 +11,35 @@
     return;
   }
 
+  function normalizedAuthorizationList(value) {
+    return Array.isArray(value)
+      ? [...new Set(value.map((entry) => String(entry || "").trim()).filter(Boolean))]
+      : [];
+  }
+
   function authenticatedAuthorization() {
     const session = auth?.getSession?.();
-    if (!session?.accessToken) return null;
+    if (!session?.authenticated) return null;
 
     const current = feature.currentModel && typeof feature.currentModel === "object"
       ? feature.currentModel
       : {};
-
-    return {
-      permissions: Array.isArray(current.permissions) && current.permissions.length
+    const permissions = normalizedAuthorizationList(
+      Array.isArray(current.permissions) && current.permissions.length
         ? current.permissions
-        : ["*"],
-      roles: Array.isArray(current.roles) && current.roles.length
+        : session.permissions
+    );
+    const roles = normalizedAuthorizationList(
+      Array.isArray(current.roles) && current.roles.length
         ? current.roles
-        : ["game_admin"],
-      adminRole: current.adminRole || "game_admin"
+        : session.roles
+    ).filter((role) => role === "game_admin");
+
+    if (!permissions.length || !roles.includes("game_admin")) return null;
+    return {
+      permissions,
+      roles,
+      adminRole: current.adminRole || session.adminRole || "game_admin"
     };
   }
 
