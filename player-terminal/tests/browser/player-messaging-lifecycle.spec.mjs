@@ -58,7 +58,8 @@ test("Messages page exposes safe public-ID lifecycle controls without attachment
   await expect(createForm.locator('[name="recipientPlayerId"]')).toHaveAttribute("maxlength", "160");
   await expect(createForm.locator('[name="body"]')).toHaveAttribute("maxlength", "1000");
   await expect(fixture.locator('[data-endpoint="messageSend"]')).toBeVisible();
-  await expect(fixture.locator('[data-endpoint="messageRead"]')).toHaveCount(1);
+  await expect(fixture.locator('[data-endpoint="messageRead"]')).toHaveCount(0);
+  await expect(fixture.locator('[data-player-message-unread="true"]')).toHaveCount(1);
   const attachment = fixture.getByRole("button", { name: "Attachments are unavailable" });
   await expect(attachment).toBeDisabled();
   await expect(fixture).toContainText("Attachments are disabled");
@@ -78,42 +79,42 @@ test("Messages page exposes safe public-ID lifecycle controls without attachment
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("Unread conversation and reply execute one authenticated mutation each", async ({ page }) => {
+test("Opening unread conversation auto-marks read and reply delegates to the terminal dispatcher", async ({ page }) => {
   const fixture = await mountMessagingFixture(page);
   await page.evaluate(async ({ threadId }) => {
     const { installMessageReadController } = await import("/src/features/messages/message-read-controller.js");
     const mount = document.getElementById("playerMessagingBrowserFixture");
     globalThis.__messageReadExecuteCount = 0;
-    globalThis.__messageSendExecuteCount = 0;
     globalThis.__messageRefreshCount = 0;
     globalThis.__messageSelectionCount = 0;
-    globalThis.__messageLastEndpoint = "";
-    globalThis.__messageLastBody = "";
+    globalThis.__messageGenericSubmitCount = 0;
 
     mount.addEventListener("click", (event) => {
       const control = event.target.closest?.("[data-player-message-thread]");
-      if (control && !control.closest('form[data-endpoint="messageRead"]')) {
+      if (control && control.getAttribute("data-player-message-unread") !== "true") {
         globalThis.__messageSelectionCount += 1;
       }
+    });
+
+    mount.addEventListener("submit", (event) => {
+      const form = event.target.closest?.('form[data-endpoint="messageSend"]');
+      if (!form) return;
+      event.preventDefault();
+      globalThis.__messageGenericSubmitCount += 1;
+      const paragraph = document.createElement("p");
+      paragraph.textContent = String(form.elements.namedItem("body")?.value || "").trim();
+      mount.querySelector(".player-terminal-message-log")?.append(paragraph);
     });
 
     const api = {
       setSession() {},
       async execute(endpointKey, payload, params) {
-        if (params.threadId !== threadId) throw new Error("Messaging controller forwarded a different thread.");
-        globalThis.__messageLastEndpoint = endpointKey;
-        if (endpointKey === "messageRead") {
-          if (payload.threadId !== threadId) throw new Error("Message read controller forwarded an invalid request.");
-          globalThis.__messageReadExecuteCount += 1;
-          return { result: { unread: 0 }, invalidatedResources: ["messages", "notifications", "dashboard"] };
+        if (endpointKey !== "messageRead") throw new Error(`Unexpected Messaging endpoint ${endpointKey}.`);
+        if (params.threadId !== threadId || payload.threadId !== threadId) {
+          throw new Error("Message read controller forwarded an invalid public thread.");
         }
-        if (endpointKey === "messageSend") {
-          if (!String(payload.body || "").trim()) throw new Error("Message reply controller omitted the body.");
-          globalThis.__messageLastBody = payload.body;
-          globalThis.__messageSendExecuteCount += 1;
-          return { result: { messageId: "public-message" }, invalidatedResources: ["messages", "notifications", "dashboard"] };
-        }
-        throw new Error(`Unexpected Messaging endpoint ${endpointKey}.`);
+        globalThis.__messageReadExecuteCount += 1;
+        return { result: { unread: 0 }, invalidatedResources: ["messages", "notifications", "dashboard"] };
       },
     };
     const terminal = {
@@ -122,17 +123,9 @@ test("Unread conversation and reply execute one authenticated mutation each", as
       },
       async refresh() {
         globalThis.__messageRefreshCount += 1;
-        if (globalThis.__messageLastEndpoint === "messageRead") {
-          const form = mount.querySelector('form[data-endpoint="messageRead"]');
-          const control = form?.querySelector("[data-player-message-thread]");
-          if (form && control) form.replaceWith(control);
-        }
-        if (globalThis.__messageLastEndpoint === "messageSend") {
-          const log = mount.querySelector(".player-terminal-message-log");
-          const paragraph = document.createElement("p");
-          paragraph.textContent = globalThis.__messageLastBody;
-          log?.append(paragraph);
-        }
+        const control = mount.querySelector(`[data-player-message-thread="${threadId}"]`);
+        control?.removeAttribute("data-player-message-unread");
+        control?.querySelector("i")?.remove();
       },
       showToast() {},
     };
@@ -144,21 +137,19 @@ test("Unread conversation and reply execute one authenticated mutation each", as
     });
   }, { threadId: THREAD });
 
-  const unread = fixture.locator('[data-player-message-thread]').first();
+  const unread = fixture.locator('[data-player-message-unread="true"]');
   await unread.click();
   await expect.poll(() => page.evaluate(() => globalThis.__messageReadExecuteCount)).toBe(1);
   await expect.poll(() => page.evaluate(() => globalThis.__messageRefreshCount)).toBe(1);
   await expect.poll(() => page.evaluate(() => globalThis.__messageSelectionCount)).toBe(1);
-  await expect(fixture.locator('form[data-endpoint="messageRead"]')).toHaveCount(0);
+  await expect(fixture.locator('[data-player-message-unread="true"]')).toHaveCount(0);
 
-  const reply = "Connected reply persisted";
+  const reply = "Connected reply delegated";
   const form = fixture.locator(`form[data-endpoint="messageSend"][data-thread-id="${THREAD}"]`);
   await form.locator('[name="body"]').fill(reply);
-  await form.locator('button[type="submit"]').click();
-  await expect.poll(() => page.evaluate(() => globalThis.__messageSendExecuteCount)).toBe(1);
-  await expect.poll(() => page.evaluate(() => globalThis.__messageRefreshCount)).toBe(2);
-  await expect.poll(() => page.evaluate(() => globalThis.__messageSelectionCount)).toBe(2);
+  await form.locator('[data-player-message-send]').click();
+  await expect.poll(() => page.evaluate(() => globalThis.__messageGenericSubmitCount)).toBe(1);
   await expect(fixture.locator(".player-terminal-message-log p").filter({ hasText: reply })).toHaveCount(1);
   await page.waitForTimeout(100);
-  expect(await page.evaluate(() => globalThis.__messageSendExecuteCount)).toBe(1);
+  expect(await page.evaluate(() => globalThis.__messageGenericSubmitCount)).toBe(1);
 });
