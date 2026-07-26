@@ -5,18 +5,21 @@ window.Econovaria.core.api = window.Econovaria.core.api || {};
 const ECONOVARIA_DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const ECONOVARIA_DEVICE_HEADER = "x-econovaria-device-id";
 const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
+const ADMIN_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function getApiRouteUrl(surface, path) {
   const constants = window.Econovaria?.core?.constants || {};
   const baseBySurface = {
     player: constants.PLAYER_API_URL,
-    staff: constants.STAFF_API_URL,
     bootstrap: constants.BOOTSTRAP_API_URL,
-    admin: constants.ADMIN_API_URL,
     webSession: constants.WEB_SESSION_API_URL
   };
   const baseUrl = String(baseBySurface[surface] || "").trim().replace(/\/+$/, "");
-  if (!baseUrl) throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
+  if (!baseUrl) {
+    throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
+  }
 
   const routePath = String(path || "").startsWith("/")
     ? String(path || "")
@@ -34,15 +37,15 @@ function getSupabaseConfig() {
   return { supabaseUrl, publishableKey };
 }
 
-function normalizeBearerToken(value) {
-  return String(value || "").replace(/^Bearer\s+/i, "").trim();
+function normalizeOpaqueSessionToken(value) {
+  return String(value || "").trim();
 }
 
 function getOrCreateDeviceId() {
   try {
-    const existing = String(window.localStorage.getItem(ECONOVARIA_DEVICE_STORAGE_KEY) || "")
-      .trim()
-      .toLowerCase();
+    const existing = String(
+      window.localStorage.getItem(ECONOVARIA_DEVICE_STORAGE_KEY) || ""
+    ).trim().toLowerCase();
     if (DEVICE_ID_PATTERN.test(existing)) return existing;
 
     const generated = String(window.crypto?.randomUUID?.() || "").toLowerCase();
@@ -52,8 +55,30 @@ function getOrCreateDeviceId() {
     window.localStorage.setItem(ECONOVARIA_DEVICE_STORAGE_KEY, generated);
     return generated;
   } catch (_) {
-    throw new Error("[Econovaria API] A secure device identifier could not be initialized.");
+    throw new Error(
+      "[Econovaria API] A secure device identifier could not be initialized."
+    );
   }
+}
+
+function readSafeAdminState() {
+  try {
+    const value = JSON.parse(
+      window.sessionStorage.getItem(ADMIN_STATE_STORAGE_KEY) || "null"
+    );
+    return value && value.authenticated === true &&
+        CSRF_PATTERN.test(String(value.csrfToken || ""))
+      ? value
+      : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function readSelectedAdminGameId() {
+  return String(
+    window.sessionStorage.getItem(ADMIN_SELECTED_GAME_STORAGE_KEY) || ""
+  ).trim();
 }
 
 async function readJsonResponse(response) {
@@ -90,26 +115,18 @@ function normalizeEdgeRouteError(
 
 async function callSupabaseJsonRoute(surface, path, options = {}) {
   const { publishableKey } = getSupabaseConfig();
-  const token = normalizeBearerToken(options.token);
-  const playerSessionToken = normalizeBearerToken(options.playerSessionToken);
-
-  if (token === publishableKey || /^sb_publishable_/i.test(token)) {
-    return {
-      ok: false,
-      status: 401,
-      code: "publishable_key_bearer_prohibited",
-      message: "The publishable key cannot be used as a user session token.",
-      retryAfterSeconds: 0
-    };
-  }
+  const playerSessionToken = normalizeOpaqueSessionToken(
+    options.playerSessionToken
+  );
 
   try {
     const headers = {
       apikey: publishableKey,
       [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId()
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    if (playerSessionToken) headers["x-player-session-token"] = playerSessionToken;
+    if (playerSessionToken) {
+      headers["x-player-session-token"] = playerSessionToken;
+    }
 
     const requestOptions = {
       method: options.method || "GET",
@@ -146,6 +163,67 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
   }
 }
 
+async function callAdminBffJsonRoute(path, options = {}) {
+  const constants = window.Econovaria?.core?.constants || {};
+  const baseUrl = String(constants.ADMIN_BFF_API_URL || "")
+    .trim()
+    .replace(/\/+$/, "");
+  const state = readSafeAdminState();
+  if (!baseUrl || !state) {
+    return {
+      ok: false,
+      status: 401,
+      code: "staff_session_invalid",
+      message: "Administrator sign-in is required.",
+      retryAfterSeconds: 0
+    };
+  }
+
+  try {
+    const method = String(options.method || "GET").toUpperCase();
+    const headers = {
+      apikey: getSupabaseConfig().publishableKey,
+      [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId()
+    };
+    const selectedGameId = readSelectedAdminGameId();
+    if (selectedGameId) headers["x-econovaria-game-id"] = selectedGameId;
+    if (!["GET", "HEAD"].includes(method)) {
+      headers["x-econovaria-csrf-token"] = state.csrfToken;
+    }
+    const requestOptions = {
+      method,
+      headers,
+      credentials: "include",
+      cache: "no-store"
+    };
+    if (options.body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      requestOptions.body = JSON.stringify(options.body);
+    }
+
+    const route = String(path || "").startsWith("/") ? path : `/${path}`;
+    const response = await fetch(`${baseUrl}${route}`, requestOptions);
+    const result = await readJsonResponse(response);
+    return response.ok
+      ? { status: response.status, ...result }
+      : normalizeEdgeRouteError(
+        result,
+        response.status,
+        options.fallbackCode,
+        options.fallbackMessage,
+        readRetryAfterSeconds(response)
+      );
+  } catch (_) {
+    return {
+      ok: false,
+      status: 0,
+      code: `${options.fallbackCode || "admin_request"}_network_failed`,
+      message: "Could not connect to the administrator service.",
+      retryAfterSeconds: 0
+    };
+  }
+}
+
 function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
   return callSupabaseJsonRoute("player", "/players/login", {
     method: "POST",
@@ -155,7 +233,8 @@ function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
       accessCode: String(accessCode || "").trim()
     },
     fallbackCode: "player_login_failed",
-    fallbackMessage: "Player login failed. Check the Game Code, Player ID, and Access Code."
+    fallbackMessage:
+      "Player login failed. Check the Game Code, Player ID, and Access Code."
   });
 }
 
@@ -229,35 +308,28 @@ function callStaffSignupApi(input) {
       purchaseCode: String(input?.purchaseCode || "").trim(),
       gameName: String(input?.gameName || "").trim(),
       difficultyPreset: String(input?.difficultyPreset || "").trim(),
-      stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
+      stockMarketWindow: {
+        timezone: String(input?.timeZone || "").trim()
+      }
     },
     fallbackCode: "staff_signup_failed",
     fallbackMessage: "Staff account signup failed."
   });
 }
 
-function callLicensingActivationApi(_bearerToken, input) {
-  const constants = window.Econovaria?.core?.constants || {};
-  return fetch(`${String(constants.ADMIN_BFF_API_URL || "").replace(/\/+$/, "")}/licensing/activate`, {
+function callLicensingActivationApi(_unusedCredential, input) {
+  return callAdminBffJsonRoute("/licensing/activate", {
     method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    headers: {
-      apikey: getSupabaseConfig().publishableKey,
-      [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId(),
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
+    body: {
       purchaseCode: String(input?.licenseCode || "").trim(),
       gameName: String(input?.sessionName || "").trim(),
       difficultyPreset: String(input?.difficulty || "").trim(),
-      stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
-    })
-  }).then(async (response) => {
-    const result = await readJsonResponse(response);
-    return response.ok
-      ? { status: response.status, ...result }
-      : normalizeEdgeRouteError(result, response.status, "licensing_activation_failed", "The game could not be created.", readRetryAfterSeconds(response));
+      stockMarketWindow: {
+        timezone: String(input?.timeZone || "").trim()
+      }
+    },
+    fallbackCode: "licensing_activation_failed",
+    fallbackMessage: "The game could not be created."
   });
 }
 
