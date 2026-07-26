@@ -247,6 +247,49 @@ async function replay(page, original) {
   }, original);
 }
 
+function replayReadHeaders(original) {
+  const headers = { ...original.headers };
+  delete headers["idempotency-key"];
+  delete headers["content-type"];
+  return headers;
+}
+
+function assertPublicReplayPayload(payload, label) {
+  const body = JSON.stringify(payload);
+  UUID_PATTERN.lastIndex = 0;
+  if (UUID_PATTERN.test(body)) throw new Error(`${label} replay verification exposed an internal UUID.`);
+}
+
+async function readAuthoritativeReplayState(original, ticker) {
+  const headers = replayReadHeaders(original);
+  const [portfolio, banking] = await Promise.all([
+    request("/functions/v1/classroom-api/players/me/stocks/portfolio", { headers }),
+    request("/functions/v1/classroom-api/players/me/ledger?limit=50", { headers }),
+  ]);
+
+  if (portfolio.status !== 200 || portfolio.payload?.ok !== true || !Array.isArray(portfolio.payload?.holdings)) {
+    throw new Error(`Portfolio replay verification returned ${portfolio.status}: ${redact(JSON.stringify(portfolio.payload))}`);
+  }
+  if (banking.status !== 200 || banking.payload?.ok !== true || !Array.isArray(banking.payload?.currentBalances)) {
+    throw new Error(`Banking replay verification returned ${banking.status}: ${redact(JSON.stringify(banking.payload))}`);
+  }
+  assertPublicReplayPayload(portfolio.payload, "Portfolio");
+  assertPublicReplayPayload(banking.payload, "Banking");
+
+  const holding = portfolio.payload.holdings.find(
+    (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
+  );
+  const checking = banking.payload.currentBalances.find((item) =>
+    ["cash", "checking"].includes(String(item?.accountType || "").toLowerCase())
+  );
+  const holdingQuantity = Number(holding?.quantity ?? 0);
+  const cashBalance = Number(checking?.balance);
+  if (!Number.isFinite(holdingQuantity) || !Number.isFinite(cashBalance)) {
+    throw new Error(`Replay verification returned invalid authoritative state: ${redact(JSON.stringify({ holding, checking }))}`);
+  }
+  return { holdingQuantity, cashBalance };
+}
+
 async function executeRenderedOrder(page, ticker, side) {
   await openMarket(page);
   await selectTicker(page, ticker);
@@ -297,12 +340,14 @@ async function assertReplaySafe(page, order, expectedHolding, expectedCash) {
   if (Number(result.payload?.holding?.quantity) !== expectedHolding || Math.abs(Number(result.payload?.cash?.balance) - expectedCash) > 0.001) {
     throw new Error("Market order replay returned a different terminal result.");
   }
-  await reloadMarket(page);
-  await selectTicker(page, evidence.ticker);
-  const holding = await position(page);
-  const cashBalance = await cash(page);
-  if (holding !== expectedHolding || Math.abs(cashBalance - expectedCash) > 0.001) {
-    throw new Error(`Market order replay duplicated a mutation: ${JSON.stringify({ holding, cashBalance, expectedHolding, expectedCash })}.`);
+  const authoritative = await readAuthoritativeReplayState(order.original, evidence.ticker);
+  if (authoritative.holdingQuantity !== expectedHolding || Math.abs(authoritative.cashBalance - expectedCash) > 0.001) {
+    throw new Error(`Market order replay duplicated a mutation: ${JSON.stringify({
+      holding: authoritative.holdingQuantity,
+      cashBalance: authoritative.cashBalance,
+      expectedHolding,
+      expectedCash,
+    })}.`);
   }
 }
 
