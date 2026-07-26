@@ -13,7 +13,7 @@ Deno.test("accepts a 15-character mixed password", () => {
 });
 
 Deno.test("rejects passwords shorter than 15 characters", () => {
-  const result = validateStaffPassword("Short1!Password");
+  const result = validateStaffPassword("Short1!Passwor");
   assertEquals(result.ok, false);
   assertEquals(result.code, "password_too_short");
   assertEquals(STAFF_PASSWORD_MIN_LENGTH, 15);
