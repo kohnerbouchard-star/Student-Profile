@@ -1,5 +1,9 @@
 import type { EdgeErrorBody } from "./edgeResponse.ts";
 import { extractBearerToken } from "./edgeAuth.ts";
+import {
+  enforceStaffRequestRateLimit,
+  normalizedStaffAction,
+} from "../../security/staffRequestRateLimit.ts";
 
 declare const Deno: {
   readonly env: {
@@ -160,6 +164,8 @@ export type EdgeStaffSessionFailure = {
   readonly ok: false;
   readonly status: number;
   readonly error: EdgeErrorBody["error"];
+  readonly retryAfterSeconds?: number;
+  readonly resetAt?: string;
 };
 
 export type EdgeStaffSessionResolution =
@@ -182,6 +188,7 @@ interface ResolveStaffSessionOptions {
   readonly requiredRole?: "game_admin" | "security_operator";
   readonly requiredAssuranceLevel?: "aal1" | "aal2";
   readonly allowLegacyMetadata?: boolean;
+  readonly skipUniversalRateLimit?: boolean;
 }
 
 const DEFAULT_STAFF_LOOKUP_ERROR: EdgeErrorBody["error"] = {
@@ -253,8 +260,11 @@ export async function resolveStaffSessionForRequest(
 
   const permissionVersion = Number(row.permission_version);
   const securityVersion = Number(row.security_version);
-  const role = row.role === "security_operator" ? "security_operator" :
-    row.role === "game_admin" ? "game_admin" : null;
+  const role = row.role === "security_operator"
+    ? "security_operator"
+    : row.role === "game_admin"
+    ? "game_admin"
+    : null;
   if (
     row.status !== "active" ||
     !role ||
@@ -293,15 +303,50 @@ export async function resolveStaffSessionForRequest(
   }
 
   const assuranceLevel = readJwtAssuranceLevel(accessToken);
-  if (
-    (options.requiredAssuranceLevel ?? "aal1") === "aal2" &&
-    assuranceLevel !== "aal2"
-  ) {
+  const requiredAssuranceLevel = options.requiredAssuranceLevel ??
+    (["GET", "HEAD"].includes(request.method.toUpperCase()) ? "aal1" : "aal2");
+  if (requiredAssuranceLevel === "aal2" && assuranceLevel !== "aal2") {
     return authorizationFailure(
       403,
       "staff_mfa_required",
       "Multi-factor authentication is required for this operation.",
     );
+  }
+
+  if (options.skipUniversalRateLimit !== true) {
+    const path = safeRequestPath(request);
+    try {
+      const decision = await enforceStaffRequestRateLimit({
+        request,
+        action: normalizedStaffAction(request.method, path),
+        profile: ["GET", "HEAD"].includes(request.method.toUpperCase())
+          ? "read"
+          : "sensitive",
+        gameId: readGameScope(path) || row.id,
+        staffUserId: row.id,
+      }, serviceClient);
+
+      if (!decision.allowed) {
+        return {
+          ok: false,
+          status: 429,
+          error: {
+            code: "staff_rate_limit_exceeded",
+            message: "Too many staff requests. Try again later.",
+            retryable: true,
+          },
+          retryAfterSeconds: Math.max(1, decision.retryAfterSeconds),
+          resetAt: decision.resetAt,
+        };
+      }
+    } catch {
+      return authorizationFailure(
+        503,
+        "staff_rate_limit_unavailable",
+        "Staff request protection is unavailable.",
+        true,
+      );
+    }
   }
 
   return {
@@ -436,6 +481,19 @@ export async function readOwnedGameSession(
   };
 }
 
+function safeRequestPath(request: Request): string {
+  try {
+    return new URL(request.url).pathname.slice(0, 2_048) || "/";
+  } catch {
+    return "/invalid-request-path";
+  }
+}
+
+function readGameScope(path: string): string {
+  const match = path.match(/\/games\/([0-9a-f-]{36})(?:\/|$)/iu);
+  return match?.[1] || "";
+}
+
 function readJwtAssuranceLevel(token: string): "aal1" | "aal2" | "unknown" {
   try {
     const payload = token.split(".")[1];
@@ -443,8 +501,11 @@ function readJwtAssuranceLevel(token: string): "aal1" | "aal2" | "unknown" {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
     const claims = JSON.parse(atob(padded));
-    return claims?.aal === "aal2" ? "aal2" :
-      claims?.aal === "aal1" ? "aal1" : "unknown";
+    return claims?.aal === "aal2"
+      ? "aal2"
+      : claims?.aal === "aal1"
+      ? "aal1"
+      : "unknown";
   } catch {
     return "unknown";
   }
@@ -466,10 +527,11 @@ function authorizationFailure(
   status: number,
   code: string,
   message: string,
+  retryable = false,
 ): EdgeStaffSessionFailure {
   return {
     ok: false,
     status,
-    error: { code, message, retryable: false },
+    error: { code, message, retryable },
   };
 }
