@@ -1,0 +1,106 @@
+import { expect, test } from "@playwright/test";
+
+const THREAD_ID = `thr_${"c".repeat(32)}`;
+const DRAFT_BODY = "Draft survives authoritative rehydration";
+
+function fixtureData() {
+  return {
+    messages: {
+      unread: 0,
+      threads: [{
+        id: THREAD_ID,
+        type: "player",
+        title: "Rehydration contract",
+        preview: "Draft persistence",
+        time: "Now",
+        unread: 0,
+        tone: "cyan",
+        initials: "RC",
+        rawStatus: "active",
+        allowPlayerReplies: true,
+        members: "2 participants",
+        status: "Active",
+        messages: [],
+      }],
+    },
+  };
+}
+
+test("rehydrated Messaging composer submits the generic saved draft once", async ({ page }) => {
+  await page.goto("/#messages");
+  await page.evaluate(async ({ threadId }) => {
+    const { renderMessagesPage } = await import("/src/pages/messages-page.js");
+    const { installFormDraftPreserver } = await import("/src/forms/form-draft-preserver.js");
+    const { installMessageIntentAdapter } = await import("/src/features/messages/message-intent-adapter.js");
+
+    const mount = document.createElement("div");
+    mount.id = "messagingDraftRehydrationFixture";
+    mount.innerHTML = renderMessagesPage({
+      messages: {
+        unread: 0,
+        threads: [{
+          id: threadId,
+          type: "player",
+          title: "Rehydration contract",
+          preview: "Draft persistence",
+          time: "Now",
+          unread: 0,
+          tone: "cyan",
+          initials: "RC",
+          rawStatus: "active",
+          allowPlayerReplies: true,
+          members: "2 participants",
+          status: "Active",
+          messages: [],
+        }],
+      },
+    }, { messageThreadId: threadId });
+    document.body.append(mount);
+
+    const drafts = installFormDraftPreserver(mount);
+    const intents = installMessageIntentAdapter({ mount, drafts });
+    globalThis.__messagingDraftFixture = { renderMessagesPage, mount, drafts, intents, threadId };
+    globalThis.__messagingDraftDispatches = [];
+
+    mount.addEventListener("submit", (event) => {
+      const form = event.target.closest?.('[data-endpoint="messageSend"]');
+      if (!(form instanceof HTMLFormElement)) return;
+      event.preventDefault();
+      globalThis.__messagingDraftDispatches.push(Object.fromEntries(new FormData(form).entries()));
+    });
+  }, { threadId: THREAD_ID });
+
+  const fixture = page.locator("#messagingDraftRehydrationFixture");
+  await fixture.locator('[name="body"]').fill(DRAFT_BODY);
+
+  await page.evaluate(({ threadId }) => {
+    const state = globalThis.__messagingDraftFixture;
+    state.mount.innerHTML = state.renderMessagesPage({
+      messages: {
+        unread: 0,
+        threads: [{
+          id: threadId,
+          type: "player",
+          title: "Rehydration contract",
+          preview: "Draft persistence",
+          time: "Now",
+          unread: 0,
+          tone: "cyan",
+          initials: "RC",
+          rawStatus: "active",
+          allowPlayerReplies: true,
+          members: "2 participants",
+          status: "Active",
+          messages: [],
+        }],
+      },
+    }, { messageThreadId: threadId });
+  }, { threadId: THREAD_ID });
+
+  await expect(fixture.locator('[name="body"]')).toHaveValue("");
+  await fixture.locator("[data-player-message-send]").click();
+  await expect.poll(() => page.evaluate(() => globalThis.__messagingDraftDispatches.length)).toBe(1);
+  expect(await page.evaluate(() => globalThis.__messagingDraftDispatches[0])).toEqual({ body: DRAFT_BODY });
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => globalThis.__messagingDraftDispatches.length)).toBe(1);
+});
