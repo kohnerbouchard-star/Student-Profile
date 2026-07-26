@@ -1,0 +1,14 @@
+/* Compact-desktop stacking repair for selected-game and logout controls.
+   The accepted desktop rail keeps its elevation, while responsive layouts must
+   not allow the rail's controls to intercept adjacent Admin content. */
+
+@media (max-width: 1180px) {
+  .econovaria-admin-game-session-controls-host {
+    z-index: auto;
+  }
+
+  .econovaria-admin-game-session-controls-host .econovaria-admin-game-session-card button,
+  .econovaria-admin-game-session-controls-host [data-econovaria-admin-logout="true"] {
+    z-index: auto !important;
+  }
+}
