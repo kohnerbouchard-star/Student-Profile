@@ -39,9 +39,9 @@ enable_signup = false
 [edge_runtime]
 enabled = true
 
-# Authenticated staff requests carry a real Supabase Auth user JWT. The platform
+# Authenticated Staff requests carry a real Supabase Auth user JWT. The platform
 # gate rejects missing or invalid JWTs before the function performs auth.getUser,
-# staff lookup, role checks, and game ownership checks.
+# Staff lookup, role checks, security-version checks and game ownership checks.
 [functions.staff-api]
 verify_jwt = true
 
@@ -49,6 +49,11 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.staff-mfa-api]
+verify_jwt = true
+
+# The one-time recovery JWT is platform-verified, resolved with auth.getUser and
+# linked to an active Staff account before a server-side password update.
+[functions.password-reset-api]
 verify_jwt = true
 
 # Bootstrap and Player requests use the publishable key only as application
@@ -62,7 +67,7 @@ verify_jwt = false
 
 # The Admin web-session BFF authenticates the public application key internally,
 # verifies allowed origins, decrypts an HttpOnly session envelope, enforces CSRF,
-# and forwards a server-held real Staff JWT to the platform-verified Admin API.
+# and forwards a server-held real Staff JWT to platform-verified Staff services.
 [functions.web-session-api]
 verify_jwt = false
 
