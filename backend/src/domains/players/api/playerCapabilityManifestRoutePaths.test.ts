@@ -132,6 +132,7 @@ Deno.test("all migrated Player route families dispatch on the Player API boundar
   assertEquals(readPlayerWorldRoutePath(`${prefix}/players/me/world/countries`), { kind: "countries" });
   assertEquals(readPlayerInventoryRoutePath(`${prefix}/players/me/inventory`), { kind: "inventory" });
   assertEquals(readPlayerMessagingRoutePath(`${prefix}/players/me/messages`), { kind: "list" });
+  assertEquals(readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages`), null);
   assertEquals(readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/policy`), { kind: "policy" });
   assertEquals(readPlayerStockAssetListRoutePath(`${prefix}/players/me/stocks/assets`), { kind: "assets" });
   assertEquals(readPlayerContractPublicListRoutePath(`${prefix}/players/me/contracts`), { kind: "contracts" });
