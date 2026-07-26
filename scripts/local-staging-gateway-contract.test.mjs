@@ -24,6 +24,7 @@ from email.message import Message
 path = sys.argv[1]
 spec = importlib.util.spec_from_file_location("econovaria_gateway", path)
 module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 
 publishable_key = "sb_publishable_contract_test"
@@ -47,11 +48,27 @@ staff_headers = Message()
 staff_headers["apikey"] = publishable_key
 staff_headers["Authorization"] = f"Bearer {user_jwt}"
 staff_headers["x-forwarded-for"] = "203.0.113.7"
+staff_headers["x-unreviewed-header"] = "must-not-pass"
 staff_forwarded = module.filtered_request_headers(
     staff_headers,
     "127.0.0.1:54321",
     browser_publishable_key=publishable_key,
 )
+
+response_metadata = module.filtered_response_headers([
+    ("Content-Type", "application/json; charset=iso-8859-1"),
+    ("Retry-After", "00045"),
+    ("X-Request-Id", "req.contract-1"),
+    ("Set-Cookie", "privileged=value"),
+    ("Location", "https://attacker.invalid/"),
+    ("Access-Control-Allow-Origin", "*"),
+    ("X-Attacker\r\nInjected", "yes"),
+])
+invalid_response_metadata = module.filtered_response_headers([
+    ("Content-Type", "text/html"),
+    ("Retry-After", "Thu, 01 Jan 2099 00:00:00 GMT"),
+    ("X-Request-Id", "bad request id"),
+])
 
 generated = module.runtime_config(
     module.LOCAL_DEVELOPMENT_PROJECT_REF,
@@ -71,6 +88,16 @@ print(json.dumps({
     "parsedStatus": parsed_status,
     "publicForwarded": public_forwarded,
     "staffForwarded": staff_forwarded,
+    "responseMetadata": {
+        "contentType": response_metadata.content_type,
+        "retryAfter": response_metadata.retry_after,
+        "requestId": response_metadata.request_id,
+    },
+    "invalidResponseMetadata": {
+        "contentType": invalid_response_metadata.content_type,
+        "retryAfter": invalid_response_metadata.retry_after,
+        "requestId": invalid_response_metadata.request_id,
+    },
     "runtimeConfig": config,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
     "maxBody": module.MAX_PROXY_BODY_BYTES,
@@ -136,7 +163,24 @@ test("gateway strips publishable bearer and preserves real staff JWT", () => {
   );
   assert.equal(result.staffForwarded["x-real-ip"], "127.0.0.1");
   assert.equal(result.staffForwarded["x-forwarded-for"], undefined);
+  assert.equal(result.staffForwarded["x-unreviewed-header"], undefined);
   assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v2");
+});
+
+test("gateway reconstructs a bounded response-header contract", () => {
+  const result = probeGateway();
+  assert.deepEqual(result.responseMetadata, {
+    contentType: "application/json; charset=utf-8",
+    retryAfter: "45",
+    requestId: "req.contract-1",
+  });
+  assert.deepEqual(result.invalidResponseMetadata, {
+    contentType: "application/octet-stream",
+    retryAfter: null,
+    requestId: null,
+  });
+  assert.equal(JSON.stringify(result.responseMetadata).includes("Set-Cookie"), false);
+  assert.equal(JSON.stringify(result.responseMetadata).includes("attacker.invalid"), false);
 });
 
 test("Player Terminal sends publishable key only as apikey", async () => {
