@@ -59,6 +59,7 @@ for (const reference of scripts) {
 
 const sessionManager = readAdmin("auth-session-manager.js");
 const auth = readAdmin("admin-auth.js");
+const boot = readAdmin("dist/admin-overview-boot.js");
 const fallback = readAdmin("classroom-write-fallback.js");
 const createAdapter = readAdmin("create-action-adapter.js");
 const credentialBridge = readAdmin("player-access-code-bridge.js");
@@ -68,12 +69,23 @@ const logoutConfirmation = readAdmin("logout-confirmation.js");
 const gameSessionControls = readAdmin("game-session-controls.js");
 
 assert(sessionManager.includes("/status"), "Admin BFF status route is missing.");
+assert(sessionManager.includes("/session/bootstrap"), "Admin granular authorization bootstrap is missing.");
+assert(sessionManager.includes("ADMIN_PERMISSION_SET"), "Admin permission allowlist is missing.");
+assert(sessionManager.includes("requestAuthorizationSummary"), "Admin authorization summary request is missing.");
 assert(sessionManager.includes("statusPromise"), "Concurrent Admin status checks are not deduplicated.");
 assert(sessionManager.includes('credentials: "include"'), "Admin BFF cookies are not included.");
 assert(!sessionManager.includes("grant_type=refresh_token"), "Browser still refreshes Staff credentials directly.");
 assert(!sessionManager.includes("accessToken"), "Browser session manager still stores a Staff access token.");
 assert(!sessionManager.includes("refreshToken"), "Browser session manager still stores a Staff refresh token.");
 assert(!sessionManager.includes("Authorization"), "Browser session manager still sends Staff bearer authorization.");
+assert(!sessionManager.includes('permissions: ["*"]'), "Browser session manager restores wildcard authorization.");
+
+assert(boot.includes("session?.authenticated"), "Admin boot does not use the safe authenticated session state.");
+assert(boot.includes("session.permissions"), "Admin boot does not consume granular Staff permissions.");
+assert(boot.includes("econovaria:admin-session-refreshed"), "Admin boot does not install authorization after session refresh.");
+assert(!boot.includes("session?.accessToken"), "Admin boot still requires a browser-readable Staff token.");
+assert(!boot.includes('["*"]'), "Admin boot still restores wildcard authorization.");
+
 assert(auth.includes("ADMIN_BFF_BASE"), "Admin transport does not target the BFF.");
 assert(auth.includes("x-econovaria-csrf-token"), "Admin mutations do not carry the BFF CSRF token.");
 assert(auth.includes('credentials: "include"'), "Admin requests omit the HttpOnly session cookie.");
@@ -110,4 +122,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell HttpOnly BFF identity, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
+console.log("Admin shell HttpOnly BFF identity, granular authorization, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
