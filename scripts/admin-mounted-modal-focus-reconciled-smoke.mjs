@@ -108,48 +108,27 @@ if (reconciledSource === redirectedSource) {
   throw new Error("Mounted modal focus reconciliation contract changed.");
 }
 
-const stabilizedControllerHelper = `async function controllerDialogForSurface(page, surface, markerName, label) {
+const controllerOwnershipNeedle = `async function controllerDialogForSurface(page, surface, markerName, label) {
   await surface.waitFor({ state: "visible", timeout: 5000 });
-  await surface.evaluate(async (root, input) => {
+`;
+const controllerOwnershipReplacement = `async function controllerDialogForSurface(page, surface, markerName, label) {
+  await surface.waitFor({ state: "visible", timeout: 5000 });
+  await surface.evaluate(async (root, currentLabel) => {
     for (let attempt = 0; attempt < 60; attempt += 1) {
       const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
       const dialog = controller?.dialog;
       const related = dialog instanceof HTMLElement && (
         dialog === root || root.contains(dialog) || dialog.contains(root)
       );
-      if (related) {
-        dialog.dataset[input.markerName] = "true";
-        return;
-      }
+      if (related) return;
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }
-    throw new Error(input.label + " did not become owned by the shared modal controller.");
-  }, { markerName, label });
-  const ownership = await surface.evaluate((root) => {
-    const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
-    const dialog = controller?.dialog;
-    const related = dialog instanceof HTMLElement && (
-      dialog === root || root.contains(dialog) || dialog.contains(root)
-    );
-    return {
-      related,
-      surfaceTag: root.tagName,
-      surfaceClass: root.className,
-      surfaceRole: root.getAttribute("role") || "",
-      controllerDialogTag: dialog?.tagName || "",
-      controllerDialogClass: dialog?.className || "",
-    };
-  });
-  assert(ownership.related, label + " is not owned by the shared modal controller: " + JSON.stringify(ownership) + ".");
-  return {
-    dialog: page.locator(\`[data-\${markerName.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase())}="true"]\`),
-    ownership,
-  };
-}`;
-
+    throw new Error(currentLabel + " did not become owned by the shared modal controller.");
+  }, label);
+`;
 const controllerReconciledSource = reconciledSource.replace(
-  /async function controllerDialogForSurface\(page, surface, markerName, label\) \{[\s\S]*?\n\}\n\nasync function exercisePlayerProfileModal/,
-  `${stabilizedControllerHelper}\n\nasync function exercisePlayerProfileModal`,
+  controllerOwnershipNeedle,
+  controllerOwnershipReplacement,
 );
 if (controllerReconciledSource === reconciledSource) {
   throw new Error("Mounted modal controller ownership fixture contract changed.");
