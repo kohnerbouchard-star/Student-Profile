@@ -62,12 +62,16 @@
 
   function installAuthenticatedAdminModelBridge() {
     const authorization = authenticatedAuthorization();
-    if (!authorization) return;
+    if (!authorization) return false;
 
     const descriptor = Object.getOwnPropertyDescriptor(feature, "currentModel");
+    if (descriptor?.get && descriptor?.set) {
+      feature.currentModel = normalizeAuthenticatedModel(feature.currentModel);
+      return true;
+    }
     if (descriptor && descriptor.configurable === false) {
       feature.currentModel = normalizeAuthenticatedModel(feature.currentModel);
-      return;
+      return true;
     }
 
     let currentModelValue = normalizeAuthenticatedModel(feature.currentModel);
@@ -84,8 +88,13 @@
     });
 
     feature.currentModel = currentModelValue;
+    return true;
   }
 
+  window.addEventListener(
+    "econovaria:admin-session-refreshed",
+    installAuthenticatedAdminModelBridge
+  );
   installAuthenticatedAdminModelBridge();
 
   if (auth && typeof auth.attachTerminal === "function") {
