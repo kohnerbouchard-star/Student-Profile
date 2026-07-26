@@ -88,6 +88,7 @@ test("browser runtime exposes only publishable application identity", async () =
   assert.match(runtime, /adminApiUrl/);
   assert.match(runtime, /webSessionApiUrl/);
   assert.match(runtime, /adminBffApiUrl/);
+  assert.match(runtime, /passwordResetApiUrl/);
   assert.match(runtime, /classroomApiUrl:\s*staffApiUrl/);
   assert.match(runtime, /SECRET_KEY_PROHIBITED/);
 
@@ -99,9 +100,11 @@ test("browser runtime exposes only publishable application identity", async () =
   assert.match(api, /callSupabaseJsonRoute\("player"/);
   assert.match(api, /callSupabaseJsonRoute\("bootstrap"/);
   assert.match(api, /callSupabaseJsonRoute\("webSession",\s*"\/login"/);
+  assert.match(api, /callAdminBffJsonRoute\("\/games\/provision"/);
   assert.doesNotMatch(api, /grant_type=password/);
   assert.doesNotMatch(api, /token:\s*publishableKey/);
   assert.doesNotMatch(api, /Authorization:\s*`Bearer \$\{publishableKey\}`/);
+  assert.doesNotMatch(api, /const ADMIN_SELECTED_GAME_STORAGE_KEY/);
 });
 
 test("Admin browser storage and transport contain no Staff credential", async () => {
@@ -122,7 +125,11 @@ test("Admin browser storage and transport contain no Staff credential", async ()
     read("admin/admin-auth.js"),
     read("admin/player-access-code-bridge.js"),
   ]);
-  assert.match(login, /authenticated:\s*result\?\.session\?\.authenticated/);
+  assert.match(login, /function persistSafeAdminStatus\(status\)/);
+  assert.match(login, /persistSafeAdminStatus\(status\)/);
+  assert.doesNotMatch(login, /persistSafeAdminStatus\(signIn\)/);
+  assert.doesNotMatch(login, /persistAdminState\(signIn\)/);
+  assert.match(login, /clearAdminState\(\);\s*renderGameSelection\(signIn\.activeGameSessions/s);
   assert.match(manager, /credentials:\s*"include"/);
   assert.match(adminAuth, /credentials:\s*"include"/);
   assert.match(adminAuth, /x-econovaria-csrf-token/);
@@ -163,9 +170,10 @@ test("Player and Admin callers remain bound to their own identities", async () =
 });
 
 test("server-side Admin BFF is the only Staff credential transport", async () => {
-  const [edge, vercel, adminRoute, sessionRoute] = await Promise.all([
+  const [edge, vercel, recoveryProxy, adminRoute, sessionRoute] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
     read("api/_admin-bff-proxy.js"),
+    read("api/password-reset.js"),
     read("api/admin/[...path].js"),
     read("api/admin-session/[...path].js"),
   ]);
@@ -177,7 +185,11 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
   assert.match(vercel, /COOKIE_ENVELOPE_PATTERN/);
   assert.match(vercel, /proxyAdminBff/);
-  assert.doesNotMatch(vercel, /authorization/i);
+  assert.match(vercel, /x-vercel-forwarded-for/);
+  assert.match(vercel, /"x-real-ip": clientIp/);
+  assert.doesNotMatch(vercel, /headers\.set\(["']authorization/i);
+  assert.match(recoveryProxy, /x-vercel-forwarded-for/);
+  assert.match(recoveryProxy, /"x-real-ip": clientIp/);
   assert.match(adminRoute, /proxyAdmin:\s*true/);
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
