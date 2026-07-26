@@ -62,13 +62,11 @@ jobs:
 
       - name: Verify password, TOTP enrollment, and AAL2 elevation
         id: mfa_browser
+        continue-on-error: true
         shell: bash
         run: |
-          set +e
+          set -o pipefail
           node scripts/admin-mfa-browser-smoke.mjs 2>&1 | tee "$RUNNER_TEMP/admin-mfa-browser.log"
-          status=${PIPESTATUS[0]}
-          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
-          exit 0
 
       - name: Upload Admin MFA diagnostics
         if: always()
@@ -80,5 +78,6 @@ jobs:
           retention-days: 7
 
       - name: Enforce Admin MFA browser journey
+        if: always()
         shell: bash
-        run: test "${{ steps.mfa_browser.outputs.status }}" = "0"
+        run: test "${{ steps.mfa_browser.outcome }}" = "success"
