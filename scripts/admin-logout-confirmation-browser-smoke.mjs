@@ -16,6 +16,7 @@ function assert(condition, message) {
 const harness = await createQualityHarness("logout-confirmation");
 const { page, errors, dir } = harness;
 const requests = [];
+let storageBeforeSignedOutNavigation = null;
 
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
@@ -35,6 +36,25 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
     headers: { "cache-control": "private, no-store" },
     body: JSON.stringify({ ok: true }),
   });
+});
+
+await page.route("**/*", async (route) => {
+  const request = route.request();
+  const url = new URL(request.url());
+  if (
+    request.isNavigationRequest() &&
+    url.searchParams.get("mode") === "admin" &&
+    url.searchParams.get("reason") === "signed-out"
+  ) {
+    storageBeforeSignedOutNavigation = await page.evaluate(() => ({
+      session: sessionStorage.getItem("econovaria.admin.auth.v1"),
+      selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+      csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
+    }));
+    await route.continue();
+    return;
+  }
+  await route.fallback();
 });
 
 async function clickRealAccountLogout() {
@@ -146,23 +166,13 @@ try {
 
   await clickRealAccountLogout();
   await modal.waitFor({ state: "visible", timeout: 5_000 });
-  const storageClearedBeforeNavigation = page.waitForFunction(() => {
-    const storage = {
-      session: sessionStorage.getItem("econovaria.admin.auth.v1"),
-      selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
-      csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
-    };
-    return storage.session === null && storage.selectedGame === null && storage.csrf === null
-      ? storage
-      : false;
-  }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue());
-  const [storage] = await Promise.all([
-    storageClearedBeforeNavigation,
+  await Promise.all([
     page.waitForURL((url) => url.searchParams.get("mode") === "admin" && url.searchParams.get("reason") === "signed-out",
       { timeout: 10_000 }),
     modal.locator("[data-econovaria-logout-confirm]").click(),
   ]);
-  assert(storage.session === null && storage.selectedGame === null && storage.csrf === null,
+  const storage = storageBeforeSignedOutNavigation;
+  assert(storage && storage.session === null && storage.selectedGame === null && storage.csrf === null,
     `Logout left local state before navigation: ${JSON.stringify(storage)}`);
   assert(requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`);
