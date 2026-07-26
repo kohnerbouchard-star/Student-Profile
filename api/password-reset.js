@@ -1,5 +1,7 @@
 "use strict";
 
+const { isIP } = require("node:net");
+
 const MAX_BODY_BYTES = 4_096;
 const JWT_PATTERN = /^[A-Za-z0-9_-]{8,2048}\.[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,4096}$/u;
 
@@ -19,6 +21,14 @@ module.exports = async function passwordResetProxy(request, response) {
 
     const config = readConfig();
     const origin = requestOrigin(request);
+    const clientIp = trustedClientIp(request);
+    if (!clientIp) {
+      return sendJson(response, 400, errorBody(
+        "trusted_client_ip_unavailable",
+        "Trusted client network metadata is unavailable."
+      ));
+    }
+
     const authorization = String(request.headers?.authorization || "").trim();
     const match = authorization.match(/^Bearer\s+(.+)$/u);
     if (!match || !JWT_PATTERN.test(match[1])) {
@@ -44,7 +54,8 @@ module.exports = async function passwordResetProxy(request, response) {
           apikey: config.publishableKey,
           Authorization: `Bearer ${match[1]}`,
           Origin: origin,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-real-ip": clientIp
         },
         body: body.value,
         cache: "no-store",
@@ -110,6 +121,24 @@ function requestOrigin(request) {
   const supplied = safeHeader(request.headers?.origin);
   if (supplied && supplied !== expected) throw new Error("origin mismatch");
   return expected;
+}
+
+function trustedClientIp(request) {
+  const candidates = [
+    request.headers?.["x-vercel-forwarded-for"],
+    request.headers?.["x-real-ip"],
+    request.socket?.remoteAddress
+  ];
+  for (const candidate of candidates) {
+    const value = safeHeader(candidate).trim();
+    if (!value || value.includes(",")) continue;
+    const normalized = value.startsWith("::ffff:") ? value.slice(7) : value;
+    const bracketless = normalized.startsWith("[") && normalized.endsWith("]")
+      ? normalized.slice(1, -1)
+      : normalized;
+    if (isIP(bracketless)) return bracketless.toLowerCase();
+  }
+  return "";
 }
 
 function readBody(request) {
