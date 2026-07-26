@@ -12,7 +12,8 @@ function getApiRouteUrl(surface, path) {
     player: constants.PLAYER_API_URL,
     staff: constants.STAFF_API_URL,
     bootstrap: constants.BOOTSTRAP_API_URL,
-    admin: constants.ADMIN_API_URL
+    admin: constants.ADMIN_API_URL,
+    webSession: constants.WEB_SESSION_API_URL
   };
   const baseUrl = String(baseBySurface[surface] || "").trim().replace(/\/+$/, "");
   if (!baseUrl) throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
@@ -113,7 +114,8 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     const requestOptions = {
       method: options.method || "GET",
       headers,
-      cache: "no-store"
+      cache: "no-store",
+      credentials: options.credentials || "omit"
     };
     if (options.body !== undefined) {
       headers["Content-Type"] = "application/json";
@@ -185,9 +187,10 @@ function callPlayerGameDashboardApi(sessionToken) {
   });
 }
 
-async function callSupabasePasswordSignIn(email, password) {
-  const result = await callSupabaseJsonRoute("bootstrap", "/staff/login", {
+function callSupabasePasswordSignIn(email, password) {
+  return callSupabaseJsonRoute("webSession", "/login", {
     method: "POST",
+    credentials: "include",
     body: {
       email: String(email || "").trim(),
       password: String(password || "")
@@ -195,18 +198,25 @@ async function callSupabasePasswordSignIn(email, password) {
     fallbackCode: "admin_login_failed",
     fallbackMessage: "Admin email or password is invalid."
   });
+}
 
-  if (!result?.ok || !result.session?.accessToken) return result;
-  return {
-    ok: true,
-    status: result.status,
-    accessToken: result.session.accessToken,
-    refreshToken: result.session.refreshToken || "",
-    expiresAt: result.session.expiresAt || null,
-    assuranceLevel: result.session.assuranceLevel || "unknown",
-    mfaRequired: result.session.mfaRequired === true,
-    user: result.user || null
-  };
+function callAdminWebSessionStatus() {
+  return callSupabaseJsonRoute("webSession", "/status", {
+    method: "GET",
+    credentials: "include",
+    fallbackCode: "staff_session_invalid",
+    fallbackMessage: "The administrator session could not be loaded."
+  });
+}
+
+function callAdminWebSessionLogout() {
+  return callSupabaseJsonRoute("webSession", "/logout", {
+    method: "POST",
+    credentials: "include",
+    body: {},
+    fallbackCode: "staff_logout_failed",
+    fallbackMessage: "The administrator session could not be closed."
+  });
 }
 
 function callStaffSignupApi(input) {
@@ -226,28 +236,33 @@ function callStaffSignupApi(input) {
   });
 }
 
-function callLicensingActivationApi(bearerToken, input) {
-  return callSupabaseJsonRoute("staff", "/licensing/activate", {
+function callLicensingActivationApi(_bearerToken, input) {
+  const constants = window.Econovaria?.core?.constants || {};
+  return fetch(`${String(constants.ADMIN_BFF_API_URL || "").replace(/\/+$/, "")}/licensing/activate`, {
     method: "POST",
-    token: bearerToken,
-    body: {
+    credentials: "include",
+    cache: "no-store",
+    headers: {
+      apikey: getSupabaseConfig().publishableKey,
+      [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId(),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
       purchaseCode: String(input?.licenseCode || "").trim(),
       gameName: String(input?.sessionName || "").trim(),
       difficultyPreset: String(input?.difficulty || "").trim(),
       stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
-    },
-    fallbackCode: "licensing_activation_failed",
-    fallbackMessage: "The game could not be created."
+    })
+  }).then(async (response) => {
+    const result = await readJsonResponse(response);
+    return response.ok
+      ? { status: response.status, ...result }
+      : normalizeEdgeRouteError(result, response.status, "licensing_activation_failed", "The game could not be created.", readRetryAfterSeconds(response));
   });
 }
 
-function callStaffBootstrapApi(bearerToken) {
-  return callSupabaseJsonRoute("staff", "/staff/bootstrap", {
-    method: "GET",
-    token: bearerToken,
-    fallbackCode: "staff_bootstrap_failed",
-    fallbackMessage: "The administrator session could not be loaded."
-  });
+function callStaffBootstrapApi() {
+  return callAdminWebSessionStatus();
 }
 
 Object.assign(window.Econovaria.core.api, {
@@ -256,6 +271,8 @@ Object.assign(window.Econovaria.core.api, {
   callPlayerLogoutApi,
   callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
+  callAdminWebSessionStatus,
+  callAdminWebSessionLogout,
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
@@ -268,6 +285,8 @@ Object.assign(window.Econovaria.core, {
   callPlayerLogoutApi,
   callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
+  callAdminWebSessionStatus,
+  callAdminWebSessionLogout,
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
