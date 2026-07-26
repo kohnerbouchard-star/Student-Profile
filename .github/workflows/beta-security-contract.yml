@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - ".github/workflows/beta-security-contract.yml"
+      - "api/**"
+      - "admin/admin-auth.js"
+      - "admin/auth-session-manager.js"
+      - "frontend/src/core/api.js"
+      - "frontend/src/core/login.js"
+      - "frontend/src/core/runtime-config.js"
       - "backend/src/security/**"
       - "backend/src/platform/supabase/edgeStaffSession.ts"
       - "backend/src/platform/supabase/edgeResponse.ts"
@@ -15,6 +21,8 @@ on:
       - "backend/supabase/functions/bootstrap-api/**"
       - "backend/supabase/functions/player-api/**"
       - "backend/supabase/functions/staff-api/**"
+      - "backend/supabase/functions/staff-mfa-api/**"
+      - "backend/supabase/functions/web-session-api/**"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts"
       - "backend/supabase/migrations/*authentication_throttle*.sql"
@@ -25,8 +33,10 @@ on:
       - "docs/security/**"
       - "docs/operations/beta-security-rate-limit-staging-runbook.md"
       - "docs/operations/staff-access-security-policy.md"
+      - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/econovaria-local-gateway.py"
+      - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/staging/probe-beta-security-http.mjs"
       - "scripts/staging/probe-beta-security-rate-limit-sql.mjs"
       - "scripts/staging/scan-beta-security-evidence.mjs"
@@ -80,26 +90,47 @@ jobs:
           SUPABASE_URL: http://localhost:54321
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_security_contract
           SUPABASE_SECRET_KEY: sb_secret_security_contract
+          ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
         run: |
           deno test \
-            --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY \
+            --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY,ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY \
             --config backend/supabase/functions/classroom-api/deno.json \
             --lock=backend/supabase/functions/deno.lock \
             --frozen \
             backend/src/security/staffPasswordPolicy.test.ts \
             backend/src/security/authenticationThrottle.test.ts \
             backend/src/security/edgeRequestBoundary.test.ts \
+            backend/src/security/webAdminSession.test.ts \
             backend/src/domains/auth/api/staffLoginHttpHandler.test.ts \
             backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts \
             backend/src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts \
             backend/supabase/functions/admin-api/adminSecurityGuard.test.ts
 
-      - name: Typecheck all backend surfaces
-        working-directory: backend
-        run: npm run typecheck:all
+      - name: Typecheck all security surfaces
+        run: |
+          npm --prefix backend run typecheck:all
+          deno check \
+            --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/supabase/functions/bootstrap-api/index.ts \
+            backend/supabase/functions/staff-api/index.ts \
+            backend/supabase/functions/staff-mfa-api/index.ts \
+            backend/supabase/functions/player-api/index.ts \
+            backend/supabase/functions/web-session-api/index.ts
+          node --check api/_admin-bff-proxy.js
+          node --check 'api/admin-session/[...path].js'
+          node --check 'api/admin/[...path].js'
+          node --check admin/auth-session-manager.js
+          node --check admin/admin-auth.js
+          node --check frontend/src/core/api.js
+          node --check frontend/src/core/login.js
 
       - name: Validate browser and gateway auth boundaries
-        run: node --test scripts/auth-boundary-contract.test.mjs
+        run: |
+          node --test scripts/auth-boundary-contract.test.mjs
+          node scripts/admin-session-manager-smoke.mjs
+          node --test scripts/local-staging-gateway-contract.test.mjs
 
       - name: Validate connected probe contracts
         run: npm run test:security-probes
