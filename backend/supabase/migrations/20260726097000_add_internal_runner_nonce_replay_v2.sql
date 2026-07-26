@@ -1,6 +1,9 @@
 begin;
 
-create table if not exists public.internal_runner_nonce_claims (
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.internal_runner_nonce_claims (
   runner_name text not null,
   nonce_hash text not null,
   timestamp_seconds bigint not null,
@@ -19,15 +22,15 @@ create table if not exists public.internal_runner_nonce_claims (
 );
 
 create index if not exists internal_runner_nonce_claims_expiry_idx
-  on public.internal_runner_nonce_claims (expires_at);
+  on private.internal_runner_nonce_claims (expires_at);
 
-alter table public.internal_runner_nonce_claims enable row level security;
-alter table public.internal_runner_nonce_claims force row level security;
-revoke all on table public.internal_runner_nonce_claims
+alter table private.internal_runner_nonce_claims enable row level security;
+alter table private.internal_runner_nonce_claims force row level security;
+revoke all on table private.internal_runner_nonce_claims
   from public, anon, authenticated, service_role;
 
-comment on table public.internal_runner_nonce_claims is
-  'Replay-denial ledger for signed internal runners. Stores only the runner name, a SHA-256 nonce digest, bounded timestamp, and expiry; raw nonces and runner secrets are never persisted.';
+comment on table private.internal_runner_nonce_claims is
+  'Private replay-denial ledger for signed internal runners. Stores only the runner name, a SHA-256 nonce digest, bounded timestamp, and expiry; raw nonces and runner secrets are never persisted.';
 
 create or replace function public.claim_internal_runner_nonce_v2(
   p_runner_name text,
@@ -38,7 +41,7 @@ create or replace function public.claim_internal_runner_nonce_v2(
 returns boolean
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, private, public
 as $function$
 declare
   v_now timestamptz := clock_timestamp();
@@ -59,10 +62,10 @@ begin
     raise exception 'INTERNAL_RUNNER_NONCE_CLAIM_INVALID' using errcode = '22023';
   end if;
 
-  delete from public.internal_runner_nonce_claims
+  delete from private.internal_runner_nonce_claims
   where expires_at <= v_now;
 
-  insert into public.internal_runner_nonce_claims (
+  insert into private.internal_runner_nonce_claims (
     runner_name,
     nonce_hash,
     timestamp_seconds,
