@@ -74,6 +74,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
   const eventRoot = mount.ownerDocument || mount;
   const pending = new Set();
   const replyDrafts = new Map();
+  const boundForms = new Set();
+  const boundButtons = new Set();
   let destroyed = false;
 
   async function refreshCommittedThread(threadId, options = {}) {
@@ -125,10 +127,6 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
     try {
       api.setSession?.(config);
-      mount.dispatchEvent(new CustomEvent("econovaria:player-message-send-started", {
-        bubbles: true,
-        detail: Object.freeze({ threadId }),
-      }));
       const operation = await api.execute("messageSend", { body }, { threadId });
       if (destroyed) return;
       replyDrafts.delete(threadId);
@@ -178,6 +176,25 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     void commitSend(form, button, threadId, body);
   }
 
+  function bindSendForm(form) {
+    if (!(form instanceof HTMLFormElement) || boundForms.has(form)) return;
+    const button = form.querySelector(MESSAGE_SEND_CONTROL);
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    const submit = (event) => beginSend(event, form, button);
+    const click = (event) => beginSend(event, form, button);
+    form.addEventListener("submit", submit, true);
+    button.addEventListener("click", click, true);
+    boundForms.add(form);
+    boundButtons.add(button);
+    form.__econovariaMessageSubmit = submit;
+    button.__econovariaMessageClick = click;
+  }
+
+  function bindCurrentSendForms() {
+    mount.querySelectorAll(MESSAGE_SEND_FORM).forEach(bindSendForm);
+  }
+
   function handleMessagingInput(event) {
     const field = event.target instanceof HTMLTextAreaElement ? event.target : null;
     const form = field?.closest(MESSAGE_SEND_FORM);
@@ -189,15 +206,8 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     else replyDrafts.delete(threadId);
   }
 
-  function handleMessagingClick(event) {
+  function handleUnreadThreadClick(event) {
     const target = event.target instanceof Element ? event.target : null;
-    const sendButton = target?.closest(MESSAGE_SEND_CONTROL);
-    const sendForm = sendButton?.closest(MESSAGE_SEND_FORM);
-    if (sendButton instanceof HTMLButtonElement && sendForm instanceof HTMLFormElement && mount.contains(sendForm)) {
-      beginSend(event, sendForm, sendButton);
-      return;
-    }
-
     const control = target?.closest(MESSAGE_THREAD_CONTROL);
     if (!(control instanceof HTMLButtonElement) || !mount.contains(control) || !control.matches(MESSAGE_UNREAD_CONTROL)) return;
 
@@ -214,23 +224,26 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     void commitRead(control, threadId);
   }
 
-  function handleMessageSendSubmit(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    const form = target?.closest(MESSAGE_SEND_FORM);
-    if (!(form instanceof HTMLFormElement) || !mount.contains(form)) return;
-    beginSend(event, form, form.querySelector(MESSAGE_SEND_CONTROL));
-  }
-
+  const observer = new MutationObserver(() => bindCurrentSendForms());
+  observer.observe(mount, { childList: true, subtree: true });
+  bindCurrentSendForms();
   eventRoot.addEventListener("input", handleMessagingInput, true);
-  eventRoot.addEventListener("click", handleMessagingClick, true);
-  eventRoot.addEventListener("submit", handleMessageSendSubmit, true);
+  eventRoot.addEventListener("click", handleUnreadThreadClick, true);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
+      observer.disconnect();
       eventRoot.removeEventListener("input", handleMessagingInput, true);
-      eventRoot.removeEventListener("click", handleMessagingClick, true);
-      eventRoot.removeEventListener("submit", handleMessageSendSubmit, true);
+      eventRoot.removeEventListener("click", handleUnreadThreadClick, true);
+      for (const form of boundForms) {
+        if (form.__econovariaMessageSubmit) form.removeEventListener("submit", form.__econovariaMessageSubmit, true);
+      }
+      for (const button of boundButtons) {
+        if (button.__econovariaMessageClick) button.removeEventListener("click", button.__econovariaMessageClick, true);
+      }
+      boundForms.clear();
+      boundButtons.clear();
       pending.clear();
       replyDrafts.clear();
     },
