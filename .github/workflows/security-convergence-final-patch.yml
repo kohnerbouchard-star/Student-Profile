@@ -1,0 +1,300 @@
+name: Security convergence final guarded patch
+
+on:
+  push:
+    branches:
+      - agent/security-convergence-v2
+    paths:
+      - .github/workflows/security-convergence-final-patch.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: security-convergence-final-guarded-patch
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out guarded branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/security-convergence-v2
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply exact guarded patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, expected=1):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} exact matches, found {count}")
+              file.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace(
+              "admin/admin-logout-controller.js",
+              '''    if (!isLogoutControl(control)) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void beginLogout(control);''',
+              '''    if (!isLogoutControl(control)) return;
+              if (window.EconovariaAdminLogoutConfirmation?.open) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void beginLogout(control);''',
+          )
+          replace(
+              "admin/admin-logout-controller.js",
+              '''    if (!isLogoutControl(event.target)) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void beginLogout(event.target);''',
+              '''    if (!isLogoutControl(event.target)) return;
+              if (window.EconovariaAdminLogoutConfirmation?.open) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void beginLogout(event.target);''',
+          )
+
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '''export const GAME_ID = "00000000-0000-4000-8000-000000000001";
+          const ADMIN_ID = "00000000-0000-4000-8000-000000000002";''',
+              '''export const GAME_ID = "00000000-0000-4000-8000-000000000001";
+          const SECONDARY_GAME_ID = "00000000-0000-4000-8000-000000000099";
+          const ADMIN_ID = "00000000-0000-4000-8000-000000000002";''',
+          )
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '''function assertBffRequest(request, errors) {
+            const headers = request.headers();
+            if (headers.authorization !== undefined) {
+              errors.push(`${request.method()} ${request.url()} exposed Staff Authorization`);
+            }
+            if (!headers.apikey) {
+              errors.push(`${request.method()} ${request.url()} omitted publishable application identity`);
+            }
+            if (headers["x-econovaria-game-id"] !== GAME_ID) {
+              errors.push(`${request.method()} ${request.url()} omitted game scope`);
+            }''',
+              '''function assertBffRequest(request, errors, allowedGameIds) {
+            const headers = request.headers();
+            if (headers.authorization !== undefined) {
+              errors.push(`${request.method()} ${request.url()} exposed Staff Authorization`);
+            }
+            if (!headers.apikey) {
+              errors.push(`${request.method()} ${request.url()} omitted publishable application identity`);
+            }
+            const gameId = headers["x-econovaria-game-id"];
+            if (!gameId || !allowedGameIds.has(gameId)) {
+              errors.push(`${request.method()} ${request.url()} omitted or exceeded game scope`);
+            }''',
+          )
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '''function attendanceSuccess() {
+            return {
+              ok: true,
+              player: {
+                id: "00000000-0000-4000-8000-000000000003",
+                displayName: "Quality Player",
+                playerIdentifier: "QUALITY-01",
+                rosterLabel: "Quality roster label",
+                status: "active",
+              },
+              attendance: {
+                status: "present",
+                attendanceDate: "2026-07-16",
+                clockedInAt: "2026-07-15T23:42:00.000Z",
+                wasCreated: true,
+                timezone: "Asia/Seoul",
+              },
+              reward: {
+                amount: 1,
+                currencyCode: "ECO",
+                ledgerEntryId: "00000000-0000-4000-8000-000000000005",
+              },
+            };
+          }''',
+              '''function attendanceSuccess(name) {
+            if (name === "attendance-reward-settings") {
+              return {
+                ok: true,
+                player: {
+                  id: "00000000-0000-4000-8000-000000000003",
+                  displayName: "Lumenor Player",
+                  playerIdentifier: "LUM-001",
+                  rosterLabel: "Lumenor roster",
+                  status: "active",
+                },
+                attendance: {
+                  id: "00000000-0000-4000-8000-000000000004",
+                  status: "present",
+                  attendanceDate: "2026-07-16",
+                  clockedInAt: "2026-07-15T23:42:00.000Z",
+                  wasCreated: true,
+                  timezone: "Asia/Seoul",
+                },
+                reward: {
+                  amount: 1.2,
+                  currencyCode: "LUM",
+                  ledgerEntryId: "00000000-0000-4000-8000-000000000005",
+                  configuredBaseAmount: 1,
+                  baseCurrencyCode: "ECO",
+                  currencyMode: "player_country",
+                  countryCode: "LUMENOR",
+                  incomeModifier: 1,
+                  exchangeRateIndex: 1.2,
+                },
+              };
+            }
+            return {
+              ok: true,
+              player: {
+                id: "00000000-0000-4000-8000-000000000003",
+                displayName: "Quality Player",
+                playerIdentifier: "QUALITY-01",
+                rosterLabel: "Quality roster label",
+                status: "active",
+              },
+              attendance: {
+                status: "present",
+                attendanceDate: "2026-07-16",
+                clockedInAt: "2026-07-15T23:42:00.000Z",
+                wasCreated: true,
+                timezone: "Asia/Seoul",
+              },
+              reward: {
+                amount: 1,
+                currencyCode: "ECO",
+                ledgerEntryId: "00000000-0000-4000-8000-000000000005",
+              },
+            };
+          }''',
+          )
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '''    settingsReadFailureInjected: false,
+            };''',
+              '''    settingsReadFailureInjected: false,
+              allowedGameIds: new Set(
+                name === "attendance-reward-settings"
+                  ? [GAME_ID, SECONDARY_GAME_ID]
+                  : [GAME_ID],
+              ),
+            };''',
+          )
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '''    assertBffRequest(request, errors);''',
+              '''    assertBffRequest(request, errors, state.allowedGameIds);''',
+          )
+          replace(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              ''': attendanceSuccess(),''',
+              ''': attendanceSuccess(name),''',
+          )
+
+          replace(
+              "backend/src/security/webAdminSession.ts",
+              '''  readonly csrfToken: string;
+            readonly user: {''',
+              '''  readonly csrfToken: string;
+            readonly mfaRequired: boolean;
+            readonly user: {''',
+          )
+          replace(
+              "backend/src/security/webAdminSession.ts",
+              '''  readonly csrfToken: string;
+            readonly nowSeconds?: number;''',
+              '''  readonly csrfToken: string;
+            readonly mfaRequired?: boolean;
+            readonly nowSeconds?: number;''',
+          )
+          replace(
+              "backend/src/security/webAdminSession.ts",
+              '''    csrfToken: input.csrfToken,
+              user: input.user,''',
+              '''    csrfToken: input.csrfToken,
+              mfaRequired: input.mfaRequired !== false,
+              user: input.user,''',
+          )
+          replace(
+              "backend/src/security/webAdminSession.ts",
+              '''    typeof payload.csrfToken !== "string" ||
+              !/^[A-Za-z0-9_-]{43}$/u.test(payload.csrfToken) ||''',
+              '''    typeof payload.csrfToken !== "string" ||
+              !/^[A-Za-z0-9_-]{43}$/u.test(payload.csrfToken) ||
+              typeof payload.mfaRequired !== "boolean" ||''',
+          )
+
+          replace(
+              "backend/supabase/functions/web-session-api/index.ts",
+              '''    csrfToken: randomWebAdminCsrfToken(),
+              user: {''',
+              '''    csrfToken: randomWebAdminCsrfToken(),
+              mfaRequired: login.session.mfaRequired,
+              user: {''',
+          )
+          replace(
+              "backend/supabase/functions/web-session-api/index.ts",
+              '''  mfaRequired = true,
+            ) {''',
+              '''  mfaRequired = payload.mfaRequired,
+            ) {''',
+          )
+
+          replace(
+              "backend/src/security/webAdminSession.test.ts",
+              '''    csrfToken: "A".repeat(43),
+              nowSeconds: NOW,''',
+              '''    csrfToken: "A".repeat(43),
+              mfaRequired: false,
+              nowSeconds: NOW,''',
+          )
+          replace(
+              "backend/src/security/webAdminSession.test.ts",
+              '''  assertEquals(opened, payload);
+            assertEquals(opened.absoluteExpiresAt - opened.issuedAt, WEB_ADMIN_SESSION_ABSOLUTE_SECONDS);''',
+              '''  assertEquals(opened, payload);
+            assertEquals(opened.mfaRequired, false);
+            assertEquals(opened.absoluteExpiresAt - opened.issuedAt, WEB_ADMIN_SESSION_ABSOLUTE_SECONDS);''',
+          )
+          replace(
+              "backend/src/security/webAdminSession.test.ts",
+              '''    csrfToken: "B".repeat(43),
+              nowSeconds: NOW,''',
+              '''    csrfToken: "B".repeat(43),
+              mfaRequired: true,
+              nowSeconds: NOW,''',
+          )
+          PY
+
+      - name: Validate patched JavaScript syntax
+        run: |
+          set -euo pipefail
+          node --check admin/admin-logout-controller.js
+          node --check scripts/admin-quality-smoke-fixture.mjs
+
+      - name: Commit patch and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/security-convergence-final-patch.yml
+          git config user.name "econovaria-security-bot"
+          git config user.email "security-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: preserve admin security policy across session boundaries"
+          git push origin HEAD:agent/security-convergence-v2
