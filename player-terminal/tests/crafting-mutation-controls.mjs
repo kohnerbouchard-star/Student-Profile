@@ -10,7 +10,7 @@ const data = {
       name: "Connected Effect Token",
       category: "Consumable",
       quantityAvailable: 2,
-      availableActions: ["use"],
+      availableActions: ["inventory.use"],
     }, {
       itemKey: "ordinary-material",
       name: "Ordinary Material",
@@ -45,7 +45,7 @@ const data = {
       equipmentKey,
       name: "Connected Equipment",
       slot: "",
-      allowedSlot: "tool",
+      allowedSlot: "utility",
       status: "active",
     }],
     effects: [],
@@ -58,7 +58,7 @@ for (const endpoint of ["craftItem", "equipmentEquip", "itemSalvage", "itemEffec
   assert.match(markup, new RegExp(`data-endpoint="${endpoint}"`), `missing ${endpoint} control`);
 }
 assert.match(markup, new RegExp(`name="equipmentKey" value="${equipmentKey}"`));
-assert.match(markup, /name="slot" value="tool"/);
+assert.match(markup, /name="slot" value="utility"/);
 assert.match(markup, /name="itemKey" value="connected-effect-token"/);
 assert.doesNotMatch(markup, /name="itemKey" value="ordinary-material"/);
 assert.doesNotMatch(markup, /playerUuid|playerId|gameSessionId|ownerPlayerId|recipientPlayerUuid/);
@@ -69,11 +69,22 @@ const equippedMarkup = renderCraftingPage({
     ...data.crafting,
     equipment: [{
       ...data.crafting.equipment[0],
-      slot: "tool",
+      slot: "utility",
     }],
   },
 }, { craftingRecipeId: "recipe.connected" });
 assert.match(equippedMarkup, /data-endpoint="equipmentEquip"/);
 assert.doesNotMatch(equippedMarkup, /data-endpoint="itemSalvage"/);
+
+const legacyTokenMarkup = renderCraftingPage({
+  ...data,
+  inventory: {
+    items: [{
+      ...data.inventory.items[0],
+      availableActions: ["use"],
+    }],
+  },
+}, { craftingRecipeId: "recipe.connected" });
+assert.doesNotMatch(legacyTokenMarkup, /data-endpoint="itemEffectUse"/);
 
 console.log("Crafting renders public-key equip, salvage, and server-approved effect-use controls without ownership fields.");
