@@ -302,9 +302,9 @@ try {
     throw new Error(`Contract submission replay was neither idempotent nor denied: ${submitReplay.status}.`);
   }
   await reloadContracts(page);
-  if (await contractDetailHeading(page, selected.title).count() < 1) {
-    throw new Error("Contract progress disappeared after replay handling.");
-  }
+  const submittedAfterReplayTab = page.locator('[data-player-contract-tab="Submitted"]');
+  if (await submittedAfterReplayTab.count()) await submittedAfterReplayTab.click();
+  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
   evidence.submissionReplaySafe = true;
 
   const unauthAccept = await request(new URL(acceptRequest.url).pathname, {
