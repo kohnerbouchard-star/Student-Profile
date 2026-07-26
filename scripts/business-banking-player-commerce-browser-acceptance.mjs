@@ -32,7 +32,7 @@ const evidence = {
     quoteCreated: false,
     purchaseCompleted: false,
     ownershipPersisted: false,
-    cashPersisted: false,
+    checkingPersisted: false,
     unauthenticatedRejected: false,
   },
   requests: [],
@@ -224,19 +224,30 @@ function parseCurrencyAmount(text) {
   return Number(match[1]);
 }
 
-async function nativeCashContext(session) {
+async function nativeCheckingContext(session) {
   await openRoute(session, "banking", ".player-terminal-banking-page");
-  const card = session.page.locator('[data-player-banking-balance^="cash:"], [data-player-banking-balance^="checking:"]').first();
+  const currencyCode = await session.page.evaluate(() => {
+    const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+    return String(
+      state?.data?.session?.currencyCode ||
+      state?.data?.banking?.checking?.currencyCode ||
+      "",
+    ).trim().toUpperCase();
+  });
+  if (!/^[A-Z0-9]{3,16}$/.test(currencyCode)) {
+    throw new Error("The authenticated Player session did not expose an assigned currency.");
+  }
+  const card = session.page.locator(
+    `[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`,
+  ).first();
   await card.waitFor({ state: "visible", timeout: 30_000 });
-  const key = String(await card.getAttribute("data-player-banking-balance"));
-  const currencyCode = key.split(":").at(-1).toUpperCase();
   const amount = parseCurrencyAmount(await card.locator("h3").innerText());
   return { currencyCode, amount };
 }
 
 async function balanceForCurrency(session, currencyCode) {
   await openRoute(session, "banking", ".player-terminal-banking-page");
-  const card = session.page.locator(`[data-player-banking-balance="cash:${currencyCode}"], [data-player-banking-balance="checking:${currencyCode}"]`).first();
+  const card = session.page.locator(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`).first();
   if (!(await card.count())) return 0;
   await card.waitFor({ state: "visible", timeout: 30_000 });
   return parseCurrencyAmount(await card.locator("h3").innerText());
@@ -290,7 +301,7 @@ async function purchaseStoreItem(session) {
   const card = button.locator("xpath=ancestor::article[1]");
   const beforeText = String(await card.innerText());
   const beforeOwned = Number(beforeText.match(/OWNED\s+(\d+)/i)?.[1] || 0);
-  const cashBefore = await nativeCashContext(session);
+  const checkingBefore = await nativeCheckingContext(session);
   await openRoute(session, "store", ".player-terminal-store-page");
   await session.page.locator(`[data-player-purchase="${itemKey}"]`).click();
   const modal = session.page.locator('[aria-labelledby="storePurchaseModalTitle"]').last();
@@ -333,11 +344,11 @@ async function purchaseStoreItem(session) {
   }
   evidence.store.ownershipPersisted = true;
 
-  const cashAfter = await nativeCashContext(session);
-  if (!(cashAfter.amount < cashBefore.amount)) {
-    throw new Error(`Store purchase did not reduce authoritative cash: ${cashBefore.amount} -> ${cashAfter.amount}.`);
+  const checkingAfter = await nativeCheckingContext(session);
+  if (!(checkingAfter.amount < checkingBefore.amount)) {
+    throw new Error(`Store purchase did not reduce authoritative checking: ${checkingBefore.amount} -> ${checkingAfter.amount}.`);
   }
-  evidence.store.cashPersisted = true;
+  evidence.store.checkingPersisted = true;
   return { url: purchaseResponse.url(), body: unauthorizedBody };
 }
 
@@ -351,7 +362,7 @@ try {
   const beta = await loginPlayer(browser, admin.gameCode, admin.players[1]);
   sessions.push(alpha, beta);
 
-  const alphaInitial = await nativeCashContext(alpha);
+  const alphaInitial = await nativeCheckingContext(alpha);
   await creditPlayer(admin, admin.players[0], alphaInitial.currencyCode);
   evidence.fixtureCredit.applied = true;
   await alpha.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
