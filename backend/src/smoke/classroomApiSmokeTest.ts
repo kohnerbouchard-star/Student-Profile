@@ -161,8 +161,8 @@ async function testSharedMissingStaff(): Promise<void> {
   assertEqual(result.error.code, "staff_not_found", "Expected missing staff code.");
   assertEqual(
     result.error.message,
-    "No staff user is linked to the Supabase Auth user.",
-    "Expected missing staff message.",
+    "No active staff account is linked to this user.",
+    "Expected non-enumerating missing staff message.",
   );
 }
 
