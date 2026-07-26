@@ -6,23 +6,30 @@ const COMMIT_EVENT = "econovaria:player-message-read-committed";
 const COMMAND_TIMEOUT_MS = 60_000;
 const COMMIT_POLL_MS = 50;
 
-function publicThreadId(control) {
-  const value = String(control?.dataset?.playerMessageThread || "").trim().toLowerCase();
-  return PUBLIC_THREAD_ID.test(value) ? value : "";
+function boundedThreadId(value) {
+  const threadId = String(value || "").trim().toLowerCase();
+  return PUBLIC_THREAD_ID.test(threadId) ? threadId : "";
 }
 
-function createReadCommandForm(mount, threadId) {
+function publicThreadId(control) {
+  return boundedThreadId(control?.dataset?.playerMessageThread);
+}
+
+function createCommandForm(mount, { endpointKey, commandName, threadId, fields = {} }) {
   const form = mount.ownerDocument.createElement("form");
   form.hidden = true;
   form.setAttribute("aria-hidden", "true");
-  form.dataset.playerForm = "message-read-command";
-  form.dataset.endpoint = "messageRead";
+  form.dataset.playerForm = commandName;
+  form.dataset.endpoint = endpointKey;
   form.dataset.threadId = threadId;
 
-  const input = mount.ownerDocument.createElement("input");
-  input.type = "hidden";
-  input.name = "threadId";
-  input.value = threadId;
+  for (const [name, value] of Object.entries(fields)) {
+    const input = mount.ownerDocument.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = String(value);
+    form.append(input);
+  }
 
   const submit = mount.ownerDocument.createElement("button");
   submit.type = "submit";
@@ -30,7 +37,7 @@ function createReadCommandForm(mount, threadId) {
   submit.tabIndex = -1;
   submit.setAttribute("aria-hidden", "true");
 
-  form.append(input, submit);
+  form.append(submit);
   mount.append(form);
   return { form, submit };
 }
@@ -67,16 +74,35 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     if (state) state.pollId = runtime.setTimeout(() => pollForCommit(threadId), COMMIT_POLL_MS);
   }
 
+  function submitCommand(command) {
+    const { form, submit } = createCommandForm(mount, command);
+    try {
+      form.requestSubmit(submit);
+    } finally {
+      runtime.queueMicrotask(() => form.remove());
+    }
+  }
+
   function dispatchReplyIntent(event, target) {
     const control = target?.closest(REPLY_CONTROL);
     if (!(control instanceof HTMLButtonElement) || !mount.contains(control)) return false;
     if (control.disabled || control.getAttribute("aria-disabled") === "true") return true;
-    const form = control.closest(MESSAGE_SEND_FORM);
-    if (!(form instanceof HTMLFormElement)) return true;
+    const composer = control.closest(MESSAGE_SEND_FORM);
+    if (!(composer instanceof HTMLFormElement)) return true;
+
+    const threadId = boundedThreadId(composer.dataset.threadId);
+    const body = String(composer.elements.namedItem("body")?.value || "").trim();
+    if (!threadId || !body) return true;
 
     event.preventDefault();
     runtime.queueMicrotask(() => {
-      if (!destroyed && form.isConnected && control.isConnected) form.requestSubmit(control);
+      if (destroyed) return;
+      submitCommand({
+        endpointKey: "messageSend",
+        commandName: "message-send-command",
+        threadId,
+        fields: { body },
+      });
     });
     return true;
   }
@@ -89,18 +115,18 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     const threadId = publicThreadId(control);
     if (!threadId || pending.has(threadId)) return;
 
-    const { form, submit } = createReadCommandForm(mount, threadId);
     const timeoutId = runtime.setTimeout(() => release(threadId), COMMAND_TIMEOUT_MS);
     pending.set(threadId, { timeoutId, pollId: 0 });
     control.setAttribute("aria-busy", "true");
     control.setAttribute("data-player-message-read-pending", "true");
 
-    try {
-      form.requestSubmit(submit);
-      pollForCommit(threadId);
-    } finally {
-      runtime.queueMicrotask(() => form.remove());
-    }
+    submitCommand({
+      endpointKey: "messageRead",
+      commandName: "message-read-command",
+      threadId,
+      fields: { threadId },
+    });
+    pollForCommit(threadId);
   }
 
   function handleClick(event) {
