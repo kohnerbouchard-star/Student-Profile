@@ -63,10 +63,10 @@ const data = {
     inventory: [{ itemKey: "machine-steel-billet", kind: "input", quantity: 10, unitCost: 2 }],
   },
   banking: {
-    checking: { accountId: "cash", balance: 1000, available: 1000, currencyCode: "LUM" },
+    checking: { accountId: "checking", balance: 1000, available: 1000, currencyCode: "LUM" },
     savings: { accountId: "savings", balance: 200, available: 200, interestRate: 3, interestEarned: 2, configured: true },
     balances: [
-      { accountType: "cash", balance: 1000, currencyCode: "LUM" },
+      { accountType: "checking", balance: 1000, currencyCode: "LUM" },
       { accountType: "savings", balance: 200, currencyCode: "LUM" },
     ],
     creditConfigured: true,
@@ -150,6 +150,9 @@ assert.match(unconfigured, /name="acquireBusinessKey"/);
 assertAccessibleForm(unconfigured, "businessCreate");
 
 const bankingMarkup = renderBankingPage(data);
+assert.match(bankingMarkup, /data-player-banking-balance="checking:LUM"/);
+assert.match(bankingMarkup, /CHECKING ACCOUNT/);
+assert.doesNotMatch(bankingMarkup, /CASH ACCOUNT|Cash ·/);
 assert.match(bankingMarkup, /data-endpoint="bankTransfer"/);
 assert.match(bankingMarkup, /name="recipientPlayerIdentifier"/);
 assert.match(bankingMarkup, /data-endpoint="savingsTransfer"/);
@@ -198,7 +201,7 @@ assert.equal(
 assert.equal(termination.payload.businessKey, businessKey);
 assert.equal(termination.payload.reason, "Role no longer required");
 
-console.log("Player Business, Banking, and Loans surface contract passed.");
+console.log("Player Business, checking/savings Banking, and Loans surface contract passed.");
 
 function assertAccessibleForm(source, endpoint) {
   const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>([\\s\\S]*?)<\\/form>`, "u"));
