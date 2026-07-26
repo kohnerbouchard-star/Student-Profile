@@ -7,6 +7,7 @@ const root = process.cwd();
 const required = [
   "src/api/capabilities.js",
   "src/api/payload-normalizer.js",
+  "src/api/player-api-core.js",
   "src/api/request-context.js",
   "src/api/resource-plan.js",
   "src/api/response-normalizer.js",
@@ -31,11 +32,15 @@ for (const marker of ["environment === \"development\"", "allowPreviewMode", "!a
   if (!configSource.includes(marker)) throw new Error(`Production preview guard is missing: ${marker}`);
 }
 
-const playerApiSource = await readFile(path.join(root, "src/api/player-api.js"), "utf8");
-for (const marker of ["loadRoute(route", "inFlightReads", "inFlightWrites", "idempotencyKey", "refreshResources", "WRITE_INVALIDATIONS", "sessionVersion", "sessionController.abort()", "mergeAbortSignals"]) {
-  if (!playerApiSource.includes(marker)) throw new Error(`Player API hardening marker is missing: ${marker}`);
+const playerApiFacadeSource = await readFile(path.join(root, "src/api/player-api.js"), "utf8");
+for (const marker of ["extends CorePlayerApi", "actionPathParams", "PLAYER_ENDPOINTS", "super.execute"]) {
+  if (!playerApiFacadeSource.includes(marker)) throw new Error(`Player API facade marker is missing: ${marker}`);
 }
-if (playerApiSource.includes("Promise.all(keys.map")) throw new Error("All-route bootstrap has returned.");
+const playerApiCoreSource = await readFile(path.join(root, "src/api/player-api-core.js"), "utf8");
+for (const marker of ["loadRoute(route", "inFlightReads", "inFlightWrites", "idempotencyKey", "refreshResources", "WRITE_INVALIDATIONS", "sessionVersion", "sessionController.abort()", "mergeAbortSignals"]) {
+  if (!playerApiCoreSource.includes(marker)) throw new Error(`Player API hardening marker is missing: ${marker}`);
+}
+if (playerApiCoreSource.includes("Promise.all(keys.map")) throw new Error("All-route bootstrap has returned.");
 
 const adapterSource = await readFile(path.join(root, "src/api/adapter-transport.js"), "utf8");
 for (const marker of ["AbortController", "REQUEST_TIMEOUT", "requestId", "signal: controller.signal"]) {
