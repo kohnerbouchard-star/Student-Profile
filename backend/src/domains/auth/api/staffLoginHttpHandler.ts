@@ -185,6 +185,7 @@ export async function handleStaffLoginRequest(
         mfaRequired: staff.mfa_required,
       },
       user: {
+        id: staff.id,
         email: staff.email,
         displayName: staff.display_name,
         role: staff.role,
