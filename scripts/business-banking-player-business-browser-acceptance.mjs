@@ -486,17 +486,20 @@ try {
   const player = await login(browser, admin.gameCode);
   context = player.context;
   evidence.rosterCurrencyCode = admin.rosterCurrencyCode;
-  const businessCurrencyCode = await renderedBusinessCurrency(player.page);
-  evidence.businessCurrencyCode = businessCurrencyCode;
-  const balanceBeforeCredit = await checkingBalance(player.page, businessCurrencyCode, { optional: true });
-  await creditPlayer(admin, businessCurrencyCode);
+  const balanceBeforeCredit = await checkingBalance(player.page, admin.rosterCurrencyCode, { optional: true });
+  await creditPlayer(admin, admin.rosterCurrencyCode);
   await player.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await player.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const balanceAfterCredit = await checkingBalance(player.page, businessCurrencyCode);
+  const balanceAfterCredit = await checkingBalance(player.page, admin.rosterCurrencyCode);
   if (balanceAfterCredit < balanceBeforeCredit + FIXTURE_CREDIT) {
     throw new Error(`Business fixture credit did not become Player-visible: ${balanceBeforeCredit} -> ${balanceAfterCredit}.`);
   }
   evidence.fixtureCreditVisible = true;
+  const businessCurrencyCode = await renderedBusinessCurrency(player.page);
+  evidence.businessCurrencyCode = businessCurrencyCode;
+  if (businessCurrencyCode !== admin.rosterCurrencyCode) {
+    throw new Error(`Business currency ${businessCurrencyCode} does not match assigned country currency ${admin.rosterCurrencyCode}.`);
+  }
 
   const originalCreate = await createBusiness(player.page);
   await createProduct(player.page);
