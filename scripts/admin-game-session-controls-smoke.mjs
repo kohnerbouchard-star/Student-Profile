@@ -96,24 +96,32 @@ for (const contract of [
 }
 
 for (const contract of [
-  "clearSessionSynchronously();",
-  "captureSession()",
-  'window.addEventListener("click"',
-  "event.stopImmediatePropagation()",
+  "clearSessionSynchronously",
+  "revokeServerSession()",
+  "EconovariaAdminAuthSession",
+  "authSession.signOut()",
+  "fallbackWebSessionLogout",
+  "webSessionApiUrl",
+  'credentials: "include"',
   "keepalive: true",
-  "/auth/sign-out",
-  "/auth/v1/logout",
   "window.location.replace(loginUrl())",
 ]) {
   assert(
     logoutController.includes(contract),
-    `Synchronous Admin logout controller is missing ${contract}.`,
+    `HttpOnly Admin logout controller is missing ${contract}.`,
   );
 }
 assert(
-  logoutController.indexOf("clearSessionSynchronously();") <
-    logoutController.indexOf("logoutPromise = revokeCapturedSession"),
-  "Admin session must be cleared before asynchronous revocation begins.",
+  !logoutController.includes("Authorization") &&
+    !logoutController.includes("/auth/sign-out") &&
+    !logoutController.includes("/auth/v1/logout") &&
+    !logoutController.includes("adminApiUrl"),
+  "Admin logout must not restore browser bearer revocation or direct Admin/Auth routes.",
+);
+assert(
+  logoutController.indexOf("logoutPromise = revokeServerSession()") <
+    logoutController.indexOf("window.location.replace(loginUrl())"),
+  "Admin web-session revocation must begin before signed-out navigation.",
 );
 
 assert(
@@ -157,6 +165,6 @@ console.log(JSON.stringify({
   canonicalPlayerShareRoute: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
-  logoutSynchronousClear: true,
+  logoutHttpOnlyWebSession: true,
   backendGameCodeBinding: true,
 }, null, 2));
