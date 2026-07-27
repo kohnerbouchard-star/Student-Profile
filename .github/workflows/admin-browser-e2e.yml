@@ -2,6 +2,12 @@ name: Admin Browser E2E
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/runtime-stability-button-integrity-v1
+    paths:
+      - ".github/workflows/admin-browser-e2e.yml"
+      - "scripts/reconcile-pr377-with-main.sh"
   pull_request:
     branches: [main]
     paths:
@@ -18,13 +24,15 @@ concurrency:
 jobs:
   reconcile-main:
     name: Reconcile PR 377 with main
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/runtime-stability-button-integrity-v1'
+    if: >-
+      (github.event_name == 'push' && github.ref_name == 'agent/runtime-stability-button-integrity-v1') ||
+      (github.event_name == 'pull_request' && github.head_ref == 'agent/runtime-stability-button-integrity-v1')
     runs-on: ubuntu-latest
     steps:
-      - name: Check out exact PR head
+      - name: Check out exact branch head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -45,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           git merge --abort 2>/dev/null || true
-          git reset --hard "${{ github.event.pull_request.head.sha }}"
+          git reset --hard "${{ github.event.pull_request.head.sha || github.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs/operations/reconciliation
