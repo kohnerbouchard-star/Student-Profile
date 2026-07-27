@@ -90,8 +90,23 @@ jobs:
           npm run test:player-progression
           deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/security/progressionRateLimitDispatch.test.ts
       - name: Run Player capability contracts
+        id: player_capabilities
         working-directory: backend
-        run: npm run test:player-capabilities
+        shell: bash
+        run: |
+          set +e
+          npm run test:player-capabilities 2>&1 | tee "$RUNNER_TEMP/player-capabilities.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
+      - name: Upload Player capability failure log
+        if: failure() && steps.player_capabilities.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: progression-player-capabilities-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/player-capabilities.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Run Player static verification
         working-directory: player-terminal
         run: npm run verify
