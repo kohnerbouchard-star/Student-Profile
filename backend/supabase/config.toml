@@ -63,13 +63,19 @@ verify_jwt = true
 [functions.password-reset-api]
 verify_jwt = true
 
-# Bootstrap and Player requests use the publishable key only as application
-# identity. Their handlers explicitly validate apikey, then enforce purchase-code
-# or opaque Player-session authorization. Opaque publishable keys are not JWTs.
+# Bootstrap and direct Player API requests use the publishable key only as
+# application identity. Their handlers enforce purchase-code or opaque Player
+# session authorization after the application-key check.
 [functions.bootstrap-api]
 verify_jwt = false
 
 [functions.player-api]
+verify_jwt = false
+
+# Same-origin Player BFF. It validates application identity and origin, seals the
+# opaque Player token in an authenticated HttpOnly cookie, enforces CSRF for
+# mutations and forwards the server-held token only to player-api.
+[functions.player-web-session-api]
 verify_jwt = false
 
 # The Admin web-session BFF authenticates the public application key internally,
@@ -78,9 +84,9 @@ verify_jwt = false
 [functions.web-session-api]
 verify_jwt = false
 
-# Server-to-server stock functions validate the publishable apikey and the
-# dedicated STOCK_MARKET_RUNNER_SECRET inside the function. They do not accept a
-# browser or legacy anon JWT as authorization.
+# Server-to-server stock functions validate the publishable apikey and signed,
+# timestamped, nonce-bound runner authorization inside the function. They do not
+# accept a browser or legacy anon JWT as authorization.
 [functions.stock-market-runner]
 verify_jwt = false
 
