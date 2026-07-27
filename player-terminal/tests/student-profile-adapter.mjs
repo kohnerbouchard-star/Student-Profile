@@ -22,7 +22,7 @@ const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
   manifestVersion: "2026-07-27.1",
-  service: "player-api",
+  service: "classroom-api",
   capabilities: {
     routes: {
       dashboard: true,
@@ -165,7 +165,7 @@ assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200");
 assert.equal(session.capabilitySchemaVersion, 1);
 assert.equal(session.capabilityManifestVersion, "2026-07-27.1");
-assert.equal(session.capabilityService, "player-api");
+assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers.apikey, "sb_publishable_adapter_fixture");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], undefined);
