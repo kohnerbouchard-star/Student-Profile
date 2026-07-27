@@ -55,6 +55,7 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
     'cache: "no-store",\n    });',
     'cache: "no-store",\n      credentials: "include",\n    });',
   );
+  source = source.replaceAll("account_type = 'cash'", "account_type = 'checking'");
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Connected Player BFF loader retained the retired login route.");
