@@ -149,6 +149,19 @@ assert.match(unconfigured, /data-endpoint="businessCreate"/);
 assert.match(unconfigured, /name="acquireBusinessKey"/);
 assertAccessibleForm(unconfigured, "businessCreate");
 
+const assignedCountryCurrency = renderBusinessPage({
+  session: { currencyCode: "LUM" },
+  countries: [{ isPlayerCountry: true, currencyCode: "YRC" }],
+  business: {
+    ...data.business,
+    configured: false,
+    company: { ...data.business.company, id: "" },
+    products: [], employees: [], inventory: [],
+  },
+});
+assert.match(assignedCountryCurrency, /STARTING CAPITAL \(YRC\)/);
+assert.doesNotMatch(assignedCountryCurrency, /STARTING CAPITAL \(LUM\)/);
+
 const bankingMarkup = renderBankingPage(data);
 assert.match(bankingMarkup, /data-player-banking-balance="checking:LUM"/);
 assert.match(bankingMarkup, /CHECKING ACCOUNT/);
