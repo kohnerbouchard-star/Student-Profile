@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const coreUrl = new URL("./marketplace-lifecycle-core.mjs", import.meta.url);
@@ -19,11 +18,10 @@ if (source.split(cookieNeedle).length - 1 !== 1) {
 const materialized = source
   .replace(headersNeedle, headersReplacement)
   .replace(cookieNeedle, cookieReplacement);
-const directory = await mkdtemp(join(dirname(fileURLToPath(coreUrl)), ".tmp-marketplace-browser-"));
-const target = join(directory, "marketplace-lifecycle.spec.mjs");
+const target = fileURLToPath(new URL("./.generated-marketplace-lifecycle.mjs", import.meta.url));
 try {
   await writeFile(target, materialized, "utf8");
   await import(pathToFileURL(target).href);
 } finally {
-  await rm(directory, { recursive: true, force: true });
+  await rm(target, { force: true });
 }

@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const coreUrl = new URL("./player-terminal-core.mjs", import.meta.url);
@@ -15,11 +14,10 @@ if (source.split(needle).length - 1 !== 1) {
 }
 
 const materialized = source.replace(needle, replacement);
-const directory = await mkdtemp(join(dirname(fileURLToPath(coreUrl)), ".tmp-player-terminal-browser-"));
-const target = join(directory, "player-terminal.spec.mjs");
+const target = fileURLToPath(new URL("./.generated-player-terminal.mjs", import.meta.url));
 try {
   await writeFile(target, materialized, "utf8");
   await import(pathToFileURL(target).href);
 } finally {
-  await rm(directory, { recursive: true, force: true });
+  await rm(target, { force: true });
 }
