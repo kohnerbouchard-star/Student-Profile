@@ -87,10 +87,12 @@ for (const contract of [
   'url.searchParams.set("mode", "student")',
   "repairVisibleShareSurfaces",
   "deduplicateVisibleShareSurfaces",
+  "dismissShareSurface",
   "econovaria-admin-share-fallback",
   "NATIVE_SURFACE_GRACE_MS",
   "nativeSurfaceObservedUntil",
-  "surface.remove()",
+  "closeControl.click()",
+  "EconovariaAdminModalLifecycleBridge?.reconcile?.()",
   "data-econovaria-player-link",
   "input[id*='share-admin-link']",
 ]) {
@@ -121,6 +123,11 @@ assert(
   shareLinkContract.includes("now < nativeSurfaceObservedUntil") &&
     shareLinkContract.includes("nativeSurfaceObservedUntil = now + NATIVE_SURFACE_GRACE_MS"),
   "A late fallback must be suppressed after the native Share modal was observed.",
+);
+assert(
+  shareLinkContract.indexOf("closeControl.click()") <
+    shareLinkContract.indexOf("surface.remove()"),
+  "Duplicate Share surfaces must close through the modal lifecycle before raw removal fallback.",
 );
 
 for (const contract of [
@@ -201,6 +208,7 @@ console.log(JSON.stringify({
   canonicalPlayerShareRoute: true,
   shareSurfaceDeduplication: true,
   lateFallbackSuppression: true,
+  modalLifecycleUnwound: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
   logoutHttpOnlyWebSession: true,
