@@ -10,7 +10,8 @@ function isWorldRoute(state) {
 }
 
 function hasReadyWorldResource(state) {
-  return state?.data?.resourceStatus?.worldRuntime?.state === "ready";
+  const source = state?.data?.worldRuntime;
+  return Boolean(source && typeof source === "object" && !Array.isArray(source));
 }
 
 function hasReadyCountriesResource(state) {
@@ -131,7 +132,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   function scheduleRender() {
     if (renderScheduled || destroyed) return;
     renderScheduled = true;
-    requestAnimationFrame(render);
+    queueMicrotask(render);
   }
 
   async function load({ force = false, preserveMessage = false } = {}) {
@@ -296,7 +297,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   mount.addEventListener("click", handleClick);
   globalThis.addEventListener("online", handleConnectivity);
   globalThis.addEventListener("offline", handleConnectivity);
-  const staleTimer = globalThis.setInterval(scheduleRender, 15_000);
+  const staleTimer = globalThis.setInterval(scheduleRender, STALE_AFTER_MS / 4);
 
   if (isWorldRoute(terminal.getState()) && !model && state === "idle") {
     const terminalState = terminal.getState();
