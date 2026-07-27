@@ -416,7 +416,7 @@ async function reloadBusiness(page) {
 }
 
 async function requireText(page, text) {
-  await page.getByText(text, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByText(text, { exact: true }).first().waitFor({ state: "visible", timeout: 30_000 });
 }
 
 async function createBusiness(page) {
