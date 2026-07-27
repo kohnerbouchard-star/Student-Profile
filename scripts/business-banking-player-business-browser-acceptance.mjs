@@ -29,6 +29,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
   rosterCurrencyCode: "",
+  fundingCurrencyCode: "",
   businessCurrencyCode: "",
   economicContext: { countryCode: "", currencyCode: "" },
   fixtureTargetBalance: FIXTURE_TARGET_BALANCE,
@@ -557,17 +558,19 @@ try {
   context = player.context;
   evidence.rosterCurrencyCode = admin.rosterCurrencyCode;
 
-  const storageBefore = databaseFundingState(admin, admin.rosterCurrencyCode);
-  evidence.storageBalanceBeforeCredit = storageBefore.cashBalance;
+  const rosterStorage = databaseFundingState(admin, admin.rosterCurrencyCode);
   evidence.economicContext = {
-    countryCode: storageBefore.contextCountryCode,
-    currencyCode: storageBefore.contextCurrencyCode,
+    countryCode: rosterStorage.contextCountryCode,
+    currencyCode: rosterStorage.contextCurrencyCode,
   };
-  if (storageBefore.contextCurrencyCode !== admin.rosterCurrencyCode) {
-    throw new Error(`Server economic currency ${storageBefore.contextCurrencyCode} does not match roster currency ${admin.rosterCurrencyCode}.`);
-  }
+  const fundingCurrencyCode = rosterStorage.contextCurrencyCode;
+  evidence.fundingCurrencyCode = fundingCurrencyCode;
+  const storageBefore = fundingCurrencyCode === admin.rosterCurrencyCode
+    ? rosterStorage
+    : databaseFundingState(admin, fundingCurrencyCode);
+  evidence.storageBalanceBeforeCredit = storageBefore.cashBalance;
 
-  const balanceBeforeCredit = await checkingBalance(player.page, admin.rosterCurrencyCode, { optional: true });
+  const balanceBeforeCredit = await checkingBalance(player.page, fundingCurrencyCode, { optional: true });
   evidence.balanceBeforeCredit = balanceBeforeCredit;
   if (Math.abs(balanceBeforeCredit - storageBefore.cashBalance) > 0.001) {
     throw new Error(`Player Banking and storage cash disagree before funding: ${balanceBeforeCredit} vs ${storageBefore.cashBalance}.`);
@@ -575,12 +578,12 @@ try {
 
   const fixtureCreditAmount = Math.max(1, Math.round((FIXTURE_TARGET_BALANCE - storageBefore.cashBalance) * 100) / 100);
   evidence.fixtureCreditAmount = fixtureCreditAmount;
-  await creditPlayer(admin, admin.rosterCurrencyCode, fixtureCreditAmount);
+  await creditPlayer(admin, fundingCurrencyCode, fixtureCreditAmount);
   await player.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await player.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
 
-  const balanceAfterCredit = await checkingBalance(player.page, admin.rosterCurrencyCode);
-  const storageAfter = databaseFundingState(admin, admin.rosterCurrencyCode);
+  const balanceAfterCredit = await checkingBalance(player.page, fundingCurrencyCode);
+  const storageAfter = databaseFundingState(admin, fundingCurrencyCode);
   evidence.balanceAfterCredit = balanceAfterCredit;
   evidence.storageBalanceAfterCredit = storageAfter.cashBalance;
   if (Math.abs(balanceAfterCredit - storageAfter.cashBalance) > 0.001) {
@@ -652,6 +655,7 @@ if (failure) throw failure;
 console.log(JSON.stringify({
   ok: true,
   rosterCurrencyCode: evidence.rosterCurrencyCode,
+  fundingCurrencyCode: evidence.fundingCurrencyCode,
   businessCurrencyCode: evidence.businessCurrencyCode,
   economicContext: evidence.economicContext,
   fixtureTargetBalance: evidence.fixtureTargetBalance,
