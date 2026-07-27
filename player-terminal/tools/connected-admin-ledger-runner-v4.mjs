@@ -115,9 +115,9 @@ function generateTotp(secret, timestamp = Date.now()) {
   }
 }
 
-async function completeMfaEnrollmentIfRequired(page) {
+async function completeMfaEnrollmentIfRequired(page, timeoutMs = 20_000) {
   const dialog = page.locator(".econovaria-mfa-dialog");
-  await dialog.waitFor({ state: "visible", timeout: 20_000 }).catch(() => {});
+  await dialog.waitFor({ state: "visible", timeout: timeoutMs }).catch(() => {});
   if (!await dialog.isVisible().catch(() => false)) return;
 
   const secretNode = dialog.locator(".econovaria-mfa-secret");
@@ -162,6 +162,7 @@ async function renderedLogin(page) {
   if (loginResponse.status() !== 200) {
     throw new Error(`Admin BFF sign-in returned ${loginResponse.status()}.`);
   }
+  await completeMfaEnrollmentIfRequired(page);
   await page.locator("#adminGamesStep:not(.hidden)").waitFor({ state: "visible", timeout: 30_000 });
   const namedGame = page.locator("#adminGameList .game-row").filter({ hasText: GAME_NAME }).first();
   const gameControl = await namedGame.count()
@@ -268,7 +269,7 @@ async function submitAdjustment(page, modal) {
   ).last();
   await submit.waitFor({ state: "visible", timeout: 10_000 });
   await submit.click();
-  await completeMfaEnrollmentIfRequired(page);
+  await completeMfaEnrollmentIfRequired(page, 3_000);
   const response = await responsePromise;
   if (response.status() !== 200) throw new Error(`Ledger adjustment returned ${response.status()}.`);
   const record = response.request();
