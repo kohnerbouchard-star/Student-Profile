@@ -141,6 +141,11 @@ async function openWorld(page) {
   await page.waitForFunction(() => location.hash === "#world", undefined, { timeout: 30_000 });
   await page.locator(".player-world-page").waitFor({ state: "visible", timeout: 60_000 });
   await page.locator(".player-world-loading").waitFor({ state: "detached", timeout: 60_000 }).catch(() => {});
+  await page.waitForFunction(() => {
+    if (document.querySelector('form[data-world-form="arrivalClass"]')) return true;
+    const label = String(document.querySelector("#world-arrival-title")?.textContent || "").trim();
+    return Boolean(label && !/^(Not assigned|Choose how you begin)$/i.test(label));
+  }, undefined, { timeout: 60_000 });
 }
 
 async function reloadWorld(page) {
