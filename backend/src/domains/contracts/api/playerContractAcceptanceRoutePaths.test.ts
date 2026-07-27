@@ -26,7 +26,7 @@ Deno.test("contract public routes accept direct and exact classroom-api paths", 
   }
 });
 
-Deno.test("contract public route parsers yield sibling operations", () => {
+Deno.test("contract public route parsers fail closed on sibling operations", () => {
   for (
     const prefix of [
       "",
@@ -38,13 +38,13 @@ Deno.test("contract public route parsers yield sibling operations", () => {
       readPlayerContractAcceptanceRoutePath(
         `${prefix}/players/me/contracts/arrival-orientation/submit`,
       ),
-      null,
+      { kind: "malformed" },
     );
     assertEquals(
       readPlayerContractPublicSubmitRoutePath(
         `${prefix}/players/me/contracts/arrival-orientation/accept`,
       ),
-      null,
+      { kind: "malformed" },
     );
   }
 });
