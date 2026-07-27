@@ -3,24 +3,33 @@ import { expect, test } from "@playwright/test";
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const LISTING_ID = "lst_11111111111111111111111111111111";
 const ORDER_ID = "ord_22222222222222222222222222222222";
-const SESSION_TOKEN = "marketplace-browser-session-token";
+const CSRF_TOKEN = "M".repeat(43);
 const NOW = "2026-07-21T01:00:00.000Z";
 
 function session() {
   return {
-    playerId: "PLAYER-42",
-    playerSessionId: "psn_marketplace_browser",
-    playerSessionToken: SESSION_TOKEN,
-    gameSessionId: GAME_ID,
-    gameCode: "MARKET42",
-    gameName: "Marketplace Browser Game",
-    status: "active",
-    displayName: "Marketplace Tester",
-    rosterLabel: "Trader 42",
-    countryCode: "LUMENOR",
-    countryName: "Lumenor",
-    currencyCode: "LUM",
-    expiresAt: "2099-07-21T03:00:00.000Z",
+    ok: true,
+    player: {
+      playerId: "PLAYER-42",
+      displayName: "Marketplace Tester",
+      rosterLabel: "Trader 42",
+      countryCode: "LUMENOR",
+      countryName: "Lumenor",
+      currencyCode: "LUM",
+      status: "active",
+    },
+    gameSession: {
+      name: "Marketplace Browser Game",
+      code: "MARKET42",
+      status: "active",
+    },
+    session: {
+      status: "active",
+      expiresAt: "2099-07-21T03:00:00.000Z",
+    },
+    balances: [],
+    attendance: { status: "not_configured" },
+    availableActions: [],
   };
 }
 
@@ -40,7 +49,7 @@ function capabilities() {
   return {
     schemaVersion: 1,
     manifestVersion: "2026-07-23.2",
-    service: "classroom-api",
+    service: "player-api",
     capabilities: {
       routes: {
         dashboard: true,
@@ -214,9 +223,22 @@ async function installRoutes(page) {
   let purchasePosts = 0;
   let committed = false;
   await page.route("**/functions/v1/player-api/**", async (route) => {
+    throw new Error(`Player browser bypassed the HttpOnly BFF: ${route.request().url()}`);
+  });
+  await page.route("**/functions/v1/player-web-session-api/proxy/**", async (route) => {
     const request = route.request();
+    const headers = request.headers();
+    expect(headers.authorization).toBeUndefined();
+    expect(headers["x-player-session-token"]).toBeUndefined();
+    expect(headers["x-econovaria-player-session-token"]).toBeUndefined();
+    expect(headers.apikey).toBeTruthy();
+    expect(headers.cookie).toContain("econovaria_player_session=");
+    if (!["GET", "HEAD"].includes(request.method())) {
+      expect(headers["x-econovaria-csrf-token"]).toBe(CSRF_TOKEN);
+    }
+
     const url = new URL(request.url());
-    const path = url.pathname.replace(/^.*\/functions\/v1\/player-api/, "");
+    const path = url.pathname.replace(/^.*\/functions\/v1\/player-web-session-api\/proxy/, "");
     if (path === "/players/me" && request.method() === "GET") return response(route, session());
     if (path === "/players/me/capabilities" && request.method() === "GET") return response(route, capabilities());
     if (path === "/players/me/game/dashboard" && request.method() === "GET") return response(route, dashboard());
@@ -245,18 +267,39 @@ async function installRoutes(page) {
   return { purchasePosts: () => purchasePosts };
 }
 
-function installSession(page) {
-  return page.addInitScript(({ token, gameId }) => {
-    globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
-      ...(globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
-      gameSessionId: gameId,
-    };
+async function installSession(page) {
+  await page.context().addCookies([{
+    name: "econovaria_player_session",
+    value: "v1.marketplace-browser.http-only-envelope",
+    domain: "127.0.0.1",
+    path: "/",
+    httpOnly: true,
+    secure: false,
+    sameSite: "Strict",
+  }]);
+  await page.addInitScript(({ csrfToken }) => {
     sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
-      playerSessionToken: token,
+      authenticated: true,
       sessionExpiresAt: "2099-07-21T03:00:00.000Z",
+      absoluteExpiresAt: "2099-07-21T05:00:00.000Z",
+      csrfToken,
+      player: {
+        playerId: "PLAYER-42",
+        displayName: "Marketplace Tester",
+        rosterLabel: "Trader 42",
+        countryCode: "LUMENOR",
+        countryName: "Lumenor",
+        currencyCode: "LUM",
+        status: "active",
+      },
+      gameSession: {
+        name: "Marketplace Browser Game",
+        code: "MARKET42",
+        status: "active",
+      },
       storedAt: "2026-07-21T01:00:00.000Z",
     }));
-  }, { token: SESSION_TOKEN, gameId: GAME_ID });
+  }, { csrfToken: CSRF_TOKEN });
 }
 
 test("Marketplace purchase remains committed when authoritative refresh fails", async ({ page }) => {
@@ -273,6 +316,7 @@ test("Marketplace purchase remains committed when authoritative refresh fails", 
   await expect(purchaseForm.locator('input[name="expectedVersion"]')).toHaveValue("7");
   await expect(marketplacePage.getByText("Create a draft listing", { exact: true })).toBeVisible();
   await expect(marketplacePage.getByText("Disputes and refunds", { exact: true })).toBeVisible();
+  await expect(page.evaluate(() => document.cookie)).resolves.not.toContain("econovaria_player_session");
 
   await purchaseForm.getByRole("button", { name: /Buy listing/i }).click();
   await expect.poll(harness.purchasePosts).toBe(1);
