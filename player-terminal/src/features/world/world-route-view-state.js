@@ -6,6 +6,9 @@ const DEFAULT_WORLD_ROUTE_VIEW = Object.freeze({
   updatedAt: 0
 });
 
+// This module is the non-DOM handoff between the World interaction controller
+// and the Player Terminal's single route renderer. It deliberately contains no
+// subscriptions or rendering side effects.
 let worldRouteView = DEFAULT_WORLD_ROUTE_VIEW;
 
 export function getWorldRouteViewState() {
