@@ -20,9 +20,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Merge main and resolve bounded conflicts
+      - name: Reconcile and validate
+        id: reconcile
+        continue-on-error: true
         shell: bash
         run: |
+          exec > >(tee /tmp/pr377-reconcile.log) 2>&1
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -34,20 +37,20 @@ jobs:
           set -e
 
           if [ "$merge_status" -ne 0 ]; then
-            cat > /tmp/expected-conflicts.txt <<'EOF'
-          .github/workflows/admin-browser-e2e.yml
-          .github/workflows/beta-security-contract.yml
-          admin/progression-review-client.js
-          backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts
-          backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts
-          backend/src/domains/contracts/api/playerContractRoutePaths.ts
-          player-terminal/src/api/player-api.js
-          player-terminal/tests/messaging-connected-lifecycle.mjs
-          scripts/admin-messaging-moderation-contract.mjs
-          scripts/admin-mounted-modal-focus-reconciled-smoke.mjs
-          scripts/admin-mounted-operational-modal-focus-smoke.mjs
-          scripts/econovaria-local-gateway.py
-          EOF
+            printf '%s\n' \
+              '.github/workflows/admin-browser-e2e.yml' \
+              '.github/workflows/beta-security-contract.yml' \
+              'admin/progression-review-client.js' \
+              'backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts' \
+              'backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts' \
+              'backend/src/domains/contracts/api/playerContractRoutePaths.ts' \
+              'player-terminal/src/api/player-api.js' \
+              'player-terminal/tests/messaging-connected-lifecycle.mjs' \
+              'scripts/admin-messaging-moderation-contract.mjs' \
+              'scripts/admin-mounted-modal-focus-reconciled-smoke.mjs' \
+              'scripts/admin-mounted-operational-modal-focus-smoke.mjs' \
+              'scripts/econovaria-local-gateway.py' \
+              > /tmp/expected-conflicts.txt
             git diff --name-only --diff-filter=U | sort > /tmp/actual-conflicts.txt
             diff -u /tmp/expected-conflicts.txt /tmp/actual-conflicts.txt
           fi
@@ -63,12 +66,8 @@ jobs:
             scripts/admin-mounted-operational-modal-focus-smoke.mjs \
             scripts/econovaria-local-gateway.py
 
-          git checkout --ours -- \
-            backend/src/domains/contracts/api/playerContractRoutePaths.ts
-
-          git checkout --theirs -- \
-            .github/workflows/admin-browser-e2e.yml \
-            player-terminal/src/api/player-api.js
+          git checkout --ours -- backend/src/domains/contracts/api/playerContractRoutePaths.ts
+          git checkout --theirs -- .github/workflows/admin-browser-e2e.yml player-terminal/src/api/player-api.js
 
           python3 - <<'PY'
           from pathlib import Path
@@ -76,69 +75,69 @@ jobs:
           path = Path('.github/workflows/admin-browser-e2e.yml')
           text = path.read_text()
 
-          def insert_after(source: str, anchor: str, addition: str) -> str:
+          def insert_after(source, anchor, addition):
               if addition.strip() in source:
                   return source
               if anchor not in source:
-                  raise SystemExit(f'missing workflow anchor: {anchor!r}')
+                  raise SystemExit(f'missing admin workflow anchor: {anchor!r}')
               return source.replace(anchor, anchor + addition, 1)
 
-          text = insert_after(
-              text,
-              '      - "admin/**"\n',
+          text = insert_after(text, '      - "admin/**"\n',
               '      - "player-terminal/**"\n'
               '      - "backend/src/security/**"\n'
               '      - "backend/src/domains/attendance/**"\n'
-              '      - "backend/src/domains/contracts/**"\n',
-          )
-          text = insert_after(
-              text,
-              '      - "scripts/admin-browser-reconnaissance.mjs"\n',
+              '      - "backend/src/domains/contracts/**"\n')
+          text = insert_after(text, '      - "scripts/admin-browser-reconnaissance.mjs"\n',
               '      - "scripts/admin-connected-ledger-mutation-browser-acceptance.mjs"\n'
-              '      - "scripts/button-action-coverage-contract.mjs"\n',
-          )
-          text = insert_after(
-              text,
-              '      - "scripts/local-auth-readiness.mjs"\n',
-              '      - "scripts/local-staging-gateway.py"\n',
-          )
-          text = insert_after(
-              text,
-              '      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"\n',
-              '      - "docs/operations/contracts/button-action-coverage-v1.json"\n',
-          )
-          text = text.replace(
-              'name: Rendered Admin browser journey',
-              'name: Rendered Admin browser and secure mutation journey',
-              1,
-          )
-          text = insert_after(
-              text,
-              '          node --check scripts/admin-browser-reconnaissance.mjs\n',
+              '      - "scripts/button-action-coverage-contract.mjs"\n')
+          text = insert_after(text, '      - "scripts/local-auth-readiness.mjs"\n',
+              '      - "scripts/local-staging-gateway.py"\n')
+          text = insert_after(text, '      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"\n',
+              '      - "docs/operations/contracts/button-action-coverage-v1.json"\n')
+          text = text.replace('name: Rendered Admin browser journey',
+                              'name: Rendered Admin browser and secure mutation journey', 1)
+          text = insert_after(text, '          node --check scripts/admin-browser-reconnaissance.mjs\n',
               '          node --check scripts/admin-connected-ledger-mutation-browser-acceptance.mjs\n'
-              '          node --check scripts/button-action-coverage-contract.mjs\n',
+              '          node --check scripts/button-action-coverage-contract.mjs\n')
+          text = text.replace('          python3 -m py_compile scripts/econovaria-local-gateway.py\n',
+                              '          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py\n', 1)
+
+          browser_block = (
+              "      - name: Execute rendered Create Game and Admin journey\n"
+              "        id: browser\n"
+              "        continue-on-error: true\n"
+              "        run: node scripts/admin-browser-reconnaissance.mjs\n"
           )
-          text = text.replace(
-              '          python3 -m py_compile scripts/econovaria-local-gateway.py\n',
-              '          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py\n',
-              1,
+          ledger_block = (
+              "\n      - name: Execute secure Admin ledger mutation journey\n"
+              "        id: ledger_mutation\n"
+              "        if: steps.browser.outcome == 'success'\n"
+              "        continue-on-error: true\n"
+              "        run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs\n"
           )
-          ledger_step = '''\n      - name: Execute secure Admin ledger mutation journey\n        id: ledger_mutation\n        if: steps.browser.outcome == 'success'\n        continue-on-error: true\n        run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs\n'''
-          text = insert_after(
-              text,
-              "      - name: Execute rendered Create Game and Admin journey\n        id: browser\n        continue-on-error: true\n        run: node scripts/admin-browser-reconnaissance.mjs\n",
-              ledger_step,
+          text = insert_after(text, browser_block, ledger_block)
+          text = text.replace("        if: steps.browser.outcome == 'failure'\n",
+                              "        if: steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure'\n", 1)
+
+          browser_expr = '$' + '{{ steps.browser.outcome }}'
+          ledger_expr = '$' + '{{ steps.ledger_mutation.outcome }}'
+          old_enforce = (
+              '      - name: Enforce rendered browser result\n'
+              '        if: always()\n'
+              '        shell: bash\n'
+              f'        run: test "{browser_expr}" = "success"\n'
           )
-          text = text.replace(
-              "        if: steps.browser.outcome == 'failure'\n",
-              "        if: steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure'\n",
-              1,
+          new_enforce = (
+              '      - name: Enforce rendered browser results\n'
+              '        if: always()\n'
+              '        shell: bash\n'
+              '        run: |\n'
+              f'          test "{browser_expr}" = "success"\n'
+              f'          test "{ledger_expr}" = "success"\n'
           )
-          text = text.replace(
-              '      - name: Enforce rendered browser result\n        if: always()\n        shell: bash\n        run: test "${{ steps.browser.outcome }}" = "success"\n',
-              '      - name: Enforce rendered browser results\n        if: always()\n        shell: bash\n        run: |\n          test "${{ steps.browser.outcome }}" = "success"\n          test "${{ steps.ledger_mutation.outcome }}" = "success"\n',
-              1,
-          )
+          if old_enforce not in text:
+              raise SystemExit('missing Admin enforcement block')
+          text = text.replace(old_enforce, new_enforce, 1)
           path.write_text(text)
           PY
 
@@ -147,31 +146,60 @@ jobs:
 
           path = Path('player-terminal/src/api/player-api.js')
           text = path.read_text()
-
-          helper = '''\nfunction actionPathParams(endpointKey, payload, params = {}) {\n  const endpoint = PLAYER_ENDPOINTS[endpointKey];\n  if (!endpoint || typeof endpoint.path !== "string") return { ...params };\n  const resolved = { ...params };\n  const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};\n  for (const match of endpoint.path.matchAll(/:([A-Za-z][A-Za-z0-9_]*)/g)) {\n    const key = match[1];\n    if (resolved[key] !== undefined && resolved[key] !== null && String(resolved[key]).trim()) continue;\n    const value = source[key];\n    if (value === undefined || value === null || !String(value).trim()) continue;\n    resolved[key] = value;\n  }\n  return resolved;\n}\n'''
+          helper = '''
+          function actionPathParams(endpointKey, payload, params = {}) {
+            const endpoint = PLAYER_ENDPOINTS[endpointKey];
+            if (!endpoint || typeof endpoint.path !== "string") return { ...params };
+            const resolved = { ...params };
+            const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+            for (const match of endpoint.path.matchAll(/:([A-Za-z][A-Za-z0-9_]*)/g)) {
+              const key = match[1];
+              if (resolved[key] !== undefined && resolved[key] !== null && String(resolved[key]).trim()) continue;
+              const value = source[key];
+              if (value === undefined || value === null || !String(value).trim()) continue;
+              resolved[key] = value;
+            }
+            return resolved;
+          }
+          '''.strip() + '\n\n'
           anchor = 'function sessionFingerprint(config) {'
           if 'function actionPathParams(' not in text:
               if anchor not in text:
-                  raise SystemExit('player api helper anchor missing')
-              text = text.replace(anchor, helper + '\n' + anchor, 1)
+                  raise SystemExit('missing Player API helper anchor')
+              text = text.replace(anchor, helper + anchor, 1)
 
-          old = '''  async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {\n    const { endpoint, path } = resolvedPath(endpointKey, params);\n    const requestId = createRequestId();\n    const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);\n    const context = { endpointKey, method: endpoint.method, path, payload, requestId, signal: mergedSignal.signal };\n'''
-          new = '''  async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {\n    const resolvedParams = actionPathParams(endpointKey, payload, params);\n    const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);\n    const requestId = createRequestId();\n    const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);\n    const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };\n'''
-          if old not in text:
-              raise SystemExit('player api read context anchor missing')
-          text = text.replace(old, new, 1)
+          old_read = '''  async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
+            const { endpoint, path } = resolvedPath(endpointKey, params);
+            const requestId = createRequestId();
+            const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
+            const context = { endpointKey, method: endpoint.method, path, payload, requestId, signal: mergedSignal.signal };
+          '''
+          new_read = '''  async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
+            const resolvedParams = actionPathParams(endpointKey, payload, params);
+            const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
+            const requestId = createRequestId();
+            const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
+            const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };
+          '''
+          if old_read not in text:
+              raise SystemExit('missing Player API read context')
+          text = text.replace(old_read, new_read, 1)
 
-          old = '''  execute(endpointKey, payload, params = {}, { signal = null } = {}) {\n    const { endpoint, path } = resolvedPath(endpointKey, params);\n'''
-          new = '''  execute(endpointKey, payload, params = {}, { signal = null } = {}) {\n    const resolvedParams = actionPathParams(endpointKey, payload, params);\n    const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);\n'''
-          if old not in text:
-              raise SystemExit('player api write route anchor missing')
-          text = text.replace(old, new, 1)
-
-          old = '    const context = { endpointKey, method: endpoint.method, path, payload, requestId, idempotencyKey, signal: mergedSignal.signal };\n'
-          new = '    const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, idempotencyKey, signal: mergedSignal.signal };\n'
-          if old not in text:
-              raise SystemExit('player api write context anchor missing')
-          text = text.replace(old, new, 1)
+          old_write = '''  execute(endpointKey, payload, params = {}, { signal = null } = {}) {
+            const { endpoint, path } = resolvedPath(endpointKey, params);
+          '''
+          new_write = '''  execute(endpointKey, payload, params = {}, { signal = null } = {}) {
+            const resolvedParams = actionPathParams(endpointKey, payload, params);
+            const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
+          '''
+          if old_write not in text:
+              raise SystemExit('missing Player API write route')
+          text = text.replace(old_write, new_write, 1)
+          old_context = '    const context = { endpointKey, method: endpoint.method, path, payload, requestId, idempotencyKey, signal: mergedSignal.signal };\n'
+          new_context = '    const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, idempotencyKey, signal: mergedSignal.signal };\n'
+          if old_context not in text:
+              raise SystemExit('missing Player API write context')
+          text = text.replace(old_context, new_context, 1)
           path.write_text(text)
           PY
 
@@ -180,11 +208,14 @@ jobs:
 
           repository = Path('backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts')
           text = repository.read_text()
-          old = 'select("item_key,name,description,category,image_url")'
-          if old not in text:
-              raise SystemExit('marketplace item projection anchor missing')
-          text = text.replace(old, 'select("item_key,name,description,category")', 1)
-          text = text.replace('    image: optionalAsset(item?.image_url),\n', '    image: null,\n', 1)
+          projection = 'select("item_key,name,description,category,image_url")'
+          if projection not in text:
+              raise SystemExit('missing Marketplace item projection')
+          text = text.replace(projection, 'select("item_key,name,description,category")', 1)
+          image_line = '    image: optionalAsset(item?.image_url),\n'
+          if image_line not in text:
+              raise SystemExit('missing Marketplace image DTO line')
+          text = text.replace(image_line, '    image: null,\n', 1)
           repository.write_text(text)
 
           page = Path('player-terminal/src/pages/marketplace-page.js')
@@ -193,35 +224,53 @@ jobs:
           import_line = 'import { resolveStoreItemImage } from "../features/store/store-artwork.js";\n'
           if import_line not in text:
               if import_anchor not in text:
-                  raise SystemExit('marketplace page import anchor missing')
+                  raise SystemExit('missing Marketplace artwork import anchor')
               text = text.replace(import_anchor, import_anchor + import_line, 1)
-          text = text.replace(
-              '<span class="player-terminal-marketplace-image"><img src="${escapeHtml(listing.image)}" alt="" /></span>',
-              '<span class="player-terminal-marketplace-image"><img src="${escapeHtml(resolveStoreItemImage({ itemKey: listing.itemId, image: listing.image }))}" alt="" /></span>',
-              1,
-          )
-          text = text.replace(
-              '<span><img src="${escapeHtml(selected.image)}" alt="" /></span>',
-              '<span><img src="${escapeHtml(resolveStoreItemImage({ itemKey: selected.itemId, image: selected.image }))}" alt="" /></span>',
-              1,
-          )
+          list_image = '<span class="player-terminal-marketplace-image"><img src="${escapeHtml(listing.image)}" alt="" /></span>'
+          detail_image = '<span><img src="${escapeHtml(selected.image)}" alt="" /></span>'
+          if list_image not in text or detail_image not in text:
+              raise SystemExit('missing Marketplace image render anchors')
+          text = text.replace(list_image,
+              '<span class="player-terminal-marketplace-image"><img src="${escapeHtml(resolveStoreItemImage({ itemKey: listing.itemId, image: listing.image }))}" alt="" /></span>', 1)
+          text = text.replace(detail_image,
+              '<span><img src="${escapeHtml(resolveStoreItemImage({ itemKey: selected.itemId, image: selected.image }))}" alt="" /></span>', 1)
           page.write_text(text)
           PY
 
           rm -f player-terminal/src/api/player-api-core.js
-          rm -f .github/workflows/reconcile-pr377-with-main.yml
           rm -f docs/operations/reconciliation/pr377-conflict-inventory.md
           rm -f docs/operations/reconciliation/pr377-conflict-hunks.md
           rmdir docs/operations/reconciliation 2>/dev/null || true
+          rm -f .github/workflows/reconcile-pr377-with-main.yml
 
           git add -A
           test -z "$(git diff --name-only --diff-filter=U)"
-          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!docs/operations/reconciliation/**'
+          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)'
           git diff --check --cached
           node --check player-terminal/src/api/player-api.js
           node --check player-terminal/src/pages/marketplace-page.js
           node --check scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
-
           git commit -m "Merge main into PR 377 and reconcile runtime contracts"
+
+      - name: Push reconciled branch
+        if: steps.reconcile.outcome == 'success'
+        shell: bash
+        run: git push origin HEAD:agent/runtime-stability-button-integrity-v1
+
+      - name: Persist reconciliation failure
+        if: steps.reconcile.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge --abort 2>/dev/null || true
+          git reset --hard "$GITHUB_SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs/operations/reconciliation
+          sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi' \
+            /tmp/pr377-reconcile.log > docs/operations/reconciliation/pr377-reconcile-failure.log
+          git add docs/operations/reconciliation/pr377-reconcile-failure.log
+          git commit -m "docs(reconcile): record PR 377 reconciliation failure"
           git push origin HEAD:agent/runtime-stability-button-integrity-v1
+          exit 1
