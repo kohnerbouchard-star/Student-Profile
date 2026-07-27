@@ -78,7 +78,7 @@ async function parseJson(response) {
 
 async function runtimeKey() {
   const response = await fetch(`${BASE_URL}/runtime-config.env.js`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Runtime configuration returned ${response.status}.`);
+  if (!response.ok) throw new Error(`Runtime configuration returned ${response.status()}.`);
   const match = (await response.text()).match(/Object\.freeze\((\{[\s\S]*\})\);?/);
   if (!match) throw new Error("Runtime configuration could not be parsed.");
   const key = String(JSON.parse(match[1]).supabasePublishableKey || "").trim();
@@ -296,10 +296,7 @@ function reachableTravelOption() {
      )
      and ceil(
        ceil(route_row.base_cost_minor * route_row.cost_multiplier_basis_points / 10000.0)
-       * case
-           when destination_row.availability = 'shortage' then 11500
-           else 10000
-         end
+       * 11500
        / 10000.0
      ) <= balance_row.balance
     join public.world_location_states as destination_row
@@ -313,10 +310,7 @@ function reachableTravelOption() {
     order by
       ceil(
         ceil(route_row.base_cost_minor * route_row.cost_multiplier_basis_points / 10000.0)
-        * case
-            when destination_row.availability = 'shortage' then 11500
-            else 10000
-          end
+        * 11500
         / 10000.0
       ),
       route_row.public_route_id
