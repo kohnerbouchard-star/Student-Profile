@@ -14,6 +14,7 @@ const PLAYER_ID = "BROWSER-PLAYER-BETA";
 const ACCESS_CODE = "BROWSER-BETA-ACCESS-002";
 const JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const TRAVEL_MODES = new Set(["land", "sea", "air", "meridian"]);
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -28,6 +29,7 @@ const evidence = {
     persisted: false,
   },
   travel: {
+    reachableRouteResolved: false,
     quoted: false,
     executed: false,
     fastForwarded: false,
@@ -40,7 +42,6 @@ const evidence = {
     replaySafe: false,
     unauthenticatedRejected: false,
   },
-  databaseDiagnostic: null,
   requests: [],
   consoleErrors: [],
   pageErrors: [],
@@ -59,81 +60,16 @@ function sqlLiteral(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
-function captureArrivalDatabaseDiagnostic() {
-  const scoreResult = JSON.stringify({
-    questionnaireId: "arrival-class-balanced-v1",
-    questionnaireVersion: "1.0.0",
-    version: "1.0.0",
-    selectedClassId: "analyst",
-    scores: [],
-    tieBreakOrder: [
-      "analyst",
-      "builder",
-      "maker",
-      "mediator",
-      "navigator",
-      "operator",
-      "steward",
-      "trader",
-    ],
-    explanation: "Rollback-only connected diagnostic.",
-  });
-  const sourceGrantKey = `arrival-grant:diagnostic:${"x".repeat(180)}`;
-  const sql = `
-    begin;
-    with target as (
-      select
-        game_row.id as game_id,
-        player_row.id as player_id,
-        country_row.country_id,
-        country_row.arrival_package_definition_id
-      from public.game_sessions as game_row
-      join public.players as player_row
-        on player_row.game_session_id = game_row.id
-      join public.world_country_runtime as country_row
-        on country_row.game_session_id = game_row.id
-       and country_row.country_uuid = player_row.country_id
-      where game_row.name = ${sqlLiteral(GAME_NAME)}
-        and player_row.player_identifier = ${sqlLiteral(PLAYER_ID)}
-        and player_row.status = 'active'
-      limit 1
-    ), class_grant as (
-      select grant_definition_id
-      from public.arrival_class_grant_runtime
-      where game_session_id = (select game_id from target)
-        and class_id = 'analyst'
-      limit 1
-    )
-    select *
-    from target
-    cross join class_grant
-    cross join lateral public.assign_arrival_class_atomic_v2(
-      target.game_id,
-      target.player_id,
-      target.country_id,
-      'analyst',
-      'arrival-class-balanced-v1',
-      '1.0.0',
-      ${sqlLiteral(scoreResult)}::jsonb,
-      'questionnaire-diagnostic-v1',
-      target.arrival_package_definition_id,
-      class_grant.grant_definition_id,
-      ${sqlLiteral(sourceGrantKey)},
-      now()
-    );
-    rollback;
-  `;
+function runSql(sql, label) {
   const result = spawnSync(
     "psql",
-    [DATABASE_URL, "-X", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    [DATABASE_URL, "-X", "-v", "ON_ERROR_STOP=1", "-At", "-F", "\t", "-c", sql],
     { encoding: "utf8", maxBuffer: 1024 * 1024 },
   );
-  const output = `${result.stderr || ""}\n${result.stdout || ""}`.trim();
-  return {
-    status: result.status,
-    signal: result.signal || null,
-    output: redact(output).slice(-3000),
-  };
+  if (result.status !== 0) {
+    throw new Error(`${label} failed: ${redact(result.stderr || result.stdout)}`);
+  }
+  return String(result.stdout || "").trim();
 }
 
 async function parseJson(response) {
@@ -146,7 +82,9 @@ async function runtimeKey() {
   const match = (await response.text()).match(/Object\.freeze\((\{[\s\S]*\})\);?/);
   if (!match) throw new Error("Runtime configuration could not be parsed.");
   const key = String(JSON.parse(match[1]).supabasePublishableKey || "").trim();
-  if (!key || key.startsWith("sb_secret_")) throw new Error("A browser-safe publishable key is required.");
+  if (!key || key.startsWith("sb_secret_")) {
+    throw new Error("A browser-safe publishable key is required.");
+  }
   return key;
 }
 
@@ -285,9 +223,8 @@ async function submitQuestionnaire(page) {
   await form.locator('button[type="submit"]').click();
   const response = await responsePromise;
   const payload = await response.json().catch(() => null);
-  if (![200, 201].includes(response.status()) || payload?.ok !== true) {
-    evidence.databaseDiagnostic = captureArrivalDatabaseDiagnostic();
-    throw new Error(`Arrival questionnaire returned ${response.status()}.`);
+  if (![200, 201].includes(response.status()) || payload?.ok !== true || !payload?.arrival?.assignment) {
+    throw new Error(`Arrival questionnaire returned an invalid ${response.status()} response.`);
   }
   evidence.questionnaire.submitted = true;
 
@@ -309,6 +246,62 @@ async function submitQuestionnaire(page) {
     throw new Error(`Arrival assignment changed after reload: ${assignedClass} -> ${persistedClass}.`);
   }
   evidence.questionnaire.persisted = true;
+}
+
+function reachableTravelOption() {
+  const sql = `
+    with target as (
+      select
+        state_row.game_session_id,
+        state_row.current_location_id
+      from public.game_sessions as game_row
+      join public.players as player_row
+        on player_row.game_session_id = game_row.id
+      join public.player_travel_states as state_row
+        on state_row.game_session_id = player_row.game_session_id
+       and state_row.player_id = player_row.id
+      where game_row.name = ${sqlLiteral(GAME_NAME)}
+        and player_row.player_identifier = ${sqlLiteral(PLAYER_ID)}
+        and player_row.status = 'active'
+        and state_row.status = 'available'
+      limit 1
+    )
+    select
+      case
+        when route_row.from_location_id = target.current_location_id
+          then route_row.to_location_id
+        else route_row.from_location_id
+      end as destination_location_id,
+      route_row.mode
+    from target
+    join public.world_route_states as route_row
+      on route_row.game_session_id = target.game_session_id
+     and route_row.status in ('open', 'restricted')
+     and (
+       route_row.from_location_id = target.current_location_id
+       or (
+         route_row.bidirectional = true
+         and route_row.to_location_id = target.current_location_id
+       )
+     )
+    join public.world_location_states as destination_row
+      on destination_row.game_session_id = route_row.game_session_id
+     and destination_row.public_location_id = case
+       when route_row.from_location_id = target.current_location_id
+         then route_row.to_location_id
+       else route_row.from_location_id
+     end
+     and destination_row.availability <> 'closed'
+    order by route_row.public_route_id
+    limit 1;
+  `;
+  const output = runSql(sql, "Reachable travel route lookup");
+  const [destination, mode] = output.split("\t");
+  if (!/^loc_[a-z0-9_]+$/.test(destination || "") || !TRAVEL_MODES.has(mode)) {
+    throw new Error("World did not expose a reviewed reachable route for the player.");
+  }
+  evidence.travel.reachableRouteResolved = true;
+  return { destination, mode };
 }
 
 async function captureRequest(response) {
@@ -335,18 +328,19 @@ async function captureRequest(response) {
 }
 
 async function quoteAndExecuteTravel(page) {
+  const { destination, mode } = reachableTravelOption();
   const quoteForm = page.locator('form[data-world-form="travelQuote"]');
   await quoteForm.waitFor({ state: "visible", timeout: 60_000 });
-  await quoteForm.locator('select[name="toLocationId"] option:not([value=""])').first().waitFor({
+  await quoteForm.locator(`select[name="toLocationId"] option[value="${destination}"]`).waitFor({
     state: "attached",
     timeout: 60_000,
   });
-  const destinations = await quoteForm.locator('select[name="toLocationId"] option').evaluateAll(
-    (options) => options.map((option) => option.value).filter(Boolean),
-  );
-  if (!destinations.length) throw new Error("World did not provide an open travel destination.");
-  const destination = destinations[0];
   await quoteForm.locator('select[name="toLocationId"]').selectOption(destination);
+  const modeInputs = quoteForm.locator('input[name="allowedModes"]');
+  for (let index = 0; index < await modeInputs.count(); index += 1) {
+    await modeInputs.nth(index).uncheck();
+  }
+  await quoteForm.locator(`input[name="allowedModes"][value="${mode}"]`).check();
 
   const quoteResponsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/travel/quotes") &&
@@ -404,12 +398,7 @@ function fastForwardJourney(journeyId) {
     where state.player_id = journey.player_id
       and state.active_journey_id = journey.id;
   `;
-  const result = spawnSync(
-    "psql",
-    [DATABASE_URL, "-X", "-v", "ON_ERROR_STOP=1", "-c", sql],
-    { encoding: "utf8", maxBuffer: 1024 * 1024 },
-  );
-  if (result.status !== 0) throw new Error(`Travel fast-forward failed: ${redact(result.stderr)}`);
+  runSql(sql, "Travel fast-forward");
   evidence.travel.fastForwarded = true;
 }
 
@@ -510,7 +499,9 @@ try {
       pageErrors: evidence.pageErrors,
     })}`);
   }
-  if (evidence.responseUuidLeak) throw new Error("Questionnaire-led World responses exposed a raw UUID.");
+  if (evidence.responseUuidLeak) {
+    throw new Error("Questionnaire-led World responses exposed a raw UUID.");
+  }
   const incomplete = [
     ...Object.values(evidence.questionnaire),
     ...Object.values(evidence.travel),
