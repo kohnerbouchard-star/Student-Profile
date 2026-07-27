@@ -12,6 +12,10 @@ loopback-only ``x-real-ip`` value before proxying requests. Local Edge Functions
 therefore receive the same proxy-overwritten client-IP contract required by the
 fail-closed rate limiter. The server binds only to 127.0.0.1, so the authoritative
 client for this development gateway is always the loopback host.
+
+Loopback-only idempotent reads receive one bounded retry after an upstream
+500/502/503. This recovers a Supabase CLI Edge worker that retires after its local
+CPU soft limit without retrying writes or masking a persistent application error.
 """
 
 from __future__ import annotations
@@ -26,6 +30,9 @@ MINIMUM_REQUEST_TIMEOUT_SECONDS = 30.0
 MAXIMUM_REQUEST_TIMEOUT_SECONDS = 300.0
 LOCAL_TRUSTED_CLIENT_IP_HEADER = "x-real-ip"
 LOCAL_TRUSTED_CLIENT_IP = "127.0.0.1"
+LOCAL_UPSTREAM_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+LOCAL_RETRYABLE_METHODS = frozenset({"GET", "HEAD"})
+LOCAL_RETRYABLE_STATUSES = frozenset({500, 502, 503})
 FORWARDED_IP_HEADERS = (
     "cf-connecting-ip",
     "x-real-ip",
@@ -71,22 +78,65 @@ def install_timeout(module: ModuleType, timeout_seconds: float) -> None:
     base_http = module.http.client.HTTPConnection
     base_https = module.http.client.HTTPSConnection
 
-    class BoundedHTTPConnection(base_http):
-        def __init__(self, *args, **kwargs):
-            requested = kwargs.get("timeout")
-            if requested is None or isinstance(requested, (int, float)):
-                kwargs["timeout"] = max(float(requested or 0), timeout_seconds)
-            super().__init__(*args, **kwargs)
+    def connection_class(base_connection):
+        class BoundedRetryingConnection(base_connection):
+            def __init__(self, *args, **kwargs):
+                requested = kwargs.get("timeout")
+                if requested is None or isinstance(requested, (int, float)):
+                    kwargs["timeout"] = max(float(requested or 0), timeout_seconds)
+                self._econovaria_request = None
+                super().__init__(*args, **kwargs)
 
-    class BoundedHTTPSConnection(base_https):
-        def __init__(self, *args, **kwargs):
-            requested = kwargs.get("timeout")
-            if requested is None or isinstance(requested, (int, float)):
-                kwargs["timeout"] = max(float(requested or 0), timeout_seconds)
-            super().__init__(*args, **kwargs)
+            def request(
+                self,
+                method,
+                url,
+                body=None,
+                headers=None,
+                *,
+                encode_chunked=False,
+            ):
+                request_headers = dict(headers or {})
+                self._econovaria_request = (
+                    str(method).upper(),
+                    url,
+                    body,
+                    request_headers,
+                    encode_chunked,
+                )
+                return super().request(
+                    method,
+                    url,
+                    body=body,
+                    headers=request_headers,
+                    encode_chunked=encode_chunked,
+                )
 
-    module.http.client.HTTPConnection = BoundedHTTPConnection
-    module.http.client.HTTPSConnection = BoundedHTTPSConnection
+            def getresponse(self):
+                response = super().getresponse()
+                request = self._econovaria_request
+                if (
+                    request is not None
+                    and self.host in LOCAL_UPSTREAM_HOSTS
+                    and request[0] in LOCAL_RETRYABLE_METHODS
+                    and response.status in LOCAL_RETRYABLE_STATUSES
+                ):
+                    response.read()
+                    method, url, body, headers, encode_chunked = request
+                    super().request(
+                        method,
+                        url,
+                        body=body,
+                        headers=headers,
+                        encode_chunked=encode_chunked,
+                    )
+                    return super().getresponse()
+                return response
+
+        return BoundedRetryingConnection
+
+    module.http.client.HTTPConnection = connection_class(base_http)
+    module.http.client.HTTPSConnection = connection_class(base_https)
 
 
 def install_trusted_client_ip(module: ModuleType) -> None:
