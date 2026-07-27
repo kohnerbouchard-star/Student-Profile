@@ -32,6 +32,18 @@ try {
     '    (response) => response.url().includes("/functions/v1/classroom-api/players/login") && response.request().method() === "POST",',
     '    (response) => response.url().includes("/functions/v1/player-web-session-api/login") && response.request().method() === "POST",',
   );
+  source = replaceExactlyOnce(
+    source,
+    "state-control replay headers",
+    '  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-player-session-token", "x-request-id"]);',
+    '  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-player-session-token", "x-econovaria-csrf-token", "x-econovaria-device-id", "x-request-id"]);',
+  );
+  source = replaceExactlyOnce(
+    source,
+    "state-control cookie replay",
+    '    const response = await fetch(url, { method, headers, body: body || undefined, cache: "no-store" });',
+    '    const response = await fetch(url, { method, headers, body: body || undefined, cache: "no-store", credentials: "include" });',
+  );
   if (source.includes('/functions/v1/classroom-api/players/login')) {
     throw new Error("Player state-control adapter retained the retired login route.");
   }
