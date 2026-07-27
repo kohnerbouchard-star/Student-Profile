@@ -36,6 +36,6 @@ function resetLocalAcceptanceRateLimits() {
 }
 
 for (const journey of CONNECTED_JOURNEYS) {
-  await import(journey);
   resetLocalAcceptanceRateLimits();
+  await import(journey);
 }
