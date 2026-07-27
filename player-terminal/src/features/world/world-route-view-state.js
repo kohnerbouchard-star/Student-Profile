@@ -16,10 +16,12 @@ export function getWorldRouteViewState() {
 }
 
 export function setWorldRouteViewState(next = {}) {
+  const candidateModel = next.model === undefined ? worldRouteView.model : next.model;
+  const authoritativeModel = candidateModel?.runtimeAvailable === false ? null : candidateModel;
   worldRouteView = Object.freeze({
     ...worldRouteView,
     ...next,
-    model: next.model === undefined ? worldRouteView.model : next.model,
+    model: authoritativeModel,
     quote: next.quote === undefined ? worldRouteView.quote : next.quote,
     state: String(next.state || worldRouteView.state || "idle"),
     message: String(next.message ?? worldRouteView.message ?? ""),
