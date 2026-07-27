@@ -90,6 +90,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("World runtime requires the Player Terminal mount.");
   const api = new PlayerApi(config);
   let model = null;
+  let terminalWorldSource = null;
   let quote = null;
   let state = "idle";
   let message = "";
@@ -106,9 +107,21 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     return mount.querySelector(".player-terminal-page-host");
   }
 
+  function syncTerminalWorldModel(terminalState) {
+    const source = terminalState?.data?.worldRuntime;
+    if (!hasReadyWorldResource(terminalState) || !source || source === terminalWorldSource) return false;
+    terminalWorldSource = source;
+    model = liveWorldModel(source);
+    state = "ready";
+    updatedAt = Date.now();
+    return true;
+  }
+
   function render() {
     renderScheduled = false;
-    if (destroyed || !isWorldRoute(terminal.getState())) return;
+    const terminalState = terminal.getState();
+    if (destroyed || !isWorldRoute(terminalState)) return;
+    syncTerminalWorldModel(terminalState);
     const host = pageHost();
     if (!host) return;
     const offline = globalThis.navigator?.onLine === false;
@@ -278,11 +291,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
 
   const unsubscribe = terminal.subscribe((terminalState) => {
     if (!isWorldRoute(terminalState)) return;
-    if (hasReadyWorldResource(terminalState) && terminalState.data?.worldRuntime && !model) {
-      model = liveWorldModel(terminalState.data.worldRuntime);
-      state = "ready";
-      updatedAt = Date.now();
-    } else if (hasReadyCountriesResource(terminalState) && !model) {
+    if (!syncTerminalWorldModel(terminalState) && hasReadyCountriesResource(terminalState) && !model) {
       model = fallbackWorldModel(terminalState);
       state = "ready";
       message = "Country data loaded. Travel runtime is not deployed in this staging environment.";
@@ -298,14 +307,17 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   const staleTimer = globalThis.setInterval(scheduleRender, 15_000);
 
   if (isWorldRoute(terminal.getState()) && !model && state === "idle") {
-    const fallback = fallbackWorldModel(terminal.getState());
-    if (fallback) {
-      model = fallback;
-      state = "ready";
-      message = "Country data loaded. Travel runtime is not deployed in this staging environment.";
-      updatedAt = Date.now();
+    const terminalState = terminal.getState();
+    if (!syncTerminalWorldModel(terminalState)) {
+      const fallback = fallbackWorldModel(terminalState);
+      if (fallback) {
+        model = fallback;
+        state = "ready";
+        message = "Country data loaded. Travel runtime is not deployed in this staging environment.";
+        updatedAt = Date.now();
+      }
+      void load({ force: true, preserveMessage: Boolean(fallback) });
     }
-    void load({ force: true, preserveMessage: Boolean(fallback) });
   }
 
   return Object.freeze({
