@@ -23,6 +23,7 @@ const FIXTURE_TARGET_BALANCE = 25_000;
 const CURRENCY_PATTERN = /^[A-Z][A-Z0-9_]{2,15}$/;
 const UUID_VALUE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const PRODUCT_KEY_PATTERN = /^bpr_[0-9a-f]{32}$/;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -47,6 +48,8 @@ const evidence = {
     businessReplayDeniedDuplicate: false,
     productCreated: false,
     productPersisted: false,
+    productApproved: false,
+    productApprovalPersisted: false,
     inputPurchased: false,
     inputPersisted: false,
     productionRun: false,
@@ -87,9 +90,7 @@ function databaseFundingState(admin, currencyCode) {
   if (!UUID_VALUE_PATTERN.test(admin.gameId) || !UUID_VALUE_PATTERN.test(admin.playerId)) {
     throw new Error("Business fixture database scope is invalid.");
   }
-  if (!CURRENCY_PATTERN.test(currencyCode)) {
-    throw new Error("Business fixture database currency is invalid.");
-  }
+  if (!CURRENCY_PATTERN.test(currencyCode)) throw new Error("Business fixture database currency is invalid.");
   const raw = psql(`
     with context as (
       select country_code, currency_code
@@ -121,6 +122,19 @@ function databaseFundingState(admin, currencyCode) {
     throw new Error(`Business fixture database context is invalid: ${redact(raw)}`);
   }
   return { cashBalance, contextCountryCode, contextCurrencyCode };
+}
+
+function databaseProductStatus(admin, productKey) {
+  if (!UUID_VALUE_PATTERN.test(admin.gameId) || !PRODUCT_KEY_PATTERN.test(productKey)) {
+    throw new Error("Business product fixture scope is invalid.");
+  }
+  return psql(`
+    select coalesce(status, '')
+    from public.business_products
+    where game_session_id = '${admin.gameId}'::uuid
+      and public_key = '${productKey}'
+    limit 1;
+  `).trim().toLowerCase();
 }
 
 async function parseJson(response) {
@@ -170,6 +184,16 @@ function walk(value, output = []) {
 
 function replayed(value) {
   return walk(value).some((item) => item.replayed === true);
+}
+
+function findPublicKey(value, pattern) {
+  for (const item of walk(value)) {
+    for (const child of Object.values(item)) {
+      const candidate = typeof child === "string" ? child.trim().toLowerCase() : "";
+      if (pattern.test(candidate)) return candidate;
+    }
+  }
+  return "";
 }
 
 function assignedCurrency(record) {
@@ -256,6 +280,38 @@ async function creditPlayer(admin, currencyCode, amount) {
   evidence.fixtureCreditApplied = true;
 }
 
+async function approveProduct(admin, productKey) {
+  if (!PRODUCT_KEY_PATTERN.test(productKey)) throw new Error("Business product response omitted a valid public product key.");
+  const idempotencyKey = `business-product-approval-${Date.now()}`;
+  const response = await request(
+    `/functions/v1/admin-api/games/${encodeURIComponent(admin.gameId)}/business-products/${encodeURIComponent(productKey)}/review`,
+    {
+      method: "POST",
+      headers: headers(admin.publishableKey, admin.token, {
+        "X-Econovaria-Game-Id": admin.gameId,
+        "X-Idempotency-Key": idempotencyKey,
+      }),
+      body: {
+        decision: "approve",
+        reason: "Connected Business lifecycle approval",
+        idempotencyKey,
+      },
+    },
+  );
+  const reviewed = walk(response.payload).find((item) => {
+    const key = String(item.productKey || item.product_key || "").trim().toLowerCase();
+    return key === productKey;
+  });
+  if (response.status !== 200 || String(reviewed?.status || "").toLowerCase() !== "active") {
+    throw new Error(`Business product approval returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
+  }
+  evidence.mutations.productApproved = true;
+  if (databaseProductStatus(admin, productKey) !== "active") {
+    throw new Error("Approved Business product did not persist as active.");
+  }
+  evidence.mutations.productApprovalPersisted = true;
+}
+
 function instrument(page) {
   page.on("console", (message) => {
     if (message.type() === "error") evidence.consoleErrors.push(redact(message.text()));
@@ -269,8 +325,7 @@ function instrument(page) {
       path: redact(new URL(url).pathname),
       status: response.status(),
     });
-    const type = response.headers()["content-type"] || "";
-    if (!type.includes("application/json")) return;
+    if (!(response.headers()["content-type"] || "").includes("application/json")) return;
     const body = await response.text().catch(() => "");
     UUID_PATTERN.lastIndex = 0;
     if (UUID_PATTERN.test(body)) evidence.responseUuidLeak = true;
@@ -399,12 +454,7 @@ async function submitMutation(page, endpoint, pathPattern, configure) {
 
 async function replayRequest(page, original) {
   return page.evaluate(async ({ url, headers: requestHeaders, body }) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: requestHeaders,
-      body,
-      cache: "no-store",
-    });
+    const response = await fetch(url, { method: "POST", headers: requestHeaders, body, cache: "no-store" });
     return { status: response.status, payload: await response.json().catch(() => null) };
   }, original);
 }
@@ -421,11 +471,7 @@ async function requireText(page, text) {
       if (String(element.textContent || "").trim() !== expected) return false;
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
-      return style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        Number(style.opacity) !== 0 &&
-        rect.width > 0 &&
-        rect.height > 0;
+      return style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
     });
   }, text, { timeout: 30_000 });
 }
@@ -449,13 +495,14 @@ async function createBusiness(page) {
     throw new Error(`Business creation replay was not recognized: ${replay.status} ${redact(JSON.stringify(replay.payload))}`);
   }
   await reloadBusiness(page);
-  const companyHeadings = page.getByText(COMPANY_NAME, { exact: true });
-  if ((await companyHeadings.count()) < 1) throw new Error("Business disappeared after idempotent replay.");
+  if ((await page.getByText(COMPANY_NAME, { exact: true }).count()) < 1) {
+    throw new Error("Business disappeared after idempotent replay.");
+  }
   evidence.mutations.businessReplayDeniedDuplicate = true;
   return operation.request;
 }
 
-async function createProduct(page) {
+async function createProduct(page, admin) {
   const operation = await submitMutation(page, "businessProductCreate", /\/players\/me\/business\/products$/, async (target) => {
     await target.locator('[name="name"]').fill(PRODUCT_NAME);
     await target.locator('[name="category"]').fill("classroom_equipment");
@@ -471,7 +518,11 @@ async function createProduct(page) {
   await reloadBusiness(page);
   await requireText(page, PRODUCT_NAME);
   evidence.mutations.productPersisted = true;
-  return operation;
+
+  const productKey = findPublicKey(operation.responsePayload, PRODUCT_KEY_PATTERN);
+  await approveProduct(admin, productKey);
+  await reloadBusiness(page);
+  await requireText(page, PRODUCT_NAME);
 }
 
 async function purchaseInputs(page) {
@@ -506,7 +557,7 @@ async function updatePrice(page) {
   });
   evidence.mutations.priceUpdated = true;
   await reloadBusiness(page);
-  const product = page.getByText(PRODUCT_NAME, { exact: true }).locator("xpath=ancestor::article[1]");
+  const product = page.getByText(PRODUCT_NAME, { exact: true }).locator("xpath=ancestor::article[1]").first();
   const text = String(await product.innerText()).replace(/,/g, "");
   if (!/PRICE\s+[^0-9]*15(?:\.00)?/i.test(text)) throw new Error(`Updated product price was not rendered: ${redact(text)}.`);
   evidence.mutations.pricePersisted = true;
@@ -527,7 +578,7 @@ async function hireEmployee(page) {
 }
 
 async function terminateEmployee(page) {
-  const employee = page.getByText(EMPLOYEE_ROLE, { exact: true }).locator("xpath=ancestor::article[1]");
+  const employee = page.getByText(EMPLOYEE_ROLE, { exact: true }).locator("xpath=ancestor::article[1]").first();
   const target = employee.locator('form[data-endpoint="businessTerminate"]');
   await target.locator('[name="reason"]').fill("Connected lifecycle termination verification");
   const responsePromise = page.waitForResponse(
@@ -542,9 +593,8 @@ async function terminateEmployee(page) {
   }
   evidence.mutations.employeeTerminated = true;
   await reloadBusiness(page);
-  if (await page.getByText(EMPLOYEE_ROLE, { exact: true }).count()) {
-    throw new Error("Terminated employee remained in the active employee list after reload.");
-  }
+  const activeEmployee = page.locator(".player-terminal-business-products article").filter({ hasText: EMPLOYEE_ROLE });
+  if (await activeEmployee.count()) throw new Error("Terminated employee remained in the active employee list after reload.");
   evidence.mutations.terminationPersisted = true;
 }
 
@@ -615,7 +665,7 @@ try {
   if (evidence.businessRequest?.capitalization !== CAPITALIZATION) {
     throw new Error(`Business request capitalization was ${evidence.businessRequest?.capitalization} instead of ${CAPITALIZATION}.`);
   }
-  await createProduct(player.page);
+  await createProduct(player.page, admin);
   await purchaseInputs(player.page);
   await runProduction(player.page);
   await updatePrice(player.page);
@@ -635,10 +685,7 @@ try {
 
   if (evidence.responseUuidLeak) throw new Error("A connected Player Business response exposed a raw internal UUID.");
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
-    throw new Error(`Player Business browser errors: ${JSON.stringify({
-      consoleErrors: evidence.consoleErrors,
-      pageErrors: evidence.pageErrors,
-    })}`);
+    throw new Error(`Player Business browser errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
   }
   if (!evidence.fixtureCreditApplied || !evidence.fixtureCreditVisible || !Object.values(evidence.mutations).every(Boolean)) {
     throw new Error(`Connected Player Business evidence is incomplete: ${JSON.stringify({
