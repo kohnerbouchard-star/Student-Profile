@@ -1,5 +1,6 @@
 const DEFAULT_CONFIG = Object.freeze({
   apiBaseUrl: "/api/player",
+  playerSessionApiBaseUrl: "/api/player-session",
   environment: "development",
   allowPreviewMode: true,
   usePreviewData: false,
