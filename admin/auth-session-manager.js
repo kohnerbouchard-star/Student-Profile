@@ -7,6 +7,9 @@
   }
 
   const WEB_SESSION_API = String(runtimeConfig.webSessionApiUrl || "").replace(/\/+$/, "");
+  const ADMIN_LOGOUT_API = String(
+    runtimeConfig.adminLogoutApiUrl || `${WEB_SESSION_API}/logout`
+  ).replace(/\/+$/, "");
   const ADMIN_BFF_API = String(runtimeConfig.adminBffApiUrl || "").replace(/\/+$/, "");
   const PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const SESSION_KEY = "econovaria.admin.auth.v1";
@@ -14,8 +17,10 @@
   const DEVICE_KEY = "econovaria.device.v1";
   const DEVICE_HEADER = "x-econovaria-device-id";
   const GAME_HEADER = "x-econovaria-game-id";
+  const CSRF_HEADER = "x-econovaria-csrf-token";
   const DEFAULT_EXPIRY_SKEW_MS = 30000;
   const DEVICE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
   const ADMIN_PERMISSION_SET = new Set([
     "account.read",
     "audit.read",
@@ -111,7 +116,7 @@
     };
     if (
       !record.authenticated ||
-      !/^[A-Za-z0-9_-]{43}$/.test(record.csrfToken) ||
+      !CSRF_PATTERN.test(record.csrfToken) ||
       !record.permissions.length ||
       record.adminRole !== "game_admin"
     ) {
@@ -246,15 +251,21 @@
   }
 
   async function signOut() {
-    if (signingOut) return;
+    if (signingOut) return { ok: false, code: "staff_logout_in_progress" };
+    const cached = read();
     signingOut = true;
+    let result = { ok: false, code: "staff_logout_revocation_failed" };
     try {
-      await nativeFetch(`${WEB_SESSION_API}/logout`, {
+      const headers = {
+        apikey: PUBLISHABLE_KEY,
+        [DEVICE_HEADER]: deviceId()
+      };
+      if (CSRF_PATTERN.test(String(cached?.csrfToken || ""))) {
+        headers[CSRF_HEADER] = cached.csrfToken;
+      }
+      const response = await nativeFetch(ADMIN_LOGOUT_API, {
         method: "POST",
-        headers: {
-          apikey: PUBLISHABLE_KEY,
-          [DEVICE_HEADER]: deviceId()
-        },
+        headers,
         body: "{}",
         credentials: "include",
         cache: "no-store",
@@ -262,9 +273,18 @@
         referrerPolicy: "no-referrer",
         keepalive: true
       }).catch(() => null);
+      const body = response ? await readResponseJson(response) : null;
+      result = response?.ok
+        ? { ok: true, code: "staff_session_revoked" }
+        : {
+          ok: false,
+          code: String(body?.error?.code || "staff_logout_revocation_failed"),
+          status: Number(response?.status || 0)
+        };
     } finally {
       clear();
     }
+    return result;
   }
 
   window.EconovariaAdminAuthSession = Object.freeze({
