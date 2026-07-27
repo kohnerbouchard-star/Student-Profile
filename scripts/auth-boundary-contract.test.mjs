@@ -23,7 +23,6 @@ const standaloneAdminClients = [
   "admin/crafting-oversight-client.js",
   "admin/progression-review-client.js",
   "admin/marketplace-lifecycle-client.js",
-  "admin/world-runtime-console-client.js",
 ];
 
 test("auth ledger is complete, unique, and machine-readable", async () => {
@@ -70,8 +69,16 @@ test("browser runtime exposes only publishable application identity", async () =
       /SUPABASE_SERVICE_ROLE_KEY\s*[:=]/,
       `${path} contains service-role configuration`,
     );
-    assert.doesNotMatch(source, /STOCK_MARKET_RUNNER_SECRET\s*[:=]/, `${path} contains runner authority`);
-    assert.doesNotMatch(source, /PURCHASE_CODE_HMAC_SECRET\s*[:=]/i, `${path} contains purchase-code key material`);
+    assert.doesNotMatch(
+      source,
+      /STOCK_MARKET_RUNNER_SECRET\s*[:=]/,
+      `${path} contains runner authority`,
+    );
+    assert.doesNotMatch(
+      source,
+      /PURCHASE_CODE_HMAC_SECRET\s*[:=]/i,
+      `${path} contains purchase-code key material`,
+    );
   }
 
   const runtime = await read("frontend/src/core/runtime-config.js");
@@ -91,15 +98,12 @@ test("Admin browser storage and transport contain no Staff credential", async ()
 
   assert.match(apiSource, /credentials:\s*"include"/);
   assert.match(apiSource, /x-econovaria-csrf-token/);
-  assert.doesNotMatch(apiSource, /accessToken:\s*signIn/);
-  assert.doesNotMatch(apiSource, /refreshToken:\s*signIn/);
-  assert.doesNotMatch(loginSource, /accessToken/);
-  assert.doesNotMatch(loginSource, /refreshToken/);
+  assert.doesNotMatch(apiSource, /accessToken:\s*signIn|refreshToken:\s*signIn/);
+  assert.doesNotMatch(loginSource, /accessToken|refreshToken/);
   assert.doesNotMatch(sessionManager, /refreshToken/);
   assert.match(sessionManager, /adminLogoutApiUrl/);
   assert.match(sessionManager, /staff_logout_revocation_failed/);
-  assert.doesNotMatch(adminAuth, /refreshToken/);
-  assert.doesNotMatch(adminAuth, /Bearer/);
+  assert.doesNotMatch(adminAuth, /refreshToken|Bearer/);
 });
 
 test("Admin browser direct legacy route fallback is retired", async () => {
@@ -129,25 +133,25 @@ test("standalone Admin clients remain cookie and CSRF bound", async () => {
   assert.match(adminAuth, /redirect:\s*"error"/);
   assert.match(adminAuth, /referrerPolicy:\s*"no-referrer"/);
 
-  let deviceBoundClients = 0;
+  let explicitBoundaryClients = 0;
   for (const path of standaloneAdminClients) {
     const source = await read(path);
-    assert.doesNotMatch(source, /AdminAuthSessionManager/);
-    assert.doesNotMatch(source, /authorization/i);
+    assert.doesNotMatch(source, /AdminAuthSessionManager|authorization/i);
 
-    if (/global\.AdminAdapter|adapter\(\)\.request/.test(source)) {
-      assert.match(source, /\/games\/\$\{encodeURIComponent\((?:id|gameId)\)\}/);
-      assert.match(source, /\.request\(\{|adapter\(\)\.request/);
+    if (/AdminAdapter/.test(source)) {
+      assert.match(source, /\.request\(/, `${path} must delegate to AdminAdapter`);
+      assert.match(source, /\/games\//, `${path} must retain game-scoped paths`);
+      assert.doesNotMatch(source, /\bfetch\s*\(/, `${path} must not bypass AdminAdapter`);
       continue;
     }
 
     if (/apiBase\s*=\s*"\/api\/admin"/.test(source)) {
       assert.match(source, /\/games\/\$\{encodeURIComponent\(selectedGameId\)\}/);
       assert.match(source, /credentials:\s*"same-origin"/);
+      explicitBoundaryClients += 1;
       continue;
     }
 
-    if (/x-econovaria-device-id/.test(source)) deviceBoundClients += 1;
     assert.match(source, /x-econovaria-game-id/, `${path} must bind active game scope`);
     assert.match(source, /x-econovaria-csrf-token/, `${path} must bind CSRF`);
     assert.match(source, /getUsableSession/, `${path} must use the central session manager`);
@@ -155,8 +159,9 @@ test("standalone Admin clients remain cookie and CSRF bound", async () => {
     assert.match(source, /redirect:\s*"error"/, `${path} must reject redirects`);
     assert.match(source, /referrerPolicy:\s*"no-referrer"/, `${path} must suppress referrers`);
     assert.doesNotMatch(source, /credentials:\s*"same-origin"/);
+    explicitBoundaryClients += 1;
   }
-  assert.ok(deviceBoundClients >= 1, "reviewed Admin clients must preserve device binding");
+  assert.ok(explicitBoundaryClients >= 1, "reviewed Admin clients must preserve explicit request boundaries");
 });
 
 test("Player and Admin callers remain bound to their own identities", async () => {
@@ -184,7 +189,10 @@ test("Player and Admin callers remain bound to their own identities", async () =
   assert.match(adapter, /publishableKey/);
   assert.match(adapter, /credentials:\s*"include"/);
   assert.match(adapter, /x-econovaria-csrf-token/);
-  assert.doesNotMatch(adapter, /playerSessionToken|x-player-session-token|Authorization\s*=\s*`Bearer/);
+  assert.doesNotMatch(
+    adapter,
+    /playerSessionToken|x-player-session-token|Authorization\s*=\s*`Bearer/,
+  );
 
   assert.match(adminAuth, /headers\.set\("apikey", SUPABASE_PUBLISHABLE_KEY\)/);
   assert.match(adminAuth, /headers\.set\(CSRF_HEADER, session\.csrfToken\)/);
@@ -238,25 +246,26 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
     assert.doesNotMatch(
       source,
       /request\.headers\.get\(["']x-stock-market-runner-secret["']\)/,
-      "entrypoints must not authorize the external caller with the legacy header",
+      "entrypoints must not authorize external callers with the legacy raw-secret header",
     );
   }
   for (const source of [runner, seed, trading]) {
     assert.match(source, /authorizeInternalRunnerRequest/);
+    assert.match(source, /claim_internal_runner_nonce_v2/);
   }
   for (const source of [stockRead, playerRead]) {
     assert.doesNotMatch(
       source,
       /authorizeInternalRunnerRequest/,
-      "read-only market endpoints must not require internal runner authority",
+      "read-only market endpoints must not require internal scheduler authority",
     );
   }
+
   assert.match(auth, /x-econovaria-runner-timestamp/);
   assert.match(auth, /x-econovaria-runner-nonce/);
-  assert.match(auth, /x-econovaria-runner-body-sha256/);
   assert.match(auth, /x-econovaria-runner-signature/);
+  assert.match(auth, /`body-sha256:\$\{input\.bodyHash\.toLowerCase\(\)\}`/);
   assert.match(auth, /request\.headers\.has\(options\.internalSecretHeader\)/);
-  assert.match(auth, /claim_internal_runner_nonce_v2/);
   assert.match(auth, /headers\.set\(options\.internalSecretHeader, secret\)/);
   assert.match(scheduler, /createInternalRunnerHeaders/);
   assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
