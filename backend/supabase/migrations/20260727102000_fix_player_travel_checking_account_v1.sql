@@ -295,7 +295,7 @@ begin
         'status', v_journey.status,
         'arrivalAt', v_journey.arrival_at
       ),
-      completed_at = v_now
+      completed_at = greatest(v_now, v_idempotency.created_at)
   where id = v_idempotency.id;
 
   return query select
@@ -320,6 +320,6 @@ grant execute on function public.execute_player_travel_v1(uuid, uuid, text, text
   to service_role;
 
 comment on function public.execute_player_travel_v1(uuid, uuid, text, text, timestamptz, jsonb) is
-  'Executes Player travel atomically through checking, converting quoted minor units to ledger currency units while preserving typed idempotent public evidence.';
+  'Executes Player travel atomically through checking, converting quoted minor units to ledger currency units while preserving typed and monotonic idempotent public evidence.';
 
 commit;
