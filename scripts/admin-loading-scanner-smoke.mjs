@@ -84,15 +84,33 @@ async function manualSnapshot(route, label) {
   return { ...snapshot, shared };
 }
 
-async function waitForStableAutomaticSkeleton(route, label) {
-  const timeoutAt = Date.now() + 3500;
+async function waitForAccountLoadingMode(route, label) {
+  const startedAt = Date.now();
+  const timeoutAt = startedAt + 3500;
+  let lastState = null;
+
   while (Date.now() < timeoutAt) {
-    await page.waitForFunction((expectedRoute) => {
+    const state = await page.evaluate((expectedRoute) => {
       const api = window.EconovariaAdminShapeSkeletons;
       const controller = api?.activePageController?.();
       const main = document.querySelector(".admin-terminal-shell-main");
       const overlay = document.querySelector(".admin-qol-page-skeleton");
-      return Boolean(
+      const account = [...document.querySelectorAll(".admin-terminal-account-page")].find((element) => {
+        if (element.closest("[data-admin-shape-skeleton-stage]") || element.hidden) return false;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
+      });
+      const heading = account?.querySelector("h1, h2, h3")?.textContent?.trim().toLowerCase() || "";
+      const expectedHeading = {
+        "account-profile": /profile/,
+        "account-settings": /settings|preferences/,
+        "account-notifications": /notifications|alerts|inbox/,
+        "account-security": /security|sessions|access/,
+        "account-help": /help|support|guides/,
+        "account-games": /games|game sessions/,
+      }[expectedRoute];
+      const automatic = Boolean(
         overlay && overlay.isConnected && !overlay.hidden &&
         main?.getAttribute("aria-busy") === "true" &&
         overlay.getAttribute("role") === "status" &&
@@ -101,34 +119,58 @@ async function waitForStableAutomaticSkeleton(route, label) {
         overlay.dataset.adminShapeSkeletonGeneration &&
         controller?.route === expectedRoute
       );
-    }, route, { timeout: Math.max(250, timeoutAt - Date.now()) });
-
-    await page.evaluate(() => new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    }));
-
-    const stable = await page.evaluate((expectedRoute) => {
-      const api = window.EconovariaAdminShapeSkeletons;
-      const controller = api?.activePageController?.();
-      const main = document.querySelector(".admin-terminal-shell-main");
-      const overlay = document.querySelector(".admin-qol-page-skeleton");
-      return Boolean(
-        overlay && overlay.isConnected && !overlay.hidden &&
-        main?.getAttribute("aria-busy") === "true" &&
-        overlay.getAttribute("role") === "status" &&
-        overlay.getAttribute("aria-label") &&
-        overlay.dataset.adminShapeSkeletonRoute === expectedRoute &&
-        overlay.dataset.adminShapeSkeletonGeneration &&
-        controller?.route === expectedRoute
+      const synchronous = Boolean(
+        account && expectedHeading?.test(heading) &&
+        !main?.hasAttribute("aria-busy") && (!overlay || overlay.hidden)
       );
+      return {
+        automatic,
+        synchronous,
+        heading,
+        busy: main?.getAttribute("aria-busy") || "",
+        overlayRoute: overlay?.dataset.adminShapeSkeletonRoute || "",
+        overlayHidden: !overlay || overlay.hidden,
+        controllerRoute: controller?.route || "",
+      };
     }, route);
-    if (stable) return;
+    lastState = state;
+
+    if (state.automatic) {
+      await page.evaluate(() => new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      }));
+      const stable = await page.evaluate((expectedRoute) => {
+        const api = window.EconovariaAdminShapeSkeletons;
+        const controller = api?.activePageController?.();
+        const main = document.querySelector(".admin-terminal-shell-main");
+        const overlay = document.querySelector(".admin-qol-page-skeleton");
+        return Boolean(
+          overlay && overlay.isConnected && !overlay.hidden &&
+          main?.getAttribute("aria-busy") === "true" &&
+          overlay.getAttribute("role") === "status" &&
+          overlay.getAttribute("aria-label") &&
+          overlay.dataset.adminShapeSkeletonRoute === expectedRoute &&
+          overlay.dataset.adminShapeSkeletonGeneration &&
+          controller?.route === expectedRoute
+        );
+      }, route);
+      if (stable) return "automatic";
+    }
+
+    if (Date.now() - startedAt >= 900 && state.synchronous) return "synchronous";
+    await page.waitForTimeout(40);
   }
-  fail(`${label} did not reach stable automatic loading semantics.`);
+
+  fail(`${label} did not reach an automatic or synchronous completion contract: ${JSON.stringify(lastState)}.`);
 }
 
 async function automaticSnapshot(route, label) {
-  await waitForStableAutomaticSkeleton(route, label);
+  const mode = await waitForAccountLoadingMode(route, label);
+  if (mode === "synchronous") {
+    const snapshot = await manualSnapshot(route, label);
+    return { ...snapshot, automatic: false, synchronous: true };
+  }
+
   const snapshot = await page.evaluate(() => {
     const api = window.EconovariaAdminShapeSkeletons;
     const controller = api.activePageController();
@@ -164,7 +206,7 @@ async function automaticSnapshot(route, label) {
   if (!snapshot.generation) fail(`${label} has no automatic skeleton controller.`);
   const shared = validate(label, snapshot);
   await waitForCleanup(label);
-  return { ...snapshot, shared };
+  return { ...snapshot, shared, automatic: true, synchronous: false };
 }
 
 async function sessionSnapshot() {
