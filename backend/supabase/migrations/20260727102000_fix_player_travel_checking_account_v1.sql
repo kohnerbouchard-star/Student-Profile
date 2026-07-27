@@ -1,6 +1,6 @@
 -- Align Player travel settlement with the canonical checking account.
--- The legacy travel RPC still queried and debited the retired cash account,
--- while Player banking and connected fixture credits use checking.
+-- Travel quotes remain denominated in minor units, while Player account
+-- balances and ledger entries use normal currency units.
 
 begin;
 
@@ -41,6 +41,7 @@ declare
   v_ledger record;
   v_leg jsonb;
   v_route public.world_route_states%rowtype;
+  v_settlement_amount numeric(18, 2);
 begin
   if p_game_session_id is null
     or p_player_id is null
@@ -203,6 +204,8 @@ begin
     end if;
   end loop;
 
+  v_settlement_amount := v_quote.total_cost_minor::numeric / 100;
+
   select balance_row.* into v_balance
   from public.account_balances as balance_row
   where balance_row.game_session_id = p_game_session_id
@@ -211,7 +214,7 @@ begin
     and balance_row.currency_code = v_quote.currency_code
   for update;
 
-  if not found or v_balance.balance < v_quote.total_cost_minor then
+  if not found or v_balance.balance < v_settlement_amount then
     raise exception 'TRAVEL_INSUFFICIENT_BALANCE' using errcode = 'P0001';
   end if;
 
@@ -248,7 +251,7 @@ begin
     p_game_session_id,
     p_player_id,
     'checking',
-    -v_quote.total_cost_minor,
+    -v_settlement_amount,
     v_quote.currency_code,
     'debit',
     'travel',
@@ -261,6 +264,7 @@ begin
       'travelQuoteId', v_quote.public_id,
       'fromLocationId', v_quote.from_location_id,
       'toLocationId', v_quote.to_location_id,
+      'totalCostMinor', v_quote.total_cost_minor,
       'durationMinutes', v_quote.total_duration_minutes
     ) || coalesce(p_request_metadata, '{}'::jsonb)
   );
@@ -315,6 +319,6 @@ grant execute on function public.execute_player_travel_v1(uuid, uuid, text, text
   to service_role;
 
 comment on function public.execute_player_travel_v1(uuid, uuid, text, text, timestamptz, jsonb) is
-  'Executes Player travel atomically against the canonical checking account, with route validation and idempotent replay.';
+  'Executes Player travel atomically through checking, converting quoted minor units to ledger currency units while preserving idempotent public evidence.';
 
 commit;
