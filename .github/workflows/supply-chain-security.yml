@@ -24,10 +24,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@2ef77ad7c8eb58313f1293825c2a9a5df3214c7c # v5
         with:
           fail-on-severity: high
           fail-on-scopes: runtime, development, unknown
@@ -43,10 +45,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -79,7 +83,7 @@ jobs:
         run: npm run security:sbom
 
       - name: Upload immutable SBOM bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: supply-chain-sbom-${{ github.sha }}
           path: artifacts/supply-chain
@@ -88,7 +92,7 @@ jobs:
 
       - name: Attest SBOM bundle provenance
         if: github.event_name != 'pull_request'
-        uses: actions/attest@v4
+        uses: actions/attest@77e7abb5d55d355ab3c1ebed027a8b6a4cbf90e6 # v4
         with:
           subject-path: artifacts/supply-chain/*
           show-summary: true
