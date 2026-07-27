@@ -62,18 +62,52 @@ jobs:
           node-version: "22.23.1"
           cache: npm
 
-      - name: Install pinned tooling and Chromium
+      - name: Pin npm
+        shell: bash
         run: |
           set -euo pipefail
-          npm install --global npm@10.9.8
-          npm ci
+          for ATTEMPT in 1 2 3; do
+            if npm install --global npm@10.9.8; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Install repository dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npm ci; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Validate browser harness contracts
+        shell: bash
+        run: |
+          set -euo pipefail
           node --check scripts/admin-browser-reconnaissance.mjs
           node --check scripts/local-auth-readiness.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
           node --test scripts/staff-service-role-access-contract.test.mjs
           node --test scripts/persisted-game-code-contract.test.mjs
-          npx playwright install --with-deps chromium
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
 
       - name: Build exact authorized Crafting pack
         shell: bash
