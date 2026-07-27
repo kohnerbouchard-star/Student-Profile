@@ -7,6 +7,37 @@ const TIMESTAMP_HEADER = "x-econovaria-runner-timestamp";
 const NONCE_HEADER = "x-econovaria-runner-nonce";
 const SIGNATURE_HEADER = "x-econovaria-runner-signature";
 
+export function createInternalRunnerHeaders({
+  runnerName,
+  url,
+  bodyText,
+  publishableKey,
+  runnerSecret,
+  timestampSeconds,
+  nonce,
+}) {
+  const bodyHash = createHash("sha256").update(bodyText).digest("hex");
+  const canonicalPayload = buildInternalRunnerSignaturePayload({
+    runnerName,
+    timestampSeconds,
+    nonce,
+    method: "POST",
+    url,
+    bodyHash,
+  });
+  const signature = createHmac("sha256", runnerSecret)
+    .update(canonicalPayload)
+    .digest("base64url");
+
+  return Object.freeze({
+    apikey: publishableKey,
+    "content-type": "application/json",
+    [TIMESTAMP_HEADER]: String(timestampSeconds),
+    [NONCE_HEADER]: nonce,
+    [SIGNATURE_HEADER]: `v1=${signature}`,
+  });
+}
+
 export function buildStockMarketTickRequest(
   environment = process.env,
   {
@@ -38,28 +69,19 @@ export function buildStockMarketTickRequest(
   const bodyText = JSON.stringify(body);
   const timestampSeconds = Math.floor(normalizedNow(now).getTime() / 1000);
   const nonce = requiredUuid(nonceFactory(), "internal runner nonce");
-  const bodyHash = createHash("sha256").update(bodyText).digest("hex");
-  const canonicalPayload = buildInternalRunnerSignaturePayload({
+  const headers = createInternalRunnerHeaders({
     runnerName: RUNNER_NAME,
+    url,
+    bodyText,
+    publishableKey,
+    runnerSecret,
     timestampSeconds,
     nonce,
-    method: "POST",
-    url,
-    bodyHash,
   });
-  const signature = createHmac("sha256", runnerSecret)
-    .update(canonicalPayload)
-    .digest("base64url");
 
   return Object.freeze({
     url,
-    headers: Object.freeze({
-      apikey: publishableKey,
-      "content-type": "application/json",
-      [TIMESTAMP_HEADER]: String(timestampSeconds),
-      [NONCE_HEADER]: nonce,
-      [SIGNATURE_HEADER]: `v1=${signature}`,
-    }),
+    headers,
     body,
     bodyText,
   });
