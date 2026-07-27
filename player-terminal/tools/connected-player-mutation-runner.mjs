@@ -164,6 +164,21 @@ async function openMessages(session) {
   assertNoFailedRequests(`${session.label} Messages route`, requestIndex);
 }
 
+async function refreshMessages(session) {
+  const { page } = session;
+  const requestIndex = evidence.requests.length;
+  const isMessagesRoute = await page.evaluate(() => location.hash === "#messages");
+  if (isMessagesRoute) {
+    const profile = page.locator('[data-route="profile"]:visible').first();
+    await profile.waitFor({ state: "visible", timeout: 30_000 });
+    await profile.click();
+    await page.waitForFunction(() => location.hash === "#profile", undefined, { timeout: 30_000 });
+    await page.locator(".player-terminal-profile-page").waitFor({ state: "visible", timeout: 30_000 });
+  }
+  await openMessages(session);
+  assertNoFailedRequests(`${session.label} Messages route refresh`, requestIndex);
+}
+
 async function openThreadCreationForm(page) {
   const form = page.locator('form[data-endpoint="messageThreadCreate"]');
   const details = form.locator("xpath=ancestor::details[1]");
@@ -205,9 +220,7 @@ async function createThread(sender, recipient) {
   await messageInLog(sender.page, message).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.threadCreated = true;
 
-  await sender.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await sender.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  await openMessages(sender);
+  await refreshMessages(sender);
   const threadButton = threadByTitle(sender.page, title);
   await threadButton.waitFor({ state: "visible", timeout: 30_000 });
   await threadButton.click();
@@ -218,9 +231,7 @@ async function createThread(sender, recipient) {
 
 async function receiveReadAndReply(recipientSession, initial) {
   const { page } = recipientSession;
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  await openMessages(recipientSession);
+  await refreshMessages(recipientSession);
 
   const threadControl = threadByTitle(page, initial.title);
   await threadControl.waitFor({ state: "visible", timeout: 30_000 });
@@ -286,9 +297,7 @@ async function receiveReadAndReply(recipientSession, initial) {
 }
 
 async function verifyReply(sender, initial, reply) {
-  await sender.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await sender.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  await openMessages(sender);
+  await refreshMessages(sender);
   const threadControl = threadByTitle(sender.page, initial.title);
   await threadControl.waitFor({ state: "visible", timeout: 30_000 });
   await threadControl.click();
