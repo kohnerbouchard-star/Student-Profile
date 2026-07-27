@@ -8,7 +8,7 @@ on:
       - .github/workflows/reconcile-pr377-with-main.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inventory-conflicts:
@@ -18,23 +18,39 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Inventory merge conflicts against main
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           set +e
           git merge --no-commit --no-ff origin/main
           merge_status=$?
           set -e
-          echo "MERGE_STATUS=${merge_status}"
-          echo "CONFLICTS_BEGIN"
-          git diff --name-only --diff-filter=U | sort
-          echo "CONFLICTS_END"
-          echo "CONFLICT_DETAILS_BEGIN"
-          git status --short
-          echo "CONFLICT_DETAILS_END"
+          mkdir -p docs/operations/reconciliation
+          {
+            echo "# PR 377 conflict inventory"
+            echo
+            echo "- PR head: $(git rev-parse HEAD)"
+            echo "- Main head: $(git rev-parse origin/main)"
+            echo "- Merge status: ${merge_status}"
+            echo
+            echo "## Unmerged paths"
+            echo '```text'
+            git diff --name-only --diff-filter=U | sort
+            echo '```'
+            echo
+            echo "## Git status"
+            echo '```text'
+            git status --short
+            echo '```'
+          } > /tmp/pr377-conflict-inventory.md
           git merge --abort || true
-          test "$merge_status" -ne 0
+          cp /tmp/pr377-conflict-inventory.md docs/operations/reconciliation/pr377-conflict-inventory.md
+          git add docs/operations/reconciliation/pr377-conflict-inventory.md
+          git commit -m "docs(reconcile): record PR 377 conflict inventory"
+          git push origin HEAD:agent/runtime-stability-button-integrity-v1
