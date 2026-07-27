@@ -6,7 +6,7 @@ const source = await readFile(coreUrl, "utf8");
 const needle = `  await expect(page.locator(".player-terminal-app-root")).toHaveAttribute("aria-hidden", "true");
   await page.keyboard.press("Escape");`;
 const replacement = `  await expect(page.locator(".player-terminal-app-root")).toHaveAttribute("aria-hidden", "true");
-  await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
+  await expect(dialog.getByLabel("Close", { exact: true })).toBeFocused();
   await page.keyboard.press("Escape");`;
 
 if (source.split(needle).length - 1 !== 1) {
