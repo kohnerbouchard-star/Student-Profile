@@ -97,9 +97,22 @@ for (const contract of [
     `Canonical selected-game share-link contract is missing ${contract}.`,
   );
 }
+const repairVisibleStart = shareLinkContract.indexOf(
+  "function repairVisibleShareSurfaces()",
+);
+const scheduleRepairsStart = shareLinkContract.indexOf(
+  "function scheduleRepairs()",
+  repairVisibleStart,
+);
+const repairVisibleSource = shareLinkContract.slice(
+  repairVisibleStart,
+  scheduleRepairsStart,
+);
 assert(
-  shareLinkContract.indexOf("deduplicateVisibleShareSurfaces().forEach") <
-    shareLinkContract.indexOf("repairSurface(surface, selected)"),
+  repairVisibleStart >= 0 &&
+    scheduleRepairsStart > repairVisibleStart &&
+    repairVisibleSource.indexOf("deduplicateVisibleShareSurfaces().forEach") <
+      repairVisibleSource.indexOf("repairSurface(surface, selected)"),
   "Share surfaces must be deduplicated before canonical content is repaired.",
 );
 
