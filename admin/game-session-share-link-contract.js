@@ -4,7 +4,9 @@
   const SHARE_ACTIONS = new Set(["share-current-game", "share-game-code"]);
   const REPAIR_DELAYS_MS = Object.freeze([0, 60, 180, 360, 720]);
   const FALLBACK_SURFACE_CLASS = "econovaria-admin-share-fallback";
+  const NATIVE_SURFACE_GRACE_MS = 1000;
   let scheduledTimers = [];
+  let nativeSurfaceObservedUntil = 0;
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -55,17 +57,25 @@
   }
 
   function deduplicateVisibleShareSurfaces(surfaces = visibleShareSurfaces()) {
-    if (surfaces.length <= 1) return surfaces;
-
-    const canonical = surfaces.find(
+    const now = Date.now();
+    const nativeSurface = surfaces.find(
       (surface) => !surface.classList.contains(FALLBACK_SURFACE_CLASS),
-    ) || surfaces[0];
-    const canonicalIsNative = !canonical.classList.contains(FALLBACK_SURFACE_CLASS);
+    ) || null;
 
+    if (nativeSurface) {
+      nativeSurfaceObservedUntil = now + NATIVE_SURFACE_GRACE_MS;
+    } else if (surfaces.length && now < nativeSurfaceObservedUntil) {
+      surfaces
+        .filter((surface) => surface.classList.contains(FALLBACK_SURFACE_CLASS))
+        .forEach((surface) => surface.remove());
+      return visibleShareSurfaces();
+    }
+
+    if (surfaces.length <= 1) return surfaces;
+    const canonical = nativeSurface || surfaces[0];
     surfaces.forEach((surface) => {
       if (surface === canonical) return;
-      if (!canonicalIsNative && !surface.classList.contains(FALLBACK_SURFACE_CLASS)) return;
-      if (canonicalIsNative && !surface.classList.contains(FALLBACK_SURFACE_CLASS)) return;
+      if (!surface.classList.contains(FALLBACK_SURFACE_CLASS)) return;
       surface.remove();
     });
 
