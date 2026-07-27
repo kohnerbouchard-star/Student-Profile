@@ -178,4 +178,16 @@
     'meta[name="econovaria-admin-api-base"]'
   );
   if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
+
+  if (
+    typeof documentObject?.createElement === "function" &&
+    typeof documentObject?.head?.append === "function" &&
+    !documentObject.querySelector?.("script[data-econovaria-admin-logout-override]")
+  ) {
+    const logoutOverride = documentObject.createElement("script");
+    logoutOverride.src = "frontend/src/core/admin-logout-override.js";
+    logoutOverride.async = true;
+    logoutOverride.dataset.econovariaAdminLogoutOverride = "true";
+    documentObject.head.append(logoutOverride);
+  }
 })(window);
