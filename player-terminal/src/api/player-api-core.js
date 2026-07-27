@@ -140,7 +140,7 @@ export class PlayerApi {
     const { endpoint, path } = resolvedPath(endpointKey, params);
     const requestId = createRequestId();
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
-    const context = { endpointKey, method: endpoint.method, path, payload, requestId, signal: mergedSignal.signal };
+    const context = { endpointKey, method: endpoint.method, path, params, payload, requestId, signal: mergedSignal.signal };
     const key = stableRequestKey(context);
     const sessionVersion = this.sessionVersion;
 
@@ -300,7 +300,7 @@ export class PlayerApi {
       ? this.retryIdempotencyKeys.get(writeKey) || createIdempotencyKey(endpointKey)
       : "";
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
-    const context = { endpointKey, method: endpoint.method, path, payload, requestId, idempotencyKey, signal: mergedSignal.signal };
+    const context = { endpointKey, method: endpoint.method, path, params, payload, requestId, idempotencyKey, signal: mergedSignal.signal };
     const invalidatedResources = WRITE_INVALIDATIONS[endpointKey] || [];
     const sessionVersion = this.sessionVersion;
 
