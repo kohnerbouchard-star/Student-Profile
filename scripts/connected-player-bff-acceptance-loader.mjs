@@ -211,7 +211,6 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
     'cache: "no-store",\n    });',
     'cache: "no-store",\n      credentials: "include",\n    });',
   );
-  source = source.replaceAll("account_type = 'cash'", "account_type = 'checking'");
   source = adaptMarketAuthenticatedReads(source);
   source = adaptMarketExpectedNegativeConsoleErrors(source);
 
