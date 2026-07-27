@@ -222,6 +222,18 @@ async function openDisclosureForm(form) {
   await form.waitFor({ state: "visible", timeout: 30_000 });
 }
 
+async function submitFormAndWait(page, form, predicate) {
+  const validity = await form.evaluate((element) => ({
+    valid: element.checkValidity(),
+    invalidName: element.querySelector(":invalid")?.getAttribute("name") || null,
+    invalidMessage: element.querySelector(":invalid")?.validationMessage || null,
+  }));
+  if (!validity.valid) throw new Error(`Connected form was invalid: ${JSON.stringify(validity)}.`);
+  const responsePromise = page.waitForResponse(predicate, { timeout: 60_000 });
+  await form.evaluate((element) => element.requestSubmit());
+  return responsePromise;
+}
+
 function numberFromText(value) {
   const match = String(value || "").replaceAll(",", "").match(/-?\d+(?:\.\d+)?/u);
   return match ? Number(match[0]) : Number.NaN;
@@ -378,12 +390,11 @@ async function proveLoans(page, fixtureData) {
   await form.locator('[name="purpose"]').selectOption({ index: 0 });
   await form.locator('[name="repaymentSource"]').fill("Connected gameplay income and existing checking reserves.");
   const beforeApplications = applicationCount();
-  const responsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith(`/players/me/banking/loans/applications/${LOAN_PRODUCT_KEY}`) && response.request().method() === "POST",
-    { timeout: 60_000 },
+  const response = await submitFormAndWait(
+    page,
+    form,
+    (candidate) => new URL(candidate.url()).pathname.endsWith(`/players/me/banking/loans/applications/${LOAN_PRODUCT_KEY}`) && candidate.request().method() === "POST",
   );
-  await form.locator('button[type="submit"]').click();
-  const response = await responsePromise;
   if (response.status() !== 200) throw new Error(`Loan application returned ${response.status()}.`);
   evidence.loans.applicationSubmitted = true;
   if (applicationCount() !== beforeApplications + 1) throw new Error("Rendered loan application did not create exactly one application.");
@@ -396,12 +407,11 @@ async function proveLoans(page, fixtureData) {
   const amountField = repayForm.locator('[name="amount"]');
   const beforeBalance = Number(await amountField.getAttribute("max"));
   await amountField.fill("10");
-  const repayResponsePromise = page.waitForResponse(
+  const repayResponse = await submitFormAndWait(
+    page,
+    repayForm,
     (candidate) => new URL(candidate.url()).pathname.endsWith(`/players/me/banking/loans/${LOAN_KEY}/payments`) && candidate.request().method() === "POST",
-    { timeout: 60_000 },
   );
-  await repayForm.locator('button[type="submit"]').click();
-  const repayResponse = await repayResponsePromise;
   if (repayResponse.status() !== 200) throw new Error(`Loan repayment returned ${repayResponse.status()}.`);
   const original = await capture(repayResponse);
   evidence.loans.repaymentSubmitted = true;
