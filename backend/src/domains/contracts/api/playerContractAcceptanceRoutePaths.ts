@@ -25,6 +25,9 @@ export function readPlayerContractAcceptanceRoutePath(
     return null;
   }
 
+  if (routeSegments.length === 5 && routeSegments[4] === "submit") {
+    return null;
+  }
   if (routeSegments.length !== 5 || routeSegments[4] !== "accept") {
     return routeSegments.length > 3 ? { kind: "malformed" } : null;
   }
