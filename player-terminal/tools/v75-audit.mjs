@@ -7,7 +7,7 @@ const root = process.cwd();
 const required = [
   "src/api/capabilities.js",
   "src/api/payload-normalizer.js",
-  "src/api/player-api-core.js",
+  "src/api/player-api.js",
   "src/api/request-context.js",
   "src/api/resource-plan.js",
   "src/api/response-normalizer.js",
@@ -32,15 +32,27 @@ for (const marker of ["environment === \"development\"", "allowPreviewMode", "!a
   if (!configSource.includes(marker)) throw new Error(`Production preview guard is missing: ${marker}`);
 }
 
-const playerApiFacadeSource = await readFile(path.join(root, "src/api/player-api.js"), "utf8");
-for (const marker of ["extends CorePlayerApi", "actionPathParams", "PLAYER_ENDPOINTS", "super.execute"]) {
-  if (!playerApiFacadeSource.includes(marker)) throw new Error(`Player API facade marker is missing: ${marker}`);
+const playerApiSource = await readFile(path.join(root, "src/api/player-api.js"), "utf8");
+for (const marker of [
+  "export class PlayerApi",
+  "actionPathParams",
+  "PLAYER_ENDPOINTS",
+  "loadRoute(route",
+  "inFlightReads",
+  "inFlightWrites",
+  "idempotencyKey",
+  "refreshResources",
+  "WRITE_INVALIDATIONS",
+  "sessionVersion",
+  "sessionController.abort()",
+  "mergeAbortSignals"
+]) {
+  if (!playerApiSource.includes(marker)) throw new Error(`Player API hardening marker is missing: ${marker}`);
 }
-const playerApiCoreSource = await readFile(path.join(root, "src/api/player-api-core.js"), "utf8");
-for (const marker of ["loadRoute(route", "inFlightReads", "inFlightWrites", "idempotencyKey", "refreshResources", "WRITE_INVALIDATIONS", "sessionVersion", "sessionController.abort()", "mergeAbortSignals"]) {
-  if (!playerApiCoreSource.includes(marker)) throw new Error(`Player API hardening marker is missing: ${marker}`);
+if (playerApiSource.includes("Promise.all(keys.map")) throw new Error("All-route bootstrap has returned.");
+if (playerApiSource.includes("extends CorePlayerApi") || playerApiSource.includes("player-api-core")) {
+  throw new Error("The retired duplicate Player API core has returned.");
 }
-if (playerApiCoreSource.includes("Promise.all(keys.map")) throw new Error("All-route bootstrap has returned.");
 
 const adapterSource = await readFile(path.join(root, "src/api/adapter-transport.js"), "utf8");
 for (const marker of ["AbortController", "REQUEST_TIMEOUT", "requestId", "signal: controller.signal"]) {
@@ -103,4 +115,4 @@ for (const [file, expected] of Object.entries(lockedHashes)) {
   if (actual !== expected) throw new Error(`Approved v7 visual lock changed: ${file}`);
 }
 
-console.log(`v7.5 audit passed: ${required.length} hardening artifacts, production guards, cookie-session transport controls, development-copy cleanup, and ${Object.keys(lockedHashes).length} visual locks verified.`);
+console.log(`v7.5 audit passed: ${required.length} hardening artifacts, unified Player API ownership, production guards, cookie-session transport controls, development-copy cleanup, and ${Object.keys(lockedHashes).length} visual locks verified.`);
