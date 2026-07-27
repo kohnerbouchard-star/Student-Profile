@@ -222,6 +222,16 @@ function contractDetailHeading(page, title) {
   return page.locator(".player-terminal-contract-detail h3").filter({ hasText: title }).first();
 }
 
+async function selectContractInTab(page, tabName, contractKey, title) {
+  const tab = page.locator(`[data-player-contract-tab="${tabName}"]`);
+  await tab.waitFor({ state: "visible", timeout: 30_000 });
+  await tab.click();
+  const row = page.locator(`[data-player-contract-select="${contractKey}"]`).first();
+  await row.waitFor({ state: "visible", timeout: 30_000 });
+  await row.click();
+  await contractDetailHeading(page, title).waitFor({ state: "visible", timeout: 30_000 });
+}
+
 let browser;
 let context;
 let failure;
@@ -249,9 +259,7 @@ try {
   evidence.accepted = true;
 
   await reloadContracts(page);
-  const activeTab = page.locator('[data-player-contract-tab="Active"]');
-  if (await activeTab.count()) await activeTab.click();
-  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
+  await selectContractInTab(page, "Active", selected.contractKey, selected.title);
   await page.locator(`form[data-endpoint="contractSubmit"][data-contract-id="${selected.contractKey}"]`).waitFor({ state: "visible", timeout: 30_000 });
   evidence.acceptancePersisted = true;
 
@@ -289,9 +297,7 @@ try {
   evidence.submitted = true;
 
   await reloadContracts(page);
-  const submittedTab = page.locator('[data-player-contract-tab="Submitted"]');
-  if (await submittedTab.count()) await submittedTab.click();
-  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
+  await selectContractInTab(page, "Submitted", selected.contractKey, selected.title);
   await page.getByText(SUBMISSION_NOTE, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
   evidence.submissionPersisted = true;
 
@@ -302,9 +308,7 @@ try {
     throw new Error(`Contract submission replay was neither idempotent nor denied: ${submitReplay.status}.`);
   }
   await reloadContracts(page);
-  const submittedAfterReplayTab = page.locator('[data-player-contract-tab="Submitted"]');
-  if (await submittedAfterReplayTab.count()) await submittedAfterReplayTab.click();
-  await contractDetailHeading(page, selected.title).waitFor({ state: "visible", timeout: 30_000 });
+  await selectContractInTab(page, "Submitted", selected.contractKey, selected.title);
   evidence.submissionReplaySafe = true;
 
   const unauthAccept = await request(new URL(acceptRequest.url).pathname, {
