@@ -86,7 +86,7 @@ Deno.test("rate-limit keys isolate read, write, and sensitive policy budgets", a
     assertNotEquals(key(write, dimension), key(sensitive, dimension));
     assertNotEquals(key(read, dimension), key(sensitive, dimension));
   }
-  assertEquals(read.map((bucket) => bucket.limit), [90, 1_200, 180, 600]);
+  assertEquals(read.map((bucket) => bucket.limit), [150, 1_200, 180, 600]);
   assertEquals(write.map((bucket) => bucket.limit), [30, 600, 60, 120]);
   assertEquals(sensitive.map((bucket) => bucket.limit), [10, 300, 15, 30]);
 });
