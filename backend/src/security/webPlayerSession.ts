@@ -33,13 +33,17 @@ export interface WebPlayerSessionPayload {
 export function readWebPlayerSessionKey(
   getEnv: (name: string) => string | undefined = readRuntimeEnvironment,
 ): Uint8Array {
-  const encoded = String(
+  const dedicated = String(
     getEnv("ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY") || "",
   ).trim();
+  const transition = String(
+    getEnv("ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY") || "",
+  ).trim();
+  const encoded = dedicated || transition;
   const bytes = decodeBase64Url(encoded);
   if (bytes.byteLength !== 32) {
     throw new Error(
-      "ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY must be a base64url-encoded 32-byte key.",
+      "ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY must be a base64url-encoded 32-byte key; the Admin web-session key is accepted only as a transition fallback.",
     );
   }
   return bytes;
