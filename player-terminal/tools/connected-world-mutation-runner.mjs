@@ -19,7 +19,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  arrivalClass: { submitted: false, preassigned: false, persisted: false },
+  arrivalClass: { submitted: false, preassigned: false, notRequired: false, persisted: false },
   travel: {
     quoted: false,
     executed: false,
@@ -187,7 +187,12 @@ async function resolveArrival(page) {
     const heading = page.locator("#world-arrival-title");
     await heading.waitFor({ state: "visible", timeout: 30_000 });
     const label = String(await heading.textContent() || "").trim();
-    if (!label || /^(Not assigned|Choose how you begin)$/i.test(label)) {
+    if (label === "No Arrival Class") {
+      evidence.arrivalClass.notRequired = true;
+      evidence.arrivalClass.persisted = true;
+      return;
+    }
+    if (!label || /^(Not assigned|Choose how you begin|Questionnaire unavailable)$/i.test(label)) {
       throw new Error(`World did not expose a valid Arrival Class state: ${label || "empty"}.`);
     }
     evidence.arrivalClass.preassigned = true;
@@ -200,7 +205,7 @@ async function resolveArrival(page) {
   const heading = page.locator("#world-arrival-title");
   await heading.waitFor({ state: "visible", timeout: 30_000 });
   const label = String(await heading.textContent() || "").trim();
-  if (!label || /^(Not assigned|Choose how you begin)$/i.test(label)) {
+  if (!label || /^(Not assigned|Choose how you begin|Questionnaire unavailable)$/i.test(label)) {
     throw new Error("Arrival Class assignment was not rendered after reload.");
   }
   evidence.arrivalClass.persisted = true;
@@ -340,7 +345,7 @@ try {
   }
   if (evidence.responseUuidLeak) throw new Error("World responses exposed a raw UUID.");
   const arrivalComplete = evidence.arrivalClass.persisted &&
-    (evidence.arrivalClass.submitted || evidence.arrivalClass.preassigned);
+    (evidence.arrivalClass.submitted || evidence.arrivalClass.preassigned || evidence.arrivalClass.notRequired);
   const incomplete = !arrivalComplete || [
     ...Object.values(evidence.travel),
     ...Object.values(evidence.residency),
