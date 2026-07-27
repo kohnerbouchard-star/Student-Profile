@@ -84,6 +84,11 @@ verify_jwt = false
 [functions.web-session-api]
 verify_jwt = false
 
+# Explicit Admin sign-out is isolated so it can fail closed when Auth session
+# revocation cannot be confirmed while still clearing the local HttpOnly cookie.
+[functions.admin-logout-api]
+verify_jwt = false
+
 # Server-to-server stock functions validate the publishable apikey and signed,
 # timestamped, nonce-bound runner authorization inside the function. They do not
 # accept a browser or legacy anon JWT as authorization.
