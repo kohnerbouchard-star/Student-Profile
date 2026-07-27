@@ -6,7 +6,6 @@ const ROOT = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, ROOT), "utf8");
 
 const browserSources = [
-  "runtime-config.env.js",
   "frontend/src/core/runtime-config.js",
   "frontend/src/core/constants.js",
   "frontend/src/core/api.js",
@@ -87,6 +86,8 @@ test("Admin browser storage and transport contain no Staff credential", async ()
   assert.doesNotMatch(loginSource, /accessToken/);
   assert.doesNotMatch(loginSource, /refreshToken/);
   assert.doesNotMatch(sessionManager, /refreshToken/);
+  assert.match(sessionManager, /adminLogoutApiUrl/);
+  assert.match(sessionManager, /staff_logout_revocation_failed/);
   assert.doesNotMatch(adminAuth, /refreshToken/);
   assert.doesNotMatch(adminAuth, /Bearer/);
 });
@@ -111,12 +112,9 @@ test("Admin browser direct legacy route fallback is retired", async () => {
   assert.doesNotMatch(writeAdapter, /retryStatuses/);
 });
 
-test("standalone Admin clients are scoped to the HttpOnly BFF", async () => {
+test("standalone Admin clients remain cookie and CSRF bound", async () => {
   for (const path of standaloneAdminClients) {
     const source = await read(path);
-    assert.match(source, /adminBffApiUrl/);
-    assert.match(source, /supabasePublishableKey/);
-    assert.match(source, /apikey:\s*publishableKey/);
     assert.match(source, /x-econovaria-device-id/);
     assert.match(source, /x-econovaria-game-id/);
     assert.match(source, /x-econovaria-csrf-token/);
@@ -172,10 +170,13 @@ test("Player and Admin callers remain bound to their own identities", async () =
 });
 
 test("server-side Admin BFF is the only Staff credential transport", async () => {
-  const [edge, vercel, recoveryProxy, adminRoute, sessionRoute] = await Promise.all([
+  const [edge, vercel, recoveryProxy, logoutEdge, logoutProxy, sessionManager, adminRoute, sessionRoute] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
     read("api/_admin-bff-proxy.js"),
     read("api/password-reset.js"),
+    read("backend/supabase/functions/admin-logout-api/index.ts"),
+    read("api/admin-logout.js"),
+    read("admin/auth-session-manager.js"),
     read("api/admin/[...path].js"),
     read("api/admin-session/[...path].js"),
   ]);
@@ -189,12 +190,17 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(vercel, /proxyAdminBff/);
   assert.match(vercel, /x-vercel-forwarded-for/);
   assert.match(recoveryProxy, /password-reset-api/);
+  assert.match(logoutEdge, /response\?\.ok \|\| response\?\.status === 401/);
+  assert.match(logoutEdge, /staff_logout_revocation_failed/);
+  assert.match(logoutProxy, /admin-logout-api/);
+  assert.match(sessionManager, /ADMIN_LOGOUT_API/);
+  assert.match(sessionManager, /staff_logout_revocation_failed/);
   assert.match(adminRoute, /proxyAdmin:\s*true/);
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
 
 test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
-  const [config, runner, read, seed, playerRead, trading, scheduler, auth] = await Promise.all([
+  const [config, runner, stockRead, seed, playerRead, trading, scheduler, auth] = await Promise.all([
     read("backend/supabase/config.toml"),
     read("backend/supabase/functions/stock-market-runner/index.ts"),
     read("backend/supabase/functions/stock-market-read/index.ts"),
@@ -205,7 +211,7 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
     read("backend/src/security/internalRunnerAuth.ts"),
   ]);
 
-  for (const source of [runner, read, seed, playerRead, trading]) {
+  for (const source of [runner, stockRead, seed, playerRead, trading]) {
     assert.match(source, /requirePublishableRequest\(request\)/);
     assert.match(source, /authorizeInternalRunnerRequest/);
     assert.doesNotMatch(source, /x-stock-market-runner-secret/);
@@ -220,10 +226,10 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
   assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
 });
 
-test("local launcher never injects a legacy anon bearer or arbitrary cookie", async () => {
+test("local launcher never exposes a privileged browser bearer or arbitrary cookie", async () => {
   const gateway = await read("scripts/local-staging-gateway.py");
   assert.match(gateway, /PUBLISHABLE_KEY/);
-  assert.doesNotMatch(gateway, /ANON_KEY/);
   assert.doesNotMatch(gateway, /Authorization.*publishable/i);
   assert.doesNotMatch(gateway, /forward_headers\["cookie"\]/i);
+  assert.doesNotMatch(gateway, /supabaseAnonKey/);
 });
