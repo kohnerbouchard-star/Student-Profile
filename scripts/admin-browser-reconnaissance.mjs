@@ -41,6 +41,40 @@ source = replaceExactlyOnce(
   `(candidate) => /\\/functions\\/v1\\/admin-api\\/games\\/[^/]+\\/players$/.test(new URL(candidate.url()).pathname) &&`,
   `(candidate) => /\\/functions\\/v1\\/web-session-api\\/proxy\\/games\\/[^/]+\\/players$/.test(new URL(candidate.url()).pathname) &&`,
 );
+source = replaceExactlyOnce(
+  source,
+  "Logout revocation evidence",
+  `  assertNoFailedRequests("Logout", logoutRequestIndex);
+
+  if (evidence.consoleErrors.length || evidence.pageErrors.length) {
+    throw new Error(\`Browser emitted errors: \${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}\`);
+  }`,
+  `  const logoutRequests = evidence.requests.slice(logoutRequestIndex);
+  const expectedRevocationProbe = logoutRequests.find((request) =>
+    request.method === "GET" &&
+    request.status === 401 &&
+    request.url.endsWith("/functions/v1/web-session-api/status")
+  );
+  if (!expectedRevocationProbe) {
+    throw new Error("Logout did not prove the revoked Admin session was rejected by the status boundary.");
+  }
+  const unexpectedLogoutFailures = logoutRequests.filter((request) =>
+    request.status >= 400 && request !== expectedRevocationProbe
+  );
+  if (unexpectedLogoutFailures.length) {
+    throw new Error(\`Logout observed unexpected failed requests: \${JSON.stringify(unexpectedLogoutFailures)}\`);
+  }
+  evidence.logout.statusRejected = true;
+
+  const expectedUnauthorizedConsoleError =
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
+  const unexpectedConsoleErrors = evidence.consoleErrors.filter((message) =>
+    message !== expectedUnauthorizedConsoleError
+  );
+  if (unexpectedConsoleErrors.length || evidence.pageErrors.length) {
+    throw new Error(\`Browser emitted errors: \${JSON.stringify({ consoleErrors: unexpectedConsoleErrors, pageErrors: evidence.pageErrors })}\`);
+  }`,
+);
 
 const materializedDirectory = await mkdtemp(join(fileURLToPath(SOURCE_DIRECTORY), ".admin-browser-materialized-"));
 const materializedPath = join(materializedDirectory, "admin-browser-reconnaissance.mjs");
