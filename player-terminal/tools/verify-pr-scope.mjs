@@ -45,6 +45,7 @@ const exactAllowed = new Set([
   ".github/workflows/beta-security-contract.yml",
   "README.md",
   "admin/admin-bootstrap.js",
+  "admin/keyboard-navigation.js",
   "admin/messaging-moderation.css",
   "admin/index.html",
   "admin/inventory-redemption-queue-loader.js",
