@@ -1,5 +1,5 @@
 name: Admin Browser E2E
-# PR 377 reconciliation trigger after validation-base retarget.
+# PR 377 reconciliation publication probe.
 
 on:
   workflow_dispatch:
@@ -40,24 +40,38 @@ jobs:
         shell: bash
         run: bash scripts/reconcile-pr377-with-main.sh
 
-      - name: Push reconciled branch
+      - name: Record reconciled Git objects
         if: steps.reconcile.outcome == 'success'
-        shell: bash
-        run: git push origin HEAD:agent/runtime-stability-button-integrity-v1
-
-      - name: Persist reconciliation failure
-        if: steps.reconcile.outcome == 'failure'
         shell: bash
         run: |
           set -euo pipefail
-          git merge --abort 2>/dev/null || true
-          git reset --hard "${{ github.event.pull_request.head.sha || github.sha }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p docs/operations/reconciliation
-          sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi' \
-            /tmp/pr377-reconcile-script.log > docs/operations/reconciliation/pr377-reconcile-script-failure.log
-          git add docs/operations/reconciliation/pr377-reconcile-script-failure.log
-          git commit -m "docs(reconcile): record deterministic reconciliation failure"
-          git push origin HEAD:agent/runtime-stability-button-integrity-v1
-          exit 1
+          mkdir -p /tmp/pr377-reconciliation
+          printf '%s\n' "$(git rev-parse HEAD)" > /tmp/pr377-reconciliation/commit-sha.txt
+          printf '%s\n' "$(git rev-parse HEAD^{tree})" > /tmp/pr377-reconciliation/tree-sha.txt
+          git show --no-patch --pretty=raw HEAD > /tmp/pr377-reconciliation/commit.txt
+
+      - name: Probe reconciled branch push
+        id: push
+        if: steps.reconcile.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          git push origin HEAD:agent/runtime-stability-button-integrity-v1 \
+            2>&1 | tee /tmp/pr377-reconciliation/push.log
+
+      - name: Upload reconciliation publication evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pr377-reconciliation-publication-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/pr377-reconciliation/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Enforce reconciliation result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.reconcile.outcome }}" = "success"
+          test "${{ steps.push.outcome }}" = "success"
