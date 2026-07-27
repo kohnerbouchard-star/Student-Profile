@@ -104,6 +104,7 @@ jobs:
           {
             node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
             node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_MFA_HANDLE_KEY=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
             node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
             printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
           } > backend/supabase/functions/.env
