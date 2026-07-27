@@ -1,0 +1,65 @@
+name: PR377 Finalize Fixes
+
+on:
+  push:
+    branches:
+      - agent/runtime-stability-button-integrity-v1
+    paths:
+      - .github/workflows/pr377-finalize-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/runtime-stability-button-integrity-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply final deterministic corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          keyboard = Path("scripts/admin-mounted-keyboard-navigation-smoke.mjs")
+          text = keyboard.read_text()
+          replacements = [
+              (
+                  "      const busy = Boolean(document.querySelector('[aria-busy=\"true\"], [data-admin-shape-skeleton-stage], .admin-shape-surface-overlay'));\n",
+                  "      const transitioning = Boolean(document.querySelector(\"[data-admin-shape-skeleton-stage], [data-admin-shape-surface-overlay], .admin-shape-skeleton-stage, .admin-shape-surface-overlay\"));\n",
+              ),
+              (
+                  "      return { busy, count };\n    }, EXCLUDED_SELECTOR);\n    if (!snapshot.busy && snapshot.count === previousCount) stableSamples += 1;\n",
+                  "      return { transitioning, count };\n    }, EXCLUDED_SELECTOR);\n    if (!snapshot.transitioning && snapshot.count === previousCount) stableSamples += 1;\n",
+              ),
+          ]
+          for old, new in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit(f"Expected one keyboard replacement, found {text.count(old)}")
+              text = text.replace(old, new, 1)
+          keyboard.write_text(text)
+
+          world = Path("player-terminal/src/features/world/world-runtime-flow.js")
+          text = world.read_text()
+          stale = "const STALE_AFTER_MS = 60_000;\n\n"
+          if text.count(stale) != 1:
+              raise SystemExit(f"Expected one stale constant, found {text.count(stale)}")
+          world.write_text(text.replace(stale, "", 1))
+          PY
+
+          node --check scripts/admin-mounted-keyboard-navigation-smoke.mjs
+          node --check player-terminal/src/features/world/world-runtime-flow.js
+          node scripts/admin-keyboard-navigation-source-smoke.mjs
+
+          rm -f .github/workflows/pr377-finalize-fixes.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: finalize World ownership and Admin focus readiness"
+          git push origin HEAD:agent/runtime-stability-button-integrity-v1
