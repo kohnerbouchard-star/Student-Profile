@@ -178,8 +178,23 @@ jobs:
       - name: Validate authentication boundary ratchet
         run: node --test scripts/auth-boundary-contract.test.mjs
 
-      - name: Validate final security-audit remediation ratchet
-        run: node --test scripts/security-audit-remediation-contract.test.mjs
+      - name: Validate fail-closed password reset remediation
+        run: node --test --test-name-pattern="password reset fails closed" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate purchase-code HMAC remediation
+        run: node --test --test-name-pattern="purchase codes use keyed" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate Player browser credential privacy
+        run: node --test --test-name-pattern="Player browser runtime" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate Player HttpOnly BFF remediation
+        run: node --test --test-name-pattern="Player BFF seals" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate deployment browser policy
+        run: node --test --test-name-pattern="deployment policy" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate internal runner HMAC and replay denial
+        run: node --test --test-name-pattern="internal stock runners" scripts/security-audit-remediation-contract.test.mjs
 
       - name: Validate Admin MFA BFF boundary
         run: node --test scripts/admin-mfa-bff-contract.test.mjs
