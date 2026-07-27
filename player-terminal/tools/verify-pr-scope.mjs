@@ -120,6 +120,7 @@ const exactAllowed = new Set([
   "backend/supabase/migrations/20260726193000_restore_store_quote_service_role_access_v1.sql",
   "backend/supabase/migrations/20260726194500_initialize_complete_game_fx_matrix_v1.sql",
   "backend/supabase/migrations/20260726220000_restore_player_contract_progress_service_role_access_v1.sql",
+  "backend/supabase/migrations/20260727083000_initialize_player_world_state_without_arrival_class_v1.sql",
   "backend/src/security/playerRateLimitDispatch.ts",
   "backend/src/security/playerRateLimitDispatch.test.ts",
   "backend/src/security/rateLimitKeying.ts",
