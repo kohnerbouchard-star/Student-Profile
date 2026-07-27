@@ -55,14 +55,15 @@ for (const relativePath of removedLegacyPaths) {
   }
 }
 
-const [html, styles, constants, api, login, terminalHtml, hostRuntime] = await Promise.all([
+const [html, styles, constants, api, login, terminalHtml, hostRuntime, transport] = await Promise.all([
   read("index.html"),
   read("frontend/src/styles/app.css"),
   read("frontend/src/core/constants.js"),
   read("frontend/src/core/api.js"),
   read("frontend/src/core/login.js"),
   read("player-terminal/index.html"),
-  read("player-terminal/host-runtime.js")
+  read("player-terminal/host-runtime.js"),
+  read("player-terminal/src/api/http-transport.js")
 ]);
 
 for (const forbidden of [
@@ -101,13 +102,17 @@ for (const activeSource of [html, styles, constants, api, login, terminalHtml, h
 
 assertNotIncludes(constants, "const API_URL =");
 assertNotIncludes(api, "callApiOnce");
-assertIncludes(api, 'callSupabaseJsonRoute("player", "/players/login"');
+assertIncludes(api, 'callSupabaseJsonRoute("playerWebSession", "/login"');
 assertIncludes(api, "playerIdentifier:");
 assertIncludes(api, "accessCode:");
+assertIncludes(api, 'credentials: "include"');
+assertNotIncludes(api, "x-player-session-token");
 assertNotIncludes(api, "Authorization: `Bearer ${publishableKey}`");
 
 assertIncludes(login, "econovaria.player.auth.v1");
 assertIncludes(login, "runtime.sessionStorage.setItem(playerStorageKey()");
+assertIncludes(login, "csrfToken");
+assertNotIncludes(login, "playerSessionToken");
 assertIncludes(login, 'new URL("player-terminal/"');
 assertIncludes(login, "callPlayerBootstrapApi");
 assertNotIncludes(login, "showApp(");
@@ -121,13 +126,21 @@ if (hostIndex < 0 || mainIndex < 0 || hostIndex >= mainIndex) {
 
 assertIncludes(hostRuntime, "sessionProvider: () => readStoredSession()");
 assertIncludes(hostRuntime, "studentProfileApiBaseUrl: PLAYER_API_URL");
+assertIncludes(hostRuntime, "playerSessionApiBaseUrl: PLAYER_SESSION_API_URL");
 assertIncludes(hostRuntime, "publishableKey: SUPABASE_PUBLISHABLE_KEY");
+assertIncludes(hostRuntime, "csrfToken: session?.csrfToken");
+assertNotIncludes(hostRuntime, "playerSessionToken");
 assertNotIncludes(hostRuntime, "accessToken: SUPABASE_PUBLISHABLE_KEY");
 assertIncludes(hostRuntime, "econovaria:player-logout-completed");
 assertIncludes(hostRuntime, "econovaria:player-session-invalid");
 assertIncludes(hostRuntime, "runtime.sessionStorage.removeItem(STORAGE_KEY)");
 
-console.log(`Player Terminal runtime cutover and legacy-source removal smoke passed (${removedLegacyPaths.length} retired paths).`);
+assertIncludes(transport, 'credentials: "include"');
+assertIncludes(transport, 'headers["x-econovaria-csrf-token"]');
+assertNotIncludes(transport, "x-player-session-token");
+assertNotIncludes(transport, "headers.Authorization");
+
+console.log(`Player Terminal HttpOnly BFF cutover and legacy-source removal smoke passed (${removedLegacyPaths.length} retired paths).`);
 
 function assertIncludes(value, expected) {
   if (!value.includes(expected)) throw new Error(`Expected source to include: ${expected}`);
