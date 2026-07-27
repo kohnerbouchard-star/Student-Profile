@@ -416,7 +416,18 @@ async function reloadBusiness(page) {
 }
 
 async function requireText(page, text) {
-  await page.getByText(text, { exact: true }).first().waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForFunction((expected) => {
+    return [...document.querySelectorAll("body *")].some((element) => {
+      if (String(element.textContent || "").trim() !== expected) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        Number(style.opacity) !== 0 &&
+        rect.width > 0 &&
+        rect.height > 0;
+    });
+  }, text, { timeout: 30_000 });
 }
 
 async function createBusiness(page) {
