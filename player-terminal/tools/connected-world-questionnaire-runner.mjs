@@ -10,8 +10,8 @@ const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
-const PLAYER_ID = "BROWSER-PLAYER-ALPHA";
-const ACCESS_CODE = "BROWSER-ALPHA-ACCESS-001";
+const PLAYER_ID = "BROWSER-PLAYER-BETA";
+const ACCESS_CODE = "BROWSER-BETA-ACCESS-002";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
