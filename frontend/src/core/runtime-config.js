@@ -180,16 +180,36 @@
   );
   if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
 
-  if (
-    runtimeScriptUrl &&
-    typeof documentObject?.createElement === "function" &&
-    typeof documentObject?.head?.append === "function" &&
-    !documentObject.querySelector?.("script[data-econovaria-admin-logout-override]")
-  ) {
+  function installAdminLogoutOverride() {
+    const adminOrLoginShell = Boolean(
+      adminApiMeta ||
+      documentObject?.getElementById?.("loginScreen") ||
+      documentObject?.getElementById?.("adminPreview")
+    );
+    if (
+      !adminOrLoginShell ||
+      !runtimeScriptUrl ||
+      typeof documentObject?.createElement !== "function" ||
+      typeof documentObject?.head?.append !== "function" ||
+      documentObject.querySelector?.("script[data-econovaria-admin-logout-override]")
+    ) {
+      return;
+    }
+
     const logoutOverride = documentObject.createElement("script");
     logoutOverride.src = new URL("admin-logout-override.js", runtimeScriptUrl).href;
     logoutOverride.async = true;
     logoutOverride.dataset.econovariaAdminLogoutOverride = "true";
     documentObject.head.append(logoutOverride);
+  }
+
+  if (documentObject?.readyState === "loading") {
+    documentObject.addEventListener?.(
+      "DOMContentLoaded",
+      installAdminLogoutOverride,
+      { once: true }
+    );
+  } else {
+    installAdminLogoutOverride();
   }
 })(window);
