@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHmac } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
@@ -15,6 +16,7 @@ const PLAYER_ACCESS_CODE = "BROWSER-ACCESS-001";
 const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
 const CODE_PATTERN = /ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g;
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -77,6 +79,75 @@ function assertNoFailedRequests(label, startIndex = 0) {
   if (failed.length) throw new Error(`${label} observed failed requests: ${JSON.stringify(failed)}`);
 }
 
+function decodeBase32(value) {
+  const normalized = String(value || "").replace(/=+$/u, "").replace(/\s+/gu, "").toUpperCase();
+  if (!normalized || /[^A-Z2-7]/u.test(normalized)) {
+    throw new Error("MFA enrollment did not expose a valid Base32 secret.");
+  }
+
+  const output = [];
+  let accumulator = 0;
+  let bits = 0;
+  for (const character of normalized) {
+    const index = BASE32_ALPHABET.indexOf(character);
+    accumulator = (accumulator << 5) | index;
+    bits += 5;
+    while (bits >= 8) {
+      bits -= 8;
+      output.push((accumulator >>> bits) & 0xff);
+      accumulator &= (1 << bits) - 1;
+    }
+  }
+  return Buffer.from(output);
+}
+
+function generateTotp(secret, timestamp = Date.now()) {
+  const key = decodeBase32(secret);
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(timestamp / 30_000)));
+  let digest;
+  try {
+    digest = createHmac("sha1", key).update(counter).digest();
+    const offset = digest[digest.length - 1] & 0x0f;
+    const value = digest.readUInt32BE(offset) & 0x7fffffff;
+    return String(value % 1_000_000).padStart(6, "0");
+  } finally {
+    key.fill(0);
+    counter.fill(0);
+    digest?.fill(0);
+  }
+}
+
+async function completeMfaEnrollmentIfRequired() {
+  const dialog = page.locator(".econovaria-mfa-dialog");
+  await dialog.waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+  if (!await dialog.isVisible().catch(() => false)) return;
+
+  const secretNode = dialog.locator(".econovaria-mfa-secret");
+  await secretNode.waitFor({ state: "visible", timeout: 20_000 });
+  const secret = String(await secretNode.textContent() || "").trim();
+
+  const remainingSeconds = 30 - (Math.floor(Date.now() / 1000) % 30);
+  if (remainingSeconds < 5) {
+    await page.waitForTimeout((remainingSeconds + 1) * 1000);
+  }
+  const code = generateTotp(secret);
+
+  const verifyResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/functions/v1/web-session-api/mfa/verify") &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await dialog.locator(".econovaria-mfa-code").fill(code);
+  await dialog.locator(".econovaria-mfa-submit").click();
+  const verifyResponse = await verifyResponsePromise;
+  if (!verifyResponse.ok()) {
+    const body = sanitize(await verifyResponse.text().catch(() => ""));
+    throw new Error(`Rendered MFA verification returned ${verifyResponse.status()}: ${body.slice(0, 500)}`);
+  }
+  await dialog.waitFor({ state: "detached", timeout: 30_000 });
+}
+
 async function waitForAdminConsole() {
   await page.waitForURL(/\/admin\/(?:index\.html)?(?:\?.*)?$/, { timeout: 120_000 });
   await page.waitForFunction(() => {
@@ -136,6 +207,8 @@ async function safeScreenshot(name) {
     page.locator("[data-econovaria-selected-game-code]"),
     page.locator(".admin-terminal-share-modal-code strong"),
     page.locator("[data-admin-player-created-access-code]"),
+    page.locator(".econovaria-mfa-secret"),
+    page.locator(".econovaria-mfa-qr"),
   ];
   await page.screenshot({
     path: `${OUTPUT_DIR}/${name}`,
@@ -175,6 +248,7 @@ try {
   }
   evidence.createdThroughRenderedUi = true;
 
+  await completeMfaEnrollmentIfRequired();
   await waitForAdminConsole();
   evidence.adminConsoleRendered = true;
   assertNoFailedRequests("Initial Admin bootstrap");
