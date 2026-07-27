@@ -25,10 +25,17 @@ export function readPlayerContractPublicSubmitRoutePath(
     return null;
   }
 
+  if (routeSegments.length < 5) return null;
+
+  const action = routeSegments[4];
+  if (action === "accept") return null;
+
   if (routeSegments.length !== 5) {
-    return routeSegments[4] === "submit" ? { kind: "malformed" } : null;
+    return action === "submit" || routeSegments.at(-1) === "submit"
+      ? { kind: "malformed" }
+      : null;
   }
-  if (routeSegments[4] !== "submit") return null;
+  if (action !== "submit") return { kind: "malformed" };
 
   let contractKey = "";
   try {
