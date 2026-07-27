@@ -12,6 +12,14 @@ function replaceRequired(source, label, before, after) {
   return source.replaceAll(before, after);
 }
 
+function replaceExactlyOnce(source, label, before, after) {
+  const count = source.split(before).length - 1;
+  if (count !== 1) {
+    throw new Error(`${label} expected one canonical source match, found ${count}.`);
+  }
+  return source.replace(before, after);
+}
+
 function preserveBffReplayHeaders(source) {
   return source.replace(
     /const allowed = new Set\(\[([\s\S]*?)\]\);/gu,
@@ -28,6 +36,106 @@ function preserveBffReplayHeaders(source) {
       );
     },
   );
+}
+
+function adaptMarketAuthenticatedReads(source) {
+  if (!source.includes("async function readAuthoritativeReplayState(original, ticker)")) {
+    return source;
+  }
+
+  const oldBlock = `async function readAuthoritativeReplayState(original, ticker) {
+  const headers = replayReadHeaders(original);
+  const [portfolio, banking] = await Promise.all([
+    request("/functions/v1/classroom-api/players/me/stocks/portfolio", { headers }),
+    request("/functions/v1/classroom-api/players/me/ledger?limit=50", { headers }),
+  ]);
+
+  if (portfolio.status !== 200 || portfolio.payload?.ok !== true || !Array.isArray(portfolio.payload?.holdings)) {
+    throw new Error(\`Portfolio replay verification returned \${portfolio.status}: \${redact(JSON.stringify(portfolio.payload))}\`);
+  }
+  if (banking.status !== 200 || banking.payload?.ok !== true || !Array.isArray(banking.payload?.currentBalances)) {
+    throw new Error(\`Banking replay verification returned \${banking.status}: \${redact(JSON.stringify(banking.payload))}\`);
+  }
+  assertPublicReplayPayload(portfolio.payload, "Portfolio");
+  assertPublicReplayPayload(banking.payload, "Banking");
+
+  const holding = portfolio.payload.holdings.find(
+    (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
+  );
+  const checking = banking.payload.currentBalances.find((item) =>
+    ["cash", "checking"].includes(String(item?.accountType || "").toLowerCase())
+  );
+  const holdingQuantity = Number(holding?.quantity ?? 0);
+  const cashBalance = Number(checking?.balance);
+  if (!Number.isFinite(holdingQuantity) || !Number.isFinite(cashBalance)) {
+    throw new Error(\`Replay verification returned invalid authoritative state: \${redact(JSON.stringify({ holding, checking }))}\`);
+  }
+  return { holdingQuantity, cashBalance };
+}`;
+
+  const newBlock = `async function authenticatedRequest(page, path, { method = "GET", headers = {}, body } = {}) {
+  return page.evaluate(async ({ path, method, headers, body }) => {
+    const response = await fetch(path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+      credentials: "include",
+    });
+    return { status: response.status, payload: await response.json().catch(() => null) };
+  }, { path, method, headers, body });
+}
+
+async function readAuthoritativeReplayState(page, original, ticker) {
+  const headers = replayReadHeaders(original);
+  const [portfolio, banking] = await Promise.all([
+    authenticatedRequest(page, "/functions/v1/player-web-session-api/proxy/players/me/stocks/portfolio", { headers }),
+    authenticatedRequest(page, "/functions/v1/player-web-session-api/proxy/players/me/ledger?limit=50", { headers }),
+  ]);
+
+  if (portfolio.status !== 200 || portfolio.payload?.ok !== true || !Array.isArray(portfolio.payload?.holdings)) {
+    throw new Error(\`Portfolio replay verification returned \${portfolio.status}: \${redact(JSON.stringify(portfolio.payload))}\`);
+  }
+  if (banking.status !== 200 || banking.payload?.ok !== true || !Array.isArray(banking.payload?.currentBalances)) {
+    throw new Error(\`Banking replay verification returned \${banking.status}: \${redact(JSON.stringify(banking.payload))}\`);
+  }
+  assertPublicReplayPayload(portfolio.payload, "Portfolio");
+  assertPublicReplayPayload(banking.payload, "Banking");
+
+  const holding = portfolio.payload.holdings.find(
+    (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
+  );
+  const checking = banking.payload.currentBalances.find((item) =>
+    ["cash", "checking"].includes(String(item?.accountType || "").toLowerCase())
+  );
+  const holdingQuantity = Number(holding?.quantity ?? 0);
+  const cashBalance = Number(checking?.balance);
+  if (!Number.isFinite(holdingQuantity) || !Number.isFinite(cashBalance)) {
+    throw new Error(\`Replay verification returned invalid authoritative state: \${redact(JSON.stringify({ holding, checking }))}\`);
+  }
+  return { holdingQuantity, cashBalance };
+}`;
+
+  source = replaceExactlyOnce(source, "Market authenticated replay reads", oldBlock, newBlock);
+  source = replaceExactlyOnce(
+    source,
+    "Market replay-state call",
+    "readAuthoritativeReplayState(order.original, evidence.ticker)",
+    "readAuthoritativeReplayState(page, order.original, evidence.ticker)",
+  );
+  source = replaceExactlyOnce(
+    source,
+    "Market stale-price authenticated request",
+    "const stale = await request(orderPath, {",
+    "const stale = await authenticatedRequest(page, orderPath, {",
+  );
+  source = replaceExactlyOnce(
+    source,
+    "Market forbidden-scope authenticated request",
+    "const forbidden = await request(orderPath, {",
+    "const forbidden = await authenticatedRequest(page, orderPath, {",
+  );
+  return source;
 }
 
 export async function runConnectedPlayerBffAcceptance(entryUrl) {
@@ -56,6 +164,7 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
     'cache: "no-store",\n      credentials: "include",\n    });',
   );
   source = source.replaceAll("account_type = 'cash'", "account_type = 'checking'");
+  source = adaptMarketAuthenticatedReads(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Connected Player BFF loader retained the retired login route.");
