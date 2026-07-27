@@ -10,11 +10,11 @@ const DEFAULT_CONFIG = Object.freeze({
   developerDiagnostics: false,
   allowedImageHosts: [],
   capabilities: null,
+  authenticated: false,
+  csrfToken: "",
+  sessionExpiresAt: "",
   gameSessionId: "",
-  playerSessionId: "",
-  playerSessionToken: "",
   publishableKey: "",
-  accessToken: "",
   adapter: null,
   apiCall: null,
   sessionProvider: null,
@@ -56,7 +56,7 @@ export function buildPlayerTerminalConfig(runtime = {}, locationLike = globalThi
   const defaultDevelopmentPreview = environment === "development" && runtime.usePreviewData !== false && !apiRequested;
   const usePreviewData = allowPreviewMode && !apiRequested && (runtime.usePreviewData === true || previewRequested || defaultDevelopmentPreview);
 
-  return {
+  const config = {
     ...DEFAULT_CONFIG,
     ...runtime,
     environment,
@@ -79,6 +79,10 @@ export function buildPlayerTerminalConfig(runtime = {}, locationLike = globalThi
       ? runtime.allowedImageHosts.map((host) => String(host).trim().toLowerCase()).filter(Boolean).slice(0, 50)
       : []
   };
+  delete config.playerSessionToken;
+  delete config.playerSessionId;
+  delete config.accessToken;
+  return config;
 }
 
 export function resolvePlayerTerminalConfig() {
