@@ -253,13 +253,18 @@ function reachableTravelOption() {
     with target as (
       select
         state_row.game_session_id,
-        state_row.current_location_id
+        state_row.player_id,
+        state_row.current_location_id,
+        residency_row.currency_code
       from public.game_sessions as game_row
       join public.players as player_row
         on player_row.game_session_id = game_row.id
       join public.player_travel_states as state_row
         on state_row.game_session_id = player_row.game_session_id
        and state_row.player_id = player_row.id
+      join public.player_residency_states as residency_row
+        on residency_row.game_session_id = player_row.game_session_id
+       and residency_row.player_id = player_row.id
       where game_row.name = ${sqlLiteral(GAME_NAME)}
         and player_row.player_identifier = ${sqlLiteral(PLAYER_ID)}
         and player_row.status = 'active'
@@ -274,6 +279,11 @@ function reachableTravelOption() {
       end as destination_location_id,
       route_row.mode
     from target
+    join public.account_balances as balance_row
+      on balance_row.game_session_id = target.game_session_id
+     and balance_row.player_id = target.player_id
+     and balance_row.account_type = 'checking'
+     and balance_row.currency_code = target.currency_code
     join public.world_route_states as route_row
       on route_row.game_session_id = target.game_session_id
      and route_row.status in ('open', 'restricted')
@@ -284,6 +294,14 @@ function reachableTravelOption() {
          and route_row.to_location_id = target.current_location_id
        )
      )
+     and ceil(
+       ceil(route_row.base_cost_minor * route_row.cost_multiplier_basis_points / 10000.0)
+       * case
+           when destination_row.availability = 'shortage' then 11500
+           else 10000
+         end
+       / 10000.0
+     ) <= balance_row.balance
     join public.world_location_states as destination_row
       on destination_row.game_session_id = route_row.game_session_id
      and destination_row.public_location_id = case
@@ -292,13 +310,22 @@ function reachableTravelOption() {
        else route_row.from_location_id
      end
      and destination_row.availability <> 'closed'
-    order by route_row.public_route_id
+    order by
+      ceil(
+        ceil(route_row.base_cost_minor * route_row.cost_multiplier_basis_points / 10000.0)
+        * case
+            when destination_row.availability = 'shortage' then 11500
+            else 10000
+          end
+        / 10000.0
+      ),
+      route_row.public_route_id
     limit 1;
   `;
-  const output = runSql(sql, "Reachable travel route lookup");
+  const output = runSql(sql, "Affordable reachable travel route lookup");
   const [destination, mode] = output.split("\t");
   if (!/^loc_[a-z0-9_]+$/.test(destination || "") || !TRAVEL_MODES.has(mode)) {
-    throw new Error("World did not expose a reviewed reachable route for the player.");
+    throw new Error("World did not expose an affordable reviewed route for the player.");
   }
   evidence.travel.reachableRouteResolved = true;
   return { destination, mode };
@@ -364,7 +391,10 @@ async function quoteAndExecuteTravel(page) {
   await executeForm.locator('button[type="submit"]').click();
   const executeResponse = await executeResponsePromise;
   if (![200, 201].includes(executeResponse.status())) {
-    throw new Error(`Travel execution returned ${executeResponse.status()}.`);
+    const payload = await executeResponse.json().catch(() => null);
+    throw new Error(
+      `Travel execution returned ${executeResponse.status()}: ${redact(JSON.stringify(payload))}`,
+    );
   }
   evidence.travel.executed = true;
 
