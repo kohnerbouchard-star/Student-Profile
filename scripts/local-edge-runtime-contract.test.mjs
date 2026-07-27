@@ -7,6 +7,7 @@ const PACKAGE = new URL("../package.json", import.meta.url);
 const FUNCTION_ROOT = new URL("../backend/supabase/functions/", import.meta.url);
 const FUNCTION_POLICIES = Object.freeze({
   "player-api": false,
+  "player-web-session-api": false,
   "bootstrap-api": false,
   "web-session-api": false,
   "staff-api": true,
@@ -69,6 +70,9 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["password-reset-api"], /validateStaffPassword/);
   assert.match(functionSources["web-session-api"], /WEB_ADMIN_SESSION_COOKIE/);
   assert.match(functionSources["web-session-api"], /\/functions\/v1\/staff-mfa-api/);
+  assert.match(functionSources["player-web-session-api"], /WEB_PLAYER_SESSION_COOKIE/);
+  assert.match(functionSources["player-web-session-api"], /constantTimePlayerTextEqual/);
+  assert.match(functionSources["player-web-session-api"], /\/functions\/v1\/player-api/);
   assert.match(
     functionSources["player-api"],
     /dispatchRateLimitedReviewedPlayerRequest/,
