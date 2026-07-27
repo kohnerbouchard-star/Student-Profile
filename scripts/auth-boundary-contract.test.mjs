@@ -254,9 +254,9 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
   assert.match(auth, /x-econovaria-runner-nonce/);
   assert.match(auth, /x-econovaria-runner-body-sha256/);
   assert.match(auth, /x-econovaria-runner-signature/);
-  assert.match(auth, /forbiddenLegacyRunnerHeaders/);
+  assert.match(auth, /request\.headers\.has\(options\.internalSecretHeader\)/);
   assert.match(auth, /claim_internal_runner_nonce_v2/);
-  assert.match(auth, /headers\.set\(options\.internalSecretHeader, runnerSecret\)/);
+  assert.match(auth, /headers\.set\(options\.internalSecretHeader, secret\)/);
   assert.match(scheduler, /createInternalRunnerHeaders/);
   assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
   assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
