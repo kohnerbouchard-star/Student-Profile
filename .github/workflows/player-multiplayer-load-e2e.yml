@@ -3,7 +3,7 @@ name: Player Multiplayer and Load E2E
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, agent/pr377-validation-base]
     paths:
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - "index.html"
