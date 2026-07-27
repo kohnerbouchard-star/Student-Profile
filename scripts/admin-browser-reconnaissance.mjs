@@ -200,7 +200,6 @@ async function closeShareModal(modal) {
     const close = modal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]:visible').first();
     if (await close.count()) await close.click();
   }
-  await modal.waitFor({ state: "hidden", timeout: 10_000 });
 }
 
 async function safeScreenshot(name) {
@@ -211,7 +210,11 @@ async function safeScreenshot(name) {
     page.locator(".econovaria-mfa-secret"),
     page.locator(".econovaria-mfa-qr"),
   ];
-  await page.screenshot({\n    path: `${OUTPUT_DIR}/${name}`,\n    fullPage: true,\n    mask: masks,\n  }).catch(() => {});
+  await page.screenshot({
+    path: `${OUTPUT_DIR}/${name}`,
+    fullPage: true,
+    mask: masks,
+  }).catch(() => {});
 }
 
 let failure;
@@ -222,7 +225,7 @@ try {
   const brokenImages = await page.locator("img").evaluateAll((images) => images
     .filter((image) => image.complete && image.naturalWidth === 0)
     .map((image) => image.getAttribute("src") || "[missing-src]"));
-  if (brokenImages.length) throw new Error(`Sogin page has broken images: ${brokenImages.join(", ")}`);
+  if (brokenImages.length) throw new Error(`Login page has broken images: ${brokenImages.join(", ")}`);
 
   await page.locator("#licenseCode").fill(LICENSE_CODE);
   await page.locator("#createEmail").fill(ADMIN_EMAIL);
@@ -322,7 +325,7 @@ try {
 
   const createPlayerRequestIndex = evidence.requests.length;
   const createPlayerResponsePromise = page.waitForResponse(
-    (candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(sanitize.url()).pathname) &&
+    (candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&
       candidate.request().method() === "POST",
     { timeout: 120_000 },
   );
