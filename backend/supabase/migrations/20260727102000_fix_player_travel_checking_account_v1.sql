@@ -287,6 +287,7 @@ begin
 
   update public.mutation_idempotency_keys
   set status = 'COMPLETED',
+      result_type = 'player_travel_journey',
       result_id = v_journey.id,
       response_body = jsonb_build_object(
         'journeyId', v_journey.public_id,
@@ -319,6 +320,6 @@ grant execute on function public.execute_player_travel_v1(uuid, uuid, text, text
   to service_role;
 
 comment on function public.execute_player_travel_v1(uuid, uuid, text, text, timestamptz, jsonb) is
-  'Executes Player travel atomically through checking, converting quoted minor units to ledger currency units while preserving idempotent public evidence.';
+  'Executes Player travel atomically through checking, converting quoted minor units to ledger currency units while preserving typed idempotent public evidence.';
 
 commit;
