@@ -7,6 +7,7 @@
   }
   const STORAGE_KEY = "econovaria.player.auth.v1";
   const PLAYER_API_URL = runtimeConfig.playerApiUrl;
+  const PLAYER_SESSION_API_URL = runtimeConfig.playerWebSessionApiUrl;
   const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
   const SESSION_INVALID_EVENT = "econovaria:player-session-invalid";
@@ -92,8 +93,11 @@
     studentProfileMode: true,
     studentProfileApiBaseUrl: PLAYER_API_URL,
     apiBaseUrl: PLAYER_API_URL,
+    playerSessionApiBaseUrl: PLAYER_SESSION_API_URL,
     publishableKey: SUPABASE_PUBLISHABLE_KEY,
+    authenticated: session?.authenticated === true,
     csrfToken: session?.csrfToken || "",
+    sessionExpiresAt: session?.absoluteExpiresAt || session?.sessionExpiresAt || "",
     sessionProvider: () => readStoredSession(),
     sessionExitUrl: loginUrl("session-invalid"),
     logoutExitUrl: loginUrl("logged-out"),
