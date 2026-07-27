@@ -56,15 +56,17 @@ export class AdapterTransport {
       void resolve;
     });
 
+    const currentSession = typeof this.config.sessionProvider === "function"
+      ? await this.config.sessionProvider()
+      : null;
     const adapterPromise = Promise.resolve()
       .then(() => this.requestAdapter({
         ...context,
         signal: controller.signal,
         session: {
-          playerSessionToken: this.config.playerSessionToken || "",
-          gameSessionId: this.config.gameSessionId || "",
-          playerSessionId: this.config.playerSessionId || "",
-          accessToken: this.config.accessToken || ""
+          authenticated: currentSession?.authenticated === true,
+          csrfToken: String(currentSession?.csrfToken || this.config.csrfToken || ""),
+          gameSessionId: this.config.gameSessionId || ""
         },
         config: this.config
       }))
