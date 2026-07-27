@@ -56,6 +56,7 @@ test("accepts an isolated staging publishable configuration", () => {
   assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
   assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
   assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
   assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
   assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
@@ -82,6 +83,7 @@ test("routes reviewed browser APIs through an approved loopback proxy", () => {
   assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
   assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
   assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
   assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
   assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
@@ -96,6 +98,7 @@ test("uses same-origin BFF routes in production", () => {
   assert.equal(runtime.playerWebSessionApiUrl, "/api/player-session");
   assert.equal(runtime.playerApiUrl, "/api/player");
   assert.equal(runtime.webSessionApiUrl, "/api/admin-session");
+  assert.equal(runtime.adminLogoutApiUrl, "/api/admin-logout");
   assert.equal(runtime.adminBffApiUrl, "/api/admin");
   assert.equal(runtime.passwordResetApiUrl, "/api/password-reset");
   assert.equal(meta.content, "/api/admin");
