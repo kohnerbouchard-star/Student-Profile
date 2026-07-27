@@ -32,7 +32,7 @@ function resolvedPath(endpointKey, params) {
 }
 
 function sessionFingerprint(config) {
-  return [config.playerSessionToken, config.gameSessionId, config.playerSessionId, config.accessToken]
+  return [config.authenticated === true ? "authenticated" : "anonymous", config.csrfToken, config.gameSessionId, config.sessionExpiresAt]
     .map((value) => String(value || ""))
     .join("|");
 }
@@ -107,10 +107,13 @@ export class PlayerApi {
 
   setSession(session) {
     if (!session || typeof session !== "object") return;
-    if (session.playerSessionToken) this.config.playerSessionToken = session.playerSessionToken;
+    if (session.authenticated === true) this.config.authenticated = true;
+    if (session.csrfToken) this.config.csrfToken = session.csrfToken;
+    if (session.expiresAt) this.config.sessionExpiresAt = session.expiresAt;
     if (session.gameSessionId) this.config.gameSessionId = session.gameSessionId;
-    if (session.playerSessionId) this.config.playerSessionId = session.playerSessionId;
-    if (session.accessToken) this.config.accessToken = session.accessToken;
+    delete this.config.playerSessionToken;
+    delete this.config.playerSessionId;
+    delete this.config.accessToken;
     const nextFingerprint = sessionFingerprint(this.config);
     if (nextFingerprint !== this.sessionFingerprint) {
       this.sessionController.abort();
