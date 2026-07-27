@@ -10,7 +10,7 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
   news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
   market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking", "portfolio"]) }),
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
-  business: Object.freeze({ required: Object.freeze(["business"]), optional: Object.freeze([]) }),
+  business: Object.freeze({ required: Object.freeze(["business", "countries"]), optional: Object.freeze([]) }),
   contracts: Object.freeze({ required: Object.freeze(["contracts"]), optional: Object.freeze([]) }),
   store: Object.freeze({ required: Object.freeze(["store"]), optional: Object.freeze(["banking", "inventory"]) }),
   marketplace: Object.freeze({ required: Object.freeze(["marketplace"]), optional: Object.freeze(["inventory", "banking"]) }),
