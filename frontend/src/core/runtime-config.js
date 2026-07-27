@@ -124,7 +124,12 @@
       }
     }
 
-    const playerApiUrl = `${apiBaseUrl}/functions/v1/player-api`;
+    const playerWebSessionApiUrl = environment === "production"
+      ? "/api/player-session"
+      : `${apiBaseUrl}/functions/v1/player-web-session-api`;
+    const playerApiUrl = environment === "production"
+      ? "/api/player"
+      : `${apiBaseUrl}/functions/v1/player-web-session-api/proxy`;
     const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
     const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
     const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
@@ -145,6 +150,7 @@
       apiProxyUrl,
       supabasePublishableKey,
       playerApiUrl,
+      playerWebSessionApiUrl,
       staffApiUrl,
       bootstrapApiUrl,
       adminApiUrl,
