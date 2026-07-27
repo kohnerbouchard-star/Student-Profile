@@ -19,12 +19,14 @@ on:
       - "backend/src/platform/supabase/edgeStaffSession.ts"
       - "backend/src/platform/supabase/edgeResponse.ts"
       - "backend/src/domains/auth/api/**"
+      - "backend/src/domains/licensing/**"
       - "backend/src/domains/players/api/playerLoginHttpHandler.ts"
       - "backend/src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts"
       - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
       - "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts"
       - "backend/supabase/functions/bootstrap-api/**"
       - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/player-web-session-api/**"
       - "backend/supabase/functions/staff-api/**"
       - "backend/supabase/functions/staff-mfa-api/**"
       - "backend/supabase/functions/web-session-api/**"
@@ -35,6 +37,7 @@ on:
       - "backend/supabase/migrations/*staff_security_state*.sql"
       - "backend/supabase/migrations/*staff_permission_grants*.sql"
       - "backend/supabase/migrations/*password_reset_security*.sql"
+      - "backend/supabase/migrations/*purchase_code_hmac*.sql"
       - "backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql"
       - "backend/package.json"
       - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
@@ -44,6 +47,7 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-mfa-bff-contract.test.mjs"
       - "scripts/auth-boundary-contract.test.mjs"
+      - "scripts/security-audit-remediation-contract.test.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
@@ -51,6 +55,7 @@ on:
       - "scripts/staging/probe-beta-security-rate-limit-sql.mjs"
       - "scripts/staging/scan-beta-security-evidence.mjs"
       - "scripts/staging/scan-beta-security-evidence.test.mjs"
+      - "vercel.json"
       - "package.json"
   push:
     branches: [main]
@@ -65,10 +70,12 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -80,7 +87,7 @@ jobs:
         run: npm install --global npm@10.9.8
 
       - name: Set up Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
         with:
           deno-version: v2.9.3
 
@@ -99,11 +106,13 @@ jobs:
         env:
           SUPABASE_URL: http://localhost:54321
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_security_contract
-          SUPABASE_SECRET_KEY: sb_secret_security_contract
+          SUPABASE_SECRET_KEY: sb_secret_security_contract_0123456789abcdef
           ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+          ECONOVARIA_PURCHASE_CODE_HMAC_SECRET: purchase_code_hmac_security_contract_0123456789abcdef
         run: |
           deno test \
-            --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY,ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY \
+            --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY,ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY,ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY,ECONOVARIA_PURCHASE_CODE_HMAC_SECRET \
             --config backend/supabase/functions/classroom-api/deno.json \
             --lock=backend/supabase/functions/deno.lock \
             --frozen \
@@ -131,11 +140,15 @@ jobs:
               backend/supabase/functions/staff-api/index.ts \
               backend/supabase/functions/staff-mfa-api/index.ts \
               backend/supabase/functions/player-api/index.ts \
+              backend/supabase/functions/player-web-session-api/index.ts \
               backend/supabase/functions/web-session-api/index.ts \
               backend/supabase/functions/password-reset-api/index.ts
             node --check api/_admin-bff-proxy.js
+            node --check api/_player-bff-proxy.js
             node --check 'api/admin-session/[...path].js'
             node --check 'api/admin/[...path].js'
+            node --check 'api/player-session/[...path].js'
+            node --check 'api/player/[...path].js'
             node --check api/password-reset.js
             node --check admin/auth-session-manager.js
             node --check admin/admin-auth.js
@@ -151,7 +164,7 @@ jobs:
 
       - name: Upload Beta Security typecheck diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: beta-security-typecheck-diagnostics
           path: ${{ runner.temp }}/beta-security-typecheck.log
@@ -164,6 +177,24 @@ jobs:
 
       - name: Validate authentication boundary ratchet
         run: node --test scripts/auth-boundary-contract.test.mjs
+
+      - name: Validate fail-closed password reset remediation
+        run: node --test --test-name-pattern="password reset fails closed" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate purchase-code HMAC remediation
+        run: node --test --test-name-pattern="purchase codes use keyed" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate Player browser credential privacy
+        run: node --test --test-name-pattern="Player browser runtime" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate Player HttpOnly BFF remediation
+        run: node --test --test-name-pattern="Player BFF seals" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate deployment browser policy
+        run: node --test --test-name-pattern="deployment policy" scripts/security-audit-remediation-contract.test.mjs
+
+      - name: Validate internal runner HMAC and replay denial
+        run: node --test --test-name-pattern="internal stock runners" scripts/security-audit-remediation-contract.test.mjs
 
       - name: Validate Admin MFA BFF boundary
         run: node --test scripts/admin-mfa-bff-contract.test.mjs
@@ -178,7 +209,7 @@ jobs:
 
       - name: Upload Admin session-manager diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: admin-session-manager-diagnostics
           path: ${{ runner.temp }}/admin-session-manager.log

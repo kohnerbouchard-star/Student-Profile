@@ -57,7 +57,7 @@ await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   snapshotKey: LOGOUT_SNAPSHOT_KEY,
 });
 
-await page.route("**/functions/v1/web-session-api/logout", async (route) => {
+await page.route("**/functions/v1/admin-logout-api", async (route) => {
   const request = route.request();
   assert(!request.headers().authorization, "Admin logout exposed a Staff bearer token.");
   if (request.method() === "OPTIONS") {
@@ -69,7 +69,7 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
     status: 200,
     contentType: "application/json",
     headers: corsHeaders(),
-    body: JSON.stringify({ ok: true }),
+    body: JSON.stringify({ ok: true, revoked: true }),
   });
   logoutResponseFulfilled = true;
 });
@@ -247,13 +247,13 @@ try {
   );
   assert(
     requests.some((entry) =>
-      entry.includes("POST") && entry.includes("/web-session-api/logout")
+      entry.includes("POST") && entry.includes("/admin-logout-api")
     ),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`,
   );
-  assert(logoutResponseFulfilled, "The mocked web-session logout response did not complete.");
+  assert(logoutResponseFulfilled, "The mocked Admin logout response did not complete.");
 
-  const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
+  const expectedNavigationAbort = /POST .*\/functions\/v1\/admin-logout-api net::ERR_ABORTED/i;
   const remainingErrors = errors.filter((error) =>
     !(logoutResponseFulfilled && expectedNavigationAbort.test(error))
   );

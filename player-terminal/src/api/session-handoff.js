@@ -1,3 +1,5 @@
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
 function firstText(...values) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) return value.trim();
@@ -8,27 +10,22 @@ function firstText(...values) {
 export function normalizePlayerSessionHandoff(input) {
   if (!input || typeof input !== "object") return null;
   const session = input.session && typeof input.session === "object" ? input.session : {};
-  const playerSession = input.playerSession && typeof input.playerSession === "object" ? input.playerSession : {};
   const gameSession = input.gameSession && typeof input.gameSession === "object" ? input.gameSession : {};
+  const authenticated = input.authenticated === true || session.authenticated === true;
+  const csrfToken = firstText(input.csrfToken, input.csrf_token, session.csrfToken, session.csrf_token);
 
-  const playerSessionToken = firstText(
-    input.playerSessionToken,
-    input.player_session_token,
-    input.sessionToken,
-    input.session_token,
-    input.token,
-    session.playerSessionToken,
-    session.player_session_token,
-    session.token,
-    playerSession.playerSessionToken,
-    playerSession.player_session_token,
-    playerSession.token
-  );
-
-  if (!playerSessionToken) return null;
+  if (!authenticated || !CSRF_PATTERN.test(csrfToken)) return null;
 
   return {
-    playerSessionToken,
+    authenticated: true,
+    csrfToken,
+    expiresAt: firstText(
+      input.absoluteExpiresAt,
+      input.sessionExpiresAt,
+      input.expiresAt,
+      session.absoluteExpiresAt,
+      session.expiresAt
+    ),
     gameSessionId: firstText(
       input.gameSessionId,
       input.game_session_id,
@@ -36,30 +33,20 @@ export function normalizePlayerSessionHandoff(input) {
       gameSession.gameSessionId,
       gameSession.game_session_id,
       session.gameSessionId,
-      session.game_session_id,
-      playerSession.gameSessionId,
-      playerSession.game_session_id
-    ),
-    playerSessionId: firstText(
-      input.playerSessionId,
-      input.player_session_id,
-      session.playerSessionId,
-      session.player_session_id,
-      playerSession.id,
-      playerSession.playerSessionId,
-      playerSession.player_session_id
-    ),
-    accessToken: firstText(input.accessToken, input.access_token, session.accessToken, session.access_token)
+      session.game_session_id
+    )
   };
 }
 
 export function applyPlayerSessionHandoff(config, input) {
   const session = normalizePlayerSessionHandoff(input);
   if (!session) return false;
-  config.playerSessionToken = session.playerSessionToken;
+  config.authenticated = true;
+  config.csrfToken = session.csrfToken;
+  if (session.expiresAt) config.sessionExpiresAt = session.expiresAt;
   if (session.gameSessionId) config.gameSessionId = session.gameSessionId;
-  if (session.playerSessionId) config.playerSessionId = session.playerSessionId;
-  if (session.accessToken) config.accessToken = session.accessToken;
+  delete config.playerSessionToken;
+  delete config.accessToken;
   return true;
 }
 
@@ -74,12 +61,11 @@ export async function resolveExistingPlayerSession(config) {
       // The host sign-in remains authoritative; a later session-ready event can retry.
     }
   }
-  const globalSession = normalizePlayerSessionHandoff(
+  return normalizePlayerSessionHandoff(
     globalThis.ECONOVARIA_PLAYER_SESSION ||
     globalThis.Econovaria?.playerSession ||
     globalThis.Econovaria?.state?.getCurrentSession?.()
   );
-  return globalSession;
 }
 
 export function dispatchHostEvent(name, detail = {}) {

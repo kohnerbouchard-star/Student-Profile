@@ -50,18 +50,19 @@ await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   });
 }, { gameId: GAME_ID, gameCode: GAME_CODE, snapshotKey: LOGOUT_SNAPSHOT_KEY });
 
-await page.route("**/functions/v1/web-session-api/logout", async (route) => {
+await page.route("**/functions/v1/admin-logout-api", async (route) => {
   const request = route.request();
   assert(!request.headers().authorization, "Admin logout exposed a Staff bearer token.");
   if (request.method() === "OPTIONS") {
     await route.fulfill({ status: 204, headers: logoutCorsHeaders(), body: "" });
     return;
   }
+  assert(request.method() === "POST", `Admin logout used ${request.method()} instead of POST.`);
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     headers: logoutCorsHeaders(),
-    body: JSON.stringify({ ok: true }),
+    body: JSON.stringify({ ok: true, revoked: true }),
   });
   logoutResponseFulfilled = true;
 });
@@ -187,8 +188,8 @@ try {
   assert(storageState.selectedGame === null, "Admin logout left the selected game before navigation.");
   assert(storageState.csrf === null, "Admin logout left the CSRF token before navigation.");
   assert(
-    requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
-    `Admin logout did not issue server-mediated revocation: ${JSON.stringify(requests)}`,
+    requests.some((entry) => entry.includes("POST") && entry.includes("/admin-logout-api")),
+    `Admin logout did not issue verified server-mediated revocation: ${JSON.stringify(requests)}`,
   );
   assert(logoutResponseFulfilled, "The mocked sidebar logout response did not complete.");
 
@@ -202,7 +203,7 @@ try {
     errors: [...errors],
   });
   writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
-  const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
+  const expectedNavigationAbort = /POST .*\/functions\/v1\/admin-logout-api net::ERR_ABORTED/i;
   const remainingErrors = errors.filter((error) =>
     !(logoutResponseFulfilled && expectedNavigationAbort.test(error))
   );
@@ -216,7 +217,7 @@ try {
     playerLinkTargetsSelectedGame: true,
     adminLinkHidden: true,
     logoutButtonClickable: true,
-    serverMediatedLogoutObserved: true,
+    verifiedServerMediatedLogoutObserved: true,
     logoutResponseFulfilled: true,
     sessionCleared: true,
   }, null, 2));

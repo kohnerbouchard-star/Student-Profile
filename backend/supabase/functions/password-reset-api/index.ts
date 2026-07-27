@@ -7,6 +7,7 @@ import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import { validateStaffPassword } from "../../../src/security/staffPasswordPolicy.ts";
 
 const MAX_BODY_BYTES = 4_096;
+const SESSION_REVOCATION_ATTEMPTS = 3;
 
 interface PasswordResetBody {
   readonly password?: unknown;
@@ -69,6 +70,22 @@ Deno.serve(async (request: Request) => {
     ));
   }
 
+  // Revoke the complete Auth session family before changing the password. A
+  // password reset is a security transition, so continuing after an upstream
+  // revocation failure could leave a stolen refresh token usable.
+  const sessionsRevoked = await revokeAllSessions(
+    env.value.supabaseUrl,
+    env.value.supabaseAnonKey,
+    accessToken,
+  );
+  if (!sessionsRevoked) {
+    return json(request, 503, errorBody(
+      "password_reset_session_revocation_failed",
+      "Administrator sessions could not be revoked. The password was not changed.",
+      true,
+    ));
+  }
+
   const service = resolved.serviceClient as any;
   const passwordUpdate = await service.auth.admin.updateUserById(
     resolved.authUser.id,
@@ -80,12 +97,6 @@ Deno.serve(async (request: Request) => {
       "The administrator password could not be updated.",
     ));
   }
-
-  await revokeAllSessions(
-    env.value.supabaseUrl,
-    env.value.supabaseAnonKey,
-    accessToken,
-  );
 
   const transitionResponse = await resolved.serviceClient.rpc<
     readonly SecurityTransitionRow[] | SecurityTransitionRow
@@ -174,15 +185,20 @@ async function revokeAllSessions(
   supabaseUrl: string,
   publishableKey: string,
   accessToken: string,
-): Promise<void> {
-  await fetch(`${supabaseUrl}/auth/v1/logout?scope=global`, {
-    method: "POST",
-    headers: {
-      apikey: publishableKey,
-      Authorization: `Bearer ${accessToken}`,
-    },
-    cache: "no-store",
-  }).catch(() => null);
+): Promise<boolean> {
+  for (let attempt = 0; attempt < SESSION_REVOCATION_ATTEMPTS; attempt += 1) {
+    const response = await fetch(`${supabaseUrl}/auth/v1/logout?scope=global`, {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+      redirect: "manual",
+    }).catch(() => null);
+    if (response?.ok) return true;
+  }
+  return false;
 }
 
 function validTransition(value: unknown): value is Required<SecurityTransitionRow> {
@@ -241,6 +257,7 @@ function unavailable(request: Request): Response {
   return json(request, 503, errorBody(
     "password_reset_unavailable",
     "Administrator password reset is unavailable.",
+    true,
   ));
 }
 
@@ -268,6 +285,6 @@ function responseHeaders(request: Request): Headers {
   return headers;
 }
 
-function errorBody(code: string, message: string) {
-  return { ok: false, error: { code, message, retryable: false } };
+function errorBody(code: string, message: string, retryable = false) {
+  return { ok: false, error: { code, message, retryable } };
 }

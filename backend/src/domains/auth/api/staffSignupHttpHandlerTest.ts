@@ -8,6 +8,23 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
+const testRuntime = globalThis as unknown as {
+  process?: { env?: Record<string, string | undefined> };
+};
+const processShadow = Object.create(testRuntime.process ?? null) as {
+  env?: Record<string, string | undefined>;
+};
+Object.defineProperty(processShadow, "env", {
+  configurable: true,
+  enumerable: true,
+  writable: false,
+  value: Object.freeze({
+    ECONOVARIA_PURCHASE_CODE_HMAC_SECRET:
+      "staff-signup-test-purchase-code-hmac-secret-0123456789",
+  }),
+});
+testRuntime.process = processShadow;
+
 const AUTH_USER_ID = "11111111-1111-4111-8111-111111111111";
 const STAFF_USER_ID = "22222222-2222-4222-8222-222222222222";
 const GAME_SESSION_ID = "33333333-3333-4333-8333-333333333333";

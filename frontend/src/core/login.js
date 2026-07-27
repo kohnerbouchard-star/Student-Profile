@@ -122,15 +122,21 @@ window.Econovaria.login = window.Econovaria.login || {};
       "econovaria.admin.selected-game.v1";
   }
 
-  function persistPlayerSession(loginResult, bootstrap) {
+  function persistPlayerSession(status) {
+    const csrfToken = String(status?.csrfToken || "");
+    if (
+      status?.session?.authenticated !== true ||
+      !SAFE_CSRF_PATTERN.test(csrfToken)
+    ) {
+      throw new Error("Player status response is invalid.");
+    }
     const record = {
-      playerSessionToken: String(loginResult?.session?.token || ""),
-      sessionExpiresAt: String(
-        loginResult?.session?.expiresAt || bootstrap?.session?.expiresAt || ""
-      ),
-      apiBaseUrl: String(constants().PLAYER_API_URL || ""),
-      player: bootstrap?.player || loginResult?.player || null,
-      gameSession: bootstrap?.gameSession || loginResult?.gameSession || null,
+      authenticated: true,
+      sessionExpiresAt: String(status.session.expiresAt || ""),
+      absoluteExpiresAt: String(status.session.absoluteExpiresAt || ""),
+      csrfToken,
+      player: status.player || null,
+      gameSession: status.gameSession || null,
       storedAt: new Date().toISOString()
     };
     runtime.sessionStorage.setItem(playerStorageKey(), JSON.stringify(record));
@@ -198,30 +204,32 @@ window.Econovaria.login = window.Econovaria.login || {};
 
     setFormBusy(form, true, "Opening session...");
     try {
+      runtime.sessionStorage.removeItem(playerStorageKey());
       const login = await api().callPlayerLoginApi?.(
         gameCode,
         playerIdentifier,
         accessCode
       );
-      if (!login?.ok || !login.session?.token) {
+      if (!login?.ok || login.session?.authenticated !== true) {
         showMessage(node, errorMessage(login, "Player login failed."), "bad");
         return;
       }
-      const bootstrap = await api().callPlayerBootstrapApi?.(login.session.token);
-      if (!bootstrap?.ok) {
-        await api().callPlayerLogoutApi?.(login.session.token).catch?.(() => {});
+      const status = await api().callPlayerBootstrapApi?.();
+      if (!status?.ok || status.session?.authenticated !== true) {
+        await api().callPlayerLogoutApi?.().catch?.(() => {});
         showMessage(
           node,
-          errorMessage(bootstrap, "Your Player session could not be loaded."),
+          errorMessage(status, "Your Player session could not be loaded."),
           "bad"
         );
         return;
       }
-      persistPlayerSession(login, bootstrap);
+      persistPlayerSession(status);
       form.reset();
       showMessage(node, "Access granted.");
       openPlayerTerminal();
     } catch (error) {
+      runtime.sessionStorage.removeItem(playerStorageKey());
       showMessage(node, errorMessage(error, "Player login failed."), "bad");
     } finally {
       setFormBusy(form, false);

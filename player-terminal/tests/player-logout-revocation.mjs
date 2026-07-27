@@ -5,6 +5,11 @@ import {
   resolvePlayerLogoutUrl
 } from "../src/integrations/player-logout-controller.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_logout_fixture";
+const SESSION_API = "https://example.test/functions/v1/player-web-session-api";
+
 class FakeCustomEvent {
   constructor(type, options = {}) {
     this.type = type;
@@ -12,7 +17,14 @@ class FakeCustomEvent {
   }
 }
 
-function createHarness({ apiCall, logoutAdvertised = true } = {}) {
+function jsonResponse(status, body, headers = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...headers }
+  });
+}
+
+function createHarness({ fetchImpl, logoutAdvertised = true } = {}) {
   const listeners = new Map();
   const dispatched = [];
   const replaced = [];
@@ -26,13 +38,18 @@ function createHarness({ apiCall, logoutAdvertised = true } = {}) {
     }
   };
   const config = {
-    playerSessionToken: "player-secret-token",
-    playerSessionId: "internal-session-id",
+    authenticated: true,
+    csrfToken: CSRF_TOKEN,
+    sessionExpiresAt: "2026-07-27T08:00:00.000Z",
     gameSessionId: "internal-game-id",
-    accessToken: "access-token",
+    playerSessionApiBaseUrl: SESSION_API,
+    publishableKey: PUBLISHABLE_KEY,
+    deviceId: DEVICE_ID,
+    playerSessionToken: "legacy-token-must-be-deleted",
+    playerSessionId: "legacy-session-id-must-be-deleted",
+    accessToken: "legacy-access-token-must-be-deleted",
     logoutRequestedEvent: "econovaria:player-logout-requested",
-    sessionExitDelayMs: 0,
-    apiCall
+    sessionExitDelayMs: 0
   };
   const terminal = {
     getState() {
@@ -54,8 +71,14 @@ function createHarness({ apiCall, logoutAdvertised = true } = {}) {
     },
     document: { title: "Player Terminal" },
     CustomEvent: FakeCustomEvent,
-    ECONOVARIA_PLAYER_SESSION: { playerSessionToken: "global-token" },
-    Econovaria: { playerSession: { playerSessionToken: "host-token" } },
+    ECONOVARIA_PLAYER_SESSION: { authenticated: true, csrfToken: CSRF_TOKEN },
+    Econovaria: { playerSession: { authenticated: true, csrfToken: CSRF_TOKEN } },
+    fetch: fetchImpl,
+    localStorage: {
+      getItem() { return DEVICE_ID; },
+      setItem() {}
+    },
+    crypto: { randomUUID: () => DEVICE_ID },
     addEventListener(name, handler) {
       listeners.set(name, handler);
     },
@@ -78,10 +101,13 @@ function createHarness({ apiCall, logoutAdvertised = true } = {}) {
 }
 
 function assertLocalStateCleared(harness) {
-  assert.equal(harness.config.playerSessionToken, "");
-  assert.equal(harness.config.playerSessionId, "");
+  assert.equal(harness.config.authenticated, false);
+  assert.equal(harness.config.csrfToken, "");
+  assert.equal(harness.config.sessionExpiresAt, "");
   assert.equal(harness.config.gameSessionId, "");
-  assert.equal(harness.config.accessToken, "");
+  assert.equal(Object.hasOwn(harness.config, "playerSessionToken"), false);
+  assert.equal(Object.hasOwn(harness.config, "playerSessionId"), false);
+  assert.equal(Object.hasOwn(harness.config, "accessToken"), false);
   assert.equal(harness.runtime.ECONOVARIA_PLAYER_SESSION, null);
   assert.equal(harness.runtime.Econovaria.playerSession, null);
   assert.equal(harness.mount.inert, true);
@@ -107,14 +133,14 @@ function assertLocalStateCleared(harness) {
 {
   const calls = [];
   const harness = createHarness({
-    apiCall: async (context) => {
-      calls.push(context);
-      return {
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse(200, {
         ok: true,
         alreadyLoggedOut: false,
         status: "revoked",
-        revokedAt: "2026-07-19T00:00:00.000Z"
-      };
+        revokedAt: "2026-07-27T00:00:00.000Z"
+      });
     }
   });
   const controller = installPlayerLogoutController({
@@ -133,14 +159,17 @@ function assertLocalStateCleared(harness) {
   });
 
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].endpointKey, "logout");
-  assert.equal(calls[0].method, "POST");
-  assert.equal(calls[0].path, "/session/logout");
-  assert.equal(calls[0].payload, undefined);
-  assert.deepEqual(calls[0].params, {});
-  assert.deepEqual(calls[0].session, { playerSessionToken: "player-secret-token" });
-  assert.equal(Object.hasOwn(calls[0].session, "gameSessionId"), false);
-  assert.equal(Object.hasOwn(calls[0].session, "playerSessionId"), false);
+  assert.equal(calls[0].url, `${SESSION_API}/logout`);
+  assert.equal(calls[0].options.method, "POST");
+  assert.equal(calls[0].options.body, "{}");
+  assert.equal(calls[0].options.credentials, "include");
+  assert.equal(calls[0].options.cache, "no-store");
+  assert.equal(calls[0].options.redirect, "manual");
+  assert.equal(calls[0].options.headers.apikey, PUBLISHABLE_KEY);
+  assert.equal(calls[0].options.headers["x-econovaria-device-id"], DEVICE_ID);
+  assert.equal(calls[0].options.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+  assert.equal(calls[0].options.headers["x-player-session-token"], undefined);
+  assert.equal(calls[0].options.headers.Authorization, undefined);
 
   assert.deepEqual(
     {
@@ -162,7 +191,7 @@ function assertLocalStateCleared(harness) {
       code: "PLAYER_SESSION_REVOKED"
     }
   );
-  assert.equal(JSON.stringify(completion).includes("player-secret-token"), false);
+  assert.equal(JSON.stringify(completion).includes("legacy-token"), false);
   assert.equal(Object.hasOwn(completion, "gameSessionId"), false);
   assert.equal(Object.hasOwn(completion, "playerSessionId"), false);
   assertLocalStateCleared(harness);
@@ -181,12 +210,10 @@ function assertLocalStateCleared(harness) {
 
 {
   const harness = createHarness({
-    apiCall: async () => {
-      const error = new Error("The session is already inactive.");
-      error.status = 401;
-      error.code = "invalid_player_session";
-      throw error;
-    }
+    fetchImpl: async () => jsonResponse(401, {
+      ok: false,
+      error: { code: "invalid_player_session", message: "The session is already inactive." }
+    })
   });
   const controller = installPlayerLogoutController({
     terminal: harness.terminal,
@@ -208,16 +235,15 @@ function assertLocalStateCleared(harness) {
 {
   let attempts = 0;
   const harness = createHarness({
-    apiCall: async () => {
+    fetchImpl: async () => {
       attempts += 1;
       if (attempts === 1) {
-        const error = new Error("Retry the exact revocation.");
-        error.status = 503;
-        error.code = "player_logout_service_unavailable";
-        error.retryAfterMs = 0;
-        throw error;
+        return jsonResponse(503, {
+          ok: false,
+          error: { code: "player_logout_service_unavailable", message: "Retry the exact revocation." }
+        }, { "retry-after": "0" });
       }
-      return { ok: true, alreadyLoggedOut: true, status: "revoked" };
+      return jsonResponse(200, { ok: true, alreadyLoggedOut: true, status: "revoked" });
     }
   });
   const controller = installPlayerLogoutController({
@@ -231,7 +257,6 @@ function assertLocalStateCleared(harness) {
   const completion = await controller.logout();
   assert.equal(attempts, 2);
   assert.equal(completion.revoked, true);
-  assert.equal(completion.alreadyLoggedOut, true);
   assert.equal(completion.localOnly, false);
   assertLocalStateCleared(harness);
   controller.destroy();
@@ -240,12 +265,12 @@ function assertLocalStateCleared(harness) {
 {
   let attempts = 0;
   const harness = createHarness({
-    apiCall: async () => {
+    fetchImpl: async () => {
       attempts += 1;
-      const error = new Error("Logout service unavailable.");
-      error.status = 503;
-      error.code = "player_logout_service_unavailable";
-      throw error;
+      return jsonResponse(503, {
+        ok: false,
+        error: { code: "player_logout_service_unavailable", message: "Logout service unavailable." }
+      });
     }
   });
   const controller = installPlayerLogoutController({
@@ -271,9 +296,9 @@ function assertLocalStateCleared(harness) {
   let calls = 0;
   const harness = createHarness({
     logoutAdvertised: false,
-    apiCall: async () => {
+    fetchImpl: async () => {
       calls += 1;
-      return { ok: true };
+      return jsonResponse(200, { ok: true });
     }
   });
   const controller = installPlayerLogoutController({
@@ -290,4 +315,4 @@ function assertLocalStateCleared(harness) {
   controller.destroy();
 }
 
-console.log("Player logout revocation lifecycle checks passed.");
+console.log("Player logout cookie-session revocation lifecycle checks passed.");

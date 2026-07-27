@@ -22,6 +22,8 @@ export interface LicensingActivationHandlerInput {
 export interface LicensingActivationHandlerDependencies {
   readonly activationRepository: LicensingActivationRepository;
   readonly runtime?: WebCryptoRuntime;
+  readonly purchaseCodeHmacSecret?: string;
+  readonly readPurchaseCodeHmacSecret?: () => string | undefined;
 }
 
 export async function handleStaffLicensingActivation(
@@ -36,6 +38,8 @@ export async function handleStaffLicensingActivation(
   const adapterDependencies = createLicensingActivationRouteAdapterDependencies({
     activationRepository: dependencies.activationRepository,
     runtime: dependencies.runtime,
+    purchaseCodeHmacSecret: dependencies.purchaseCodeHmacSecret,
+    readPurchaseCodeHmacSecret: dependencies.readPurchaseCodeHmacSecret,
   });
 
   return handleLicensingActivationRequest(

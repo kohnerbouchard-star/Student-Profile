@@ -124,13 +124,21 @@
       }
     }
 
-    const playerApiUrl = `${apiBaseUrl}/functions/v1/player-api`;
+    const playerWebSessionApiUrl = environment === "production"
+      ? "/api/player-session"
+      : `${apiBaseUrl}/functions/v1/player-web-session-api`;
+    const playerApiUrl = environment === "production"
+      ? "/api/player"
+      : `${apiBaseUrl}/functions/v1/player-web-session-api/proxy`;
     const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
     const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
     const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
     const webSessionApiUrl = environment === "production"
       ? "/api/admin-session"
       : `${apiBaseUrl}/functions/v1/web-session-api`;
+    const adminLogoutApiUrl = environment === "production"
+      ? "/api/admin-logout"
+      : `${apiBaseUrl}/functions/v1/admin-logout-api`;
     const adminBffApiUrl = environment === "production"
       ? "/api/admin"
       : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
@@ -145,10 +153,12 @@
       apiProxyUrl,
       supabasePublishableKey,
       playerApiUrl,
+      playerWebSessionApiUrl,
       staffApiUrl,
       bootstrapApiUrl,
       adminApiUrl,
       webSessionApiUrl,
+      adminLogoutApiUrl,
       adminBffApiUrl,
       passwordResetApiUrl,
       classroomApiUrl: staffApiUrl,
@@ -164,8 +174,42 @@
   });
 
   const documentObject = globalObject.document;
+  const runtimeScriptUrl = text(documentObject?.currentScript?.src);
   const adminApiMeta = documentObject?.querySelector?.(
     'meta[name="econovaria-admin-api-base"]'
   );
   if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
+
+  function installAdminLogoutOverride() {
+    const adminOrLoginShell = Boolean(
+      adminApiMeta ||
+      documentObject?.getElementById?.("loginScreen") ||
+      documentObject?.getElementById?.("adminPreview")
+    );
+    if (
+      !adminOrLoginShell ||
+      !runtimeScriptUrl ||
+      typeof documentObject?.createElement !== "function" ||
+      typeof documentObject?.head?.append !== "function" ||
+      documentObject.querySelector?.("script[data-econovaria-admin-logout-override]")
+    ) {
+      return;
+    }
+
+    const logoutOverride = documentObject.createElement("script");
+    logoutOverride.src = new URL("admin-logout-override.js", runtimeScriptUrl).href;
+    logoutOverride.async = true;
+    logoutOverride.dataset.econovariaAdminLogoutOverride = "true";
+    documentObject.head.append(logoutOverride);
+  }
+
+  if (documentObject?.readyState === "loading") {
+    documentObject.addEventListener?.(
+      "DOMContentLoaded",
+      installAdminLogoutOverride,
+      { once: true }
+    );
+  } else {
+    installAdminLogoutOverride();
+  }
 })(window);

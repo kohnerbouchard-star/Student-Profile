@@ -8,6 +8,7 @@ if (!runtimeConfig) {
 const SUPABASE_URL = runtimeConfig.supabaseUrl;
 const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
 const PLAYER_API_URL = runtimeConfig.playerApiUrl;
+const PLAYER_WEB_SESSION_API_URL = runtimeConfig.playerWebSessionApiUrl;
 const STAFF_API_URL = runtimeConfig.staffApiUrl;
 const BOOTSTRAP_API_URL = runtimeConfig.bootstrapApiUrl;
 const ADMIN_API_URL = runtimeConfig.adminApiUrl;
@@ -83,6 +84,7 @@ window.Econovaria.core.constants = Object.freeze({
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY,
   PLAYER_API_URL,
+  PLAYER_WEB_SESSION_API_URL,
   STAFF_API_URL,
   BOOTSTRAP_API_URL,
   ADMIN_API_URL,
