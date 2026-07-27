@@ -29,12 +29,6 @@ export interface PurchaseCodeHmacSha256HasherDependencies
   ) => Promise<string>;
 }
 
-/**
- * Versioned purchase-code verifier material. The primary digest is keyed and
- * therefore cannot be guessed offline from a database dump. The legacy digest
- * is included only inside the request envelope so the database can atomically
- * upgrade pre-existing SHA-256 records after a successful redemption.
- */
 export function createPurchaseCodeHmacSha256Hasher(
   dependencies: PurchaseCodeHmacSha256HasherDependencies,
 ): PurchaseCodeHasher {
@@ -75,10 +69,7 @@ export async function hashPurchaseCodeWithHmacSha256(
   };
 }
 
-/**
- * Retained only for explicit migration fixtures and compatibility tests. New
- * activation paths must use createPurchaseCodeHmacSha256Hasher.
- */
+/** Retained only for explicit migration fixtures and compatibility tests. */
 export function createPurchaseCodeSha256Hasher(
   dependencies: PurchaseCodeSha256HasherDependencies,
 ): PurchaseCodeHasher {
@@ -92,16 +83,13 @@ export async function hashPurchaseCodeWithSha256(
   dependencies: PurchaseCodeSha256HasherDependencies,
 ): Promise<PurchaseCodeHashResult> {
   const normalizedPurchaseCode = input.normalizedPurchaseCode.value.trim();
-
   if (!normalizedPurchaseCode) {
     throw new PurchaseCodeHashingError("normalizedPurchaseCode is required.");
   }
-
   const codeHash = normalizeSha256Hex(
     await dependencies.digest.digestUtf8ToHex(normalizedPurchaseCode),
     "purchaseCodeHash",
   );
-
   return { codeHash };
 }
 
@@ -114,13 +102,21 @@ export function readPurchaseCodeHmacSecret(): string | undefined {
       readonly env?: Record<string, string | undefined>;
     };
   };
-  const read = (name: string) =>
-    runtime.Deno?.env?.get(name) ?? runtime.process?.env?.[name];
+  const read = (name: string): string | undefined => {
+    try {
+      const denoValue = runtime.Deno?.env?.get(name);
+      if (denoValue) return denoValue;
+    } catch {
+      // Permission-restricted test and build environments may intentionally
+      // deny Deno.env. Continue to the injected process-style test runtime.
+    }
+    try {
+      return runtime.process?.env?.[name];
+    } catch {
+      return undefined;
+    }
+  };
 
-  // A dedicated key is preferred. The rate-limit or Supabase server secret is
-  // accepted only as a transition key so existing deployments fail closed
-  // without reintroducing an unkeyed digest. The HMAC message is domain
-  // separated, and production should rotate to the dedicated key.
   return read("ECONOVARIA_PURCHASE_CODE_HMAC_SECRET") ??
     read("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ??
     read("SUPABASE_SECRET_KEY") ??
