@@ -12,6 +12,7 @@ const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
 const PLAYER_ID = "BROWSER-PLAYER-BETA";
 const ACCESS_CODE = "BROWSER-BETA-ACCESS-002";
+const JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
@@ -25,6 +26,19 @@ const evidence = {
     submitted: false,
     assignmentRendered: false,
     persisted: false,
+  },
+  travel: {
+    quoted: false,
+    executed: false,
+    fastForwarded: false,
+    completed: false,
+    persisted: false,
+  },
+  residency: {
+    submitted: false,
+    persisted: false,
+    replaySafe: false,
+    unauthenticatedRejected: false,
   },
   databaseDiagnostic: null,
   requests: [],
@@ -177,7 +191,7 @@ async function fixture() {
   const game = games.find((item) => item?.name === GAME_NAME) || games[0];
   const gameCode = String(game?.gameCode || game?.joinCode || "");
   if (!gameCode) throw new Error("Connected game code was not available.");
-  return { gameCode };
+  return { key, gameCode };
 }
 
 function instrument(page) {
@@ -227,20 +241,24 @@ async function login(browser, gameCode) {
   return { context, page };
 }
 
-async function openWorldForQuestionnaire(page) {
+async function openWorld(page) {
   const control = page.locator('[data-route="world"]:visible').first();
   await control.waitFor({ state: "visible", timeout: 30_000 });
   await control.click();
   await page.waitForFunction(() => location.hash === "#world", undefined, { timeout: 30_000 });
   await page.locator(".player-world-page").waitFor({ state: "visible", timeout: 60_000 });
-  await page.locator('form[data-world-form="arrivalClass"]').waitFor({
-    state: "visible",
-    timeout: 60_000,
-  });
+  await page.locator(".player-world-loading").waitFor({ state: "detached", timeout: 60_000 }).catch(() => {});
+}
+
+async function reloadWorld(page) {
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
+  await openWorld(page);
 }
 
 async function submitQuestionnaire(page) {
   const form = page.locator('form[data-world-form="arrivalClass"]');
+  await form.waitFor({ state: "visible", timeout: 60_000 });
   const fieldsets = form.locator("fieldset");
   const questionCount = await fieldsets.count();
   evidence.questionnaire.rendered = true;
@@ -282,12 +300,7 @@ async function submitQuestionnaire(page) {
   }
   evidence.questionnaire.assignmentRendered = true;
 
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const worldControl = page.locator('[data-route="world"]:visible').first();
-  await worldControl.waitFor({ state: "visible", timeout: 30_000 });
-  await worldControl.click();
-  await page.locator("#world-arrival-title").waitFor({ state: "visible", timeout: 60_000 });
+  await reloadWorld(page);
   if (await page.locator('form[data-world-form="arrivalClass"]').count()) {
     throw new Error("Arrival questionnaire reappeared after assignment persistence reload.");
   }
@@ -298,6 +311,184 @@ async function submitQuestionnaire(page) {
   evidence.questionnaire.persisted = true;
 }
 
+async function captureRequest(response) {
+  const requestRecord = response.request();
+  const headers = await requestRecord.allHeaders();
+  const allowed = new Set([
+    "accept",
+    "apikey",
+    "authorization",
+    "content-type",
+    "idempotency-key",
+    "x-idempotency-key",
+    "x-player-session-token",
+    "x-request-id",
+  ]);
+  return {
+    url: response.url(),
+    method: requestRecord.method(),
+    body: requestRecord.postData() || "{}",
+    headers: Object.fromEntries(
+      Object.entries(headers).filter(([name]) => allowed.has(name.toLowerCase())),
+    ),
+  };
+}
+
+async function quoteAndExecuteTravel(page) {
+  const quoteForm = page.locator('form[data-world-form="travelQuote"]');
+  await quoteForm.waitFor({ state: "visible", timeout: 60_000 });
+  await quoteForm.locator('select[name="toLocationId"] option:not([value=""])').first().waitFor({
+    state: "attached",
+    timeout: 60_000,
+  });
+  const destinations = await quoteForm.locator('select[name="toLocationId"] option').evaluateAll(
+    (options) => options.map((option) => option.value).filter(Boolean),
+  );
+  if (!destinations.length) throw new Error("World did not provide an open travel destination.");
+  const destination = destinations[0];
+  await quoteForm.locator('select[name="toLocationId"]').selectOption(destination);
+
+  const quoteResponsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/travel/quotes") &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await quoteForm.locator('button[type="submit"]').click();
+  const quoteResponse = await quoteResponsePromise;
+  if (![200, 201].includes(quoteResponse.status())) {
+    throw new Error(`Travel quote returned ${quoteResponse.status()}.`);
+  }
+  evidence.travel.quoted = true;
+
+  const executeForm = page.locator('form[data-world-form="travelExecute"]');
+  await executeForm.waitFor({ state: "visible", timeout: 30_000 });
+  const executeResponsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/travel") &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await executeForm.locator('button[type="submit"]').click();
+  const executeResponse = await executeResponsePromise;
+  if (![200, 201].includes(executeResponse.status())) {
+    throw new Error(`Travel execution returned ${executeResponse.status()}.`);
+  }
+  evidence.travel.executed = true;
+
+  const completeForm = page.locator('form[data-world-form="travelComplete"]');
+  await completeForm.waitFor({ state: "visible", timeout: 60_000 });
+  const journeyId = String(await completeForm.getAttribute("data-journey-id") || "")
+    .trim()
+    .toLowerCase();
+  if (!JOURNEY_ID.test(journeyId)) {
+    throw new Error("Travel execution did not expose a bounded public journey ID.");
+  }
+  return { destination, journeyId };
+}
+
+function fastForwardJourney(journeyId) {
+  if (!JOURNEY_ID.test(journeyId)) throw new Error("Refusing to fast-forward an invalid journey ID.");
+  const sql = `
+    with updated_journey as (
+      update public.player_travel_journeys
+      set departed_at = now() - interval '2 minutes',
+          arrival_at = now() - interval '1 minute',
+          updated_at = now()
+      where public_id = '${journeyId}'
+        and status = 'in_transit'
+      returning id, player_id
+    )
+    update public.player_travel_states as state
+    set arrival_at = now() - interval '1 minute',
+        updated_at = now()
+    from updated_journey as journey
+    where state.player_id = journey.player_id
+      and state.active_journey_id = journey.id;
+  `;
+  const result = spawnSync(
+    "psql",
+    [DATABASE_URL, "-X", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    { encoding: "utf8", maxBuffer: 1024 * 1024 },
+  );
+  if (result.status !== 0) throw new Error(`Travel fast-forward failed: ${redact(result.stderr)}`);
+  evidence.travel.fastForwarded = true;
+}
+
+async function completeTravel(page, destination, journeyId) {
+  await reloadWorld(page);
+  const form = page.locator(
+    `form[data-world-form="travelComplete"][data-journey-id="${journeyId}"]`,
+  );
+  await form.waitFor({ state: "visible", timeout: 30_000 });
+  const responsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith(`/players/me/travel/${journeyId}/complete`) &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await form.locator('button[type="submit"]').click();
+  const response = await responsePromise;
+  if (response.status() !== 200) throw new Error(`Travel completion returned ${response.status()}.`);
+  evidence.travel.completed = true;
+
+  await reloadWorld(page);
+  if (await page.locator('form[data-world-form="travelComplete"]').count()) {
+    throw new Error("Completed journey remained active after reload.");
+  }
+  const currentLocation = page.locator(".player-world-map-panel .player-world-facts dd").first();
+  await currentLocation.waitFor({ state: "visible", timeout: 30_000 });
+  if (String(await currentLocation.textContent() || "").trim() !== destination) {
+    throw new Error(`Completed travel did not persist the destination ${destination}.`);
+  }
+  evidence.travel.persisted = true;
+}
+
+async function submitResidency(page, fixtureData) {
+  const form = page.locator('form[data-world-form="residencyRequest"]');
+  await form.waitFor({ state: "visible", timeout: 30_000 });
+  const options = await form.locator('select[name="countryId"] option').evaluateAll(
+    (nodes) => nodes.map((node) => node.value).filter(Boolean),
+  );
+  if (!options.length) throw new Error("Residency did not provide an eligible destination.");
+  await form.locator('select[name="countryId"]').selectOption(options[0]);
+  const responsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/residency") &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await form.locator('button[type="submit"]').click();
+  const response = await responsePromise;
+  if (![200, 201].includes(response.status())) {
+    throw new Error(`Residency request returned ${response.status()}.`);
+  }
+  const original = await captureRequest(response);
+  evidence.residency.submitted = true;
+
+  await reloadWorld(page);
+  await page.getByText("Request pending", { exact: true }).waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
+  evidence.residency.persisted = true;
+
+  const replay = await page.evaluate(async ({ url, method, headers, body }) => {
+    const response = await fetch(url, { method, headers, body, cache: "no-store" });
+    return { status: response.status, payload: await response.json().catch(() => null) };
+  }, original);
+  if (replay.status !== 200 || replay.payload?.ok !== true) {
+    throw new Error(`Residency replay returned ${replay.status}.`);
+  }
+  evidence.residency.replaySafe = true;
+
+  const unauthorized = await request(new URL(original.url).pathname, {
+    method: original.method,
+    headers: platformHeaders(fixtureData.key),
+    body: JSON.parse(original.body),
+  });
+  if (![401, 403].includes(unauthorized.status)) {
+    throw new Error(`Unauthenticated residency request returned ${unauthorized.status}.`);
+  }
+  evidence.residency.unauthenticatedRejected = true;
+}
+
 let browser;
 let context;
 let failure;
@@ -306,19 +497,26 @@ try {
   browser = await chromium.launch({ headless: true });
   ({ context, page: globalThis.__arrivalQuestionnairePage } = await login(browser, fixtureData.gameCode));
   const page = globalThis.__arrivalQuestionnairePage;
-  await openWorldForQuestionnaire(page);
+  await openWorld(page);
   await submitQuestionnaire(page);
+  const travel = await quoteAndExecuteTravel(page);
+  fastForwardJourney(travel.journeyId);
+  await completeTravel(page, travel.destination, travel.journeyId);
+  await submitResidency(page, fixtureData);
 
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
-    throw new Error(`Arrival questionnaire emitted errors: ${JSON.stringify({
+    throw new Error(`Questionnaire-led World journey emitted errors: ${JSON.stringify({
       consoleErrors: evidence.consoleErrors,
       pageErrors: evidence.pageErrors,
     })}`);
   }
-  if (evidence.responseUuidLeak) throw new Error("Arrival questionnaire responses exposed a raw UUID.");
-  if (Object.values(evidence.questionnaire).some((value) => value !== true && value !== 8)) {
-    throw new Error("Arrival questionnaire evidence is incomplete.");
-  }
+  if (evidence.responseUuidLeak) throw new Error("Questionnaire-led World responses exposed a raw UUID.");
+  const incomplete = [
+    ...Object.values(evidence.questionnaire),
+    ...Object.values(evidence.travel),
+    ...Object.values(evidence.residency),
+  ].some((value) => value !== true && value !== 8);
+  if (incomplete) throw new Error("Questionnaire-led World evidence is incomplete.");
 } catch (error) {
   failure = error;
   evidence.failure = redact(error?.stack || error);
@@ -335,4 +533,9 @@ try {
 }
 
 if (failure) throw failure;
-console.log(JSON.stringify({ ok: true, questionnaire: evidence.questionnaire }));
+console.log(JSON.stringify({
+  ok: true,
+  questionnaire: evidence.questionnaire,
+  travel: evidence.travel,
+  residency: evidence.residency,
+}));
