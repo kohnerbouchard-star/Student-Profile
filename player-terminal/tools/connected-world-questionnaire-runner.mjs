@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
@@ -24,6 +26,7 @@ const evidence = {
     assignmentRendered: false,
     persisted: false,
   },
+  databaseDiagnostic: null,
   requests: [],
   consoleErrors: [],
   pageErrors: [],
@@ -36,6 +39,87 @@ function redact(value) {
     .replace(/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g, "[game-code-redacted]")
     .replace(/BROWSER-[A-Z0-9-]+/g, "[credential-redacted]")
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]");
+}
+
+function sqlLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function captureArrivalDatabaseDiagnostic() {
+  const scoreResult = JSON.stringify({
+    questionnaireId: "arrival-class-balanced-v1",
+    questionnaireVersion: "1.0.0",
+    version: "1.0.0",
+    selectedClassId: "analyst",
+    scores: [],
+    tieBreakOrder: [
+      "analyst",
+      "builder",
+      "maker",
+      "mediator",
+      "navigator",
+      "operator",
+      "steward",
+      "trader",
+    ],
+    explanation: "Rollback-only connected diagnostic.",
+  });
+  const sourceGrantKey = `arrival-grant:diagnostic:${"x".repeat(180)}`;
+  const sql = `
+    begin;
+    with target as (
+      select
+        game_row.id as game_id,
+        player_row.id as player_id,
+        country_row.country_id,
+        country_row.arrival_package_definition_id
+      from public.game_sessions as game_row
+      join public.players as player_row
+        on player_row.game_session_id = game_row.id
+      join public.world_country_runtime as country_row
+        on country_row.game_session_id = game_row.id
+       and country_row.country_uuid = player_row.country_id
+      where game_row.name = ${sqlLiteral(GAME_NAME)}
+        and player_row.player_identifier = ${sqlLiteral(PLAYER_ID)}
+        and player_row.status = 'active'
+      limit 1
+    ), class_grant as (
+      select grant_definition_id
+      from public.arrival_class_grant_runtime
+      where game_session_id = (select game_id from target)
+        and class_id = 'analyst'
+      limit 1
+    )
+    select *
+    from target
+    cross join class_grant
+    cross join lateral public.assign_arrival_class_atomic_v2(
+      target.game_id,
+      target.player_id,
+      target.country_id,
+      'analyst',
+      'arrival-class-balanced-v1',
+      '1.0.0',
+      ${sqlLiteral(scoreResult)}::jsonb,
+      'questionnaire-diagnostic-v1',
+      target.arrival_package_definition_id,
+      class_grant.grant_definition_id,
+      ${sqlLiteral(sourceGrantKey)},
+      now()
+    );
+    rollback;
+  `;
+  const result = spawnSync(
+    "psql",
+    [DATABASE_URL, "-X", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    { encoding: "utf8", maxBuffer: 1024 * 1024 },
+  );
+  const output = `${result.stderr || ""}\n${result.stdout || ""}`.trim();
+  return {
+    status: result.status,
+    signal: result.signal || null,
+    output: redact(output).slice(-3000),
+  };
 }
 
 async function parseJson(response) {
@@ -184,6 +268,7 @@ async function submitQuestionnaire(page) {
   const response = await responsePromise;
   const payload = await response.json().catch(() => null);
   if (![200, 201].includes(response.status()) || payload?.ok !== true) {
+    evidence.databaseDiagnostic = captureArrivalDatabaseDiagnostic();
     throw new Error(`Arrival questionnaire returned ${response.status()}.`);
   }
   evidence.questionnaire.submitted = true;
