@@ -1,0 +1,43 @@
+name: PR377 Architecture Fix Runner
+
+on:
+  push:
+    branches:
+      - agent/runtime-stability-button-integrity-v1
+    paths:
+      - .github/pr377-architecture-fix.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/runtime-stability-button-integrity-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply and verify repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/pr377_architecture_fix.py
+          node --check player-terminal/src/app.js
+          node --check player-terminal/src/main.js
+          node --check player-terminal/src/features/world/world-runtime-flow.js
+          node --check player-terminal/src/features/world/world-route-view-state.js
+          node --check admin/keyboard-navigation.js
+          node --check scripts/admin-mounted-keyboard-navigation-smoke.mjs
+          rm -f \
+            .github/pr377-architecture-fix.trigger \
+            .github/workflows/pr377-architecture-fix-runner.yml \
+            .github/workflows/pr377-one-time-architecture-fix.yml \
+            scripts/pr377_architecture_fix.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: centralize World rendering and preserve Admin focus"
+          git push origin HEAD:agent/runtime-stability-button-integrity-v1
