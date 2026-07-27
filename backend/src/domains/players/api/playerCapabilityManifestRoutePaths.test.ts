@@ -2,7 +2,6 @@ import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/p
 import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
 import { readPlayerContractPublicListRoutePath } from "../../contracts/api/playerContractPublicListRoutePaths.ts";
 import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/playerContractPublicSubmitRoutePaths.ts";
-import { readPlayerContractRoutePath } from "../../contracts/api/playerContractRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
@@ -149,7 +148,6 @@ Deno.test("all migrated Player route families dispatch on the Player API boundar
   assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`), { kind: "items" });
   assertEquals(readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`), { kind: "banking" });
   assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), { kind: "businessRead" });
-  assertEquals(readPlayerContractRoutePath(`${prefix}/players/me/contracts`), { kind: "contracts" });
   assertEquals(parsePlayerWorldRuntimeRoute(`${prefix}/players/me/world-runtime`), {
     operation: "context",
     journeyId: null,
