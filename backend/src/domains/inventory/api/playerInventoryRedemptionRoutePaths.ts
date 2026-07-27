@@ -1,5 +1,6 @@
 import type { PlayerInventoryRedemptionRoute } from "../contracts/playerInventoryRedemptionContracts.ts";
 import { isUuid } from "../../../platform/supabase/uuid.ts";
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 
 const ITEM_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const REQUEST_ID_PATTERN = /^red_[0-9a-f]{32}$/;
@@ -7,8 +8,7 @@ const REQUEST_ID_PATTERN = /^red_[0-9a-f]{32}$/;
 export function readPlayerInventoryRedemptionRoutePath(
   pathname: string,
 ): PlayerInventoryRedemptionRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
   if (!routeSegments) return null;
   if (
     routeSegments.length < 4 ||
@@ -35,19 +35,4 @@ export function readPlayerInventoryRedemptionRoutePath(
   }
 
   return suffix.includes("redemptions") ? { kind: "malformed" } : null;
-}
-
-function readRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-  if (segments[0] === "classroom-api") return segments.slice(1);
-  if (
-    segments[0] === "functions" &&
-    segments[1] === "v1" &&
-    segments[2] === "classroom-api"
-  ) {
-    return segments.slice(3);
-  }
-  return null;
 }
