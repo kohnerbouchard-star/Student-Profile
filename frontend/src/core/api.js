@@ -5,10 +5,12 @@ window.Econovaria.core.api = window.Econovaria.core.api || {};
 const ECONOVARIA_DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const ECONOVARIA_DEVICE_HEADER = "x-econovaria-device-id";
 const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ECONOVARIA_API_PLAYER_STATE_STORAGE_KEY = "econovaria.player.auth.v1";
 const ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const ADMIN_MFA_MODULE_URL = "frontend/src/core/admin-mfa.js";
+let inMemoryPlayerCsrfToken = "";
 let inMemoryAdminCsrfToken = "";
 let adminMfaModulePromise = null;
 
@@ -16,6 +18,7 @@ function getApiRouteUrl(surface, path) {
   const constants = window.Econovaria?.core?.constants || {};
   const baseBySurface = {
     player: constants.PLAYER_API_URL,
+    playerWebSession: constants.PLAYER_WEB_SESSION_API_URL,
     bootstrap: constants.BOOTSTRAP_API_URL,
     webSession: constants.WEB_SESSION_API_URL
   };
@@ -40,10 +43,6 @@ function getSupabaseConfig() {
   return { supabaseUrl, publishableKey };
 }
 
-function normalizeOpaqueSessionToken(value) {
-  return String(value || "").trim();
-}
-
 function getOrCreateDeviceId() {
   try {
     const existing = String(
@@ -64,11 +63,9 @@ function getOrCreateDeviceId() {
   }
 }
 
-function readSafeAdminState() {
+function readSafeSessionState(storageKey) {
   try {
-    const value = JSON.parse(
-      window.sessionStorage.getItem(ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY) || "null"
-    );
+    const value = JSON.parse(window.sessionStorage.getItem(storageKey) || "null");
     return value && value.authenticated === true &&
         CSRF_PATTERN.test(String(value.csrfToken || ""))
       ? value
@@ -76,6 +73,29 @@ function readSafeAdminState() {
   } catch (_) {
     return null;
   }
+}
+
+function readSafePlayerState() {
+  return readSafeSessionState(ECONOVARIA_API_PLAYER_STATE_STORAGE_KEY);
+}
+
+function readSafeAdminState() {
+  return readSafeSessionState(ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY);
+}
+
+function rememberPlayerCsrf(result) {
+  const candidate = String(result?.csrfToken || "");
+  if (CSRF_PATTERN.test(candidate)) inMemoryPlayerCsrfToken = candidate;
+}
+
+function clearPlayerCsrf() {
+  inMemoryPlayerCsrfToken = "";
+}
+
+function readPlayerCsrf() {
+  return CSRF_PATTERN.test(inMemoryPlayerCsrfToken)
+    ? inMemoryPlayerCsrfToken
+    : String(readSafePlayerState()?.csrfToken || "");
 }
 
 function rememberAdminCsrf(result) {
@@ -160,9 +180,6 @@ function normalizeEdgeRouteError(
 
 async function callSupabaseJsonRoute(surface, path, options = {}) {
   const { publishableKey } = getSupabaseConfig();
-  const playerSessionToken = normalizeOpaqueSessionToken(
-    options.playerSessionToken
-  );
   const method = String(options.method || "GET").toUpperCase();
 
   try {
@@ -170,8 +187,18 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       apikey: publishableKey,
       [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId()
     };
-    if (playerSessionToken) {
-      headers["x-player-session-token"] = playerSessionToken;
+    if (options.requirePlayerCsrf === true) {
+      const csrfToken = readPlayerCsrf();
+      if (!CSRF_PATTERN.test(csrfToken)) {
+        return {
+          ok: false,
+          status: 401,
+          code: "player_session_invalid",
+          message: "Player sign-in is required.",
+          retryAfterSeconds: 0
+        };
+      }
+      headers["x-econovaria-csrf-token"] = csrfToken;
     }
     if (options.requireCsrf === true) {
       const csrfToken = readAdminCsrf();
@@ -201,6 +228,9 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
     if (response.ok && result?.ok === true) {
+      if (surface === "player" || surface === "playerWebSession") {
+        rememberPlayerCsrf(result);
+      }
       rememberAdminCsrf(result);
       return { status: response.status, ...result };
     }
@@ -285,8 +315,9 @@ async function callAdminBffJsonRoute(path, options = {}) {
 }
 
 function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
-  return callSupabaseJsonRoute("player", "/players/login", {
+  return callSupabaseJsonRoute("playerWebSession", "/login", {
     method: "POST",
+    credentials: "include",
     body: {
       gameJoinCode: String(gameCode || "").trim(),
       playerIdentifier: String(playerIdentifier || "").trim(),
@@ -298,29 +329,32 @@ function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
   });
 }
 
-function callPlayerBootstrapApi(sessionToken) {
-  return callSupabaseJsonRoute("player", "/players/me", {
+function callPlayerBootstrapApi() {
+  return callSupabaseJsonRoute("playerWebSession", "/status", {
     method: "GET",
-    playerSessionToken: sessionToken,
+    credentials: "include",
     fallbackCode: "player_session_bootstrap_failed",
-    fallbackMessage: "Your player session could not be loaded."
+    fallbackMessage: "Your Player session could not be loaded."
   });
 }
 
-function callPlayerLogoutApi(sessionToken) {
-  return callSupabaseJsonRoute("player", "/players/me/session/logout", {
+async function callPlayerLogoutApi() {
+  const result = await callSupabaseJsonRoute("playerWebSession", "/logout", {
     method: "POST",
-    playerSessionToken: sessionToken,
+    credentials: "include",
+    requirePlayerCsrf: true,
     body: {},
     fallbackCode: "player_logout_failed",
     fallbackMessage: "The Player session could not be revoked."
   });
+  clearPlayerCsrf();
+  return result;
 }
 
-function callPlayerGameDashboardApi(sessionToken) {
+function callPlayerGameDashboardApi() {
   return callSupabaseJsonRoute("player", "/players/me/game/dashboard", {
     method: "GET",
-    playerSessionToken: sessionToken,
+    credentials: "include",
     fallbackCode: "player_game_dashboard_failed",
     fallbackMessage: "Your game dashboard could not be loaded."
   });
