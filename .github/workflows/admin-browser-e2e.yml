@@ -1,4 +1,5 @@
 name: Admin Browser E2E
+# PR 377 reconciliation trigger after validation-base retarget.
 
 on:
   workflow_dispatch:
