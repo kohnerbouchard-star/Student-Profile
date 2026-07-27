@@ -3,12 +3,14 @@ import { readPlayerContractPublicSubmitRoutePath } from "./playerContractPublicS
 
 declare const Deno: { test(name: string, run: () => void): void };
 
-Deno.test("contract public routes accept direct and exact classroom-api paths", () => {
+Deno.test("contract public routes accept direct and exact Edge paths", () => {
   for (
     const prefix of [
       "",
       "/classroom-api",
       "/functions/v1/classroom-api",
+      "/player-api",
+      "/functions/v1/player-api",
     ]
   ) {
     assertEquals(
@@ -26,23 +28,37 @@ Deno.test("contract public routes accept direct and exact classroom-api paths", 
   }
 });
 
-Deno.test("contract public route parsers fail closed on sibling operations", () => {
+Deno.test("contract public route parsers defer recognized sibling operations", () => {
   for (
     const prefix of [
       "",
       "/classroom-api",
       "/functions/v1/classroom-api",
+      "/player-api",
+      "/functions/v1/player-api",
     ]
   ) {
     assertEquals(
       readPlayerContractAcceptanceRoutePath(
         `${prefix}/players/me/contracts/arrival-orientation/submit`,
       ),
-      { kind: "malformed" },
+      null,
     );
     assertEquals(
       readPlayerContractPublicSubmitRoutePath(
         `${prefix}/players/me/contracts/arrival-orientation/accept`,
+      ),
+      null,
+    );
+    assertEquals(
+      readPlayerContractAcceptanceRoutePath(
+        `${prefix}/players/me/contracts/arrival-orientation/archive`,
+      ),
+      { kind: "malformed" },
+    );
+    assertEquals(
+      readPlayerContractPublicSubmitRoutePath(
+        `${prefix}/players/me/contracts/arrival-orientation/archive`,
       ),
       { kind: "malformed" },
     );
