@@ -41,6 +41,29 @@ Deno.test("Player browser privacy preserves safe payloads without rewriting", as
   assertEquals(result.value, source);
 });
 
+Deno.test("Player browser privacy sanitizes high-cardinality responses deterministically", async () => {
+  const identifiers = Array.from({ length: 512 }, (_, index) =>
+    `00000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`
+  );
+  const source = {
+    records: identifiers.map((id, index) => ({
+      id,
+      relation: `game:${GAME_ID}:record:${id}`,
+      duplicatePlayerId: index % 2 === 0 ? PLAYER_ID : id,
+    })),
+  };
+
+  const first = await sanitizePlayerBrowserPayload(source);
+  const second = await sanitizePlayerBrowserPayload(source);
+  const firstText = JSON.stringify(first.value);
+
+  assertEquals(first.changed, true);
+  assertEquals(second.changed, true);
+  assertEquals(UUID_PATTERN.test(firstText), false);
+  assertEquals(first.value, second.value);
+  assertEquals(firstText.includes("pub_"), true);
+});
+
 Deno.test("Player browser response privacy preserves status and headers", async () => {
   const response = new Response(JSON.stringify({
     ok: true,
