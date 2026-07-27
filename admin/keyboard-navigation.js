@@ -69,7 +69,7 @@
     if (identity) lastFocusIdentity = identity;
   }
 
-  function restoreFocusAfterMutation() {
+  function restoreFocusAfterMount() {
     if (focusRestoreScheduled || !lastFocusIdentity) return;
     const active = document.activeElement;
     if (active instanceof HTMLElement && active !== document.body && active.isConnected && visible(active)) return;
@@ -169,10 +169,8 @@
     if (action instanceof HTMLElement) activateNonNative(action, event);
   }
 
-  const focusObserver = new MutationObserver(restoreFocusAfterMutation);
-  focusObserver.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener("focusin", rememberFocusIdentity, true);
-  document.addEventListener("econovaria:admin-route-mounted", restoreFocusAfterMutation);
+  document.addEventListener("econovaria:admin-route-mounted", restoreFocusAfterMount);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("pointerdown", markPointerModality, true);
 
