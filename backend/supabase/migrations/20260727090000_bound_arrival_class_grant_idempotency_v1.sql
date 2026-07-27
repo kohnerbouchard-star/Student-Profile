@@ -50,7 +50,8 @@ begin
     or p_assignment_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
     or p_arrival_package_definition_id !~ '^[a-z0-9][a-z0-9._:-]{0,127}$'
     or p_grant_definition_id !~ '^[a-z0-9][a-z0-9._:-]{0,127}$'
-    or p_grant_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,511}$'
+    or length(coalesce(p_grant_idempotency_key, '')) not between 8 and 512
+    or p_grant_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
     or p_assigned_at is null
   then
     raise exception 'ARRIVAL_CLASS_REQUEST_INVALID' using errcode = 'P0001';
