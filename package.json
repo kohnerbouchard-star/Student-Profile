@@ -97,7 +97,7 @@
     "validate:progression-content": "node --test scripts/progression-content-quality.test.mjs"
   },
   "devDependencies": {
-    "playwright": "1.61.1",
+    "playwright": "1.62.0",
     "supabase": "2.109.1"
   }
 }
