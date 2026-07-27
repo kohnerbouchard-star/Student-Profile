@@ -9,11 +9,14 @@ const routeCookieNeedle = 'expect(headers.cookie).toContain("econovaria_player_s
 const routeCookieReplacement = 'expect((await page.context().cookies()).some((cookie) => cookie.name === "econovaria_player_session" && cookie.httpOnly)).toBe(true);';
 const documentCookieNeedle = 'await expect(page.evaluate(() => document.cookie)).resolves.not.toContain("econovaria_player_session");';
 const documentCookieReplacement = 'expect(await page.evaluate(() => document.cookie)).not.toContain("econovaria_player_session");';
+const serviceNeedle = 'service: "player-api",';
+const serviceReplacement = 'service: "classroom-api",';
 
 for (const [needle, label] of [
   [headersNeedle, "request.headers() call"],
   [routeCookieNeedle, "route cookie assertion"],
   [documentCookieNeedle, "document cookie assertion"],
+  [serviceNeedle, "compatibility service label"],
 ]) {
   if (source.split(needle).length - 1 !== 1) {
     throw new Error(`Marketplace browser adapter expected one ${label}.`);
@@ -23,7 +26,8 @@ for (const [needle, label] of [
 const materialized = source
   .replace(headersNeedle, headersReplacement)
   .replace(routeCookieNeedle, routeCookieReplacement)
-  .replace(documentCookieNeedle, documentCookieReplacement);
+  .replace(documentCookieNeedle, documentCookieReplacement)
+  .replace(serviceNeedle, serviceReplacement);
 const target = fileURLToPath(new URL("./.generated-marketplace-lifecycle.mjs", import.meta.url));
 try {
   await writeFile(target, materialized, "utf8");
