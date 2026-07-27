@@ -26,6 +26,10 @@ const standaloneAdminClients = [
   "admin/world-runtime-console-client.js",
 ];
 
+const interceptedAdminClients = new Set([
+  "admin/inventory-redemption-queue-client.js",
+]);
+
 test("auth ledger is complete, unique, and machine-readable", async () => {
   const ledger = JSON.parse(await read("docs/security/auth-boundary-ledger-v1.json"));
   assert.equal(ledger.schemaVersion, "econovaria-auth-boundary-ledger-v1");
@@ -120,9 +124,28 @@ test("Admin browser direct legacy route fallback is retired", async () => {
 });
 
 test("standalone Admin clients remain cookie and CSRF bound", async () => {
+  const adminAuth = await read("admin/admin-auth.js");
+  assert.match(adminAuth, /url\.pathname\.startsWith\(LOCAL_API_PREFIX\)/);
+  assert.match(adminAuth, /headers\.set\(DEVICE_HEADER, deviceId\(\)\)/);
+  assert.match(adminAuth, /headers\.set\("X-Econovaria-Game-Id", selectedGameId\)/);
+  assert.match(adminAuth, /headers\.set\(CSRF_HEADER, session\.csrfToken\)/);
+  assert.match(adminAuth, /credentials:\s*"include"/);
+  assert.match(adminAuth, /redirect:\s*"error"/);
+  assert.match(adminAuth, /referrerPolicy:\s*"no-referrer"/);
+
   let deviceBoundClients = 0;
   for (const path of standaloneAdminClients) {
     const source = await read(path);
+    assert.doesNotMatch(source, /AdminAuthSessionManager/);
+    assert.doesNotMatch(source, /authorization/i);
+
+    if (interceptedAdminClients.has(path)) {
+      assert.match(source, /apiBase\s*=\s*"\/api\/admin"/);
+      assert.match(source, /\/games\/\$\{encodeURIComponent\(selectedGameId\)\}/);
+      assert.match(source, /credentials:\s*"same-origin"/);
+      continue;
+    }
+
     if (/x-econovaria-device-id/.test(source)) deviceBoundClients += 1;
     assert.match(source, /x-econovaria-game-id/, `${path} must bind active game scope`);
     assert.match(source, /x-econovaria-csrf-token/, `${path} must bind CSRF`);
@@ -130,8 +153,6 @@ test("standalone Admin clients remain cookie and CSRF bound", async () => {
     assert.match(source, /credentials:\s*"include"/, `${path} must use HttpOnly cookies`);
     assert.match(source, /redirect:\s*"error"/, `${path} must reject redirects`);
     assert.match(source, /referrerPolicy:\s*"no-referrer"/, `${path} must suppress referrers`);
-    assert.doesNotMatch(source, /AdminAuthSessionManager/);
-    assert.doesNotMatch(source, /authorization/i);
     assert.doesNotMatch(source, /credentials:\s*"same-origin"/);
   }
   assert.ok(deviceBoundClients >= 1, "reviewed Admin clients must preserve device binding");
@@ -213,11 +234,20 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
 
   for (const source of [runner, stockRead, seed, playerRead, trading]) {
     assert.match(source, /requirePublishableRequest\(request\)/);
-    assert.match(source, /authorizeInternalRunnerRequest/);
     assert.doesNotMatch(
       source,
       /request\.headers\.get\(["']x-stock-market-runner-secret["']\)/,
       "entrypoints must not authorize the external caller with the legacy header",
+    );
+  }
+  for (const source of [runner, seed, trading]) {
+    assert.match(source, /authorizeInternalRunnerRequest/);
+  }
+  for (const source of [stockRead, playerRead]) {
+    assert.doesNotMatch(
+      source,
+      /authorizeInternalRunnerRequest/,
+      "read-only market endpoints must not require internal runner authority",
     );
   }
   assert.match(auth, /x-econovaria-runner-timestamp/);
