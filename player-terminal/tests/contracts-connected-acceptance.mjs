@@ -4,6 +4,10 @@ import { PlayerApi } from "../src/api/player-api.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_contract_accept_fixture";
+
 const manifest = {
   ok: true,
   schemaVersion: 1,
@@ -11,50 +15,22 @@ const manifest = {
   service: "classroom-api",
   capabilities: {
     routes: {
-      dashboard: false,
-      news: false,
-      market: false,
-      portfolio: false,
-      business: false,
-      contracts: true,
-      store: false,
-      marketplace: false,
-      inventory: false,
-      crafting: false,
-      banking: false,
-      loans: false,
-      messages: false,
-      progression: false,
-      profile: false
+      dashboard: false, news: false, market: false, portfolio: false,
+      business: false, contracts: true, store: false, marketplace: false,
+      inventory: false, crafting: false, banking: false, loans: false,
+      messages: false, progression: false, profile: false
     },
     actions: {
-      bankingExport: false,
-      bankTransfer: false,
-      businessHire: false,
-      businessPrice: false,
-      businessProduction: false,
-      chartRange: false,
-      contractAccept: true,
-      contractSubmit: false,
-      craftItem: false,
-      inventoryUse: false,
-      loanApply: false,
-      loanRepay: false,
-      logout: true,
-      marketOrder: false,
-      marketSearch: false,
-      marketWatchlist: false,
-      marketplaceCancel: false,
-      marketplaceListing: false,
-      marketplacePurchase: false,
-      messageAttachment: false,
-      messageSearch: false,
-      messageSend: false,
-      notificationsRead: false,
-      progressionClaim: false,
-      progressionUnlock: false,
-      savingsTransfer: false,
-      storePurchase: false
+      bankingExport: false, bankTransfer: false, businessHire: false,
+      businessPrice: false, businessProduction: false, chartRange: false,
+      contractAccept: true, contractSubmit: false, craftItem: false,
+      inventoryUse: false, loanApply: false, loanRepay: false, logout: true,
+      marketOrder: false, marketSearch: false, marketWatchlist: false,
+      marketplaceCancel: false, marketplaceListing: false,
+      marketplacePurchase: false, messageAttachment: false,
+      messageSearch: false, messageSend: false, notificationsRead: false,
+      progressionClaim: false, progressionUnlock: false,
+      savingsTransfer: false, storePurchase: false
     }
   },
   endpoints: [
@@ -104,19 +80,17 @@ const apiCall = createStudentProfileApiCall({
       return {
         ok: true,
         contracts: [contract],
-        progress: accepted
-          ? [{
-              contractKey: "arrival-orientation",
-              status: "in_progress",
-              evidencePayload: {},
-              resultPayload: {},
-              submittedAt: null,
-              completedAt: null,
-              rewardIssuedAt: null,
-              createdAt: "2026-07-19T00:01:00.000Z",
-              updatedAt: "2026-07-19T00:01:00.000Z"
-            }]
-          : []
+        progress: accepted ? [{
+          contractKey: "arrival-orientation",
+          status: "in_progress",
+          evidencePayload: {},
+          resultPayload: {},
+          submittedAt: null,
+          completedAt: null,
+          rewardIssuedAt: null,
+          createdAt: "2026-07-19T00:01:00.000Z",
+          updatedAt: "2026-07-19T00:01:00.000Z"
+        }] : []
       };
     }
     if (request.path === "/players/me/contracts/arrival-orientation/accept") {
@@ -137,9 +111,11 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "token-1",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   gameSessionId: "must-not-be-forwarded",
-  playerSessionId: "must-not-be-forwarded",
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   apiCall
@@ -172,7 +148,11 @@ const acceptRequest = calls.find((request) => request.endpointKey === "contractA
 assert.equal(acceptRequest.method, "POST");
 assert.equal(acceptRequest.path, "/players/me/contracts/arrival-orientation/accept");
 assert.equal(acceptRequest.payload, undefined);
-assert.equal(acceptRequest.headers["x-player-session-token"], "token-1");
+assert.equal(acceptRequest.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(acceptRequest.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(acceptRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(acceptRequest.headers["x-player-session-token"], undefined);
+assert.equal(acceptRequest.headers.Authorization, undefined);
 assert.equal("x-game-session-id" in acceptRequest.headers, false);
 assert.equal("x-player-id" in acceptRequest.headers, false);
 
@@ -190,4 +170,4 @@ assert.equal(
   "Contract list and acceptance must not forward browser-owned game scope."
 );
 
-console.log("Connected Contract acceptance passed: manifest gating, public-key write, committed success, invalidation, and authoritative refresh are valid.");
+console.log("Connected Contract acceptance passed: cookie-session binding, manifest gating, public-key write, invalidation, and authoritative refresh are valid.");
