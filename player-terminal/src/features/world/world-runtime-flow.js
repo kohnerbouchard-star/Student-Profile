@@ -1,7 +1,7 @@
 import { PlayerApi } from "../../api/player-api.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { normalizeApiError } from "../../api/errors.js";
-import { renderWorldPage } from "../../pages/world-page.js";
+import { resetWorldRouteViewState, setWorldRouteViewState } from "./world-route-view-state.js";
 
 const STALE_AFTER_MS = 60_000;
 
@@ -103,10 +103,6 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     return terminal.getState()?.data?.capabilities || { routes: {}, actions: {} };
   }
 
-  function pageHost() {
-    return mount.querySelector(".player-terminal-page-host");
-  }
-
   function syncTerminalWorldModel(terminalState) {
     const source = terminalState?.data?.worldRuntime;
     if (!hasReadyWorldResource(terminalState) || !source || source === terminalWorldSource) return false;
@@ -122,18 +118,14 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     const terminalState = terminal.getState();
     if (destroyed || !isWorldRoute(terminalState)) return;
     syncTerminalWorldModel(terminalState);
-    const host = pageHost();
-    if (!host) return;
-    const offline = globalThis.navigator?.onLine === false;
-    const stale = Boolean(updatedAt && Date.now() - updatedAt > STALE_AFTER_MS);
-    host.innerHTML = renderWorldPage(model, {
+    setWorldRouteViewState({
+      model,
+      quote,
       state: state === "loading" && !model ? "loading" : state === "unavailable" && !model ? "unavailable" : "ready",
       message,
-      quote,
-      offline,
-      stale,
-      capabilities: currentCapabilities(),
+      updatedAt,
     });
+    terminal.requestRender?.();
   }
 
   function scheduleRender() {
@@ -332,6 +324,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
       mount.removeEventListener("click", handleClick);
       globalThis.removeEventListener("online", handleConnectivity);
       globalThis.removeEventListener("offline", handleConnectivity);
+      resetWorldRouteViewState();
     },
   });
 }
