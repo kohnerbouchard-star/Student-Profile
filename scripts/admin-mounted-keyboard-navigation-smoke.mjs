@@ -233,34 +233,7 @@ async function activeElementDetail(page) {
   }, EXCLUDED_SELECTOR);
 }
 
-async function waitForStableSequentialFocusSurface(page, section) {
-  let previousCount = -1;
-  let stableSamples = 0;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const snapshot = await page.evaluate((excludedSelector) => {
-      const busy = Boolean(document.querySelector('[aria-busy="true"], [data-admin-shape-skeleton-stage], .admin-shape-surface-overlay'));
-      const selector = "a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])";
-      const count = [...document.querySelectorAll(selector)].filter((node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        if (("disabled" in node && node.disabled === true) || node.getAttribute("aria-disabled") === "true") return false;
-        if (node.closest(excludedSelector)) return false;
-        const style = getComputedStyle(node);
-        const rect = node.getBoundingClientRect();
-        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-      }).length;
-      return { busy, count };
-    }, EXCLUDED_SELECTOR);
-    if (!snapshot.busy && snapshot.count === previousCount) stableSamples += 1;
-    else stableSamples = 0;
-    if (stableSamples >= 2) return;
-    previousCount = snapshot.count;
-    await page.waitForTimeout(100);
-  }
-  throw new Error(`${section} focus surface did not reach a stable ready state.`);
-}
-
 async function tabRoundTrip(page, startControl, section) {
-  await waitForStableSequentialFocusSurface(page, section);
   await startControl.focus();
   assert(await startControl.evaluate((node) => document.activeElement === node), `${section} navigation control could not receive focus.`);
 
