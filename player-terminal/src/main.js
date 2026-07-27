@@ -6,6 +6,7 @@ import { installBankingReadFlow } from "./features/banking/banking-read-flow.js"
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installMessageIntentAdapter } from "./features/messages/message-intent-adapter.js";
+import { installMessageReadFlow } from "./features/messages/message-read-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
 import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
@@ -27,6 +28,7 @@ const formDrafts = installFormDraftPreserver(mount, {
 const messageIntents = installMessageIntentAdapter({ mount, drafts: formDrafts });
 
 const terminal = createPlayerTerminal({ mount, config });
+const messageReads = installMessageReadFlow({ mount, terminal, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
 const logout = installPlayerLogoutController({ terminal, config, mount });
 const localControls = installLocalControlsFlow({ mount, terminal });
@@ -49,6 +51,7 @@ terminal.destroy = () => {
   marketOrders.destroy();
   storePurchases.destroy();
   localControls.destroy();
+  messageReads.destroy();
   messageIntents.destroy();
   formDrafts.destroy();
   countryFocus.destroy();
