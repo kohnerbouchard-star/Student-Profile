@@ -24,6 +24,7 @@ import { renderProgressionPage } from "../src/pages/progression-page.js";
 import { renderProfilePage } from "../src/pages/profile-page.js";
 
 const clone = (value) => structuredClone(value);
+const csrfToken = "A".repeat(43);
 
 assert.equal(previewData.countries.length, 10, "World map should expose ten countries.");
 assert.equal(ECONOVARIA_COUNTRY_REGIONS.length, 10, "Interactive map should expose ten clickable country regions.");
@@ -175,24 +176,32 @@ for (const request of [
   await assert.rejects(transport.request(request), ApiConnectionPendingError);
 }
 
-
-const handoff = normalizePlayerSessionHandoff({ session: { token: "ps_test", gameSessionId: "game-1" } });
-assert.equal(handoff.playerSessionToken, "ps_test");
+const handoff = normalizePlayerSessionHandoff({
+  authenticated: true,
+  csrfToken,
+  absoluteExpiresAt: "2026-07-27T08:00:00.000Z",
+  gameSession: { id: "game-1" }
+});
+assert.equal(handoff.authenticated, true);
+assert.equal(handoff.csrfToken, csrfToken);
 assert.equal(handoff.gameSessionId, "game-1");
+assert.equal("playerSessionToken" in handoff, false);
 
 let adapterContext = null;
 const adapter = new AdapterTransport(async (context) => {
   adapterContext = context;
   return { ok: true };
 }, {
-  playerSessionToken: "ps_test",
+  authenticated: true,
+  csrfToken,
   gameSessionId: "game-1",
-  playerSessionId: "session-1",
-  accessToken: ""
+  sessionProvider: () => ({ authenticated: true, csrfToken, gameSessionId: "game-1" })
 });
 await adapter.request({ endpointKey: "dashboard", method: "GET", path: "/dashboard" });
-assert.equal(adapterContext.session.playerSessionToken, "ps_test");
+assert.equal(adapterContext.session.authenticated, true);
+assert.equal(adapterContext.session.csrfToken, csrfToken);
 assert.equal(adapterContext.session.gameSessionId, "game-1");
+assert.equal("playerSessionToken" in adapterContext.session, false);
 assert.equal(adapterContext.endpointKey, "dashboard");
 
-console.log("Smoke test passed: v7.4 routes, read models, write boundaries, session handoff, generic API adapter, and interactive map contract are valid.");
+console.log("Smoke test passed: v7.5 routes, read models, write boundaries, cookie-session handoff, generic API adapter, and interactive map contract are valid.");
