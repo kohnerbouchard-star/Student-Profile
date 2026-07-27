@@ -12,6 +12,24 @@ function replaceRequired(source, label, before, after) {
   return source.replaceAll(before, after);
 }
 
+function preserveBffReplayHeaders(source) {
+  return source.replace(
+    /const allowed = new Set\(\[([\s\S]*?)\]\);/gu,
+    (match, body) => {
+      if (!body.includes("x-player-session") || body.includes("x-econovaria-csrf-token")) {
+        return match;
+      }
+      if (!body.includes('"x-request-id"')) {
+        throw new Error("Connected Player replay allowlist has no request-ID anchor.");
+      }
+      return match.replace(
+        '"x-request-id"',
+        '"x-econovaria-csrf-token", "x-econovaria-device-id", "x-request-id"',
+      );
+    },
+  );
+}
+
 export async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
@@ -28,14 +46,7 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
     '    if (!url.includes("/functions/v1/classroom-api/")) return;',
     '    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/")) return;',
   );
-  source = source.replaceAll(
-    '"x-player-session-token", "x-request-id"',
-    '"x-player-session-token", "x-econovaria-csrf-token", "x-econovaria-device-id", "x-request-id"',
-  );
-  source = source.replaceAll(
-    '"x-player-session-token", "x-request-id",',
-    '"x-player-session-token", "x-econovaria-csrf-token", "x-econovaria-device-id", "x-request-id",',
-  );
+  source = preserveBffReplayHeaders(source);
   source = source.replaceAll(
     'cache: "no-store" });',
     'cache: "no-store", credentials: "include" });',
