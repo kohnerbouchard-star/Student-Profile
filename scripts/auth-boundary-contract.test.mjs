@@ -26,10 +26,6 @@ const standaloneAdminClients = [
   "admin/world-runtime-console-client.js",
 ];
 
-const interceptedAdminClients = new Set([
-  "admin/inventory-redemption-queue-client.js",
-]);
-
 test("auth ledger is complete, unique, and machine-readable", async () => {
   const ledger = JSON.parse(await read("docs/security/auth-boundary-ledger-v1.json"));
   assert.equal(ledger.schemaVersion, "econovaria-auth-boundary-ledger-v1");
@@ -139,8 +135,13 @@ test("standalone Admin clients remain cookie and CSRF bound", async () => {
     assert.doesNotMatch(source, /AdminAuthSessionManager/);
     assert.doesNotMatch(source, /authorization/i);
 
-    if (interceptedAdminClients.has(path)) {
-      assert.match(source, /apiBase\s*=\s*"\/api\/admin"/);
+    if (/global\.AdminAdapter|adapter\(\)\.request/.test(source)) {
+      assert.match(source, /\/games\/\$\{encodeURIComponent\((?:id|gameId)\)\}/);
+      assert.match(source, /\.request\(\{|adapter\(\)\.request/);
+      continue;
+    }
+
+    if (/apiBase\s*=\s*"\/api\/admin"/.test(source)) {
       assert.match(source, /\/games\/\$\{encodeURIComponent\(selectedGameId\)\}/);
       assert.match(source, /credentials:\s*"same-origin"/);
       continue;
