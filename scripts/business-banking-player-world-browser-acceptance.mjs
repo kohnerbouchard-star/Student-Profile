@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const CONNECTED_JOURNEYS = Object.freeze([
+  "../player-terminal/tools/connected-world-questionnaire-runner.mjs",
   "../player-terminal/tools/connected-world-mutation-runner.mjs",
   "../player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
   "../player-terminal/tools/connected-marketplace-mutation-runner.mjs",
