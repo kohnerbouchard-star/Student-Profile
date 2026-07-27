@@ -78,6 +78,15 @@ function bearerToken(request) {
     .trim();
 }
 
+type AuthUserLookupClient = {
+  auth: {
+    getUser(token: string): Promise<{
+      data: { user: { id?: string } | null };
+      error: unknown;
+    }>;
+  };
+};
+
 export async function resolveContext(request) {
   const token = bearerToken(request);
   if (!token) {
@@ -96,7 +105,8 @@ export async function resolveContext(request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const userResult = await authClient.auth.getUser(token);
+  const userResult = await (authClient as unknown as AuthUserLookupClient).auth
+    .getUser(token);
   const user = userResult.data?.user;
   if (userResult.error || !user?.id) {
     return {
