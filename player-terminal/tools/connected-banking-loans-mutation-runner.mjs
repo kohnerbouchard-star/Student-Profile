@@ -130,12 +130,12 @@ function seedBankingAndLoanProduct() {
       from public.account_balances ab
       where ab.game_session_id = v_game_id
         and ab.player_id = v_player_id
-        and ab.account_type = 'cash'
+        and ab.account_type = 'checking'
       limit 1;
       v_currency := coalesce(v_currency, 'ECO');
 
       perform public.record_player_ledger_entry(
-        v_game_id, v_player_id, 'cash', 10000, v_currency,
+        v_game_id, v_player_id, 'checking', 10000, v_currency,
         'credit', 'acceptance', 'connected_banking_seed', gen_random_uuid(),
         'system', null, jsonb_build_object('disposable', true)
       );
@@ -220,12 +220,12 @@ function numberFromText(value) {
 }
 
 async function bankingBalances(page) {
-  const cash = page.locator('[data-player-banking-balance^="cash:"] h3').first();
+  const checking = page.locator('[data-player-banking-balance^="checking:"] h3').first();
   const savings = page.locator('[data-player-banking-balance^="savings:"] h3').first();
-  await cash.waitFor({ state: "visible", timeout: 30_000 });
+  await checking.waitFor({ state: "visible", timeout: 30_000 });
   await savings.waitFor({ state: "visible", timeout: 30_000 });
   return {
-    cash: numberFromText(await cash.textContent()),
+    checking: numberFromText(await checking.textContent()),
     savings: numberFromText(await savings.textContent()),
   };
 }
@@ -269,7 +269,7 @@ async function proveSavings(page, fixtureData) {
 
   await reloadRoute(page, "banking", ".player-terminal-banking-page");
   const after = await bankingBalances(page);
-  if (Math.abs(after.cash - (before.cash - 10)) > 0.01 || Math.abs(after.savings - (before.savings + 10)) > 0.01) {
+  if (Math.abs(after.checking - (before.checking - 10)) > 0.01 || Math.abs(after.savings - (before.savings + 10)) > 0.01) {
     throw new Error(`Savings balances did not persist: ${JSON.stringify({ before, after })}`);
   }
   evidence.savings.persisted = true;
@@ -280,7 +280,7 @@ async function proveSavings(page, fixtureData) {
   }
   await reloadRoute(page, "banking", ".player-terminal-banking-page");
   const afterReplay = await bankingBalances(page);
-  if (Math.abs(afterReplay.cash - after.cash) > 0.01 || Math.abs(afterReplay.savings - after.savings) > 0.01) {
+  if (Math.abs(afterReplay.checking - after.checking) > 0.01 || Math.abs(afterReplay.savings - after.savings) > 0.01) {
     throw new Error("Savings replay duplicated the transfer.");
   }
   evidence.savings.replaySafe = true;
@@ -348,7 +348,7 @@ function approveLatestApplication() {
 
       select ledger_entry_id into v_ledger_entry
       from public.record_player_ledger_entry(
-        v_application.game_session_id, v_application.player_id, 'cash', v_application.amount,
+        v_application.game_session_id, v_application.player_id, 'checking', v_application.amount,
         v_product.currency_code, 'credit', 'loans', 'loan_disbursement', v_loan_id,
         'system', null, jsonb_build_object('loan_key', '${LOAN_KEY}', 'disposable', true)
       );
@@ -361,14 +361,14 @@ function approveLatestApplication() {
 
 async function proveLoans(page, fixtureData) {
   await openRoute(page, "loans", ".player-terminal-loans-page");
-  const offer = page.locator('[data-player-loan-offer]').filter({ hasText: "Connected Player Credit" }).first();
+  const offer = page.locator("[data-player-loan-offer]").filter({ hasText: "Connected Player Credit" }).first();
   await offer.waitFor({ state: "visible", timeout: 30_000 });
   await offer.click();
   const form = page.locator(`form[data-endpoint="loanApply"][data-offer-id="${LOAN_PRODUCT_KEY}"]`);
   await form.waitFor({ state: "visible", timeout: 30_000 });
   await form.locator('[name="amount"]').fill("500");
   await form.locator('[name="purpose"]').selectOption({ index: 0 });
-  await form.locator('[name="repaymentSource"]').fill("Connected gameplay income and existing cash reserves.");
+  await form.locator('[name="repaymentSource"]').fill("Connected gameplay income and existing checking reserves.");
   const beforeApplications = applicationCount();
   const responsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith(`/players/me/banking/loans/applications/${LOAN_PRODUCT_KEY}`) && response.request().method() === "POST",
