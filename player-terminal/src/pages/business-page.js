@@ -20,6 +20,7 @@ function productRow(product, business, currencyCode) {
     <dl><div><dt>PRICE</dt><dd>${escapeHtml(formatCurrency(product.price, currencyCode))}</dd></div><div><dt>MARGIN</dt><dd>${escapeHtml(formatPercent(product.margin, 1))}</dd></div><div><dt>DEMAND</dt><dd>${escapeHtml(product.demand)}</dd></div></dl>
     <form data-player-form="business-price" data-endpoint="businessPrice" data-product-id="${escapeHtml(product.id)}">
       ${hiddenBusinessKey(business)}
+      <input name="productKey" type="hidden" value="${escapeHtml(product.id)}" />
       <input name="expectedVersion" type="hidden" value="${escapeHtml(product.version)}" />
       <label>NEW PRICE<input name="price" type="number" min="0.01" max="1000000" step="0.01" value="${escapeHtml(product.price)}" required /></label>
       <button class="player-terminal-compact-button" type="submit">${icon("edit")} Update</button>
