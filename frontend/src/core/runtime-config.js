@@ -136,6 +136,9 @@
     const webSessionApiUrl = environment === "production"
       ? "/api/admin-session"
       : `${apiBaseUrl}/functions/v1/web-session-api`;
+    const adminLogoutApiUrl = environment === "production"
+      ? "/api/admin-logout"
+      : `${apiBaseUrl}/functions/v1/admin-logout-api`;
     const adminBffApiUrl = environment === "production"
       ? "/api/admin"
       : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
@@ -155,6 +158,7 @@
       bootstrapApiUrl,
       adminApiUrl,
       webSessionApiUrl,
+      adminLogoutApiUrl,
       adminBffApiUrl,
       passwordResetApiUrl,
       classroomApiUrl: staffApiUrl,
