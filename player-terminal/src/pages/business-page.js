@@ -6,6 +6,13 @@ function hiddenBusinessKey(business) {
   return `<input name="businessKey" type="hidden" value="${escapeHtml(business.company.id)}" />`;
 }
 
+function playerBusinessCurrencyCode(data) {
+  const countries = Array.isArray(data.countries) ? data.countries : [];
+  const playerCountry = countries.find((country) => country?.isPlayerCountry === true);
+  const candidate = String(playerCountry?.currencyCode || data.session?.currencyCode || "ECO").trim().toUpperCase();
+  return /^[A-Z][A-Z0-9_]{2,15}$/.test(candidate) ? candidate : "ECO";
+}
+
 function productRow(product, business, currencyCode) {
   return `<article class="player-terminal-business-product">
     <span class="player-terminal-product-icon">${icon(product.icon || "factory")}</span>
@@ -86,7 +93,7 @@ function statusForm(business) {
 
 export function renderBusinessPage(data) {
   const business = data.business;
-  const code = data.session.currencyCode;
+  const code = playerBusinessCurrencyCode(data);
   if (!business.configured) {
     return `<section class="player-terminal-page player-terminal-business-page">
       <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Create or acquire one game-scoped enterprise using your authoritative country and currency.</p></div></div>
