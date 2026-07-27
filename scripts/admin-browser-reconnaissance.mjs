@@ -237,7 +237,7 @@ try {
   await page.locator("#confirmAccessCode").fill(ADMIN_PASSWORD);
 
   const signupResponsePromise = page.waitForResponse(
-    (response) => response.url().includes("/functions/v1/classroom-api/staff/signup"),
+    (response) => response.url().includes("/functions/v1/bootstrap-api/staff/signup"),
     { timeout: 180_000 },
   );
   await page.getByRole("button", { name: "Create Game", exact: true }).click();
