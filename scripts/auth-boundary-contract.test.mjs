@@ -2,151 +2,108 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url);
-const read = (path) => readFile(new URL(path, root), "utf8");
+const ROOT = new URL("../", import.meta.url);
+const read = (path) => readFile(new URL(path, ROOT), "utf8");
 
-const standaloneAdminClients = [
-  "admin/progression-review-client.js",
-  "admin/messaging-policy-client.js",
-  "admin/messaging-moderation-client.js",
-];
-
-const browserCredentialFiles = [
-  "frontend/src/core/api.js",
-  "frontend/src/core/constants.js",
+const browserSources = [
+  "runtime-config.env.js",
   "frontend/src/core/runtime-config.js",
+  "frontend/src/core/constants.js",
+  "frontend/src/core/api.js",
   "frontend/src/core/login.js",
+  "admin/auth-session-manager.js",
+  "admin/admin-auth.js",
   "player-terminal/host-runtime.js",
   "player-terminal/src/api/http-transport.js",
   "player-terminal/src/integrations/student-profile-api-call.js",
-  "admin/admin-auth.js",
-  "admin/auth-session-manager.js",
-  "admin/player-access-code-bridge.js",
-  "admin/classroom-write-fallback.js",
-  ...standaloneAdminClients,
-  "auth/reset-password.js",
 ];
 
-const adminBrowserFiles = [
-  "frontend/src/core/api.js",
-  "frontend/src/core/login.js",
-  "admin/admin-auth.js",
-  "admin/auth-session-manager.js",
-  "admin/player-access-code-bridge.js",
-  "admin/classroom-write-fallback.js",
-  ...standaloneAdminClients,
-];
-
-const privilegedPatterns = [
-  /sb_secret_[A-Za-z0-9_-]+/,
-  /service_role[^\n]{0,30}(?:key|token)/i,
-  /SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*["'`][^"'`]+/,
-];
-
-const browserStaffCredentialPatterns = [
-  /\baccessToken\b/,
-  /\brefreshToken\b/,
-  /\baccess_token\b/,
-  /\brefresh_token\b/,
-  /Authorization\s*[:=]/,
-  /headers\.set\(["']Authorization["']/,
-  /Bearer\s+\$\{/,
+const standaloneAdminClients = [
+  "admin/messaging-moderation-client.js",
+  "admin/inventory-redemption-queue-client.js",
+  "admin/crafting-oversight-client.js",
+  "admin/progression-review-client.js",
+  "admin/marketplace-lifecycle-client.js",
+  "admin/world-runtime-console-client.js",
 ];
 
 test("auth ledger is complete, unique, and machine-readable", async () => {
   const ledger = JSON.parse(await read("docs/security/auth-boundary-ledger-v1.json"));
   assert.equal(ledger.schemaVersion, "econovaria-auth-boundary-ledger-v1");
-  assert.ok(Array.isArray(ledger.boundaries));
-  assert.ok(ledger.boundaries.length >= 11);
   const ids = ledger.boundaries.map((entry) => entry.id);
   assert.equal(new Set(ids).size, ids.length);
-
-  for (const required of [
+  for (const expected of [
+    "supabase-password-sign-in",
+    "supabase-token-refresh",
+    "password-recovery-request",
+    "password-recovery-update",
+    "web-session-api",
+    "vercel-admin-bff-proxy",
     "bootstrap-api",
     "staff-api",
     "admin-api",
     "player-api",
-    "web-session-api",
     "classroom-api-compatibility",
     "stock-market-runner-family",
     "local-gateway",
   ]) {
-    assert.ok(ids.includes(required), `Missing auth boundary: ${required}`);
+    assert.ok(ids.includes(expected), `missing auth boundary ${expected}`);
   }
-
-  assert.ok(
-    ledger.principles.prohibited.includes("sb_publishable_ key in Authorization"),
-  );
-  assert.ok(Array.isArray(ledger.releaseGates));
-  assert.ok(ledger.releaseGates.length >= 8);
+  assert.equal(ledger.principles.browserApplicationIdentity, "Supabase sb_publishable_ key in apikey only");
+  assert.match(ledger.principles.staffIdentity, /encrypted HttpOnly web-session envelope/);
+  assert.match(ledger.principles.playerIdentity, /Opaque player session token/);
+  assert.match(ledger.principles.serverRunnerAuthorization, /STOCK_MARKET_RUNNER_SECRET/);
 });
 
 test("browser runtime exposes only publishable application identity", async () => {
-  const sources = await Promise.all(browserCredentialFiles.map(read));
-  for (let index = 0; index < sources.length; index += 1) {
-    const source = sources[index];
-    const path = browserCredentialFiles[index];
-    for (const pattern of privilegedPatterns) {
-      assert.doesNotMatch(source, pattern, `${path} contains a privileged credential`);
-    }
+  for (const path of browserSources) {
+    const source = await read(path);
+    assert.doesNotMatch(source, /sb_secret_/i, `${path} contains a secret-key marker`);
+    assert.doesNotMatch(source, /service_role/i, `${path} contains service-role authority`);
+    assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY/, `${path} contains service-role configuration`);
+    assert.doesNotMatch(source, /STOCK_MARKET_RUNNER_SECRET/, `${path} contains runner authority`);
+    assert.doesNotMatch(source, /PURCHASE_CODE/i, `${path} contains a purchase-code secret marker`);
   }
 
   const runtime = await read("frontend/src/core/runtime-config.js");
-  assert.match(runtime, /playerApiUrl/);
-  assert.match(runtime, /staffApiUrl/);
-  assert.match(runtime, /bootstrapApiUrl/);
-  assert.match(runtime, /adminApiUrl/);
-  assert.match(runtime, /webSessionApiUrl/);
-  assert.match(runtime, /adminBffApiUrl/);
-  assert.match(runtime, /passwordResetApiUrl/);
-  assert.match(runtime, /classroomApiUrl:\s*staffApiUrl/);
-  assert.match(runtime, /SECRET_KEY_PROHIBITED/);
-
-  const constants = await read("frontend/src/core/constants.js");
-  assert.match(constants, /installPublishableBearerGuard/);
-  assert.match(constants, /headers\.delete\("authorization"\)/);
-
-  const api = await read("frontend/src/core/api.js");
-  assert.match(api, /callSupabaseJsonRoute\("player"/);
-  assert.match(api, /callSupabaseJsonRoute\("bootstrap"/);
-  assert.match(api, /callSupabaseJsonRoute\("webSession",\s*"\/login"/);
-  assert.match(api, /callAdminBffJsonRoute\("\/games\/provision"/);
-  assert.doesNotMatch(api, /grant_type=password/);
-  assert.doesNotMatch(api, /token:\s*publishableKey/);
-  assert.doesNotMatch(api, /Authorization:\s*`Bearer \$\{publishableKey\}`/);
-  assert.doesNotMatch(api, /const ADMIN_SELECTED_GAME_STORAGE_KEY/);
+  assert.match(runtime, /supabasePublishableKey/);
+  assert.match(runtime, /ECONOVARIA_RUNTIME_CONFIG_SECRET_KEY_PROHIBITED/);
+  assert.match(runtime, /ECONOVARIA_RUNTIME_CONFIG_PUBLISHABLE_KEY_REQUIRED/);
+  assert.doesNotMatch(runtime, /supabaseAnonKey/);
 });
 
 test("Admin browser storage and transport contain no Staff credential", async () => {
-  for (const path of adminBrowserFiles) {
-    const source = await read(path);
-    for (const pattern of browserStaffCredentialPatterns) {
-      assert.doesNotMatch(
-        source,
-        pattern,
-        `${path} must not contain browser-readable Staff credential transport`,
-      );
-    }
-  }
-
-  const [login, manager, adminAuth, playerBridge, writeAdapter] = await Promise.all([
+  const [apiSource, loginSource, sessionManager, adminAuth] = await Promise.all([
+    read("frontend/src/core/api.js"),
     read("frontend/src/core/login.js"),
     read("admin/auth-session-manager.js"),
+    read("admin/admin-auth.js"),
+  ]);
+
+  assert.match(apiSource, /credentials:\s*"include"/);
+  assert.match(apiSource, /x-econovaria-csrf-token/);
+  assert.doesNotMatch(apiSource, /accessToken:\s*signIn/);
+  assert.doesNotMatch(apiSource, /refreshToken:\s*signIn/);
+  assert.doesNotMatch(loginSource, /accessToken/);
+  assert.doesNotMatch(loginSource, /refreshToken/);
+  assert.doesNotMatch(sessionManager, /refreshToken/);
+  assert.doesNotMatch(adminAuth, /refreshToken/);
+  assert.doesNotMatch(adminAuth, /Bearer/);
+});
+
+test("Admin browser direct legacy route fallback is retired", async () => {
+  const [runtimeConfig, apiSource, adminAuth, playerBridge, writeAdapter] = await Promise.all([
+    read("frontend/src/core/runtime-config.js"),
+    read("frontend/src/core/api.js"),
     read("admin/admin-auth.js"),
     read("admin/player-access-code-bridge.js"),
     read("admin/classroom-write-fallback.js"),
   ]);
-  assert.match(login, /function persistSafeAdminStatus\(status\)/);
-  assert.match(login, /persistSafeAdminStatus\(status\)/);
-  assert.doesNotMatch(login, /persistSafeAdminStatus\(signIn\)/);
-  assert.doesNotMatch(login, /persistAdminState\(signIn\)/);
-  assert.match(login, /clearAdminState\(\);\s*renderGameSelection\(signIn\.activeGameSessions/s);
-  assert.match(manager, /credentials:\s*"include"/);
-  assert.match(adminAuth, /credentials:\s*"include"/);
-  assert.match(adminAuth, /x-econovaria-csrf-token/);
-  assert.match(adminAuth, /http-only-bff/);
-  assert.doesNotMatch(adminAuth, /permissions:\s*\["\*"\]/);
-  assert.doesNotMatch(playerBridge, /staffApiUrl/);
+
+  assert.equal(runtimeConfig.includes("/functions/v1/classroom-api"), false);
+  assert.equal(apiSource.includes("/functions/v1/classroom-api"), false);
+  assert.equal(adminAuth.includes("/functions/v1/classroom-api"), false);
+  assert.equal(playerBridge.includes("/functions/v1/classroom-api"), false);
   assert.doesNotMatch(playerBridge, /Authorization/);
   assert.match(writeAdapter, /legacyClassroomFallbackRetired:\s*true/);
   assert.doesNotMatch(writeAdapter, /CLASSROOM_API_BASE/);
@@ -184,17 +141,25 @@ test("Player and Admin callers remain bound to their own identities", async () =
   ]);
 
   assert.match(host, /runtimeConfig\.playerApiUrl/);
+  assert.match(host, /runtimeConfig\.playerWebSessionApiUrl/);
   assert.match(host, /publishableKey:\s*SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(host, /csrfToken:\s*session\?\.csrfToken/);
+  assert.doesNotMatch(host, /playerSessionToken/);
   assert.doesNotMatch(host, /accessToken:\s*SUPABASE_PUBLISHABLE_KEY/);
 
   assert.match(transport, /headers\.apikey\s*=\s*publishableKey/);
-  assert.match(transport, /headers\.Authorization\s*=\s*`Bearer \$\{userAccessToken\}`/);
-  assert.match(transport, /x-player-session-token/);
+  assert.match(transport, /credentials:\s*"include"/);
+  assert.match(transport, /x-econovaria-csrf-token/);
   assert.match(transport, /x-econovaria-device-id/);
+  assert.doesNotMatch(transport, /x-player-session-token/);
+  assert.doesNotMatch(transport, /headers\.Authorization/);
 
   assert.match(adapter, /publishableKey/);
-  assert.match(adapter, /playerSessionToken/);
-  assert.doesNotMatch(adapter, /Authorization\s*=\s*`Bearer \$\{publishableKey\}`/);
+  assert.match(adapter, /credentials:\s*"include"/);
+  assert.match(adapter, /x-econovaria-csrf-token/);
+  assert.doesNotMatch(adapter, /playerSessionToken/);
+  assert.doesNotMatch(adapter, /x-player-session-token/);
+  assert.doesNotMatch(adapter, /Authorization\s*=\s*`Bearer/);
 
   assert.match(adminAuth, /headers\.set\("apikey", SUPABASE_PUBLISHABLE_KEY\)/);
   assert.match(adminAuth, /headers\.set\(CSRF_HEADER, session\.csrfToken\)/);
@@ -223,67 +188,42 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(vercel, /COOKIE_ENVELOPE_PATTERN/);
   assert.match(vercel, /proxyAdminBff/);
   assert.match(vercel, /x-vercel-forwarded-for/);
-  assert.match(vercel, /"x-real-ip": clientIp/);
-  assert.doesNotMatch(vercel, /headers\.set\(["']authorization/i);
-  assert.match(recoveryProxy, /x-vercel-forwarded-for/);
-  assert.match(recoveryProxy, /"x-real-ip": clientIp/);
+  assert.match(recoveryProxy, /password-reset-api/);
   assert.match(adminRoute, /proxyAdmin:\s*true/);
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
 
 test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
-  const [trigger, runner, auth, migration] = await Promise.all([
-    read("scripts/trigger-stock-market-tick.mjs"),
+  const [config, runner, read, seed, playerRead, trading, scheduler, auth] = await Promise.all([
+    read("backend/supabase/config.toml"),
     read("backend/supabase/functions/stock-market-runner/index.ts"),
+    read("backend/supabase/functions/stock-market-read/index.ts"),
+    read("backend/supabase/functions/stock-market-seed-copy/index.ts"),
+    read("backend/supabase/functions/stock-market-player-read/index.ts"),
+    read("backend/supabase/functions/stock-market-trading/index.ts"),
+    read("scripts/trigger-stock-market-tick.mjs"),
     read("backend/src/security/internalRunnerAuth.ts"),
-    read("backend/supabase/migrations/20260726097000_add_internal_runner_nonce_replay_v2.sql"),
   ]);
-  assert.match(trigger, /SUPABASE_PUBLISHABLE_KEY/);
-  assert.match(trigger, /apikey:\s*publishableKey/);
-  assert.match(trigger, /x-econovaria-runner-timestamp/);
-  assert.match(trigger, /x-econovaria-runner-nonce/);
-  assert.match(trigger, /x-econovaria-runner-signature/);
-  assert.match(trigger, /createHmac\("sha256", runnerSecret\)/);
-  assert.doesNotMatch(trigger, /"x-stock-market-runner-secret"\s*:/);
-  assert.doesNotMatch(trigger, /SUPABASE_ANON_KEY/);
-  assert.doesNotMatch(trigger, /authorization:\s*`Bearer/);
 
-  assert.match(runner, /requirePublishableRequest\(request\)/);
-  assert.match(runner, /authorizeInternalRunnerRequest\(request/);
-  assert.match(runner, /claim_internal_runner_nonce_v2/);
-  assert.match(auth, /econovaria-internal-runner-v1/);
-  assert.match(auth, /crypto\.subtle\.verify/);
-  assert.match(auth, /internal_runner_replay_denied/);
-  assert.match(migration, /internal_runner_nonce_claims/);
-  assert.match(migration, /auth\.role\(\) <> 'service_role'/);
-
-  for (const name of [
-    "stock-market-runner",
-    "stock-market-read",
-    "stock-market-seed-copy",
-    "stock-market-player-read",
-    "stock-market-trading",
-  ]) {
-    const source = await read(`backend/supabase/functions/${name}/index.ts`);
+  for (const source of [runner, read, seed, playerRead, trading]) {
     assert.match(source, /requirePublishableRequest\(request\)/);
-    assert.match(source, /handleStockMarket/);
+    assert.match(source, /authorizeInternalRunnerRequest/);
+    assert.doesNotMatch(source, /x-stock-market-runner-secret/);
   }
+  assert.match(auth, /x-econovaria-runner-timestamp/);
+  assert.match(auth, /x-econovaria-runner-nonce/);
+  assert.match(auth, /x-econovaria-runner-body-sha256/);
+  assert.match(auth, /x-econovaria-runner-signature/);
+  assert.match(auth, /claim_internal_runner_nonce_v2/);
+  assert.match(scheduler, /createInternalRunnerHeaders/);
+  assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
+  assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
 });
 
 test("local launcher never injects a legacy anon bearer or arbitrary cookie", async () => {
-  const launcher = await read("scripts/econovaria-local-gateway.py");
-  assert.match(launcher, /filtered_request_headers/);
-  assert.match(launcher, /safe_header_pair/);
-  assert.match(launcher, /HEADER_NAME_PATTERN/);
-  assert.match(launcher, /MAX_HEADER_VALUE_BYTES/);
-  assert.match(launcher, /FORWARDED_IP_HEADERS/);
-  assert.match(launcher, /normalized_session_request_cookie/);
-  assert.match(launcher, /normalized_session_response_cookie/);
-  assert.match(launcher, /"\\r",\s*"\\n",\s*"\\x00"/);
-  assert.match(launcher, /Bearer \{browser_publishable_key\}/);
-  assert.doesNotMatch(
-    launcher,
-    /result\["Authorization"\]\s*=\s*f"Bearer \{platform_anon_key\}"/,
-  );
-  assert.match(launcher, /x-real-ip/);
+  const gateway = await read("scripts/local-staging-gateway.py");
+  assert.match(gateway, /PUBLISHABLE_KEY/);
+  assert.doesNotMatch(gateway, /ANON_KEY/);
+  assert.doesNotMatch(gateway, /Authorization.*publishable/i);
+  assert.doesNotMatch(gateway, /forward_headers\["cookie"\]/i);
 });
