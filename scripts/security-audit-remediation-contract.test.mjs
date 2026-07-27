@@ -8,14 +8,17 @@ test("password reset fails closed before changing credentials", async () => {
   const source = await read("backend/supabase/functions/password-reset-api/index.ts");
   const revokeIndex = source.indexOf("const sessionsRevoked = await revokeAllSessions");
   const updateIndex = source.indexOf("const passwordUpdate = await service.auth.admin.updateUserById");
+  const helperIndex = source.indexOf("async function revokeAllSessions");
   assert.ok(revokeIndex >= 0, "global session revocation must be explicit");
   assert.ok(updateIndex > revokeIndex, "revocation must precede the password mutation");
+  assert.ok(helperIndex > updateIndex, "session revocation helper must remain outside the request success path");
+  const handlerTail = source.slice(updateIndex, helperIndex);
   assert.match(source, /if \(!sessionsRevoked\)[\s\S]*password_reset_session_revocation_failed/);
   assert.match(source, /if \(response\?\.ok\) return true;/);
   assert.doesNotMatch(
-    source.slice(updateIndex),
+    handlerTail,
     /sessionsRevoked:\s*true[\s\S]*revokeAllSessions/,
-    "the success response must not precede a best-effort revocation",
+    "the success response must not invoke best-effort revocation after the password mutation",
   );
 });
 
