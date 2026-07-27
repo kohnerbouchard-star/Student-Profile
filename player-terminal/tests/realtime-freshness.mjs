@@ -18,6 +18,10 @@ import {
 } from "../src/realtime/player-invalidation-controller.js";
 import { previewData } from "../src/data/preview-data.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const ROTATED_CSRF_TOKEN = "D".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+
 assert.equal(resourceFreshnessMs("market"), 5000);
 assert.equal(resourceFreshnessMs("countries"), 300000);
 assert.equal(resourceFreshnessMs("news", { news: 7 }), 7);
@@ -31,13 +35,15 @@ assert.equal(shouldRefreshCurrentRoute("market", ["dashboard"]), true, "Shell/da
 let newsReads = 0;
 const api = new PlayerApi({
   usePreviewData: false,
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: "sb_publishable_realtime_fixture",
+  deviceId: DEVICE_ID,
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   resourceFreshnessMs: { news: 5 },
   allowedImageHosts: [],
-  playerSessionToken: "token-freshness",
   gameSessionId: "game-1",
-  playerSessionId: "session-1",
   apiCall: async ({ endpointKey }) => {
     assert.equal(endpointKey, "news");
     newsReads += 1;
@@ -60,8 +66,14 @@ assert.equal(isResourceInvalidated("news"), false, "A successful authenticated r
 
 markResourceInvalidations(["market", "banking"]);
 assert.deepEqual(pendingResourceInvalidations().sort(), ["banking", "market"]);
-api.setSession({ playerSessionToken: "token-new-session", gameSessionId: "game-1", playerSessionId: "session-2" });
+api.setSession({
+  authenticated: true,
+  csrfToken: ROTATED_CSRF_TOKEN,
+  gameSessionId: "game-1",
+});
 assert.deepEqual(pendingResourceInvalidations(), [], "Session replacement must clear old-session invalidations.");
+assert.equal(api.config.csrfToken, ROTATED_CSRF_TOKEN);
+assert.equal("playerSessionToken" in api.config, false);
 
 const eventTarget = new EventTarget();
 const documentRef = new EventTarget();
@@ -116,4 +128,4 @@ assert.ok(controllerSource.includes("markResourceInvalidations"));
 assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("postgres_changes"), "The frontend invalidation boundary must not subscribe directly to economic tables.");
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
-console.log("Realtime freshness passed: TTLs, allowlisted signals, session scope, debouncing, targeted route refresh, authenticated refetch, and payload privacy are valid.");
+console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, debouncing, targeted route refresh, authenticated refetch, and payload privacy are valid.");

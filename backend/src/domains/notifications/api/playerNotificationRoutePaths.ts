@@ -1,10 +1,10 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type { PlayerNotificationRoute } from "../contracts/playerNotificationContracts.ts";
 
 export function readPlayerNotificationRoutePath(
   pathname: string,
 ): PlayerNotificationRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
 
   if (!routeSegments) return null;
 
@@ -37,13 +37,4 @@ export function readPlayerNotificationRoutePath(
   }
 
   return null;
-}
-
-function readRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-  const classroomApiIndex = segments.lastIndexOf("classroom-api");
-  if (classroomApiIndex < 0) return null;
-  return segments.slice(classroomApiIndex + 1);
 }

@@ -34,6 +34,8 @@ export interface LicensingActivationRouteDependencies {
   >;
   readonly activationRepository: LicensingActivationRepository;
   readonly runtime?: WebCryptoRuntime;
+  readonly purchaseCodeHmacSecret?: string;
+  readonly readPurchaseCodeHmacSecret?: () => string | undefined;
 }
 
 export interface LicensingActivationRouteResult {
@@ -75,6 +77,8 @@ export async function handleLicensingActivationRoute(
     {
       activationRepository: dependencies.activationRepository,
       runtime: dependencies.runtime,
+      purchaseCodeHmacSecret: dependencies.purchaseCodeHmacSecret,
+      readPurchaseCodeHmacSecret: dependencies.readPurchaseCodeHmacSecret,
     },
   );
 

@@ -6,9 +6,10 @@ const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smok
 const PLAYER_IDENTIFIER = "RFID:04A1B2C3D4";
 const ACCESS_CODE = "PLAYER-4826";
 const GAME_CODE = "SMOKE1";
-const PLAYER_SESSION_TOKEN = "ps_identity_smoke_session_token";
+const CSRF_TOKEN = "C".repeat(43);
 const PLAYER_STORAGE_KEY = "econovaria.player.auth.v1";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+const SESSION_COOKIE = "econovaria_player_session=v1.AAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBB; Path=/; HttpOnly; SameSite=Strict";
 
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
@@ -18,6 +19,8 @@ const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
 const loginRequests = [];
+const statusRequests = [];
+const proxyRequests = [];
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
@@ -36,31 +39,113 @@ await page.route("https://cdn.jsdelivr.net/**", async (route) => {
   });
 });
 
-await page.route("**/functions/v1/classroom-api/**", async (route) => {
+function corsHeaders(extra = {}) {
+  return {
+    "access-control-allow-origin": "http://127.0.0.1:4173",
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "apikey, content-type, x-econovaria-device-id, x-econovaria-csrf-token, x-request-id, idempotency-key",
+    "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "cache-control": "private, no-store",
+    ...extra,
+  };
+}
+
+function assertBrowserRequestBoundary(request, pathname) {
+  const headers = request.headers();
+  if (headers.authorization !== undefined) {
+    errors.push(`Player browser exposed Authorization on ${request.method()} ${pathname}`);
+  }
+  if (headers["x-player-session-token"] !== undefined || headers["x-econovaria-player-session-token"] !== undefined) {
+    errors.push(`Player browser exposed the retired Player token header on ${request.method()} ${pathname}`);
+  }
+  if (!headers.apikey) {
+    errors.push(`Player browser omitted publishable application identity on ${request.method()} ${pathname}`);
+  }
+}
+
+const capabilityManifest = {
+  ok: true,
+  schemaVersion: 1,
+  manifestVersion: "2026-07-27.1",
+  service: "classroom-api",
+  capabilities: {
+    routes: {
+      dashboard: false,
+      news: false,
+      market: false,
+      portfolio: false,
+      business: false,
+      contracts: false,
+      store: false,
+      marketplace: false,
+      inventory: false,
+      crafting: false,
+      banking: false,
+      loans: false,
+      messages: false,
+      progression: false,
+      profile: true,
+    },
+    actions: {
+      bankingExport: false,
+      bankTransfer: false,
+      businessHire: false,
+      businessPrice: false,
+      businessProduction: false,
+      chartRange: false,
+      contractAccept: false,
+      contractSubmit: false,
+      craftItem: false,
+      inventoryUse: false,
+      loanApply: false,
+      loanRepay: false,
+      logout: true,
+      marketOrder: false,
+      marketSearch: false,
+      marketWatchlist: false,
+      marketplaceCancel: false,
+      marketplaceListing: false,
+      marketplacePurchase: false,
+      messageAttachment: false,
+      messageSearch: false,
+      messageSend: false,
+      notificationsRead: false,
+      progressionClaim: false,
+      progressionUnlock: false,
+      savingsTransfer: false,
+      storePurchase: false,
+    },
+  },
+  endpoints: [
+    { key: "capabilities", operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }] },
+    { key: "logout", operations: [{ method: "POST", pathTemplate: "/players/me/session/logout" }] },
+  ],
+};
+
+await page.route("**/functions/v1/player-web-session-api/**", async (route) => {
   const request = route.request();
   const pathname = new URL(request.url()).pathname;
+  assertBrowserRequestBoundary(request, pathname);
 
   if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-player-session-token",
-        "access-control-allow-methods": "GET,POST,OPTIONS",
-      },
-      body: "",
-    });
+    await route.fulfill({ status: 204, headers: corsHeaders(), body: "" });
     return;
   }
 
-  if (request.method() === "POST" && pathname.endsWith("/players/login")) {
+  if (request.method() === "POST" && pathname.endsWith("/player-web-session-api/login")) {
     loginRequests.push(request.postDataJSON());
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+      headers: corsHeaders({ "set-cookie": SESSION_COOKIE }),
       body: JSON.stringify({
         ok: true,
+        csrfToken: CSRF_TOKEN,
+        session: {
+          authenticated: true,
+          expiresAt: new Date(Date.now() + 43_200_000).toISOString(),
+          absoluteExpiresAt: new Date(Date.now() + 14_400_000).toISOString(),
+        },
         gameSession: { name: "Identity Smoke Game", status: "active" },
         player: {
           displayName: "Identity Smoke Player",
@@ -68,21 +153,43 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
           playerIdentifier: PLAYER_IDENTIFIER,
           status: "active",
         },
+      }),
+    });
+    return;
+  }
+
+  if (request.method() === "GET" && pathname.endsWith("/player-web-session-api/status")) {
+    statusRequests.push(pathname);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: corsHeaders(),
+      body: JSON.stringify({
+        ok: true,
+        csrfToken: CSRF_TOKEN,
         session: {
-          token: PLAYER_SESSION_TOKEN,
-          status: "active",
+          authenticated: true,
           expiresAt: new Date(Date.now() + 43_200_000).toISOString(),
+          absoluteExpiresAt: new Date(Date.now() + 14_400_000).toISOString(),
+        },
+        gameSession: { name: "Identity Smoke Game", status: "active" },
+        player: {
+          displayName: "Identity Smoke Player",
+          rosterLabel: "GRADE-10-01",
+          playerIdentifier: PLAYER_IDENTIFIER,
+          status: "active",
         },
       }),
     });
     return;
   }
 
-  if (request.method() === "GET" && pathname.endsWith("/players/me")) {
+  if (request.method() === "GET" && pathname.endsWith("/player-web-session-api/proxy/players/me")) {
+    proxyRequests.push(pathname);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+      headers: corsHeaders(),
       body: JSON.stringify({
         ok: true,
         gameSession: { name: "Identity Smoke Game", status: "active" },
@@ -104,18 +211,47 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
     return;
   }
 
+  if (request.method() === "GET" && pathname.endsWith("/player-web-session-api/proxy/players/me/capabilities")) {
+    proxyRequests.push(pathname);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: corsHeaders(),
+      body: JSON.stringify(capabilityManifest),
+    });
+    return;
+  }
+
   await route.fulfill({
     status: 503,
     contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+    headers: corsHeaders(),
     body: JSON.stringify({
       ok: false,
       error: {
         code: "smoke_route_not_stubbed",
-        message: "This identity smoke only verifies the authenticated Player Terminal handoff.",
+        message: "This identity smoke verifies the Player HttpOnly-session handoff.",
         retryable: false,
       },
     }),
+  });
+});
+
+await page.route("**/functions/v1/player-api/**", async (route) => {
+  errors.push(`Player browser bypassed the HttpOnly BFF: ${route.request().url()}`);
+  await route.fulfill({
+    status: 500,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: false, error: { code: "direct_player_authority_forbidden" } }),
+  });
+});
+
+await page.route("**/functions/v1/classroom-api/**", async (route) => {
+  errors.push(`Player browser reached retired classroom authority: ${route.request().url()}`);
+  await route.fulfill({
+    status: 500,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: false, error: { code: "retired_player_authority" } }),
   });
 });
 
@@ -156,6 +292,9 @@ try {
   if (loginRequests.length !== 1) {
     throw new Error(`Expected exactly one login request, received ${loginRequests.length}.`);
   }
+  if (statusRequests.length !== 1) {
+    throw new Error(`Expected exactly one cookie-session status request, received ${statusRequests.length}.`);
+  }
 
   const login = loginRequests[0];
   if (
@@ -177,32 +316,44 @@ try {
       href: location.href,
       terminalMounted: Boolean(document.getElementById("playerTerminal")),
       legacyShellMounted: Boolean(document.getElementById("appShell")),
+      readableCookies: document.cookie,
     };
   }, PLAYER_STORAGE_KEY);
 
   if (
     !handoff.terminalMounted ||
     handoff.legacyShellMounted ||
-    handoff.value?.playerSessionToken !== PLAYER_SESSION_TOKEN ||
-    !handoff.value?.sessionExpiresAt
+    handoff.value?.authenticated !== true ||
+    handoff.value?.csrfToken !== CSRF_TOKEN ||
+    !handoff.value?.sessionExpiresAt ||
+    "playerSessionToken" in (handoff.value || {}) ||
+    "accessToken" in (handoff.value || {})
   ) {
-    throw new Error(`Player Terminal handoff is incomplete: ${JSON.stringify(handoff)}.`);
+    throw new Error(`Player Terminal cookie-session handoff is incomplete: ${JSON.stringify(handoff)}.`);
   }
 
   if (UUID_PATTERN.test(handoff.raw || "")) {
     throw new Error("Player login handoff persisted an internal UUID in browser storage.");
   }
+  if (/econovaria_player_session|session_token|ps_identity/i.test(handoff.readableCookies || "")) {
+    throw new Error("Player session credential became browser-readable through document.cookie.");
+  }
 
   writeFileSync(`${ARTIFACT_DIR}/player-login-identity-runtime.json`, JSON.stringify({
     formState,
     loginRequests,
+    statusRequests,
+    proxyRequests,
     handoff: {
       href: handoff.href,
       terminalMounted: handoff.terminalMounted,
       legacyShellMounted: handoff.legacyShellMounted,
-      hasOpaqueSessionToken: handoff.value?.playerSessionToken === PLAYER_SESSION_TOKEN,
+      authenticated: handoff.value?.authenticated === true,
+      hasCsrf: handoff.value?.csrfToken === CSRF_TOKEN,
       hasExpiry: Boolean(handoff.value?.sessionExpiresAt),
+      hasBrowserToken: Boolean(handoff.value?.playerSessionToken || handoff.value?.accessToken),
       containsUuid: UUID_PATTERN.test(handoff.raw || ""),
+      readableSessionCookie: /econovaria_player_session/i.test(handoff.readableCookies || ""),
     },
     errors,
     consoleMessages,
@@ -210,10 +361,12 @@ try {
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-login-identity.png`, fullPage: true });
 
   if (errors.length) throw new Error(errors[0]);
-  console.log("Player Game Code + Player ID + Access Code → Player Terminal handoff smoke passed.");
+  console.log("Player Game Code + Player ID + Access Code → HttpOnly Player Terminal handoff smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/player-login-identity-runtime.json`, JSON.stringify({
     loginRequests,
+    statusRequests,
+    proxyRequests,
     errors,
     consoleMessages,
   }, null, 2));

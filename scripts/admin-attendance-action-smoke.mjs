@@ -1,196 +1,45 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createSpecializedQualityHarness,
+  GAME_ID,
+} from "./admin-specialized-quality-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+function flatten(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const payload = source.payload && typeof source.payload === "object" ? source.payload : {};
+  return { ...source, ...payload };
 }
 
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Browser Smoke Game",
-  name: "Browser Smoke Game",
-  status: "active",
-  gameCode: "SMOKE1",
-};
-
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 0,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 0 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {},
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-const errors = [];
-const writes = [];
-
-page.on("pageerror", (error) => errors.push(error.stack || error.message));
-
-await page.addInitScript(({ accessToken, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "smoke-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const request = route.request();
-  const pathname = new URL(request.url()).pathname;
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf, x-csrf-token",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  if (request.method() === "POST" && pathname.endsWith(`/games/${GAME_ID}/attendance/scans`)) {
-    writes.push({ service: "admin-api", pathname, body: request.postDataJSON() });
-    await route.fulfill({
-      status: 404,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*" },
-      body: JSON.stringify({ error: { code: "route_not_found" } }),
-    });
-    return;
-  }
-  const body = pathname.endsWith("/session/bootstrap")
-    ? {
-        data: {
-          admin: {
-            id: ADMIN_ID,
-            accountId: ADMIN_ID,
-            displayName: "Smoke Test Administrator",
-            email: "admin@example.test",
-            role: "game_admin",
-            roles: ["game_admin"],
+const harness = await createSpecializedQualityHarness("attendance-action", {
+  handleProxy: ({ method, path }) => {
+    if (method === "POST" && /\/attendance\/(?:scan|scans)$/.test(path)) {
+      return {
+        body: {
+          ok: true,
+          gameSession: { id: GAME_ID, name: "Quality Game", status: "active" },
+          player: {
+            id: "00000000-0000-4000-8000-000000000003",
+            displayName: "Attendance Smoke Player",
+            rosterLabel: "ATT-001",
+            status: "active",
           },
-          activeGame: game,
-          games: [game],
-          permissions: ["*"],
-          roles: ["game_admin"],
-          adminRole: "game_admin",
-          csrfToken: "",
-          session: {
-            id: ADMIN_ID,
-            csrfToken: "",
-            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          attendance: {
+            id: "00000000-0000-4000-8000-000000000004",
+            status: "present",
+            attendanceDate: "2026-07-14",
+            clockedInAt: new Date().toISOString(),
+            wasCreated: true,
+            timezone: "Asia/Seoul",
           },
-          capabilities: {},
+          reward: { amount: 1, currencyCode: "XAL", ledgerEntryId: null },
         },
-      }
-    : { data: common };
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(body),
-  });
+      };
+    }
+    return null;
+  },
 });
-
-await page.route("**/functions/v1/classroom-api/**", async (route) => {
-  const request = route.request();
-  const pathname = new URL(request.url()).pathname;
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id",
-        "access-control-allow-methods": "POST,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  writes.push({ service: "classroom-api", pathname, body: request.postDataJSON() });
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify({
-      ok: true,
-      gameSession: { id: GAME_ID, name: game.name, status: "active" },
-      player: {
-        id: "00000000-0000-4000-8000-000000000003",
-        displayName: "Attendance Smoke Player",
-        rosterLabel: "ATT-001",
-        status: "active",
-      },
-      attendance: {
-        id: "00000000-0000-4000-8000-000000000004",
-        status: "present",
-        attendanceDate: "2026-07-14",
-        clockedInAt: new Date().toISOString(),
-        wasCreated: true,
-        timezone: "Asia/Seoul",
-      },
-      reward: { amount: 1, currencyCode: "XAL", ledgerEntryId: null },
-    }),
-  });
-});
+const { page, errors, writes, dir } = harness;
 
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -227,24 +76,38 @@ try {
     scannerState: document.querySelector("[data-admin-terminal-scanner-state]")?.textContent?.trim() || "",
   }));
   const result = { ...browserResult, scannerSource };
+  const attendanceWrites = writes.filter((write) => /\/attendance\/(?:scan|scans)$/.test(write.path));
 
-  writeFileSync(`${ARTIFACT_DIR}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors }, null, 2));
-  await page.screenshot({ path: `${ARTIFACT_DIR}/attendance-action.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/attendance-action.html`, await page.content());
+  writeFileSync(`${dir}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors }, null, 2));
+  await harness.capture("attendance-action");
 
   if (errors.length) throw new Error(errors[0]);
-  if (writes.filter((write) => write.service === "admin-api").length !== 1) {
-    throw new Error(`Expected one admin attendance attempt: ${JSON.stringify(writes)}.`);
+  if (attendanceWrites.length !== 1) {
+    throw new Error(`Expected one BFF attendance mutation: ${JSON.stringify(writes)}.`);
   }
-  const classroomWrites = writes.filter((write) => write.service === "classroom-api");
-  if (classroomWrites.length !== 1) {
-    throw new Error(`Expected one classroom attendance retry: ${JSON.stringify(writes)}.`);
+  const write = attendanceWrites[0];
+  const command = write.parsedBody || {};
+  const payload = flatten(command);
+  if (
+    command.action !== "submit-attendance-scan" ||
+    payload.code !== "PLAYER-CODE-123" ||
+    payload.scanMode !== "manual" ||
+    payload.source !== "confirm"
+  ) {
+    throw new Error(`Attendance mutation sent unexpected body ${JSON.stringify(write.parsedBody)}.`);
   }
-  if (!classroomWrites[0].pathname.endsWith(`/games/${GAME_ID}/attendance/scan`)) {
-    throw new Error(`Attendance retry used unexpected path ${classroomWrites[0].pathname}.`);
+  if (!command.idempotencyKey || command.idempotencyKey !== command.requestId) {
+    throw new Error("Attendance mutation omitted its canonical idempotency/request identity.");
   }
-  if (classroomWrites[0].body?.playerId !== "PLAYER-CODE-123") {
-    throw new Error(`Attendance retry sent unexpected body ${JSON.stringify(classroomWrites[0].body)}.`);
+  if (write.headers.authorization !== undefined) {
+    throw new Error("Attendance mutation exposed Staff Authorization.");
+  }
+  if (
+    write.headers["x-econovaria-game-id"] !== GAME_ID ||
+    !write.headers["x-econovaria-csrf-token"] ||
+    write.headers["x-idempotency-key"] !== command.idempotencyKey
+  ) {
+    throw new Error("Attendance mutation omitted BFF game scope, cookie-bound CSRF, or idempotency.");
   }
   if (result.resultHidden || !result.emptyHidden || !/confirmed|completed/i.test(result.scannerState)) {
     throw new Error(`Attendance result did not reach confirmed visible state: ${JSON.stringify(result)}.`);
@@ -252,21 +115,15 @@ try {
   if (!result.player || !result.status) {
     throw new Error(`Attendance result omitted player or status: ${JSON.stringify(result)}.`);
   }
-  console.log("Admin attendance scanner submission and original video smoke passed.");
+  await harness.finish({ result, attendanceWrite: write });
+  console.log("Admin attendance scanner BFF submission and original video smoke passed.");
 } catch (error) {
-  try {
-    writeFileSync(`${ARTIFACT_DIR}/attendance-action-error.json`, JSON.stringify({
-      error: error.stack || error.message || String(error),
-      writes,
-      errors,
-    }, null, 2));
-    await page.screenshot({ path: `${ARTIFACT_DIR}/attendance-action-error.png`, fullPage: true });
-    writeFileSync(`${ARTIFACT_DIR}/attendance-action-error.html`, await page.content());
-  } catch (_) {}
-  console.error(error.stack || error.message || String(error));
-  console.error("ATTENDANCE_WRITES", JSON.stringify(writes, null, 2));
-  process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
+  writeFileSync(`${dir}/attendance-action-error.json`, JSON.stringify({
+    error: error.stack || error.message || String(error),
+    writes,
+    errors,
+  }, null, 2));
+  await harness.capture("attendance-action-error").catch(() => {});
+  await harness.finish({ failure: error.stack || error.message || String(error) });
+  throw error;
 }

@@ -4,6 +4,8 @@
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
+  const DEVICE_KEY = "econovaria.device.v1";
+  const DEVICE_HEADER = "x-econovaria-device-id";
   const LOGOUT_ACTIONS = new Set([
     "sign-out",
     "signout",
@@ -117,57 +119,44 @@
     window.location.replace(loginUrl());
   }
 
-  async function revokeSession() {
-    const session = window.EconovariaAdminAuthSession?.read?.() || storedSession();
-    const token = text(session?.accessToken);
+  function webSessionLogoutUrl() {
     const config = window.EconovariaRuntimeConfig || {};
-    const directAdminApi = text(config.adminApiUrl);
-    const gameId = selectedGameId();
+    const explicit = text(config.webSessionApiUrl).replace(/\/+$/, "");
+    if (explicit) return `${explicit}/logout`;
+    const supabaseUrl = text(config.supabaseUrl).replace(/\/+$/, "");
+    return supabaseUrl
+      ? `${supabaseUrl}/functions/v1/web-session-api/logout`
+      : "";
+  }
 
-    if (directAdminApi) {
-      const headers = {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      };
-      if (config.supabasePublishableKey) headers.apikey = config.supabasePublishableKey;
-      if (token) headers.Authorization = `Bearer ${token}`;
-      if (gameId) headers["X-Econovaria-Game-Id"] = gameId;
-      try {
-        await window.fetch(`${directAdminApi.replace(/\/$/, "")}/auth/sign-out`, {
-          method: "POST",
-          headers,
-          body: "{}",
-          credentials: "omit",
-          cache: "no-store",
-        });
-      } catch (_) {}
-    } else {
-      try {
-        await window.fetch("/api/admin/auth/sign-out", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: "{}",
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-      } catch (_) {}
-    }
+  async function revokeWebSession() {
+    const config = window.EconovariaRuntimeConfig || {};
+    const logoutUrl = webSessionLogoutUrl();
+    const publishableKey = text(config.supabasePublishableKey);
+    if (!logoutUrl || !publishableKey) return false;
 
-    if (token && config.supabaseUrl && config.supabasePublishableKey) {
-      try {
-        await window.fetch(`${config.supabaseUrl.replace(/\/$/, "")}/auth/v1/logout`, {
-          method: "POST",
-          headers: {
-            apikey: config.supabasePublishableKey,
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "omit",
-          cache: "no-store",
-        });
-      } catch (_) {}
+    const headers = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      apikey: publishableKey,
+    };
+    const deviceId = text(window.localStorage.getItem(DEVICE_KEY));
+    if (deviceId) headers[DEVICE_HEADER] = deviceId;
+
+    try {
+      const response = await window.fetch(logoutUrl, {
+        method: "POST",
+        headers,
+        body: "{}",
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+        referrerPolicy: "no-referrer",
+        keepalive: true,
+      });
+      return response.ok;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -197,12 +186,15 @@
     button.textContent = "Signing out…";
 
     signOutPromise = (async () => {
-      const controller = window.EconovariaAdminLogoutController;
-      if (typeof controller?.beginLogout === "function") {
-        await controller.beginLogout(button);
-        return;
+      // The session manager captured native fetch before later Admin adapters wrap
+      // window.fetch. Use that transport when available, then retain a bounded
+      // BFF-native fallback for partial bootstrap failures.
+      const manager = window.EconovariaAdminAuthSession;
+      if (typeof manager?.signOut === "function") {
+        await manager.signOut();
+      } else {
+        await revokeWebSession();
       }
-      await revokeSession();
       clearLocalStateAndRedirect();
     })().finally(() => {
       signOutPromise = null;

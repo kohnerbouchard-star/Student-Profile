@@ -13,13 +13,42 @@ const CLIENT_OWNERSHIP_FIELDS = new Set([
   "playerId", "playerUuid", "playerUUID", "playerSessionId",
   "recipientPlayerUuid", "recipientPlayerUUID", "senderPlayerUuid", "senderPlayerUUID"
 ]);
-
 const READ_MODEL_KEYS = new Set([
   "countries", "news", "market", "marketAsset", "portfolio", "store", "banking", "notifications"
 ]);
+const DEVICE_STORAGE_KEY = "econovaria.device.v1";
+const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function normalizedBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function normalizedCredential(value) {
+  return String(value || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function isPublishableKey(value) {
+  return /^sb_publishable_/i.test(normalizedCredential(value));
+}
+
+function deviceId(config) {
+  const configured = String(config?.deviceId || "").trim().toLowerCase();
+  if (DEVICE_ID_PATTERN.test(configured)) return configured;
+  try {
+    const existing = String(globalThis.localStorage?.getItem(DEVICE_STORAGE_KEY) || "")
+      .trim()
+      .toLowerCase();
+    if (DEVICE_ID_PATTERN.test(existing)) return existing;
+    const generated = String(globalThis.crypto?.randomUUID?.() || "").toLowerCase();
+    if (!DEVICE_ID_PATTERN.test(generated)) throw new Error("device id unavailable");
+    globalThis.localStorage?.setItem(DEVICE_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    throw new ApiRequestError("This device could not initialize a secure game session.", {
+      code: "DEVICE_ID_UNAVAILABLE"
+    });
+  }
 }
 
 function assertNoClientOwnershipFields(payload, endpointKey) {
@@ -41,25 +70,33 @@ function backendPayload(context) {
 }
 
 export function headersFor(context) {
-  const token = String(context.session?.playerSessionToken || "").trim();
-  if (!token) {
-    throw new ApiRequestError("Your player session has expired. Reconnect through the Econovaria sign-in screen.", {
+  if (context.session?.authenticated !== true) {
+    throw new ApiRequestError("Your Player session has expired. Reconnect through the Econovaria sign-in screen.", {
       status: 401, code: "SESSION_INVALID", endpointKey: context.endpointKey, requestId: context.requestId
     });
   }
 
-  const accessToken = String(
-    context.session?.accessToken || context.config?.accessToken || ""
-  ).replace(/^Bearer\s+/i, "").trim();
+  const publishableKey = normalizedCredential(context.config?.publishableKey || "");
+  if (publishableKey && !isPublishableKey(publishableKey)) {
+    throw new ApiRequestError("The Player application identity is invalid.", {
+      code: "PUBLISHABLE_KEY_INVALID", endpointKey: context.endpointKey, requestId: context.requestId
+    });
+  }
 
   const headers = {
     "content-type": "application/json",
-    "x-player-session-token": token,
+    "x-econovaria-device-id": deviceId(context.config),
     "x-request-id": String(context.requestId || "")
   };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-    headers.apikey = accessToken;
+  if (publishableKey) headers.apikey = publishableKey;
+  if (!["GET", "HEAD"].includes(String(context.method || "GET").toUpperCase())) {
+    const csrfToken = String(context.session?.csrfToken || context.config?.csrfToken || "");
+    if (!CSRF_PATTERN.test(csrfToken)) {
+      throw new ApiRequestError("Your Player session has expired. Reconnect through the Econovaria sign-in screen.", {
+        status: 401, code: "SESSION_INVALID", endpointKey: context.endpointKey, requestId: context.requestId
+      });
+    }
+    headers["x-econovaria-csrf-token"] = csrfToken;
   }
   if (context.idempotencyKey) {
     const idempotencyKey = String(context.idempotencyKey);
@@ -122,14 +159,17 @@ function applyCapabilityManifest(snapshot, manifest) {
   };
 }
 
-export function createStudentProfileFetchRequest({ apiBaseUrl = "/functions/v1/classroom-api", fetchImpl = globalThis.fetch } = {}) {
+export function createStudentProfileFetchRequest({ apiBaseUrl = "/api/player", fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("A fetch implementation is required.");
   const baseUrl = normalizedBaseUrl(apiBaseUrl);
   return async function studentProfileFetchRequest({ method, path, payload, headers, signal }) {
     const response = await fetchImpl(`${baseUrl}${path}`, {
-      method, headers,
+      method,
+      headers,
       body: method === "GET" || method === "HEAD" || payload === undefined ? undefined : JSON.stringify(payload),
-      signal, credentials: "same-origin"
+      signal,
+      credentials: "include",
+      cache: "no-store"
     });
     const body = await readBody(response);
     if (!response.ok) {
@@ -146,14 +186,14 @@ export function createStudentProfileApiCall({ request } = {}) {
   let rawSession = null;
   let capabilityManifest = null;
   let snapshot = createEmptyReadModels();
-  let sessionToken = "";
+  let sessionFingerprint = "";
 
   async function loadCapabilityManifest(context) {
     const route = resolvePlayerBackendRequest({ endpointKey: "capabilities", method: "GET", path: "/capabilities", payload: undefined, params: {}, session: context.session });
     if (!route) throw new ApiConnectionPendingError({ endpointKey: "capabilities", method: "GET", path: "/capabilities" });
     const raw = await request({
       endpointKey: "capabilities", method: route.method, path: route.path, payload: route.payload,
-      headers: headersFor({ ...context, endpointKey: "capabilities" }), signal: context.signal,
+      headers: headersFor({ ...context, endpointKey: "capabilities", method: route.method }), signal: context.signal,
       requestId: context.requestId
     });
     return validateStudentProfileCapabilityManifest(raw);
@@ -161,9 +201,13 @@ export function createStudentProfileApiCall({ request } = {}) {
 
   return async function studentProfileApiCall(context) {
     assertNoClientOwnershipFields(context.payload, context.endpointKey);
-    const currentToken = String(context.session?.playerSessionToken || "");
-    if (currentToken !== sessionToken) {
-      sessionToken = currentToken;
+    const currentFingerprint = [
+      context.session?.authenticated === true ? "authenticated" : "anonymous",
+      String(context.session?.csrfToken || ""),
+      String(context.session?.gameSessionId || "")
+    ].join("|");
+    if (currentFingerprint !== sessionFingerprint) {
+      sessionFingerprint = currentFingerprint;
       rawSession = null;
       capabilityManifest = null;
       snapshot = createEmptyReadModels();
@@ -177,7 +221,7 @@ export function createStudentProfileApiCall({ request } = {}) {
 
     const raw = await request({
       endpointKey: context.endpointKey, method: backendRequest.method, path: backendRequest.path,
-      payload: backendRequest.payload, headers: headersFor(context), signal: context.signal,
+      payload: backendRequest.payload, headers: headersFor({ ...context, method: backendRequest.method }), signal: context.signal,
       requestId: context.requestId, idempotencyKey: context.idempotencyKey
     });
 
@@ -192,7 +236,7 @@ export function createStudentProfileApiCall({ request } = {}) {
 
     if (context.endpointKey === "dashboard") {
       if (!rawSession || !capabilityManifest) {
-        throw new ApiRequestError("The player session and capability manifest must load before the dashboard.", {
+        throw new ApiRequestError("The Player session and capability manifest must load before the dashboard.", {
           code: "INVALID_RESPONSE", endpointKey: context.endpointKey, requestId: context.requestId
         });
       }

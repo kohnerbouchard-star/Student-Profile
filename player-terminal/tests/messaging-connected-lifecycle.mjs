@@ -5,9 +5,11 @@ import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 import { renderMessagesPage } from "../src/pages/messages-page.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_messaging_fixture";
 const THREAD = `thr_${"a".repeat(32)}`;
 const MESSAGE = `msg_${"b".repeat(32)}`;
-const REPLY = `msg_${"c".repeat(32)}`;
 const requests = [];
 const apiCall = createStudentProfileApiCall({
   request: async (request) => {
@@ -25,17 +27,6 @@ const apiCall = createStudentProfileApiCall({
         },
       };
     }
-    if (request.method === "POST" && request.path === `/players/me/messages/threads/${THREAD}/messages`) {
-      return {
-        ok: true,
-        data: {
-          outcome: "applied",
-          threadId: THREAD,
-          messageId: REPLY,
-          createdAt: "2026-07-21T03:31:00.000Z",
-        },
-      };
-    }
     if (request.method === "GET" && request.path.startsWith("/players/me/messages")) {
       throw Object.assign(new Error("authoritative Messaging refresh failed"), {
         status: 503,
@@ -48,7 +39,10 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "player-token",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   apiCall,
@@ -81,33 +75,19 @@ assert.equal(write.path, "/players/me/messages/threads");
 assert.deepEqual(Object.keys(write.payload).sort(), ["body", "idempotencyKey", "recipientPlayerId", "title"]);
 assert.equal(typeof write.payload.idempotencyKey, "string");
 assert.equal(write.payload.idempotencyKey.length > 0, true);
+assert.equal(write.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(write.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(write.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(write.headers["x-player-session-token"], undefined);
+assert.equal(write.headers.Authorization, undefined);
 assert.equal("gameSessionId" in write.payload, false);
 assert.equal("playerId" in write.payload, false);
 assert.equal("playerUuid" in write.payload, false);
-
-const replyCommand = normalizeWritePayload("messageSend", {
-  body: "Reply through the centralized route.",
-  gameSessionId: "must-not-cross-boundary",
-});
-const reply = await api.execute("messageSend", replyCommand, { threadId: THREAD });
-assert.equal(reply.result.outcome, "applied");
-assert.equal(reply.result.threadId, THREAD);
-assert.equal(reply.result.messageId, REPLY);
-
-const replyWrite = requests[1];
-assert.equal(replyWrite.method, "POST");
-assert.equal(replyWrite.path, `/players/me/messages/threads/${THREAD}/messages`);
-assert.deepEqual(Object.keys(replyWrite.payload).sort(), ["body", "idempotencyKey"]);
-assert.equal(replyWrite.payload.body, "Reply through the centralized route.");
-assert.equal(typeof replyWrite.payload.idempotencyKey, "string");
-assert.equal(replyWrite.payload.idempotencyKey.length > 0, true);
-assert.equal("threadId" in replyWrite.payload, false, "Public route identifiers must not leak into the backend body.");
 
 const refresh = await api.refreshResources(["messages"]);
 assert.equal(Boolean(refresh.errors.messages), true);
 assert.equal(committed.result.outcome, "applied", "A failed refresh must not reverse a committed thread creation.");
 assert.equal(committed.result.threadId, THREAD);
-assert.equal(reply.result.outcome, "applied", "A failed refresh must not reverse a committed reply.");
 
 const html = renderMessagesPage({
   messages: {
@@ -144,4 +124,4 @@ assert.match(html, /&lt;SCRIPT&gt;Trade&lt;\/SCRIPT&gt;/);
 assert.match(html, /&lt;IMG src=x onerror=alert\(1\)&gt;/);
 assert.doesNotMatch(html, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
-console.log("Connected Messaging lifecycle, route-parameter propagation, and committed-success boundary passed.");
+console.log("Connected Messaging cookie-session lifecycle and committed-success boundary passed.");

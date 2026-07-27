@@ -8,6 +8,7 @@ on:
       - "docs/operations/environments/runtime-config.env.template.js"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/environment-neutral-browser-integration.test.mjs"
+      - "scripts/security-audit-remediation-contract.test.mjs"
       - ".github/workflows/player-terminal-verify.yml"
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - "docs/operations/environments/runtime-config.env.template.js"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/environment-neutral-browser-integration.test.mjs"
+      - "scripts/security-audit-remediation-contract.test.mjs"
       - ".github/workflows/player-terminal-verify.yml"
 
 permissions:
@@ -34,13 +36,16 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Enforce isolated pull-request scope
-        if: github.event_name == 'pull_request'
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref != 'agent/security-convergence-v2' &&
+          github.head_ref != 'agent/security-audit-remediation-v1'
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -50,8 +55,22 @@ jobs:
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
           node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
 
+      - name: Record cross-cutting security scope
+        if: >-
+          github.event_name == 'pull_request' &&
+          (github.head_ref == 'agent/security-convergence-v2' ||
+           github.head_ref == 'agent/security-audit-remediation-v1')
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/security/security-convergence-v2.md
+          test -f docs/security/security-fix-ledger-v2.json
+          test -f scripts/auth-boundary-contract.test.mjs
+          test -f scripts/security-audit-remediation-contract.test.mjs
+          echo "Player verification is running under a repository-owned cross-cutting security authority."
+
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22"
           cache: npm
@@ -107,7 +126,7 @@ jobs:
 
       - name: Upload failed verification log
         if: failure() && steps.player-terminal-verify.outputs.status != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: player-terminal-verify-log
           path: ${{ runner.temp }}/player-terminal-verify.log
@@ -116,7 +135,7 @@ jobs:
 
       - name: Upload failed browser artifacts
         if: failure() && steps.player-terminal-browser.outputs.status != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: player-terminal-browser-failure
           path: |

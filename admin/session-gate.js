@@ -155,17 +155,19 @@
       return;
     }
 
-    const previousSession = sessionManager.read();
-    if (!previousSession) {
-      redirectToMainLogin("session-required");
-      return;
-    }
-
+    let session;
     try {
-      await sessionManager.getUsableSession();
+      // The HttpOnly cookie is authoritative. When navigation intentionally
+      // carries no browser summary, the manager rebuilds a sanitized summary
+      // from /status and the scoped BFF bootstrap before this gate decides.
+      session = await sessionManager.getUsableSession();
     } catch (_) {
       clearTransferredSession();
       redirectToMainLogin("session-expired");
+      return;
+    }
+    if (!session) {
+      redirectToMainLogin("session-required");
       return;
     }
 

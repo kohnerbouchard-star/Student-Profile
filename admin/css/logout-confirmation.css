@@ -224,6 +224,19 @@ body.econovaria-admin-logout-confirmation-open {
   font-weight: 400 !important;
 }
 
+/* Compact Admin layouts must not allow elevated sidebar controls to intercept
+   adjacent page actions. Desktop rail elevation remains unchanged. */
+@media (max-width: 1180px) {
+  .econovaria-admin-game-session-controls-host {
+    z-index: auto;
+  }
+
+  .econovaria-admin-game-session-controls-host .econovaria-admin-game-session-card button,
+  .econovaria-admin-game-session-controls-host [data-econovaria-admin-logout="true"] {
+    z-index: auto !important;
+  }
+}
+
 @media (max-width: 700px) {
   .econovaria-admin-logout-confirmation__context {
     grid-template-columns: 1fr !important;

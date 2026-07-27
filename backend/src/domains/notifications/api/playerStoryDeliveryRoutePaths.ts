@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type { PlayerStoryDeliveryRoute } from "../contracts/playerStoryDeliveryContracts.ts";
 
 const DELIVERY_ID_PATTERN = /^ndl_[0-9a-f]{32}$/;
@@ -5,8 +6,7 @@ const DELIVERY_ID_PATTERN = /^ndl_[0-9a-f]{32}$/;
 export function readPlayerStoryDeliveryRoutePath(
   pathname: string,
 ): PlayerStoryDeliveryRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
   if (!routeSegments) return null;
 
   if (
@@ -41,13 +41,4 @@ export function readPlayerStoryDeliveryRoutePath(
   }
 
   return null;
-}
-
-function readRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-  const classroomApiIndex = segments.lastIndexOf("classroom-api");
-  if (classroomApiIndex < 0) return null;
-  return segments.slice(classroomApiIndex + 1);
 }

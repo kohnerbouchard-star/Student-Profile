@@ -8,6 +8,10 @@ import {
 } from "../src/integrations/student-profile-runtime.js";
 import { renderInventoryPage } from "../src/pages/inventory-page.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_runtime_integration_fixture";
+
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
@@ -114,7 +118,10 @@ assert.equal(optionalActionDrift.capabilities.actions.inventoryUse, true);
 const runtimeConfig = installStudentProfileRuntime({
   usePreviewData: false,
   apiBaseUrl: "/api/player",
-  playerSessionToken: "token-1",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   requestTimeoutMs: 1000,
   writeCooldownMs: 250
 }, {
@@ -123,6 +130,7 @@ const runtimeConfig = installStudentProfileRuntime({
 assert.equal(runtimeConfig.apiBaseUrl, STUDENT_PROFILE_CLASSROOM_API_BASE);
 assert.equal(typeof runtimeConfig.apiCall, "function");
 assert.equal(new PlayerApi(runtimeConfig).transport.constructor.name, "AdapterTransport");
+assert.equal("playerSessionToken" in runtimeConfig, false);
 
 const requests = [];
 const apiCall = createStudentProfileApiCall({
@@ -147,6 +155,16 @@ const apiCall = createStudentProfileApiCall({
   }
 });
 
+const requestContext = {
+  session: { authenticated: true, csrfToken: CSRF_TOKEN },
+  config: {
+    authenticated: true,
+    csrfToken: CSRF_TOKEN,
+    publishableKey: PUBLISHABLE_KEY,
+    deviceId: DEVICE_ID
+  }
+};
+
 const session = await apiCall({
   endpointKey: "session",
   method: "GET",
@@ -154,10 +172,12 @@ const session = await apiCall({
   payload: undefined,
   params: {},
   requestId: "req-session",
-  session: { playerSessionToken: "token-1" }
+  ...requestContext
 });
 assert.equal(requests[0].path, "/players/me");
 assert.equal(requests[1].path, "/players/me/capabilities");
+assert.equal(requests[0].headers.apikey, PUBLISHABLE_KEY);
+assert.equal(requests[0].headers["x-player-session-token"], undefined);
 assert.equal(session.capabilitySchemaVersion, 1);
 assert.equal(session.capabilityManifestVersion, "2026-07-18.3");
 assert.equal(session.capabilities.actions.inventoryUse, true);
@@ -170,12 +190,13 @@ const redemption = await apiCall({
   params: { inventoryItemId: "meal-pass" },
   requestId: "req-redemption",
   idempotencyKey: "inventoryUse:test-key",
-  session: { playerSessionToken: "token-1" }
+  ...requestContext
 });
 assert.equal(redemption.outcome, "created");
 const redemptionRequest = requests.at(-1);
 assert.equal(redemptionRequest.method, "POST");
 assert.equal(redemptionRequest.path, "/players/me/inventory/meal-pass/redemptions");
+assert.equal(redemptionRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
 assert.deepEqual(
   Object.keys(redemptionRequest.payload).sort(),
   ["idempotencyKey", "note", "quantity"]
@@ -183,12 +204,18 @@ assert.deepEqual(
 assert.equal(redemptionRequest.payload.idempotencyKey, "inventoryUse:test-key");
 assert.equal("gameSessionId" in redemptionRequest.payload, false);
 
+const secureApiConfig = {
+  usePreviewData: false,
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
+  requestTimeoutMs: 1000,
+  writeCooldownMs: 250
+};
 const committedCalls = [];
 const committedApi = new PlayerApi({
-  usePreviewData: false,
-  playerSessionToken: "token-2",
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 250,
+  ...secureApiConfig,
   apiCall: async (context) => {
     committedCalls.push(context);
     if (context.endpointKey === "inventoryUse") return { outcome: "created" };
@@ -212,10 +239,7 @@ assert.equal(Boolean(refresh.errors.inventory), true);
 assert.equal(committed.result.outcome, "created");
 
 const failedApi = new PlayerApi({
-  usePreviewData: false,
-  playerSessionToken: "token-3",
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 250,
+  ...secureApiConfig,
   apiCall: async () => { throw new Error("redemption write failed"); }
 });
 failedApi.readCache.set("GET:inventory:cached", { items: [{ id: "meal-pass" }] });
@@ -262,4 +286,4 @@ assert.doesNotMatch(disabledHtml, /data-player-inventory-use=/);
 assert.doesNotMatch(disabledHtml, /data-capability-status="integration-pending"/);
 assert.match(disabledHtml, /Available/);
 
-console.log("Student-Profile runtime integration and Inventory redemption boundary passed.");
+console.log("Student-Profile runtime integration and Inventory redemption cookie-session boundary passed.");

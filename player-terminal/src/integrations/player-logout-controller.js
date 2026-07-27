@@ -2,13 +2,17 @@ import { createRequestId } from "../api/request-context.js";
 
 const DEFAULT_LOGOUT_EVENT = "econovaria:player-logout-requested";
 const LOGOUT_COMPLETED_EVENT = "econovaria:player-logout-completed";
-const RETRYABLE_STATUSES = new Set([409, 429, 503]);
+const DEVICE_STORAGE_KEY = "econovaria.device.v1";
+const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const RETRYABLE_STATUSES = new Set([409, 429, 502, 503]);
 const RETRYABLE_CODES = new Set([
   "NETWORK_ERROR",
   "OFFLINE",
   "REQUEST_TIMEOUT",
   "PLAYER_LOGOUT_CONFLICT",
-  "PLAYER_LOGOUT_SERVICE_UNAVAILABLE"
+  "PLAYER_LOGOUT_SERVICE_UNAVAILABLE",
+  "PLAYER_SESSION_REVOCATION_FAILED"
 ]);
 
 function boundedInteger(value, fallback, minimum, maximum) {
@@ -19,7 +23,9 @@ function boundedInteger(value, fallback, minimum, maximum) {
 }
 
 function safeCode(error, fallback = "PLAYER_LOGOUT_FAILED") {
-  return String(error?.code || error?.body?.code || fallback).trim().toUpperCase();
+  return String(error?.code || error?.body?.code || error?.body?.error?.code || fallback)
+    .trim()
+    .toUpperCase();
 }
 
 function isRetryable(error) {
@@ -30,15 +36,42 @@ function wait(runtime, delayMs) {
   return new Promise((resolve) => runtime.setTimeout?.(resolve, delayMs));
 }
 
-function sessionToken(config) {
-  return String(config?.playerSessionToken || "").trim();
+function deviceId(config, runtime) {
+  const configured = String(config?.deviceId || "").trim().toLowerCase();
+  if (DEVICE_ID_PATTERN.test(configured)) return configured;
+  try {
+    const existing = String(runtime.localStorage?.getItem(DEVICE_STORAGE_KEY) || "")
+      .trim()
+      .toLowerCase();
+    if (DEVICE_ID_PATTERN.test(existing)) return existing;
+    const generated = String(runtime.crypto?.randomUUID?.() || "").toLowerCase();
+    if (!DEVICE_ID_PATTERN.test(generated)) return "";
+    runtime.localStorage?.setItem(DEVICE_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    return "";
+  }
+}
+
+async function currentSession(config) {
+  if (typeof config?.sessionProvider === "function") {
+    try {
+      return await config.sessionProvider();
+    } catch {
+      return null;
+    }
+  }
+  return config?.authenticated === true ? config : null;
 }
 
 function clearSessionState(config, runtime) {
-  config.playerSessionToken = "";
-  config.playerSessionId = "";
+  config.authenticated = false;
+  config.csrfToken = "";
+  config.sessionExpiresAt = "";
   config.gameSessionId = "";
-  config.accessToken = "";
+  delete config.playerSessionToken;
+  delete config.playerSessionId;
+  delete config.accessToken;
   try {
     if (runtime.ECONOVARIA_PLAYER_SESSION) runtime.ECONOVARIA_PLAYER_SESSION = null;
     if (runtime.Econovaria?.playerSession) runtime.Econovaria.playerSession = null;
@@ -118,8 +151,9 @@ export function installPlayerLogoutController({
   let destroyed = false;
 
   async function revoke() {
-    const token = sessionToken(config);
-    if (!token) {
+    const session = await currentSession(config);
+    const csrfToken = String(session?.csrfToken || config.csrfToken || "");
+    if (session?.authenticated !== true || !CSRF_PATTERN.test(csrfToken)) {
       return {
         revoked: false,
         alreadyLoggedOut: true,
@@ -129,7 +163,8 @@ export function installPlayerLogoutController({
         requestId: ""
       };
     }
-    if (!logoutAdvertised(terminal, config) || typeof config.apiCall !== "function") {
+    const baseUrl = String(config.playerSessionApiBaseUrl || "").trim().replace(/\/+$/, "");
+    if (!logoutAdvertised(terminal, config) || !baseUrl || typeof runtime.fetch !== "function") {
       return {
         revoked: false,
         alreadyLoggedOut: false,
@@ -144,37 +179,55 @@ export function installPlayerLogoutController({
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const requestId = createRequestId();
       try {
-        const response = await config.apiCall({
-          endpointKey: "logout",
-          method: "POST",
-          path: "/session/logout",
-          payload: undefined,
-          params: {},
-          session: { playerSessionToken: token },
-          config,
-          requestId,
-          signal: null
-        });
-        return {
-          revoked: true,
-          alreadyLoggedOut: response?.alreadyLoggedOut === true,
-          localOnly: false,
-          status: 200,
-          code: "PLAYER_SESSION_REVOKED",
-          requestId
+        const headers = {
+          "content-type": "application/json",
+          "x-econovaria-csrf-token": csrfToken,
+          "x-request-id": requestId
         };
-      } catch (error) {
-        lastError = error;
-        if (Number(error?.status || 0) === 401) {
+        const publishableKey = String(config.publishableKey || "").trim();
+        if (publishableKey) headers.apikey = publishableKey;
+        const currentDeviceId = deviceId(config, runtime);
+        if (currentDeviceId) headers["x-econovaria-device-id"] = currentDeviceId;
+
+        const response = await runtime.fetch(`${baseUrl}/logout`, {
+          method: "POST",
+          headers,
+          body: "{}",
+          credentials: "include",
+          cache: "no-store",
+          redirect: "manual"
+        });
+        const body = await response.json?.().catch?.(() => ({})) || {};
+        if (response.ok) {
+          return {
+            revoked: true,
+            alreadyLoggedOut: false,
+            localOnly: false,
+            status: response.status,
+            code: "PLAYER_SESSION_REVOKED",
+            requestId
+          };
+        }
+        if (response.status === 401) {
           return {
             revoked: false,
             alreadyLoggedOut: true,
             localOnly: false,
             status: 401,
-            code: safeCode(error, "INVALID_PLAYER_SESSION"),
+            code: safeCode({ body }, "INVALID_PLAYER_SESSION"),
             requestId
           };
         }
+        const error = {
+          status: response.status,
+          code: safeCode({ body }),
+          body,
+          retryAfterMs: Number(response.headers?.get?.("retry-after") || 0) * 1000,
+          requestId
+        };
+        throw error;
+      } catch (error) {
+        lastError = error;
         if (attempt >= attempts || !isRetryable(error)) break;
         const requestedDelay = boundedInteger(error?.retryAfterMs, retryDelay, 0, 2000);
         await wait(runtime, requestedDelay || retryDelay);

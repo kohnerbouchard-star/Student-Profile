@@ -33,8 +33,20 @@ const messagingRoutes = readFileSync("player-terminal/src/api/messaging-backend-
 const capabilityManifest = readFileSync("player-terminal/src/integrations/student-profile-capability-manifest.js", "utf8");
 
 for (const client of [moderationClient, policyClient]) {
+  assert.match(client, /adminBffApiUrl/);
+  assert.match(client, /supabasePublishableKey/);
+  assert.match(client, /apikey:\s*publishableKey/);
+  assert.match(client, /x-econovaria-device-id/);
+  assert.match(client, /x-econovaria-game-id/);
+  assert.match(client, /x-econovaria-csrf-token/);
+  assert.match(client, /getUsableSession/);
+  assert.match(client, /credentials:\s*"include"/);
   assert.match(client, /cache:\s*"no-store"/);
-  assert.match(client, /authorization:\s*`Bearer/);
+  assert.match(client, /redirect:\s*"error"/);
+  assert.match(client, /referrerPolicy:\s*"no-referrer"/);
+  assert.doesNotMatch(client, /AdminAuthSessionManager/);
+  assert.doesNotMatch(client, /authorization/i);
+  assert.doesNotMatch(client, /Bearer/);
   assert.doesNotMatch(client, /window\.fetch\s*=/);
 }
 assert.match(moderationClient, /x-idempotency-key/);
@@ -69,9 +81,7 @@ assert.match(adminBootstrap, /name:\s*"operational-surfaces"/);
 
 assert.match(messagesPage, /data-endpoint="messageThreadCreate"/);
 assert.match(messagesPage, /data-endpoint="messageSend"/);
-assert.match(messagesPage, /data-player-message-unread="true"/);
-assert.match(messagesPage, /aria-label="Open\$\{unreadLabel\} conversation/);
-assert.doesNotMatch(messagesPage, /data-endpoint="messageRead"/);
+assert.match(messagesPage, /data-endpoint="messageRead"/);
 assert.match(messagesPage, /maxlength="1000"/);
 assert.match(messagesPage, /Attachments are disabled/);
 assert.match(messagesPage, /escapeHtml\(message\.body\)/);
@@ -91,4 +101,4 @@ assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, automatic read-on-open, privacy, capability, hardened bootstrap, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, privacy, capability, secure BFF, hardened bootstrap, and attachment-disablement contracts passed.");

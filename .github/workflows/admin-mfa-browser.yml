@@ -1,0 +1,83 @@
+name: Admin MFA Browser
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/admin-mfa-browser.yml"
+      - "index.html"
+      - "frontend/src/core/api.js"
+      - "frontend/src/core/admin-mfa.js"
+      - "frontend/src/core/login.js"
+      - "frontend/src/core/runtime-config.js"
+      - "frontend/src/styles/admin-mfa.css"
+      - "backend/supabase/functions/web-session-api/**"
+      - "backend/supabase/functions/staff-mfa-api/**"
+      - "scripts/admin-mfa-browser-smoke.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-mfa-browser.yml"
+      - "index.html"
+      - "frontend/src/core/api.js"
+      - "frontend/src/core/admin-mfa.js"
+      - "frontend/src/core/login.js"
+      - "frontend/src/core/runtime-config.js"
+      - "frontend/src/styles/admin-mfa.css"
+      - "backend/supabase/functions/web-session-api/**"
+      - "backend/supabase/functions/staff-mfa-api/**"
+      - "scripts/admin-mfa-browser-smoke.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-mfa-browser-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify password, TOTP enrollment, and AAL2 elevation
+        id: mfa_browser
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-mfa-browser-smoke.mjs 2>&1 | tee "$RUNNER_TEMP/admin-mfa-browser.log"
+
+      - name: Upload Admin MFA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-mfa-browser-diagnostics
+          path: ${{ runner.temp }}/admin-mfa-browser.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce Admin MFA browser journey
+        if: always()
+        shell: bash
+        run: test "${{ steps.mfa_browser.outcome }}" = "success"

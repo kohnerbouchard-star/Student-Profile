@@ -48,8 +48,18 @@ for (const marker of ["AbortController", "REQUEST_TIMEOUT", "requestId", "signal
 }
 
 const httpSource = await readFile(path.join(root, "src/api/http-transport.js"), "utf8");
-for (const marker of ["x-econovaria-player-session-token", "x-request-id", "idempotency-key", "retry-after"]) {
+for (const marker of [
+  "credentials: \"include\"",
+  "x-econovaria-csrf-token",
+  "x-econovaria-device-id",
+  "x-request-id",
+  "idempotency-key",
+  "retry-after"
+]) {
   if (!httpSource.includes(marker)) throw new Error(`HTTP transport control is missing: ${marker}`);
+}
+for (const forbidden of ["x-player-session-token", "x-econovaria-player-session-token", "headers.Authorization"]) {
+  if (httpSource.includes(forbidden)) throw new Error(`Retired browser credential transport returned: ${forbidden}`);
 }
 if (httpSource.includes("body?.message")) throw new Error("Raw backend messages must not be displayed or promoted.");
 
@@ -93,4 +103,4 @@ for (const [file, expected] of Object.entries(lockedHashes)) {
   if (actual !== expected) throw new Error(`Approved v7 visual lock changed: ${file}`);
 }
 
-console.log(`v7.5 audit passed: ${required.length} hardening artifacts, production guards, transport controls, development-copy cleanup, and ${Object.keys(lockedHashes).length} visual locks verified.`);
+console.log(`v7.5 audit passed: ${required.length} hardening artifacts, production guards, cookie-session transport controls, development-copy cleanup, and ${Object.keys(lockedHashes).length} visual locks verified.`);

@@ -1,77 +1,294 @@
 name: Admin Browser E2E
-# PR 377 reconciliation publication probe.
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - agent/runtime-stability-button-integrity-v1
-    paths:
-      - ".github/workflows/admin-browser-e2e.yml"
-      - "scripts/reconcile-pr377-with-main.sh"
   pull_request:
-    branches: [main, agent/pr377-validation-base]
+    branches: [main]
     paths:
       - ".github/workflows/admin-browser-e2e.yml"
-      - "scripts/reconcile-pr377-with-main.sh"
+      - "index.html"
+      - "admin/**"
+      - "player-terminal/**"
+      - "backend/src/security/**"
+      - "backend/src/domains/attendance/**"
+      - "backend/src/domains/contracts/**"
+      - "frontend/src/core/**"
+      - "backend/src/domains/auth/**"
+      - "backend/src/domains/licensing/**"
+      - "backend/src/domains/game-sessions/**"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/functions/**"
+      - "backend/supabase/migrations/**"
+      - "scripts/admin-browser-reconnaissance.mjs"
+      - "scripts/admin-connected-ledger-mutation-browser-acceptance.mjs"
+      - "scripts/button-action-coverage-contract.mjs"
+      - "scripts/econovaria-local-gateway.py"
+      - "scripts/local-auth-readiness.mjs"
+      - "scripts/local-staging-gateway.py"
+      - "scripts/staff-service-role-access-contract.test.mjs"
+      - "scripts/persisted-game-code-contract.test.mjs"
+      - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
+      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
+      - "docs/seed-content/executable/beta-pack-v1/**"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: pr377-reconcile-${{ github.event.pull_request.number || github.ref }}
+  group: admin-browser-e2e-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  reconcile-main:
-    name: Reconcile PR 377 with main
+  rendered-admin:
+    name: Rendered Admin browser and secure mutation journey
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_BROWSER_OUTPUT_DIR: /tmp/econovaria-browser
+      ECONOVARIA_BROWSER_LICENSE_CODE: BROWSER-E2E-LICENSE-001
+      ECONOVARIA_BROWSER_ADMIN_EMAIL: browser.e2e@example.test
+      ECONOVARIA_BROWSER_ADMIN_PASSWORD: Browser-E2E-Access-2026!
+      ECONOVARIA_BROWSER_GAME_NAME: Browser E2E Economy
+      ECONOVARIA_GATEWAY_REQUEST_TIMEOUT_SECONDS: "180"
     steps:
-      - name: Check out exact branch head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Execute deterministic reconciliation
-        id: reconcile
-        continue-on-error: true
-        shell: bash
-        run: bash scripts/reconcile-pr377-with-main.sh
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
 
-      - name: Record reconciled Git objects
-        if: steps.reconcile.outcome == 'success'
+      - name: Pin npm
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/pr377-reconciliation
-          printf '%s\n' "$(git rev-parse HEAD)" > /tmp/pr377-reconciliation/commit-sha.txt
-          printf '%s\n' "$(git rev-parse HEAD^{tree})" > /tmp/pr377-reconciliation/tree-sha.txt
-          git show --no-patch --pretty=raw HEAD > /tmp/pr377-reconciliation/commit.txt
+          for ATTEMPT in 1 2 3; do
+            if npm install --global npm@10.9.8; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
 
-      - name: Probe reconciled branch push
-        id: push
-        if: steps.reconcile.outcome == 'success'
-        continue-on-error: true
+      - name: Install repository dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npm ci; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Validate browser harness contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/admin-browser-reconnaissance.mjs
+          node --check scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
+          node --check scripts/button-action-coverage-contract.mjs
+          node --check scripts/local-auth-readiness.mjs
+          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
+          node --test scripts/local-staging-gateway-contract.test.mjs
+          node --test scripts/staff-service-role-access-contract.test.mjs
+          node --test scripts/persisted-game-code-contract.test.mjs
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Start local Supabase browser stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/admin-browser-supabase-startup.log
+          : > "$LOG"
+          mkdir -p backend/supabase/functions
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_MFA_HANDLE_KEY=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
+          EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Provision canonical source content
         shell: bash
         run: |
           set -o pipefail
-          git push origin HEAD:agent/runtime-stability-button-integrity-v1 \
-            2>&1 | tee /tmp/pr377-reconciliation/push.log
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/admin-browser-source-provisioning.log
 
-      - name: Upload reconciliation publication evidence
+      - name: Seed one browser-only license code
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          insert into public.purchase_codes (
+            code_hash,
+            status,
+            max_redemptions,
+            redeemed_count
+          ) values (
+            encode(extensions.digest('BROWSER-E2E-LICENSE-001', 'sha256'), 'hex'),
+            'active',
+            1,
+            0
+          );
+          SQL
+
+      - name: Verify Create Game RPC readiness
+        run: node scripts/local-auth-readiness.mjs
+
+      - name: Start same-origin browser gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(npx supabase status --workdir backend -o env)"
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
+          python3 scripts/econovaria-local-gateway.py \
+            --local-supabase \
+            --port 4173 \
+            > /tmp/admin-browser-gateway.log 2>&1 &
+          echo $! > /tmp/admin-browser-gateway.pid
+          for ATTEMPT in $(seq 1 90); do
+            STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              http://127.0.0.1:4173/ || true)"
+            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --request OPTIONS \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/player-api || true)"
+            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --request OPTIONS \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
+            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-browser-gateway.log
+          exit 1
+
+      - name: Execute rendered Create Game and Admin journey
+        id: browser
+        continue-on-error: true
+        run: node scripts/admin-browser-reconnaissance.mjs
+
+      - name: Execute secure Admin ledger mutation journey
+        id: ledger_mutation
+        if: steps.browser.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
+
+      - name: Capture sanitized server diagnostics
+        if: steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure'
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "== database state =="
+            psql "$DATABASE_URL" -X -qAt -c "select jsonb_build_object('authUsers', (select count(*) from auth.users where email = 'browser.e2e@example.test'), 'staffUsers', (select count(*) from public.staff_users where email = 'browser.e2e@example.test'), 'games', (select count(*) from public.game_sessions where name = 'Browser E2E Economy'), 'gamesWithReadableCode', (select count(*) from public.game_sessions where name = 'Browser E2E Economy' and game_join_code is not null), 'licenseStatus', (select status from public.purchase_codes where code_hash = encode(extensions.digest('BROWSER-E2E-LICENSE-001', 'sha256'), 'hex')), 'licenseRedeemedCount', (select redeemed_count from public.purchase_codes where code_hash = encode(extensions.digest('BROWSER-E2E-LICENSE-001', 'sha256'), 'hex')))::text;"
+            echo "== container logs =="
+            for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
+              echo "-- ${CONTAINER} --"
+              docker logs --since 10m "$CONTAINER" 2>&1 | tail -n 500
+            done
+          } \
+            | sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi; s/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/[game-code-redacted]/g' \
+            > /tmp/admin-browser-server-diagnostics.log
+          cat /tmp/admin-browser-server-diagnostics.log
+          exit 0
+
+      - name: Upload sanitized browser evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@v4
         with:
-          name: pr377-reconciliation-publication-${{ github.event.pull_request.head.sha || github.sha }}
-          path: /tmp/pr377-reconciliation/
+          name: admin-browser-e2e-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/econovaria-browser/
+            /tmp/admin-browser-supabase-startup.log
+            /tmp/admin-browser-source-provisioning.log
+            /tmp/admin-browser-gateway.log
+            /tmp/admin-browser-server-diagnostics.log
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 30
 
-      - name: Enforce reconciliation result
+      - name: Enforce rendered browser results
         if: always()
         shell: bash
         run: |
-          test "${{ steps.reconcile.outcome }}" = "success"
-          test "${{ steps.push.outcome }}" = "success"
+          test "${{ steps.browser.outcome }}" = "success"
+          test "${{ steps.ledger_mutation.outcome }}" = "success"
+
+      - name: Stop local browser stack
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/admin-browser-gateway.pid ]; then
+            kill "$(cat /tmp/admin-browser-gateway.pid)" 2>/dev/null || true
+          fi
+          rm -f backend/supabase/functions/.env
+          npx supabase stop --workdir backend --no-backup || true

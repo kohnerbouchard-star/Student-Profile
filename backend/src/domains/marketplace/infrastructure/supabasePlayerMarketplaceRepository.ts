@@ -120,7 +120,7 @@ export class SupabasePlayerMarketplaceRepository implements PlayerMarketplaceRep
         .eq("game_session_id", scope.gameId).in("id", playerIds)
       : { data: [], error: null };
     const itemsResult: QueryResult<Row[]> = itemKeys.length
-      ? await this.client.from("store_items").select("item_key,name,description,category,image_url")
+      ? await this.client.from("store_items").select("item_key,name,description,category")
         .eq("game_session_id", scope.gameId).in("item_key", itemKeys)
       : { data: [], error: null };
     assertResult(playersResult);
@@ -325,7 +325,7 @@ function listingDto(
     name: text(item?.name, 180, "Marketplace item"),
     description: optionalText(item?.description, 1200) ?? "No description is available.",
     category: token(item?.category ?? "other", 64),
-    image: optionalAsset(item?.image_url),
+    image: null,
     country: token(row.seller_country_code, 32),
     condition: condition(row.condition_label),
     seller: text(player?.display_name, 180, "Player"),

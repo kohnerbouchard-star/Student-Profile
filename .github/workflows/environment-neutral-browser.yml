@@ -39,15 +39,61 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.1
-      - name: Validate runtime configuration contracts
-        run: node --test scripts/runtime-config-contract.test.mjs scripts/environment-neutral-browser-integration.test.mjs
-      - name: Validate browser consumer syntax
+
+      - name: Validate runtime configuration contract
+        id: runtime_contract
+        shell: bash
         run: |
-          node --check frontend/src/core/runtime-config.js
-          node --check frontend/src/core/constants.js
-          node --check auth/reset-password.js
-          node --check admin/auth-session-manager.js
-          node --check player-terminal/host-runtime.js
-          node --check admin/player-access-code-bridge.js
-          node --check admin/admin-auth.js
-          node --check admin/classroom-write-fallback.js
+          set +e
+          node --test scripts/runtime-config-contract.test.mjs 2>&1 | tee "$RUNNER_TEMP/runtime-config-contract.log"
+          status=${PIPESTATUS[0]}
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Validate browser authority integration
+        id: browser_authority
+        shell: bash
+        run: |
+          set +e
+          node --test scripts/environment-neutral-browser-integration.test.mjs 2>&1 | tee "$RUNNER_TEMP/environment-neutral-browser.log"
+          status=${PIPESTATUS[0]}
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Validate browser consumer syntax
+        id: consumer_syntax
+        shell: bash
+        run: |
+          set +e
+          {
+            node --check frontend/src/core/runtime-config.js
+            node --check frontend/src/core/constants.js
+            node --check auth/reset-password.js
+            node --check admin/auth-session-manager.js
+            node --check player-terminal/host-runtime.js
+            node --check admin/player-access-code-bridge.js
+            node --check admin/admin-auth.js
+            node --check admin/classroom-write-fallback.js
+          } 2>&1 | tee "$RUNNER_TEMP/environment-neutral-syntax.log"
+          status=${PIPESTATUS[0]}
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload environment-neutral diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-neutral-browser-diagnostics
+          path: |
+            ${{ runner.temp }}/runtime-config-contract.log
+            ${{ runner.temp }}/environment-neutral-browser.log
+            ${{ runner.temp }}/environment-neutral-syntax.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce environment-neutral browser contracts
+        shell: bash
+        run: |
+          test "${{ steps.runtime_contract.outputs.status }}" = "0"
+          test "${{ steps.browser_authority.outputs.status }}" = "0"
+          test "${{ steps.consumer_syntax.outputs.status }}" = "0"

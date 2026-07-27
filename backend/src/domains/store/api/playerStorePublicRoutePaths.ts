@@ -1,3 +1,5 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 export type PlayerStorePublicRoute =
   | { readonly kind: "items" }
   | { readonly kind: "quotes" }
@@ -6,13 +8,18 @@ export type PlayerStorePublicRoute =
 export function readPlayerStorePublicRoutePath(
   pathname: string,
 ): PlayerStorePublicRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
-  if (playersIndex < 0 || segments[playersIndex + 1] !== "me") return null;
-  if (segments[playersIndex + 2] !== "store") return null;
+  const segments = readPlayerApiRouteSegments(pathname);
+  if (
+    !segments ||
+    segments.length !== 4 ||
+    segments[0] !== "players" ||
+    segments[1] !== "me" ||
+    segments[2] !== "store"
+  ) {
+    return null;
+  }
 
-  const resource = segments[playersIndex + 3];
-  if (playersIndex + 4 !== segments.length) return null;
+  const resource = segments[3];
   if (resource === "items") return { kind: "items" };
   if (resource === "quotes") return { kind: "quotes" };
   if (resource === "purchases") return { kind: "purchases" };

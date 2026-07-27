@@ -12,29 +12,46 @@ const PLAYER = "00000000-0000-4000-8000-000000000021";
 const CREDENTIAL = "00000000-0000-4000-8000-000000000031";
 const NOW = Date.parse("2026-07-18T09:00:00.000Z");
 const EXPIRES_AT = "2026-07-18T21:00:00.000Z";
+const THROTTLE_BUCKETS = [
+  { dimension: "account" as const, keyHash: "a".repeat(64) },
+  { dimension: "device" as const, keyHash: "b".repeat(64) },
+  { dimension: "ip" as const, keyHash: "c".repeat(64) },
+];
 
 Deno.test("player login returns a one-time token without internal UUIDs", async () => {
-  const fake = fakeClient({
-    game_sessions: [row({
-      id: GAME,
-      name: "Period 2",
-      status: "active",
-      game_join_code_status: "active",
-    })],
-    players: [row({
-      id: PLAYER,
-      display_name: "Alex Rivera",
-      roster_label: "Table 4",
-      player_identifier: "CARD-200",
-      status: "active",
-    })],
-    player_access_credentials: [row({
-      id: CREDENTIAL,
-      player_id: PLAYER,
-      status: "active",
-    })],
-    player_sessions: [row({ expires_at: EXPIRES_AT })],
-  });
+  const fake = fakeClient(
+    {
+      game_sessions: [row({
+        id: GAME,
+        name: "Period 2",
+        status: "active",
+        game_join_code_status: "active",
+      })],
+      players: [row({
+        id: PLAYER,
+        display_name: "Alex Rivera",
+        roster_label: "Table 4",
+        player_identifier: "CARD-200",
+        status: "active",
+      })],
+      player_access_credentials: [row({
+        id: CREDENTIAL,
+        player_id: PLAYER,
+        status: "active",
+        normalized_student_code_hash: "d".repeat(64),
+        credential_version: "pbkdf2-sha256-v2",
+        credential_salt: "A".repeat(22),
+        credential_verifier: "B".repeat(43),
+        credential_iterations: 600_000,
+      })],
+    },
+    {
+      create_player_session_v2: rowList([{
+        session_id: SESSION,
+        expires_at: EXPIRES_AT,
+      }]),
+    },
+  );
 
   const response = await handlePlayerLoginRequest(
     new Request("https://example.test/player-login", {
@@ -73,12 +90,14 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
     },
   });
   assertNoUuid(JSON.stringify(body));
-  assertEquals(fake.inserts.player_sessions, [{
-    game_session_id: GAME,
-    player_id: PLAYER,
-    session_token_hash: "hash:ps_one_time_authenticated_token",
-    status: "active",
-    expires_at: EXPIRES_AT,
+  assertEquals(fake.rpcs, [{
+    functionName: "create_player_session_v2",
+    args: {
+      p_game_session_id: GAME,
+      p_player_id: PLAYER,
+      p_session_token_hash: "hash:ps_one_time_authenticated_token",
+      p_expires_at: EXPIRES_AT,
+    },
   }]);
 });
 
@@ -108,7 +127,7 @@ Deno.test("player login fails closed when a legacy player lacks a public identif
   const serialized = JSON.stringify(await response.json());
   assertEquals(serialized.includes(PLAYER), false);
   assertEquals(serialized.includes("CARD-200"), false);
-  assertEquals(fake.inserts.player_sessions, undefined);
+  assertEquals(fake.rpcs, []);
 });
 
 Deno.test("player bootstrap derives scope from token and returns no token or UUID", async () => {
@@ -211,6 +230,23 @@ function dependencies(
     hashValue: (value: string) => Promise.resolve(`hash:${value}`),
     generateSessionToken: overrides.generateSessionToken,
     now: () => NOW,
+    buildThrottleBuckets: async () => THROTTLE_BUCKETS,
+    checkThrottle: async () => ({
+      allowed: true,
+      retryAfterSeconds: 0,
+      limitingDimension: null,
+      failureCount: 0,
+      lockedUntil: null,
+    }),
+    recordFailure: async () => ({
+      allowed: false,
+      retryAfterSeconds: 0,
+      limitingDimension: null,
+      failureCount: 1,
+      lockedUntil: null,
+    }),
+    recordSuccess: async () => {},
+    verifyCredential: async () => true,
   };
 }
 
@@ -244,23 +280,28 @@ function rowList(data: readonly unknown[]) {
 
 function fakeClient(
   responses: Record<string, Array<{ data: unknown; error: null }>>,
+  rpcResponses: Record<string, { data: unknown; error: null }> = {},
 ) {
-  const inserts: Record<string, unknown[]> = {};
+  const rpcs: Array<{ functionName: string; args: unknown }> = [];
   const client = {
     from(table: string) {
       const response = responses[table]?.shift();
       if (!response) throw new Error(`Unexpected query for ${table}`);
-      return new FakeQuery(table, response, inserts);
+      return new FakeQuery(response);
+    },
+    rpc(functionName: string, args: unknown) {
+      rpcs.push({ functionName, args });
+      const response = rpcResponses[functionName];
+      if (!response) throw new Error(`Unexpected RPC: ${functionName}`);
+      return Promise.resolve(response);
     },
   } as unknown as EdgeSupabaseClient;
-  return { client, inserts };
+  return { client, rpcs };
 }
 
 class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
   constructor(
-    private readonly table: string,
     private readonly response: { data: unknown; error: null },
-    private readonly inserts: Record<string, unknown[]>,
   ) {}
 
   select(): this {
@@ -268,11 +309,6 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
   }
 
   eq(): this {
-    return this;
-  }
-
-  insert(value: unknown): this {
-    (this.inserts[this.table] ??= []).push(value);
     return this;
   }
 
@@ -290,9 +326,7 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
 
   then<TResult1 = { data: unknown; error: null }, TResult2 = never>(
     onfulfilled?:
-      | ((
-        value: { data: unknown; error: null },
-      ) => TResult1 | PromiseLike<TResult1>)
+      | ((value: { data: unknown; error: null }) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {

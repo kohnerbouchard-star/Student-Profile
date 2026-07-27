@@ -139,8 +139,10 @@
     }
 
     function restoreFocus() {
+      const immediateTarget = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+      focusStableTarget(immediateTarget);
       window.requestAnimationFrame(() => {
-        const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+        const target = stableFocusTarget(opener) || immediateTarget || document.querySelector("#adminPreview");
         focusStableTarget(target);
         window.requestAnimationFrame(() => {
           const replacement = semanticFocusReplacement(opener);
