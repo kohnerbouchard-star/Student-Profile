@@ -126,6 +126,8 @@ const exactAllowed = new Set([
   "backend/src/security/playerBrowserResponsePrivacy.ts",
   "backend/src/security/playerBrowserResponsePrivacy.test.ts",
   "backend/src/security/classroomApiRateLimitDispatch.test.ts",
+  "backend/src/security/playerRateLimitPolicy.ts",
+  "backend/src/security/playerRateLimitPolicy.classroomCapacity.test.ts",
   "docs/operations/evidence/pr-249-player-marketplace-lifecycle.md",
   "docs/roadmaps/active/player-marketplace-lifecycle-v1.md",
   "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md",
