@@ -214,6 +214,14 @@ async function reloadRoute(page, route, selector) {
   await openRoute(page, route, selector);
 }
 
+async function openDisclosureForm(form) {
+  const disclosure = form.locator("xpath=..");
+  const summary = disclosure.locator("summary");
+  await summary.waitFor({ state: "visible", timeout: 30_000 });
+  if ((await disclosure.getAttribute("open")) === null) await summary.click();
+  await form.waitFor({ state: "visible", timeout: 30_000 });
+}
+
 function numberFromText(value) {
   const match = String(value || "").replaceAll(",", "").match(/-?\d+(?:\.\d+)?/u);
   return match ? Number(match[0]) : Number.NaN;
@@ -365,7 +373,7 @@ async function proveLoans(page, fixtureData) {
   await offer.waitFor({ state: "visible", timeout: 30_000 });
   await offer.click();
   const form = page.locator(`form[data-endpoint="loanApply"][data-offer-id="${LOAN_PRODUCT_KEY}"]`);
-  await form.waitFor({ state: "visible", timeout: 30_000 });
+  await openDisclosureForm(form);
   await form.locator('[name="amount"]').fill("500");
   await form.locator('[name="purpose"]').selectOption({ index: 0 });
   await form.locator('[name="repaymentSource"]').fill("Connected gameplay income and existing checking reserves.");
@@ -384,7 +392,7 @@ async function proveLoans(page, fixtureData) {
   approveLatestApplication();
   await reloadRoute(page, "loans", ".player-terminal-loans-page");
   const repayForm = page.locator(`form[data-endpoint="loanRepay"][data-loan-id="${LOAN_KEY}"]`);
-  await repayForm.waitFor({ state: "visible", timeout: 30_000 });
+  await openDisclosureForm(repayForm);
   const amountField = repayForm.locator('[name="amount"]');
   const beforeBalance = Number(await amountField.getAttribute("max"));
   await amountField.fill("10");
@@ -400,7 +408,7 @@ async function proveLoans(page, fixtureData) {
 
   await reloadRoute(page, "loans", ".player-terminal-loans-page");
   const persistedForm = page.locator(`form[data-endpoint="loanRepay"][data-loan-id="${LOAN_KEY}"]`);
-  await persistedForm.waitFor({ state: "visible", timeout: 30_000 });
+  await openDisclosureForm(persistedForm);
   const persistedBalance = Number(await persistedForm.locator('[name="amount"]').getAttribute("max"));
   if (!(persistedBalance < beforeBalance)) throw new Error(`Loan repayment did not reduce the balance: ${beforeBalance} -> ${persistedBalance}.`);
   evidence.loans.repaymentPersisted = true;
@@ -411,6 +419,7 @@ async function proveLoans(page, fixtureData) {
   }
   await reloadRoute(page, "loans", ".player-terminal-loans-page");
   const replayForm = page.locator(`form[data-endpoint="loanRepay"][data-loan-id="${LOAN_KEY}"]`);
+  await openDisclosureForm(replayForm);
   const replayBalance = Number(await replayForm.locator('[name="amount"]').getAttribute("max"));
   if (Math.abs(replayBalance - persistedBalance) > 0.01) throw new Error("Loan repayment replay duplicated the payment.");
   evidence.loans.replaySafe = true;
