@@ -94,13 +94,20 @@ test("deployment policy is delivered as HTTP security headers", async () => {
   assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
 });
 
-test("internal stock runner remains signed and replay resistant", async () => {
-  const entrypoint = await read("backend/supabase/functions/stock-market-runner/index.ts");
+test("internal stock runners remain signed and replay resistant", async () => {
+  const entrypoints = await Promise.all([
+    read("backend/supabase/functions/stock-market-runner/index.ts"),
+    read("backend/supabase/functions/stock-market-seed-copy/index.ts"),
+    read("backend/supabase/functions/stock-market-trading/index.ts"),
+  ]);
   const auth = await read("backend/src/security/internalRunnerAuth.ts");
-  assert.match(entrypoint, /authorizeInternalRunnerRequest/);
+  for (const entrypoint of entrypoints) {
+    assert.match(entrypoint, /authorizeInternalRunnerRequest/);
+    assert.match(entrypoint, /claim_internal_runner_nonce_v2/);
+  }
   assert.match(auth, /x-econovaria-runner-signature/);
   assert.match(auth, /x-econovaria-runner-timestamp/);
   assert.match(auth, /x-econovaria-runner-nonce/);
-  assert.match(auth, /claim_internal_runner_nonce_v2/);
-  assert.match(auth, /runner_nonce_replayed/);
+  assert.match(auth, /internal_runner_replay_denied/);
+  assert.match(auth, /request\.headers\.has\(options\.internalSecretHeader\)/);
 });
