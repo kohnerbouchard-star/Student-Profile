@@ -3,6 +3,7 @@
 
   const SHARE_ACTIONS = new Set(["share-current-game", "share-game-code"]);
   const REPAIR_DELAYS_MS = Object.freeze([0, 60, 180, 360, 720]);
+  const FALLBACK_SURFACE_CLASS = "econovaria-admin-share-fallback";
   let scheduledTimers = [];
 
   function text(value) {
@@ -51,6 +52,24 @@
         const style = window.getComputedStyle(surface);
         return style.display !== "none" && style.visibility !== "hidden";
       });
+  }
+
+  function deduplicateVisibleShareSurfaces(surfaces = visibleShareSurfaces()) {
+    if (surfaces.length <= 1) return surfaces;
+
+    const canonical = surfaces.find(
+      (surface) => !surface.classList.contains(FALLBACK_SURFACE_CLASS),
+    ) || surfaces[0];
+    const canonicalIsNative = !canonical.classList.contains(FALLBACK_SURFACE_CLASS);
+
+    surfaces.forEach((surface) => {
+      if (surface === canonical) return;
+      if (!canonicalIsNative && !surface.classList.contains(FALLBACK_SURFACE_CLASS)) return;
+      if (canonicalIsNative && !surface.classList.contains(FALLBACK_SURFACE_CLASS)) return;
+      surface.remove();
+    });
+
+    return visibleShareSurfaces();
   }
 
   function hideAdminShareField(input) {
@@ -126,7 +145,7 @@
     const selected = context();
     if (!selected.gameCode) return false;
     let repaired = false;
-    visibleShareSurfaces().forEach((surface) => {
+    deduplicateVisibleShareSurfaces().forEach((surface) => {
       repaired = repairSurface(surface, selected) || repaired;
     });
     return repaired;
@@ -160,6 +179,7 @@
 
   window.EconovariaAdminGameShareLinkContract = Object.freeze({
     canonicalPlayerUrl,
+    deduplicateVisibleShareSurfaces,
     repairVisibleShareSurfaces,
     scheduleRepairs,
   });
