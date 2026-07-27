@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
@@ -8,6 +9,7 @@ const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/eco
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const PLAYER = Object.freeze({
   displayName: "Browser Player Beta",
   playerIdentifier: "BROWSER-PLAYER-BETA",
@@ -16,9 +18,10 @@ const PLAYER = Object.freeze({
 const COMPANY_NAME = "Connected Browser Industries";
 const PRODUCT_NAME = "Connected Classroom Kit";
 const EMPLOYEE_ROLE = "Connected Quality Specialist";
-const FIXTURE_CREDIT = 6_000;
 const CAPITALIZATION = 2_000;
+const FIXTURE_TARGET_BALANCE = 25_000;
 const CURRENCY_PATTERN = /^[A-Z][A-Z0-9_]{2,15}$/;
+const UUID_VALUE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
@@ -27,8 +30,16 @@ const evidence = {
   generatedAt: new Date().toISOString(),
   rosterCurrencyCode: "",
   businessCurrencyCode: "",
+  economicContext: { countryCode: "", currencyCode: "" },
+  fixtureTargetBalance: FIXTURE_TARGET_BALANCE,
+  fixtureCreditAmount: 0,
+  balanceBeforeCredit: null,
+  storageBalanceBeforeCredit: null,
+  balanceAfterCredit: null,
+  storageBalanceAfterCredit: null,
   fixtureCreditApplied: false,
   fixtureCreditVisible: false,
+  businessRequest: null,
   mutations: {
     businessCreated: false,
     businessPersisted: false,
@@ -62,6 +73,53 @@ function redact(value) {
     .replace(/BROWSER-[A-Z0-9-]+/g, "[credential-redacted]")
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]")
     .replace(/sb_(?:secret|publishable)_[A-Za-z0-9_-]+/g, "[supabase-key-redacted]");
+}
+
+function psql(sql) {
+  return execFileSync("psql", [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", sql], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+}
+
+function databaseFundingState(admin, currencyCode) {
+  if (!UUID_VALUE_PATTERN.test(admin.gameId) || !UUID_VALUE_PATTERN.test(admin.playerId)) {
+    throw new Error("Business fixture database scope is invalid.");
+  }
+  if (!CURRENCY_PATTERN.test(currencyCode)) {
+    throw new Error("Business fixture database currency is invalid.");
+  }
+  const raw = psql(`
+    with context as (
+      select country_code, currency_code
+      from public.resolve_player_economic_context_v1(
+        '${admin.gameId}'::uuid,
+        '${admin.playerId}'::uuid
+      )
+      limit 1
+    )
+    select json_build_object(
+      'cashBalance', coalesce((
+        select balance
+        from public.account_balances
+        where game_session_id = '${admin.gameId}'::uuid
+          and player_id = '${admin.playerId}'::uuid
+          and account_type = 'cash'
+          and currency_code = '${currencyCode}'
+        limit 1
+      ), 0),
+      'contextCountryCode', coalesce((select country_code from context), ''),
+      'contextCurrencyCode', coalesce((select currency_code from context), '')
+    )::text;
+  `);
+  const value = JSON.parse(raw || "{}");
+  const cashBalance = Number(value.cashBalance);
+  const contextCountryCode = String(value.contextCountryCode || "").trim().toUpperCase();
+  const contextCurrencyCode = String(value.contextCurrencyCode || "").trim().toUpperCase();
+  if (!Number.isFinite(cashBalance) || !CURRENCY_PATTERN.test(contextCurrencyCode)) {
+    throw new Error(`Business fixture database context is invalid: ${redact(raw)}`);
+  }
+  return { cashBalance, contextCountryCode, contextCurrencyCode };
 }
 
 async function parseJson(response) {
@@ -165,7 +223,7 @@ async function resolveAdminFixture() {
   };
 }
 
-async function creditPlayer(admin, currencyCode) {
+async function creditPlayer(admin, currencyCode, amount) {
   const idempotencyKey = `business-fixture-${Date.now()}`;
   const response = await request(
     `/functions/v1/admin-api/games/${encodeURIComponent(admin.gameId)}/players/${encodeURIComponent(admin.playerId)}/ledger-adjustments`,
@@ -176,7 +234,7 @@ async function creditPlayer(admin, currencyCode) {
         "X-Idempotency-Key": idempotencyKey,
       }),
       body: {
-        amount: FIXTURE_CREDIT,
+        amount,
         reason: "Disposable connected Business acceptance fixture",
         accountType: "checking",
         currencyCode,
@@ -307,16 +365,13 @@ async function submitMutation(page, endpoint, pathPattern, configure) {
   await target.locator('button[type="submit"]').click();
   const response = await responsePromise;
   const payload = await parseJson(response);
-  if (response.status() !== 200 || payload?.ok !== true) {
-    throw new Error(`${endpoint} returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
-  }
   const requestRecord = response.request();
   const allHeaders = await requestRecord.allHeaders();
   const allowed = new Set([
     "accept", "apikey", "authorization", "content-type", "idempotency-key",
     "x-player-session-token", "x-request-id",
   ]);
-  return {
+  const operation = {
     responsePayload: payload,
     request: {
       url: response.url(),
@@ -324,6 +379,21 @@ async function submitMutation(page, endpoint, pathPattern, configure) {
       headers: Object.fromEntries(Object.entries(allHeaders).filter(([name]) => allowed.has(name.toLowerCase()))),
     },
   };
+  if (endpoint === "businessCreate") {
+    const body = JSON.parse(operation.request.body);
+    evidence.businessRequest = {
+      keys: Object.keys(body).sort(),
+      capitalization: Number(body.capitalization),
+      entityType: String(body.entityType || ""),
+      industryCode: String(body.industryCode || ""),
+      hasAcquireBusinessKey: Boolean(body.acquireBusinessKey),
+      hasIdempotencyKey: typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 8,
+    };
+  }
+  if (response.status() !== 200 || payload?.ok !== true) {
+    throw new Error(`${endpoint} returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
+  }
+  return operation;
 }
 
 async function replayRequest(page, original) {
@@ -486,22 +556,51 @@ try {
   const player = await login(browser, admin.gameCode);
   context = player.context;
   evidence.rosterCurrencyCode = admin.rosterCurrencyCode;
+
+  const storageBefore = databaseFundingState(admin, admin.rosterCurrencyCode);
+  evidence.storageBalanceBeforeCredit = storageBefore.cashBalance;
+  evidence.economicContext = {
+    countryCode: storageBefore.contextCountryCode,
+    currencyCode: storageBefore.contextCurrencyCode,
+  };
+  if (storageBefore.contextCurrencyCode !== admin.rosterCurrencyCode) {
+    throw new Error(`Server economic currency ${storageBefore.contextCurrencyCode} does not match roster currency ${admin.rosterCurrencyCode}.`);
+  }
+
   const balanceBeforeCredit = await checkingBalance(player.page, admin.rosterCurrencyCode, { optional: true });
-  await creditPlayer(admin, admin.rosterCurrencyCode);
+  evidence.balanceBeforeCredit = balanceBeforeCredit;
+  if (Math.abs(balanceBeforeCredit - storageBefore.cashBalance) > 0.001) {
+    throw new Error(`Player Banking and storage cash disagree before funding: ${balanceBeforeCredit} vs ${storageBefore.cashBalance}.`);
+  }
+
+  const fixtureCreditAmount = Math.max(1, Math.round((FIXTURE_TARGET_BALANCE - storageBefore.cashBalance) * 100) / 100);
+  evidence.fixtureCreditAmount = fixtureCreditAmount;
+  await creditPlayer(admin, admin.rosterCurrencyCode, fixtureCreditAmount);
   await player.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await player.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
+
   const balanceAfterCredit = await checkingBalance(player.page, admin.rosterCurrencyCode);
-  if (balanceAfterCredit < balanceBeforeCredit + FIXTURE_CREDIT) {
-    throw new Error(`Business fixture credit did not become Player-visible: ${balanceBeforeCredit} -> ${balanceAfterCredit}.`);
+  const storageAfter = databaseFundingState(admin, admin.rosterCurrencyCode);
+  evidence.balanceAfterCredit = balanceAfterCredit;
+  evidence.storageBalanceAfterCredit = storageAfter.cashBalance;
+  if (Math.abs(balanceAfterCredit - storageAfter.cashBalance) > 0.001) {
+    throw new Error(`Player Banking and storage cash disagree after funding: ${balanceAfterCredit} vs ${storageAfter.cashBalance}.`);
+  }
+  if (storageAfter.cashBalance < FIXTURE_TARGET_BALANCE || storageAfter.cashBalance < CAPITALIZATION) {
+    throw new Error(`Business fixture funding is below the required threshold: ${storageAfter.cashBalance}.`);
   }
   evidence.fixtureCreditVisible = true;
+
   const businessCurrencyCode = await renderedBusinessCurrency(player.page);
   evidence.businessCurrencyCode = businessCurrencyCode;
-  if (businessCurrencyCode !== admin.rosterCurrencyCode) {
-    throw new Error(`Business currency ${businessCurrencyCode} does not match assigned country currency ${admin.rosterCurrencyCode}.`);
+  if (businessCurrencyCode !== storageAfter.contextCurrencyCode) {
+    throw new Error(`Business currency ${businessCurrencyCode} does not match server economic currency ${storageAfter.contextCurrencyCode}.`);
   }
 
   const originalCreate = await createBusiness(player.page);
+  if (evidence.businessRequest?.capitalization !== CAPITALIZATION) {
+    throw new Error(`Business request capitalization was ${evidence.businessRequest?.capitalization} instead of ${CAPITALIZATION}.`);
+  }
   await createProduct(player.page);
   await purchaseInputs(player.page);
   await runProduction(player.page);
@@ -529,8 +628,6 @@ try {
   }
   if (!evidence.fixtureCreditApplied || !evidence.fixtureCreditVisible || !Object.values(evidence.mutations).every(Boolean)) {
     throw new Error(`Connected Player Business evidence is incomplete: ${JSON.stringify({
-      rosterCurrencyCode: evidence.rosterCurrencyCode,
-      businessCurrencyCode: evidence.businessCurrencyCode,
       fixtureCreditApplied: evidence.fixtureCreditApplied,
       fixtureCreditVisible: evidence.fixtureCreditVisible,
       mutations: evidence.mutations,
@@ -556,8 +653,11 @@ console.log(JSON.stringify({
   ok: true,
   rosterCurrencyCode: evidence.rosterCurrencyCode,
   businessCurrencyCode: evidence.businessCurrencyCode,
-  fixtureCreditApplied: evidence.fixtureCreditApplied,
-  fixtureCreditVisible: evidence.fixtureCreditVisible,
+  economicContext: evidence.economicContext,
+  fixtureTargetBalance: evidence.fixtureTargetBalance,
+  fixtureCreditAmount: evidence.fixtureCreditAmount,
+  storageBalanceAfterCredit: evidence.storageBalanceAfterCredit,
+  businessRequest: evidence.businessRequest,
   mutations: evidence.mutations,
   requestCount: evidence.requests.length,
 }));
