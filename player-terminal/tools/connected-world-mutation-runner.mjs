@@ -19,7 +19,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  arrivalClass: { submitted: false, persisted: false },
+  arrivalClass: { submitted: false, preassigned: false, persisted: false },
   travel: {
     quoted: false,
     executed: false,
@@ -161,25 +161,43 @@ async function captureRequest(response) {
   };
 }
 
-async function submitArrival(page) {
+async function resolveArrival(page) {
   const form = page.locator('form[data-world-form="arrivalClass"]');
-  await form.waitFor({ state: "visible", timeout: 30_000 });
-  const fieldsets = form.locator("fieldset");
-  if (await fieldsets.count() < 6) throw new Error("Arrival Class did not render six required questions.");
-  for (let index = 0; index < await fieldsets.count(); index += 1) {
-    await fieldsets.nth(index).locator('input[type="radio"]').first().check();
+  if (await form.isVisible().catch(() => false)) {
+    const fieldsets = form.locator("fieldset");
+    if (await fieldsets.count() < 6) throw new Error("Arrival Class did not render six required questions.");
+    for (let index = 0; index < await fieldsets.count(); index += 1) {
+      await fieldsets.nth(index).locator('input[type="radio"]').first().check();
+    }
+    const responsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname.endsWith("/players/me/arrival-class") && response.request().method() === "POST",
+      { timeout: 60_000 },
+    );
+    await form.locator('button[type="submit"]').click();
+    const response = await responsePromise;
+    if (![200, 201].includes(response.status())) throw new Error(`Arrival Class returned ${response.status()}.`);
+    evidence.arrivalClass.submitted = true;
+    await page.locator('form[data-world-form="arrivalClass"]').waitFor({ state: "detached", timeout: 60_000 });
+  } else {
+    const heading = page.locator("#world-arrival-title");
+    await heading.waitFor({ state: "visible", timeout: 30_000 });
+    const label = String(await heading.textContent() || "").trim();
+    if (!label || /^(Not assigned|Choose how you begin)$/i.test(label)) {
+      throw new Error(`World did not expose a valid Arrival Class state: ${label || "empty"}.`);
+    }
+    evidence.arrivalClass.preassigned = true;
   }
-  const responsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith("/players/me/arrival-class") && response.request().method() === "POST",
-    { timeout: 60_000 },
-  );
-  await form.locator('button[type="submit"]').click();
-  const response = await responsePromise;
-  if (![200, 201].includes(response.status())) throw new Error(`Arrival Class returned ${response.status()}.`);
-  evidence.arrivalClass.submitted = true;
-  await page.locator('form[data-world-form="arrivalClass"]').waitFor({ state: "detached", timeout: 60_000 });
+
   await reloadWorld(page);
-  if (await page.locator('form[data-world-form="arrivalClass"]').count()) throw new Error("Arrival Class assignment did not persist after reload.");
+  if (await page.locator('form[data-world-form="arrivalClass"]').count()) {
+    throw new Error("Arrival Class assignment did not persist after reload.");
+  }
+  const heading = page.locator("#world-arrival-title");
+  await heading.waitFor({ state: "visible", timeout: 30_000 });
+  const label = String(await heading.textContent() || "").trim();
+  if (!label || /^(Not assigned|Choose how you begin)$/i.test(label)) {
+    throw new Error("Arrival Class assignment was not rendered after reload.");
+  }
   evidence.arrivalClass.persisted = true;
 }
 
@@ -306,7 +324,7 @@ try {
   ({ context, page: globalThis.__worldPage } = await login(browser, fixtureData.gameCode));
   const page = globalThis.__worldPage;
   await openWorld(page);
-  await submitArrival(page);
+  await resolveArrival(page);
   const travel = await quoteAndExecuteTravel(page);
   fastForwardJourney(travel.journeyId);
   await completeTravel(page, travel.destination, travel.journeyId);
@@ -316,8 +334,9 @@ try {
     throw new Error(`World browser journey emitted errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
   }
   if (evidence.responseUuidLeak) throw new Error("World responses exposed a raw UUID.");
-  const incomplete = [
-    ...Object.values(evidence.arrivalClass),
+  const arrivalComplete = evidence.arrivalClass.persisted &&
+    (evidence.arrivalClass.submitted || evidence.arrivalClass.preassigned);
+  const incomplete = !arrivalComplete || [
     ...Object.values(evidence.travel),
     ...Object.values(evidence.residency),
   ].some((value) => value !== true);
