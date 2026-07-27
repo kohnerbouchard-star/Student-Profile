@@ -138,6 +138,54 @@ async function readAuthoritativeReplayState(page, original, ticker) {
   return source;
 }
 
+function adaptMarketExpectedNegativeConsoleErrors(source) {
+  if (!source.includes("const stale = await authenticatedRequest(page, orderPath, {")) {
+    return source;
+  }
+
+  source = replaceExactlyOnce(
+    source,
+    "Market negative-console capture start",
+    "  const stale = await authenticatedRequest(page, orderPath, {",
+    "  const expectedNegativeConsoleStart = evidence.consoleErrors.length;\n  const stale = await authenticatedRequest(page, orderPath, {",
+  );
+
+  const marker = `  evidence.forbiddenScopeRejected = true;
+
+  const unauthorized = await request(orderPath, {`;
+  const replacement = `  evidence.forbiddenScopeRejected = true;
+
+  await page.waitForTimeout(50);
+  const expectedNegativeConsoleErrors = evidence.consoleErrors.splice(
+    expectedNegativeConsoleStart,
+  );
+  const expectedNegativeStatuses = expectedNegativeConsoleErrors.map((message) => {
+    const match = message.match(
+      /Failed to load resource:.*status of (400|409)(?:\\s|\\(|$)/i,
+    );
+    return match ? Number(match[1]) : null;
+  });
+  if (
+    expectedNegativeConsoleErrors.length !== 2 ||
+    expectedNegativeStatuses.filter((status) => status === 400).length !== 1 ||
+    expectedNegativeStatuses.filter((status) => status === 409).length !== 1 ||
+    expectedNegativeStatuses.some((status) => status === null)
+  ) {
+    throw new Error(
+      \`Market negative probes emitted unexpected console errors: \${JSON.stringify(expectedNegativeConsoleErrors)}\`,
+    );
+  }
+
+  const unauthorized = await request(orderPath, {`;
+
+  return replaceExactlyOnce(
+    source,
+    "Market expected negative-console verification",
+    marker,
+    replacement,
+  );
+}
+
 export async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
@@ -165,6 +213,7 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
   );
   source = source.replaceAll("account_type = 'cash'", "account_type = 'checking'");
   source = adaptMarketAuthenticatedReads(source);
+  source = adaptMarketExpectedNegativeConsoleErrors(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Connected Player BFF loader retained the retired login route.");
