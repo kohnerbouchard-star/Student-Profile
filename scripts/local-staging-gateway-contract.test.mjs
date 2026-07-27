@@ -13,6 +13,8 @@ import { resolvePlayerLogoutUrl } from "../player-terminal/src/integrations/play
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gatewayPath = path.join(repositoryRoot, "scripts", "econovaria-local-gateway.py");
 const runtimeConfigPath = path.join(repositoryRoot, "frontend", "src", "core", "runtime-config.js");
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const CSRF_TOKEN = "C".repeat(43);
 
 function probeGateway() {
   const program = String.raw`
@@ -168,12 +170,15 @@ test("local browser config contains only publishable application identity", () =
   assert.equal(JSON.stringify(result.runtimeConfig).includes("eyJlegacy-unused"), false);
 
   const runtime = evaluateRuntimeConfig(result.runtimeConfig);
-  assert.equal(runtime.playerApiUrl, "http://127.0.0.1:4173/functions/v1/player-api");
-  assert.equal(runtime.staffApiUrl, "http://127.0.0.1:4173/functions/v1/staff-api");
-  assert.equal(runtime.bootstrapApiUrl, "http://127.0.0.1:4173/functions/v1/bootstrap-api");
-  assert.equal(runtime.adminApiUrl, "http://127.0.0.1:4173/functions/v1/admin-api");
-  assert.equal(runtime.webSessionApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api");
-  assert.equal(runtime.adminBffApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api/proxy");
+  const functions = "http://127.0.0.1:4173/functions/v1";
+  assert.equal(runtime.playerWebSessionApiUrl, `${functions}/player-web-session-api`);
+  assert.equal(runtime.playerApiUrl, `${functions}/player-web-session-api/proxy`);
+  assert.equal(runtime.staffApiUrl, `${functions}/staff-api`);
+  assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
+  assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
+  assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
+  assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
 });
 
@@ -227,7 +232,7 @@ test("gateway reconstructs a bounded response-header and cookie contract", () =>
   assert.equal(JSON.stringify(result.responseMetadata).includes("attacker.invalid"), false);
 });
 
-test("Player Terminal sends publishable key only as apikey", async () => {
+test("Player Terminal uses the HttpOnly BFF without a browser credential", async () => {
   const originalFetch = globalThis.fetch;
   let request = null;
   try {
@@ -240,11 +245,11 @@ test("Player Terminal sends publishable key only as apikey", async () => {
     };
 
     const transport = new HttpTransport({
-      apiBaseUrl: "http://127.0.0.1:4173/functions/v1/player-api",
+      apiBaseUrl: "http://127.0.0.1:4173/functions/v1/player-web-session-api/proxy",
       requestTimeoutMs: 1000,
       publishableKey: "sb_publishable_contract_test",
-      playerSessionToken: "ps_contract",
-      gameSessionId: "game_contract",
+      deviceId: DEVICE_ID,
+      sessionProvider: () => ({ authenticated: true, csrfToken: CSRF_TOKEN }),
     });
     await transport.request({
       endpointKey: "session",
@@ -256,37 +261,34 @@ test("Player Terminal sends publishable key only as apikey", async () => {
 
     assert.equal(request.options.headers.apikey, "sb_publishable_contract_test");
     assert.equal(request.options.headers.Authorization, undefined);
-    assert.equal(request.options.headers["x-player-session-token"], "ps_contract");
+    assert.equal(request.options.headers["x-player-session-token"], undefined);
+    assert.equal(request.options.headers["x-econovaria-device-id"], DEVICE_ID);
+    assert.equal(request.options.credentials, "include");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("Student-Profile adapter separates publishable and bearer credentials", () => {
-  const publicHeaders = headersFor({
-    endpointKey: "session",
+test("Player mutation headers use publishable identity, device binding, and CSRF only", () => {
+  const headers = headersFor({
+    endpointKey: "marketOrder",
+    method: "POST",
     requestId: "ptr_adapter_contract",
+    idempotencyKey: "idem_adapter_contract",
     session: {
-      publishableKey: "sb_publishable_contract_test",
-      playerSessionToken: "ps_adapter_contract",
+      authenticated: true,
+      csrfToken: CSRF_TOKEN,
     },
-    config: {},
-  });
-  assert.equal(publicHeaders.apikey, "sb_publishable_contract_test");
-  assert.equal(publicHeaders.Authorization, undefined);
-
-  const userHeaders = headersFor({
-    endpointKey: "session",
-    requestId: "ptr_user_adapter_contract",
-    session: {
-      accessToken: "user.jwt.contract",
+    config: {
       publishableKey: "sb_publishable_contract_test",
-      playerSessionToken: "ps_adapter_contract",
+      deviceId: DEVICE_ID,
     },
-    config: {},
   });
-  assert.equal(userHeaders.apikey, "sb_publishable_contract_test");
-  assert.equal(userHeaders.Authorization, "Bearer user.jwt.contract");
+  assert.equal(headers.apikey, "sb_publishable_contract_test");
+  assert.equal(headers["x-econovaria-device-id"], DEVICE_ID);
+  assert.equal(headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+  assert.equal(headers["x-player-session-token"], undefined);
+  assert.equal(headers.Authorization, undefined);
 });
 
 test("voluntary logout does not reuse invalid-session destination", () => {
