@@ -92,6 +92,7 @@ const exactAllowed = new Set([
   "scripts/staging/verify-messaging-zero-residue.sql",
   "scripts/environment-neutral-browser-integration.test.mjs",
   "scripts/runtime-config-contract.test.mjs",
+  "scripts/econovaria-local-gateway.py",
   "scripts/local-staging-gateway.py",
   "scripts/local-staging-gateway-contract.test.mjs",
   "backend/package.json",
