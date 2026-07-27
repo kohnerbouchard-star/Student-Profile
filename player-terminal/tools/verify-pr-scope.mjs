@@ -123,6 +123,7 @@ const exactAllowed = new Set([
   "backend/supabase/migrations/20260727090000_bound_arrival_class_grant_idempotency_v1.sql",
   "backend/supabase/migrations/20260727091000_reconcile_arrival_residency_eligibility_v1.sql",
   "backend/supabase/migrations/20260727102000_fix_player_travel_checking_account_v1.sql",
+  "backend/supabase/migrations/20260727103000_fix_arrival_grant_checking_account_v1.sql",
   "backend/src/security/playerRateLimitDispatch.ts",
   "backend/src/security/playerRateLimitDispatch.test.ts",
   "backend/src/security/rateLimitKeying.ts",
