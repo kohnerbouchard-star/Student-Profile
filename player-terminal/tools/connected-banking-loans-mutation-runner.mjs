@@ -36,6 +36,7 @@ const evidence = {
     unauthenticatedRejected: false,
   },
   requests: [],
+  actionBoundaries: [],
   consoleErrors: [],
   pageErrors: [],
   responseUuidLeak: false,
@@ -222,16 +223,61 @@ async function openDisclosureForm(form) {
   await form.waitFor({ state: "visible", timeout: 30_000 });
 }
 
-async function submitFormAndWait(page, form, predicate) {
+async function submitFormAndWait(page, form, endpointKey, predicate) {
   const validity = await form.evaluate((element) => ({
     valid: element.checkValidity(),
+    connected: element.isConnected,
+    endpoint: element.dataset.endpoint || "",
+    resourceId: element.dataset.offerId || element.dataset.loanId || "",
     invalidName: element.querySelector(":invalid")?.getAttribute("name") || null,
     invalidMessage: element.querySelector(":invalid")?.validationMessage || null,
   }));
-  if (!validity.valid) throw new Error(`Connected form was invalid: ${JSON.stringify(validity)}.`);
-  const responsePromise = page.waitForResponse(predicate, { timeout: 60_000 });
-  await form.evaluate((element) => element.requestSubmit());
-  return responsePromise;
+  if (!validity.valid || !validity.connected || validity.endpoint !== endpointKey) {
+    throw new Error(`Connected form was not submit-ready: ${redact(JSON.stringify(validity))}.`);
+  }
+
+  const boundaryPromise = page.evaluate((expectedEndpoint) => new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 5_000);
+    const listener = (event) => {
+      if (event?.detail?.endpointKey !== expectedEndpoint) return;
+      clearTimeout(timer);
+      document.removeEventListener("econovaria:player-api-request", listener, true);
+      resolve({
+        endpointKey: String(event.detail.endpointKey || ""),
+        method: String(event.detail.method || ""),
+        path: String(event.detail.path || ""),
+        payloadKeys: Object.keys(event.detail.payload || {}).sort(),
+        paramKeys: Object.keys(event.detail.params || {}).sort(),
+      });
+    };
+    document.addEventListener("econovaria:player-api-request", listener, true);
+  }), endpointKey);
+
+  const responsePromise = page.waitForResponse(predicate, { timeout: 15_000 }).catch(() => null);
+  await form.locator('button[type="submit"]').click();
+  const boundary = await boundaryPromise;
+  const response = await responsePromise;
+  const diagnostics = await page.evaluate(() => ({
+    toast: document.querySelector(".player-terminal-toast")?.textContent || "",
+    formError: document.querySelector("[data-player-form-error]")?.textContent || "",
+  }));
+  evidence.actionBoundaries.push({
+    endpointKey,
+    reached: Boolean(boundary),
+    method: boundary?.method || "",
+    path: redact(boundary?.path || ""),
+    payloadKeys: boundary?.payloadKeys || [],
+    paramKeys: boundary?.paramKeys || [],
+    responseStatus: response?.status?.() || 0,
+    diagnostic: redact(JSON.stringify(diagnostics)),
+  });
+  if (!boundary) {
+    throw new Error(`Connected ${endpointKey} form did not reach the Player API boundary: ${redact(JSON.stringify({ validity, diagnostics }))}.`);
+  }
+  if (!response) {
+    throw new Error(`Connected ${endpointKey} reached the Player API boundary but produced no reviewed response: ${redact(JSON.stringify({ boundary, diagnostics }))}.`);
+  }
+  return response;
 }
 
 function numberFromText(value) {
@@ -393,6 +439,7 @@ async function proveLoans(page, fixtureData) {
   const response = await submitFormAndWait(
     page,
     form,
+    "loanApply",
     (candidate) => new URL(candidate.url()).pathname.endsWith(`/players/me/banking/loans/applications/${LOAN_PRODUCT_KEY}`) && candidate.request().method() === "POST",
   );
   if (response.status() !== 200) throw new Error(`Loan application returned ${response.status()}.`);
@@ -410,6 +457,7 @@ async function proveLoans(page, fixtureData) {
   const repayResponse = await submitFormAndWait(
     page,
     repayForm,
+    "loanRepay",
     (candidate) => new URL(candidate.url()).pathname.endsWith(`/players/me/banking/loans/${LOAN_KEY}/payments`) && candidate.request().method() === "POST",
   );
   if (repayResponse.status() !== 200) throw new Error(`Loan repayment returned ${repayResponse.status()}.`);
