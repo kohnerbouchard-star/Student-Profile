@@ -174,18 +174,20 @@
   });
 
   const documentObject = globalObject.document;
+  const runtimeScriptUrl = text(documentObject?.currentScript?.src);
   const adminApiMeta = documentObject?.querySelector?.(
     'meta[name="econovaria-admin-api-base"]'
   );
   if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
 
   if (
+    runtimeScriptUrl &&
     typeof documentObject?.createElement === "function" &&
     typeof documentObject?.head?.append === "function" &&
     !documentObject.querySelector?.("script[data-econovaria-admin-logout-override]")
   ) {
     const logoutOverride = documentObject.createElement("script");
-    logoutOverride.src = "frontend/src/core/admin-logout-override.js";
+    logoutOverride.src = new URL("admin-logout-override.js", runtimeScriptUrl).href;
     logoutOverride.async = true;
     logoutOverride.dataset.econovariaAdminLogoutOverride = "true";
     documentObject.head.append(logoutOverride);
