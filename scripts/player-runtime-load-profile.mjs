@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const coreUrl = new URL("./player-runtime-load-profile-core.mjs", import.meta.url);
@@ -150,12 +149,10 @@ if (source.includes("/functions/v1/player-api/players/login") || source.includes
   throw new Error("Player load adapter left a retired browser credential transport.");
 }
 
-const scriptsDirectory = dirname(fileURLToPath(coreUrl));
-const directory = await mkdtemp(join(scriptsDirectory, ".tmp-player-load-"));
-const target = join(directory, "player-runtime-load-profile.mjs");
+const target = fileURLToPath(new URL("./.generated-player-runtime-load-profile.mjs", import.meta.url));
 try {
   await writeFile(target, source, "utf8");
   await import(`${pathToFileURL(target).href}?source=${encodeURIComponent(fileURLToPath(coreUrl))}`);
 } finally {
-  await rm(directory, { recursive: true, force: true });
+  await rm(target, { force: true });
 }
