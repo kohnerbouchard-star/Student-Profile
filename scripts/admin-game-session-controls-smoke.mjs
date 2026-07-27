@@ -86,6 +86,9 @@ for (const contract of [
   'url.searchParams.set("gameCode", normalizedCode)',
   'url.searchParams.set("mode", "student")',
   "repairVisibleShareSurfaces",
+  "deduplicateVisibleShareSurfaces",
+  "econovaria-admin-share-fallback",
+  "surface.remove()",
   "data-econovaria-player-link",
   "input[id*='share-admin-link']",
 ]) {
@@ -94,6 +97,11 @@ for (const contract of [
     `Canonical selected-game share-link contract is missing ${contract}.`,
   );
 }
+assert(
+  shareLinkContract.indexOf("deduplicateVisibleShareSurfaces().forEach") <
+    shareLinkContract.indexOf("repairSurface(surface, selected)"),
+  "Share surfaces must be deduplicated before canonical content is repaired.",
+);
 
 for (const contract of [
   "clearSessionSynchronously",
@@ -171,6 +179,7 @@ console.log(JSON.stringify({
   persistedGameCodeAuthority: true,
   sharePanelResponsive: true,
   canonicalPlayerShareRoute: true,
+  shareSurfaceDeduplication: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
   logoutHttpOnlyWebSession: true,
