@@ -5,7 +5,8 @@ import type {
   LicensingActivationRepository,
 } from "./licensingRepository.ts";
 import {
-  createPurchaseCodeSha256Hasher,
+  createPurchaseCodeHmacSha256Hasher,
+  readPurchaseCodeHmacSecret,
 } from "./purchaseCodeHasher.ts";
 import {
   createWebCryptoSha256HexDigest,
@@ -15,14 +16,18 @@ import {
 export interface LicensingActivationFactoryInput {
   readonly activationRepository: LicensingActivationRepository;
   readonly runtime?: WebCryptoRuntime;
+  readonly purchaseCodeHmacSecret?: string;
+  readonly readPurchaseCodeHmacSecret?: () => string | undefined;
 }
 
 export function createLicensingActivationRouteAdapterDependencies(
   input: LicensingActivationFactoryInput,
 ): LicensingActivationRouteAdapterDependencies {
   const digest = createWebCryptoSha256HexDigest(input.runtime);
-  const purchaseCodeHasher = createPurchaseCodeSha256Hasher({
+  const purchaseCodeHasher = createPurchaseCodeHmacSha256Hasher({
     digest,
+    hmacSecret: input.purchaseCodeHmacSecret,
+    readHmacSecret: input.readPurchaseCodeHmacSecret ?? readPurchaseCodeHmacSecret,
   });
 
   return {
