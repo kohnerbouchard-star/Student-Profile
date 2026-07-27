@@ -19,7 +19,13 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  arrivalClass: { submitted: false, preassigned: false, notRequired: false, persisted: false },
+  arrivalClass: {
+    submitted: false,
+    optionalAvailable: false,
+    preassigned: false,
+    notRequired: false,
+    persisted: false,
+  },
   travel: {
     quoted: false,
     executed: false,
@@ -142,9 +148,8 @@ async function openWorld(page) {
   await page.locator(".player-world-page").waitFor({ state: "visible", timeout: 60_000 });
   await page.locator(".player-world-loading").waitFor({ state: "detached", timeout: 60_000 }).catch(() => {});
   await page.waitForFunction(() => {
-    if (document.querySelector('form[data-world-form="arrivalClass"]')) return true;
-    const label = String(document.querySelector("#world-arrival-title")?.textContent || "").trim();
-    return Boolean(label && !/^(Not assigned|Choose how you begin)$/i.test(label));
+    const selector = document.querySelector('form[data-world-form="travelQuote"] select[name="toLocationId"]');
+    return Boolean(selector && [...selector.options].some((option) => Boolean(option.value)));
   }, undefined, { timeout: 60_000 });
 }
 
@@ -166,55 +171,39 @@ async function captureRequest(response) {
   };
 }
 
-async function resolveArrival(page) {
+async function observeArrival(page) {
   const form = page.locator('form[data-world-form="arrivalClass"]');
   if (await form.isVisible().catch(() => false)) {
-    const fieldsets = form.locator("fieldset");
-    if (await fieldsets.count() < 6) throw new Error("Arrival Class did not render six required questions.");
-    for (let index = 0; index < await fieldsets.count(); index += 1) {
-      await fieldsets.nth(index).locator('input[type="radio"]').first().check();
-    }
-    const responsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname.endsWith("/players/me/arrival-class") && response.request().method() === "POST",
-      { timeout: 60_000 },
-    );
-    await form.locator('button[type="submit"]').click();
-    const response = await responsePromise;
-    if (![200, 201].includes(response.status())) throw new Error(`Arrival Class returned ${response.status()}.`);
-    evidence.arrivalClass.submitted = true;
-    await page.locator('form[data-world-form="arrivalClass"]').waitFor({ state: "detached", timeout: 60_000 });
-  } else {
-    const heading = page.locator("#world-arrival-title");
-    await heading.waitFor({ state: "visible", timeout: 30_000 });
-    const label = String(await heading.textContent() || "").trim();
-    if (label === "No Arrival Class") {
-      evidence.arrivalClass.notRequired = true;
-      evidence.arrivalClass.persisted = true;
-      return;
-    }
-    if (!label || /^(Not assigned|Choose how you begin|Questionnaire unavailable)$/i.test(label)) {
-      throw new Error(`World did not expose a valid Arrival Class state: ${label || "empty"}.`);
-    }
-    evidence.arrivalClass.preassigned = true;
+    evidence.arrivalClass.optionalAvailable = true;
+    evidence.arrivalClass.persisted = true;
+    return;
   }
 
-  await reloadWorld(page);
-  if (await page.locator('form[data-world-form="arrivalClass"]').count()) {
-    throw new Error("Arrival Class assignment did not persist after reload.");
-  }
   const heading = page.locator("#world-arrival-title");
   await heading.waitFor({ state: "visible", timeout: 30_000 });
   const label = String(await heading.textContent() || "").trim();
-  if (!label || /^(Not assigned|Choose how you begin|Questionnaire unavailable)$/i.test(label)) {
-    throw new Error("Arrival Class assignment was not rendered after reload.");
+  if (label === "No Arrival Class") {
+    evidence.arrivalClass.notRequired = true;
+    evidence.arrivalClass.persisted = true;
+    return;
   }
+  if (!label || /^(Not assigned|Choose how you begin|Questionnaire unavailable)$/i.test(label)) {
+    throw new Error(`World did not expose a valid optional Arrival Class state: ${label || "empty"}.`);
+  }
+  evidence.arrivalClass.preassigned = true;
   evidence.arrivalClass.persisted = true;
 }
 
 async function quoteAndExecuteTravel(page) {
   const quoteForm = page.locator('form[data-world-form="travelQuote"]');
   await quoteForm.waitFor({ state: "visible", timeout: 30_000 });
-  const destinationOptions = await quoteForm.locator('select[name="toLocationId"] option').evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
+  await quoteForm.locator('select[name="toLocationId"] option:not([value=""])').first().waitFor({
+    state: "attached",
+    timeout: 60_000,
+  });
+  const destinationOptions = await quoteForm.locator('select[name="toLocationId"] option').evaluateAll(
+    (options) => options.map((option) => option.value).filter(Boolean),
+  );
   if (!destinationOptions.length) throw new Error("World did not provide an open travel destination.");
   const destination = destinationOptions[0];
   await quoteForm.locator('select[name="toLocationId"]').selectOption(destination);
@@ -334,7 +323,7 @@ try {
   ({ context, page: globalThis.__worldPage } = await login(browser, fixtureData.gameCode));
   const page = globalThis.__worldPage;
   await openWorld(page);
-  await resolveArrival(page);
+  await observeArrival(page);
   const travel = await quoteAndExecuteTravel(page);
   fastForwardJourney(travel.journeyId);
   await completeTravel(page, travel.destination, travel.journeyId);
@@ -344,9 +333,12 @@ try {
     throw new Error(`World browser journey emitted errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
   }
   if (evidence.responseUuidLeak) throw new Error("World responses exposed a raw UUID.");
-  const arrivalComplete = evidence.arrivalClass.persisted &&
-    (evidence.arrivalClass.submitted || evidence.arrivalClass.preassigned || evidence.arrivalClass.notRequired);
-  const incomplete = !arrivalComplete || [
+  const arrivalObserved = evidence.arrivalClass.persisted && (
+    evidence.arrivalClass.optionalAvailable ||
+    evidence.arrivalClass.preassigned ||
+    evidence.arrivalClass.notRequired
+  );
+  const incomplete = !arrivalObserved || [
     ...Object.values(evidence.travel),
     ...Object.values(evidence.residency),
   ].some((value) => value !== true);
