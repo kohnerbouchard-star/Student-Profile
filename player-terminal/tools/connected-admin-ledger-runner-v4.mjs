@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHmac } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
@@ -50,16 +51,17 @@ async function runtimeKey() {
   const match = (await response.text()).match(/Object\.freeze\((\{[\s\S]*\})\);?/);
   if (!match) throw new Error("Runtime configuration could not be parsed.");
   const key = String(JSON.parse(match[1]).supabasePublishableKey || "").trim();
-  if (!key || key.startsWith("sb_secret_")) throw new Error("A browser-safe publishable key is required.");
+  if (!key || key.startsWith("sb_secret_")) {
+    throw new Error("A browser-safe Supabase publishable key is required.");
+  }
   return key;
 }
 
-function platformHeaders(key, token = key) {
+function platformHeaders(key) {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
     apikey: key,
-    Authorization: `Bearer ${token}`,
   };
 }
 
@@ -70,37 +72,64 @@ async function request(pathOrUrl, { method = "GET", headers = {}, body } = {}) {
     headers,
     body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
     cache: "no-store",
+    redirect: "manual",
   });
   return { status: response.status, payload: await jsonResponse(response) };
 }
 
-async function authenticate() {
-  const key = await runtimeKey();
-  const signIn = await request("/auth/v1/token?grant_type=password", {
-    method: "POST",
-    headers: platformHeaders(key),
-    body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-  });
-  if (signIn.status !== 200 || !signIn.payload?.access_token) throw new Error(`Admin sign-in returned ${signIn.status}.`);
-  const accessToken = signIn.payload.access_token;
-  const bootstrap = await request("/functions/v1/classroom-api/staff/bootstrap", {
-    headers: platformHeaders(key, accessToken),
-  });
-  if (bootstrap.status !== 200 || bootstrap.payload?.ok !== true) throw new Error(`Admin bootstrap returned ${bootstrap.status}.`);
-  const sessions = Array.isArray(bootstrap.payload.activeGameSessions) ? bootstrap.payload.activeGameSessions : [];
-  const game = sessions.find((item) => item?.name === GAME_NAME) || sessions[0];
-  const gameId = String(game?.id || "").trim();
-  if (!gameId) throw new Error("Admin bootstrap did not return the test game.");
-  return {
-    key,
-    gameId,
-    record: {
-      accessToken,
-      refreshToken: String(signIn.payload.refresh_token || ""),
-      csrfToken: "",
-      user: signIn.payload.user || null,
-    },
-  };
+function decodeBase32(value) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const normalized = String(value || "").replace(/=+$/u, "").replace(/\s+/gu, "").toUpperCase();
+  if (!normalized || /[^A-Z2-7]/u.test(normalized)) {
+    throw new Error("Admin MFA enrollment did not expose a valid Base32 secret.");
+  }
+  const output = [];
+  let accumulator = 0;
+  let bits = 0;
+  for (const character of normalized) {
+    accumulator = (accumulator << 5) | alphabet.indexOf(character);
+    bits += 5;
+    while (bits >= 8) {
+      bits -= 8;
+      output.push((accumulator >>> bits) & 0xff);
+      accumulator &= (1 << bits) - 1;
+    }
+  }
+  return Buffer.from(output);
+}
+
+function generateTotp(secret, timestamp = Date.now()) {
+  const key = decodeBase32(secret);
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(timestamp / 30_000)));
+  let digest;
+  try {
+    digest = createHmac("sha1", key).update(counter).digest();
+    const offset = digest[digest.length - 1] & 0x0f;
+    const value = digest.readUInt32BE(offset) & 0x7fffffff;
+    return String(value % 1_000_000).padStart(6, "0");
+  } finally {
+    key.fill(0);
+    counter.fill(0);
+    digest?.fill(0);
+  }
+}
+
+async function completeMfaEnrollmentIfRequired(page) {
+  const dialog = page.locator(".econovaria-mfa-dialog");
+  await dialog.waitFor({ state: "visible", timeout: 20_000 }).catch(() => {});
+  if (!await dialog.isVisible().catch(() => false)) return;
+
+  const secretNode = dialog.locator(".econovaria-mfa-secret");
+  await secretNode.waitFor({ state: "visible", timeout: 20_000 });
+  const secret = String(await secretNode.textContent() || "").trim();
+  const remainingSeconds = 30 - (Math.floor(Date.now() / 1000) % 30);
+  if (remainingSeconds < 5) {
+    await page.waitForTimeout((remainingSeconds + 1) * 1000);
+  }
+  await dialog.locator(".econovaria-mfa-code").fill(generateTotp(secret));
+  await dialog.locator(".econovaria-mfa-submit").click();
+  await dialog.waitFor({ state: "detached", timeout: 30_000 });
 }
 
 function instrument(page) {
@@ -117,6 +146,30 @@ function instrument(page) {
       status: response.status(),
     });
   });
+}
+
+async function renderedLogin(page) {
+  await page.goto(`${BASE_URL}/?mode=admin`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.locator("#adminEmail").fill(ADMIN_EMAIL);
+  await page.locator("#adminAccessCode").fill(ADMIN_PASSWORD);
+  const loginResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/functions/v1/web-session-api/login") &&
+      response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await page.locator("#adminForm button[type='submit']").click();
+  const loginResponse = await loginResponsePromise;
+  if (loginResponse.status() !== 200) {
+    throw new Error(`Admin BFF sign-in returned ${loginResponse.status()}.`);
+  }
+  await page.locator("#adminGamesStep:not(.hidden)").waitFor({ state: "visible", timeout: 30_000 });
+  const namedGame = page.locator("#adminGameList .game-row").filter({ hasText: GAME_NAME }).first();
+  const gameControl = await namedGame.count()
+    ? namedGame
+    : page.locator("#adminGameList .game-row").first();
+  await gameControl.waitFor({ state: "visible", timeout: 30_000 });
+  await gameControl.click();
+  await waitForAdmin(page);
 }
 
 async function waitForAdmin(page) {
@@ -153,16 +206,18 @@ async function openPlayers(page) {
 }
 
 function playerRow(page) {
-  return namedPlayer(page).locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' admin-terminal-player-row ')][1]");
+  return namedPlayer(page).locator(
+    "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' admin-terminal-player-row ')][1]",
+  );
 }
 
-async function readCash(page) {
+async function readBalance(page) {
   await openPlayers(page);
   const row = playerRow(page);
   await row.waitFor({ state: "visible", timeout: 30_000 });
   const text = String(await row.innerText()).replace(/\s+/gu, " ").trim();
-  const match = text.match(/CASH\s+[^0-9-]*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/iu);
-  if (!match) throw new Error(`Could not read Player cash from row: ${redact(text)}`);
+  const match = text.match(/(?:CASH|CHECKING)\s+[^0-9-]*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/iu);
+  if (!match) throw new Error(`Could not read Player checking balance from row: ${redact(text)}`);
   return Number(match[1].replaceAll(",", ""));
 }
 
@@ -176,13 +231,17 @@ async function openAdjustment(page) {
 }
 
 async function fillAdjustment(modal) {
-  const amount = modal.locator('input[name="amount"]:visible, input[type="number"]:visible, input[type="text"][name*="amount" i]:visible').first();
+  const amount = modal.locator(
+    'input[name="amount"]:visible, input[type="number"]:visible, input[type="text"][name*="amount" i]:visible',
+  ).first();
   await amount.waitFor({ state: "visible", timeout: 10_000 });
   await amount.fill(String(ADJUSTMENT));
 
   const type = modal.locator('select[name="adjustmentType"]:visible').first();
   if (await type.count()) {
-    const options = await type.locator("option").evaluateAll((nodes) => nodes.map((node) => ({ value: node.value, text: String(node.textContent || "") })));
+    const options = await type.locator("option").evaluateAll((nodes) =>
+      nodes.map((node) => ({ value: node.value, text: String(node.textContent || "") }))
+    );
     const credit = options.find((option) => /credit|add|increase/iu.test(`${option.value} ${option.text}`));
     if (credit) await type.selectOption(credit.value);
   }
@@ -199,42 +258,67 @@ async function fillAdjustment(modal) {
 
 async function submitAdjustment(page, modal) {
   const responsePromise = page.waitForResponse(
-    (response) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players\/[^/]+\/ledger-adjustments$/u.test(new URL(response.url()).pathname) && response.request().method() === "POST",
-    { timeout: 60_000 },
+    (response) => /\/functions\/v1\/web-session-api\/proxy\/games\/[^/]+\/players\/[^/]+\/ledger-adjustments$/u
+      .test(new URL(response.url()).pathname) && response.request().method() === "POST",
+    { timeout: 90_000 },
   );
-  const submit = modal.getByRole("button", { name: /save ledger adjustment|apply|confirm|adjust|credit|update/iu }).last();
+  const submit = modal.getByRole(
+    "button",
+    { name: /save ledger adjustment|apply|confirm|adjust|credit|update/iu },
+  ).last();
   await submit.waitFor({ state: "visible", timeout: 10_000 });
   await submit.click();
+  await completeMfaEnrollmentIfRequired(page);
   const response = await responsePromise;
   if (response.status() !== 200) throw new Error(`Ledger adjustment returned ${response.status()}.`);
   const record = response.request();
   const requestHeaders = await record.allHeaders();
-  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "x-econovaria-csrf", "x-econovaria-game-id", "x-idempotency-key", "x-request-id"]);
+  const allowed = new Set([
+    "accept",
+    "apikey",
+    "content-type",
+    "x-econovaria-csrf-token",
+    "x-econovaria-device-id",
+    "x-idempotency-key",
+    "x-request-id",
+  ]);
   return {
     url: response.url(),
     body: record.postData() || "{}",
-    headers: Object.fromEntries(Object.entries(requestHeaders).filter(([name]) => allowed.has(name.toLowerCase()))),
+    headers: Object.fromEntries(
+      Object.entries(requestHeaders).filter(([name]) => allowed.has(name.toLowerCase())),
+    ),
   };
+}
+
+async function replayThroughBrowser(page, original) {
+  return page.evaluate(async ({ url, headers, body }) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      cache: "no-store",
+      credentials: "include",
+    });
+    return { status: response.status, payload: await response.json().catch(() => null) };
+  }, original);
 }
 
 let browser;
 let context;
 let failure;
 try {
-  const auth = await authenticate();
+  const key = await runtimeKey();
   browser = await chromium.launch({ headless: true });
-  context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-  await context.addInitScript(({ origin, record, gameId }) => {
-    if (location.origin !== origin) return;
-    sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(record));
-    sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-  }, { origin: new URL(BASE_URL).origin, record: auth.record, gameId: auth.gameId });
+  context = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+    reducedMotion: "reduce",
+  });
 
   const page = await context.newPage();
   instrument(page);
-  await page.goto(`${BASE_URL}/admin/`, { waitUntil: "domcontentloaded", timeout: 120_000 });
-  await waitForAdmin(page);
-  evidence.beforeBalance = await readCash(page);
+  await renderedLogin(page);
+  evidence.beforeBalance = await readBalance(page);
 
   const modal = await openAdjustment(page);
   await fillAdjustment(modal);
@@ -242,25 +326,28 @@ try {
   evidence.mutation.submitted = true;
 
   await waitForAdmin(page);
-  evidence.committedBalance = await readCash(page);
-  if (!Number.isFinite(evidence.committedBalance) || Math.abs(evidence.committedBalance - evidence.beforeBalance) < 0.001) {
-    throw new Error(`The committed ledger mutation did not change the rendered balance: ${evidence.beforeBalance} -> ${evidence.committedBalance}.`);
+  evidence.committedBalance = await readBalance(page);
+  if (
+    !Number.isFinite(evidence.committedBalance) ||
+    Math.abs(evidence.committedBalance - evidence.beforeBalance) < 0.001
+  ) {
+    throw new Error(
+      `The committed ledger mutation did not change the rendered balance: ${evidence.beforeBalance} -> ${evidence.committedBalance}.`,
+    );
   }
   evidence.mutation.renderedAfterCommit = true;
 
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdmin(page);
-  evidence.persistedBalance = await readCash(page);
+  evidence.persistedBalance = await readBalance(page);
   if (Math.abs(evidence.persistedBalance - evidence.committedBalance) > 0.001) {
-    throw new Error(`The ledger balance did not persist: ${evidence.committedBalance} -> ${evidence.persistedBalance}.`);
+    throw new Error(
+      `The ledger balance did not persist: ${evidence.committedBalance} -> ${evidence.persistedBalance}.`,
+    );
   }
   evidence.mutation.persistedAfterReload = true;
 
-  const replay = await request(original.url, {
-    method: "POST",
-    headers: original.headers,
-    body: original.body,
-  });
+  const replay = await replayThroughBrowser(page, original);
   if (replay.status !== 200) throw new Error(`Ledger replay returned ${replay.status}.`);
   const replayResult = replay.payload?.data ?? replay.payload;
   if (replayResult?.outcome && replayResult.outcome !== "replayed") {
@@ -269,32 +356,52 @@ try {
 
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdmin(page);
-  evidence.replayBalance = await readCash(page);
+  evidence.replayBalance = await readBalance(page);
   if (Math.abs(evidence.replayBalance - evidence.committedBalance) > 0.001) {
-    throw new Error(`The replay duplicated the mutation: ${evidence.committedBalance} -> ${evidence.replayBalance}.`);
+    throw new Error(
+      `The replay duplicated the mutation: ${evidence.committedBalance} -> ${evidence.replayBalance}.`,
+    );
   }
   evidence.mutation.replayedWithoutDuplication = true;
 
-  const unauthorized = await request(new URL(original.url).pathname, {
+  const unauthorized = await request(original.url, {
     method: "POST",
-    headers: platformHeaders(auth.key),
+    headers: platformHeaders(key),
     body: original.body,
   });
-  if (![401, 403].includes(unauthorized.status)) throw new Error(`Unauthenticated ledger mutation returned ${unauthorized.status}.`);
+  if (![401, 403].includes(unauthorized.status)) {
+    throw new Error(`Unauthenticated ledger mutation returned ${unauthorized.status}.`);
+  }
   evidence.mutation.unauthenticatedRejected = true;
 
-  if (evidence.consoleErrors.length || evidence.pageErrors.length) {
-    throw new Error(`Admin browser errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
+  const expectedUnauthorizedConsole =
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
+  const unexpectedConsoleErrors = evidence.consoleErrors.filter(
+    (message) => message !== expectedUnauthorizedConsole,
+  );
+  if (unexpectedConsoleErrors.length || evidence.pageErrors.length) {
+    throw new Error(
+      `Admin browser errors: ${JSON.stringify({ consoleErrors: unexpectedConsoleErrors, pageErrors: evidence.pageErrors })}`,
+    );
   }
 } catch (error) {
   failure = error;
   evidence.failure = redact(error?.stack || error);
 } finally {
   evidence.finalizedAt = new Date().toISOString();
-  await writeFile(`${OUTPUT_DIR}/admin-connected-ledger-mutation-browser-acceptance.json`, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  await writeFile(
+    `${OUTPUT_DIR}/admin-connected-ledger-mutation-browser-acceptance.json`,
+    `${JSON.stringify(evidence, null, 2)}\n`,
+    "utf8",
+  );
   await context?.close().catch(() => {});
   await browser?.close().catch(() => {});
 }
 
 if (failure) throw failure;
-console.log(JSON.stringify({ ok: true, beforeBalance: evidence.beforeBalance, committedBalance: evidence.committedBalance, mutation: evidence.mutation }));
+console.log(JSON.stringify({
+  ok: true,
+  beforeBalance: evidence.beforeBalance,
+  committedBalance: evidence.committedBalance,
+  mutation: evidence.mutation,
+}));
