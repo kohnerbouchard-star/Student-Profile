@@ -3,7 +3,8 @@ import {
   createStudentProfileFetchRequest
 } from "./student-profile-api-call.js";
 
-const DEFAULT_PLAYER_API_BASE = "/functions/v1/player-api";
+const DEFAULT_PLAYER_API_BASE = "/api/player";
+const LOCAL_PLAYER_BFF_SUFFIX = "/functions/v1/player-web-session-api/proxy";
 
 function normalizedBase(value) {
   return String(value || DEFAULT_PLAYER_API_BASE).trim().replace(/\/+$/, "");
@@ -11,7 +12,9 @@ function normalizedBase(value) {
 
 function isPlayerApiBase(value) {
   const base = normalizedBase(value);
-  return base === DEFAULT_PLAYER_API_BASE || base.endsWith(DEFAULT_PLAYER_API_BASE);
+  return base === DEFAULT_PLAYER_API_BASE ||
+    base.endsWith(DEFAULT_PLAYER_API_BASE) ||
+    base.endsWith(LOCAL_PLAYER_BFF_SUFFIX);
 }
 
 export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fetch } = {}) {
@@ -26,7 +29,7 @@ export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fe
 
   const apiBaseUrl = normalizedBase(config.studentProfileApiBaseUrl || DEFAULT_PLAYER_API_BASE);
   if (!isPlayerApiBase(apiBaseUrl)) {
-    throw new TypeError("Student-Profile connected mode must use /functions/v1/player-api.");
+    throw new TypeError("Student-Profile connected mode must use the Player HttpOnly BFF.");
   }
 
   const request = createStudentProfileFetchRequest({ apiBaseUrl, fetchImpl });
@@ -40,5 +43,4 @@ export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fe
 }
 
 export const STUDENT_PROFILE_PLAYER_API_BASE = DEFAULT_PLAYER_API_BASE;
-// Compatibility export for downstream packages; the value is the canonical Player API.
 export const STUDENT_PROFILE_CLASSROOM_API_BASE = DEFAULT_PLAYER_API_BASE;
