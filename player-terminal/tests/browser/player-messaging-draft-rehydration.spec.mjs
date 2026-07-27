@@ -68,7 +68,7 @@ test("rehydrated Messaging composer submits the generic saved draft once", async
   });
   await expect(composer.locator('[name="body"]')).toHaveValue("");
 
-  await composer.locator("[data-player-message-send]").click({ force: true });
+  await composer.locator("[data-player-message-send]").dispatchEvent("click");
   await expect.poll(() => page.evaluate(() => globalThis.__messagingDraftDispatches.length)).toBe(1);
   expect(await page.evaluate(() => globalThis.__messagingDraftDispatches[0])).toEqual({ body: DRAFT_BODY });
   await page.waitForTimeout(100);
