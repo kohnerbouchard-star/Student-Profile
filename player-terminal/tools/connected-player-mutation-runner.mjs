@@ -166,16 +166,25 @@ async function openMessages(session) {
 
 async function refreshMessages(session) {
   const { page } = session;
+  if (!await page.evaluate(() => location.hash === "#messages")) await openMessages(session);
+
   const requestIndex = evidence.requests.length;
-  const isMessagesRoute = await page.evaluate(() => location.hash === "#messages");
-  if (isMessagesRoute) {
-    const profile = page.locator('[data-route="profile"]:visible').first();
-    await profile.waitFor({ state: "visible", timeout: 30_000 });
-    await profile.click();
-    await page.waitForFunction(() => location.hash === "#profile", undefined, { timeout: 30_000 });
-    await page.locator(".player-terminal-profile-page").waitFor({ state: "visible", timeout: 30_000 });
-  }
-  await openMessages(session);
+  const refreshResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/messages") && response.request().method() === "GET",
+    { timeout: 60_000 },
+  );
+  await page.evaluate(() => {
+    globalThis.dispatchEvent(new CustomEvent("econovaria:player-resources-invalidated", {
+      detail: { resources: ["messages"] },
+    }));
+  });
+  const response = await refreshResponse;
+  if (!response.ok()) throw new Error(`${session.label} Messages refresh returned ${response.status()}.`);
+  await page.locator(".player-terminal-messages-page").waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const surface = document.querySelector(".player-terminal-messages-page");
+    return Boolean(surface && surface.getAttribute("aria-busy") !== "true");
+  }, undefined, { timeout: 60_000 });
   assertNoFailedRequests(`${session.label} Messages route refresh`, requestIndex);
 }
 
