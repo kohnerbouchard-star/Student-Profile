@@ -3,9 +3,11 @@ import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
+import { jsonResponse } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   handleStockMarketSeedCopyRequest,
 } from "../../../src/domains/stocks/api/stockMarketSeedCopyHttpHandler.ts";
+import { requirePublishableRequest } from "../_shared/econovariaAuth.ts";
 
 const createSupabaseClient = createClient as unknown as (
   url: string,
@@ -13,11 +15,13 @@ const createSupabaseClient = createClient as unknown as (
   options: unknown,
 ) => EdgeSupabaseClient;
 
-Deno.serve((request) =>
-  handleStockMarketSeedCopyRequest(request, {
-    createServiceClient,
-  })
-);
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return jsonResponse(204, null);
+
+  const publishableFailure = await requirePublishableRequest(request);
+  if (publishableFailure) return publishableFailure;
+  return handleStockMarketSeedCopyRequest(request, { createServiceClient });
+});
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
   return createSupabaseClient(env.supabaseUrl, env.supabaseServiceRoleKey, {

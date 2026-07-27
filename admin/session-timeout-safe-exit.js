@@ -32,9 +32,16 @@
     else redirectTimer = 0;
   }
 
+  function parsedExpiry(value) {
+    const timestamp = Date.parse(String(value || ""));
+    return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0;
+  }
+
   function sessionExpiresAt(session) {
-    const expiresAt = Number(sessionManager?.parseJwt(session?.accessToken || "")?.exp || 0) * 1000;
-    return Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : 0;
+    const accessExpiry = parsedExpiry(session?.expiresAt);
+    const absoluteExpiry = parsedExpiry(session?.absoluteExpiresAt);
+    if (!accessExpiry || !absoluteExpiry) return 0;
+    return Math.min(accessExpiry, absoluteExpiry);
   }
 
   function lockAdminShell() {
@@ -53,7 +60,10 @@
       gate.setAttribute("aria-live", "assertive");
       gate.setAttribute("aria-label", "Administrator session expired");
       const status = gate.querySelector(".admin-qol-sr-only");
-      if (status) status.textContent = "Administrator session expired. Returning to sign in.";
+      if (status) {
+        status.textContent =
+          "Administrator session expired. Returning to sign in.";
+      }
     }
     document.title = "Session expired · Econovaria Administrator";
   }
@@ -66,16 +76,19 @@
     try {
       sessionManager?.clear();
       window.sessionStorage.removeItem("econovaria.admin.csrf.v1");
-      window.sessionStorage.removeItem("econovaria.admin.idle-seed-fingerprint.v1");
+      window.sessionStorage.removeItem(
+        "econovaria.admin.idle-seed-fingerprint.v1",
+      );
     } catch (_) {}
     window.ECONOVARIA_CSRF_TOKEN = "";
     window.currentSession = null;
     if (window.state) window.state.staffSession = null;
     lockAdminShell();
 
-    window.dispatchEvent(new CustomEvent("econovaria:admin-session-exit-started", {
-      detail: { reason, terminal: "admin" }
-    }));
+    window.dispatchEvent(new CustomEvent(
+      "econovaria:admin-session-exit-started",
+      { detail: { reason, terminal: "admin" } },
+    ));
     redirectTimer = window.setTimeout(() => {
       window.location.replace(loginUrl(reason));
     }, 120);
@@ -90,7 +103,7 @@
 
     try {
       const usable = await sessionManager.getUsableSession({
-        minimumValidityMs: REFRESH_SKEW_MS
+        minimumValidityMs: REFRESH_SKEW_MS,
       });
       if (!usable) {
         exit("session-expired");
@@ -106,7 +119,10 @@
   function schedule(session = sessionManager?.read()) {
     if (exiting || !sessionManager || !session) return;
     const expiresAt = sessionExpiresAt(session);
-    if (!expiresAt) return;
+    if (!expiresAt) {
+      exit("session-invalid");
+      return;
+    }
     if (expiresAt === scheduledExpiry && expiryTimer) return;
 
     clearTimer("expiry");
@@ -118,7 +134,7 @@
     }
     expiryTimer = window.setTimeout(
       () => void validateAtExpiry(),
-      Math.min(delay, MAX_TIMER_MS)
+      Math.min(delay, MAX_TIMER_MS),
     );
   }
 
@@ -126,7 +142,10 @@
     if (document.visibilityState !== "visible") return;
     schedule();
     const session = sessionManager?.read();
-    if (session && sessionExpiresAt(session) <= Date.now() + REFRESH_SKEW_MS) {
+    if (
+      session &&
+      sessionExpiresAt(session) <= Date.now() + REFRESH_SKEW_MS
+    ) {
       void validateAtExpiry();
     }
   }
@@ -134,7 +153,10 @@
   function start() {
     if (!sessionManager) return;
     schedule();
-    recheckTimer = window.setInterval(handleVisibilityChange, RECHECK_INTERVAL_MS);
+    recheckTimer = window.setInterval(
+      handleVisibilityChange,
+      RECHECK_INTERVAL_MS,
+    );
   }
 
   window.addEventListener("econovaria:admin-session-refreshed", () => {
@@ -146,7 +168,7 @@
 
   window.EconovariaAdminSessionExit = Object.freeze({
     exit,
-    check: handleVisibilityChange
+    check: handleVisibilityChange,
   });
 
   start();

@@ -11,9 +11,16 @@ declare const Deno: {
 const AUTH_USER_ID = "11111111-1111-4111-8111-111111111111";
 const STAFF_USER_ID = "22222222-2222-4222-8222-222222222222";
 const GAME_SESSION_ID = "33333333-3333-4333-8333-333333333333";
+const SECURE_PASSWORD = "SecurePassword123!";
+const THROTTLE_BUCKETS = [
+  { dimension: "account" as const, keyHash: "a".repeat(64) },
+  { dimension: "device" as const, keyHash: "b".repeat(64) },
+  { dimension: "ip" as const, keyHash: "c".repeat(64) },
+];
 
 interface MockCalls {
   authCreates: number;
+  authCreateInputs: unknown[];
   authDeletes: string[];
   authDisables: string[];
   staffDeletes: string[];
@@ -35,6 +42,17 @@ Deno.test("staff signup validates before creating an Auth user", async () => {
   await assertError(response, 400, "password_too_short");
   assertEquals(mock.calls.authCreates, 0);
   assertEquals(mock.calls.rpcNames.length, 0);
+});
+
+Deno.test("staff signup requires the complete mixed-character password policy", async () => {
+  const mock = createMock();
+  const response = await handleStaffSignupRequest(
+    signupRequest({ password: "longlowercasepassword123!" }),
+    mock.dependencies,
+  );
+
+  await assertError(response, 400, "password_missing_uppercase");
+  assertEquals(mock.calls.authCreates, 0);
 });
 
 Deno.test("staff signup requires an explicit game timezone before creating Auth", async () => {
@@ -59,12 +77,12 @@ Deno.test("staff signup fails before Auth creation when canonical provisioning i
   );
 
   await assertError(response, 503, "game_provisioning_unavailable");
-  assertEquals(mock.calls.rpcNames.join(","), "game_provisioning_preflight_v1");
+  assertEquals(domainRpcNames(mock.calls), ["game_provisioning_preflight_v1"]);
   assertEquals(mock.calls.authCreates, 0);
   assertEquals(mock.calls.authDeletes.length, 0);
 });
 
-Deno.test("staff signup creates the linked account and fully provisioned first game", async () => {
+Deno.test("staff signup creates controlled role metadata and the first game", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
     signupRequest(),
@@ -74,16 +92,25 @@ Deno.test("staff signup creates the linked account and fully provisioned first g
 
   assertEquals(response.status, 201);
   assertEquals(body.ok, true);
-  assertEquals(body.staff.id, STAFF_USER_ID);
+  assertEquals(body.staff.email, "teacher@example.com");
+  assertEquals(body.staff.role, "game_admin");
   assertEquals(body.activation.gameSessionId, GAME_SESSION_ID);
   assertEquals(body.activation.provisioningStatus, "ready");
   assertEquals(body.activation.packId, "econovaria.beta-seed-pack.v1");
   assertEquals(mock.calls.authCreates, 1);
   assertEquals(mock.calls.authDeletes.length, 0);
-  assertEquals(mock.calls.rpcNames.join(","), [
+  assertEquals(domainRpcNames(mock.calls), [
     "game_provisioning_preflight_v1",
     "redeem_purchase_code_for_game",
-  ].join(","));
+  ]);
+  const authInput = mock.calls.authCreateInputs[0] as Record<string, unknown>;
+  assertEquals(authInput.email, "teacher@example.com");
+  assertEquals(authInput.password, SECURE_PASSWORD);
+  assertEquals(authInput.app_metadata, {
+    econovaria_role: "game_admin",
+    permission_version: 1,
+    security_version: 1,
+  });
 });
 
 Deno.test("staff signup compensates after license redemption fails", async () => {
@@ -96,23 +123,19 @@ Deno.test("staff signup compensates after license redemption fails", async () =>
   );
 
   await assertError(response, 409, "purchase_code_exhausted");
-  assertEquals(mock.calls.rpcNames.join(","), [
+  assertEquals(domainRpcNames(mock.calls), [
     "game_provisioning_preflight_v1",
     "redeem_purchase_code_for_game",
-  ].join(","));
+  ]);
   assertEquals(mock.calls.staffDeletes[0], AUTH_USER_ID);
   assertEquals(mock.calls.authDeletes[0], AUTH_USER_ID);
   assertEquals(mock.calls.authDisables.length, 0);
 });
 
-function createMock(options: MockOptions = {}): {
-  readonly dependencies: {
-    readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
-  };
-  readonly calls: MockCalls;
-} {
+function createMock(options: MockOptions = {}) {
   const calls: MockCalls = {
     authCreates: 0,
+    authCreateInputs: [],
     authDeletes: [],
     authDisables: [],
     staffDeletes: [],
@@ -121,8 +144,9 @@ function createMock(options: MockOptions = {}): {
   const client = {
     auth: {
       admin: {
-        createUser: async () => {
+        createUser: async (input: unknown) => {
           calls.authCreates += 1;
+          calls.authCreateInputs.push(input);
           return {
             data: {
               user: {
@@ -175,7 +199,33 @@ function createMock(options: MockOptions = {}): {
   } as unknown as EdgeSupabaseClient;
 
   return {
-    dependencies: { createServiceClient: () => client },
+    dependencies: {
+      createServiceClient: (_env: SupabaseEnv) => client,
+      enforceVolumetric: async () => ({
+        allowed: true,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        limit: 90,
+        remaining: 89,
+        resetAt: "2026-07-26T00:05:00.000Z",
+      }),
+      buildThrottleBuckets: async () => THROTTLE_BUCKETS,
+      checkThrottle: async () => ({
+        allowed: true,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        failureCount: 0,
+        lockedUntil: null,
+      }),
+      recordFailure: async () => ({
+        allowed: false,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        failureCount: 1,
+        lockedUntil: null,
+      }),
+      recordSuccess: async () => {},
+    },
     calls,
   };
 }
@@ -193,9 +243,7 @@ function createStaffQuery(calls: MockCalls) {
       return query;
     },
     eq: (_column: string, value: unknown) => {
-      if (operation === "delete") {
-        calls.staffDeletes.push(String(value));
-      }
+      if (operation === "delete") calls.staffDeletes.push(String(value));
       return query;
     },
     single: async () => ({
@@ -214,20 +262,18 @@ function createStaffQuery(calls: MockCalls) {
         | ((value: { data: unknown[]; error: null }) => unknown)
         | null,
       onrejected: ((reason: unknown) => unknown) | null,
-    ) =>
-      Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
+    ) => Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
   };
-
   return query;
 }
 
 function signupRequest(overrides: Record<string, unknown> = {}): Request {
-  return new Request("https://classroom-api.test/staff/signup", {
+  return new Request("https://bootstrap-api.test/staff/signup", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       email: "teacher@example.com",
-      password: "secure-password",
+      password: SECURE_PASSWORD,
       displayName: "Teacher Name",
       purchaseCode: "LICENSE-CODE",
       gameName: "Fall 2026",
@@ -236,6 +282,13 @@ function signupRequest(overrides: Record<string, unknown> = {}): Request {
       ...overrides,
     }),
   });
+}
+
+function domainRpcNames(calls: MockCalls): string[] {
+  return calls.rpcNames.filter((name) =>
+    name === "game_provisioning_preflight_v1" ||
+    name === "redeem_purchase_code_for_game"
+  );
 }
 
 async function assertError(
@@ -250,11 +303,9 @@ async function assertError(
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
-  if (!Object.is(actual, expected)) {
+  if (!Object.is(actual, expected) && JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${
-        JSON.stringify(actual)
-      }.`,
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
     );
   }
 }

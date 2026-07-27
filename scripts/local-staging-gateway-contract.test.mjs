@@ -11,73 +11,121 @@ import { headersFor } from "../player-terminal/src/integrations/student-profile-
 import { resolvePlayerLogoutUrl } from "../player-terminal/src/integrations/player-logout-controller.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const gatewayPath = path.join(repositoryRoot, "scripts", "local-staging-gateway.py");
+const gatewayPath = path.join(repositoryRoot, "scripts", "econovaria-local-gateway.py");
 const runtimeConfigPath = path.join(repositoryRoot, "frontend", "src", "core", "runtime-config.js");
 
 function probeGateway() {
   const program = String.raw`
+import base64
 import importlib.util
 import json
 import sys
 from email.message import Message
 
 path = sys.argv[1]
-spec = importlib.util.spec_from_file_location("econovaria_local_gateway", path)
+spec = importlib.util.spec_from_file_location("econovaria_gateway", path)
 module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 
-local_anon_key = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature"
-generated = module.runtime_config(
-    "eecvbssdvarfcykcfrny",
-    "sb_publishable_contract_test",
-    4173,
+publishable_key = "sb_publishable_contract_test"
+user_jwt = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature"
+iv = base64.urlsafe_b64encode(bytes(range(12))).decode("ascii").rstrip("=")
+ciphertext = base64.urlsafe_b64encode(bytes(range(17, 81))).decode("ascii").rstrip("=")
+envelope = f"v1.{iv}.{ciphertext}"
+parsed_status = module.parse_supabase_status_env(
+    'API_URL="http://127.0.0.1:54321"\n'
+    f'PUBLISHABLE_KEY="{publishable_key}"\n'
+    'ANON_KEY="eyJlegacy-unused"\n'
 )
-local_generated = module.runtime_config(
+
+public_headers = Message()
+public_headers["apikey"] = publishable_key
+public_headers["Authorization"] = f"Bearer {publishable_key}"
+public_forwarded = module.filtered_request_headers(
+    public_headers,
+    "127.0.0.1:54321",
+    browser_publishable_key=publishable_key,
+)
+
+staff_headers = Message()
+staff_headers["apikey"] = publishable_key
+staff_headers["Authorization"] = f"Bearer {user_jwt}"
+staff_headers["x-forwarded-for"] = "203.0.113.7"
+staff_headers["x-unreviewed-header"] = "must-not-pass"
+staff_forwarded = module.filtered_request_headers(
+    staff_headers,
+    "127.0.0.1:54321",
+    browser_publishable_key=publishable_key,
+)
+
+web_headers = Message()
+web_headers["apikey"] = publishable_key
+web_headers["Cookie"] = f"analytics=secret; econovaria_admin_session={envelope}; unrelated=value"
+web_headers["x-econovaria-csrf-token"] = "C" * 43
+web_forwarded = module.filtered_request_headers(
+    web_headers,
+    "127.0.0.1:54321",
+    browser_publishable_key=publishable_key,
+    request_path="/functions/v1/web-session-api/proxy/games",
+    browser_origin="http://127.0.0.1:4173",
+)
+
+response_metadata = module.filtered_response_headers([
+    ("Content-Type", "application/json; charset=iso-8859-1"),
+    ("Retry-After", "00045"),
+    ("X-Request-Id", "req.contract-1"),
+    ("Set-Cookie", f"econovaria_admin_session={envelope}; Path=/; HttpOnly; SameSite=Strict"),
+    ("Location", "https://attacker.invalid/"),
+    ("Access-Control-Allow-Origin", "*"),
+    ("X-Attacker\r\nInjected", "yes"),
+])
+clear_metadata = module.filtered_response_headers([
+    ("Set-Cookie", "__Host-econovaria_admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"),
+])
+invalid_response_metadata = module.filtered_response_headers([
+    ("Content-Type", "text/html"),
+    ("Retry-After", "Thu, 01 Jan 2099 00:00:00 GMT"),
+    ("X-Request-Id", "bad request id"),
+    ("Set-Cookie", "econovaria_admin_session=v1.bad.bad; Path=/; HttpOnly"),
+])
+
+generated = module.runtime_config(
     module.LOCAL_DEVELOPMENT_PROJECT_REF,
-    local_anon_key,
+    publishable_key,
     4173,
     environment="development",
     supabase_url="http://127.0.0.1:54321",
 )
 prefix = "window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze("
 suffix = ");\n"
-assert generated.startswith(prefix)
-assert generated.endswith(suffix)
-assert local_generated.startswith(prefix)
-assert local_generated.endswith(suffix)
 config = json.loads(generated[len(prefix):-len(suffix)])
-local_config = json.loads(local_generated[len(prefix):-len(suffix)])
-parsed_status = module.parse_supabase_status_env(
-    'API_URL="http://127.0.0.1:54321"\n'
-    'PUBLISHABLE_KEY="sb_publishable_contract_test"\n'
-    f'ANON_KEY="{local_anon_key}"\n'
-    'IGNORED\n'
-)
-selected_local_key = module.local_edge_anon_key(parsed_status)
-try:
-    module.local_edge_anon_key({"PUBLISHABLE_KEY": "sb_publishable_contract_test"})
-except SystemExit as error:
-    publishable_only_error = str(error)
-else:
-    publishable_only_error = ""
-
-conditional_headers = Message()
-conditional_headers["If-Modified-Since"] = "Wed, 22 Jul 2026 00:00:00 GMT"
-conditional_headers["If-None-Match"] = '"stale-player-bundle"'
-module.remove_static_conditionals(conditional_headers)
 
 print(json.dumps({
-    "functions": module.is_proxy_path("/functions/v1/classroom-api/players/login"),
+    "functions": module.is_proxy_path("/functions/v1/player-api/players/login"),
     "auth": module.is_proxy_path("/auth/v1/token?grant_type=password"),
     "rest": module.is_proxy_path("/rest/v1/players"),
-    "storage": module.is_proxy_path("/storage/v1/object/public/example"),
-    "config": config,
-    "localConfig": local_config,
     "parsedStatus": parsed_status,
-    "selectedLocalKey": selected_local_key,
-    "publishableOnlyError": publishable_only_error,
+    "publicForwarded": public_forwarded,
+    "staffForwarded": staff_forwarded,
+    "webForwarded": web_forwarded,
+    "responseMetadata": {
+        "contentType": response_metadata.content_type,
+        "retryAfter": response_metadata.retry_after,
+        "requestId": response_metadata.request_id,
+        "sessionCookie": response_metadata.session_cookie,
+    },
+    "clearCookie": clear_metadata.session_cookie,
+    "invalidResponseMetadata": {
+        "contentType": invalid_response_metadata.content_type,
+        "retryAfter": invalid_response_metadata.retry_after,
+        "requestId": invalid_response_metadata.request_id,
+        "sessionCookie": invalid_response_metadata.session_cookie,
+    },
+    "runtimeConfig": config,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
-    "remainingConditionals": list(conditional_headers.keys()),
+    "maxBody": module.MAX_PROXY_BODY_BYTES,
+    "envelope": envelope,
 }))
 `;
 
@@ -85,18 +133,12 @@ print(json.dumps({
     cwd: repositoryRoot,
     encoding: "utf8",
   });
-
   assert.equal(
     result.status,
     0,
     `local gateway contract probe failed:\n${result.stderr || result.stdout}`,
   );
   return JSON.parse(result.stdout);
-}
-
-function legacyAnonKey(payload) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `eyJhbGciOiJIUzI1NiJ9.${encoded}.signature`;
 }
 
 function evaluateRuntimeConfig(config) {
@@ -111,107 +153,83 @@ function evaluateRuntimeConfig(config) {
   return window.EconovariaRuntimeConfig;
 }
 
-test("local gateway proxies Edge Functions and Supabase Auth only", () => {
+test("gateway proxies only Edge Functions and Supabase Auth", () => {
   const result = probeGateway();
-
   assert.equal(result.functions, true);
   assert.equal(result.auth, true);
   assert.equal(result.rest, false);
-  assert.equal(result.storage, false);
+  assert.equal(result.maxBody, 1_048_576);
 });
 
-test("connected staging keeps Auth on Supabase and Edge APIs on loopback", () => {
-  const { config } = probeGateway();
-
-  assert.deepEqual(config, {
-    environment: "staging",
-    projectRef: "eecvbssdvarfcykcfrny",
-    supabaseUrl: "https://eecvbssdvarfcykcfrny.supabase.co",
-    apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey: "sb_publishable_contract_test",
-  });
-});
-
-test("local Supabase mode selects the anon JWT instead of the opaque publishable key", () => {
-  const {
-    localConfig,
-    parsedStatus,
-    selectedLocalKey,
-    publishableOnlyError,
-  } = probeGateway();
-  const expectedAnonKey =
-    "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature";
-
-  assert.deepEqual(localConfig, {
-    environment: "development",
-    projectRef: "localdevelopment0000",
-    supabaseUrl: "http://127.0.0.1:4173",
-    apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey: expectedAnonKey,
-  });
-  assert.deepEqual(parsedStatus, {
-    API_URL: "http://127.0.0.1:54321",
-    PUBLISHABLE_KEY: "sb_publishable_contract_test",
-    ANON_KEY: expectedAnonKey,
-  });
-  assert.equal(selectedLocalKey, expectedAnonKey);
-  assert.match(publishableOnlyError, /did not return ANON_KEY/);
-});
-
-test("runtime validator accepts local anon keys only under the local development binding", () => {
-  const anonKey = legacyAnonKey({ role: "anon", ref: "localhost" });
-  const runtime = evaluateRuntimeConfig({
-    environment: "development",
-    projectRef: "localdevelopment0000",
-    supabaseUrl: "http://127.0.0.1:4173",
-    apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey: anonKey,
-  });
-
-  assert.equal(runtime.environment, "development");
-  assert.equal(runtime.supabaseUrl, "http://127.0.0.1:4173");
-  assert.equal(runtime.classroomApiUrl, "http://127.0.0.1:4173/functions/v1/classroom-api");
-  assert.throws(
-    () =>
-      evaluateRuntimeConfig({
-        environment: "staging",
-        projectRef: "localdevelopment0000",
-        supabaseUrl: "http://127.0.0.1:4173",
-        apiProxyUrl: "http://127.0.0.1:4173",
-        supabasePublishableKey: anonKey,
-      }),
-    /ECONOVARIA_RUNTIME_CONFIG_INVALID_LOCAL_BINDING/,
-  );
-});
-
-test("remote legacy anon keys retain exact project binding", () => {
-  assert.throws(
-    () =>
-      evaluateRuntimeConfig({
-        environment: "staging",
-        projectRef: "eecvbssdvarfcykcfrny",
-        supabaseUrl: "https://eecvbssdvarfcykcfrny.supabase.co",
-        apiProxyUrl: "http://127.0.0.1:4173",
-        supabasePublishableKey: legacyAnonKey({ role: "anon", ref: "anotherprojectref000" }),
-      }),
-    /ECONOVARIA_RUNTIME_CONFIG_INVALID_LEGACY_ANON_KEY/,
-  );
-});
-
-test("connected local static assets cannot reuse stale browser validators", () => {
+test("local browser config contains only publishable application identity", () => {
   const result = probeGateway();
+  assert.equal(result.parsedStatus.PUBLISHABLE_KEY, "sb_publishable_contract_test");
+  assert.equal(result.runtimeConfig.supabasePublishableKey, "sb_publishable_contract_test");
+  assert.equal(JSON.stringify(result.runtimeConfig).includes("eyJlegacy-unused"), false);
 
-  assert.deepEqual(result.remainingConditionals, []);
-  assert.equal(result.staticHeaders["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0");
-  assert.equal(result.staticHeaders.Pragma, "no-cache");
-  assert.equal(result.staticHeaders.Expires, "0");
-  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "connected-no-cache-v1");
+  const runtime = evaluateRuntimeConfig(result.runtimeConfig);
+  assert.equal(runtime.playerApiUrl, "http://127.0.0.1:4173/functions/v1/player-api");
+  assert.equal(runtime.staffApiUrl, "http://127.0.0.1:4173/functions/v1/staff-api");
+  assert.equal(runtime.bootstrapApiUrl, "http://127.0.0.1:4173/functions/v1/bootstrap-api");
+  assert.equal(runtime.adminApiUrl, "http://127.0.0.1:4173/functions/v1/admin-api");
+  assert.equal(runtime.webSessionApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api");
+  assert.equal(runtime.adminBffApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api/proxy");
+  assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
 });
 
-test("Player Terminal sends the canonical backend session contract", async () => {
+test("gateway strips publishable bearer and preserves real staff JWT", () => {
+  const result = probeGateway();
+  assert.equal(result.publicForwarded.apikey, "sb_publishable_contract_test");
+  assert.equal(result.publicForwarded.Authorization, undefined);
+  assert.equal(result.publicForwarded["x-real-ip"], "127.0.0.1");
+
+  assert.equal(result.staffForwarded.apikey, "sb_publishable_contract_test");
+  assert.equal(
+    result.staffForwarded.Authorization,
+    "Bearer eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature",
+  );
+  assert.equal(result.staffForwarded["x-real-ip"], "127.0.0.1");
+  assert.equal(result.staffForwarded["x-forwarded-for"], undefined);
+  assert.equal(result.staffForwarded["x-unreviewed-header"], undefined);
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v3");
+});
+
+test("gateway carries only the encrypted Admin session and CSRF", () => {
+  const result = probeGateway();
+  assert.equal(
+    result.webForwarded.Cookie,
+    `econovaria_admin_session=${result.envelope}`,
+  );
+  assert.equal(result.webForwarded.Origin, "http://127.0.0.1:4173");
+  assert.equal(result.webForwarded["x-econovaria-csrf-token"], "C".repeat(43));
+  assert.equal(result.webForwarded.Cookie.includes("analytics"), false);
+  assert.equal(result.webForwarded.Cookie.includes("unrelated"), false);
+});
+
+test("gateway reconstructs a bounded response-header and cookie contract", () => {
+  const result = probeGateway();
+  assert.deepEqual(result.responseMetadata, {
+    contentType: "application/json; charset=utf-8",
+    retryAfter: "45",
+    requestId: "req.contract-1",
+    sessionCookie: `econovaria_admin_session=${result.envelope}; Path=/; Max-Age=28800; HttpOnly; SameSite=Strict`,
+  });
+  assert.equal(
+    result.clearCookie,
+    "econovaria_admin_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict",
+  );
+  assert.deepEqual(result.invalidResponseMetadata, {
+    contentType: "application/octet-stream",
+    retryAfter: null,
+    requestId: null,
+    sessionCookie: null,
+  });
+  assert.equal(JSON.stringify(result.responseMetadata).includes("attacker.invalid"), false);
+});
+
+test("Player Terminal sends publishable key only as apikey", async () => {
   const originalFetch = globalThis.fetch;
   let request = null;
-
   try {
     globalThis.fetch = async (url, options) => {
       request = { url, options };
@@ -222,13 +240,12 @@ test("Player Terminal sends the canonical backend session contract", async () =>
     };
 
     const transport = new HttpTransport({
-      apiBaseUrl: "http://127.0.0.1:4173/functions/v1/classroom-api",
+      apiBaseUrl: "http://127.0.0.1:4173/functions/v1/player-api",
       requestTimeoutMs: 1000,
-      accessToken: "sb_publishable_contract_test",
+      publishableKey: "sb_publishable_contract_test",
       playerSessionToken: "ps_contract",
       gameSessionId: "game_contract",
     });
-
     await transport.request({
       endpointKey: "session",
       method: "GET",
@@ -237,51 +254,47 @@ test("Player Terminal sends the canonical backend session contract", async () =>
       idempotencyKey: "ptr_contract_idempotency",
     });
 
+    assert.equal(request.options.headers.apikey, "sb_publishable_contract_test");
+    assert.equal(request.options.headers.Authorization, undefined);
     assert.equal(request.options.headers["x-player-session-token"], "ps_contract");
-    assert.equal(request.options.headers["x-econovaria-game-id"], "game_contract");
-    assert.equal(request.options.headers["x-idempotency-key"], "ptr_contract_idempotency");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("Student-Profile adapter supplies platform and Player session headers when configured", () => {
-  const headers = headersFor({
+test("Student-Profile adapter separates publishable and bearer credentials", () => {
+  const publicHeaders = headersFor({
     endpointKey: "session",
     requestId: "ptr_adapter_contract",
     session: {
-      accessToken: "sb_publishable_contract_test",
+      publishableKey: "sb_publishable_contract_test",
       playerSessionToken: "ps_adapter_contract",
     },
     config: {},
   });
+  assert.equal(publicHeaders.apikey, "sb_publishable_contract_test");
+  assert.equal(publicHeaders.Authorization, undefined);
 
-  assert.equal(headers.Authorization, "Bearer sb_publishable_contract_test");
-  assert.equal(headers.apikey, "sb_publishable_contract_test");
-  assert.equal(headers["x-player-session-token"], "ps_adapter_contract");
-  assert.equal(headers["x-request-id"], "ptr_adapter_contract");
-});
-
-test("Student-Profile adapter retains Player session headers in injected test adapters", () => {
-  const headers = headersFor({
+  const userHeaders = headersFor({
     endpointKey: "session",
-    requestId: "ptr_injected_adapter",
-    session: { playerSessionToken: "ps_adapter_contract" },
+    requestId: "ptr_user_adapter_contract",
+    session: {
+      accessToken: "user.jwt.contract",
+      publishableKey: "sb_publishable_contract_test",
+      playerSessionToken: "ps_adapter_contract",
+    },
     config: {},
   });
-
-  assert.equal(headers.Authorization, undefined);
-  assert.equal(headers.apikey, undefined);
-  assert.equal(headers["x-player-session-token"], "ps_adapter_contract");
+  assert.equal(userHeaders.apikey, "sb_publishable_contract_test");
+  assert.equal(userHeaders.Authorization, "Bearer user.jwt.contract");
 });
 
-test("voluntary logout does not reuse the invalid-session destination", () => {
+test("voluntary logout does not reuse invalid-session destination", () => {
   const result = resolvePlayerLogoutUrl({
     logoutExitUrl: "http://127.0.0.1:4173/?mode=player&reason=logged-out",
     sessionExitUrl: "http://127.0.0.1:4173/?mode=player&reason=session-invalid",
   }, {
     href: "http://127.0.0.1:4173/player-terminal/",
   });
-
   assert.equal(result, "http://127.0.0.1:4173/?mode=player&reason=logged-out");
 });

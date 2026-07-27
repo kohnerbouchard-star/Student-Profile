@@ -101,9 +101,10 @@ for (const activeSource of [html, styles, constants, api, login, terminalHtml, h
 
 assertNotIncludes(constants, "const API_URL =");
 assertNotIncludes(api, "callApiOnce");
-assertIncludes(api, 'callSupabaseJsonRoute("/players/login"');
+assertIncludes(api, 'callSupabaseJsonRoute("player", "/players/login"');
 assertIncludes(api, "playerIdentifier:");
 assertIncludes(api, "accessCode:");
+assertNotIncludes(api, "Authorization: `Bearer ${publishableKey}`");
 
 assertIncludes(login, "econovaria.player.auth.v1");
 assertIncludes(login, "runtime.sessionStorage.setItem(playerStorageKey()");
@@ -119,8 +120,9 @@ if (hostIndex < 0 || mainIndex < 0 || hostIndex >= mainIndex) {
 }
 
 assertIncludes(hostRuntime, "sessionProvider: () => readStoredSession()");
-assertIncludes(hostRuntime, "studentProfileApiBaseUrl: CLASSROOM_API_URL");
-assertIncludes(hostRuntime, "accessToken: SUPABASE_PUBLISHABLE_KEY");
+assertIncludes(hostRuntime, "studentProfileApiBaseUrl: PLAYER_API_URL");
+assertIncludes(hostRuntime, "publishableKey: SUPABASE_PUBLISHABLE_KEY");
+assertNotIncludes(hostRuntime, "accessToken: SUPABASE_PUBLISHABLE_KEY");
 assertIncludes(hostRuntime, "econovaria:player-logout-completed");
 assertIncludes(hostRuntime, "econovaria:player-session-invalid");
 assertIncludes(hostRuntime, "runtime.sessionStorage.removeItem(STORAGE_KEY)");

@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import { isUuid } from "../../../platform/supabase/uuid.ts";
 
 export type PlayerContractRoute =
@@ -12,33 +13,29 @@ export type PlayerContractRoute =
 export function readPlayerContractRoutePath(
   pathname: string,
 ): PlayerContractRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
+  const segments = readPlayerApiRouteSegments(pathname);
 
-  if (playersIndex < 0) {
+  if (
+    !segments ||
+    segments[0] !== "players" ||
+    segments[1] !== "me" ||
+    segments[2] !== "contracts"
+  ) {
     return null;
   }
 
-  const meSegment = segments[playersIndex + 1];
-  const contractsSegment = segments[playersIndex + 2];
-  const contractId = segments[playersIndex + 3];
-  const submitSegment = segments[playersIndex + 4];
-
-  if (meSegment !== "me" || contractsSegment !== "contracts") {
-    return null;
-  }
-
-  if (playersIndex + 3 === segments.length) {
+  if (segments.length === 3) {
     return {
       kind: "contracts",
     };
   }
 
+  const contractId = segments[3];
   if (
     contractId &&
     isUuid(contractId) &&
-    submitSegment === "submit" &&
-    playersIndex + 5 === segments.length
+    segments[4] === "submit" &&
+    segments.length === 5
   ) {
     return {
       kind: "submit",

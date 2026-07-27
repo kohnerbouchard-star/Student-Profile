@@ -36,16 +36,24 @@ await page.route("https://cdn.jsdelivr.net/**", async (route) => {
   });
 });
 
-await page.route("**/functions/v1/classroom-api/**", async (route) => {
+await page.route("**/functions/v1/player-api/**", async (route) => {
   const request = route.request();
   const pathname = new URL(request.url()).pathname;
+  const headers = request.headers();
+
+  if (headers.authorization !== undefined) {
+    errors.push(`Player browser exposed Authorization on ${request.method()} ${pathname}`);
+  }
+  if (!headers.apikey) {
+    errors.push(`Player browser omitted publishable application identity on ${request.method()} ${pathname}`);
+  }
 
   if (request.method() === "OPTIONS") {
     await route.fulfill({
       status: 204,
       headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-player-session-token",
+        "access-control-allow-origin": "http://127.0.0.1:4173",
+        "access-control-allow-headers": "apikey, content-type, x-player-session-token, x-econovaria-player-session-token",
         "access-control-allow-methods": "GET,POST,OPTIONS",
       },
       body: "",
@@ -58,7 +66,7 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+      headers: { "access-control-allow-origin": "http://127.0.0.1:4173", "cache-control": "no-store" },
       body: JSON.stringify({
         ok: true,
         gameSession: { name: "Identity Smoke Game", status: "active" },
@@ -82,7 +90,7 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+      headers: { "access-control-allow-origin": "http://127.0.0.1:4173", "cache-control": "no-store" },
       body: JSON.stringify({
         ok: true,
         gameSession: { name: "Identity Smoke Game", status: "active" },
@@ -107,7 +115,7 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
   await route.fulfill({
     status: 503,
     contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+    headers: { "access-control-allow-origin": "http://127.0.0.1:4173", "cache-control": "no-store" },
     body: JSON.stringify({
       ok: false,
       error: {
@@ -116,6 +124,15 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
         retryable: false,
       },
     }),
+  });
+});
+
+await page.route("**/functions/v1/classroom-api/**", async (route) => {
+  errors.push(`Player browser reached retired classroom authority: ${route.request().url()}`);
+  await route.fulfill({
+    status: 500,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: false, error: { code: "retired_player_authority" } }),
   });
 });
 

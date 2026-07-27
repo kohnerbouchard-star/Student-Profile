@@ -28,9 +28,21 @@ const routes = readFileSync("player-terminal/src/api/backend-routes.js", "utf8")
 const progressionRoutes = readFileSync("player-terminal/src/api/progression-backend-routes.js", "utf8");
 const payload = readFileSync("player-terminal/src/api/payload-normalizer.js", "utf8");
 
+assert.match(client, /adminBffApiUrl/);
+assert.match(client, /supabasePublishableKey/);
+assert.match(client, /apikey:\s*publishableKey/);
+assert.match(client, /x-econovaria-device-id/);
+assert.match(client, /x-econovaria-game-id/);
+assert.match(client, /x-econovaria-csrf-token/);
+assert.match(client, /getUsableSession/);
+assert.match(client, /credentials:\s*"include"/);
 assert.match(client, /cache:\s*"no-store"/);
+assert.match(client, /redirect:\s*"error"/);
+assert.match(client, /referrerPolicy:\s*"no-referrer"/);
 assert.match(client, /x-idempotency-key/);
-assert.match(client, /authorization:\s*`Bearer/);
+assert.doesNotMatch(client, /AdminAuthSessionManager/);
+assert.doesNotMatch(client, /authorization/i);
+assert.doesNotMatch(client, /Bearer/);
 assert.doesNotMatch(client, /playerUuid|accessCode|sessionToken/);
 assert.match(surface, /econovaria:admin-route-mounted/);
 assert.match(surface, /data-progression-correction/);
@@ -54,4 +66,4 @@ assert.doesNotMatch(
   JSON.stringify({ client, surface, player, progressionRoutes }),
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
 );
-console.log("Admin and Player Progression source, privacy, accessibility, and composed-adapter contracts passed.");
+console.log("Admin and Player Progression source, privacy, accessibility, and secure BFF contracts passed.");

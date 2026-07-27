@@ -113,7 +113,7 @@ export async function resolvePlayerRequestScope(
   const sessionTokenHash = await dependencies.hashSessionToken(sessionToken);
   const sessionResult = await dependencies.resolvePlayerSession(sessionTokenHash);
 
-  if (!sessionResult.ok) {
+  if (sessionResult.ok === false) {
     throw new EdgeActivationError(
       sessionResult.error.code,
       sessionResult.error.message,

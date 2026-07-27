@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import {
   MARKETPLACE_LISTING_KEY_PATTERN,
   MARKETPLACE_ORDER_KEY_PATTERN,
@@ -22,10 +23,17 @@ function decoded(value: string): string {
 export function readPlayerMarketplaceRoutePath(
   pathname: string,
 ): PlayerMarketplaceRoute | null {
-  const marker = "/players/me/marketplace";
-  const index = pathname.indexOf(marker);
-  if (index < 0) return null;
-  const path = pathname.slice(index + marker.length) || "/";
+  const segments = readPlayerApiRouteSegments(pathname);
+  if (
+    !segments ||
+    segments[0] !== "players" ||
+    segments[1] !== "me" ||
+    segments[2] !== "marketplace"
+  ) {
+    return null;
+  }
+
+  const path = `/${segments.slice(3).join("/")}`;
   if (path === "/" || path === "/listings") return { kind: "collection" };
 
   const listingAction = path.match(

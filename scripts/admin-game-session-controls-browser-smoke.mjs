@@ -1,191 +1,75 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createQualityHarness,
+  GAME_ID,
+} from "./admin-quality-smoke-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_GAME_SESSION_ARTIFACT_DIR ||
-  "admin-browser-smoke-artifacts/game-session-controls";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-const GAME_CODE = "SMOKE1";
-const GAME_NAME = "Browser Smoke Game";
-mkdirSync(ARTIFACT_DIR, { recursive: true });
+const GAME_CODE = "QUALITY1";
+const GAME_NAME = "Quality Game";
+const ORIGIN = "http://127.0.0.1:4173";
+const LOGOUT_SNAPSHOT_KEY = "econovaria.admin.sidebar-logout-snapshot.v1";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+function logoutCorsHeaders() {
+  return {
+    "access-control-allow-origin": ORIGIN,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "apikey,content-type,x-econovaria-device-id",
+    "access-control-allow-methods": "POST,OPTIONS",
+    "cache-control": "private, no-store",
+  };
 }
 
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: GAME_NAME,
-  name: GAME_NAME,
-  status: "active",
-  lifecycleState: "active",
-  gameCode: GAME_CODE,
-  joinCode: GAME_CODE,
-};
-
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  selectedGame: game,
-  games: [game],
-  players: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {
-    difficultyPreset: "moderate",
-    priceMultiplier: 1,
-    incomeMultiplier: 1,
-  },
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-function responseFor(pathname) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return {
-      data: {
-        admin: {
-          id: ADMIN_ID,
-          accountId: ADMIN_ID,
-          displayName: "Smoke Test Administrator",
-          email: "admin@example.test",
-          role: "game_admin",
-          roles: ["game_admin"],
-        },
-        activeGame: game,
-        games: [game],
-        permissions: ["*"],
-        roles: ["game_admin"],
-        adminRole: "game_admin",
-        csrfToken: "",
-        session: {
-          id: ADMIN_ID,
-          csrfToken: "",
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        },
-        capabilities: {
-          notifications: false,
-          securityHistory: "current_session_only",
-          helpArticles: true,
-          auditLogFlags: true,
-          auditLogExport: true,
-          overallScore: false,
-          marketplaceAdminTrading: false,
-        },
-      },
-    };
-  }
-  if (pathname.endsWith("/auth/sign-out")) {
-    return { data: { signedOut: true } };
-  }
-  return { data: common };
-}
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-const page = await context.newPage();
-const errors = [];
+const harness = await createQualityHarness("game-session-controls");
+const { page, errors, dir } = harness;
 const requests = [];
+const report = {};
+let logoutResponseFulfilled = false;
 
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
 });
 page.on("request", (request) => requests.push(`${request.method()} ${request.url()}`));
-page.on("requestfailed", (request) => {
-  const url = request.url();
-  const failure = request.failure()?.errorText || "";
-  if (url.endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-  if (url.includes("/auth/v1/logout") && failure.includes("ERR_ABORTED")) return;
-  if (failure.includes("ERR_ABORTED") && /\?mode=admin/.test(url)) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
-});
 
-await page.addInitScript(({ accessToken, gameId, adminId, gameCode }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "smoke-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
-}, {
-  accessToken: token,
-  gameId: GAME_ID,
-  adminId: ADMIN_ID,
-  gameCode: GAME_CODE,
-});
+  if (window.__econovariaSidebarLogoutSnapshotInstalled) return;
+  window.__econovariaSidebarLogoutSnapshotInstalled = true;
+  window.addEventListener("beforeunload", () => {
+    try {
+      localStorage.setItem(snapshotKey, JSON.stringify({
+        session: sessionStorage.getItem("econovaria.admin.auth.v1"),
+        selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+        csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
+      }));
+    } catch (_) {}
+  });
+}, { gameId: GAME_ID, gameCode: GAME_CODE, snapshotKey: LOGOUT_SNAPSHOT_KEY });
 
-await page.route("**/functions/v1/admin-api/**", async (route) => {
+await page.route("**/functions/v1/web-session-api/logout", async (route) => {
   const request = route.request();
+  assert(!request.headers().authorization, "Admin logout exposed a Staff bearer token.");
   if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers":
-          "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
+    await route.fulfill({ status: 204, headers: logoutCorsHeaders(), body: "" });
     return;
   }
   await route.fulfill({
     status: 200,
     contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(responseFor(new URL(request.url()).pathname)),
+    headers: logoutCorsHeaders(),
+    body: JSON.stringify({ ok: true }),
   });
-});
-
-await page.route("**/auth/v1/logout", async (route) => {
-  await route.fulfill({ status: 204, body: "" });
+  logoutResponseFulfilled = true;
 });
 
 try {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.evaluate((snapshotKey) => localStorage.removeItem(snapshotKey), LOGOUT_SNAPSHOT_KEY);
   await page.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15_000 });
 
   const card = page.locator("[data-econovaria-game-session-card]").first();
@@ -203,8 +87,10 @@ try {
   assert(cardState.gameCode === GAME_CODE, `Selected-game card stored ${cardState.gameCode}.`);
   assert(cardState.name === GAME_NAME, `Selected-game card displayed ${cardState.name}.`);
   assert(cardState.code === GAME_CODE, `Selected-game card displayed code ${cardState.code}.`);
-  assert(cardState.copy?.includes(`Players using ${GAME_CODE} join ${GAME_NAME}`),
-    `Selected-game card did not explain the multiplayer target: ${cardState.copy}`);
+  assert(
+    cardState.copy?.includes(`Players using ${GAME_CODE} join ${GAME_NAME}`),
+    `Selected-game card did not explain the multiplayer target: ${cardState.copy}`,
+  );
   assert(cardState.width <= cardState.parentWidth + 1, "Selected-game card overflowed its sidebar host.");
 
   const shareButton = card.locator("[data-econovaria-share-game]");
@@ -233,46 +119,51 @@ try {
       horizontalOverflow: dialog.scrollWidth > dialog.clientWidth + 1,
     };
   });
-  assert(shareState.context?.includes(GAME_CODE) && shareState.context?.includes(GAME_NAME),
-    `Share panel omitted the selected game context: ${shareState.context}`);
+  assert(
+    shareState.context?.includes(GAME_CODE) && shareState.context?.includes(GAME_NAME),
+    `Share panel omitted the selected game context: ${shareState.context}`,
+  );
   assert(shareState.code === GAME_CODE, `Share panel displayed ${shareState.code}.`);
   const playerShareUrl = new URL(shareState.playerLink);
-  assert(playerShareUrl.pathname === "/play",
-    `Player link did not target the canonical /play route: ${shareState.playerLink}`);
-  assert(playerShareUrl.searchParams.get("mode") === "student",
-    `Player link did not use the canonical Player-share mode: ${shareState.playerLink}`);
-  assert(playerShareUrl.searchParams.get("gameCode") === GAME_CODE,
-    `Player link did not include the selected code: ${shareState.playerLink}`);
+  assert(
+    playerShareUrl.pathname === "/play",
+    `Player link did not target the canonical /play route: ${shareState.playerLink}`,
+  );
+  assert(
+    playerShareUrl.searchParams.get("mode") === "student",
+    `Player link did not use the canonical Player-share mode: ${shareState.playerLink}`,
+  );
+  assert(
+    playerShareUrl.searchParams.get("gameCode") === GAME_CODE,
+    `Player link did not include the selected code: ${shareState.playerLink}`,
+  );
   assert(shareState.adminLinkVisible === false, "Player share panel still exposes the Admin link.");
-  assert(shareState.width <= Math.min(622, shareState.viewportWidth - 30),
-    `Share dialog width is not bounded: ${shareState.width}.`);
+  assert(
+    shareState.width <= Math.min(622, shareState.viewportWidth - 30),
+    `Share dialog width is not bounded: ${shareState.width}.`,
+  );
   assert(shareState.horizontalOverflow === false, "Share dialog overflows horizontally.");
 
-  await page.screenshot({ path: `${ARTIFACT_DIR}/share-game-access.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/share-game-access.html`, await page.content());
-
+  await harness.capture("share-game-access");
   await page.keyboard.press("Escape");
   await shareSurface.waitFor({ state: "hidden", timeout: 5_000 }).catch(async () => {
     await shareSurface.waitFor({ state: "detached", timeout: 5_000 });
   });
 
   const logoutButton = card.locator("[data-econovaria-admin-logout]");
-  const logoutHitTarget = await logoutButton.evaluate((button) => {
-    const rect = button.getBoundingClientRect();
-    const point = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    return {
-      enabled: !button.disabled,
-      pointerEvents: getComputedStyle(button).pointerEvents,
-      topTargetIsButton: point === button || button.contains(point),
-      width: rect.width,
-      height: rect.height,
-    };
-  });
-  assert(logoutHitTarget.enabled, "Admin logout button is disabled.");
+  await logoutButton.waitFor({ state: "visible", timeout: 5_000 });
+  assert(await logoutButton.isEnabled(), "Admin logout button is disabled.");
+  await logoutButton.click({ trial: true, timeout: 5_000 });
+  const logoutBox = await logoutButton.boundingBox();
+  const logoutHitTarget = await logoutButton.evaluate((button) => ({
+    enabled: !button.disabled,
+    pointerEvents: getComputedStyle(button).pointerEvents,
+  }));
   assert(logoutHitTarget.pointerEvents !== "none", "Admin logout button ignores pointer input.");
-  assert(logoutHitTarget.topTargetIsButton, "Another element covers the Admin logout button.");
-  assert(logoutHitTarget.width > 60 && logoutHitTarget.height >= 36,
-    `Admin logout hit target is too small: ${JSON.stringify(logoutHitTarget)}.`);
+  assert(
+    logoutBox && logoutBox.width > 60 && logoutBox.height >= 36,
+    `Admin logout hit target is too small: ${JSON.stringify(logoutBox)}.`,
+  );
 
   await Promise.all([
     page.waitForURL((url) =>
@@ -282,26 +173,40 @@ try {
     logoutButton.click(),
   ]);
 
-  const storageState = await page.evaluate(() => ({
-    session: sessionStorage.getItem("econovaria.admin.auth.v1"),
-    selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
-    csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
-  }));
-  assert(storageState.session === null, "Admin logout left the session token in storage.");
-  assert(storageState.selectedGame === null, "Admin logout left the selected game in storage.");
-  assert(storageState.csrf === null, "Admin logout left the CSRF token in storage.");
-  assert(requests.some((entry) => entry.includes("POST") && entry.includes("/auth/v1/logout")),
-    `Admin logout did not issue the Supabase Auth revocation request: ${JSON.stringify(requests)}`);
+  const storageState = await page.evaluate((snapshotKey) => {
+    try {
+      return JSON.parse(localStorage.getItem(snapshotKey) || "null");
+    } catch (_) {
+      return null;
+    }
+  }, LOGOUT_SNAPSHOT_KEY);
+  assert(
+    storageState && storageState.session === null,
+    `Admin logout left the session summary before navigation: ${JSON.stringify(storageState)}.`,
+  );
+  assert(storageState.selectedGame === null, "Admin logout left the selected game before navigation.");
+  assert(storageState.csrf === null, "Admin logout left the CSRF token before navigation.");
+  assert(
+    requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
+    `Admin logout did not issue server-mediated revocation: ${JSON.stringify(requests)}`,
+  );
+  assert(logoutResponseFulfilled, "The mocked sidebar logout response did not complete.");
 
-  writeFileSync(`${ARTIFACT_DIR}/report.json`, JSON.stringify({
+  Object.assign(report, {
     cardState,
     shareState,
-    logoutHitTarget,
+    logoutHitTarget: { ...logoutHitTarget, ...logoutBox, browserTrialPassed: true },
     storageState,
-    supabaseLogoutRequestObserved: true,
-    errors,
-  }, null, 2));
-  assert(errors.length === 0, errors.join("\n"));
+    serverMediatedLogoutObserved: true,
+    logoutResponseFulfilled,
+    errors: [...errors],
+  });
+  writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
+  const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
+  const remainingErrors = errors.filter((error) =>
+    !(logoutResponseFulfilled && expectedNavigationAbort.test(error))
+  );
+  assert(remainingErrors.length === 0, remainingErrors.join("\n"));
 
   console.log(JSON.stringify({
     selectedGameTarget: true,
@@ -311,19 +216,17 @@ try {
     playerLinkTargetsSelectedGame: true,
     adminLinkHidden: true,
     logoutButtonClickable: true,
-    supabaseLogoutRequestObserved: true,
+    serverMediatedLogoutObserved: true,
+    logoutResponseFulfilled: true,
     sessionCleared: true,
   }, null, 2));
 } catch (error) {
-  await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }).catch(() => {});
-  writeFileSync(`${ARTIFACT_DIR}/failure.html`, await page.content().catch(() => ""));
-  writeFileSync(`${ARTIFACT_DIR}/failure.json`, JSON.stringify({
-    error: String(error?.stack || error),
-    errors,
-    requests,
-  }, null, 2));
+  report.failure = String(error?.stack || error);
+  report.errors = [...errors];
+  report.requests = requests;
+  await harness.capture("failure").catch(() => {});
+  writeFileSync(`${dir}/failure.json`, JSON.stringify(report, null, 2));
   throw error;
 } finally {
-  await context.close();
-  await browser.close();
+  await harness.finish(report);
 }

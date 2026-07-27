@@ -1,106 +1,8 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
-
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts/account";
-const GAME_ID = "00000000-0000-4000-8000-000000000701";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000702";
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64")
-  .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-const now = Math.floor(Date.now() / 1000);
-const token = `${encode({ alg: "none", typ: "JWT" })}.${encode({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Account Surface Audit Game",
-  name: "Account Surface Audit Game",
-  status: "active",
-  gameCode: "ACCT01",
-};
-
-const model = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  games: [game],
-  players: [], roster: [], attendance: [], attendanceRows: [], attendanceHistory: [], attendanceLedger: [],
-  contracts: [], contractSubmissions: [], store: [], storeItems: [], assets: [], trades: [], events: [], logs: [],
-  market: { assets: [], trades: [], events: [] },
-  notifications: [], adminNotifications: [],
-  adminProfile: {
-    id: ADMIN_ID,
-    displayName: "Smoke Test Administrator",
-    email: "admin@example.test",
-    role: "game_admin",
-    avatarUrl: "",
-  },
-  adminSettings: {},
-  adminSecurity: { sessions: [], currentSession: null },
-  adminHelp: { articles: [] },
-  settings: {
-    difficultyPreset: "moderate",
-    backendDifficultyPreset: "moderate",
-    difficultyBasePreset: "moderate",
-    priceMultiplier: 1,
-    incomeMultiplier: 1,
-    shockFrequency: 1,
-    shockSeverity: 1,
-    recoverySupport: 1,
-    tradeMultiplier: 1,
-    configSaveState: "saved",
-  },
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [], recentActivity: [], marketStatus: "open",
-  },
-};
-
-const bootstrap = {
-  data: {
-    admin: {
-      id: ADMIN_ID,
-      accountId: ADMIN_ID,
-      displayName: "Smoke Test Administrator",
-      email: "admin@example.test",
-      role: "game_admin",
-      roles: ["game_admin"],
-    },
-    activeGame: game,
-    games: [game],
-    permissions: ["*"],
-    roles: ["game_admin"],
-    adminRole: "game_admin",
-    csrfToken: "",
-    session: { id: ADMIN_ID, csrfToken: "", expiresAt: new Date(Date.now() + 3600_000).toISOString() },
-    capabilities: {
-      notifications: false,
-      securityHistory: "current_session_only",
-      helpArticles: true,
-      auditLogFlags: true,
-      auditLogExport: true,
-      overallScore: false,
-      marketplaceAdminTrading: false,
-    },
-  },
-};
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createQualityHarness,
+} from "./admin-quality-smoke-fixture.mjs";
 
 const surfaces = [
   ["open-admin-profile", "Profile", /profile/i],
@@ -111,74 +13,34 @@ const surfaces = [
   ["open-admin-games", "Games", /games|game sessions/i],
 ];
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-const errors = [];
+const harness = await createQualityHarness("account");
+const { page, errors, dir } = harness;
 const summaries = [];
 
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => {
-  if (message.type() === "error") errors.push(`console: ${message.text()}`);
-});
-page.on("requestfailed", (request) => {
-  const failure = request.failure()?.errorText || "";
-  if (request.url().endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(request.url()) && failure.includes("ERR_ABORTED")) return;
-  if (/\/admin\/assets\/icons\/media-placeholder\.svg$/i.test(request.url()) && failure.includes("ERR_ABORTED")) return;
-  errors.push(`requestfailed: ${request.method()} ${request.url()} ${failure}`);
-});
-
-await page.addInitScript(({ accessToken, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "account-smoke-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+await page.addInitScript(() => {
   window.__adminKeyboardPointerEvents = [];
   for (const type of ["pointerdown", "mousedown", "touchstart"]) {
     window.addEventListener(type, (event) => {
-      window.__adminKeyboardPointerEvents.push({ type: event.type, target: event.target?.tagName || "" });
+      window.__adminKeyboardPointerEvents.push({
+        type: event.type,
+        target: event.target?.tagName || "",
+      });
     }, true);
   }
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const request = route.request();
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  const payload = new URL(request.url()).pathname.endsWith("/session/bootstrap") ? bootstrap : { data: model };
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(payload),
-  });
 });
 
-const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const assert = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
 const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
-async function capture(name) {
-  await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
-}
 
 async function keyboardActivate(locator, key = "Enter") {
   await locator.waitFor({ state: "visible", timeout: 5000 });
   await locator.focus();
-  assert(await locator.evaluate((node) => document.activeElement === node), `Keyboard target did not receive focus: ${await locator.textContent()}`);
+  assert(
+    await locator.evaluate((node) => document.activeElement === node),
+    `Keyboard target did not receive focus: ${await locator.textContent()}`,
+  );
   await page.keyboard.press(key);
 }
 
@@ -188,7 +50,8 @@ async function inspect(action, label) {
       if (!(element instanceof Element) || element.hidden) return false;
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      return style.display !== "none" && style.visibility !== "hidden" &&
+        rect.width > 0 && rect.height > 0;
     };
     const headings = [...document.querySelectorAll("h1, h2, h3")]
       .filter(visible)
@@ -203,12 +66,16 @@ async function inspect(action, label) {
       action,
       label,
       headings,
-      text: (document.querySelector("#adminPreview")?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 1600),
+      text: (document.querySelector("#adminPreview")?.textContent || "")
+        .trim().replace(/\s+/g, " ").slice(0, 1600),
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
-      visibleModals: [...document.querySelectorAll("[data-admin-terminal-modal-backdrop]")].filter(visible).length,
+      visibleModals: [...document.querySelectorAll("[data-admin-terminal-modal-backdrop]")]
+        .filter(visible).length,
       visibleFallbacks,
-      inlineStyleIds: [...document.querySelectorAll("style[id]")].map((style) => style.id).filter(Boolean),
+      runtimeStyleIds: [...document.querySelectorAll("style[id]")]
+        .map((style) => style.id)
+        .filter(Boolean),
     };
   }, { action, label });
 }
@@ -234,10 +101,13 @@ try {
     assert(summary.documentWidth <= summary.viewportWidth + 2, `${label} overflows horizontally.`);
     assert(summary.visibleModals === 0, `${label} left an unexpected modal open.`);
     assert(summary.visibleFallbacks === 0, `${label} rendered a visible generic fallback in UI chrome.`);
-    assert(summary.inlineStyleIds.length === 0, `${label} contains runtime style tags.`);
+    assert(summary.runtimeStyleIds.length === 0, `${label} contains runtime style tags.`);
     assert(summary.headings.length > 0, `${label} rendered no visible heading.`);
-    assert(expected.test(`${summary.headings.join(" ")} ${summary.text}`), `${label} did not render its expected surface.`);
-    await capture(`account-${slug(label)}`);
+    assert(
+      expected.test(`${summary.headings.join(" ")} ${summary.text}`),
+      `${label} did not render its expected surface.`,
+    );
+    await harness.capture(`account-${slug(label)}`);
 
     const overview = page.locator('[data-admin-section="Overview"]').first();
     await keyboardActivate(overview, "Enter");
@@ -249,15 +119,25 @@ try {
     pointerEvents: window.__adminKeyboardPointerEvents || [],
   }));
   assert(keyboardEvidence.modality === "keyboard", "Account surfaces lost keyboard modality.");
-  assert(keyboardEvidence.pointerEvents.length === 0, `Account surfaces emitted pointer input: ${JSON.stringify(keyboardEvidence.pointerEvents)}.`);
-  writeFileSync(`${ARTIFACT_DIR}/account-page-summary.json`, JSON.stringify({ summaries, keyboardEvidence }, null, 2));
+  assert(
+    keyboardEvidence.pointerEvents.length === 0,
+    `Account surfaces emitted pointer input: ${JSON.stringify(keyboardEvidence.pointerEvents)}.`,
+  );
+  writeFileSync(
+    `${dir}/account-page-summary.json`,
+    JSON.stringify({ summaries, keyboardEvidence }, null, 2),
+  );
+  await harness.finish({ summaries, keyboardEvidence });
   console.log("All six accepted v606 account surfaces passed by keyboard.");
 } catch (error) {
-  writeFileSync(`${ARTIFACT_DIR}/account-page-summary.json`, JSON.stringify({ summaries, errors, failure: error.message }, null, 2));
-  await capture("account-surface-failure");
-  console.error(error.stack || error.message || String(error));
-  process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
+  writeFileSync(
+    `${dir}/account-page-summary.json`,
+    JSON.stringify({ summaries, errors, failure: error.message }, null, 2),
+  );
+  await harness.capture("account-surface-failure").catch(() => {});
+  await harness.finish({
+    summaries,
+    failure: error.stack || error.message || String(error),
+  });
+  throw error;
 }

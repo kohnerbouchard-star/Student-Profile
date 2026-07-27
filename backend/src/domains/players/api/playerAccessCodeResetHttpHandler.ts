@@ -10,10 +10,13 @@ import {
   readOwnedGameSession,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
 import { normalizePlayerIdentifier } from "../domain/playerIdentifiers.ts";
+import {
+  createPlayerCredentialMaterial,
+  type PlayerCredentialMaterial,
+} from "../../../security/playerCredentialHashing.ts";
 
 interface PlayerAccessCodeResetDependencies {
   readonly resolveStaffForRequest: (
@@ -23,6 +26,7 @@ interface PlayerAccessCodeResetDependencies {
       readonly missingMessage: string;
     },
   ) => Promise<StaffRequestResolution>;
+  readonly createCredentialMaterial?: typeof createPlayerCredentialMaterial;
 }
 
 type StaffRequestResolution =
@@ -48,7 +52,6 @@ interface IdentityWriteBody {
 interface ResetPlayerAccessCodeSuccessBody {
   readonly ok: true;
   readonly player: {
-    readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
     readonly playerIdentifier: string;
@@ -58,7 +61,9 @@ interface ResetPlayerAccessCodeSuccessBody {
     readonly studentCode: string | null;
     readonly status: "active" | "unchanged";
     readonly createdAt: string | null;
+    readonly credentialVersion: string | null;
   };
+  readonly sessionsRevoked: boolean;
 }
 
 interface EdgeQueryErrorLike {
@@ -75,25 +80,29 @@ export async function handleResetPlayerAccessCodeRequest(
   if (request.method !== "POST") {
     return jsonError(405, {
       code: "method_not_allowed",
-      message: "Use POST to update player identity credentials.",
+      message: "Use POST to update Player identity credentials.",
       retryable: false,
     });
   }
 
   try {
     const envResult = readSupabaseEnv();
-
     if (!envResult.ok) {
       return jsonError(500, {
         code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
+        message: "Player identity credential management is not configured.",
         retryable: false,
       });
     }
 
-    const staffResult = await dependencies.resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to manage player identity credentials.",
-    });
+    const staffResult = await dependencies.resolveStaffForRequest(
+      request,
+      envResult.value,
+      {
+        missingMessage:
+          "A verified staff user is required to manage Player identity credentials.",
+      },
+    );
 
     if ("status" in staffResult) {
       return jsonError(staffResult.status, staffResult.error);
@@ -104,7 +113,6 @@ export async function handleResetPlayerAccessCodeRequest(
       gameSessionId,
       staffResult.staff.id,
     );
-
     if (!ownershipResult.ok) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
@@ -116,16 +124,9 @@ export async function handleResetPlayerAccessCodeRequest(
       .eq("id", playerId)
       .maybeSingle();
 
-    if (playerResponse.error) {
-      return jsonError(500, {
-        code: "player_identity_update_failed",
-        message: "Player identity credentials could not be updated.",
-        retryable: false,
-      });
-    }
+    if (playerResponse.error) return identityWriteFailedResponse();
 
     const player = playerResponse.data;
-
     if (!player?.id) {
       return jsonError(404, {
         code: "player_not_found",
@@ -133,18 +134,16 @@ export async function handleResetPlayerAccessCodeRequest(
         retryable: false,
       });
     }
-
     if (player.status !== "active") {
       return jsonError(409, {
         code: "player_not_active",
-        message: "Only active players can receive identity credentials.",
+        message: "Only active Players can receive identity credentials.",
         retryable: false,
       });
     }
 
     const requested = await readIdentityWriteBody(request);
     const playerIdentifier = requested.playerIdentifier ?? player.player_identifier;
-
     if (!playerIdentifier) {
       return jsonError(400, {
         code: "player_identifier_required",
@@ -156,30 +155,32 @@ export async function handleResetPlayerAccessCodeRequest(
     const normalizedPlayerIdentifier = normalizePlayerIdentifier(playerIdentifier);
     let accessCode: string | null = null;
     let credentialCreatedAt: string | null = null;
+    let credentialVersion: string | null = null;
     let credentialStatus: "active" | "unchanged" = "unchanged";
 
     if (requested.accessCode) {
       accessCode = normalizeStudentCode(requested.accessCode);
-      const accessCodeHash = await sha256Hex(accessCode);
+      const createMaterial = dependencies.createCredentialMaterial ??
+        createPlayerCredentialMaterial;
+      const credential = await createMaterial(accessCode);
       const updateResponse = await staffResult.serviceClient.rpc(
-        "set_player_identity_and_access_code",
-        {
-          p_game_session_id: gameSessionId,
-          p_player_id: playerId,
-          p_player_identifier: playerIdentifier.trim(),
-          p_player_identifier_normalized: normalizedPlayerIdentifier,
-          p_access_code_hash: accessCodeHash,
-        },
+        "set_player_identity_and_access_credential_v2",
+        credentialRpcArguments(
+          gameSessionId,
+          playerId,
+          playerIdentifier,
+          normalizedPlayerIdentifier,
+          credential,
+        ),
       );
 
-      if (updateResponse.error) {
-        return identityWriteError(updateResponse.error);
-      }
+      if (updateResponse.error) return identityWriteError(updateResponse.error);
 
       const row = Array.isArray(updateResponse.data)
         ? updateResponse.data[0]
         : updateResponse.data;
       credentialCreatedAt = row?.credential_created_at ?? null;
+      credentialVersion = credential.credentialVersion;
       credentialStatus = "active";
     } else {
       const identifierUpdate = await staffResult.serviceClient
@@ -197,7 +198,6 @@ export async function handleResetPlayerAccessCodeRequest(
       if (identifierUpdate.error) {
         return identityWriteError(identifierUpdate.error);
       }
-
       if (!identifierUpdate.data?.id) {
         return jsonError(404, {
           code: "player_not_found",
@@ -210,7 +210,6 @@ export async function handleResetPlayerAccessCodeRequest(
     return jsonResponse<ResetPlayerAccessCodeSuccessBody>(200, {
       ok: true,
       player: {
-        id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
         playerIdentifier: playerIdentifier.trim(),
@@ -220,7 +219,13 @@ export async function handleResetPlayerAccessCodeRequest(
         studentCode: accessCode,
         status: credentialStatus,
         createdAt: credentialCreatedAt,
+        credentialVersion,
       },
+      sessionsRevoked: credentialStatus === "active",
+    }, {
+      "cache-control": "private, no-store, max-age=0",
+      "pragma": "no-cache",
+      "vary": "authorization",
     });
   } catch (error) {
     if (error instanceof EdgeActivationError) {
@@ -230,13 +235,28 @@ export async function handleResetPlayerAccessCodeRequest(
         retryable: error.retryable,
       });
     }
-
-    return jsonError(500, {
-      code: "player_identity_update_failed",
-      message: "Player identity credentials could not be updated.",
-      retryable: false,
-    });
+    return identityWriteFailedResponse();
   }
+}
+
+function credentialRpcArguments(
+  gameSessionId: string,
+  playerId: string,
+  playerIdentifier: string,
+  playerIdentifierNormalized: string,
+  credential: PlayerCredentialMaterial,
+) {
+  return {
+    p_game_session_id: gameSessionId,
+    p_player_id: playerId,
+    p_player_identifier: playerIdentifier.trim(),
+    p_player_identifier_normalized: playerIdentifierNormalized,
+    p_lookup_digest: credential.lookupDigest,
+    p_credential_version: credential.credentialVersion,
+    p_credential_salt: credential.salt,
+    p_credential_verifier: credential.verifier,
+    p_credential_iterations: credential.iterations,
+  };
 }
 
 function identityWriteError(error: EdgeQueryErrorLike): Response {
@@ -248,14 +268,14 @@ function identityWriteError(error: EdgeQueryErrorLike): Response {
   ) {
     return jsonError(409, {
       code: "player_identifier_conflict",
-      message: "That Player ID is already assigned to an active player in this game.",
+      message: "That Player ID is already assigned to an active Player in this game.",
       retryable: false,
     });
   }
   if (message.includes("PLAYER_ACCESS_CODE_CONFLICT")) {
     return jsonError(409, {
       code: "player_access_code_conflict",
-      message: "That Access Code is already assigned to an active player in this game.",
+      message: "That Access Code is already assigned to an active Player in this game.",
       retryable: false,
     });
   }
@@ -266,6 +286,10 @@ function identityWriteError(error: EdgeQueryErrorLike): Response {
       retryable: false,
     });
   }
+  return identityWriteFailedResponse();
+}
+
+function identityWriteFailedResponse(): Response {
   return jsonError(500, {
     code: "player_identity_update_failed",
     message: "Player identity credentials could not be updated.",
@@ -273,14 +297,24 @@ function identityWriteError(error: EdgeQueryErrorLike): Response {
   });
 }
 
-async function readIdentityWriteBody(request: Request): Promise<IdentityWriteBody> {
+async function readIdentityWriteBody(
+  request: Request,
+): Promise<IdentityWriteBody> {
   let value: unknown;
 
   try {
     const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > 4_096) {
+      throw new EdgeActivationError(
+        "request_body_too_large",
+        "Player identity credential requests are limited to 4096 bytes.",
+        413,
+      );
+    }
     if (!raw.trim()) return { playerIdentifier: null, accessCode: null };
     value = JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    if (error instanceof EdgeActivationError) throw error;
     throw new EdgeActivationError(
       "invalid_request_body",
       "Request body must be a JSON object.",
@@ -297,23 +331,77 @@ async function readIdentityWriteBody(request: Request): Promise<IdentityWriteBod
   }
 
   const input = value as Record<string, unknown>;
+  const topLevelKeys = new Set([
+    "payload",
+    "playerIdentifier",
+    "playerId",
+    "rfidCardId",
+    "rfidId",
+    "cardId",
+    "externalPlayerId",
+    "accessCode",
+    "studentCode",
+    "playerAccessCode",
+    "pin",
+  ]);
+  if (Object.keys(input).some((key) => !topLevelKeys.has(key))) {
+    throw new EdgeActivationError(
+      "unknown_request_field",
+      "Request body contains an unsupported field.",
+      400,
+    );
+  }
+
   const payload = isRecord(input.payload)
     ? input.payload as Record<string, unknown>
     : null;
+  if (input.payload !== undefined && !payload) {
+    throw new EdgeActivationError(
+      "invalid_request_payload",
+      "payload must be a JSON object.",
+      400,
+    );
+  }
+  if (
+    payload &&
+    Object.keys(payload).some((key) => key === "payload" || !topLevelKeys.has(key))
+  ) {
+    throw new EdgeActivationError(
+      "unknown_request_field",
+      "Request payload contains an unsupported field.",
+      400,
+    );
+  }
+
   const source = payload ? { ...input, ...payload } : input;
   const rawIdentifier = source.playerIdentifier ?? source.playerId ??
     source.rfidCardId ?? source.rfidId ?? source.cardId ?? source.externalPlayerId;
   const rawAccessCode = source.accessCode ?? source.studentCode ??
     source.playerAccessCode ?? source.pin;
 
-  return {
-    playerIdentifier: rawIdentifier === undefined || rawIdentifier === null ||
-        String(rawIdentifier).trim() === ""
-      ? null
-      : String(rawIdentifier).trim(),
-    accessCode: rawAccessCode === undefined || rawAccessCode === null ||
-        String(rawAccessCode).trim() === ""
-      ? null
-      : String(rawAccessCode).trim(),
-  };
+  const playerIdentifier = rawIdentifier === undefined || rawIdentifier === null ||
+      String(rawIdentifier).trim() === ""
+    ? null
+    : String(rawIdentifier).trim();
+  const accessCode = rawAccessCode === undefined || rawAccessCode === null ||
+      String(rawAccessCode).trim() === ""
+    ? null
+    : String(rawAccessCode).trim();
+
+  if (playerIdentifier && playerIdentifier.length > 128) {
+    throw new EdgeActivationError(
+      "player_identifier_too_long",
+      "Player Identifier is too long.",
+      400,
+    );
+  }
+  if (accessCode && accessCode.length > 128) {
+    throw new EdgeActivationError(
+      "player_access_code_too_long",
+      "Player Access Code is too long.",
+      400,
+    );
+  }
+
+  return { playerIdentifier, accessCode };
 }

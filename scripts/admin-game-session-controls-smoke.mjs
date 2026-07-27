@@ -86,6 +86,13 @@ for (const contract of [
   'url.searchParams.set("gameCode", normalizedCode)',
   'url.searchParams.set("mode", "student")',
   "repairVisibleShareSurfaces",
+  "deduplicateVisibleShareSurfaces",
+  "dismissShareSurface",
+  "econovaria-admin-share-fallback",
+  "NATIVE_SURFACE_GRACE_MS",
+  "nativeSurfaceObservedUntil",
+  "closeControl.click()",
+  "EconovariaAdminModalLifecycleBridge?.reconcile?.()",
   "data-econovaria-player-link",
   "input[id*='share-admin-link']",
 ]) {
@@ -94,26 +101,65 @@ for (const contract of [
     `Canonical selected-game share-link contract is missing ${contract}.`,
   );
 }
+const repairVisibleStart = shareLinkContract.indexOf(
+  "function repairVisibleShareSurfaces()",
+);
+const scheduleRepairsStart = shareLinkContract.indexOf(
+  "function scheduleRepairs()",
+  repairVisibleStart,
+);
+const repairVisibleSource = shareLinkContract.slice(
+  repairVisibleStart,
+  scheduleRepairsStart,
+);
+assert(
+  repairVisibleStart >= 0 &&
+    scheduleRepairsStart > repairVisibleStart &&
+    repairVisibleSource.indexOf("deduplicateVisibleShareSurfaces().forEach") <
+      repairVisibleSource.indexOf("repairSurface(surface, selected)"),
+  "Share surfaces must be deduplicated before canonical content is repaired.",
+);
+assert(
+  shareLinkContract.includes("now < nativeSurfaceObservedUntil") &&
+    shareLinkContract.includes("nativeSurfaceObservedUntil = now + NATIVE_SURFACE_GRACE_MS"),
+  "A late fallback must be suppressed after the native Share modal was observed.",
+);
+assert(
+  shareLinkContract.indexOf("closeControl.click()") <
+    shareLinkContract.indexOf("surface.remove()"),
+  "Duplicate Share surfaces must close through the modal lifecycle before raw removal fallback.",
+);
 
 for (const contract of [
-  "clearSessionSynchronously();",
-  "captureSession()",
-  'window.addEventListener("click"',
-  "event.stopImmediatePropagation()",
+  "clearSessionSynchronously",
+  "revokeServerSession()",
+  "return fallbackWebSessionLogout();",
+  "fallbackWebSessionLogout",
+  "webSessionApiUrl",
+  'credentials: "include"',
   "keepalive: true",
-  "/auth/sign-out",
-  "/auth/v1/logout",
   "window.location.replace(loginUrl())",
 ]) {
   assert(
     logoutController.includes(contract),
-    `Synchronous Admin logout controller is missing ${contract}.`,
+    `HttpOnly Admin logout controller is missing ${contract}.`,
   );
 }
 assert(
-  logoutController.indexOf("clearSessionSynchronously();") <
-    logoutController.indexOf("logoutPromise = revokeCapturedSession"),
-  "Admin session must be cleared before asynchronous revocation begins.",
+  !logoutController.includes("authSession.signOut()"),
+  "Admin logout must have one navigation owner and must not delegate to a second teardown path.",
+);
+assert(
+  !logoutController.includes("Authorization") &&
+    !logoutController.includes("/auth/sign-out") &&
+    !logoutController.includes("/auth/v1/logout") &&
+    !logoutController.includes("adminApiUrl"),
+  "Admin logout must not restore browser bearer revocation or direct Admin/Auth routes.",
+);
+assert(
+  logoutController.indexOf("logoutPromise = revokeServerSession()") <
+    logoutController.indexOf("window.location.replace(loginUrl())"),
+  "Admin web-session revocation must settle before signed-out navigation.",
 );
 
 assert(
@@ -136,6 +182,11 @@ assert(
   styles.includes("width: min(620px, calc(100vw - 32px))"),
   "Share modal must use the bounded responsive width.",
 );
+assert(
+  styles.includes("@media (max-width: 800px)") &&
+    styles.includes("> .econovaria-admin-game-session-card"),
+  "Narrow Admin layouts must prevent the injected session card from covering content.",
+);
 
 for (const contract of [
   '.eq("game_join_code_hash", gameJoinCodeHash)',
@@ -155,8 +206,12 @@ console.log(JSON.stringify({
   persistedGameCodeAuthority: true,
   sharePanelResponsive: true,
   canonicalPlayerShareRoute: true,
+  shareSurfaceDeduplication: true,
+  lateFallbackSuppression: true,
+  modalLifecycleUnwound: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
-  logoutSynchronousClear: true,
+  logoutHttpOnlyWebSession: true,
+  narrowSessionControlsBounded: true,
   backendGameCodeBinding: true,
 }, null, 2));

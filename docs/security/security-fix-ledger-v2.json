@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "econovaria-security-fix-ledger-v2",
+  "status": "implementation_in_progress",
+  "productionAuthorized": false,
+  "sourceBranch": "agent/security-convergence-v2",
+  "requirements": {
+    "authentication": [
+      "publishable_key_apikey_only",
+      "server_mediated_staff_login",
+      "staff_password_15_to_128_mixed_classes",
+      "staff_status_role_permission_and_security_versions",
+      "mfa_aal2_for_privileged_mutations",
+      "player_identity_from_active_server_session",
+      "versioned_player_credential_hashing",
+      "credential_rotation_revokes_sessions",
+      "single_active_player_session"
+    ],
+    "abusePrevention": [
+      "route_action_rate_limit",
+      "account_progressive_cooldown",
+      "device_progressive_cooldown",
+      "classroom_nat_aware_ip_cooldown",
+      "trusted_proxy_ip_overwrite",
+      "retry_after_response",
+      "limiter_fail_closed",
+      "hmac_only_throttle_keys"
+    ],
+    "requestBoundary": [
+      "method_allowlist",
+      "url_length_limit",
+      "content_type_enforcement",
+      "actual_body_byte_limit",
+      "strict_json_shape",
+      "field_length_and_format_bounds",
+      "unknown_route_fail_closed",
+      "safe_no_store_responses"
+    ],
+    "blastRadius": [
+      "separate_bootstrap_player_staff_admin_operator_runner_zones",
+      "no_browser_privileged_credentials",
+      "server_side_scope_derivation",
+      "capability_specific_privilege_after_authorization",
+      "production_project_denial_for_staging_operator",
+      "separate_staging_and_production_secrets",
+      "private_schema_and_narrow_rpc_target",
+      "zero_residue_acceptance_cleanup"
+    ]
+  },
+  "implemented": [
+    "split_bootstrap_player_staff_and_admin_edge_boundaries",
+    "publishable_key_bearer_rejection",
+    "server_mediated_staff_login",
+    "progressive_account_device_ip_authentication_throttle",
+    "staff_password_policy",
+    "staff_security_state_and_metadata_reconciliation",
+    "staff_mfa_service_and_admin_aal2_gate",
+    "player_credential_versioning_and_lazy_upgrade",
+    "player_session_rotation_and_credential_rotation_revocation",
+    "bootstrap_request_boundary",
+    "admin_route_rate_limit_guard",
+    "gateway_header_sanitization",
+    "auth_boundary_contract_tests"
+  ],
+  "blocking": [
+    "connected_ci_not_yet_green_on_current_head",
+    "universal_route_policy_manifest_incomplete",
+    "granular_staff_permission_enforcement_incomplete",
+    "mfa_browser_enrollment_and_challenge_journey_incomplete",
+    "existing_staff_metadata_backfill_not_yet_executed_in_isolated_staging",
+    "http_only_same_origin_session_bff_not_implemented",
+    "legacy_classroom_api_still_required_for_internal_compatibility",
+    "player_argon2id_target_not_implemented",
+    "static_runner_secret_not_replaced_with_timestamped_hmac",
+    "final_database_catalog_privilege_audit_not_run",
+    "connected_adversarial_staging_acceptance_not_run"
+  ],
+  "retirementRule": "inventory_then_replace_then_parity_test_then_isolated_staging_dual_run_then_zero_use_then_delete_then_rotate_then_full_gate"
+}

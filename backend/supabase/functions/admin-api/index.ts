@@ -25,6 +25,16 @@ import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
 } from "./gameLifecycleOperations.ts";
+import {
+  guardAdminRequest,
+  type AdminSecurityGuardResult,
+} from "./adminSecurityGuard.ts";
+
+type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
+type AdminSecurityFailure = Extract<
+  AdminSecurityGuardResult,
+  { readonly ok: false }
+>;
 
 function routePath(url: URL): string {
   const marker = "/admin-api";
@@ -32,6 +42,33 @@ function routePath(url: URL): string {
   return markerIndex >= 0
     ? url.pathname.slice(markerIndex + marker.length) || "/"
     : url.pathname;
+}
+
+function adminSecurityFailureResponse(
+  request: Request,
+  failure: AdminSecurityFailure,
+): Response {
+  const headers = {
+    ...corsHeaders(request),
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "private, no-store, max-age=0",
+    "Pragma": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "Vary": "Origin, Authorization, X-Econovaria-Device-Id",
+  } as Record<string, string>;
+
+  if (failure.retryAfterSeconds) {
+    headers["Retry-After"] = String(Math.max(1, failure.retryAfterSeconds));
+  }
+  if (failure.resetAt) headers["X-RateLimit-Reset"] = failure.resetAt;
+
+  return new Response(JSON.stringify({
+    code: failure.code,
+    message: failure.message,
+  }), {
+    status: failure.status,
+    headers,
+  });
 }
 
 async function handleGlobalRoute(
@@ -85,12 +122,19 @@ async function handleGlobalRoute(
         },
         activeGame: selected ? gameDto(selected) : {},
         games: context.games.map(gameDto),
-        permissions: ["*"],
+        permissions: context.security.permissions,
+        permissionVersion: Number(
+          context.user?.app_metadata?.permission_version || 0,
+        ),
+        securityVersion: Number(
+          context.user?.app_metadata?.security_version || 0,
+        ),
         roles: ["game_admin"],
         csrfToken: "",
         session: {
           id: claims.id || context.staff.id,
           csrfToken: "",
+          assuranceLevel: context.security.assuranceLevel,
           expiresAt: claims.exp
             ? new Date(Number(claims.exp) * 1000).toISOString()
             : null,
@@ -105,6 +149,8 @@ async function handleGlobalRoute(
           marketplaceAdminTrading: false,
           progressionReview: true,
           progressionCorrection: true,
+          multiFactorAuthentication:
+            context.security.assuranceLevel === "aal2",
         },
       },
     });
@@ -150,7 +196,9 @@ async function handleGlobalRoute(
     return json(request, 200, {
       data: {
         security: {
-          twoFactorEnabled: false,
+          twoFactorEnabled: context.security.assuranceLevel === "aal2",
+          assuranceLevel: context.security.assuranceLevel,
+          mfaRequired: true,
           sessions: [{
             id: claims.id || context.staff.id,
             current: true,
@@ -161,7 +209,9 @@ async function handleGlobalRoute(
               : null,
           }],
           events: [],
-          implementationStatus: "current_session_only",
+          implementationStatus: context.security.assuranceLevel === "aal2"
+            ? "aal2_verified"
+            : "mfa_enrollment_required",
         },
       },
     });
@@ -198,18 +248,33 @@ Deno.serve(async (request: Request) => {
   }
 
   const context = await resolveContext(request);
-  if (!context.ok) {
+  if (context.ok !== true) {
     return json(request, context.status, {
       code: "auth_failed",
       message: context.message,
     });
   }
+  const authorizedContext = context as AuthorizedAdminContext;
 
   const url = new URL(request.url);
   const path = routePath(url);
 
   try {
-    const globalResponse = await handleGlobalRoute(request, context, path);
+    const security = await guardAdminRequest(
+      request,
+      authorizedContext,
+      path,
+    );
+    if (security.ok === false) {
+      return adminSecurityFailureResponse(request, security);
+    }
+    const securedContext = { ...authorizedContext, security };
+
+    const globalResponse = await handleGlobalRoute(
+      request,
+      securedContext,
+      path,
+    );
     if (globalResponse) return globalResponse;
 
     const gameMatch = path.match(/^\/games\/([^/]+)(\/.*)?$/);
@@ -228,7 +293,7 @@ Deno.serve(async (request: Request) => {
 
     const gameId = decodeURIComponent(gameMatch[1]);
     const suffix = gameMatch[2] || "";
-    const game = ensureOwnedGame(context, gameId);
+    const game = ensureOwnedGame(securedContext, gameId);
     if (!game) {
       return json(request, 404, {
         code: "game_not_found",
@@ -237,11 +302,11 @@ Deno.serve(async (request: Request) => {
     }
 
     const lifecycleOperation = await handleGameLifecycleOperation(
-      context.service,
+      securedContext.service,
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -263,13 +328,13 @@ Deno.serve(async (request: Request) => {
     }
 
     const worldOperation = await handleWorldRuntimeAdminOperation(
-      context.service as unknown as Parameters<
+      securedContext.service as unknown as Parameters<
         typeof handleWorldRuntimeAdminOperation
       >[0],
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -281,14 +346,12 @@ Deno.serve(async (request: Request) => {
       );
     }
 
-    // Cast through never to prevent Deno from recursively expanding the full
-    // generated Supabase client type at this bounded Marketplace adapter.
     const marketplaceOperation = await handleMarketplaceAdminOperation(
-      context.service as never,
+      securedContext.service as never,
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -302,11 +365,11 @@ Deno.serve(async (request: Request) => {
 
     if (suffix.startsWith("/messages")) {
       const rateLimit = await guardStaffMessagingRateLimit(
-        context.service,
+        securedContext.service,
         {
           request,
           gameId,
-          staffUserId: context.staff.id,
+          staffUserId: securedContext.staff.id,
           suffix,
         },
       );
@@ -315,11 +378,11 @@ Deno.serve(async (request: Request) => {
       }
 
       const messagingOperation = await handleMessagingOperation(
-        context.service,
+        securedContext.service,
         {
           request,
           gameId,
-          staffUserId: context.staff.id,
+          staffUserId: securedContext.staff.id,
           suffix,
         },
       );
@@ -333,11 +396,11 @@ Deno.serve(async (request: Request) => {
     }
 
     const progressionOperation = await handleProgressionOperation(
-      context.service,
+      securedContext.service,
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -350,11 +413,11 @@ Deno.serve(async (request: Request) => {
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(
-      context.service,
+      securedContext.service,
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -367,11 +430,11 @@ Deno.serve(async (request: Request) => {
     }
 
     const businessBankingOperation = await handleBusinessBankingAdminOperation(
-      context.service,
+      securedContext.service,
       {
         request,
         gameId,
-        staffUserId: context.staff.id,
+        staffUserId: securedContext.staff.id,
         suffix,
       },
     );
@@ -385,7 +448,7 @@ Deno.serve(async (request: Request) => {
 
     const readResponse = await handleGameRead(
       request,
-      context,
+      securedContext,
       url,
       game,
       gameId,
@@ -395,7 +458,7 @@ Deno.serve(async (request: Request) => {
 
     const runtimeMutationResponse = await handleRuntimeMutation(
       request,
-      context,
+      securedContext,
       gameId,
       suffix,
     );
@@ -403,7 +466,7 @@ Deno.serve(async (request: Request) => {
 
     const writeResponse = await handleGameWrite(
       request,
-      context,
+      securedContext,
       url,
       gameId,
       suffix,

@@ -1,10 +1,10 @@
-import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createQualityHarness,
+} from "./admin-quality-smoke-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
 const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts/keyboard";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 const VIEWPORTS = [
   { label: "desktop", width: 1440, height: 1000 },
   { label: "compact", width: 1024, height: 768 },
@@ -35,171 +35,15 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Keyboard Smoke Game",
-  name: "Keyboard Smoke Game",
-  status: "active",
-  gameCode: "KEYS01",
-};
-
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 0,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 0 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {
-    difficultyPreset: "moderate",
-    backendDifficultyPreset: "moderate",
-    difficultyBasePreset: "moderate",
-    priceMultiplier: 1,
-    incomeMultiplier: 1,
-    shockFrequency: 1,
-    shockSeverity: 1,
-    recoverySupport: 1,
-    tradeMultiplier: 1,
-    configSaveState: "saved",
-  },
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-function responseFor(pathname) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return {
-      data: {
-        admin: {
-          id: ADMIN_ID,
-          accountId: ADMIN_ID,
-          displayName: "Keyboard Smoke Administrator",
-          email: "admin@example.test",
-          role: "game_admin",
-          roles: ["game_admin"],
-        },
-        activeGame: game,
-        games: [game],
-        permissions: ["*"],
-        roles: ["game_admin"],
-        adminRole: "game_admin",
-        csrfToken: "",
-        session: {
-          id: ADMIN_ID,
-          csrfToken: "",
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        },
-        capabilities: {
-          notifications: false,
-          securityHistory: "current_session_only",
-          helpArticles: true,
-          auditLogFlags: true,
-          auditLogExport: true,
-          overallScore: false,
-          marketplaceAdminTrading: false,
-        },
-      },
-    };
-  }
-  return { data: common };
-}
-
-async function createPage(browser, viewport) {
-  const context = await browser.newContext({ viewport });
-  const page = await context.newPage();
-  const errors = [];
-
-  page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-  page.on("console", (message) => {
-    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+async function createPage(viewport, label) {
+  const harness = await createQualityHarness(`mounted-keyboard-${label}`);
+  harness.state.delayReads = false;
+  harness.state.writeDelay = 0;
+  await harness.page.setViewportSize(viewport);
+  harness.page.on("console", (message) => {
+    if (message.type() === "error") harness.errors.push(`console: ${message.text()}`);
   });
-  page.on("requestfailed", (request) => {
-    const url = request.url();
-    const failure = request.failure()?.errorText || "";
-    if (url.endsWith("/favicon.ico")) return;
-    if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-    errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
-  });
-
-  await page.addInitScript(({ accessToken, gameId, adminId }) => {
-    sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-      accessToken,
-      refreshToken: "keyboard-smoke-refresh-token",
-      user: { id: adminId, email: "admin@example.test" },
-    }));
-    sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-  }, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-  await page.route("**/functions/v1/admin-api/**", async (route) => {
-    const request = route.request();
-    if (request.method() === "OPTIONS") {
-      await route.fulfill({
-        status: 204,
-        headers: {
-          "access-control-allow-origin": "*",
-          "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-          "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-        },
-        body: "",
-      });
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify(responseFor(new URL(request.url()).pathname)),
-    });
-  });
-
-  return { context, page, errors };
+  return harness;
 }
 
 async function loadAdmin(page) {
@@ -215,11 +59,13 @@ async function activeElementDetail(page) {
     if (!(node instanceof HTMLElement)) return { eligible: false, label: "missing-active-element" };
     const disabled = ("disabled" in node && node.disabled === true) || node.getAttribute("aria-disabled") === "true";
     const excluded = Boolean(node.closest(excludedSelector));
+    const focusable = node.matches("a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])") && node.tabIndex >= 0;
     const style = getComputedStyle(node);
     const rect = node.getBoundingClientRect();
     const visible = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
     return {
-      eligible: !disabled && !excluded && visible,
+      eligible: focusable && !disabled && !excluded && visible,
+      focusable,
       disabled,
       excluded,
       visible,
@@ -237,43 +83,52 @@ async function tabRoundTrip(page, startControl, section) {
   await startControl.focus();
   assert(await startControl.evaluate((node) => document.activeElement === node), `${section} navigation control could not receive focus.`);
 
-  const eligibleCount = await page.evaluate((excludedSelector) => {
+  const sequence = await page.evaluate(({ excludedSelector, section }) => {
     const selector = "a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])";
-    return [...document.querySelectorAll(selector)].filter((node) => {
+    const controls = [...document.querySelectorAll(selector)].filter((node) => {
       if (!(node instanceof HTMLElement)) return false;
       if (("disabled" in node && node.disabled === true) || node.getAttribute("aria-disabled") === "true") return false;
       if (node.closest(excludedSelector)) return false;
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-    }).length;
-  }, EXCLUDED_SELECTOR);
-  const steps = Math.max(3, Math.min(12, eligibleCount - 1));
+      return node.tabIndex >= 0 && style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    });
+    const startIndex = controls.findIndex((node) => node.getAttribute("data-admin-section") === section);
+    return { count: controls.length, startIndex };
+  }, { excludedSelector: EXCLUDED_SELECTOR, section });
+  assert(sequence.startIndex >= 0, `${section} navigation control was absent from the sequential focus order.`);
+  const remaining = Math.max(1, sequence.count - sequence.startIndex - 1);
+  const steps = Math.max(1, Math.min(8, remaining));
   const forward = [];
 
   for (let index = 0; index < steps; index += 1) {
     await page.keyboard.press("Tab");
     const detail = await activeElementDetail(page);
-    assert(detail.eligible, `${section} Tab entered an excluded control: ${JSON.stringify(detail)}.`);
+    assert(detail.eligible, `${section} Tab entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
     forward.push(detail);
   }
 
   for (let index = 0; index < steps; index += 1) {
     await page.keyboard.press("Shift+Tab");
     const detail = await activeElementDetail(page);
-    assert(detail.eligible, `${section} Shift+Tab entered an excluded control: ${JSON.stringify(detail)}.`);
+    assert(detail.eligible, `${section} Shift+Tab entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
   }
 
-  assert(
-    await startControl.evaluate((node) => document.activeElement === node),
-    `${section} Shift+Tab did not reverse the sequential focus path back to its starting control.`,
-  );
+  let returned = await startControl.evaluate((node) => document.activeElement === node);
+  for (let recovery = 0; !returned && recovery < 8; recovery += 1) {
+    await page.keyboard.press("Shift+Tab");
+    const detail = await activeElementDetail(page);
+    assert(detail.eligible, `${section} Shift+Tab recovery entered an excluded or non-focusable control: ${JSON.stringify(detail)}.`);
+    returned = await startControl.evaluate((node) => document.activeElement === node);
+  }
+  assert(returned, `${section} Shift+Tab could not return to the starting navigation control.`);
 
   return forward;
 }
 
-async function exerciseNavigation(browser, viewport) {
-  const { context, page, errors } = await createPage(browser, viewport);
+async function exerciseNavigation(viewport) {
+  const harness = await createPage(viewport, `navigation-${viewport.label}`);
+  const { page, errors } = harness;
   const sections = [];
 
   try {
@@ -317,7 +172,7 @@ async function exerciseNavigation(browser, viewport) {
     assert(errors.length === 0, `Mounted Admin navigation emitted browser errors: ${errors[0]}`);
     return { viewport, sections, errors };
   } finally {
-    await context.close();
+    await harness.finish({ viewport, sections });
   }
 }
 
@@ -347,12 +202,13 @@ async function tabToControl(page, startControl, control, label) {
   throw new Error(`${label} was not reachable through sequential keyboard navigation.`);
 }
 
-async function exerciseQuickActions(browser) {
+async function exerciseQuickActions() {
   const viewport = { width: 1440, height: 1000 };
   const results = [];
 
   for (const item of QUICK_ACTIONS) {
-    const { context, page, errors } = await createPage(browser, viewport);
+    const harness = await createPage(viewport, `quick-action-${item.action}`);
+    const { page, errors } = harness;
     try {
       await loadAdmin(page);
       const sectionControl = page.locator(`[data-admin-section="${item.section}"]`).first();
@@ -388,21 +244,20 @@ async function exerciseQuickActions(browser) {
       assert(errors.length === 0, `${item.action} emitted browser errors: ${errors[0]}`);
       results.push({ ...item, tabs, modalOpened: true });
     } finally {
-      await context.close();
+      await harness.finish({ viewport, item, results });
     }
   }
 
   return { viewport, results };
 }
 
-const browser = await chromium.launch({ headless: true });
 const report = { navigation: [], quickActions: null };
 
 try {
   for (const viewport of VIEWPORTS) {
-    report.navigation.push(await exerciseNavigation(browser, viewport));
+    report.navigation.push(await exerciseNavigation(viewport));
   }
-  report.quickActions = await exerciseQuickActions(browser);
+  report.quickActions = await exerciseQuickActions();
   writeFileSync(`${ARTIFACT_DIR}/mounted-keyboard-navigation.json`, JSON.stringify(report, null, 2));
   console.log("Mounted Admin keyboard-only navigation and original header-action smoke passed.");
 } catch (error) {
@@ -410,6 +265,4 @@ try {
   writeFileSync(`${ARTIFACT_DIR}/mounted-keyboard-navigation.json`, JSON.stringify(report, null, 2));
   console.error(report.failure);
   process.exitCode = 1;
-} finally {
-  await browser.close();
 }

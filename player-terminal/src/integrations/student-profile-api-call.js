@@ -21,6 +21,14 @@ function normalizedBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function normalizedCredential(value) {
+  return String(value || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function isPublishableKey(value) {
+  return /^sb_publishable_/i.test(normalizedCredential(value));
+}
+
 function assertNoClientOwnershipFields(payload, endpointKey) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return;
   for (const key of Object.keys(payload)) {
@@ -47,19 +55,26 @@ export function headersFor(context) {
     });
   }
 
-  const accessToken = String(
+  const configuredAccessToken = normalizedCredential(
     context.session?.accessToken || context.config?.accessToken || ""
-  ).replace(/^Bearer\s+/i, "").trim();
+  );
+  const publishableKey = normalizedCredential(
+    context.session?.publishableKey ||
+    context.config?.publishableKey ||
+    (isPublishableKey(configuredAccessToken) ? configuredAccessToken : "")
+  );
+  const userAccessToken =
+    configuredAccessToken && configuredAccessToken !== publishableKey
+      ? configuredAccessToken
+      : "";
 
   const headers = {
     "content-type": "application/json",
     "x-player-session-token": token,
     "x-request-id": String(context.requestId || "")
   };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-    headers.apikey = accessToken;
-  }
+  if (publishableKey) headers.apikey = publishableKey;
+  if (userAccessToken) headers.Authorization = `Bearer ${userAccessToken}`;
   if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
   return headers;
 }

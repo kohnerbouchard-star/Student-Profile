@@ -23,6 +23,7 @@ on:
       - "scripts/player-multiplayer-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
       - "scripts/econovaria-local-gateway.py"
+      - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
@@ -73,25 +74,32 @@ jobs:
           npm ci
           node --check scripts/player-multiplayer-browser-acceptance.mjs
           node --check scripts/player-runtime-load-profile.mjs
-          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
+          python3 -m py_compile scripts/econovaria-local-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
           python3 - <<'PY'
           import importlib.util
+          import sys
           from email.message import Message
           from pathlib import Path
 
           path = Path("scripts/econovaria-local-gateway.py")
-          spec = importlib.util.spec_from_file_location("econovaria_gateway_wrapper", path)
+          spec = importlib.util.spec_from_file_location("econovaria_gateway", path)
           module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
           spec.loader.exec_module(module)
-          gateway = module.load_gateway()
-          module.install_trusted_client_ip(gateway)
           headers = Message()
+          headers["apikey"] = "sb_publishable_contract_test"
+          headers["authorization"] = "Bearer sb_publishable_contract_test"
           headers["cf-connecting-ip"] = "203.0.113.10"
           headers["x-real-ip"] = "203.0.113.11"
           headers["x-forwarded-for"] = "203.0.113.12"
-          filtered = gateway.filtered_request_headers(headers, "127.0.0.1:54321")
+          filtered = module.filtered_request_headers(
+              headers,
+              "127.0.0.1:54321",
+              browser_publishable_key="sb_publishable_contract_test",
+          )
           assert filtered["x-real-ip"] == "127.0.0.1"
+          assert "authorization" not in {name.lower() for name in filtered}
           assert "cf-connecting-ip" not in {name.lower() for name in filtered}
           assert "x-forwarded-for" not in {name.lower() for name in filtered}
           PY
@@ -123,11 +131,12 @@ jobs:
           LOG=/tmp/player-runtime-supabase-startup.log
           : > "$LOG"
           mkdir -p backend/supabase/functions
-          node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" \
-            | awk '{print "ECONOVARIA_RATE_LIMIT_HMAC_SECRET=" $0}' \
-            > backend/supabase/functions/.env
-          printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip' \
-            >> backend/supabase/functions/.env
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
           chmod 600 backend/supabase/functions/.env
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           for ATTEMPT in 1 2 3; do
@@ -143,8 +152,52 @@ jobs:
           done
           exit "$STATUS"
 
-      - name: Rebuild database from zero
-        run: npx supabase db reset --workdir backend --local
+      - name: Rebuild database from zero and refresh REST schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+
+          eval "$(npx supabase status --workdir backend -o env)"
+          SERVER_KEY="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$SERVER_KEY"
+
+          cat > /tmp/auth-throttle-readiness-request.json <<'JSON'
+          {
+            "p_buckets": [
+              {"dimension":"account","keyHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+              {"dimension":"device","keyHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+              {"dimension":"ip","keyHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+            ]
+          }
+          JSON
+
+          for ATTEMPT in $(seq 1 60); do
+            STATUS="$(curl --silent --show-error \
+              --output /tmp/auth-throttle-readiness-response.json \
+              --write-out '%{http_code}' \
+              --max-time 5 \
+              --request POST \
+              --header "apikey: ${SERVER_KEY}" \
+              --header "Authorization: Bearer ${SERVER_KEY}" \
+              --header "Content-Type: application/json" \
+              --data-binary @/tmp/auth-throttle-readiness-request.json \
+              http://127.0.0.1:54321/rest/v1/rpc/auth_throttle_check_v2 || true)"
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Authentication throttle RPC was not ready after PostgREST restart." >&2
+          sed -E \
+            's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{64}/[digest-redacted]/gi' \
+            /tmp/auth-throttle-readiness-response.json >&2 || true
+          exit 1
 
       - name: Provision canonical source content
         shell: bash
@@ -176,7 +229,11 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(npx supabase status --workdir backend -o env)"
-          test -n "${ANON_KEY:-}"
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
           python3 scripts/econovaria-local-gateway.py \
             --local-supabase \
             --port 4173 \
@@ -185,17 +242,15 @@ jobs:
           for ATTEMPT in $(seq 1 90); do
             STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               http://127.0.0.1:4173/ || true)"
-            CLASSROOM_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/classroom-api || true)"
-            ADMIN_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/player-api || true)"
+            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/admin-api || true)"
-            if [ "$STATIC_STATUS" = "200" ] && [ "$CLASSROOM_STATUS" = "204" ] && [ "$ADMIN_STATUS" = "204" ]; then
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
+            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
               exit 0
             fi
             sleep 1

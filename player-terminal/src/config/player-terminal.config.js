@@ -13,6 +13,7 @@ const DEFAULT_CONFIG = Object.freeze({
   gameSessionId: "",
   playerSessionId: "",
   playerSessionToken: "",
+  publishableKey: "",
   accessToken: "",
   adapter: null,
   apiCall: null,

@@ -6,7 +6,7 @@
     throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
   }
   const STORAGE_KEY = "econovaria.player.auth.v1";
-  const CLASSROOM_API_URL = runtimeConfig.classroomApiUrl;
+  const PLAYER_API_URL = runtimeConfig.playerApiUrl;
   const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const SESSION_INVALID_EVENT = "econovaria:player-session-invalid";
   const SESSION_REQUIRED_EVENT = "econovaria:player-session-required";
@@ -38,7 +38,7 @@
       return {
         playerSessionToken,
         sessionExpiresAt: expiresAt,
-        accessToken: SUPABASE_PUBLISHABLE_KEY
+        publishableKey: SUPABASE_PUBLISHABLE_KEY
       };
     } catch (_) {
       runtime.sessionStorage.removeItem(STORAGE_KEY);
@@ -76,9 +76,9 @@
     usePreviewData: development && !session,
     simulatePreviewWrites: development && !session && requestedPreviewWrites,
     studentProfileMode: true,
-    studentProfileApiBaseUrl: CLASSROOM_API_URL,
-    apiBaseUrl: CLASSROOM_API_URL,
-    accessToken: SUPABASE_PUBLISHABLE_KEY,
+    studentProfileApiBaseUrl: PLAYER_API_URL,
+    apiBaseUrl: PLAYER_API_URL,
+    publishableKey: SUPABASE_PUBLISHABLE_KEY,
     playerSessionToken: session?.playerSessionToken || "",
     sessionProvider: () => readStoredSession(),
     sessionExitUrl: loginUrl("session-invalid"),

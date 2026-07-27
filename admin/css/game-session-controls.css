@@ -303,6 +303,16 @@
   color: #e9fbff;
 }
 
+@media (max-width: 800px) {
+  .econovaria-admin-game-session-controls-host {
+    z-index: auto;
+  }
+
+  .econovaria-admin-game-session-controls-host > .econovaria-admin-game-session-card {
+    display: none !important;
+  }
+}
+
 @media (max-width: 700px) {
   [data-modal-id="share-game-access"] .admin-terminal-share-modal-code,
   .econovaria-admin-game-session-card__code-row {

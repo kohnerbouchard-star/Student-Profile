@@ -1,5 +1,9 @@
 import type { EdgeErrorBody } from "./edgeResponse.ts";
 import { extractBearerToken } from "./edgeAuth.ts";
+import {
+  enforceStaffRequestRateLimit,
+  normalizedStaffAction,
+} from "../../security/staffRequestRateLimit.ts";
 
 declare const Deno: {
   readonly env: {
@@ -28,9 +32,11 @@ interface EdgeSupabaseQueryResponse<T = unknown> {
   readonly statusText?: string;
 }
 
-interface EdgeSupabaseAuthUser {
+export interface EdgeSupabaseAuthUser {
   readonly id: string;
   readonly email?: string | null;
+  readonly app_metadata?: Record<string, unknown>;
+  readonly user_metadata?: Record<string, unknown>;
 }
 
 interface EdgeSupabaseAuthResponse {
@@ -52,6 +58,8 @@ interface EdgeSupabaseAuthAdminClient {
     readonly email: string;
     readonly password: string;
     readonly email_confirm: boolean;
+    readonly app_metadata?: Record<string, unknown>;
+    readonly user_metadata?: Record<string, unknown>;
   }): PromiseLike<EdgeSupabaseAuthAdminResponse>;
   deleteUser(userId: string): PromiseLike<{
     readonly data: unknown;
@@ -59,7 +67,11 @@ interface EdgeSupabaseAuthAdminClient {
   }>;
   updateUserById(
     userId: string,
-    input: { readonly ban_duration: string },
+    input: {
+      readonly ban_duration?: string;
+      readonly app_metadata?: Record<string, unknown>;
+      readonly user_metadata?: Record<string, unknown>;
+    },
   ): PromiseLike<EdgeSupabaseAuthAdminResponse>;
 }
 
@@ -131,11 +143,16 @@ export interface EdgeSupabaseClient {
   ): PromiseLike<EdgeSupabaseQueryResponse<Data>>;
 }
 
-interface EdgeStaffSessionStaff {
+export interface EdgeStaffSessionStaff {
   readonly id: string;
   readonly supabase_auth_user_id: string;
   readonly email: string;
   readonly display_name: string;
+  readonly status: string;
+  readonly role: "game_admin" | "security_operator";
+  readonly permission_version: number;
+  readonly security_version: number;
+  readonly mfa_required: boolean;
 }
 
 interface EdgeStaffSessionDependencies {
@@ -143,18 +160,21 @@ interface EdgeStaffSessionDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
 }
 
-type EdgeStaffSessionFailure = {
+export type EdgeStaffSessionFailure = {
   readonly ok: false;
   readonly status: number;
   readonly error: EdgeErrorBody["error"];
+  readonly retryAfterSeconds?: number;
+  readonly resetAt?: string;
 };
 
-type EdgeStaffSessionResolution =
+export type EdgeStaffSessionResolution =
   | {
     readonly ok: true;
     readonly authUser: EdgeSupabaseAuthUser;
     readonly staff: EdgeStaffSessionStaff;
     readonly serviceClient: EdgeSupabaseClient;
+    readonly assuranceLevel: "aal1" | "aal2" | "unknown";
   }
   | EdgeStaffSessionFailure;
 
@@ -165,6 +185,10 @@ interface ResolveStaffSessionOptions {
     | { readonly ok: true }
     | EdgeStaffSessionFailure
     | Promise<{ readonly ok: true } | EdgeStaffSessionFailure>;
+  readonly requiredRole?: "game_admin" | "security_operator";
+  readonly requiredAssuranceLevel?: "aal1" | "aal2";
+  readonly allowLegacyMetadata?: boolean;
+  readonly skipUniversalRateLimit?: boolean;
 }
 
 const DEFAULT_STAFF_LOOKUP_ERROR: EdgeErrorBody["error"] = {
@@ -182,31 +206,28 @@ export async function resolveStaffSessionForRequest(
   const authHeader = request.headers.get("authorization");
   const accessToken = extractBearerToken(authHeader);
 
-  if (!accessToken) {
+  if (!accessToken || /^sb_publishable_/i.test(accessToken)) {
     return missingStaffAuthUser(options.missingMessage);
   }
 
   const authClient = dependencies.createAuthClient(env);
   const authUserResult = await authClient.auth.getUser(accessToken);
   const authUser = authUserResult.data.user;
-
   if (authUserResult.error || !authUser?.id) {
     return missingStaffAuthUser(options.missingMessage);
   }
 
   if (options.beforeStaffLookup) {
     const prerequisiteResult = await options.beforeStaffLookup();
-
-    if (!prerequisiteResult.ok) {
-      return prerequisiteResult;
-    }
+    if (prerequisiteResult.ok === false) return prerequisiteResult;
   }
 
   const serviceClient = dependencies.createServiceClient(env);
-
   const staffResponse = await serviceClient
     .from("staff_users")
-    .select("id,supabase_auth_user_id,email,display_name")
+    .select(
+      "id,supabase_auth_user_id,email,display_name,status,role,permission_version,security_version,mfa_required",
+    )
     .eq("supabase_auth_user_id", authUser.id)
     .maybeSingle();
 
@@ -218,46 +239,177 @@ export async function resolveStaffSessionForRequest(
     };
   }
 
-  const staff = staffResponse.data as EdgeStaffSessionStaff | null;
+  const row = staffResponse.data as {
+    readonly id?: string;
+    readonly supabase_auth_user_id?: string;
+    readonly email?: string;
+    readonly display_name?: string;
+    readonly status?: string;
+    readonly role?: string;
+    readonly permission_version?: number | string;
+    readonly security_version?: number | string;
+    readonly mfa_required?: boolean;
+  } | null;
+  if (!row?.id) {
+    return authorizationFailure(
+      403,
+      "staff_not_found",
+      "No active staff account is linked to this user.",
+    );
+  }
 
-  if (!staff?.id) {
-    return {
-      ok: false,
-      status: 403,
-      error: {
-        code: "staff_not_found",
-        message: "No staff user is linked to the Supabase Auth user.",
-        retryable: false,
-      },
-    };
+  const permissionVersion = Number(row.permission_version);
+  const securityVersion = Number(row.security_version);
+  const role = row.role === "security_operator"
+    ? "security_operator"
+    : row.role === "game_admin"
+    ? "game_admin"
+    : null;
+  if (
+    row.status !== "active" ||
+    !role ||
+    !Number.isSafeInteger(permissionVersion) ||
+    permissionVersion < 1 ||
+    !Number.isSafeInteger(securityVersion) ||
+    securityVersion < 1
+  ) {
+    return authorizationFailure(
+      403,
+      "staff_account_inactive",
+      "The staff account is not active.",
+    );
+  }
+
+  const requiredRole = options.requiredRole ?? "game_admin";
+  if (role !== requiredRole) {
+    return authorizationFailure(
+      403,
+      "staff_role_denied",
+      "The staff account is not authorized for this surface.",
+    );
+  }
+
+  const metadata = authUser.app_metadata ?? {};
+  const metadataMatches =
+    metadata.econovaria_role === role &&
+    Number(metadata.permission_version) === permissionVersion &&
+    Number(metadata.security_version) === securityVersion;
+  if (!metadataMatches && options.allowLegacyMetadata !== true) {
+    return authorizationFailure(
+      403,
+      "staff_claims_outdated",
+      "The staff authorization claims must be refreshed by an administrator.",
+    );
+  }
+
+  const assuranceLevel = readJwtAssuranceLevel(accessToken);
+  const isMutation = !["GET", "HEAD"].includes(request.method.toUpperCase());
+  const requiredAssuranceLevel = options.requiredAssuranceLevel ??
+    (isMutation && row.mfa_required !== false ? "aal2" : "aal1");
+  if (requiredAssuranceLevel === "aal2" && assuranceLevel !== "aal2") {
+    return authorizationFailure(
+      403,
+      "staff_mfa_required",
+      "Multi-factor authentication is required for this operation.",
+    );
+  }
+
+  if (options.skipUniversalRateLimit !== true) {
+    const path = safeRequestPath(request);
+    try {
+      const decision = await enforceStaffRequestRateLimit({
+        request,
+        action: normalizedStaffAction(request.method, path),
+        profile: ["GET", "HEAD"].includes(request.method.toUpperCase())
+          ? "read"
+          : "sensitive",
+        gameId: readGameScope(path) || row.id,
+        staffUserId: row.id,
+      }, serviceClient);
+
+      if (!decision.allowed) {
+        return {
+          ok: false,
+          status: 429,
+          error: {
+            code: "staff_rate_limit_exceeded",
+            message: "Too many staff requests. Try again later.",
+            retryable: true,
+          },
+          retryAfterSeconds: Math.max(1, decision.retryAfterSeconds),
+          resetAt: decision.resetAt,
+        };
+      }
+    } catch {
+      return authorizationFailure(
+        503,
+        "staff_rate_limit_unavailable",
+        "Staff request protection is unavailable.",
+        true,
+      );
+    }
   }
 
   return {
     ok: true,
     authUser,
-    staff,
+    staff: {
+      id: row.id,
+      supabase_auth_user_id: String(row.supabase_auth_user_id || authUser.id),
+      email: String(row.email || authUser.email || ""),
+      display_name: String(row.display_name || "Staff"),
+      status: "active",
+      role,
+      permission_version: permissionVersion,
+      security_version: securityVersion,
+      mfa_required: row.mfa_required !== false,
+    },
     serviceClient,
+    assuranceLevel,
   };
 }
 
-function missingStaffAuthUser(message: string): EdgeStaffSessionFailure {
-  return {
-    ok: false,
-    status: 401,
-    error: {
-      code: "missing_staff_auth_user",
-      message,
-      retryable: false,
-    },
-  };
+function environmentValue(name: string): string {
+  try {
+    return String(Deno.env.get(name) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function dictionaryValues(raw: string): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+    return Object.values(parsed)
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function firstConfigured(values: readonly string[]): string {
+  return values.find((value) => Boolean(value)) || "";
 }
 
 export function readSupabaseEnv():
   | { readonly ok: true; readonly value: SupabaseEnv }
   | { readonly ok: false } {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = environmentValue("SUPABASE_URL");
+  const supabaseAnonKey = firstConfigured([
+    environmentValue("SUPABASE_PUBLISHABLE_KEY"),
+    environmentValue("PUBLISHABLE_KEY"),
+    ...dictionaryValues(environmentValue("SUPABASE_PUBLISHABLE_KEYS")),
+    environmentValue("SUPABASE_ANON_KEY"),
+  ]);
+  const supabaseServiceRoleKey = firstConfigured([
+    environmentValue("SUPABASE_SECRET_KEY"),
+    environmentValue("SECRET_KEY"),
+    ...dictionaryValues(environmentValue("SUPABASE_SECRET_KEYS")),
+    environmentValue("SUPABASE_SERVICE_ROLE_KEY"),
+  ]);
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return { ok: false };
@@ -265,11 +417,7 @@ export function readSupabaseEnv():
 
   return {
     ok: true,
-    value: {
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseServiceRoleKey,
-    },
+    value: { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey },
   };
 }
 
@@ -312,7 +460,6 @@ export async function readOwnedGameSession(
   }
 
   const gameSession = gameResponse.data;
-
   if (!gameSession?.id) {
     return {
       ok: false,
@@ -332,5 +479,60 @@ export async function readOwnedGameSession(
       name: gameSession.name,
       status: gameSession.status,
     },
+  };
+}
+
+function safeRequestPath(request: Request): string {
+  try {
+    return new URL(request.url).pathname.slice(0, 2_048) || "/";
+  } catch {
+    return "/invalid-request-path";
+  }
+}
+
+function readGameScope(path: string): string {
+  const match = path.match(/\/games\/([0-9a-f-]{36})(?:\/|$)/iu);
+  return match?.[1] || "";
+}
+
+function readJwtAssuranceLevel(token: string): "aal1" | "aal2" | "unknown" {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return "unknown";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const claims = JSON.parse(atob(padded));
+    return claims?.aal === "aal2"
+      ? "aal2"
+      : claims?.aal === "aal1"
+      ? "aal1"
+      : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function missingStaffAuthUser(message: string): EdgeStaffSessionFailure {
+  return {
+    ok: false,
+    status: 401,
+    error: {
+      code: "missing_staff_auth_user",
+      message,
+      retryable: false,
+    },
+  };
+}
+
+function authorizationFailure(
+  status: number,
+  code: string,
+  message: string,
+  retryable = false,
+): EdgeStaffSessionFailure {
+  return {
+    ok: false,
+    status,
+    error: { code, message, retryable },
   };
 }

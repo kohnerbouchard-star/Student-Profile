@@ -36,8 +36,69 @@ additional_redirect_urls = ["http://localhost:4173"]
 jwt_expiry = 3600
 enable_signup = false
 
+# Supabase CLI local Auth disables TOTP enrollment and verification by default.
+# Enable both for disposable local browser acceptance; hosted project settings are
+# configured separately and are not changed by this repository file.
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [edge_runtime]
 enabled = true
+
+# Authenticated Staff requests carry a real Supabase Auth user JWT. The platform
+# gate rejects missing or invalid JWTs before the function performs auth.getUser,
+# Staff lookup, role checks, security-version checks and game ownership checks.
+[functions.staff-api]
+verify_jwt = true
+
+[functions.admin-api]
+verify_jwt = true
+
+[functions.staff-mfa-api]
+verify_jwt = true
+
+# The one-time recovery JWT is platform-verified, resolved with auth.getUser and
+# linked to an active Staff account before a server-side password update.
+[functions.password-reset-api]
+verify_jwt = true
+
+# Bootstrap and Player requests use the publishable key only as application
+# identity. Their handlers explicitly validate apikey, then enforce purchase-code
+# or opaque Player-session authorization. Opaque publishable keys are not JWTs.
+[functions.bootstrap-api]
+verify_jwt = false
+
+[functions.player-api]
+verify_jwt = false
+
+# The Admin web-session BFF authenticates the public application key internally,
+# verifies allowed origins, decrypts an HttpOnly session envelope, enforces CSRF,
+# and forwards a server-held real Staff JWT to platform-verified Staff services.
+[functions.web-session-api]
+verify_jwt = false
+
+# Server-to-server stock functions validate the publishable apikey and the
+# dedicated STOCK_MARKET_RUNNER_SECRET inside the function. They do not accept a
+# browser or legacy anon JWT as authorization.
+[functions.stock-market-runner]
+verify_jwt = false
+
+[functions.stock-market-read]
+verify_jwt = false
+
+[functions.stock-market-seed-copy]
+verify_jwt = false
+
+[functions.stock-market-player-read]
+verify_jwt = false
+
+[functions.stock-market-trading]
+verify_jwt = false
+
+# Legacy compatibility surface. Browser runtime must not target this function.
+[functions.classroom-api]
+verify_jwt = true
 
 [analytics]
 enabled = false

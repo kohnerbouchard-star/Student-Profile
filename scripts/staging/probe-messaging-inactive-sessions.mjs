@@ -25,7 +25,7 @@ if (process.argv.includes("--plan")) {
     requiredEnvironment: [
       "SUPABASE_PROJECT_REF",
       "SUPABASE_URL",
-      "SUPABASE_ANON_KEY",
+      "SUPABASE_PUBLISHABLE_KEY",
       "MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN",
       "MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN",
       "MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN",
@@ -37,6 +37,7 @@ if (process.argv.includes("--plan")) {
       "known production project refs rejected",
       "no game lifecycle mutation performed by the probe",
       "synthetic inactive sessions only",
+      "publishable key used only as apikey",
       "all returned application payloads remain UUID-private",
     ],
     states: [
@@ -50,13 +51,15 @@ if (process.argv.includes("--plan")) {
 
 const config = readConfig();
 const evidence = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   executedAt: new Date().toISOString(),
   headSha: String(process.env.GITHUB_SHA || "local").slice(0, 64),
   project: {
     ref: config.projectRef,
     production: false,
   },
+  apiBoundary: "player-api",
+  publishableBearerProhibited: true,
   credentialsRecorded: false,
   rawInternalIdentifiersRecorded: false,
   productionTouched: false,
@@ -86,16 +89,23 @@ console.log(JSON.stringify({
 function readConfig() {
   const projectRef = required("SUPABASE_PROJECT_REF");
   const supabaseUrl = new URL(required("SUPABASE_URL"));
+  const publishableKey = String(
+    process.env.SUPABASE_PUBLISHABLE_KEY || process.env.PUBLISHABLE_KEY || "",
+  ).trim();
   assert(/^[a-z0-9]{20}$/.test(projectRef), "Supabase project ref is invalid.");
   assert(!KNOWN_PRODUCTION_PROJECT_REFS.has(projectRef), "Known production project ref is prohibited.");
   assert(
     supabaseUrl.protocol === "https:" && supabaseUrl.hostname === `${projectRef}.supabase.co`,
     "Supabase URL does not match the isolated project ref.",
   );
+  assert(
+    publishableKey.startsWith("sb_publishable_"),
+    "SUPABASE_PUBLISHABLE_KEY must use the sb_publishable_ format.",
+  );
   return Object.freeze({
     projectRef,
-    supabaseUrl: supabaseUrl.origin,
-    anonKey: required("SUPABASE_ANON_KEY"),
+    playerApiUrl: `${supabaseUrl.origin}/functions/v1/player-api`,
+    publishableKey,
     expiredToken: required("MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN"),
     pausedToken: required("MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN"),
     endedToken: required("MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN"),
@@ -103,13 +113,12 @@ function readConfig() {
 }
 
 async function inactiveRequest(token) {
-  const response = await fetch(`${config.supabaseUrl}/functions/v1/classroom-api/players/me/messages`, {
+  const response = await fetch(`${config.playerApiUrl}/players/me/messages`, {
     method: "GET",
     headers: {
       accept: "application/json",
       "content-type": "application/json",
-      apikey: config.anonKey,
-      authorization: `Bearer ${config.anonKey}`,
+      apikey: config.publishableKey,
       "x-player-session-token": token,
     },
     cache: "no-store",
@@ -131,7 +140,7 @@ function assertNoSensitiveData(value) {
   const text = JSON.stringify(value);
   assert(!UUID_PATTERN.test(text), "Inactive-session payload or evidence leaked an internal UUID.");
   assert(
-    !/(eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role|x-player-session-token|authorization)/i.test(text),
+    !/(eyJ[a-zA-Z0-9_-]{20,}|sb_(?:secret|publishable)_[A-Za-z0-9_-]+|service_role|x-player-session-token|authorization)/i.test(text),
     "Inactive-session payload or evidence contains credential-shaped data.",
   );
 }

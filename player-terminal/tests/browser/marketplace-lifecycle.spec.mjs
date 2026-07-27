@@ -39,7 +39,7 @@ function capabilities() {
   ].map(([key, method, pathTemplate]) => ({ key, operations: [{ method, pathTemplate }] }));
   return {
     schemaVersion: 1,
-    manifestVersion: "2026-07-22.2",
+    manifestVersion: "2026-07-23.2",
     service: "classroom-api",
     capabilities: {
       routes: {
@@ -213,10 +213,10 @@ function response(route, body, status = 200) {
 async function installRoutes(page) {
   let purchasePosts = 0;
   let committed = false;
-  await page.route("**/functions/v1/classroom-api/**", async (route) => {
+  await page.route("**/functions/v1/player-api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const path = url.pathname.replace(/^.*\/functions\/v1\/classroom-api/, "");
+    const path = url.pathname.replace(/^.*\/functions\/v1\/player-api/, "");
     if (path === "/players/me" && request.method() === "GET") return response(route, session());
     if (path === "/players/me/capabilities" && request.method() === "GET") return response(route, capabilities());
     if (path === "/players/me/game/dashboard" && request.method() === "GET") return response(route, dashboard());

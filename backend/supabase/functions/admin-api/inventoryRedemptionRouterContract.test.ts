@@ -4,14 +4,18 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   for (
     const fragment of [
       'import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";',
-      "const game = ensureOwnedGame(context, gameId);",
+      "const securedContext = { ...authorizedContext, security };",
+      "const game = ensureOwnedGame(securedContext, gameId);",
       "const redemptionOperation = await handleInventoryRedemptionOperation(",
-      "staffUserId: context.staff.id",
+      "staffUserId: securedContext.staff.id",
     ]
   ) assertIncludes(adminIndex, fragment);
 
+  const securityGuard = adminIndex.indexOf(
+    "const securedContext = { ...authorizedContext, security };",
+  );
   const ownership = adminIndex.indexOf(
-    "const game = ensureOwnedGame(context, gameId);",
+    "const game = ensureOwnedGame(securedContext, gameId);",
   );
   const redemption = adminIndex.indexOf(
     "const redemptionOperation = await handleInventoryRedemptionOperation(",
@@ -19,7 +23,12 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   const genericRead = adminIndex.indexOf(
     "const readResponse = await handleGameRead(",
   );
-  assert(ownership >= 0 && redemption > ownership && genericRead > redemption);
+  assert(
+    securityGuard >= 0 &&
+      ownership > securityGuard &&
+      redemption > ownership &&
+      genericRead > redemption,
+  );
 });
 
 function assertIncludes(value: string, fragment: string): void {

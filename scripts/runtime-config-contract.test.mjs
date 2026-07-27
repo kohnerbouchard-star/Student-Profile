@@ -46,26 +46,28 @@ const stagingConfig = Object.freeze({
 
 test("accepts an isolated staging publishable configuration", () => {
   const { runtime, meta } = execute(stagingConfig);
+  const functions = "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1";
   assert.equal(runtime.environment, "staging");
   assert.equal(runtime.projectRef, "eecvbssdvarfcykcfrny");
   assert.equal(runtime.apiProxyUrl, "");
-  assert.equal(
-    runtime.classroomApiUrl,
-    "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/classroom-api",
-  );
-  assert.equal(
-    runtime.adminApiUrl,
-    "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-api",
-  );
-  assert.equal(meta.content, runtime.adminApiUrl);
+  assert.equal(runtime.playerApiUrl, `${functions}/player-api`);
+  assert.equal(runtime.staffApiUrl, `${functions}/staff-api`);
+  assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
+  assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
+  assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
+  assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
+  assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
+  assert.equal(meta.content, runtime.adminBffApiUrl);
   assert.equal(Object.isFrozen(runtime), true);
 });
 
-test("routes only Edge Function APIs through an approved loopback proxy", () => {
+test("routes reviewed browser APIs through an approved loopback proxy", () => {
   const { runtime, meta } = execute({
     ...stagingConfig,
     apiProxyUrl: "http://127.0.0.1:4173/",
   });
+  const functions = "http://127.0.0.1:4173/functions/v1";
 
   assert.equal(
     runtime.supabaseUrl,
@@ -73,15 +75,26 @@ test("routes only Edge Function APIs through an approved loopback proxy", () => 
     "Supabase Auth and Realtime must retain the real staging project URL.",
   );
   assert.equal(runtime.apiProxyUrl, "http://127.0.0.1:4173");
-  assert.equal(
-    runtime.classroomApiUrl,
-    "http://127.0.0.1:4173/functions/v1/classroom-api",
-  );
-  assert.equal(
-    runtime.adminApiUrl,
-    "http://127.0.0.1:4173/functions/v1/admin-api",
-  );
-  assert.equal(meta.content, runtime.adminApiUrl);
+  assert.equal(runtime.playerApiUrl, `${functions}/player-api`);
+  assert.equal(runtime.staffApiUrl, `${functions}/staff-api`);
+  assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
+  assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
+  assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
+  assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
+  assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
+  assert.equal(meta.content, runtime.adminBffApiUrl);
+});
+
+test("uses same-origin BFF routes in production", () => {
+  const { runtime, meta } = execute({
+    ...stagingConfig,
+    environment: "production",
+  });
+  assert.equal(runtime.webSessionApiUrl, "/api/admin-session");
+  assert.equal(runtime.adminBffApiUrl, "/api/admin");
+  assert.equal(runtime.passwordResetApiUrl, "/api/password-reset");
+  assert.equal(meta.content, "/api/admin");
 });
 
 test("fails closed when deployment configuration is absent", () => {

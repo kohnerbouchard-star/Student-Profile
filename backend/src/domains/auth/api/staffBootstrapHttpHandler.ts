@@ -8,6 +8,7 @@ import {
   readSupabaseEnv,
   resolveStaffSessionForRequest,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { overwriteTrustedClientIpHeaders } from "../../../security/rateLimitKeying.ts";
 
 interface StaffBootstrapDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -44,6 +45,10 @@ interface StaffBootstrapSessionRow {
   readonly updated_at: string;
 }
 
+const INTERNAL_WEB_SESSION_ORIGIN = "https://web-session.internal";
+const INTERNAL_WEB_SESSION_RATE_LIMIT_IP = "192.0.2.1";
+const TRUSTED_IP_HEADER = "x-real-ip";
+
 export async function handleStaffBootstrapRequest(
   request: Request,
   dependencies: StaffBootstrapDependencies,
@@ -67,8 +72,9 @@ export async function handleStaffBootstrapRequest(
       });
     }
 
+    const protectedRequest = internalWebSessionRequest(request);
     const staffResult = await resolveStaffSessionForRequest(
-      request,
+      protectedRequest,
       envResult.value,
       dependencies,
       {
@@ -128,4 +134,21 @@ export async function handleStaffBootstrapRequest(
       retryable: false,
     });
   }
+}
+
+function internalWebSessionRequest(request: Request): Request {
+  const url = new URL(request.url);
+  if (url.origin !== INTERNAL_WEB_SESSION_ORIGIN) return request;
+
+  // The web-session handler has already authenticated the browser request and
+  // is the only owner of this synthetic internal origin. Preserve universal
+  // Staff limiting without accepting a browser-supplied network header. The
+  // external login boundary remains keyed to the proxy-overwritten client IP.
+  return new Request(request, {
+    headers: overwriteTrustedClientIpHeaders(
+      request.headers,
+      TRUSTED_IP_HEADER,
+      INTERNAL_WEB_SESSION_RATE_LIMIT_IP,
+    ),
+  });
 }

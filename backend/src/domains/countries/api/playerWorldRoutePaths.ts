@@ -1,8 +1,8 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type { PlayerWorldRoute } from "../contracts/playerWorldReadContracts.ts";
 
 export function readPlayerWorldRoutePath(pathname: string): PlayerWorldRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
 
   if (!routeSegments) return null;
 
@@ -25,14 +25,6 @@ export function readPlayerWorldRoutePath(pathname: string): PlayerWorldRoute | n
   }
 
   return null;
-}
-
-function readRouteSegments(segments: readonly string[]): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-
-  const classroomApiIndex = segments.lastIndexOf("classroom-api");
-  if (classroomApiIndex < 0) return null;
-  return segments.slice(classroomApiIndex + 1);
 }
 
 function matches(actual: readonly string[], expected: readonly string[]): boolean {

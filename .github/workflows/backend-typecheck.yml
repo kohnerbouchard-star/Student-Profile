@@ -4,12 +4,20 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "api/**"
+      - "admin/**"
+      - "auth/**"
+      - "frontend/src/**"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:
       - main
     paths:
       - "backend/**"
+      - "api/**"
+      - "admin/**"
+      - "auth/**"
+      - "frontend/src/**"
       - ".github/workflows/backend-typecheck.yml"
 
 permissions:
@@ -49,9 +57,32 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run typecheck:all > /tmp/backend-typecheck.log 2>&1
+          {
+            npm run typecheck:all
+            deno check \
+              --config supabase/functions/classroom-api/deno.json \
+              --lock=supabase/functions/deno.lock \
+              --frozen \
+              supabase/functions/bootstrap-api/index.ts \
+              supabase/functions/staff-api/index.ts \
+              supabase/functions/staff-mfa-api/index.ts \
+              supabase/functions/player-api/index.ts \
+              supabase/functions/web-session-api/index.ts \
+              supabase/functions/password-reset-api/index.ts
+            node --check ../api/_admin-bff-proxy.js
+            node --check '../api/admin-session/[...path].js'
+            node --check '../api/admin/[...path].js'
+            node --check ../api/password-reset.js
+            node --check ../admin/auth-session-manager.js
+            node --check ../admin/admin-auth.js
+            node --check ../admin/session-timeout-safe-exit.js
+            node --check ../auth/reset-password.js
+            node --check ../frontend/src/core/api.js
+            node --check ../frontend/src/core/admin-mfa.js
+            node --check ../frontend/src/core/login.js
+          } > /tmp/backend-typecheck.log 2>&1
           echo $? > /tmp/backend-typecheck.status
-          tail -n 160 /tmp/backend-typecheck.log
+          tail -n 260 /tmp/backend-typecheck.log
           exit 0
 
       - name: Upload backend typecheck diagnostics
