@@ -298,7 +298,7 @@ function reachableTravelOption() {
        ceil(route_row.base_cost_minor * route_row.cost_multiplier_basis_points / 10000.0)
        * 11500
        / 10000.0
-     ) <= balance_row.balance
+     ) <= balance_row.balance * 100
     join public.world_location_states as destination_row
       on destination_row.game_session_id = route_row.game_session_id
      and destination_row.public_location_id = case
