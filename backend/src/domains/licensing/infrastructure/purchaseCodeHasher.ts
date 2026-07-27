@@ -116,8 +116,15 @@ export function readPurchaseCodeHmacSecret(): string | undefined {
   };
   const read = (name: string) =>
     runtime.Deno?.env?.get(name) ?? runtime.process?.env?.[name];
+
+  // A dedicated key is preferred. The rate-limit or Supabase server secret is
+  // accepted only as a transition key so existing deployments fail closed
+  // without reintroducing an unkeyed digest. The HMAC message is domain
+  // separated, and production should rotate to the dedicated key.
   return read("ECONOVARIA_PURCHASE_CODE_HMAC_SECRET") ??
-    read("ECONOVARIA_RATE_LIMIT_HMAC_SECRET");
+    read("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ??
+    read("SUPABASE_SECRET_KEY") ??
+    read("SUPABASE_SERVICE_ROLE_KEY");
 }
 
 function validateHmacSecret(secret: string): void {
