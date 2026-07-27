@@ -6,6 +6,11 @@ on:
       - agent/runtime-stability-button-integrity-v1
     paths:
       - .github/workflows/reconcile-pr377-with-main.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/reconcile-pr377-with-main.yml
+      - scripts/reconcile-pr377-with-main.sh
 
 permissions:
   contents: write
@@ -14,9 +19,10 @@ jobs:
   reconcile:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out PR branch
+      - name: Check out exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -37,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           git merge --abort 2>/dev/null || true
-          git reset --hard "$GITHUB_SHA"
+          git reset --hard "${{ github.event.pull_request.head.sha || github.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs/operations/reconciliation
