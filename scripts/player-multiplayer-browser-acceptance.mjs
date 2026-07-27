@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const coreUrl = new URL("./player-multiplayer-browser-acceptance-core.mjs", import.meta.url);
@@ -22,7 +21,8 @@ if (materialized.includes(legacyNeedle) || !materialized.includes(bffNeedle)) {
   throw new Error("Player multiplayer BFF login adaptation did not materialize exactly.");
 }
 
-const directory = await mkdtemp(join(tmpdir(), "econovaria-player-multiplayer-"));
+const scriptsDirectory = dirname(fileURLToPath(coreUrl));
+const directory = await mkdtemp(join(scriptsDirectory, ".tmp-player-multiplayer-"));
 const target = join(directory, "player-multiplayer-browser-acceptance.mjs");
 try {
   await writeFile(target, materialized, "utf8");
