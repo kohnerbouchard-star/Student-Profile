@@ -1,0 +1,40 @@
+name: Reconcile PR 377 with main
+
+on:
+  push:
+    branches:
+      - agent/runtime-stability-button-integrity-v1
+    paths:
+      - .github/workflows/reconcile-pr377-with-main.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-conflicts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Inventory merge conflicts against main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+          echo "MERGE_STATUS=${merge_status}"
+          echo "CONFLICTS_BEGIN"
+          git diff --name-only --diff-filter=U | sort
+          echo "CONFLICTS_END"
+          echo "CONFLICT_DETAILS_BEGIN"
+          git status --short
+          echo "CONFLICT_DETAILS_END"
+          git merge --abort || true
+          test "$merge_status" -ne 0
