@@ -178,6 +178,12 @@ async function login(browser, gameCode, player, label) {
 
 async function openMarketplace(page) {
   const control = page.locator('[data-route="marketplace"]:visible').first();
+  if (!(await control.isVisible().catch(() => false))) {
+    const tradeEntry = page.locator('[data-route="store"]:visible').first();
+    await tradeEntry.waitFor({ state: "visible", timeout: 30_000 });
+    await tradeEntry.click();
+    await page.waitForFunction(() => location.hash === "#store", undefined, { timeout: 30_000 });
+  }
   await control.waitFor({ state: "visible", timeout: 30_000 });
   await control.click();
   await page.waitForFunction(() => location.hash === "#marketplace", undefined, { timeout: 30_000 });
