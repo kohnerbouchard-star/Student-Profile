@@ -461,6 +461,7 @@ async function replayRequest(page, original) {
 
 async function reloadBusiness(page) {
   if (!await page.evaluate(() => location.hash === "#business")) await openBusiness(page);
+  const previousSurface = await page.locator(".player-terminal-business-page").first().elementHandle();
   const responsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/business") && response.request().method() === "GET",
     { timeout: 60_000 },
@@ -470,6 +471,9 @@ async function reloadBusiness(page) {
       detail: { resources: ["business"] },
     }));
   });
+  if (previousSurface) {
+    await page.waitForFunction((surface) => !surface.isConnected, previousSurface, { timeout: 30_000 });
+  }
   const response = await responsePromise;
   if (!response.ok()) throw new Error(`Business refresh returned ${response.status()}.`);
   await page.locator(".player-terminal-business-page").waitFor({ state: "visible", timeout: 30_000 });
