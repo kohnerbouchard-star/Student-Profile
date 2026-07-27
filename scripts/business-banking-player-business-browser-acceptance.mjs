@@ -460,9 +460,19 @@ async function replayRequest(page, original) {
 }
 
 async function reloadBusiness(page) {
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
-  await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  await openBusiness(page);
+  if (!await page.evaluate(() => location.hash === "#business")) await openBusiness(page);
+  const responsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/business") && response.request().method() === "GET",
+    { timeout: 60_000 },
+  );
+  await page.evaluate(() => {
+    globalThis.dispatchEvent(new CustomEvent("econovaria:player-resources-invalidated", {
+      detail: { resources: ["business"] },
+    }));
+  });
+  const response = await responsePromise;
+  if (!response.ok()) throw new Error(`Business refresh returned ${response.status()}.`);
+  await page.locator(".player-terminal-business-page").waitFor({ state: "visible", timeout: 30_000 });
 }
 
 async function requireText(page, text) {
