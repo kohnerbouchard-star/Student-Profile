@@ -88,6 +88,8 @@ for (const contract of [
   "repairVisibleShareSurfaces",
   "deduplicateVisibleShareSurfaces",
   "econovaria-admin-share-fallback",
+  "NATIVE_SURFACE_GRACE_MS",
+  "nativeSurfaceObservedUntil",
   "surface.remove()",
   "data-econovaria-player-link",
   "input[id*='share-admin-link']",
@@ -114,6 +116,11 @@ assert(
     repairVisibleSource.indexOf("deduplicateVisibleShareSurfaces().forEach") <
       repairVisibleSource.indexOf("repairSurface(surface, selected)"),
   "Share surfaces must be deduplicated before canonical content is repaired.",
+);
+assert(
+  shareLinkContract.includes("now < nativeSurfaceObservedUntil") &&
+    shareLinkContract.includes("nativeSurfaceObservedUntil = now + NATIVE_SURFACE_GRACE_MS"),
+  "A late fallback must be suppressed after the native Share modal was observed.",
 );
 
 for (const contract of [
@@ -193,6 +200,7 @@ console.log(JSON.stringify({
   sharePanelResponsive: true,
   canonicalPlayerShareRoute: true,
   shareSurfaceDeduplication: true,
+  lateFallbackSuppression: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
   logoutHttpOnlyWebSession: true,
