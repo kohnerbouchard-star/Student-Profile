@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Inventory merge conflicts against main
+      - name: Persist conflict hunks against main
         shell: bash
         run: |
           set -euo pipefail
@@ -28,29 +28,27 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           set +e
-          git merge --no-commit --no-ff origin/main
+          git -c merge.conflictStyle=diff3 merge --no-commit --no-ff origin/main
           merge_status=$?
           set -e
           mkdir -p docs/operations/reconciliation
           {
-            echo "# PR 377 conflict inventory"
+            echo "# PR 377 conflict hunks"
             echo
             echo "- PR head: $(git rev-parse HEAD)"
             echo "- Main head: $(git rev-parse origin/main)"
             echo "- Merge status: ${merge_status}"
             echo
-            echo "## Unmerged paths"
-            echo '```text'
-            git diff --name-only --diff-filter=U | sort
-            echo '```'
-            echo
-            echo "## Git status"
-            echo '```text'
-            git status --short
-            echo '```'
-          } > /tmp/pr377-conflict-inventory.md
+            for path in $(git diff --name-only --diff-filter=U | sort); do
+              echo "## ${path}"
+              echo '```diff'
+              git diff --cc -- "$path" || true
+              echo '```'
+              echo
+            done
+          } > /tmp/pr377-conflict-hunks.md
           git merge --abort || true
-          cp /tmp/pr377-conflict-inventory.md docs/operations/reconciliation/pr377-conflict-inventory.md
-          git add docs/operations/reconciliation/pr377-conflict-inventory.md
-          git commit -m "docs(reconcile): record PR 377 conflict inventory"
+          cp /tmp/pr377-conflict-hunks.md docs/operations/reconciliation/pr377-conflict-hunks.md
+          git add docs/operations/reconciliation/pr377-conflict-hunks.md
+          git commit -m "docs(reconcile): record PR 377 conflict hunks"
           git push origin HEAD:agent/runtime-stability-button-integrity-v1
