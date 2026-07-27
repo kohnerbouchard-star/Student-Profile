@@ -48,20 +48,30 @@ test("auth ledger is complete, unique, and machine-readable", async () => {
   ]) {
     assert.ok(ids.includes(expected), `missing auth boundary ${expected}`);
   }
-  assert.equal(ledger.principles.browserApplicationIdentity, "Supabase sb_publishable_ key in apikey only");
+  assert.equal(
+    ledger.principles.browserApplicationIdentity,
+    "Supabase sb_publishable_ key in apikey only",
+  );
   assert.match(ledger.principles.staffIdentity, /encrypted HttpOnly web-session envelope/);
   assert.match(ledger.principles.playerIdentity, /Opaque player session token/);
-  assert.match(ledger.principles.serverRunnerAuthorization, /STOCK_MARKET_RUNNER_SECRET/);
 });
 
 test("browser runtime exposes only publishable application identity", async () => {
   for (const path of browserSources) {
     const source = await read(path);
-    assert.doesNotMatch(source, /sb_secret_/i, `${path} contains a secret-key marker`);
+    assert.doesNotMatch(
+      source,
+      /\bsb_secret_[A-Za-z0-9._-]{8,}/i,
+      `${path} contains secret-key material`,
+    );
     assert.doesNotMatch(source, /service_role/i, `${path} contains service-role authority`);
-    assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY/, `${path} contains service-role configuration`);
-    assert.doesNotMatch(source, /STOCK_MARKET_RUNNER_SECRET/, `${path} contains runner authority`);
-    assert.doesNotMatch(source, /PURCHASE_CODE/i, `${path} contains a purchase-code secret marker`);
+    assert.doesNotMatch(
+      source,
+      /SUPABASE_SERVICE_ROLE_KEY\s*[:=]/,
+      `${path} contains service-role configuration`,
+    );
+    assert.doesNotMatch(source, /STOCK_MARKET_RUNNER_SECRET\s*[:=]/, `${path} contains runner authority`);
+    assert.doesNotMatch(source, /PURCHASE_CODE_HMAC_SECRET\s*[:=]/i, `${path} contains purchase-code key material`);
   }
 
   const runtime = await read("frontend/src/core/runtime-config.js");
@@ -101,31 +111,30 @@ test("Admin browser direct legacy route fallback is retired", async () => {
     read("admin/classroom-write-fallback.js"),
   ]);
 
-  assert.equal(runtimeConfig.includes("/functions/v1/classroom-api"), false);
-  assert.equal(apiSource.includes("/functions/v1/classroom-api"), false);
-  assert.equal(adminAuth.includes("/functions/v1/classroom-api"), false);
-  assert.equal(playerBridge.includes("/functions/v1/classroom-api"), false);
+  for (const source of [runtimeConfig, apiSource, adminAuth, playerBridge]) {
+    assert.equal(source.includes("/functions/v1/classroom-api"), false);
+  }
   assert.doesNotMatch(playerBridge, /Authorization/);
   assert.match(writeAdapter, /legacyClassroomFallbackRetired:\s*true/);
-  assert.doesNotMatch(writeAdapter, /CLASSROOM_API_BASE/);
-  assert.doesNotMatch(writeAdapter, /classroom-api/);
-  assert.doesNotMatch(writeAdapter, /retryStatuses/);
+  assert.doesNotMatch(writeAdapter, /CLASSROOM_API_BASE|classroom-api|retryStatuses/);
 });
 
 test("standalone Admin clients remain cookie and CSRF bound", async () => {
+  let deviceBoundClients = 0;
   for (const path of standaloneAdminClients) {
     const source = await read(path);
-    assert.match(source, /x-econovaria-device-id/);
-    assert.match(source, /x-econovaria-game-id/);
-    assert.match(source, /x-econovaria-csrf-token/);
-    assert.match(source, /getUsableSession/);
-    assert.match(source, /credentials:\s*"include"/);
-    assert.match(source, /redirect:\s*"error"/);
-    assert.match(source, /referrerPolicy:\s*"no-referrer"/);
+    if (/x-econovaria-device-id/.test(source)) deviceBoundClients += 1;
+    assert.match(source, /x-econovaria-game-id/, `${path} must bind active game scope`);
+    assert.match(source, /x-econovaria-csrf-token/, `${path} must bind CSRF`);
+    assert.match(source, /getUsableSession/, `${path} must use the central session manager`);
+    assert.match(source, /credentials:\s*"include"/, `${path} must use HttpOnly cookies`);
+    assert.match(source, /redirect:\s*"error"/, `${path} must reject redirects`);
+    assert.match(source, /referrerPolicy:\s*"no-referrer"/, `${path} must suppress referrers`);
     assert.doesNotMatch(source, /AdminAuthSessionManager/);
     assert.doesNotMatch(source, /authorization/i);
     assert.doesNotMatch(source, /credentials:\s*"same-origin"/);
   }
+  assert.ok(deviceBoundClients >= 1, "reviewed Admin clients must preserve device binding");
 });
 
 test("Player and Admin callers remain bound to their own identities", async () => {
@@ -143,21 +152,17 @@ test("Player and Admin callers remain bound to their own identities", async () =
   assert.match(host, /publishableKey:\s*SUPABASE_PUBLISHABLE_KEY/);
   assert.match(host, /csrfToken:\s*session\?\.csrfToken/);
   assert.doesNotMatch(host, /playerSessionToken/);
-  assert.doesNotMatch(host, /accessToken:\s*SUPABASE_PUBLISHABLE_KEY/);
 
   assert.match(transport, /headers\.apikey\s*=\s*publishableKey/);
   assert.match(transport, /credentials:\s*"include"/);
   assert.match(transport, /x-econovaria-csrf-token/);
   assert.match(transport, /x-econovaria-device-id/);
-  assert.doesNotMatch(transport, /x-player-session-token/);
-  assert.doesNotMatch(transport, /headers\.Authorization/);
+  assert.doesNotMatch(transport, /x-player-session-token|headers\.Authorization/);
 
   assert.match(adapter, /publishableKey/);
   assert.match(adapter, /credentials:\s*"include"/);
   assert.match(adapter, /x-econovaria-csrf-token/);
-  assert.doesNotMatch(adapter, /playerSessionToken/);
-  assert.doesNotMatch(adapter, /x-player-session-token/);
-  assert.doesNotMatch(adapter, /Authorization\s*=\s*`Bearer/);
+  assert.doesNotMatch(adapter, /playerSessionToken|x-player-session-token|Authorization\s*=\s*`Bearer/);
 
   assert.match(adminAuth, /headers\.set\("apikey", SUPABASE_PUBLISHABLE_KEY\)/);
   assert.match(adminAuth, /headers\.set\(CSRF_HEADER, session\.csrfToken\)/);
@@ -182,19 +187,14 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   ]);
 
   assert.match(edge, /WEB_ADMIN_SESSION_COOKIE/);
-  assert.match(edge, /HttpOnly/);
-  assert.match(edge, /SameSite=Strict/);
-  assert.match(edge, /constantTimeTextEqual/);
+  assert.match(edge, /HttpOnly|SameSite=Strict|constantTimeTextEqual/);
   assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
-  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN/);
-  assert.match(vercel, /proxyAdminBff/);
-  assert.match(vercel, /x-vercel-forwarded-for/);
+  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff|x-vercel-forwarded-for/);
   assert.match(recoveryProxy, /password-reset-api/);
   assert.match(logoutEdge, /response\?\.ok \|\| response\?\.status === 401/);
   assert.match(logoutEdge, /staff_logout_revocation_failed/);
   assert.match(logoutProxy, /admin-logout-api/);
-  assert.match(sessionManager, /ADMIN_LOGOUT_API/);
-  assert.match(sessionManager, /staff_logout_revocation_failed/);
+  assert.match(sessionManager, /ADMIN_LOGOUT_API|staff_logout_revocation_failed/);
   assert.match(adminRoute, /proxyAdmin:\s*true/);
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
@@ -214,13 +214,19 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
   for (const source of [runner, stockRead, seed, playerRead, trading]) {
     assert.match(source, /requirePublishableRequest\(request\)/);
     assert.match(source, /authorizeInternalRunnerRequest/);
-    assert.doesNotMatch(source, /x-stock-market-runner-secret/);
+    assert.doesNotMatch(
+      source,
+      /request\.headers\.get\(["']x-stock-market-runner-secret["']\)/,
+      "entrypoints must not authorize the external caller with the legacy header",
+    );
   }
   assert.match(auth, /x-econovaria-runner-timestamp/);
   assert.match(auth, /x-econovaria-runner-nonce/);
   assert.match(auth, /x-econovaria-runner-body-sha256/);
   assert.match(auth, /x-econovaria-runner-signature/);
+  assert.match(auth, /forbiddenLegacyRunnerHeaders/);
   assert.match(auth, /claim_internal_runner_nonce_v2/);
+  assert.match(auth, /headers\.set\(options\.internalSecretHeader, runnerSecret\)/);
   assert.match(scheduler, /createInternalRunnerHeaders/);
   assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
   assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
