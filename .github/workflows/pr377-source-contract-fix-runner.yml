@@ -6,6 +6,7 @@ on:
       - agent/runtime-stability-button-integrity-v1
     paths:
       - .github/pr377-source-contract-fix.trigger
+      - .github/workflows/pr377-source-contract-fix-runner.yml
 
 permissions:
   contents: write
@@ -30,22 +31,22 @@ jobs:
           path = Path("scripts/admin-mounted-keyboard-navigation-smoke.mjs")
           text = path.read_text()
           old = '''      const busy = Boolean(document.querySelector('[aria-busy="true"], [data-admin-shape-skeleton-stage], .admin-shape-surface-overlay'));
-'''
+          '''
           new = '''      const transitioning = Boolean(document.querySelector(
         "[data-admin-shape-skeleton-stage], [data-admin-shape-surface-overlay], .admin-shape-skeleton-stage, .admin-shape-surface-overlay",
       ));
-'''
+          '''
           if text.count(old) != 1:
               raise SystemExit(f"Expected one mounted readiness match, found {text.count(old)}")
           text = text.replace(old, new, 1)
           old = '''      return { busy, count };
     }, EXCLUDED_SELECTOR);
     if (!snapshot.busy && snapshot.count === previousCount) stableSamples += 1;
-'''
+          '''
           new = '''      return { transitioning, count };
     }, EXCLUDED_SELECTOR);
     if (!snapshot.transitioning && snapshot.count === previousCount) stableSamples += 1;
-'''
+          '''
           if text.count(old) != 1:
               raise SystemExit(f"Expected one mounted readiness result match, found {text.count(old)}")
           path.write_text(text.replace(old, new, 1))
