@@ -3,6 +3,7 @@ import { parseRetryAfter } from "./request-context.js";
 
 const DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function normalizedCredential(value) {
   return String(value || "").replace(/^Bearer\s+/i, "").trim();
@@ -35,6 +36,13 @@ function deviceId(config) {
   }
 }
 
+function currentPlayerSession(config) {
+  const value = typeof config.sessionProvider === "function"
+    ? config.sessionProvider()
+    : null;
+  return value && value.authenticated === true ? value : null;
+}
+
 export class HttpTransport {
   constructor(config) {
     this.config = config;
@@ -51,6 +59,7 @@ export class HttpTransport {
     if (signal?.aborted) controller.abort();
     else signal?.addEventListener("abort", onExternalAbort, { once: true });
 
+    const normalizedMethod = String(method || "GET").toUpperCase();
     const headers = {
       Accept: "application/json",
       "x-request-id": requestId,
@@ -59,22 +68,30 @@ export class HttpTransport {
 
     if (payload !== undefined) headers["Content-Type"] = "application/json";
 
-    const configuredAccessToken = normalizedCredential(this.config.accessToken);
-    const publishableKey = normalizedCredential(
-      this.config.publishableKey ||
-      (isPublishableKey(configuredAccessToken) ? configuredAccessToken : "")
-    );
-    const userAccessToken =
-      configuredAccessToken && configuredAccessToken !== publishableKey
-        ? configuredAccessToken
-        : "";
-
+    const publishableKey = normalizedCredential(this.config.publishableKey);
+    if (publishableKey && !isPublishableKey(publishableKey)) {
+      throw new ApiRequestError("The Player application identity is invalid.", {
+        code: "PUBLISHABLE_KEY_INVALID",
+        path,
+        endpointKey,
+        requestId
+      });
+    }
     if (publishableKey) headers.apikey = publishableKey;
-    if (userAccessToken) headers.Authorization = `Bearer ${userAccessToken}`;
 
-    if (this.config.playerSessionToken) {
-      headers["x-player-session-token"] = this.config.playerSessionToken;
-      headers["x-econovaria-player-session-token"] = this.config.playerSessionToken;
+    if (!["GET", "HEAD"].includes(normalizedMethod)) {
+      const session = currentPlayerSession(this.config);
+      const csrfToken = String(session?.csrfToken || this.config.csrfToken || "");
+      if (!CSRF_PATTERN.test(csrfToken)) {
+        throw new ApiRequestError("Your Player session ended. Sign in again.", {
+          status: 401,
+          code: "SESSION_INVALID",
+          path,
+          endpointKey,
+          requestId
+        });
+      }
+      headers["x-econovaria-csrf-token"] = csrfToken;
     }
     if (this.config.gameSessionId) {
       headers["x-econovaria-game-id"] = this.config.gameSessionId;
@@ -87,11 +104,12 @@ export class HttpTransport {
 
     try {
       const response = await fetch(`${this.config.apiBaseUrl}${path}`, {
-        method,
+        method: normalizedMethod,
         headers,
         body: payload === undefined ? undefined : JSON.stringify(payload),
         signal: controller.signal,
-        credentials: "include"
+        credentials: "include",
+        cache: "no-store"
       });
 
       const contentType = response.headers.get("content-type") || "";
