@@ -228,9 +228,19 @@
     headers.set("Content-Type", "application/json");
     headers.set("X-Idempotency-Key", idempotencyKey);
     headers.delete("Content-Length");
-    return new Request(request, {
+    return new Request(request.url, {
+      method: request.method,
       headers,
       body: JSON.stringify({ ...normalized, idempotencyKey }),
+      credentials: request.credentials,
+      cache: request.cache,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      referrerPolicy: request.referrerPolicy,
+      integrity: request.integrity,
+      keepalive: request.keepalive,
+      mode: request.mode,
+      signal: request.signal,
     });
   }
 
