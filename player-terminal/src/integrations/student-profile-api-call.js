@@ -2,6 +2,7 @@ import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
 import { hasMarketplaceBackendRoute, resolveMarketplaceBackendRequest } from "../api/marketplace-backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
+import { attachPortfolioHoldings } from "../api/portfolio-market-holdings.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
@@ -97,7 +98,11 @@ export function headersFor(context) {
     }
     headers["x-econovaria-csrf-token"] = csrfToken;
   }
-  if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
+  if (context.idempotencyKey) {
+    const idempotencyKey = String(context.idempotencyKey);
+    headers["idempotency-key"] = idempotencyKey;
+    headers["x-idempotency-key"] = idempotencyKey;
+  }
   return headers;
 }
 
@@ -259,6 +264,12 @@ export function createStudentProfileApiCall({ request } = {}) {
     }
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
       snapshot = mergeTerminalRead(snapshot, context.endpointKey, raw);
+      if (context.endpointKey === "portfolio") {
+        snapshot = {
+          ...snapshot,
+          portfolio: attachPortfolioHoldings(snapshot.portfolio, raw),
+        };
+      }
       return endpointProjection(snapshot, context.endpointKey);
     }
     return raw;

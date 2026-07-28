@@ -20,7 +20,7 @@ try {
   const diagnostic = await page.evaluate(async () => {
     const response = await fetch(
       new URL("./dist/admin-overview-terminal.js", window.location.href),
-      { cache: "no-store" },
+      { cache: "no-store" }
     );
     const source = await response.text();
     const needles = [

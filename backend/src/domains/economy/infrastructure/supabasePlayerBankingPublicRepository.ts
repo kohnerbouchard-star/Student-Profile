@@ -74,12 +74,12 @@ export class SupabasePlayerBankingPublicRepository
     const rows = ledgerResponse.data ?? [];
     return {
       balances: (balancesResponse.data ?? []).map((row) => ({
-        accountType: String(row.account_type),
+        accountType: publicAccountType(row.account_type),
         balance: readBalanceNumber(row.balance),
         currencyCode: String(row.currency_code),
       })),
       entries: rows.slice(0, input.limit).map((row) => ({
-        accountType: String(row.account_type),
+        accountType: publicAccountType(row.account_type),
         amount: readBalanceNumber(row.amount),
         currencyCode: String(row.currency_code),
         entryType: String(row.entry_type),
@@ -90,6 +90,12 @@ export class SupabasePlayerBankingPublicRepository
       hasMore: rows.length > input.limit,
     };
   }
+}
+
+function publicAccountType(value: string): string {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "cash" || normalized === "checking") return "checking";
+  return normalized;
 }
 
 function unavailable(message: string): PlayerBankingPublicError {

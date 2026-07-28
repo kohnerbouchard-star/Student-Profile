@@ -18,13 +18,15 @@ const review = renderMarketOrderDialog({
   orderType: "market",
   quantity: 4,
   estimatedGross: 100,
-  availableCashLabel: "ECO 500",
+  availableCheckingLabel: "ECO 500",
   currencyCode: "ECO",
   error: ""
 });
 assert.ok(review.includes("MARKET ORDER REVIEW"));
 assert.ok(review.includes("CONFIRMATION REQUIRED"));
 assert.ok(review.includes("Current price and gross value are estimates"));
+assert.ok(review.includes("AVAILABLE CHECKING"));
+assert.ok(!review.includes("AVAILABLE CASH"));
 assert.ok(review.includes("data-player-market-order-confirm"));
 assert.ok(!review.includes("playerSessionId"));
 assert.ok(!review.includes(asset.id), "The review must not expose the internal stock asset identifier.");
@@ -59,13 +61,15 @@ const receipt = renderMarketOrderDialog({
       status: "filled",
       rejectionReason: null
     },
-    cash: { accountType: "cash", currencyCode: "ECO", balance: 399.6 },
+    checking: { accountType: "checking", currencyCode: "ECO", balance: 399.6 },
     holding: { quantity: 16, averageCost: 24.8 }
   },
   refreshWarning: ""
 });
 assert.ok(receipt.includes("ORDER RECEIPT"));
 assert.ok(receipt.includes("FILLED"));
+assert.ok(receipt.includes("CHECKING BALANCE"));
+assert.ok(!receipt.includes("CASH BALANCE"));
 assert.ok(receipt.includes("ECO 25.1"));
 assert.ok(receipt.includes("16 shares"));
 assert.ok(!receipt.includes("ORDER ID"), "Player receipts must not depend on internal order identifiers.");
@@ -79,7 +83,7 @@ const refreshPending = renderMarketOrderDialog({
   currencyCode: "ECO",
   receipt: {
     order: { ticker: "NOV", side: "sell", quantity: 2, executionPrice: 25, grossValue: 50, status: "filled" },
-    cash: { currencyCode: "ECO", balance: 550 },
+    checking: { currencyCode: "ECO", balance: 550 },
     holding: { quantity: 10, averageCost: 24 }
   },
   refreshWarning: "Order completed, refresh pending."
@@ -101,9 +105,11 @@ assert.ok(source.includes('orderType: "market"'), "The current backend request m
 assert.ok(source.includes("BACKEND INTEGRATION PENDING"), "Limit-order controls must remain present while backend support is pending.");
 assert.ok(source.includes("await terminal.refresh()"));
 assert.ok(source.includes("The order completed, but current balances, holdings, and market data could not be refreshed"), "Committed orders must remain successful when refresh fails.");
+assert.ok(source.includes("AVAILABLE CHECKING"));
+assert.ok(!source.includes("AVAILABLE CASH"));
 assert.ok(!source.includes("playerUuid") && !source.includes("recipientPlayerUuid"));
 assert.ok(routes.includes("ticker:"));
 assert.ok(routes.includes("expectedPrice"));
 assert.ok(!routes.includes("stockAssetId:"), "The connected Player route must not submit the internal stock asset identifier.");
 
-console.log("Market order flow passed: ticker-only review, stale-price guard, market-only settlement, limit-order preservation, UUID-private receipts, and committed-success refresh behavior are valid.");
+console.log("Market order flow passed: checking-funded review, ticker-only execution, stale-price guard, market-only settlement, limit-order preservation, UUID-private receipts, and committed-success refresh behavior are valid.");

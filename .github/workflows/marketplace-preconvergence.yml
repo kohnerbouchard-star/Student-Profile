@@ -16,6 +16,8 @@ on:
       - "backend/supabase/migrations/20260721142900_fix_marketplace_listing_legacy_lookups_v1.sql"
       - "backend/supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql"
       - "backend/supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql"
+      - "backend/supabase/migrations/20260728033000_skip_zero_marketplace_settlement_postings_v1.sql"
+      - "backend/supabase/migrations/20260728054000_replay_marketplace_purchase_before_resource_checks_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   push:
@@ -35,6 +37,8 @@ on:
       - "backend/supabase/migrations/20260721142900_fix_marketplace_listing_legacy_lookups_v1.sql"
       - "backend/supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql"
       - "backend/supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql"
+      - "backend/supabase/migrations/20260728033000_skip_zero_marketplace_settlement_postings_v1.sql"
+      - "backend/supabase/migrations/20260728054000_replay_marketplace_purchase_before_resource_checks_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   workflow_dispatch:
@@ -142,13 +146,15 @@ jobs:
         shell: bash
         run: |
           deno test \
-            --allow-read=supabase/migrations/20260721142800_restore_marketplace_listing_reservation_wrapper_v1.sql,supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql,supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql \
+            --allow-read=supabase/migrations/20260721142800_restore_marketplace_listing_reservation_wrapper_v1.sql,supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql,supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql,supabase/migrations/20260728033000_skip_zero_marketplace_settlement_postings_v1.sql,supabase/migrations/20260728054000_replay_marketplace_purchase_before_resource_checks_v1.sql \
             --config supabase/functions/classroom-api/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
             src/domains/marketplace/tests/playerMarketplaceListingWrapperRestorationMigrationContract.test.ts \
             src/domains/marketplace/tests/playerMarketplaceLegacyProjectionConflictMigrationContract.test.ts \
-            src/domains/marketplace/tests/playerMarketplaceTableReturnConflictMigrationContract.test.ts
+            src/domains/marketplace/tests/playerMarketplaceTableReturnConflictMigrationContract.test.ts \
+            src/domains/marketplace/tests/playerMarketplaceZeroSettlementPostingMigrationContract.test.ts \
+            src/domains/marketplace/tests/playerMarketplaceReplayFirstMigrationContract.test.ts
 
       - name: Upload Marketplace diagnostics
         if: always()

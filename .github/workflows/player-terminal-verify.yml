@@ -45,7 +45,8 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.head_ref != 'agent/security-convergence-v2' &&
-          github.head_ref != 'agent/security-audit-remediation-v1'
+          github.head_ref != 'agent/security-audit-remediation-v1' &&
+          github.head_ref != 'agent/runtime-stability-button-integrity-v1'
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -68,6 +69,22 @@ jobs:
           test -f scripts/auth-boundary-contract.test.mjs
           test -f scripts/security-audit-remediation-contract.test.mjs
           echo "Player verification is running under a repository-owned cross-cutting security authority."
+
+      - name: Record cross-cutting runtime scope
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref == 'agent/runtime-stability-button-integrity-v1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/operations/contracts/button-action-coverage-v1.json
+          test -f backend/src/security/playerBrowserResponsePrivacy.ts
+          test -f backend/src/security/playerBrowserResponsePrivacy.test.ts
+          test -f scripts/button-action-coverage-contract.mjs
+          test -f scripts/player-connected-mutation-browser-acceptance.mjs
+          test -f scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
+          test -f player-terminal/tools/verify-pr-scope.mjs
+          echo "Player verification is running under the repository-owned runtime stability and button-integrity authority."
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7

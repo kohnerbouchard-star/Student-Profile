@@ -4,11 +4,20 @@ import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 import { isResourceUnavailable } from "../api/resource-status.js";
 import { resolveStoreItemImage } from "../features/store/store-artwork.js";
 
-function renderStoreItem(item, currencyCode) {
+function ownedQuantity(inventoryItems, itemId) {
+  const holding = (Array.isArray(inventoryItems) ? inventoryItems : []).find((item) =>
+    String(item?.storeItemId || item?.itemKey || "") === String(itemId || "")
+  );
+  const quantity = Number(holding?.quantity ?? holding?.quantityOwned ?? 0);
+  return Number.isFinite(quantity) ? quantity : 0;
+}
+
+function renderStoreItem(item, currencyCode, inventoryItems) {
   const soldOut = item.stock <= 0;
+  const owned = ownedQuantity(inventoryItems, item.id);
   return `<article class="player-terminal-store-card${soldOut ? " is-sold-out" : ""}">
     <div class="player-terminal-store-image"><img src="${escapeHtml(resolveStoreItemImage(item))}" alt="" /><span>${escapeHtml(item.category)}</span></div>
-    <div class="player-terminal-store-copy"><small>STOCK ${escapeHtml(item.stock)} · OWNED ${escapeHtml(item.owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
+    <div class="player-terminal-store-copy"><small>STOCK ${escapeHtml(item.stock)} · OWNED ${escapeHtml(owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
     <div class="player-terminal-store-footer"><strong>${escapeHtml(formatCurrency(item.price, currencyCode))}</strong><button class="player-terminal-compact-button" type="button" data-player-purchase="${escapeHtml(item.id)}" ${soldOut ? "disabled" : ""}>${icon("cart")} ${soldOut ? "Sold out" : "Purchase"}</button></div>
   </article>`;
 }
@@ -33,7 +42,7 @@ export function renderStorePage(data, ui) {
       <label class="player-terminal-search-field">${icon("eye")}<input type="search" placeholder="Search store" data-player-store-search /></label>
     </div>
 
-    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, currencyCode)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
+    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, currencyCode, data.inventory.items)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
 
   </section>`;
 }

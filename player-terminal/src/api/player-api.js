@@ -31,6 +31,21 @@ function resolvedPath(endpointKey, params) {
   return { endpoint, path };
 }
 
+function actionPathParams(endpointKey, payload, params = {}) {
+  const endpoint = PLAYER_ENDPOINTS[endpointKey];
+  if (!endpoint || typeof endpoint.path !== "string") return { ...params };
+  const resolved = { ...params };
+  const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  for (const match of endpoint.path.matchAll(/:([A-Za-z][A-Za-z0-9_]*)/g)) {
+    const key = match[1];
+    if (resolved[key] !== undefined && resolved[key] !== null && String(resolved[key]).trim()) continue;
+    const value = source[key];
+    if (value === undefined || value === null || !String(value).trim()) continue;
+    resolved[key] = value;
+  }
+  return resolved;
+}
+
 function sessionFingerprint(config) {
   return [config.authenticated === true ? "authenticated" : "anonymous", config.csrfToken, config.gameSessionId, config.sessionExpiresAt]
     .map((value) => String(value || ""))
@@ -140,10 +155,11 @@ export class PlayerApi {
   }
 
   async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
-    const { endpoint, path } = resolvedPath(endpointKey, params);
+    const resolvedParams = actionPathParams(endpointKey, payload, params);
+    const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     const requestId = createRequestId();
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
-    const context = { endpointKey, method: endpoint.method, path, payload, requestId, signal: mergedSignal.signal };
+    const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };
     const key = stableRequestKey(context);
     const sessionVersion = this.sessionVersion;
 
@@ -282,7 +298,8 @@ export class PlayerApi {
   }
 
   execute(endpointKey, payload, params = {}, { signal = null } = {}) {
-    const { endpoint, path } = resolvedPath(endpointKey, params);
+    const resolvedParams = actionPathParams(endpointKey, payload, params);
+    const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     if (endpoint.method === "GET") {
       throw new ApiRequestError("A read endpoint cannot be submitted as an action.", { code: "INVALID_REQUEST", endpointKey, path });
     }
@@ -303,7 +320,7 @@ export class PlayerApi {
       ? this.retryIdempotencyKeys.get(writeKey) || createIdempotencyKey(endpointKey)
       : "";
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
-    const context = { endpointKey, method: endpoint.method, path, payload, requestId, idempotencyKey, signal: mergedSignal.signal };
+    const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, idempotencyKey, signal: mergedSignal.signal };
     const invalidatedResources = WRITE_INVALIDATIONS[endpointKey] || [];
     const sessionVersion = this.sessionVersion;
 

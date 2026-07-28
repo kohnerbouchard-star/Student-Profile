@@ -20,7 +20,7 @@ assert.deepEqual(
 const failureCases = [
   {
     code: "STORE_INSUFFICIENT_BALANCE",
-    message: "You do not have enough available cash for this Store purchase.",
+    message: "You do not have enough available checking funds for this Store purchase.",
     resetQuote: false,
     retryable: false
   },
@@ -187,4 +187,4 @@ for (const testCase of failureCases) {
   );
 }
 
-console.log("Store negative-state matrix passed: quote envelope, stable errors, stale-quote recovery, safe exit, and duplicate retry semantics are valid.");
+console.log("Store negative-state matrix passed: checking-balance errors, quote envelope, stale-quote recovery, safe exit, and duplicate retry semantics are valid.");

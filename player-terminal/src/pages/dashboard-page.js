@@ -70,7 +70,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
     : config.usePreviewData
       ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]
       : [];
-  const availableCash = bankingUnavailable ? "Unavailable" : formatCurrency(banking.checking.available, currencyCode);
+  const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(banking.checking.available, currencyCode);
   const unreadMessages = messagesUnavailable ? "—" : String(messages?.unread || 0);
 
   const contractAction = contractsUnavailable
@@ -89,7 +89,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
     </div>
 
     <div class="player-terminal-command-metrics">
-      ${renderMetric({ label: "Available cash", value: availableCash, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}
+      ${renderMetric({ label: "Available checking", value: availableChecking, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}
       ${renderMetric({ label: "Net worth", value: formatCurrency(dashboard.netWorth, currencyCode), meta: `${dashboard.dailyChange >= 0 ? "+" : ""}${dashboard.dailyChange.toFixed(2)}% today`, tone: "cyan", iconName: "portfolio" })}
       ${renderMetric({ label: "Active contracts", value: String(dashboard.contractsActive), meta: `${dashboard.contractsDueSoon} due soon`, tone: "amber", iconName: "contracts" })}
       ${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}
@@ -126,7 +126,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
         <header class="player-terminal-panel-header"><div><span>FINANCIAL SNAPSHOT</span><strong>${escapeHtml(formatCurrency(dashboard.netWorth, currencyCode))}</strong></div><span class="player-terminal-daily-change ${toneFromChange(dashboard.dailyChange)}">${escapeHtml(formatPercent(dashboard.dailyChange))} today</span></header>
         <div class="player-terminal-wealth-snapshot">
           <div class="player-terminal-wealth-breakdown">
-            <button type="button" data-route="banking"><span>${icon("banking")}</span><div><small>Cash & savings</small><strong>${escapeHtml(formatCurrency(dashboard.liquidBalance + dashboard.savingsBalance, currencyCode))}</strong></div></button>
+            <button type="button" data-route="banking"><span>${icon("banking")}</span><div><small>Checking & savings</small><strong>${escapeHtml(formatCurrency(dashboard.liquidBalance + dashboard.savingsBalance, currencyCode))}</strong></div></button>
             <button type="button" data-route="portfolio"><span>${icon("portfolio")}</span><div><small>Investments</small><strong>${escapeHtml(formatCurrency(dashboard.portfolioValue, currencyCode))}</strong></div></button>
             <button type="button" data-route="inventory"><span>${icon("inventory")}</span><div><small>Inventory value</small><strong>${escapeHtml(formatCurrency(dashboard.inventoryValue, currencyCode))}</strong></div></button>
           </div>

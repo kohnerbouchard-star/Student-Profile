@@ -9,6 +9,8 @@ const paths = [
   "admin/messaging-policy-client.js",
   "admin/messaging-policy-surface.js",
   "player-terminal/src/pages/messages-page.js",
+  "player-terminal/src/features/messages/message-read-flow.js",
+  "player-terminal/src/main.js",
   "player-terminal/src/api/backend-routes.js",
   "player-terminal/src/api/messaging-backend-routes.js",
   "player-terminal/src/api/payload-normalizer.js",
@@ -27,10 +29,12 @@ const loader = readFileSync(paths[1], "utf8");
 const stylesheet = readFileSync("admin/messaging-moderation.css", "utf8");
 const adminIndex = readFileSync("admin/index.html", "utf8");
 const adminBootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
-const messagesPage = readFileSync("player-terminal/src/pages/messages-page.js", "utf8");
-const backendRoutes = readFileSync("player-terminal/src/api/backend-routes.js", "utf8");
-const messagingRoutes = readFileSync("player-terminal/src/api/messaging-backend-routes.js", "utf8");
-const capabilityManifest = readFileSync("player-terminal/src/integrations/student-profile-capability-manifest.js", "utf8");
+const messagesPage = readFileSync(paths[5], "utf8");
+const messageReadFlow = readFileSync(paths[6], "utf8");
+const playerMain = readFileSync(paths[7], "utf8");
+const backendRoutes = readFileSync(paths[8], "utf8");
+const messagingRoutes = readFileSync(paths[9], "utf8");
+const capabilityManifest = readFileSync(paths[11], "utf8");
 
 for (const client of [moderationClient, policyClient]) {
   assert.match(client, /adminBffApiUrl/);
@@ -81,10 +85,23 @@ assert.match(adminBootstrap, /name:\s*"operational-surfaces"/);
 
 assert.match(messagesPage, /data-endpoint="messageThreadCreate"/);
 assert.match(messagesPage, /data-endpoint="messageSend"/);
-assert.match(messagesPage, /data-endpoint="messageRead"/);
+assert.match(messagesPage, /data-player-message-unread="true"/);
 assert.match(messagesPage, /maxlength="1000"/);
 assert.match(messagesPage, /Attachments are disabled/);
 assert.match(messagesPage, /escapeHtml\(message\.body\)/);
+assert.doesNotMatch(messagesPage, /data-endpoint="messageRead"/);
+
+assert.match(messageReadFlow, /installMessageReadFlow/);
+assert.match(messageReadFlow, /data-player-message-thread/);
+assert.match(messageReadFlow, /data-player-message-unread/);
+assert.match(messageReadFlow, /api\.execute\("messageRead"/);
+assert.match(messageReadFlow, /PUBLIC_THREAD_ID/);
+assert.match(messageReadFlow, /terminal\.refresh\(\)/);
+assert.match(messageReadFlow, /invalid_player_session/);
+assert.doesNotMatch(messageReadFlow, /authorization|Bearer|x-player-session-token/i);
+assert.doesNotMatch(messageReadFlow, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+assert.match(playerMain, /installMessageReadFlow/);
+assert.match(playerMain, /messageReads\.destroy\(\)/);
 
 assert.match(backendRoutes, /resolveMessagingBackendRequest/);
 assert.match(backendRoutes, /hasMessagingBackendRoute/);
@@ -96,9 +113,11 @@ assert.match(backendRoutes, /hasCraftingBackendRoute/);
 assert.match(messagingRoutes, /\/players\/me\/messages\/threads/);
 assert.match(messagingRoutes, /recipientPlayerId/);
 assert.match(messagingRoutes, /UUID\.test/);
+assert.match(messagingRoutes, /messageRead/);
+assert.match(messagingRoutes, /\/read/);
 assert.match(capabilityManifest, /messageThreadCreate/);
 assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, privacy, capability, secure BFF, hardened bootstrap, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, privacy, capability, secure BFF, automatic read-on-open, hardened bootstrap, and attachment-disablement contracts passed.");

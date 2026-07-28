@@ -3,7 +3,7 @@ name: Player Multiplayer and Load E2E
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, agent/pr377-validation-base]
     paths:
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - "index.html"
@@ -15,12 +15,22 @@ on:
       - "backend/src/domains/world/**"
       - "backend/src/domains/economy/**"
       - "backend/src/domains/inventory/**"
+      - "backend/src/domains/contracts/**"
+      - "backend/src/domains/stocks/**"
       - "backend/src/domains/progression/**"
       - "backend/src/security/**"
       - "backend/supabase/config.toml"
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/player-multiplayer-browser-acceptance.mjs"
+      - "scripts/player-connected-mutation-browser-acceptance.mjs"
+      - "scripts/business-banking-player-state-controls-browser-acceptance.mjs"
+      - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
+      - "scripts/player-contracts-browser-acceptance.mjs"
+      - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
+      - "scripts/business-banking-player-market-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
@@ -38,9 +48,9 @@ concurrency:
 
 jobs:
   connected-player-runtime:
-    name: Two-browser Player journey and 30-40 Player load
+    name: Two-browser Player journey, secure mutations, and 30-40 Player load
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 140
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -73,6 +83,14 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/player-multiplayer-browser-acceptance.mjs
+          node --check scripts/player-connected-mutation-browser-acceptance.mjs
+          node --check scripts/business-banking-player-state-controls-browser-acceptance.mjs
+          node --check scripts/business-banking-player-commerce-browser-acceptance.mjs
+          node --check scripts/business-banking-player-business-browser-acceptance.mjs
+          node --check scripts/business-banking-player-world-browser-acceptance.mjs
+          node --check scripts/player-contracts-browser-acceptance.mjs
+          node --check scripts/business-banking-player-inventory-browser-acceptance.mjs
+          node --check scripts/business-banking-player-market-browser-acceptance.mjs
           node --check scripts/player-runtime-load-profile.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
@@ -263,14 +281,62 @@ jobs:
         continue-on-error: true
         run: node scripts/player-multiplayer-browser-acceptance.mjs
 
+      - name: Execute connected Messaging mutation journey
+        id: player_mutations
+        if: steps.player_browser.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/player-connected-mutation-browser-acceptance.mjs
+
+      - name: Execute notification and watchlist mutation journey
+        id: player_state_controls
+        if: steps.player_mutations.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-state-controls-browser-acceptance.mjs
+
+      - name: Execute connected transfer and Store mutation journey
+        id: player_commerce
+        if: steps.player_state_controls.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-commerce-browser-acceptance.mjs
+
+      - name: Execute connected Inventory redemption journey
+        id: player_inventory
+        if: steps.player_commerce.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-inventory-browser-acceptance.mjs
+
+      - name: Execute connected Contract lifecycle
+        id: player_contracts
+        if: steps.player_inventory.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/player-contracts-browser-acceptance.mjs
+
+      - name: Execute connected immediate market-order lifecycle
+        id: player_market
+        if: steps.player_contracts.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-market-browser-acceptance.mjs
+
+      - name: Execute connected Business lifecycle
+        id: player_business
+        if: steps.player_market.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-business-browser-acceptance.mjs
+
+      - name: Execute connected World lifecycle
+        id: player_world
+        if: steps.player_business.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-world-browser-acceptance.mjs
+
       - name: Execute 30 and 40 Player connected load profile
         id: player_load
-        if: steps.player_browser.outcome == 'success'
+        if: steps.player_world.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
       - name: Capture sanitized Player diagnostics
-        if: steps.player_browser.outcome == 'failure' || steps.player_load.outcome == 'failure'
+        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_state_controls.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_inventory.outcome == 'failure' || steps.player_contracts.outcome == 'failure' || steps.player_market.outcome == 'failure' || steps.player_business.outcome == 'failure' || steps.player_world.outcome == 'failure' || steps.player_load.outcome == 'failure'
         shell: bash
         run: |
           set +e
@@ -280,7 +346,7 @@ jobs:
             echo "== container logs =="
             for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
               echo "-- ${CONTAINER} --"
-              docker logs --since 15m "$CONTAINER" 2>&1 | tail -n 700
+              docker logs --since 20m "$CONTAINER" 2>&1 | tail -n 900
             done
           } \
             | sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi; s/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/[game-code-redacted]/g; s/(BROWSER|LOAD)-(PLAYER|ACCESS)-[A-Z0-9-]+/[credential-redacted]/g' \
@@ -308,6 +374,14 @@ jobs:
         shell: bash
         run: |
           test "${{ steps.player_browser.outcome }}" = "success"
+          test "${{ steps.player_mutations.outcome }}" = "success"
+          test "${{ steps.player_state_controls.outcome }}" = "success"
+          test "${{ steps.player_commerce.outcome }}" = "success"
+          test "${{ steps.player_inventory.outcome }}" = "success"
+          test "${{ steps.player_contracts.outcome }}" = "success"
+          test "${{ steps.player_market.outcome }}" = "success"
+          test "${{ steps.player_business.outcome }}" = "success"
+          test "${{ steps.player_world.outcome }}" = "success"
           test "${{ steps.player_load.outcome }}" = "success"
 
       - name: Stop local Player stack

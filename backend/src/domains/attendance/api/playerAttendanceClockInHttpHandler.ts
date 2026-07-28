@@ -23,6 +23,9 @@ import {
   enforceScopedRateLimit,
   type EnforceScopedRateLimitInput,
 } from "../../../security/playerRateLimitService.ts";
+import {
+  enforcePlayerBrowserResponsePrivacy,
+} from "../../../security/playerBrowserResponsePrivacy.ts";
 import type { RateLimitDecision } from "../../../security/rateLimitContracts.ts";
 import {
   mapAttendanceClockInRpcError,
@@ -195,33 +198,35 @@ export async function handlePlayerAttendanceClockInRequest(
       });
     }
 
-    return jsonResponse<PlayerAttendanceClockInSuccessBody>(200, {
-      ok: true,
-      gameSession: {
-        id: sessionResolution.gameSession.id,
-        name: sessionResolution.gameSession.name,
-        status: sessionResolution.gameSession.status,
-      },
-      player: {
-        id: sessionResolution.player.id,
-        displayName: sessionResolution.player.display_name,
-        rosterLabel: sessionResolution.player.roster_label ?? null,
-        status: sessionResolution.player.status,
-      },
-      attendance: {
-        id: attendanceRow.attendance_id,
-        status: attendanceRow.attendance_status,
-        attendanceDate: attendanceRow.attendance_date,
-        clockedInAt: attendanceRow.clocked_in_at,
-        wasCreated: attendanceRow.was_created,
-        timezone: attendanceConfig.timezone,
-      },
-      reward: {
-        amount: readBalanceNumber(attendanceRow.reward_amount),
-        currencyCode: attendanceRow.currency_code,
-        ledgerEntryId: attendanceRow.ledger_entry_id,
-      },
-    });
+    return await enforcePlayerBrowserResponsePrivacy(
+      jsonResponse<PlayerAttendanceClockInSuccessBody>(200, {
+        ok: true,
+        gameSession: {
+          id: sessionResolution.gameSession.id,
+          name: sessionResolution.gameSession.name,
+          status: sessionResolution.gameSession.status,
+        },
+        player: {
+          id: sessionResolution.player.id,
+          displayName: sessionResolution.player.display_name,
+          rosterLabel: sessionResolution.player.roster_label ?? null,
+          status: sessionResolution.player.status,
+        },
+        attendance: {
+          id: attendanceRow.attendance_id,
+          status: attendanceRow.attendance_status,
+          attendanceDate: attendanceRow.attendance_date,
+          clockedInAt: attendanceRow.clocked_in_at,
+          wasCreated: attendanceRow.was_created,
+          timezone: attendanceConfig.timezone,
+        },
+        reward: {
+          amount: readBalanceNumber(attendanceRow.reward_amount),
+          currencyCode: attendanceRow.currency_code,
+          ledgerEntryId: attendanceRow.ledger_entry_id,
+        },
+      }),
+    );
   } catch {
     return jsonError(500, {
       code: "attendance_clock_in_failed",

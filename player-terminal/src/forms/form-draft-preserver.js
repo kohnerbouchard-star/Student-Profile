@@ -52,6 +52,14 @@ function captureForm(form) {
   return values;
 }
 
+function savedValue(saved) {
+  if (!saved) return "";
+  if (saved.kind === "value") return String(saved.value || "");
+  if (saved.kind === "checkbox" || saved.kind === "radio") return saved.checked ? String(saved.value || "") : "";
+  if (saved.kind === "multiple") return Array.isArray(saved.values) ? [...saved.values] : [];
+  return "";
+}
+
 function restoreControl(control, saved) {
   if (!saved) return;
   if (saved.kind === "checkbox" || saved.kind === "radio") {
@@ -85,7 +93,7 @@ export function installFormDraftPreserver(mount, {
   sessionReadyEvent = "",
   sessionInvalidEvent = ""
 } = {}) {
-  if (!(mount instanceof HTMLElement)) return { destroy() {}, clear() {} };
+  if (!(mount instanceof HTMLElement)) return { destroy() {}, clear() {}, value() { return ""; } };
   const drafts = new Map();
   let restoring = false;
   let restoreQueued = false;
@@ -139,6 +147,10 @@ export function installFormDraftPreserver(mount, {
   restoreVisibleForms();
 
   return {
+    value(form, name, index = 0) {
+      if (!(form instanceof HTMLFormElement) || !name || SENSITIVE_NAME.test(name)) return "";
+      return savedValue(drafts.get(formIdentity(form))?.[name]?.[index]);
+    },
     clear(form) {
       if (form instanceof HTMLFormElement) drafts.delete(formIdentity(form));
       else drafts.clear();

@@ -8,6 +8,10 @@ on:
       - ".github/workflows/admin-browser-e2e.yml"
       - "index.html"
       - "admin/**"
+      - "player-terminal/**"
+      - "backend/src/security/**"
+      - "backend/src/domains/attendance/**"
+      - "backend/src/domains/contracts/**"
       - "frontend/src/core/**"
       - "backend/src/domains/auth/**"
       - "backend/src/domains/licensing/**"
@@ -16,13 +20,17 @@ on:
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/admin-browser-reconnaissance.mjs"
+      - "scripts/admin-connected-ledger-mutation-browser-acceptance.mjs"
+      - "scripts/button-action-coverage-contract.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-auth-readiness.mjs"
+      - "scripts/local-staging-gateway.py"
       - "scripts/staff-service-role-access-contract.test.mjs"
       - "scripts/persisted-game-code-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
       - "docs/seed-content/executable/beta-pack-v1/**"
 
 permissions:
@@ -34,7 +42,7 @@ concurrency:
 
 jobs:
   rendered-admin:
-    name: Rendered Admin browser journey
+    name: Rendered Admin browser and secure mutation journey
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -91,8 +99,10 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/admin-browser-reconnaissance.mjs
+          node --check scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
+          node --check scripts/button-action-coverage-contract.mjs
           node --check scripts/local-auth-readiness.mjs
-          python3 -m py_compile scripts/econovaria-local-gateway.py
+          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
           node --test scripts/staff-service-role-access-contract.test.mjs
           node --test scripts/persisted-game-code-contract.test.mjs
@@ -227,8 +237,14 @@ jobs:
         continue-on-error: true
         run: node scripts/admin-browser-reconnaissance.mjs
 
+      - name: Execute secure Admin ledger mutation journey
+        id: ledger_mutation
+        if: steps.browser.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
+
       - name: Capture sanitized server diagnostics
-        if: steps.browser.outcome == 'failure'
+        if: steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure'
         shell: bash
         run: |
           set +e
@@ -260,10 +276,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Enforce rendered browser result
+      - name: Enforce rendered browser results
         if: always()
         shell: bash
-        run: test "${{ steps.browser.outcome }}" = "success"
+        run: |
+          test "${{ steps.browser.outcome }}" = "success"
+          test "${{ steps.ledger_mutation.outcome }}" = "success"
 
       - name: Stop local browser stack
         if: always()

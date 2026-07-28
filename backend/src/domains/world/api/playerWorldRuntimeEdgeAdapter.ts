@@ -40,8 +40,9 @@ export function handlePlayerWorldRuntimeEdgeRequest(
     createPublicQuoteId: () => publicId("trq"),
     createAssignmentId: () => publicId("aca"),
   });
+  const normalizedRequest = normalizeProxiedIdempotencyHeader(request);
 
-  return handlePlayerWorldRuntimeRequest(request, {
+  return handlePlayerWorldRuntimeRequest(normalizedRequest, {
     resolveScope: (scopedRequest) =>
       resolvePlayerRequestScope(scopedRequest, {
         hashSessionToken: sha256Hex,
@@ -50,6 +51,16 @@ export function handlePlayerWorldRuntimeEdgeRequest(
       }),
     service,
   });
+}
+
+function normalizeProxiedIdempotencyHeader(request: Request): Request {
+  const canonical = request.headers.get("idempotency-key")?.trim() ?? "";
+  if (canonical) return request;
+  const proxied = request.headers.get("x-idempotency-key")?.trim() ?? "";
+  if (!proxied) return request;
+  const headers = new Headers(request.headers);
+  headers.set("idempotency-key", proxied);
+  return new Request(request, { headers });
 }
 
 function publicId(prefix: "aca" | "trq"): string {

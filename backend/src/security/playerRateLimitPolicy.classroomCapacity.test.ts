@@ -12,7 +12,8 @@ Deno.test("read rate limits support a 40-Player classroom behind one NAT without
   assert(read.ip.limit >= reviewedReadsPerPlayer * maximumPlayers);
   assertEquals(read.ip, { limit: 600, windowSeconds: 60, blockSeconds: 30 });
   assertEquals(read.identity, { limit: 180, windowSeconds: 60, blockSeconds: 30 });
-  assertEquals(read.action, { limit: 90, windowSeconds: 60, blockSeconds: 30 });
+  assertEquals(read.action, { limit: 150, windowSeconds: 60, blockSeconds: 30 });
+  assert(read.action.limit < read.identity.limit);
   assertEquals(read.game, { limit: 1200, windowSeconds: 60, blockSeconds: 30 });
 });
 

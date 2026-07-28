@@ -24,7 +24,7 @@ Deno.test("Player Banking parser accepts only the reviewed collection route", ()
   assertEquals(readPlayerBankingPublicRoutePath("/players/me/ledger/private"), null);
 });
 
-Deno.test("Player Banking returns cross-currency public data and a safe next cursor", async () => {
+Deno.test("Player Banking returns cross-currency checking data and a safe next cursor", async () => {
   const repository = new FixtureRepository();
   const response = await handlePlayerBankingPublicRequest(
     request("GET", "/players/me/ledger?limit=2"),
@@ -35,8 +35,8 @@ Deno.test("Player Banking returns cross-currency public data and a safe next cur
   assertEquals(response.status, 200);
   assertEquals(response.headers.get("cache-control"), "private, no-store");
   assertEquals(body.currentBalances, [
-    { accountType: "cash", balance: 1250, currencyCode: "ECO" },
-    { accountType: "cash", balance: 40, currencyCode: "LUM" },
+    { accountType: "checking", balance: 1250, currencyCode: "ECO" },
+    { accountType: "checking", balance: 40, currencyCode: "LUM" },
   ]);
   assertEquals(body.ledgerEntries.map((entry: any) => entry.entryKey), [
     "ledger_1",
@@ -45,6 +45,10 @@ Deno.test("Player Banking returns cross-currency public data and a safe next cur
   assertEquals(body.ledgerEntries.map((entry: any) => entry.currencyCode), [
     "ECO",
     "LUM",
+  ]);
+  assertEquals(body.ledgerEntries.map((entry: any) => entry.accountType), [
+    "checking",
+    "checking",
   ]);
   assertEquals(body.pagination, {
     cursor: null,
@@ -61,6 +65,7 @@ Deno.test("Player Banking returns cross-currency public data and a safe next cur
     offset: 0,
   });
   assertNoUuid(body);
+  assertNoCashAccountType(body);
 });
 
 Deno.test("Player Banking cursor advances response-local public keys", async () => {
@@ -79,6 +84,7 @@ Deno.test("Player Banking cursor advances response-local public keys", async () 
   assertEquals(body.pagination.cursor, "offset_2");
   assertEquals(repository.inputs[0].offset, 2);
   assertNoUuid(body);
+  assertNoCashAccountType(body);
 });
 
 Deno.test("Player Banking empty state is a normal bounded response", async () => {
@@ -129,12 +135,12 @@ class FixtureRepository implements PlayerBankingPublicRepository {
     this.inputs.push(input);
     return Promise.resolve({
       balances: [
-        { accountType: "cash", balance: 1250, currencyCode: "ECO" },
-        { accountType: "cash", balance: 40, currencyCode: "LUM" },
+        { accountType: "checking", balance: 1250, currencyCode: "ECO" },
+        { accountType: "checking", balance: 40, currencyCode: "LUM" },
       ],
       entries: [
         {
-          accountType: "cash",
+          accountType: "checking",
           amount: 25,
           currencyCode: "ECO",
           entryType: "credit",
@@ -143,7 +149,7 @@ class FixtureRepository implements PlayerBankingPublicRepository {
           createdAt: "2026-07-19T03:59:00.000Z",
         },
         {
-          accountType: "cash",
+          accountType: "checking",
           amount: -4,
           currencyCode: "LUM",
           entryType: "debit",
@@ -212,6 +218,13 @@ function assertNoUuid(value: unknown): void {
   const serialized = JSON.stringify(value);
   if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized)) {
     throw new Error(`Player Banking response leaked an internal UUID: ${serialized}`);
+  }
+}
+
+function assertNoCashAccountType(value: unknown): void {
+  const serialized = JSON.stringify(value);
+  if (serialized.includes('"accountType":"cash"')) {
+    throw new Error(`Player Banking response exposed the retired cash account type: ${serialized}`);
   }
 }
 

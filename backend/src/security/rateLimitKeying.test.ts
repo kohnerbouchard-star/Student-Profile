@@ -7,7 +7,10 @@ import {
   overwriteTrustedClientIpHeaders,
   readTrustedClientIp,
 } from "./rateLimitKeying.ts";
-import { RateLimitError } from "./rateLimitContracts.ts";
+import {
+  type PlayerRateLimitProfile,
+  RateLimitError,
+} from "./rateLimitContracts.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -59,6 +62,33 @@ Deno.test("rate-limit keys isolate games and actions without changing broad iden
   assertEquals(key(base, "game"), key(otherAction, "game"));
   assertEquals(key(base, "identity"), key(otherAction, "identity"));
   assertEquals(key(base, "ip"), key(otherAction, "ip"));
+});
+
+Deno.test("rate-limit keys isolate read, write, and sensitive policy budgets", async () => {
+  const read = await playerBuckets(
+    GAME,
+    "player.watchlist.write",
+    "read",
+  );
+  const write = await playerBuckets(
+    GAME,
+    "player.watchlist.write",
+    "write",
+  );
+  const sensitive = await playerBuckets(
+    GAME,
+    "player.watchlist.write",
+    "sensitive",
+  );
+
+  for (const dimension of ["action", "game", "identity", "ip"]) {
+    assertNotEquals(key(read, dimension), key(write, dimension));
+    assertNotEquals(key(write, dimension), key(sensitive, dimension));
+    assertNotEquals(key(read, dimension), key(sensitive, dimension));
+  }
+  assertEquals(read.map((bucket) => bucket.limit), [150, 1_200, 180, 600]);
+  assertEquals(write.map((bucket) => bucket.limit), [30, 600, 60, 120]);
+  assertEquals(sensitive.map((bucket) => bucket.limit), [10, 300, 15, 30]);
 });
 
 Deno.test("reviewed multi-segment Player and staff scanner actions are accepted", async () => {
@@ -188,13 +218,17 @@ Deno.test("keying rejects weak secrets, client-shaped actions, and invalid owner
   );
 });
 
-function playerBuckets(gameUuid: string, action: string) {
+function playerBuckets(
+  gameUuid: string,
+  action: string,
+  profile: PlayerRateLimitProfile = "read",
+) {
   return buildPlayerRateLimitBuckets({
     gameUuid,
     action,
     ipAddress: "203.0.113.42",
     playerUuid: PLAYER,
-    profile: "read",
+    profile,
   }, SECRET);
 }
 

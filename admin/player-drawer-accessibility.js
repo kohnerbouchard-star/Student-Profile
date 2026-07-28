@@ -4,6 +4,8 @@
   const DRAWER_SELECTOR = "[data-admin-terminal-player-drawer]";
   const DOSSIER_SELECTOR = ".admin-terminal-player-dossier-v296";
   const OPENER_SELECTOR = '[data-admin-terminal-action="select-player-panel"]';
+  const PLAYER_ROW_SELECTOR = ".admin-terminal-player-row";
+  const LEDGER_MUTATION_PATH = /\/players\/[^/]+\/ledger-adjustments$/;
   const CLOSE_SELECTOR = [
     "[data-admin-player-drawer-close]",
     "[data-admin-terminal-action*='close-player']",
@@ -15,6 +17,7 @@
   const bindings = new Set();
   let lastOpener = null;
   let scheduled = false;
+  let ledgerRefreshScheduled = false;
 
   function visible(element) {
     if (!(element instanceof HTMLElement) || element.hidden) return false;
@@ -116,6 +119,29 @@
     window.setTimeout(reconcile, 120);
   }
 
+  function markLedgerRefreshPending() {
+    document.documentElement.setAttribute("aria-busy", "true");
+    document.querySelectorAll(PLAYER_ROW_SELECTOR).forEach((row) => {
+      if (!(row instanceof HTMLElement)) return;
+      row.setAttribute("aria-busy", "true");
+    });
+  }
+
+  function scheduleLedgerReconciliation(detail) {
+    if (ledgerRefreshScheduled) return;
+    ledgerRefreshScheduled = true;
+    markLedgerRefreshPending();
+    document.dispatchEvent(new CustomEvent("econovaria:admin-player-ledger-reconcile", {
+      detail: Object.freeze({
+        requestId: String(detail?.requestId || ""),
+        strategy: "authoritative_reload",
+      }),
+    }));
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 0);
+  }
+
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     const opener = target?.closest(OPENER_SELECTOR);
@@ -124,12 +150,20 @@
     schedule();
   }, true);
 
+  document.addEventListener("econovaria:admin-request-lifecycle", (event) => {
+    const detail = event?.detail || {};
+    if (detail.phase !== "committed") return;
+    if (!LEDGER_MUTATION_PATH.test(String(detail.pathname || ""))) return;
+    scheduleLedgerReconciliation(detail);
+  });
+
   document.addEventListener("econovaria:admin-route-mounted", schedule);
   window.addEventListener("load", schedule, { once: true });
   schedule();
 
   window.EconovariaPlayerDrawerAccessibility = Object.freeze({
     reconcile: schedule,
+    reconcileLedger: scheduleLedgerReconciliation,
     getBindingCount: () => bindings.size,
   });
 })();

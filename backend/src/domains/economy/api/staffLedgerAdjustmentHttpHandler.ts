@@ -179,7 +179,7 @@ export async function handleStaffLedgerAdjustmentRequest(
       },
       ledgerEntry: {
         id: ledger.ledgerEntryId,
-        accountType: ledger.accountType,
+        accountType: publicAccountType(ledger.accountType),
         amount: body.amount,
         balance: ledger.balance,
         currencyCode: ledger.currencyCode,
@@ -257,11 +257,25 @@ async function readStaffLedgerAdjustmentRequestBody(
       "ledger_adjustment_reason_required",
       "reason is required.",
     ),
-    accountType: parseOptionalText(value.accountType) ?? "cash",
+    accountType: storageAccountType(
+      parseOptionalText(value.accountType) ?? "checking",
+    ),
     currencyCode: normalizeCurrencyCode(
       parseOptionalText(value.currencyCode) ?? "ECO",
     ),
   };
+}
+
+function storageAccountType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "checking" || normalized === "cash") return "cash";
+  return normalized;
+}
+
+function publicAccountType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "checking" || normalized === "cash") return "checking";
+  return normalized;
 }
 
 function parseLedgerAmount(value: unknown): number {

@@ -150,6 +150,7 @@ export class SupabasePlayerNotificationRepository
       return toNotificationRecord(delivery, notification);
     });
   }
+
   async countUnreadNotifications(input: {
     readonly gameId: string;
     readonly playerUuid: string;
@@ -203,9 +204,10 @@ export class SupabasePlayerNotificationRepository
   }): Promise<readonly PlayerNotificationDeliveryStateRecord[]> {
     if (input.publicDeliveryIds.length === 0) return [];
 
+    const canonicalSeenAt = requireIsoDateTime(input.seenAt);
     const deliveryResponse = await this.client
       .from("notification_deliveries")
-      .update({ seen_at: input.seenAt })
+      .update({ seen_at: canonicalSeenAt })
       .eq("game_session_id", input.gameId)
       .eq("player_id", input.playerUuid)
       .in("public_delivery_id", input.publicDeliveryIds)
@@ -218,7 +220,9 @@ export class SupabasePlayerNotificationRepository
     const deliveries = deliveryResponse.data ?? [];
     assertDeliveryScope(deliveries, input.gameId, input.playerUuid);
     if (
-      deliveries.some((row) => requireIsoDateTime(row.seen_at) !== input.seenAt)
+      deliveries.some((row) =>
+        requireIsoDateTime(row.seen_at) !== canonicalSeenAt
+      )
     ) {
       throw writeFailed();
     }
@@ -416,8 +420,9 @@ function requirePublicNotificationId(value: unknown): string {
 
 function requireIsoDateTime(value: unknown): string {
   const text = requireText(value);
-  if (Number.isNaN(Date.parse(text))) throw readFailed();
-  return text;
+  const timestamp = Date.parse(text);
+  if (Number.isNaN(timestamp)) throw readFailed();
+  return new Date(timestamp).toISOString();
 }
 
 function optionalIsoDateTime(value: unknown): string | null {
