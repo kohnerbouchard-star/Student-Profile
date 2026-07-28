@@ -48,6 +48,44 @@ source = replaceExactlyOnce(
 source = preserveBffReplayHeaders(source);
 source = replaceExactlyOnce(
   source,
+  "World questionnaire selection stabilization",
+  `  evidence.questionnaire.optionCountsValid = true;
+
+  const responsePromise = page.waitForResponse(`,
+  `  let stableSelectionPasses = 0;
+  for (let attempt = 0; attempt < 6 && stableSelectionPasses < 2; attempt += 1) {
+    const currentFieldsets = form.locator("fieldset");
+    if (await currentFieldsets.count() !== questionCount) {
+      stableSelectionPasses = 0;
+      await page.waitForTimeout(150);
+      continue;
+    }
+    for (let index = 0; index < questionCount; index += 1) {
+      const firstOption = currentFieldsets.nth(index).locator('input[type="radio"]').first();
+      if (!await firstOption.isChecked()) await firstOption.check();
+    }
+    await page.waitForTimeout(150);
+    const selectedAnswerCount = await form.locator('input[type="radio"]:checked').count();
+    stableSelectionPasses = selectedAnswerCount === questionCount
+      ? stableSelectionPasses + 1
+      : 0;
+  }
+  const selectedAnswerCount = await form.locator('input[type="radio"]:checked').count();
+  if (selectedAnswerCount !== questionCount) {
+    throw new Error(\`Arrival questionnaire retained \${selectedAnswerCount} selected answers; expected \${questionCount}.\`);
+  }
+  evidence.questionnaire.optionCountsValid = true;
+
+  const responsePromise = page.waitForResponse(`,
+);
+source = replaceExactlyOnce(
+  source,
+  "World questionnaire error evidence",
+  '    throw new Error(`Arrival questionnaire returned an invalid ${response.status()} response.`);',
+  '    throw new Error(`Arrival questionnaire returned an invalid ${response.status()} response (${String(payload?.error?.code || "unknown_error")}).`);',
+);
+source = replaceExactlyOnce(
+  source,
   "World cookie-bound residency replay",
   'const response = await fetch(url, { method, headers, body, cache: "no-store" });',
   'const response = await fetch(url, { method, headers, body, cache: "no-store", credentials: "include" });',
