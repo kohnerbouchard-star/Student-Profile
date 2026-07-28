@@ -90,7 +90,14 @@
         apiProxyUrl,
         "ECONOVARIA_RUNTIME_CONFIG_INVALID_API_PROXY_URL"
       );
-      if (!localHost.has(parsedProxyUrl.hostname)) {
+      const browserOrigin = text(globalObject.location?.origin).replace(/\/+$/, "");
+      const isLoopbackProxy = localHost.has(parsedProxyUrl.hostname);
+      const isExactHostedStagingProxy =
+        environment === "staging" &&
+        parsedProxyUrl.protocol === "https:" &&
+        browserOrigin.length > 0 &&
+        parsedProxyUrl.origin === browserOrigin;
+      if (!isLoopbackProxy && !isExactHostedStagingProxy) {
         throw new Error("ECONOVARIA_RUNTIME_CONFIG_API_PROXY_MUST_BE_LOOPBACK");
       }
       if (!new Set(["http:", "https:"]).has(parsedProxyUrl.protocol)) {
