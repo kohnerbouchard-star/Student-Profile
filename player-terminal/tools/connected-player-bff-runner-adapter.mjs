@@ -236,6 +236,33 @@ function adaptMarketplaceSellerPersistence(source) {
   );
 }
 
+function adaptCraftingGroupedNavigation(source) {
+  if (!source.includes('async function openCrafting(page, recipeKey = "")')) return source;
+
+  const before = `async function openCrafting(page, recipeKey = "") {
+  const route = page.locator('[data-route="crafting"]:visible').first();
+  await route.waitFor({ state: "visible", timeout: 30_000 });
+  await route.click();`;
+  const after = `async function openCrafting(page, recipeKey = "") {
+  let route = page.locator('[data-route="crafting"]:visible').first();
+  if (!(await route.count())) {
+    const workRoute = page.locator('[data-route="contracts"]:visible').first();
+    await workRoute.waitFor({ state: "visible", timeout: 30_000 });
+    await workRoute.click();
+    await page.waitForFunction(() => location.hash === "#contracts", undefined, { timeout: 30_000 });
+    route = page.locator('[data-route="crafting"]:visible').first();
+  }
+  await route.waitFor({ state: "visible", timeout: 30_000 });
+  await route.click();`;
+
+  return replaceExactlyOnce(
+    source,
+    "Crafting grouped navigation",
+    before,
+    after,
+  );
+}
+
 export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Player journey") {
   const targetPath = fileURLToPath(targetUrl);
   let source = await readFile(targetPath, "utf8");
@@ -262,6 +289,7 @@ export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Pl
   source = adaptMarketplaceCountryFixture(source);
   source = adaptMarketplaceListingDisclosure(source);
   source = adaptMarketplaceSellerPersistence(source);
+  source = adaptCraftingGroupedNavigation(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error(`${label} retained the retired Player login route.`);
