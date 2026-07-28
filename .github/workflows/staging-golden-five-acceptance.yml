@@ -1,0 +1,133 @@
+name: Staging Golden Five Acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econovaria-staging-golden-five-acceptance
+  cancel-in-progress: false
+
+jobs:
+  golden-five:
+    name: Verify and exercise five staging players
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    env:
+      SUPABASE_PROJECT_REF: eecvbssdvarfcykcfrny
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_SUPABASE_PROJECT_REF }}
+      POOLER_URL: ${{ secrets.STAGING_POOLER_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+      ECONOVARIA_PROJECT_REF: eecvbssdvarfcykcfrny
+      ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_GOLDEN_EVIDENCE_PATH: /tmp/econovaria-golden-five/fixture-verification.json
+      ECONOVARIA_GOLDEN_BROWSER_OUTPUT_DIR: /tmp/econovaria-golden-five/browser
+      ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE: ${{ secrets.GOLDEN_ALPHA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE: ${{ secrets.GOLDEN_BRAVO_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE: ${{ secrets.GOLDEN_CHARLIE_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE: ${{ secrets.GOLDEN_DELTA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE: ${{ secrets.GOLDEN_ECHO_ACCESS_CODE }}
+
+    steps:
+      - name: Check out selected source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Validate staging secret contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            PRODUCTION_PROJECT_REF
+            POOLER_URL
+            SUPABASE_DB_PASSWORD
+            ECONOVARIA_SUPABASE_PUBLISHABLE_KEY
+            ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE
+            ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE
+            ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE
+            ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE
+            ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required staging environment secret: ${name}" >&2
+              exit 1
+            fi
+          done
+          if [[ "$PRODUCTION_PROJECT_REF" == "$SUPABASE_PROJECT_REF" ]]; then
+            echo "Production project selection is prohibited." >&2
+            exit 1
+          fi
+          if [[ "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" != sb_publishable_* ]]; then
+            echo "The browser key is not a Supabase publishable key." >&2
+            exit 1
+          fi
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate staging scripts
+        run: npm run test:staging:scripts
+
+      - name: Start same-origin staging gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/econovaria-local-gateway.py \
+            --root "$GITHUB_WORKSPACE" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --publishable-key "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" \
+            --port 4173 \
+            > /tmp/econovaria-staging-gateway.log 2>&1 &
+          echo $! > /tmp/econovaria-staging-gateway.pid
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/econovaria-staging-gateway.log >&2
+          exit 1
+
+      - name: Run hosted staging acceptance
+        run: npm run test:staging
+
+      - name: Stop staging gateway
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/econovaria-staging-gateway.pid ]]; then
+            kill "$(cat /tmp/econovaria-staging-gateway.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload sanitized staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-five-staging-evidence-${{ github.run_id }}
+          path: /tmp/econovaria-golden-five
+          if-no-files-found: warn
+          retention-days: 14
