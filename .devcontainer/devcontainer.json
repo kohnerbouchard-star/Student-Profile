@@ -3,6 +3,12 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "forwardPorts": [4174],
   "portsAttributes": {
+    "4173": {
+      "label": "Econovaria internal gateway — do not open",
+      "onAutoForward": "ignore",
+      "protocol": "http",
+      "visibility": "private"
+    },
     "4174": {
       "label": "Econovaria staging preview",
       "onAutoForward": "openPreview",
