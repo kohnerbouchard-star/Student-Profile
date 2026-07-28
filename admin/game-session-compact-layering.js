@@ -1,22 +1,16 @@
-(function installAdminGameSessionCompactLayering() {
-  "use strict";
+const STYLESHEET_ID = "econovaria-admin-game-session-compact-layering-stylesheet";
 
-  const STYLE_ID = "econovaria-admin-game-session-compact-layering";
-  if (document.getElementById(STYLE_ID)) return;
+if (!document.getElementById(STYLESHEET_ID)) {
+  const stylesheet = document.createElement("link");
+  stylesheet.id = STYLESHEET_ID;
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = new URL("./css/game-session-compact-layering.css", import.meta.url).href;
 
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    @media (max-width: 1180px) {
-      .econovaria-admin-game-session-controls-host {
-        z-index: auto !important;
-      }
-
-      .econovaria-admin-game-session-controls-host .econovaria-admin-logout-button,
-      .econovaria-admin-game-session-controls-host [data-econovaria-admin-logout="true"] {
-        z-index: auto !important;
-      }
-    }
-  `;
-  document.head.append(style);
-})();
+  await new Promise((resolve, reject) => {
+    stylesheet.addEventListener("load", resolve, { once: true });
+    stylesheet.addEventListener("error", () => reject(new Error(
+      "Compact Admin session-control styles could not be loaded.",
+    )), { once: true });
+    document.head.append(stylesheet);
+  });
+}
