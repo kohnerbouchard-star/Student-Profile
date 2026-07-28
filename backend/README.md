@@ -7,11 +7,14 @@ sources.
 
 ## Runtime boundaries
 
-- `supabase/functions/admin-api/` is the staff-authenticated, game-scoped admin
-  API and uses service-role access only after route authorization.
-- `supabase/functions/classroom-api/` owns modern classroom/student capabilities
-  including licensing, sessions, attendance, Store, contracts, and related
-  game-scoped reads and writes.
+- `supabase/functions/staff-api/`, `supabase/functions/admin-api/`, and the Admin
+  HttpOnly BFF are the canonical staff/admin browser boundaries.
+- `supabase/functions/player-api/`, `supabase/functions/player-web-session-api/`,
+  and the Player HttpOnly BFF are the canonical Player browser boundaries.
+- `supabase/functions/classroom-api/` is a deployed compatibility boundary. It
+  remains required because `admin-api` still forwards a bounded set of staff
+  operations to it server-side. Browser runtime must not target it directly, and
+  new product capability must not be added there.
 - `supabase/functions/stock-market-*` contains stock read, trading, seed-copy,
   and runner boundaries.
 - `supabase/migrations/` is the only normal database schema path.
@@ -19,6 +22,12 @@ sources.
 - `src/platform/` owns Supabase, scheduling, and realtime adapters.
 - `src/shared/` is restricted to genuinely cross-domain primitives.
 - `legacy/` is reference material and must not receive new production logic.
+
+The `classroom-api` compatibility function may be retired only after every
+server-side caller, compatibility route, deployment reference, and required
+acceptance test has been migrated and verified at zero required usage. See
+`supabase/functions/classroom-api/README.md` for the authoritative lifecycle
+classification.
 
 ## Verification
 

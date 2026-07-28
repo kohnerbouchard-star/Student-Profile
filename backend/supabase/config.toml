@@ -107,7 +107,11 @@ verify_jwt = false
 [functions.stock-market-trading]
 verify_jwt = false
 
-# Legacy compatibility surface. Browser runtime must not target this function.
+# Deployed compatibility surface. Browser runtime must not target this function.
+# admin-api still forwards a bounded set of authenticated Staff operations here
+# server-side. Keep platform JWT verification enabled and retire the function only
+# after all server-side callers, compatibility routes, deployment references and
+# required acceptance tests have reached zero required usage.
 [functions.classroom-api]
 verify_jwt = true
 

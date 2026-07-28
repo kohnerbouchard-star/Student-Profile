@@ -9,10 +9,16 @@ game session.
 ## Production status
 
 The application is an active production candidate, not an approved
-production-grade release. Modern `admin-api` and `classroom-api` services are
-deployed, but launch remains blocked by database-history reconciliation,
-legacy-service containment, controlled staging/promotion, and backup/plan
-posture. Do not deploy from an unmerged branch or make manual schema changes.
+production-grade release. Modern Staff/Admin and Player API services are the
+canonical browser boundaries. `classroom-api` remains deployed only as a
+compatibility surface for bounded server-side forwarding and retained migration
+coverage; browser runtime must not target it directly. Launch remains blocked by
+database-history reconciliation, legacy-service containment, controlled
+staging/promotion, and backup/plan posture. Do not deploy from an unmerged branch
+or make manual schema changes.
+
+The authoritative `classroom-api` lifecycle classification is maintained in
+`backend/supabase/functions/classroom-api/README.md`.
 
 The current audit and program are maintained in:
 
