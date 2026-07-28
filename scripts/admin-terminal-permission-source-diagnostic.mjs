@@ -20,7 +20,7 @@ try {
   const diagnostic = await page.evaluate(async () => {
     const response = await fetch(
       new URL("./dist/admin-overview-terminal.js", window.location.href),
-      { cache: "no-store" },
+      { cache: "no-store" }
     );
     const source = await response.text();
     const needles = [
@@ -34,10 +34,6 @@ try {
       "__sessionBootstrapPending",
       "loadAdminTerminalSessionBootstrap",
       "authState",
-      "confirm-player-balance-adjustment",
-      "open-player-balance-adjustment",
-      "ledger-adjustments",
-      "adjustmentType",
     ];
     const excerpts = {};
     for (const needle of needles) {
