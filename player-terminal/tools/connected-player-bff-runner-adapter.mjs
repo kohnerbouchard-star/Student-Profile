@@ -9,7 +9,7 @@ function replaceExactlyOnce(source, label, before, after) {
   if (count !== 1) {
     throw new Error(`${label} expected one canonical source match, found ${count}.`);
   }
-  return source.replace(before, after);
+  return source.replace(before, () => after);
 }
 
 function replaceAtLeastOnce(source, label, before, after) {
@@ -17,7 +17,7 @@ function replaceAtLeastOnce(source, label, before, after) {
   if (count < 1) {
     throw new Error(`${label} expected at least one canonical source match.`);
   }
-  return source.replaceAll(before, after);
+  return source.replaceAll(before, () => after);
 }
 
 function preserveBffReplayHeaders(source, label) {
