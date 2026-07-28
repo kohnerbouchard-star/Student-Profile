@@ -1,10 +1,10 @@
 import type { PlayerSessionLogoutRoute } from "../contracts/playerSessionLogoutContracts.ts";
+import { readPlayerApiRouteSegments } from "./playerApiRouteSegments.ts";
 
 export function readPlayerSessionLogoutRoutePath(
   pathname: string,
 ): PlayerSessionLogoutRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
   if (!routeSegments) return null;
 
   if (
@@ -27,13 +27,4 @@ export function readPlayerSessionLogoutRoutePath(
   }
 
   return null;
-}
-
-function readRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-  const classroomApiIndex = segments.lastIndexOf("classroom-api");
-  if (classroomApiIndex < 0) return null;
-  return segments.slice(classroomApiIndex + 1);
 }

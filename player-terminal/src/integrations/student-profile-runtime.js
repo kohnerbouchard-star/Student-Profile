@@ -3,15 +3,18 @@ import {
   createStudentProfileFetchRequest
 } from "./student-profile-api-call.js";
 
-const DEFAULT_CLASSROOM_API_BASE = "/functions/v1/classroom-api";
+const DEFAULT_PLAYER_API_BASE = "/api/player";
+const LOCAL_PLAYER_BFF_SUFFIX = "/functions/v1/player-web-session-api/proxy";
 
 function normalizedBase(value) {
-  return String(value || DEFAULT_CLASSROOM_API_BASE).trim().replace(/\/+$/, "");
+  return String(value || DEFAULT_PLAYER_API_BASE).trim().replace(/\/+$/, "");
 }
 
-function isClassroomApiBase(value) {
+function isPlayerApiBase(value) {
   const base = normalizedBase(value);
-  return base === DEFAULT_CLASSROOM_API_BASE || base.endsWith(DEFAULT_CLASSROOM_API_BASE);
+  return base === DEFAULT_PLAYER_API_BASE ||
+    base.endsWith(DEFAULT_PLAYER_API_BASE) ||
+    base.endsWith(LOCAL_PLAYER_BFF_SUFFIX);
 }
 
 export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fetch } = {}) {
@@ -24,9 +27,9 @@ export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fe
     throw new TypeError("Student-Profile connected mode requires a fetch implementation.");
   }
 
-  const apiBaseUrl = normalizedBase(config.studentProfileApiBaseUrl || DEFAULT_CLASSROOM_API_BASE);
-  if (!isClassroomApiBase(apiBaseUrl)) {
-    throw new TypeError("Student-Profile connected mode must use /functions/v1/classroom-api.");
+  const apiBaseUrl = normalizedBase(config.studentProfileApiBaseUrl || DEFAULT_PLAYER_API_BASE);
+  if (!isPlayerApiBase(apiBaseUrl)) {
+    throw new TypeError("Student-Profile connected mode must use the Player HttpOnly BFF.");
   }
 
   const request = createStudentProfileFetchRequest({ apiBaseUrl, fetchImpl });
@@ -39,4 +42,5 @@ export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fe
   };
 }
 
-export const STUDENT_PROFILE_CLASSROOM_API_BASE = DEFAULT_CLASSROOM_API_BASE;
+export const STUDENT_PROFILE_PLAYER_API_BASE = DEFAULT_PLAYER_API_BASE;
+export const STUDENT_PROFILE_CLASSROOM_API_BASE = DEFAULT_PLAYER_API_BASE;

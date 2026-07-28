@@ -36,8 +36,84 @@ additional_redirect_urls = ["http://localhost:4173"]
 jwt_expiry = 3600
 enable_signup = false
 
+# Supabase CLI local Auth disables TOTP enrollment and verification by default.
+# Enable both for disposable local browser acceptance; hosted project settings are
+# configured separately and are not changed by this repository file.
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [edge_runtime]
 enabled = true
+
+# Authenticated Staff requests carry a real Supabase Auth user JWT. The platform
+# gate rejects missing or invalid JWTs before the function performs auth.getUser,
+# Staff lookup, role checks, security-version checks and game ownership checks.
+[functions.staff-api]
+verify_jwt = true
+
+[functions.admin-api]
+verify_jwt = true
+
+[functions.staff-mfa-api]
+verify_jwt = true
+
+# The one-time recovery JWT is platform-verified, resolved with auth.getUser and
+# linked to an active Staff account before a server-side password update.
+[functions.password-reset-api]
+verify_jwt = true
+
+# Bootstrap and direct Player API requests use the publishable key only as
+# application identity. Their handlers enforce purchase-code or opaque Player
+# session authorization after the application-key check.
+[functions.bootstrap-api]
+verify_jwt = false
+
+[functions.player-api]
+verify_jwt = false
+
+# Same-origin Player BFF. It validates application identity and origin, seals the
+# opaque Player token in an authenticated HttpOnly cookie, enforces CSRF for
+# mutations and forwards the server-held token only to player-api.
+[functions.player-web-session-api]
+verify_jwt = false
+
+# The Admin web-session BFF authenticates the public application key internally,
+# verifies allowed origins, decrypts an HttpOnly session envelope, enforces CSRF,
+# and forwards a server-held real Staff JWT to platform-verified Staff services.
+[functions.web-session-api]
+verify_jwt = false
+
+# Explicit Admin sign-out is isolated so it can fail closed when Auth session
+# revocation cannot be confirmed while still clearing the local HttpOnly cookie.
+[functions.admin-logout-api]
+verify_jwt = false
+
+# Server-to-server stock functions validate the publishable apikey and signed,
+# timestamped, nonce-bound runner authorization inside the function. They do not
+# accept a browser or legacy anon JWT as authorization.
+[functions.stock-market-runner]
+verify_jwt = false
+
+[functions.stock-market-read]
+verify_jwt = false
+
+[functions.stock-market-seed-copy]
+verify_jwt = false
+
+[functions.stock-market-player-read]
+verify_jwt = false
+
+[functions.stock-market-trading]
+verify_jwt = false
+
+# Deployed compatibility surface. Browser runtime must not target this function.
+# admin-api still forwards a bounded set of authenticated Staff operations here
+# server-side. Keep platform JWT verification enabled and retire the function only
+# after all server-side callers, compatibility routes, deployment references and
+# required acceptance tests have reached zero required usage.
+[functions.classroom-api]
+verify_jwt = true
 
 [analytics]
 enabled = false

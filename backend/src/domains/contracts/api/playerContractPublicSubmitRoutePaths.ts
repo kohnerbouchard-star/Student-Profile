@@ -1,3 +1,5 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 const PUBLIC_CONTRACT_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 export type PlayerContractPublicSubmitRoute =
@@ -12,9 +14,7 @@ export type PlayerContractPublicSubmitRoute =
 export function readPlayerContractPublicSubmitRoutePath(
   pathname: string,
 ): PlayerContractPublicSubmitRoute | null {
-  const routeSegments = readExactRouteSegments(
-    pathname.split("/").filter(Boolean),
-  );
+  const routeSegments = readPlayerApiRouteSegments(pathname);
 
   if (
     !routeSegments ||
@@ -25,6 +25,9 @@ export function readPlayerContractPublicSubmitRoutePath(
     return null;
   }
 
+  if (routeSegments.length === 5 && routeSegments[4] === "accept") {
+    return null;
+  }
   if (routeSegments.length !== 5 || routeSegments[4] !== "submit") {
     return routeSegments.length > 3 ? { kind: "malformed" } : null;
   }
@@ -39,20 +42,4 @@ export function readPlayerContractPublicSubmitRoutePath(
   return PUBLIC_CONTRACT_KEY_PATTERN.test(contractKey)
     ? { kind: "submit", contractKey }
     : { kind: "malformed" };
-}
-
-function readExactRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-
-  if (
-    segments[0] === "functions" &&
-    segments[1] === "v1" &&
-    segments[2] === "classroom-api"
-  ) {
-    return segments.slice(3);
-  }
-
-  return null;
 }

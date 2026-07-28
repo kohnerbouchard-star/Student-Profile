@@ -34,14 +34,14 @@ jobs:
       PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
     steps:
       - name: Check out exact workflow head
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -122,17 +122,28 @@ jobs:
           do $probe$
           declare
             v_staff_id uuid;
-            v_code_hash text := encode(
+            v_legacy_hash text := encode(
               extensions.digest(
                 'ECON-LOCAL-LICENSE-ROLLBACK-PROBE',
                 'sha256'
               ),
               'hex'
             );
+            v_primary_hash text := encode(
+              extensions.digest(
+                'econovaria-purchase-code-v2|synthetic-local-rollback-probe',
+                'sha256'
+              ),
+              'hex'
+            );
+            v_code_envelope text;
+            v_hash_version text;
             v_redemption record;
             v_verification jsonb;
             v_result jsonb;
           begin
+            v_code_envelope := 'v2.' || v_primary_hash || '.' || v_legacy_hash;
+
             select game_row.owner_staff_user_id into v_staff_id
             from public.seed_content_releases as release_row
             join public.game_sessions as game_row
@@ -150,19 +161,23 @@ jobs:
 
             begin
               insert into public.purchase_codes (
-                code_hash, status, max_redemptions, redeemed_count
+                code_hash, code_hash_version, status, max_redemptions, redeemed_count
               ) values (
-                v_code_hash, 'active', 1, 0
+                v_legacy_hash, 'sha256-v1', 'active', 1, 0
               );
 
               select * into v_redemption
               from public.redeem_purchase_code_for_game(
                 v_staff_id,
-                v_code_hash,
+                v_code_envelope,
                 '[SYNTHETIC] License Redemption Rollback Probe',
                 '{"difficulty_preset":"moderate","stock_market_window":{"timezone":"Asia/Seoul"}}'::jsonb,
                 '{"source":"local-license-redemption-rollback-probe"}'::jsonb
               );
+
+              select purchase_code_row.code_hash_version into v_hash_version
+              from public.purchase_codes as purchase_code_row
+              where purchase_code_row.id = v_redemption.purchase_code_id;
 
               v_verification := public.verify_provisioned_game_v1(
                 v_redemption.game_session_id,
@@ -174,6 +189,7 @@ jobs:
                 'purchaseCodeStatus', v_redemption.purchase_code_status,
                 'redeemedCount', v_redemption.redeemed_count,
                 'maxRedemptions', v_redemption.max_redemptions,
+                'hashVersion', v_hash_version,
                 'gameReady', coalesce(
                   (v_verification->>'ready')::boolean,
                   false
@@ -189,6 +205,7 @@ jobs:
 
               if v_redemption.purchase_code_status <> 'exhausted'
                 or v_redemption.redeemed_count <> 1
+                or v_hash_version <> 'hmac-sha256-v2'
                 or coalesce(
                   (v_verification->>'ready')::boolean,
                   false
@@ -225,7 +242,7 @@ jobs:
 
       - name: Upload sanitized provisioning evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: game-creation-provisioning-${{ github.event.pull_request.head.sha || github.sha }}
           path: |

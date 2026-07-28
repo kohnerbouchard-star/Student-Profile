@@ -17,8 +17,24 @@
     ".admin-shape-surface-overlay",
   ].join(", ");
   const ACTIVATION_KEYS = new Set(["Enter", " ", "Spacebar"]);
+  const EXPLICIT_NATIVE_ACTIONS = new Set([
+    "contract-submission-accept",
+    "contract-submission-reject",
+    "contract-submission-confirm-decision",
+    "contract-submission-cancel-decision",
+  ]);
   const FORWARD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
   const BACKWARD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
+  const FOCUS_IDENTITY_ATTRIBUTES = Object.freeze([
+    "data-admin-section",
+    "data-admin-terminal-action",
+    "data-modal-action",
+    "data-admin-player-drawer-close",
+    "id",
+    "name",
+  ]);
+  let lastFocusIdentity = null;
+  let focusRestoreScheduled = false;
 
   function excluded(element) {
     if (!(element instanceof HTMLElement)) return true;
@@ -36,6 +52,40 @@
     if (!(element instanceof HTMLElement) || !visible(element)) return false;
     if (element.getAttribute("aria-disabled") === "true") return false;
     return !("disabled" in element && element.disabled === true);
+  }
+
+  function focusIdentity(element) {
+    if (!(element instanceof HTMLElement)) return null;
+    for (const attribute of FOCUS_IDENTITY_ATTRIBUTES) {
+      const value = element.getAttribute(attribute);
+      if (value) return Object.freeze({ attribute, value });
+    }
+    return null;
+  }
+
+  function resolveFocusIdentity(identity) {
+    if (!identity) return null;
+    const selector = `[${identity.attribute}="${CSS.escape(identity.value)}"]`;
+    return [...document.querySelectorAll(selector)].find(enabled) || null;
+  }
+
+  function rememberFocusIdentity(event) {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const identity = focusIdentity(target);
+    if (identity) lastFocusIdentity = identity;
+  }
+
+  function restoreFocusAfterMount() {
+    if (focusRestoreScheduled || !lastFocusIdentity) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== document.body && active.isConnected && visible(active)) return;
+    focusRestoreScheduled = true;
+    requestAnimationFrame(() => {
+      focusRestoreScheduled = false;
+      const current = document.activeElement;
+      if (current instanceof HTMLElement && current !== document.body && current.isConnected && visible(current)) return;
+      resolveFocusIdentity(lastFocusIdentity)?.focus({ preventScroll: true });
+    });
   }
 
   function nativeInteractive(element) {
@@ -94,6 +144,16 @@
     return true;
   }
 
+  function activateAction(control, event) {
+    if (!ACTIVATION_KEYS.has(event.key) || !enabled(control)) return false;
+    const actionName = control.getAttribute("data-admin-terminal-action") || "";
+    if (nativeInteractive(control) && !EXPLICIT_NATIVE_ACTIONS.has(actionName)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    control.click();
+    return true;
+  }
+
   function onKeyDown(event) {
     if (event.defaultPrevented) return;
     markKeyboardModality();
@@ -122,9 +182,11 @@
     }
 
     const action = target.closest(ACTION_SELECTOR);
-    if (action instanceof HTMLElement) activateNonNative(action, event);
+    if (action instanceof HTMLElement) activateAction(action, event);
   }
 
+  document.addEventListener("focusin", rememberFocusIdentity, true);
+  document.addEventListener("econovaria:admin-route-mounted", restoreFocusAfterMount);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("pointerdown", markPointerModality, true);
 

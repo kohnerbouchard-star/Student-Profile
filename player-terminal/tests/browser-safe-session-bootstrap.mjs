@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { PlayerApi } from "../src/api/player-api.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+
 const browserSafeSession = {
   ok: true,
   gameSession: {
@@ -17,7 +20,7 @@ const browserSafeSession = {
   },
   session: {
     status: "active",
-    expiresAt: "2026-07-24T03:40:00.000Z",
+    expiresAt: "2026-07-27T08:40:00.000Z",
   },
   balances: [{
     accountType: "cash",
@@ -70,7 +73,10 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "player-session-token",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: "sb_publishable_browser_safe_fixture",
+  deviceId: DEVICE_ID,
   requestTimeoutMs: 1000,
   writeCooldownMs: 0,
   apiCall,
@@ -93,5 +99,7 @@ assert.doesNotMatch(
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
   "Browser-safe session state must not require or expose ownership UUIDs.",
 );
+assert.equal("playerSessionToken" in api.config, false);
+assert.equal("accessToken" in api.config, false);
 
-console.log("Browser-safe Player session bootstrap passed without internal game or session UUIDs.");
+console.log("Browser-safe Player session bootstrap passed without browser credentials or internal ownership UUIDs.");

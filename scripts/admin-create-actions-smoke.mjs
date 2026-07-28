@@ -1,31 +1,10 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createSpecializedQualityHarness,
+  GAME_ID,
+} from "./admin-specialized-quality-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-const base64Url = (value) => Buffer.from(JSON.stringify(value)).toString("base64")
-  .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Browser Smoke Game",
-  name: "Browser Smoke Game",
-  status: "active",
-  gameCode: "SMOKE1",
-};
 const player = {
   id: "00000000-0000-4000-8000-000000000003",
   playerId: "00000000-0000-4000-8000-000000000003",
@@ -63,144 +42,29 @@ const storeItem = {
   status: "active",
   visibility: "visible",
 };
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 0,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 0 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {
-    difficultyPreset: "moderate",
-    backendDifficultyPreset: "moderate",
-    difficultyBasePreset: "moderate",
-    priceMultiplier: 1,
-    incomeMultiplier: 1,
-    shockFrequency: 1,
-    shockSeverity: 1,
-    recoverySupport: 1,
-    tradeMultiplier: 1,
-    configSaveState: "saved",
-  },
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
 
-function responseFor(pathname, method) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return { data: {
-      admin: { id: ADMIN_ID, accountId: ADMIN_ID, displayName: "Smoke Test Administrator", email: "admin@example.test", role: "game_admin", roles: ["game_admin"] },
-      activeGame: game,
-      games: [game],
-      permissions: ["*"],
-      roles: ["game_admin"],
-      adminRole: "game_admin",
-      csrfToken: "",
-      session: { id: ADMIN_ID, csrfToken: "", expiresAt: new Date(Date.now() + 3600_000).toISOString() },
-      capabilities: { notifications: false, securityHistory: "current_session_only", helpArticles: true, auditLogFlags: true, auditLogExport: true, overallScore: false, marketplaceAdminTrading: false },
-    } };
-  }
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players`)) return { data: { created: true, player, accessCode: "SMOKE-ACCESS" } };
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/contracts`)) return { data: { created: true, contract } };
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/store/items`)) return { data: { created: true, item: storeItem, storeItem } };
-  if (pathname.includes("/players")) return { data: { ...common, players: [player] } };
-  if (pathname.includes("/contracts")) return { data: { ...common, contracts: [contract] } };
-  if (pathname.includes("/store")) return { data: { ...common, store: [storeItem], storeItems: [storeItem] } };
-  return { data: common };
-}
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-const errors = [];
+const harness = await createSpecializedQualityHarness("create-actions", {
+  handleProxy: ({ method, path }) => {
+    if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players`)) {
+      return { status: 200, body: { data: { created: true, player, accessCode: "SMOKE-ACCESS" } } };
+    }
+    if (method === "POST" && path.endsWith(`/games/${GAME_ID}/contracts`)) {
+      return { status: 200, body: { data: { created: true, contract } } };
+    }
+    if (method === "POST" && path.endsWith(`/games/${GAME_ID}/store/items`)) {
+      return { status: 200, body: { data: { created: true, item: storeItem, storeItem } } };
+    }
+    return null;
+  },
+});
+const { page, errors, writes, dir } = harness;
 const consoleMessages = [];
-const writeRequests = [];
 const actionResults = [];
-
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
-page.on("requestfailed", (request) => {
-  const url = request.url();
-  const failure = request.failure()?.errorText || "";
-  if (url.endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
+page.on("console", (message) => {
+  const entry = `${message.type()}: ${message.text()}`;
+  consoleMessages.push(entry);
+  if (message.type() === "error") errors.push(entry);
 });
-
-await page.addInitScript(({ accessToken, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "smoke-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const request = route.request();
-  const method = request.method();
-  if (method === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  const pathname = new URL(request.url()).pathname;
-  if (!["GET", "HEAD"].includes(method)) {
-    let body = null;
-    try { body = request.postDataJSON(); } catch { body = request.postData(); }
-    writeRequests.push({ method, pathname, body });
-  }
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(responseFor(pathname, method)),
-  });
-});
-
-async function capture(name) {
-  await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
-}
 
 async function loadSection(sectionName) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -231,15 +95,24 @@ async function assertOriginalModalVideo(selector, expectedPath) {
   const video = page.locator(`.admin-terminal-modal:visible video${selector}`).first();
   await video.waitFor({ state: "visible", timeout: 5000 });
   const source = await video.locator("source").getAttribute("src");
-  if (!String(source || "").endsWith(expectedPath)) throw new Error(`${selector} used ${source || "no source"} instead of ${expectedPath}.`);
-  const state = await video.evaluate((node) => ({ autoplay: node.autoplay, muted: node.muted, loop: node.loop, playsInline: node.playsInline }));
-  if (!state.autoplay || !state.muted || !state.loop || !state.playsInline) throw new Error(`${selector} lost required playback attributes: ${JSON.stringify(state)}.`);
+  if (!String(source || "").endsWith(expectedPath)) {
+    throw new Error(`${selector} used ${source || "no source"} instead of ${expectedPath}.`);
+  }
+  const state = await video.evaluate((node) => ({
+    autoplay: node.autoplay,
+    muted: node.muted,
+    loop: node.loop,
+    playsInline: node.playsInline,
+  }));
+  if (!state.autoplay || !state.muted || !state.loop || !state.playsInline) {
+    throw new Error(`${selector} lost required playback attributes: ${JSON.stringify(state)}.`);
+  }
 }
 
 async function waitForWrite(startIndex, timeoutMs = 5000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    if (writeRequests.length > startIndex) return writeRequests.at(-1);
+    if (writes.length > startIndex) return writes.at(-1);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return null;
@@ -254,10 +127,10 @@ async function submitPlayer() {
   await form.locator('[name="status"]').selectOption("active");
   await form.locator('[name="startingLocation"]').selectOption("NORTHREACH");
   await form.locator('[name="notes"]').fill("Browser create workflow smoke.");
-  const startIndex = writeRequests.length;
+  const startIndex = writes.length;
   await form.locator('[data-admin-terminal-action="create-player"]').click();
   const write = await waitForWrite(startIndex);
-  await capture("submit-create-player");
+  await harness.capture("submit-create-player");
   return { action: "create-player", write };
 }
 
@@ -269,10 +142,10 @@ async function submitContract() {
   await form.locator('[name="objective"]').fill("Verify the contract create workflow.");
   await form.locator('[name="instructions"]').fill("Complete the browser smoke assignment.");
   await form.locator('[name="evidence"]').fill("Submit a short response.");
-  const startIndex = writeRequests.length;
+  const startIndex = writes.length;
   await form.locator('[data-admin-terminal-action="create-contract"]').click();
   const write = await waitForWrite(startIndex);
-  await capture("submit-create-contract");
+  await harness.capture("submit-create-contract");
   return { action: "create-contract", write };
 }
 
@@ -290,19 +163,26 @@ async function submitStoreItem() {
   await form.locator('[name="stockQuantity"]').waitFor({ state: "visible", timeout: 5000 });
   await form.locator('[name="stockQuantity"]').fill("10");
   await form.locator('[name="visibility"]').selectOption("All players");
-  const startIndex = writeRequests.length;
+  const startIndex = writes.length;
   await form.locator('[data-admin-terminal-action="save-store-item"]').click();
   const write = await waitForWrite(startIndex);
-  await capture("submit-create-store-item");
+  await harness.capture("submit-create-store-item");
   return { action: "save-store-item", write };
 }
 
 function assertWrite(result, expectedPathSuffix, expectedAction) {
   if (!result.write) throw new Error(`${result.action} sent no API request.`);
-  if (result.write.method !== "POST") throw new Error(`${result.action} used ${result.write.method} instead of POST.`);
-  if (!result.write.pathname.endsWith(expectedPathSuffix)) throw new Error(`${result.action} used unexpected path ${result.write.pathname}.`);
-  if (result.write.body?.action !== expectedAction) throw new Error(`${result.action} sent action ${result.write.body?.action || "missing"}.`);
-  return result.write.body?.payload || {};
+  if (result.write.method !== "POST") {
+    throw new Error(`${result.action} used ${result.write.method} instead of POST.`);
+  }
+  if (!result.write.path.endsWith(expectedPathSuffix)) {
+    throw new Error(`${result.action} used unexpected path ${result.write.path}.`);
+  }
+  const body = result.write.parsedBody || {};
+  if (body.action !== expectedAction) {
+    throw new Error(`${result.action} sent action ${body.action || "missing"}.`);
+  }
+  return body.payload || {};
 }
 
 try {
@@ -312,28 +192,47 @@ try {
   actionResults.push(playerResult, contractResult, storeResult);
 
   const playerPayload = assertWrite(playerResult, `/games/${GAME_ID}/players`, "create-player");
-  if (playerPayload.displayName !== "Browser Smoke Player" || playerPayload.startingLocation !== "NORTHREACH") throw new Error(`Player create payload was not normalized correctly: ${JSON.stringify(playerPayload)}`);
+  if (
+    playerPayload.displayName !== "Browser Smoke Player" ||
+    playerPayload.startingLocation !== "NORTHREACH"
+  ) {
+    throw new Error(`Player create payload was not normalized correctly: ${JSON.stringify(playerPayload)}`);
+  }
 
   const contractPayload = assertWrite(contractResult, `/games/${GAME_ID}/contracts`, "create-contract");
-  if (contractPayload.title !== "Browser Smoke Contract" || contractPayload.publishNow !== true) throw new Error(`Contract create payload was not normalized correctly: ${JSON.stringify(contractPayload)}`);
+  if (contractPayload.title !== "Browser Smoke Contract" || contractPayload.publishNow !== true) {
+    throw new Error(`Contract create payload was not normalized correctly: ${JSON.stringify(contractPayload)}`);
+  }
 
   const storePayload = assertWrite(storeResult, `/games/${GAME_ID}/store/items`, "save-store-item");
-  if (storePayload.name !== "Browser Smoke Item" || storePayload.category !== "material" || storePayload.status !== "active" || storePayload.price !== 25 || storePayload.stockQuantity !== 10 || storePayload.visibility !== "visible") {
+  if (
+    storePayload.name !== "Browser Smoke Item" ||
+    storePayload.category !== "material" ||
+    storePayload.status !== "active" ||
+    storePayload.price !== 25 ||
+    storePayload.stockQuantity !== 10 ||
+    storePayload.visibility !== "visible"
+  ) {
     throw new Error(`Store create payload was not normalized correctly: ${JSON.stringify(storePayload)}`);
   }
 
   if (errors.length) throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
-  writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({ actionResults, writeRequests, errors, consoleMessages }, null, 2));
+  writeFileSync(
+    `${dir}/create-actions-runtime.json`,
+    JSON.stringify({ actionResults, writes, errors, consoleMessages }, null, 2),
+  );
+  await harness.finish({ actionResults, consoleMessages });
   console.log("Admin create submissions, Store-only item creation, and original modal videos smoke passed.");
 } catch (error) {
-  writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({ actionResults, writeRequests, errors, consoleMessages }, null, 2));
-  await capture("admin-create-actions-failure").catch(() => {});
-  console.error(error.stack || error.message || String(error));
-  console.error("CREATE_RESULTS", JSON.stringify(actionResults, null, 2));
-  console.error("WRITE_REQUESTS", JSON.stringify(writeRequests, null, 2));
-  console.error("BROWSER_ERRORS", JSON.stringify(errors, null, 2));
-  process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
+  writeFileSync(
+    `${dir}/create-actions-runtime.json`,
+    JSON.stringify({ actionResults, writes, errors, consoleMessages }, null, 2),
+  );
+  await harness.capture("admin-create-actions-failure").catch(() => {});
+  await harness.finish({
+    actionResults,
+    consoleMessages,
+    failure: error.stack || error.message || String(error),
+  });
+  throw error;
 }

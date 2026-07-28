@@ -4,6 +4,10 @@ import { PlayerApi } from "../src/api/player-api.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_contract_submit_fixture";
+
 const manifest = {
   ok: true,
   schemaVersion: 1,
@@ -11,50 +15,22 @@ const manifest = {
   service: "classroom-api",
   capabilities: {
     routes: {
-      dashboard: false,
-      news: false,
-      market: false,
-      portfolio: false,
-      business: false,
-      contracts: true,
-      store: false,
-      marketplace: false,
-      inventory: false,
-      crafting: false,
-      banking: false,
-      loans: false,
-      messages: false,
-      progression: false,
-      profile: false
+      dashboard: false, news: false, market: false, portfolio: false,
+      business: false, contracts: true, store: false, marketplace: false,
+      inventory: false, crafting: false, banking: false, loans: false,
+      messages: false, progression: false, profile: false
     },
     actions: {
-      bankingExport: false,
-      bankTransfer: false,
-      businessHire: false,
-      businessPrice: false,
-      businessProduction: false,
-      chartRange: false,
-      contractAccept: false,
-      contractSubmit: true,
-      craftItem: false,
-      inventoryUse: false,
-      loanApply: false,
-      loanRepay: false,
-      logout: false,
-      marketOrder: false,
-      marketSearch: false,
-      marketWatchlist: false,
-      marketplaceCancel: false,
-      marketplaceListing: false,
-      marketplacePurchase: false,
-      messageAttachment: false,
-      messageSearch: false,
-      messageSend: false,
-      notificationsRead: false,
-      progressionClaim: false,
-      progressionUnlock: false,
-      savingsTransfer: false,
-      storePurchase: false
+      bankingExport: false, bankTransfer: false, businessHire: false,
+      businessPrice: false, businessProduction: false, chartRange: false,
+      contractAccept: false, contractSubmit: true, craftItem: false,
+      inventoryUse: false, loanApply: false, loanRepay: false, logout: false,
+      marketOrder: false, marketSearch: false, marketWatchlist: false,
+      marketplaceCancel: false, marketplaceListing: false,
+      marketplacePurchase: false, messageAttachment: false,
+      messageSearch: false, messageSend: false, notificationsRead: false,
+      progressionClaim: false, progressionUnlock: false,
+      savingsTransfer: false, storePurchase: false
     }
   },
   endpoints: [
@@ -142,9 +118,11 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "token-1",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   gameSessionId: "must-not-be-forwarded",
-  playerSessionId: "must-not-be-forwarded",
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   apiCall
@@ -188,7 +166,11 @@ assert.deepEqual(submitRequest.payload, {
     note: "Completed response"
   }
 });
-assert.equal(submitRequest.headers["x-player-session-token"], "token-1");
+assert.equal(submitRequest.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(submitRequest.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(submitRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(submitRequest.headers["x-player-session-token"], undefined);
+assert.equal(submitRequest.headers.Authorization, undefined);
 for (const privateField of ["gameSessionId", "playerId", "playerSessionId", "contractId"]) {
   assert.equal(privateField in submitRequest.payload, false);
 }
@@ -209,4 +191,4 @@ assert.equal(
   "Contract submission must not forward browser-owned game scope."
 );
 
-console.log("Connected Contract submission passed: manifest gating, public-key evidence write, committed success, invalidation, and authoritative refresh are valid.");
+console.log("Connected Contract submission passed: cookie-session binding, manifest gating, public-key evidence write, invalidation, and authoritative refresh are valid.");

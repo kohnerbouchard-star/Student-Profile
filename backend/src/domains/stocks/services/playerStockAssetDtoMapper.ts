@@ -6,6 +6,7 @@ import type {
 export function toPlayerStockAssetDto(
   asset: PlayerStockAssetRecord,
   volume: number,
+  isWatchlisted = false,
 ): PlayerStockAssetDto {
   const changePct = asset.previousClose > 0
     ? ((asset.currentPrice - asset.previousClose) / asset.previousClose) * 100
@@ -28,6 +29,7 @@ export function toPlayerStockAssetDto(
     currentVolatility: asset.currentVolatility,
     longRunVolatility: asset.longRunVolatility,
     description: asset.description,
+    isWatchlisted,
   };
 }
 

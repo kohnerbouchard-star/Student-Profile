@@ -11,10 +11,12 @@ declare const Deno: {
 
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const OTHER_GAME_ID = "00000000-0000-4000-8000-000000000002";
+const PLAYER_UUID = "00000000-0000-4000-8000-000000000010";
+const OTHER_PLAYER_UUID = "00000000-0000-4000-8000-000000000011";
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const SECOND_ASSET_UUID = "00000000-0000-4000-8000-000000000102";
 
-Deno.test("player stock asset repository scopes and bounds one asset query plus one tick query", async () => {
+Deno.test("player stock asset repository scopes assets, ticks, and watchlist projection", async () => {
   const client = new FakeClient([
     asset(),
     asset({ id: SECOND_ASSET_UUID, ticker: "BETA", company_name: "Beta Energy" }),
@@ -23,29 +25,66 @@ Deno.test("player stock asset repository scopes and bounds one asset query plus 
     tick(),
     tick({ stock_asset_id: SECOND_ASSET_UUID, ticker: "BETA", tick_index: 2, volume: 2000 }),
     tick({ game_session_id: OTHER_GAME_ID, tick_index: 99 }),
+  ], [
+    watchlistRow({ stock_asset_id: SECOND_ASSET_UUID }),
+    watchlistRow({ player_id: OTHER_PLAYER_UUID }),
+    watchlistRow({ game_session_id: OTHER_GAME_ID }),
   ]);
   const repository = new SupabasePlayerStockAssetListRepository(client as never);
-  const result = await repository.listAssets({ gameId: GAME_ID, limit: 2, offset: 0 });
+  const result = await repository.listAssets({
+    gameId: GAME_ID,
+    playerUuid: PLAYER_UUID,
+    limit: 2,
+    offset: 0,
+  });
 
   assertEquals(result.gameId, GAME_ID);
+  assertEquals(result.playerUuid, PLAYER_UUID);
   assertEquals(result.assets.map((value) => value.ticker), ["AURA", "BETA"]);
   assertEquals(result.latestTicks.map((value) => value.tickIndex), [1, 2]);
-  assertEquals(client.fromCalls, ["game_session_stock_assets"]);
+  assertEquals(result.watchlistedAssetUuids, [SECOND_ASSET_UUID]);
+  assertEquals(client.fromCalls, [
+    "game_session_stock_assets",
+    "player_stock_watchlist",
+  ]);
   assertEquals(client.rpcCalls, [{
     functionName: "read_latest_stock_market_ticks_for_game",
     args: { p_game_session_id: GAME_ID, p_ticker: null },
   }]);
   assertEquals(client.lastRange, { from: 0, to: 1 });
+  assertEquals(client.lastWatchlistLimit, 3);
 });
 
-Deno.test("player stock asset repository preserves lookahead range", async () => {
-  const client = new FakeClient([
-    asset(),
-    asset({ id: SECOND_ASSET_UUID, ticker: "BETA" }),
-  ], []);
+Deno.test("player stock asset repository preserves lookahead range and skips empty watchlist query", async () => {
+  const client = new FakeClient([], []);
   const repository = new SupabasePlayerStockAssetListRepository(client as never);
-  await repository.listAssets({ gameId: GAME_ID, limit: 3, offset: 4 });
+  await repository.listAssets({
+    gameId: GAME_ID,
+    playerUuid: PLAYER_UUID,
+    limit: 3,
+    offset: 4,
+  });
   assertEquals(client.lastRange, { from: 4, to: 6 });
+  assertEquals(client.fromCalls, ["game_session_stock_assets"]);
+});
+
+Deno.test("player stock asset repository rejects cross-scope watchlist rows", async () => {
+  const client = new FakeClient(
+    [asset()],
+    [tick()],
+    [watchlistRow({ player_id: OTHER_PLAYER_UUID })],
+  );
+  client.ignoreWatchlistFilters = true;
+  const repository = new SupabasePlayerStockAssetListRepository(client as never);
+  await assertRejectsCode(
+    () => repository.listAssets({
+      gameId: GAME_ID,
+      playerUuid: PLAYER_UUID,
+      limit: 50,
+      offset: 0,
+    }),
+    "player_stock_asset_read_failed",
+  );
 });
 
 Deno.test("player stock asset repository maps schema errors", async () => {
@@ -57,7 +96,12 @@ Deno.test("player stock asset repository maps schema errors", async () => {
   const repository = new SupabasePlayerStockAssetListRepository(client as never);
 
   await assertRejectsCode(
-    () => repository.listAssets({ gameId: GAME_ID, limit: 50, offset: 0 }),
+    () => repository.listAssets({
+      gameId: GAME_ID,
+      playerUuid: PLAYER_UUID,
+      limit: 50,
+      offset: 0,
+    }),
     "player_stock_asset_schema_not_applied",
   );
 });
@@ -66,16 +110,19 @@ class FakeClient {
   readonly fromCalls: string[] = [];
   readonly rpcCalls: { functionName: string; args: unknown }[] = [];
   lastRange: { from: number; to: number } | null = null;
+  lastWatchlistLimit: number | null = null;
   tableError: { code?: string; message: string } | null = null;
+  ignoreWatchlistFilters = false;
 
   constructor(
     readonly assets: readonly Record<string, unknown>[],
     readonly ticks: readonly Record<string, unknown>[],
+    readonly watchlist: readonly Record<string, unknown>[] = [],
   ) {}
 
   from(tableName: string): FakeQuery {
     this.fromCalls.push(tableName);
-    return new FakeQuery(this);
+    return new FakeQuery(this, tableName);
   }
 
   async rpc(functionName: string, args: any) {
@@ -89,18 +136,30 @@ class FakeClient {
 
 class FakeQuery
   implements PromiseLike<{ data: readonly Record<string, unknown>[] | null; error: unknown }> {
-  private readonly filters: { column: string; value: unknown }[] = [];
+  private readonly filters: {
+    column: string;
+    value: unknown;
+    kind: "eq" | "in";
+  }[] = [];
   private readonly orderings: { column: string; ascending: boolean }[] = [];
   private bounds: { from: number; to: number } | null = null;
 
-  constructor(private readonly client: FakeClient) {}
+  constructor(
+    private readonly client: FakeClient,
+    private readonly tableName: string,
+  ) {}
 
   select(): FakeQuery {
     return this;
   }
 
   eq(column: string, value: unknown): FakeQuery {
-    this.filters.push({ column, value });
+    this.filters.push({ column, value, kind: "eq" });
+    return this;
+  }
+
+  in(column: string, values: readonly unknown[]): FakeQuery {
+    this.filters.push({ column, value: values, kind: "in" });
     return this;
   }
 
@@ -112,6 +171,14 @@ class FakeQuery
   range(from: number, to: number): FakeQuery {
     this.bounds = { from, to };
     this.client.lastRange = this.bounds;
+    return this;
+  }
+
+  limit(count: number): FakeQuery {
+    this.bounds = { from: 0, to: count - 1 };
+    if (this.tableName === "player_stock_watchlist") {
+      this.client.lastWatchlistLimit = count;
+    }
     return this;
   }
 
@@ -127,9 +194,15 @@ class FakeQuery
       return { data: null, error: this.client.tableError };
     }
 
-    let rows = [...this.client.assets];
-    for (const filter of this.filters) {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
+    let rows = this.tableName === "player_stock_watchlist"
+      ? [...this.client.watchlist]
+      : [...this.client.assets];
+    if (!(this.tableName === "player_stock_watchlist" && this.client.ignoreWatchlistFilters)) {
+      for (const filter of this.filters) {
+        rows = rows.filter((row) => filter.kind === "eq"
+          ? row[filter.column] === filter.value
+          : (filter.value as readonly unknown[]).includes(row[filter.column]));
+      }
     }
     for (const ordering of [...this.orderings].reverse()) {
       rows.sort((left, right) => {
@@ -177,6 +250,15 @@ function tick(overrides: Record<string, unknown> = {}) {
     change_pct: 5,
     volume: 1000,
     created_at: "2026-07-18T05:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function watchlistRow(overrides: Record<string, unknown> = {}) {
+  return {
+    game_session_id: GAME_ID,
+    player_id: PLAYER_UUID,
+    stock_asset_id: ASSET_UUID,
     ...overrides,
   };
 }

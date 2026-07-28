@@ -12,12 +12,13 @@ declare const Deno: {
 
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const PLAYER_UUID = "00000000-0000-4000-8000-000000000010";
+const OTHER_PLAYER_UUID = "00000000-0000-4000-8000-000000000011";
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const SECOND_ASSET_UUID = "00000000-0000-4000-8000-000000000102";
 const THIRD_ASSET_UUID = "00000000-0000-4000-8000-000000000103";
 const EFFECTIVE_AT = "2026-07-18T05:00:00.000Z";
 
-Deno.test("player stock asset service returns deterministic public-safe pagination", async () => {
+Deno.test("player stock asset service returns deterministic player-scoped pagination", async () => {
   const repository = new FakeRepository();
   repository.assets = [
     asset({ internalAssetUuid: SECOND_ASSET_UUID, ticker: "BETA", sector: "ENERGY" }),
@@ -28,12 +29,19 @@ Deno.test("player stock asset service returns deterministic public-safe paginati
     { gameId: GAME_ID, internalAssetUuid: ASSET_UUID, tickIndex: 4, volume: 1000 },
     { gameId: GAME_ID, internalAssetUuid: SECOND_ASSET_UUID, tickIndex: 5, volume: 2000 },
   ];
+  repository.watchlistedAssetUuids = [SECOND_ASSET_UUID];
   const service = new PlayerStockAssetListService(repository);
   const result = await service.listAssets(scope(), { limit: 2, offset: 0 });
 
-  assertEquals(repository.inputs, [{ gameId: GAME_ID, limit: 3, offset: 0 }]);
+  assertEquals(repository.inputs, [{
+    gameId: GAME_ID,
+    playerUuid: PLAYER_UUID,
+    limit: 3,
+    offset: 0,
+  }]);
   assertEquals(result.assets.map((value) => value.assetId), ["AURA", "BETA"]);
   assertEquals(result.assets.map((value) => value.volume), [1000, 2000]);
+  assertEquals(result.assets.map((value) => value.isWatchlisted), [false, true]);
   assertEquals(result.sectors, ["All", "AI_AEROSPACE", "ENERGY"]);
   assertEquals(result.tickIndex, 5);
   assertEquals(result.pagination, {
@@ -59,12 +67,35 @@ Deno.test("player stock asset service distinguishes a valid empty market", async
   assertEquals(result.emptyState, { reason: "stock_market_not_initialized" });
 });
 
-Deno.test("player stock asset service rejects cross-game rows and public id collisions", async () => {
+Deno.test("player stock asset service rejects cross-scope rows, watchlists, and public id collisions", async () => {
   const crossGame = new FakeRepository();
   crossGame.assets = [asset({ gameId: "00000000-0000-4000-8000-000000000002" })];
   await assertRejectsCode(
     () =>
       new PlayerStockAssetListService(crossGame).listAssets(scope(), {
+        limit: 50,
+        offset: 0,
+      }),
+    "player_stock_asset_scope_violation",
+  );
+
+  const crossPlayer = new FakeRepository();
+  crossPlayer.playerUuid = OTHER_PLAYER_UUID;
+  await assertRejectsCode(
+    () =>
+      new PlayerStockAssetListService(crossPlayer).listAssets(scope(), {
+        limit: 50,
+        offset: 0,
+      }),
+    "player_stock_asset_scope_violation",
+  );
+
+  const unknownWatchlist = new FakeRepository();
+  unknownWatchlist.assets = [asset()];
+  unknownWatchlist.watchlistedAssetUuids = [SECOND_ASSET_UUID];
+  await assertRejectsCode(
+    () =>
+      new PlayerStockAssetListService(unknownWatchlist).listAssets(scope(), {
         limit: 50,
         offset: 0,
       }),
@@ -106,6 +137,8 @@ Deno.test("player stock asset service maps persistence failures to retryable una
 
 class FakeRepository implements PlayerStockAssetListRepository {
   readonly inputs: unknown[] = [];
+  gameId = GAME_ID;
+  playerUuid = PLAYER_UUID;
   assets: PlayerStockAssetRecord[] = [];
   latestTicks: {
     gameId: string;
@@ -113,15 +146,23 @@ class FakeRepository implements PlayerStockAssetListRepository {
     tickIndex: number;
     volume: number;
   }[] = [];
+  watchlistedAssetUuids: string[] = [];
   error: Error | null = null;
 
-  async listAssets(input: { gameId: string; limit: number; offset: number }) {
+  async listAssets(input: {
+    gameId: string;
+    playerUuid: string;
+    limit: number;
+    offset: number;
+  }) {
     this.inputs.push(input);
     if (this.error) throw this.error;
     return {
-      gameId: GAME_ID,
+      gameId: this.gameId,
+      playerUuid: this.playerUuid,
       assets: this.assets,
       latestTicks: this.latestTicks,
+      watchlistedAssetUuids: this.watchlistedAssetUuids,
     };
   }
 }

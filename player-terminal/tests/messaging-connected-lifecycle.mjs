@@ -5,6 +5,9 @@ import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 import { renderMessagesPage } from "../src/pages/messages-page.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_messaging_fixture";
 const THREAD = `thr_${"a".repeat(32)}`;
 const MESSAGE = `msg_${"b".repeat(32)}`;
 const requests = [];
@@ -36,7 +39,10 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "player-token",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   apiCall,
@@ -69,6 +75,11 @@ assert.equal(write.path, "/players/me/messages/threads");
 assert.deepEqual(Object.keys(write.payload).sort(), ["body", "idempotencyKey", "recipientPlayerId", "title"]);
 assert.equal(typeof write.payload.idempotencyKey, "string");
 assert.equal(write.payload.idempotencyKey.length > 0, true);
+assert.equal(write.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(write.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(write.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(write.headers["x-player-session-token"], undefined);
+assert.equal(write.headers.Authorization, undefined);
 assert.equal("gameSessionId" in write.payload, false);
 assert.equal("playerId" in write.payload, false);
 assert.equal("playerUuid" in write.payload, false);
@@ -113,4 +124,4 @@ assert.match(html, /&lt;SCRIPT&gt;Trade&lt;\/SCRIPT&gt;/);
 assert.match(html, /&lt;IMG src=x onerror=alert\(1\)&gt;/);
 assert.doesNotMatch(html, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
-console.log("Connected Messaging lifecycle and committed-success boundary passed.");
+console.log("Connected Messaging cookie-session lifecycle and committed-success boundary passed.");

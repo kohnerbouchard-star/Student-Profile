@@ -70,8 +70,18 @@ const JSON_HEADERS = {
   "access-control-allow-origin": EDGE_BROWSER_ORIGIN,
   "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "access-control-allow-headers":
-    "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token, x-econovaria-player-session-token, x-econovaria-game-id, x-econovaria-game-session-id, x-idempotency-key, idempotency-key",
+    "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token, x-econovaria-player-session-token, x-econovaria-device-id, x-econovaria-game-id, x-econovaria-game-session-id, x-idempotency-key, idempotency-key",
+  "access-control-expose-headers":
+    "retry-after, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset",
   "access-control-max-age": "86400",
+  "cache-control": "private, no-store, max-age=0",
+  "pragma": "no-cache",
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "referrer-policy": "no-referrer",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
   "vary": "Origin",
 };
 
@@ -85,7 +95,7 @@ export function jsonError(
   }, {
     "cache-control": "private, no-store, max-age=0",
     "pragma": "no-cache",
-    "vary": "Origin, Authorization, X-Player-Session-Token",
+    "vary": "Origin, Authorization, X-Player-Session-Token, X-Econovaria-Device-Id",
   });
 }
 

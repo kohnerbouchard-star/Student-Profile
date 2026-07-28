@@ -28,7 +28,7 @@ function readExactRouteSegments(
   if (segments[0] === "players") return segments;
 
   if (
-    segments[0] === "classroom-api" &&
+    ["classroom-api", "player-api"].includes(segments[0] || "") &&
     segments[1] === "players"
   ) {
     return segments.slice(1);
@@ -37,7 +37,7 @@ function readExactRouteSegments(
   if (
     segments[0] === "functions" &&
     segments[1] === "v1" &&
-    segments[2] === "classroom-api"
+    ["classroom-api", "player-api"].includes(segments[2] || "")
   ) {
     return segments.slice(3);
   }

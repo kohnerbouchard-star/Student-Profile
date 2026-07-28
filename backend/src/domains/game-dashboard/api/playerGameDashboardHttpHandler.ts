@@ -40,6 +40,9 @@ import type {
 import {
   StoryNotificationRepositoryError,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
+import {
+  withPlayerGameDashboardReadPermit,
+} from "./playerGameDashboardReadLimiter.ts";
 
 interface PlayerGameDashboardHttpDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -153,13 +156,15 @@ export async function handlePlayerGameDashboardRequest(
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabasePlayerGameDashboardRepository(serviceClient as any);
-    const snapshot = await repository.read({
-      gameSessionId,
-      playerSessionId: sessionResult.session.id,
-      playerId: sessionResult.player.id,
-      playerDisplayName: sessionResult.player.display_name,
-      playerRosterLabel: sessionResult.player.roster_label,
-    });
+    const snapshot = await withPlayerGameDashboardReadPermit(() =>
+      repository.read({
+        gameSessionId,
+        playerSessionId: sessionResult.session.id,
+        playerId: sessionResult.player.id,
+        playerDisplayName: sessionResult.player.display_name,
+        playerRosterLabel: sessionResult.player.roster_label,
+      })
+    );
     return jsonResponse<PlayerGameDashboardResponseBody>(200, {
       ok: true,
       ...snapshot,

@@ -6,6 +6,13 @@ function hiddenBusinessKey(business) {
   return `<input name="businessKey" type="hidden" value="${escapeHtml(business.company.id)}" />`;
 }
 
+function playerBusinessCurrencyCode(data) {
+  const countries = Array.isArray(data.countries) ? data.countries : [];
+  const playerCountry = countries.find((country) => country?.isPlayerCountry === true);
+  const candidate = String(playerCountry?.currencyCode || data.session?.currencyCode || "ECO").trim().toUpperCase();
+  return /^[A-Z][A-Z0-9_]{2,15}$/.test(candidate) ? candidate : "ECO";
+}
+
 function productRow(product, business, currencyCode) {
   return `<article class="player-terminal-business-product">
     <span class="player-terminal-product-icon">${icon(product.icon || "factory")}</span>
@@ -13,6 +20,7 @@ function productRow(product, business, currencyCode) {
     <dl><div><dt>PRICE</dt><dd>${escapeHtml(formatCurrency(product.price, currencyCode))}</dd></div><div><dt>MARGIN</dt><dd>${escapeHtml(formatPercent(product.margin, 1))}</dd></div><div><dt>DEMAND</dt><dd>${escapeHtml(product.demand)}</dd></div></dl>
     <form data-player-form="business-price" data-endpoint="businessPrice" data-product-id="${escapeHtml(product.id)}">
       ${hiddenBusinessKey(business)}
+      <input name="productKey" type="hidden" value="${escapeHtml(product.id)}" />
       <input name="expectedVersion" type="hidden" value="${escapeHtml(product.version)}" />
       <label>NEW PRICE<input name="price" type="number" min="0.01" max="1000000" step="0.01" value="${escapeHtml(product.price)}" required /></label>
       <button class="player-terminal-compact-button" type="submit">${icon("edit")} Update</button>
@@ -68,6 +76,7 @@ function employeeRows(business, code) {
     <div><small>${escapeHtml(employee.contractType)}</small><strong>${escapeHtml(employee.role)}</strong><p>${escapeHtml(formatCurrency(employee.wage, code))} per cycle · ${escapeHtml(employee.productivity)}× productivity</p></div>
     <form data-player-form="business-terminate" data-endpoint="businessTerminate" data-employee-id="${escapeHtml(employee.id)}">
       ${hiddenBusinessKey(business)}
+      <input name="employeeKey" type="hidden" value="${escapeHtml(employee.id)}" />
       <label>REASON<input name="reason" minlength="2" maxlength="500" required /></label>
       <button class="player-terminal-compact-button" type="submit">Terminate</button>
     </form>
@@ -85,7 +94,7 @@ function statusForm(business) {
 
 export function renderBusinessPage(data) {
   const business = data.business;
-  const code = data.session.currencyCode;
+  const code = playerBusinessCurrencyCode(data);
   if (!business.configured) {
     return `<section class="player-terminal-page player-terminal-business-page">
       <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Create or acquire one game-scoped enterprise using your authoritative country and currency.</p></div></div>
@@ -94,8 +103,9 @@ export function renderBusinessPage(data) {
   }
 
   const capacityTone = business.operations.capacityUse >= 90 ? "red" : business.operations.capacityUse >= 75 ? "amber" : "green";
+  const statusLabel = String(business.company.status || "").trim().toUpperCase();
   return `<section class="player-terminal-page player-terminal-business-page">
-    <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Operate a bounded company model with server-authoritative settlement and accounting.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(business.company.status, "green")}</div></div>
+    <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Operate a bounded company model with server-authoritative settlement and accounting.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(statusLabel, "green")}</div></div>
 
     <div class="player-terminal-business-metrics">
       ${renderMetric({ label: "Company value", value: formatCurrency(business.company.valuation, code), meta: `${business.company.valuationChange >= 0 ? "+" : ""}${business.company.valuationChange.toFixed(1)}% this cycle`, tone: "cyan", iconName: "business" })}

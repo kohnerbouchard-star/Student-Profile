@@ -96,6 +96,16 @@ function errorCode(error) {
   return String(error?.code || error?.body?.error?.code || "").toLowerCase();
 }
 
+function cookieBoundSessionKey(config, state) {
+  if (state?.status !== "ready") return "";
+  const game = String(config.gameSessionId || state.data?.session?.gameSessionId || "");
+  const csrfToken = String(config.csrfToken || "");
+  const expiresAt = String(config.sessionExpiresAt || state.data?.session?.expiresAt || "");
+  const authenticated = config.authenticated === true || Boolean(state.data?.session);
+  if (!authenticated || !game) return "";
+  return `${game}:${expiresAt}:${csrfToken || "http-only-cookie"}`;
+}
+
 export function installStoryDeliveryFlow({ mount, terminal, config, api: suppliedApi = null, runtime = globalThis }) {
   if (!(mount instanceof HTMLElement) || config.usePreviewData === true) return { destroy() {} };
   const api = suppliedApi || new PlayerApi(config);
@@ -295,10 +305,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
       if (state.status === "error") clearState();
       return;
     }
-    const token = String(config.playerSessionToken || "");
-    const game = String(config.gameSessionId || state.data?.session?.gameSessionId || "");
-    const playerSession = String(config.playerSessionId || state.data?.session?.playerSessionId || "");
-    const nextSessionKey = token && game ? `${game}:${playerSession}:${token}` : "";
+    const nextSessionKey = cookieBoundSessionKey(config, state);
     if (!nextSessionKey || nextSessionKey === sessionKey) return;
     clearState();
     sessionKey = nextSessionKey;
@@ -308,13 +315,10 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
   mount.addEventListener("econovaria:player-story-close-request", handleCloseRequest);
   runtime.addEventListener?.(String(config.sessionInvalidEvent || "econovaria:player-session-invalid"), handleSessionInvalid);
   const initial = terminal.getState();
-  if (initial?.status === "ready") {
-    const token = String(config.playerSessionToken || "");
-    const game = String(config.gameSessionId || initial.data?.session?.gameSessionId || "");
-    if (token && game) {
-      sessionKey = `${game}:${String(config.playerSessionId || "")}:${token}`;
-      void load();
-    }
+  const initialSessionKey = cookieBoundSessionKey(config, initial);
+  if (initialSessionKey) {
+    sessionKey = initialSessionKey;
+    void load();
   }
 
   return {

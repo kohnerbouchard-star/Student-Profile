@@ -58,6 +58,11 @@
     return null;
   }
 
+  function isAdminRoot(element) {
+    return element instanceof HTMLElement &&
+      (element.id === "adminPreview" || element.classList.contains("admin-terminal-shell-main"));
+  }
+
   function stableFocusTarget(preferred) {
     if (preferred instanceof HTMLElement && preferred.isConnected && visible(preferred) && enabled(preferred)) return preferred;
     const replacement = semanticFocusReplacement(preferred);
@@ -70,13 +75,15 @@
       document.querySelector('[data-admin-terminal-action="add-player"]'),
       document.querySelector(".admin-terminal-shell-main"),
       document.querySelector("#adminPreview"),
-    ].find((element) => element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element)) || null;
+    ].find((element) => {
+      return element instanceof HTMLElement && element.isConnected && enabled(element) &&
+        (isAdminRoot(element) || visible(element));
+    }) || null;
   }
 
   function focusStableTarget(target) {
     if (!(target instanceof HTMLElement) || !target.isConnected || !enabled(target)) return;
-    const isAdminRoot = target.id === "adminPreview" || target.classList.contains("admin-terminal-shell-main");
-    if (!isAdminRoot && !visible(target)) return;
+    if (!isAdminRoot(target) && !visible(target)) return;
     if (target.tabIndex < 0 && !target.matches(FOCUSABLE_SELECTOR)) target.tabIndex = -1;
     target.focus({ preventScroll: true });
   }
@@ -139,13 +146,16 @@
     }
 
     function restoreFocus() {
+      const immediateTarget = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+      focusStableTarget(immediateTarget);
       window.requestAnimationFrame(() => {
-        const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+        const target = stableFocusTarget(opener) || immediateTarget || document.querySelector("#adminPreview");
         focusStableTarget(target);
         window.requestAnimationFrame(() => {
-          const replacement = semanticFocusReplacement(opener);
-          if (replacement instanceof HTMLElement && document.activeElement !== replacement) {
-            focusStableTarget(replacement);
+          const finalTarget = semanticFocusReplacement(opener) || stableFocusTarget(opener) || target ||
+            document.querySelector("#adminPreview");
+          if (finalTarget instanceof HTMLElement && document.activeElement !== finalTarget) {
+            focusStableTarget(finalTarget);
           }
         });
       });

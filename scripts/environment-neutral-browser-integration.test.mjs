@@ -1,60 +1,99 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const productionProjectRef = "cgiukdjwicykrmtkhudh";
-const productionPublishableKey = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
-const textExtensions = new Set([".html", ".js", ".mjs", ".json", ".css"]);
+const root = path.resolve(process.cwd());
+const read = (relativePath) => readFileSync(path.join(root, relativePath), "utf8");
 
-function read(relativePath) {
-  return fs.readFileSync(path.join(root, relativePath), "utf8");
+function filesUnder(relativePath) {
+  const absolute = path.join(root, relativePath);
+  if (!statSync(absolute).isDirectory()) return [relativePath];
+  return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+    const child = path.join(relativePath, entry.name);
+    return entry.isDirectory() ? filesUnder(child) : [child];
+  });
 }
 
-function walk(relativePath) {
-  const absolutePath = path.join(root, relativePath);
-  const result = [];
-  for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
-    const childRelative = path.join(relativePath, entry.name);
-    if (entry.isDirectory()) result.push(...walk(childRelative));
-    else if (textExtensions.has(path.extname(entry.name))) result.push(childRelative);
-  }
-  return result;
-}
-
-function assertOrdered(source, orderedFragments, label) {
+function assertOrdered(source, fragments) {
   let previous = -1;
-  for (const fragment of orderedFragments) {
-    const position = source.indexOf(fragment);
-    assert.notEqual(position, -1, `${label} is missing ${fragment}`);
-    assert.ok(position > previous, `${label} loads ${fragment} out of order`);
-    previous = position;
+  for (const fragment of fragments) {
+    const index = source.indexOf(fragment);
+    assert.notEqual(index, -1, `Missing ${fragment}`);
+    assert.ok(index > previous, `${fragment} is loaded out of order`);
+    previous = index;
   }
+}
+
+function assertNoBearerConstruction(source, label) {
+  assert.doesNotMatch(
+    source,
+    /headers\s*:\s*\{[^}]*Authorization\s*:/s,
+    `${label} constructs an Authorization request header`,
+  );
+  assert.doesNotMatch(
+    source,
+    /headers\.(?:set|append)\(\s*["']Authorization["']/iu,
+    `${label} mutates an Authorization request header`,
+  );
 }
 
 test("deployable browser surface contains no committed production binding", () => {
-  const files = ["index.html", ...walk("frontend"), ...walk("auth"), ...walk("admin"), ...walk("player-terminal")];
-  for (const relativePath of files) {
+  const productionProjectRef = "eecvbssdvarfcykcfrny";
+  const productionPublishableKey =
+    "sb_publishable_caHEJkH8LxlDVU9VFcYrUQ_6HTrCGP8";
+  const deployableFiles = [
+    ...filesUnder("frontend"),
+    ...filesUnder("admin"),
+    ...filesUnder("auth"),
+    ...filesUnder("player-terminal"),
+    "index.html",
+    "docs/operations/environments/runtime-config.env.template.js",
+  ].filter((relativePath) => /\.(?:html|js|mjs|json|css)$/u.test(relativePath));
+
+  for (const relativePath of deployableFiles) {
     const source = read(relativePath);
-    assert.equal(source.includes(productionProjectRef), false, `${relativePath} embeds the production project ref`);
-    assert.equal(source.includes(productionPublishableKey), false, `${relativePath} embeds the production publishable key`);
+    assert.equal(
+      source.includes(productionProjectRef),
+      false,
+      `${relativePath} embeds the production project ref`,
+    );
+    assert.equal(
+      source.includes(productionPublishableKey),
+      false,
+      `${relativePath} embeds the production publishable key`,
+    );
   }
 });
 
-test("all browser API consumers use the validated runtime authority", () => {
+test("browser URL owners use the validated runtime authority", () => {
   for (const relativePath of [
     "frontend/src/core/constants.js",
     "auth/reset-password.js",
     "admin/auth-session-manager.js",
     "player-terminal/host-runtime.js",
-    "admin/player-access-code-bridge.js",
     "admin/admin-auth.js",
     "admin/classroom-write-fallback.js",
   ]) {
-    assert.match(read(relativePath), /EconovariaRuntimeConfig/, `${relativePath} does not consume runtime config`);
+    assert.match(
+      read(relativePath),
+      /EconovariaRuntimeConfig/,
+      `${relativePath} does not consume runtime config`,
+    );
   }
+
+  const apiSource = read("frontend/src/core/api.js");
+  assert.match(apiSource, /window\.Econovaria\?\.core\?\.constants/);
+  assert.doesNotMatch(apiSource, /supabase\.co/);
+  assert.doesNotMatch(apiSource, /sb_publishable_[A-Za-z0-9_-]+/);
+});
+
+test("same-origin Player credential adapter creates no remote authority", () => {
+  const source = read("admin/player-access-code-bridge.js");
+  assert.doesNotMatch(source, /supabase\.co/);
+  assert.doesNotMatch(source, /sb_publishable_/);
+  assertNoBearerConstruction(source, "Player credential adapter");
+  assert.match(source, /\/api\/admin/);
 });
 
 test("entry points load deployment config and validator before consumers", () => {
@@ -62,25 +101,56 @@ test("entry points load deployment config and validator before consumers", () =>
     'src="runtime-config.env.js"',
     'src="frontend/src/core/runtime-config.js"',
     'src="frontend/src/core/constants.js"',
-  ], "root login");
-  assertOrdered(read("auth/reset-password.html"), [
-    'src="../runtime-config.env.js"',
-    'src="../frontend/src/core/runtime-config.js"',
-    'src="./reset-password.js"',
-  ], "password recovery");
-  assertOrdered(read("player-terminal/index.html"), [
-    'src="../runtime-config.env.js"',
-    'src="../frontend/src/core/runtime-config.js"',
-    'src="./host-runtime.js"',
-  ], "player terminal");
+    'src="frontend/src/core/api.js"',
+    'src="frontend/src/core/login.js"',
+  ]);
   assertOrdered(read("admin/index.html"), [
     'src="../runtime-config.env.js"',
     'src="../frontend/src/core/runtime-config.js"',
     'src="./auth-session-manager.js"',
-  ], "admin console");
+    'src="./admin-auth.js"',
+  ]);
+  assertOrdered(read("auth/reset-password.html"), [
+    'src="../runtime-config.env.js"',
+    'src="../frontend/src/core/runtime-config.js"',
+    'src="./reset-password.js"',
+  ]);
+  assertOrdered(read("player-terminal/index.html"), [
+    'src="../runtime-config.env.js"',
+    'src="../frontend/src/core/runtime-config.js"',
+    'src="./host-runtime.js"',
+  ]);
 });
 
-test("admin API metadata is populated only by validated runtime config", () => {
-  assert.match(read("admin/index.html"), /name="econovaria-admin-api-base" content=""/);
-  assert.match(read("frontend/src/core/runtime-config.js"), /adminApiMeta\.content = runtimeConfig\.adminApiUrl/);
+test("Admin metadata is populated only with the validated BFF authority", () => {
+  const runtime = read("frontend/src/core/runtime-config.js");
+  const adminHtml = read("admin/index.html");
+  assert.match(runtime, /adminBffApiUrl/);
+  assert.match(runtime, /adminApiMeta\.content = runtimeConfig\.adminBffApiUrl/);
+  assert.match(
+    adminHtml,
+    /meta name="econovaria-admin-api-base" content=""/,
+  );
+});
+
+test("recovery and Admin browser consumers use dedicated reviewed boundaries", () => {
+  const runtime = read("frontend/src/core/runtime-config.js");
+  const recovery = read("auth/reset-password.js");
+  const adminManager = read("admin/auth-session-manager.js");
+  const adminAuth = read("admin/admin-auth.js");
+  const writeAdapter = read("admin/classroom-write-fallback.js");
+
+  assert.match(runtime, /passwordResetApiUrl/);
+  assert.match(runtime, /webSessionApiUrl/);
+  assert.match(runtime, /adminBffApiUrl/);
+  assert.match(recovery, /PASSWORD_RESET_API_URL/);
+  assert.doesNotMatch(recovery, /\/auth\/v1\/user/);
+  assert.match(adminManager, /credentials:\s*"include"/);
+  assert.match(adminManager, /\/session\/bootstrap/);
+  assertNoBearerConstruction(adminManager, "Admin session manager");
+  assert.match(adminAuth, /ADMIN_BFF_BASE/);
+  assert.doesNotMatch(adminAuth, /Bearer/);
+  assert.match(writeAdapter, /legacyClassroomFallbackRetired:\s*true/);
+  assert.doesNotMatch(writeAdapter, /classroom-api/);
+  assertNoBearerConstruction(writeAdapter, "Admin write lifecycle adapter");
 });

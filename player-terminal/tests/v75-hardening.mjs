@@ -13,6 +13,10 @@ import { buildPlayerTerminalConfig } from "../src/config/player-terminal.config.
 import { renderShell } from "../src/components/layout.js";
 import { previewData } from "../src/data/preview-data.js";
 
+const CSRF_TEST = "C".repeat(43);
+const CSRF_OLD = "A".repeat(43);
+const CSRF_NEW = "B".repeat(43);
+
 const productionConfig = buildPlayerTerminalConfig(
   { usePreviewData: true, allowPreviewMode: true },
   { hostname: "play.econovaria.example", search: "?preview=1" }
@@ -58,6 +62,20 @@ const previewCapabilities = resolveCapabilities({ config: { usePreviewData: true
 assert.ok(Object.values(previewCapabilities.routes).every(Boolean), "Preview must keep all routes available for visual verification.");
 assert.ok(Object.values(previewCapabilities.actions).every(Boolean), "Preview must keep all action boundaries testable.");
 
+function connectedConfig(overrides = {}) {
+  return {
+    usePreviewData: false,
+    requestTimeoutMs: 1000,
+    writeCooldownMs: 300,
+    allowedImageHosts: [],
+    capabilities: null,
+    authenticated: true,
+    csrfToken: CSRF_TEST,
+    gameSessionId: "game_test",
+    ...overrides
+  };
+}
+
 const calls = [];
 const readModels = {
   session: structuredClone(previewData.session),
@@ -65,38 +83,25 @@ const readModels = {
   notifications: [],
   store: structuredClone(previewData.store),
   banking: structuredClone(previewData.banking),
+  inventory: structuredClone(previewData.inventory),
   news: structuredClone(previewData.news)
 };
-const api = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 300,
-  allowedImageHosts: [],
-  capabilities: null,
-  playerSessionToken: "ps_test",
-  gameSessionId: "game_test",
-  playerSessionId: "session_test",
-  accessToken: "",
+const api = new PlayerApi(connectedConfig({
   apiCall: async (context) => {
     calls.push(context.endpointKey);
     if (!(context.endpointKey in readModels)) throw Object.assign(new Error("unsupported"), { status: 404 });
     return structuredClone(readModels[context.endpointKey]);
   }
-});
+}));
 
 await api.bootstrap();
 assert.deepEqual(calls, ["session", "dashboard", "notifications"], "Bootstrap must load only shell resources.");
 await api.loadRoute("store");
-assert.deepEqual(calls.slice(3).sort(), ["banking", "store"], "Store navigation must load only its route resource plan.");
+assert.deepEqual(calls.slice(3).sort(), ["banking", "inventory", "store"], "Store navigation must load Store, Banking, and Inventory together.");
 assert.ok(!calls.includes("business") && !calls.includes("marketplace"), "Unvisited systems must not load during bootstrap.");
 
 let newsReads = 0;
-const dedupeApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 300,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_test",
+const dedupeApi = new PlayerApi(connectedConfig({
   apiCall: async ({ endpointKey }) => {
     if (endpointKey === "news") {
       newsReads += 1;
@@ -105,7 +110,7 @@ const dedupeApi = new PlayerApi({
     }
     return structuredClone(readModels[endpointKey]);
   }
-});
+}));
 await Promise.all([dedupeApi.request("news", { force: true }), dedupeApi.request("news", { force: true })]);
 assert.equal(newsReads, 1, "Concurrent identical reads must share one in-flight request.");
 
@@ -117,17 +122,13 @@ const oldReadGate = new Promise((resolve) => { releaseOldRead = resolve; });
 const newReadGate = new Promise((resolve) => { releaseNewRead = resolve; });
 const oldReadStarted = new Promise((resolve) => { markOldReadStarted = resolve; });
 const newReadStarted = new Promise((resolve) => { markNewReadStarted = resolve; });
-const sessionReadTokens = [];
-const sessionRaceApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 300,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_old",
+const sessionReadBindings = [];
+const sessionRaceApi = new PlayerApi(connectedConfig({
+  csrfToken: CSRF_OLD,
   apiCall: async ({ endpointKey, session, signal }) => {
     assert.equal(endpointKey, "news");
-    sessionReadTokens.push(session.playerSessionToken);
-    if (session.playerSessionToken === "ps_old") {
+    sessionReadBindings.push(session.csrfToken);
+    if (session.csrfToken === CSRF_OLD) {
       markOldReadStarted();
       await oldReadGate;
       assert.equal(signal.aborted, true, "Replacing the host session must abort old transport work.");
@@ -137,10 +138,10 @@ const sessionRaceApi = new PlayerApi({
     await newReadGate;
     return { items: [{ id: "new-session-news" }] };
   }
-});
+}));
 const oldSessionRead = sessionRaceApi.request("news", { force: true });
 await oldReadStarted;
-sessionRaceApi.setSession({ playerSessionToken: "ps_new" });
+sessionRaceApi.setSession({ authenticated: true, csrfToken: CSRF_NEW });
 const newSessionRead = sessionRaceApi.request("news", { force: true });
 await newReadStarted;
 releaseOldRead();
@@ -149,21 +150,16 @@ assert.equal(sessionRaceApi.inFlightReads.size, 1, "An old completion must not r
 releaseNewRead();
 const newSessionNews = await newSessionRead;
 assert.equal(newSessionNews.items[0].id, "new-session-news");
-assert.deepEqual(sessionReadTokens, ["ps_old", "ps_new"]);
+assert.deepEqual(sessionReadBindings, [CSRF_OLD, CSRF_NEW]);
 assert.equal((await sessionRaceApi.request("news")).items[0].id, "new-session-news", "Only the new session result may remain cached.");
 
-const isolationApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 300,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_test",
+const isolationApi = new PlayerApi(connectedConfig({
   apiCall: async ({ endpointKey }) => {
     if (endpointKey === "business") throw Object.assign(new Error("internal table detail"), { status: 503 });
     if (endpointKey === "news") return structuredClone(previewData.news);
     return structuredClone(readModels[endpointKey]);
   }
-});
+}));
 await assert.rejects(
   isolationApi.loadRoute("business"),
   (error) => error.code === "ROUTE_DATA_UNAVAILABLE" && !error.message.includes("table")
@@ -171,25 +167,13 @@ await assert.rejects(
 const isolatedNews = await isolationApi.loadRoute("news");
 assert.equal(isolatedNews.data.news.items.length, previewData.news.items.length, "One route failure must not poison another route.");
 
-const malformedApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 300,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_test",
-  apiCall: async () => "not-an-object"
-});
+const malformedApi = new PlayerApi(connectedConfig({ apiCall: async () => "not-an-object" }));
 await assert.rejects(malformedApi.request("market"), (error) => error.code === "INVALID_RESPONSE");
 
 let writeContext = null;
 let storeReads = 0;
-const writeApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
+const writeApi = new PlayerApi(connectedConfig({
   writeCooldownMs: 500,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_test",
-  gameSessionId: "game_test",
   apiCall: async (context) => {
     if (context.endpointKey === "store") {
       storeReads += 1;
@@ -202,7 +186,7 @@ const writeApi = new PlayerApi({
     }
     return structuredClone(readModels[context.endpointKey]);
   }
-});
+}));
 await writeApi.request("store");
 const firstWrite = writeApi.execute("storePurchase", { storeItemId: "market-lens", quantity: 1 }, {});
 const duplicateWrite = writeApi.execute("storePurchase", { storeItemId: "market-lens", quantity: 1 }, {});
@@ -210,6 +194,7 @@ assert.equal(firstWrite, duplicateWrite, "Repeated in-flight clicks must resolve
 const writeResult = await firstWrite;
 assert.ok(writeContext.idempotencyKey.startsWith("ptr_storePurchase_"), "Critical writes require an idempotency key.");
 assert.ok(writeContext.requestId.startsWith("ptr_"), "Every write requires a request ID.");
+assert.equal(writeContext.session.csrfToken, CSRF_TEST);
 assert.deepEqual(writeResult.invalidatedResources, WRITE_INVALIDATIONS.storePurchase);
 await writeApi.request("store");
 assert.equal(storeReads, 2, "A successful purchase must invalidate the Store read cache.");
@@ -223,54 +208,45 @@ let markOldWriteStarted;
 const oldWriteGate = new Promise((resolve) => { releaseOldWrite = resolve; });
 const oldWriteStarted = new Promise((resolve) => { markOldWriteStarted = resolve; });
 let sessionStoreReads = 0;
-const sessionWriteApi = new PlayerApi({
-  usePreviewData: false,
-  requestTimeoutMs: 1000,
+const sessionWriteApi = new PlayerApi(connectedConfig({
+  csrfToken: CSRF_OLD,
   writeCooldownMs: 500,
-  allowedImageHosts: [],
-  playerSessionToken: "ps_old",
   apiCall: async ({ endpointKey, session, signal }) => {
     if (endpointKey === "store") {
       sessionStoreReads += 1;
-      return { items: [{ id: session.playerSessionToken }] };
+      return { items: [{ id: session.csrfToken }] };
     }
     markOldWriteStarted();
     await oldWriteGate;
     assert.equal(signal.aborted, true, "A session replacement must abort an outstanding write signal.");
     return { ok: true, purchaseId: "old-session-purchase" };
   }
-});
+}));
 await sessionWriteApi.request("store");
 const oldSessionWrite = sessionWriteApi.execute("storePurchase", { storeItemId: "market-lens", quantity: 1 }, {});
 await oldWriteStarted;
-sessionWriteApi.setSession({ playerSessionToken: "ps_new" });
-assert.equal((await sessionWriteApi.request("store")).items[0].id, "ps_new");
+sessionWriteApi.setSession({ authenticated: true, csrfToken: CSRF_NEW });
+assert.equal((await sessionWriteApi.request("store")).items[0].id, CSRF_NEW);
 releaseOldWrite();
 await assert.rejects(oldSessionWrite, (error) => error.code === "REQUEST_ABORTED");
 assert.equal(sessionWriteApi.writeCompletedAt.size, 0, "An old write must not create a cooldown in the new session.");
-assert.equal((await sessionWriteApi.request("store")).items[0].id, "ps_new");
+assert.equal((await sessionWriteApi.request("store")).items[0].id, CSRF_NEW);
 assert.equal(sessionStoreReads, 2, "An old write completion must not invalidate the new session cache.");
 
 let adapterContext = null;
 const adapter = new AdapterTransport(async (context) => {
   adapterContext = context;
   return { ok: true };
-}, {
-  requestTimeoutMs: 1000,
-  playerSessionToken: "ps_header",
-  gameSessionId: "game_header",
-  playerSessionId: "session_header",
-  accessToken: ""
-});
+}, connectedConfig({ requestTimeoutMs: 1000, gameSessionId: "game_header" }));
 await adapter.request({ endpointKey: "dashboard", method: "GET", path: "/dashboard", requestId: "ptr_adapter" });
-assert.equal(adapterContext.session.playerSessionToken, "ps_header");
+assert.equal(adapterContext.session.authenticated, true);
+assert.equal(adapterContext.session.csrfToken, CSRF_TEST);
+assert.equal(adapterContext.session.gameSessionId, "game_header");
+assert.equal("playerSessionToken" in adapterContext.session, false);
 assert.equal(adapterContext.requestId, "ptr_adapter");
 assert.ok(adapterContext.signal instanceof AbortSignal, "Host adapters must receive a cancellation signal.");
 
-const timeoutAdapter = new AdapterTransport(() => new Promise(() => {}), {
-  requestTimeoutMs: 20,
-  playerSessionToken: "ps_timeout"
-});
+const timeoutAdapter = new AdapterTransport(() => new Promise(() => {}), connectedConfig({ requestTimeoutMs: 20 }));
 await assert.rejects(
   timeoutAdapter.request({ endpointKey: "dashboard", method: "GET", path: "/dashboard", requestId: "ptr_timeout" }),
   (error) => error.code === "REQUEST_TIMEOUT" && error.requestId === "ptr_timeout"
@@ -278,7 +254,7 @@ await assert.rejects(
 
 const secretAdapter = new AdapterTransport(async () => {
   throw Object.assign(new Error("SQL relation secret_table does not exist"), { status: 500 });
-}, { requestTimeoutMs: 1000, playerSessionToken: "ps_safe" });
+}, connectedConfig({ requestTimeoutMs: 1000 }));
 await assert.rejects(
   secretAdapter.request({ endpointKey: "dashboard", method: "GET", path: "/dashboard", requestId: "ptr_safe" }),
   (error) => error.status === 500 && !error.message.includes("secret_table")
@@ -291,13 +267,11 @@ try {
     capturedFetch = { url, options };
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const http = new HttpTransport({
+  const http = new HttpTransport(connectedConfig({
     apiBaseUrl: "https://api.econovaria.example/player",
     requestTimeoutMs: 1000,
-    playerSessionToken: "ps_http",
-    gameSessionId: "game_http",
-    accessToken: ""
-  });
+    gameSessionId: "game_http"
+  }));
   await http.request({
     endpointKey: "storePurchase",
     method: "POST",
@@ -306,7 +280,9 @@ try {
     requestId: "ptr_http",
     idempotencyKey: "ptr_storePurchase_http"
   });
-  assert.equal(capturedFetch.options.headers["x-econovaria-player-session-token"], "ps_http");
+  assert.equal(capturedFetch.options.credentials, "include");
+  assert.equal(capturedFetch.options.headers["x-econovaria-csrf-token"], CSRF_TEST);
+  assert.equal(capturedFetch.options.headers["x-player-session-token"], undefined);
   assert.equal(capturedFetch.options.headers["x-request-id"], "ptr_http");
   assert.equal(capturedFetch.options.headers["idempotency-key"], "ptr_storePurchase_http");
 
@@ -342,7 +318,7 @@ assert.equal(sanitizedStore.items[0].image, "");
 assert.equal(sanitizedStore.items[0].price, null);
 assert.equal(sanitizedStore.items[1].image, "./assets/store-items/market-lens.svg");
 
-assert.equal("logout" in PLAYER_ENDPOINTS, false, "The terminal must not expose a logout API endpoint.");
+assert.equal("logout" in PLAYER_ENDPOINTS, false, "The terminal must not expose a direct Player token logout endpoint.");
 assert.deepEqual(ROUTE_RESOURCE_PLAN.profile.required, ["session"]);
 
 const capabilityData = structuredClone(previewData);
@@ -358,4 +334,4 @@ assert.ok(shell.includes('data-route="store"'));
 assert.ok(!shell.includes('data-route="marketplace"'), "Disabled routes must not appear in navigation.");
 assert.ok(!shell.includes('data-route="business"'), "Unsupported route groups must be removed from navigation.");
 
-console.log("v7.5 hardening passed: lazy reads, capability gates, fail-closed preview, session isolation, transport controls, safe errors, idempotency, invalidation, and schema guards are valid.");
+console.log("v7.5 hardening passed: lazy reads, capability gates, fail-closed preview, cookie-session isolation, transport controls, safe errors, idempotency, invalidation, and schema guards are valid.");

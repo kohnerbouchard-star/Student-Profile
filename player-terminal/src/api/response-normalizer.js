@@ -106,6 +106,12 @@ function unwrap(endpointKey, raw) {
     typeof raw.progression === "object" &&
     !Array.isArray(raw.progression)
   ) return raw.progression;
+  if (
+    endpointKey === "worldRuntime" &&
+    raw.context &&
+    typeof raw.context === "object" &&
+    !Array.isArray(raw.context)
+  ) return raw.context;
   if (Object.prototype.hasOwnProperty.call(raw, "data") && (raw.ok === true || Object.keys(raw).length <= 3)) return raw.data;
   return raw;
 }

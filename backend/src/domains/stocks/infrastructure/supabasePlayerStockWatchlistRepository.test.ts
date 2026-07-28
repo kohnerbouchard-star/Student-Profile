@@ -44,7 +44,7 @@ Deno.test("player stock watchlist repository scopes list reads and latest ticks"
   }]);
 });
 
-Deno.test("player stock watchlist repository makes PUT and DELETE idempotent", async () => {
+Deno.test("player stock watchlist repository uses the scoped mutation RPC for idempotent PUT and DELETE", async () => {
   const client = new FakeClient();
   client.assetRows.push(assetRow());
   client.watchlistRows.push(watchlistRow());
@@ -73,9 +73,16 @@ Deno.test("player stock watchlist repository makes PUT and DELETE idempotent", a
     isWatchlisted: false,
   });
   assertEquals(removedAgain.changed, false);
+
+  assertEquals(client.rpcCalls.slice(0, 3), [
+    mutationCall(true),
+    mutationCall(false),
+    mutationCall(false),
+  ]);
+  assertEquals(client.directMutationAttempted, false);
 });
 
-Deno.test("player stock watchlist repository rejects inactive additions and maps schema errors", async () => {
+Deno.test("player stock watchlist repository rejects unavailable assets and malformed RPC results", async () => {
   const inactiveClient = new FakeClient();
   inactiveClient.assetRows.push(assetRow({ is_active: false }));
   await assertRejectsCode(
@@ -87,6 +94,20 @@ Deno.test("player stock watchlist repository rejects inactive additions and maps
         isWatchlisted: true,
       }),
     "player_stock_watchlist_asset_not_found",
+  );
+
+  const malformedClient = new FakeClient();
+  malformedClient.assetRows.push(assetRow());
+  malformedClient.malformedMutationResult = true;
+  await assertRejectsCode(
+    () => new SupabasePlayerStockWatchlistRepository(malformedClient as never)
+      .setWatchlisted({
+        gameId: GAME_ID,
+        playerUuid: PLAYER_UUID,
+        ticker: "AURA",
+        isWatchlisted: true,
+      }),
+    "player_stock_watchlist_write_failed",
   );
 
   const schemaClient = new FakeClient();
@@ -113,6 +134,8 @@ class FakeClient {
   readonly rpcCalls: { functionName: string; args: unknown }[] = [];
   lastRange: { from: number; to: number } | null = null;
   tableError: { code?: string; message: string } | null = null;
+  malformedMutationResult = false;
+  directMutationAttempted = false;
 
   from(tableName: string): FakeQuery {
     return new FakeQuery(this, tableName);
@@ -120,10 +143,65 @@ class FakeClient {
 
   async rpc(functionName: string, args: any) {
     this.rpcCalls.push({ functionName, args });
+    if (functionName === "read_latest_stock_market_ticks_for_game") {
+      return {
+        data: this.tickRows.filter((row) =>
+          row.game_session_id === args.p_game_session_id
+        ),
+        error: null,
+      };
+    }
+
+    if (functionName !== "set_player_stock_watchlist_v1") {
+      throw new Error(`Unexpected RPC ${functionName}`);
+    }
+
+    const asset = this.assetRows.find((row) =>
+      row.game_session_id === args.p_game_session_id &&
+      row.ticker === args.p_ticker &&
+      (args.p_is_watchlisted !== true || row.is_active === true)
+    );
+    if (!asset) {
+      return {
+        data: null,
+        error: {
+          code: "P0001",
+          message: "player_stock_watchlist_asset_not_available",
+        },
+      };
+    }
+
+    if (this.malformedMutationResult) {
+      return { data: [{ changed: "yes" }], error: null };
+    }
+
+    const existingIndex = this.watchlistRows.findIndex((row) =>
+      row.game_session_id === args.p_game_session_id &&
+      row.player_id === args.p_player_id &&
+      row.stock_asset_id === asset.id
+    );
+    let changed = false;
+    if (args.p_is_watchlisted === true && existingIndex < 0) {
+      this.watchlistRows.push(watchlistRow({
+        game_session_id: args.p_game_session_id,
+        player_id: args.p_player_id,
+        stock_asset_id: asset.id,
+      }));
+      changed = true;
+    } else if (args.p_is_watchlisted === false && existingIndex >= 0) {
+      this.watchlistRows.splice(existingIndex, 1);
+      changed = true;
+    }
+
     return {
-      data: this.tickRows.filter((row) =>
-        row.game_session_id === args.p_game_session_id
-      ),
+      data: [{
+        game_session_id: args.p_game_session_id,
+        player_id: args.p_player_id,
+        stock_asset_id: asset.id,
+        ticker: asset.ticker,
+        is_watchlisted: args.p_is_watchlisted,
+        changed,
+      }],
       error: null,
     };
   }
@@ -169,22 +247,14 @@ class FakeQuery implements PromiseLike<any> {
     return this;
   }
 
-  async insert(values: any) {
-    if (this.client.tableError) return { data: null, error: this.client.tableError };
-    const duplicate = this.client.watchlistRows.some((row) =>
-      row.game_session_id === values.game_session_id &&
-      row.player_id === values.player_id &&
-      row.stock_asset_id === values.stock_asset_id
-    );
-    if (duplicate) {
-      return { data: null, error: { code: "23505", message: "duplicate" } };
-    }
-    this.client.watchlistRows.push(watchlistRow(values));
-    return { data: [], error: null };
+  insert(): never {
+    this.client.directMutationAttempted = true;
+    throw new Error("Direct watchlist inserts are forbidden.");
   }
 
-  delete(): FakeDeleteQuery {
-    return new FakeDeleteQuery(this.client);
+  delete(): never {
+    this.client.directMutationAttempted = true;
+    throw new Error("Direct watchlist deletes are forbidden.");
   }
 
   then(onfulfilled?: any, onrejected?: any): PromiseLike<any> {
@@ -214,28 +284,16 @@ class FakeQuery implements PromiseLike<any> {
   }
 }
 
-class FakeDeleteQuery {
-  private readonly filters: { column: string; value: unknown }[] = [];
-
-  constructor(private readonly client: FakeClient) {}
-
-  eq(column: string, value: unknown): FakeDeleteQuery {
-    this.filters.push({ column, value });
-    return this;
-  }
-
-  async select() {
-    if (this.client.tableError) return { data: null, error: this.client.tableError };
-    const removed = this.client.watchlistRows.filter((row) =>
-      this.filters.every((filter) => row[filter.column] === filter.value)
-    );
-    this.client.watchlistRows.splice(
-      0,
-      this.client.watchlistRows.length,
-      ...this.client.watchlistRows.filter((row) => !removed.includes(row)),
-    );
-    return { data: removed.map((row) => ({ id: row.id })), error: null };
-  }
+function mutationCall(isWatchlisted: boolean) {
+  return {
+    functionName: "set_player_stock_watchlist_v1",
+    args: {
+      p_game_session_id: GAME_ID,
+      p_player_id: PLAYER_UUID,
+      p_ticker: "AURA",
+      p_is_watchlisted: isWatchlisted,
+    },
+  };
 }
 
 function watchlistRow(overrides: Record<string, unknown> = {}) {

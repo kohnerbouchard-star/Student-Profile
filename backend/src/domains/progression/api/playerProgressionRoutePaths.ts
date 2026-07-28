@@ -1,33 +1,33 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import {
   PROGRESSION_REWARD_ID_PATTERN,
   PROGRESSION_SKILL_ID_PATTERN,
   type PlayerProgressionRoute,
 } from "../contracts/progressionContracts.ts";
 
-const DIRECT_PREFIX = "/players/me/progression";
-const EDGE_PREFIX = "/functions/v1/classroom-api/players/me/progression";
-
 export function readPlayerProgressionRoutePath(
   pathname: string,
 ): PlayerProgressionRoute | null {
-  const prefix = pathname === DIRECT_PREFIX || pathname.startsWith(`${DIRECT_PREFIX}/`)
-    ? DIRECT_PREFIX
-    : pathname === EDGE_PREFIX || pathname.startsWith(`${EDGE_PREFIX}/`)
-    ? EDGE_PREFIX
-    : null;
-  if (!prefix) return null;
+  const segments = readPlayerApiRouteSegments(pathname);
+  if (
+    !segments ||
+    segments[0] !== "players" ||
+    segments[1] !== "me" ||
+    segments[2] !== "progression"
+  ) {
+    return null;
+  }
 
-  const suffix = pathname.slice(prefix.length);
-  if (!suffix) return { kind: "read" };
-  const segments = suffix.split("/").filter(Boolean);
-  if (segments.length === 3 && segments[0] === "skills" && segments[2] === "unlock") {
-    return PROGRESSION_SKILL_ID_PATTERN.test(segments[1] ?? "")
-      ? { kind: "unlock", skillId: segments[1]! }
+  const suffix = segments.slice(3);
+  if (suffix.length === 0) return { kind: "read" };
+  if (suffix.length === 3 && suffix[0] === "skills" && suffix[2] === "unlock") {
+    return PROGRESSION_SKILL_ID_PATTERN.test(suffix[1] ?? "")
+      ? { kind: "unlock", skillId: suffix[1]! }
       : { kind: "malformed" };
   }
-  if (segments.length === 3 && segments[0] === "rewards" && segments[2] === "claim") {
-    return PROGRESSION_REWARD_ID_PATTERN.test(segments[1] ?? "")
-      ? { kind: "claim", rewardId: segments[1]! }
+  if (suffix.length === 3 && suffix[0] === "rewards" && suffix[2] === "claim") {
+    return PROGRESSION_REWARD_ID_PATTERN.test(suffix[1] ?? "")
+      ? { kind: "claim", rewardId: suffix[1]! }
       : { kind: "malformed" };
   }
   return { kind: "malformed" };

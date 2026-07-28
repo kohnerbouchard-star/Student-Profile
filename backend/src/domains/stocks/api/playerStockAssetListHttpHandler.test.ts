@@ -16,7 +16,7 @@ const PLAYER_SESSION_ID = "00000000-0000-4000-8000-000000000020";
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const NOW = new Date("2026-07-18T05:00:00.000Z");
 
-Deno.test("player stock asset list derives scope and returns browser-safe DTOs", async () => {
+Deno.test("player stock asset list derives player scope and returns browser-safe watchlist state", async () => {
   const repository = new FakeRepository();
   const response = await handlePlayerStockAssetListRequest(
     request("/players/me/stocks/assets?limit=25&offset=5"),
@@ -31,8 +31,14 @@ Deno.test("player stock asset list derives scope and returns browser-safe DTOs",
     response.headers.get("vary"),
     "authorization, x-player-session-token",
   );
-  assertEquals(repository.inputs, [{ gameId: GAME_ID, limit: 26, offset: 5 }]);
+  assertEquals(repository.inputs, [{
+    gameId: GAME_ID,
+    playerUuid: PLAYER_UUID,
+    limit: 26,
+    offset: 5,
+  }]);
   assertEquals(body.assets[0].assetId, "AURA");
+  assertEquals(body.assets[0].isWatchlisted, true);
   assertEquals(body.sectors, ["All", "AI_AEROSPACE"]);
   const serialized = JSON.stringify(body);
   assertEquals(serialized.includes(ASSET_UUID), false);
@@ -91,10 +97,16 @@ Deno.test("player stock asset reads reject runner secrets, malformed paths, and 
 class FakeRepository implements PlayerStockAssetListRepository {
   readonly inputs: unknown[] = [];
 
-  async listAssets(input: { gameId: string; limit: number; offset: number }) {
+  async listAssets(input: {
+    gameId: string;
+    playerUuid: string;
+    limit: number;
+    offset: number;
+  }) {
     this.inputs.push(input);
     return {
       gameId: GAME_ID,
+      playerUuid: PLAYER_UUID,
       assets: [asset()],
       latestTicks: [{
         gameId: GAME_ID,
@@ -102,6 +114,7 @@ class FakeRepository implements PlayerStockAssetListRepository {
         tickIndex: 42,
         volume: 1000,
       }],
+      watchlistedAssetUuids: [ASSET_UUID],
     };
   }
 }

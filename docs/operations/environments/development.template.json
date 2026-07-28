@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "environment": "development",
   "githubEnvironment": "development",
   "identity": "TODO_DEVELOPMENT_SUPABASE_PROJECT_REF",
@@ -12,12 +12,14 @@
     "organization": "EconovariaOrg",
     "projectRef": "TODO_DEVELOPMENT_SUPABASE_PROJECT_REF"
   },
+  "variableNames": [
+    "SUPABASE_PROJECT_REF",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_URL"
+  ],
   "secretNames": [
     "FRONTEND_DEPLOY_TOKEN",
     "SUPABASE_ACCESS_TOKEN",
-    "SUPABASE_ANON_KEY",
-    "SUPABASE_PROJECT_REF",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_URL"
+    "SUPABASE_SECRET_KEY"
   ]
 }

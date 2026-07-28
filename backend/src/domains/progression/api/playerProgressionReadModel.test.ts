@@ -83,6 +83,29 @@ Deno.test("Player Progression self read preserves private achievement and hidden
   assertNoUuid(JSON.stringify(result));
 });
 
+Deno.test("Player Progression self read safely normalizes achievements with no earned reward", () => {
+  const result = normalizePlayerProgressionReadModelV1({
+    ...valid,
+    achievements: [{
+      ...valid.achievements[0],
+      currentValue: 0,
+      progressText: "0 / 1",
+      complete: false,
+      completedAt: null,
+      claimable: null,
+      rewardId: null,
+      rewardKind: null,
+      rewardAmount: null,
+    }],
+  });
+  const achievement = (result.achievements as Array<Record<string, unknown>>)[0];
+  assertEquals(achievement.claimable, false);
+  assertEquals(achievement.rewardId, null);
+  assertEquals(achievement.rewardKind, null);
+  assertEquals(achievement.rewardAmount, 0);
+  assertNoUuid(JSON.stringify(result));
+});
+
 Deno.test("Player Progression self read rejects unexpected top-level and nested private fields", () => {
   for (const candidate of [
     { ...valid, playerUuid: "00000000-0000-4000-8000-000000000021" },
@@ -93,6 +116,35 @@ Deno.test("Player Progression self read rejects unexpected top-level and nested 
     {
       ...valid,
       reputation: [{ ...valid.reputation[0], idempotencyKey: "secret" }],
+    },
+  ]) assertInvalid(candidate);
+});
+
+Deno.test("Player Progression self read rejects inconsistent or malformed reward state", () => {
+  for (const candidate of [
+    {
+      ...valid,
+      achievements: [{ ...valid.achievements[0], claimable: "yes" }],
+    },
+    {
+      ...valid,
+      achievements: [{
+        ...valid.achievements[0],
+        claimable: true,
+        rewardId: null,
+        rewardKind: null,
+        rewardAmount: null,
+      }],
+    },
+    {
+      ...valid,
+      achievements: [{
+        ...valid.achievements[0],
+        claimable: false,
+        rewardId: `rwd_${"b".repeat(32)}`,
+        rewardKind: null,
+        rewardAmount: 1,
+      }],
     },
   ]) assertInvalid(candidate);
 });

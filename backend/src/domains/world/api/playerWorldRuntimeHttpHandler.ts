@@ -87,7 +87,7 @@ export async function handlePlayerWorldRuntimeRequest(
           request: { answers },
           idempotencyKey: requireIdempotencyKey(request),
         });
-        return jsonOk({ arrival });
+        return jsonOk({ ok: true, arrival });
       }
       case "travelQuote": {
         const body = await readStrictObject(request, ["toLocationId", "allowedModes"]);
@@ -128,7 +128,7 @@ export async function handlePlayerWorldRuntimeRequest(
             expectedRevision: requireRevision(body.expectedRevision),
           },
         });
-        return jsonOk({ residency });
+        return jsonOk({ ok: true, residency });
       }
     }
   } catch (error) {

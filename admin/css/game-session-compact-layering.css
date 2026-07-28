@@ -1,0 +1,11 @@
+/* Compact Admin session controls must remain below main-content actions. */
+@media (max-width: 1180px) {
+  .econovaria-admin-game-session-controls-host {
+    z-index: auto !important;
+  }
+
+  .econovaria-admin-game-session-controls-host .econovaria-admin-logout-button,
+  .econovaria-admin-game-session-controls-host [data-econovaria-admin-logout="true"] {
+    z-index: auto !important;
+  }
+}

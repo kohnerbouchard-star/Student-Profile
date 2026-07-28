@@ -1,10 +1,10 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createSpecializedQualityHarness,
+  GAME_ID,
+} from "./admin-specialized-quality-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
-const GAME_ID = "00000000-0000-4000-8000-000000000201";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000202";
 const PLAYER_UUID = "00000000-0000-4000-8000-000000000203";
 const CREATE_IDENTIFIER = "RFID:CREATE-203";
 const CREATE_ACCESS_CODE = "CREATE-8246";
@@ -12,40 +12,14 @@ const UPDATE_IDENTIFIER = "RFID:UPDATED-203";
 const UPDATE_ACCESS_CODE = "UPDATED-9357";
 const ID_ONLY_IDENTIFIER = "RFID:UPDATED-204";
 
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-
 function flattenedBody(value) {
   const body = value && typeof value === "object" ? value : {};
   const payload = body.payload && typeof body.payload === "object" ? body.payload : {};
   return { ...body, ...payload };
 }
-
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
-
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "RFID Identity Smoke Game",
-  name: "RFID Identity Smoke Game",
-  status: "active",
-  gameCode: "RFID01",
-};
 
 const existingPlayer = {
   id: PLAYER_UUID,
@@ -62,253 +36,78 @@ const existingPlayer = {
   currencyCode: "NRC",
 };
 
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [existingPlayer],
-  roster: [existingPlayer],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 1,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 1 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {},
-  logs: [],
-  dashboard: {
-    activePlayerCount: 1,
-    totalPlayers: 1,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-function bootstrapResponse() {
-  return {
-    data: {
-      admin: {
-        id: ADMIN_ID,
-        accountId: ADMIN_ID,
-        displayName: "Smoke Test Administrator",
-        email: "admin@example.test",
-        role: "game_admin",
-        roles: ["game_admin"],
-      },
-      activeGame: game,
-      games: [game],
-      permissions: ["*"],
-      roles: ["game_admin"],
-      adminRole: "game_admin",
-      csrfToken: "",
-      session: {
-        id: ADMIN_ID,
-        csrfToken: "",
-        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-      },
-      capabilities: {},
+const harness = await createSpecializedQualityHarness("admin-player-identity", {
+  model: {
+    players: [existingPlayer],
+    roster: [existingPlayer],
+    attendanceSummary: {
+      presentCount: 0,
+      lateCount: 0,
+      absentCount: 0,
+      activePlayerCount: 1,
+      rewardsIssuedCount: 0,
+      rewardsIssuedTotal: 0,
     },
-  };
-}
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-const errors = [];
-const consoleMessages = [];
-const writes = [];
-let phase = "initializing";
-
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
-page.on("requestfailed", (request) => {
-  const url = request.url();
-  const failure = request.failure()?.errorText || "";
-  if (url.endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
-});
-
-await page.addInitScript(({ accessToken, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "identity-smoke-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const request = route.request();
-  const pathname = new URL(request.url()).pathname;
-  const method = request.method();
-
-  if (method === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf, x-csrf-token",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-
-  let body = null;
-  if (["POST", "PATCH", "PUT"].includes(method)) {
-    try {
-      body = request.postDataJSON();
-    } catch (_) {
-      body = {};
+    attendanceCounts: { present: 0, late: 0, absent: 0, total: 1 },
+    dashboard: {
+      activePlayerCount: 1,
+      totalPlayers: 1,
+      onlinePlayerCount: 0,
+      attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
+      leaderboard: [],
+      recentActivity: [],
+      marketStatus: "open",
+    },
+  },
+  handleProxy: ({ method, path, parsedBody }) => {
+    const payload = flattenedBody(parsedBody);
+    if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players`)) {
+      return {
+        status: 201,
+        body: {
+          ok: true,
+          player: {
+            id: "00000000-0000-4000-8000-000000000204",
+            displayName: payload.displayName,
+            rosterLabel: payload.rosterLabel,
+            playerIdentifier: payload.playerIdentifier,
+            status: "active",
+          },
+          accessCode: {
+            studentCode: payload.accessCode,
+            status: "active",
+            createdAt: new Date().toISOString(),
+          },
+        },
+      };
     }
-  }
-
-  const payload = flattenedBody(body);
-  const write = {
-    service: "admin-api",
-    pathname,
-    method,
-    headers: request.headers(),
-    body,
-    payload,
-  };
-
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players`)) {
-    writes.push(write);
-    await route.fulfill({
-      status: 201,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({
-        ok: true,
-        player: {
-          id: "00000000-0000-4000-8000-000000000204",
-          displayName: payload.displayName,
-          rosterLabel: payload.rosterLabel,
-          playerIdentifier: payload.playerIdentifier,
-          status: "active",
+    if (method === "PATCH" && path.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/settings`)) {
+      return { body: { ok: true, data: { saved: true, settings: parsedBody?.settings || {} } } };
+    }
+    if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)) {
+      return {
+        body: {
+          ok: true,
+          player: {
+            id: PLAYER_UUID,
+            displayName: existingPlayer.displayName,
+            rosterLabel: existingPlayer.rosterLabel,
+            playerIdentifier: payload.playerIdentifier,
+            status: "active",
+          },
+          accessCode: payload.accessCode
+            ? { studentCode: payload.accessCode, status: "active", createdAt: new Date().toISOString() }
+            : { studentCode: null, status: "unchanged", createdAt: null },
         },
-        accessCode: {
-          studentCode: payload.accessCode,
-          status: "active",
-          createdAt: new Date().toISOString(),
-        },
-      }),
-    });
-    return;
-  }
-
-  if (method === "PATCH" && pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/settings`)) {
-    writes.push(write);
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({ ok: true, data: { saved: true, settings: body?.settings || {} } }),
-    });
-    return;
-  }
-
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)) {
-    writes.push(write);
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({
-        ok: true,
-        player: {
-          id: PLAYER_UUID,
-          displayName: existingPlayer.displayName,
-          rosterLabel: existingPlayer.rosterLabel,
-          playerIdentifier: payload.playerIdentifier,
-          status: "active",
-        },
-        accessCode: payload.accessCode
-          ? { studentCode: payload.accessCode, status: "active", createdAt: new Date().toISOString() }
-          : { studentCode: null, status: "unchanged", createdAt: null },
-      }),
-    });
-    return;
-  }
-
-  if (method === "GET" && pathname.endsWith(`/games/${GAME_ID}/players`)) {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({ data: { ...common, players: [existingPlayer], roster: [existingPlayer] } }),
-    });
-    return;
-  }
-
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(pathname.endsWith("/session/bootstrap") ? bootstrapResponse() : { data: common }),
-  });
+      };
+    }
+    return null;
+  },
 });
-
-await page.route("**/functions/v1/classroom-api/**", async (route) => {
-  const request = route.request();
-  const pathname = new URL(request.url()).pathname;
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id",
-        "access-control-allow-methods": "GET,POST,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  writes.push({
-    service: "classroom-api",
-    pathname,
-    method: request.method(),
-    headers: request.headers(),
-    body: request.method() === "POST" ? request.postDataJSON() : null,
-  });
-  await route.fulfill({
-    status: 404,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*" },
-    body: JSON.stringify({
-      error: {
-        code: "unexpected_direct_route",
-        message: "Existing-player identity settings must use admin-api.",
-      },
-    }),
-  });
-});
+const { page, errors, writes, dir } = harness;
+const consoleMessages = [];
+let phase = "initializing";
+page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
 
 async function closeCreatedPlayerConfirmation() {
   const confirmation = page.locator("[data-admin-player-created-confirmation]");
@@ -318,16 +117,23 @@ async function closeCreatedPlayerConfirmation() {
 }
 
 async function saveDiagnostics(name, extra = {}) {
-  writeFileSync(`${ARTIFACT_DIR}/${name}.json`, JSON.stringify({
+  writeFileSync(`${dir}/${name}.json`, JSON.stringify({
     phase,
     writes,
     errors,
     consoleMessages,
     ...extra,
   }, null, 2));
-  writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
-  await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
+  writeFileSync(`${dir}/${name}.html`, await page.content());
+  await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true });
 }
+
+const mappedWrites = () => writes.map((write) => ({
+  ...write,
+  pathname: write.path,
+  payload: flattenedBody(write.parsedBody),
+  body: write.parsedBody,
+}));
 
 try {
   phase = "opening admin shell";
@@ -356,24 +162,24 @@ try {
   const confirmation = page.locator("[data-admin-player-created-confirmation]");
   await confirmation.waitFor({ state: "visible", timeout: 8000 });
   const createdCredentials = {
-    playerIdentifier: await confirmation.locator("[data-admin-player-created-identifier]").textContent(),
-    accessCode: await confirmation.locator("[data-admin-player-created-access-code]").textContent(),
+    playerIdentifier: (await confirmation.locator("[data-admin-player-created-identifier]").textContent())?.trim() || "",
+    accessCode: (await confirmation.locator("[data-admin-player-created-access-code]").textContent())?.trim() || "",
   };
-  createdCredentials.playerIdentifier = createdCredentials.playerIdentifier?.trim() || "";
-  createdCredentials.accessCode = createdCredentials.accessCode?.trim() || "";
 
-  const createWrite = writes.find((write) =>
-    write.service === "admin-api" && write.pathname.endsWith(`/games/${GAME_ID}/players`)
+  let currentWrites = mappedWrites();
+  const createWrite = currentWrites.find((write) =>
+    write.service === "admin-bff" && write.pathname.endsWith(`/games/${GAME_ID}/players`)
   );
-  assert(createWrite, "Player create emitted no authenticated admin-api request.");
+  assert(createWrite, "Player create emitted no authenticated Admin BFF request.");
   assert(
     createWrite.payload.playerIdentifier === CREATE_IDENTIFIER &&
       createWrite.payload.accessCode === CREATE_ACCESS_CODE,
     `Player create sent the wrong identity payload: ${JSON.stringify(createWrite.body)}.`,
   );
   assert(!("id" in createWrite.payload) && !("uuid" in createWrite.payload), "Player create exposed an editable UUID.");
-  assert(String(createWrite.headers.authorization || "").startsWith("Bearer "), "Player create omitted Authorization.");
+  assert(createWrite.headers.authorization === undefined, "Player create exposed Staff Authorization.");
   assert(createWrite.headers["x-econovaria-game-id"] === GAME_ID, "Player create omitted the game header.");
+  assert(Boolean(createWrite.headers["x-econovaria-csrf-token"]), "Player create omitted cookie-bound CSRF.");
   assert(
     createdCredentials.playerIdentifier === CREATE_IDENTIFIER &&
       createdCredentials.accessCode === CREATE_ACCESS_CODE,
@@ -414,8 +220,7 @@ try {
     `Edit Player Profile showed a generated ID instead of ${existingPlayer.playerIdentifier}.`,
   );
   assert(
-    await accessCodeInput.getAttribute("type") === "password" &&
-      await accessCodeInput.inputValue() === "",
+    await accessCodeInput.getAttribute("type") === "password" && await accessCodeInput.inputValue() === "",
     "Edit Player Profile exposed or prefilled an Access Code.",
   );
   assert(!(await profile.textContent()).includes(PLAYER_UUID), "Edit Player Profile exposed the backend UUID.");
@@ -437,9 +242,10 @@ try {
   await profile.getByText("Player profile and Player ID saved. The current Access Code was not changed.", { exact: true })
     .waitFor({ state: "visible", timeout: 8000 });
 
-  phase = "verifying authenticated profile and identity writes";
-  const profileWrites = writes.filter((write) =>
-    write.service === "admin-api" &&
+  phase = "verifying BFF profile and identity writes";
+  currentWrites = mappedWrites();
+  const profileWrites = currentWrites.filter((write) =>
+    write.service === "admin-bff" &&
     write.method === "PATCH" &&
     write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/settings`)
   );
@@ -455,8 +261,8 @@ try {
     );
   }
 
-  const identityWrites = writes.filter((write) =>
-    write.service === "admin-api" &&
+  const identityWrites = currentWrites.filter((write) =>
+    write.service === "admin-bff" &&
     write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
   );
   assert(identityWrites.length === 2, `Expected two credential writes, received ${identityWrites.length}.`);
@@ -472,15 +278,10 @@ try {
   );
 
   for (const write of [...profileWrites, ...identityWrites]) {
-    assert(String(write.headers.authorization || "").startsWith("Bearer "), "A profile write omitted Authorization.");
+    assert(write.headers.authorization === undefined, "A profile write exposed Staff Authorization.");
     assert(write.headers["x-econovaria-game-id"] === GAME_ID, "A profile write omitted the game header.");
+    assert(Boolean(write.headers["x-econovaria-csrf-token"]), "A profile write omitted cookie-bound CSRF.");
   }
-  assert(
-    writes.filter((write) =>
-      write.service === "classroom-api" && write.pathname.includes("/access-code/reset")
-    ).length === 0,
-    "Edit Player Profile bypassed admin-api.",
-  );
   assert(errors.length === 0, errors[0] || "Unexpected browser error.");
 
   phase = "passed";
@@ -489,14 +290,12 @@ try {
     profileWrites,
     identityWrites,
   });
+  await harness.finish({ createdCredentials, profileWrites, identityWrites });
   console.log("Admin Edit Player Profile identity, Player-created confirmation, and Access Code smoke passed.");
 } catch (error) {
   await saveDiagnostics("admin-player-identity-failure", {
     failure: error.stack || error.message || String(error),
   });
-  console.error(error.stack || error.message || String(error));
-  process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
+  await harness.finish({ failure: error.stack || error.message || String(error) });
+  throw error;
 }

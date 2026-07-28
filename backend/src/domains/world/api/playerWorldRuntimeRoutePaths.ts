@@ -1,3 +1,5 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 export type PlayerWorldRuntimeOperation =
   | "context"
   | "arrivalClass"
@@ -14,23 +16,28 @@ export interface ParsedPlayerWorldRuntimeRoute {
 export function parsePlayerWorldRuntimeRoute(
   pathname: string,
 ): ParsedPlayerWorldRuntimeRoute | null {
-  const normalized = normalize(pathname);
-  if (normalized === "/players/me/world-runtime") {
+  const segments = readPlayerApiRouteSegments(normalize(pathname));
+  if (!segments || segments[0] !== "players" || segments[1] !== "me") {
+    return null;
+  }
+
+  const routePath = `/${segments.join("/")}`;
+  if (routePath === "/players/me/world-runtime") {
     return Object.freeze({ operation: "context", journeyId: null });
   }
-  if (normalized === "/players/me/arrival-class") {
+  if (routePath === "/players/me/arrival-class") {
     return Object.freeze({ operation: "arrivalClass", journeyId: null });
   }
-  if (normalized === "/players/me/travel/quotes") {
+  if (routePath === "/players/me/travel/quotes") {
     return Object.freeze({ operation: "travelQuote", journeyId: null });
   }
-  if (normalized === "/players/me/travel") {
+  if (routePath === "/players/me/travel") {
     return Object.freeze({ operation: "travelExecute", journeyId: null });
   }
-  if (normalized === "/players/me/residency") {
+  if (routePath === "/players/me/residency") {
     return Object.freeze({ operation: "residencyRequest", journeyId: null });
   }
-  const completion = normalized.match(
+  const completion = routePath.match(
     /^\/players\/me\/travel\/(trj_[0-9a-f]{32})\/complete$/,
   );
   if (completion) {

@@ -11,10 +11,14 @@ export const PLAYER_RATE_LIMIT_POLICIES: Readonly<
   >
 > = Object.freeze({
   read: policy({
-    ip: [240, 60, 30],
+    // One classroom NAT must support 40 Players loading several server-owned
+    // projections during route changes. The per-action allowance remains below
+    // the aggregate per-identity ceiling, so one endpoint cannot bypass the
+    // Player-level cap while legitimate refresh and persistence reads can finish.
+    ip: [600, 60, 30],
     identity: [180, 60, 30],
     game: [1_200, 60, 30],
-    action: [90, 60, 30],
+    action: [150, 60, 30],
   }),
   write: policy({
     ip: [120, 60, 60],

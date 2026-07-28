@@ -17,6 +17,8 @@ import {
 } from "../src/recovery/player-recovery-controller.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 
 assert.equal(classifyPlayerRecovery({ code: "OFFLINE" }, { online: false }), "offline");
 assert.equal(classifyPlayerRecovery({ code: "REQUEST_TIMEOUT" }), "timeout");
@@ -146,7 +148,10 @@ function createRuntime() {
   let attempt = 0;
   const api = new PlayerApi({
     usePreviewData: false,
-    playerSessionToken: "token-1",
+    authenticated: true,
+    csrfToken: CSRF_TOKEN,
+    publishableKey: "sb_publishable_recovery_fixture",
+    deviceId: DEVICE_ID,
     requestTimeoutMs: 1000,
     writeCooldownMs: 0,
     apiCall: async (context) => {
@@ -190,6 +195,7 @@ function createRuntime() {
   assert.deepEqual(events[1].error, { status: 0, code: "NETWORK_ERROR", retryAfterMs: 0 });
   assert.equal("payload" in events[1], false, "Recovery events must not expose request payloads.");
   assert.equal(calls[0].idempotencyKey, calls[1].idempotencyKey, "The retry must retain the original idempotency key.");
+  assert.equal("playerSessionToken" in api.config, false);
 
   instrumentation.destroy();
   assert.equal(PlayerApi.prototype.execute, original, "Recovery instrumentation must restore the original API method when destroyed.");
@@ -217,4 +223,4 @@ assert.match(cssSource, /player-terminal-recovery-notice/);
 assert.match(cssSource, /@media \(max-width: 640px\)/);
 assert.doesNotMatch(controllerSource, /playerSessionToken|accessCode|ownershipUuid/i, "Recovery UI code must not expose credentials or ownership UUIDs.");
 
-console.log("Player recovery states passed: bounded classification, safe nested loopback diagnostics, production redaction, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, isolated runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");
+console.log("Player recovery states passed: bounded classification, safe nested loopback diagnostics, production redaction, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, cookie-session runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");

@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type { PlayerBusinessBankingRoute } from "../contracts/playerBusinessBankingContracts.ts";
 
 const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
@@ -5,10 +6,11 @@ const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
 export function readPlayerBusinessBankingRoutePath(
   pathname: string,
 ): PlayerBusinessBankingRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
-  if (playersIndex < 0 || segments[playersIndex + 1] !== "me") return null;
-  const tail = segments.slice(playersIndex + 2);
+  const segments = readPlayerApiRouteSegments(pathname);
+  if (!segments || segments[0] !== "players" || segments[1] !== "me") {
+    return null;
+  }
+  const tail = segments.slice(2);
 
   if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead" };
   if (tail.length === 1 && tail[0] === "businesses") return { kind: "businessCreate" };

@@ -1,10 +1,17 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 export type PlayerBankingPublicRoute = { readonly kind: "banking" };
 
 export function readPlayerBankingPublicRoutePath(pathname: string): PlayerBankingPublicRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
-  if (playersIndex < 0 || segments[playersIndex + 1] !== "me") return null;
-  if (segments[playersIndex + 2] !== "ledger") return null;
-  if (playersIndex + 3 !== segments.length) return null;
+  const segments = readPlayerApiRouteSegments(pathname);
+  if (
+    !segments ||
+    segments.length !== 3 ||
+    segments[0] !== "players" ||
+    segments[1] !== "me" ||
+    segments[2] !== "ledger"
+  ) {
+    return null;
+  }
   return { kind: "banking" };
 }

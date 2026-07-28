@@ -1,26 +1,18 @@
-import { chromium } from "playwright";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createSpecializedQualityHarness,
+  GAME_ID,
+} from "./admin-specialized-quality-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
-const GAME_ID = "00000000-0000-4000-8000-000000000301";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000302";
 const MANUAL_IDENTIFIER = "RFID:MANUAL-303";
 const MANUAL_ACCESS_CODE = "MANUAL-8246";
-
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
 
 function flatten(value) {
   const source = value && typeof value === "object" ? value : {};
   const payload = source.payload && typeof source.payload === "object" ? source.payload : {};
   return { ...source, ...payload };
 }
-
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -42,121 +34,15 @@ assert(!createUxSource.includes("data-admin-player-access-code-dialog"), "Player
 assert(createUxSource.includes("dismissOnEscape: false"), "One-time credential confirmation does not protect acknowledgement on Escape.");
 assert(createUxSource.includes("dismissOnBackdrop: false"), "One-time credential confirmation can still be dismissed accidentally through the backdrop.");
 
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "admin@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
-
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Player Create UX Smoke Game",
-  name: "Player Create UX Smoke Game",
-  status: "active",
-  gameCode: "CREATE1",
-};
-
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [],
-  roster: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 0,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 0 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {},
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-const errors = [];
-const writes = [];
 let createCount = 0;
-
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("requestfailed", (request) => {
-  const failure = request.failure()?.errorText || "";
-  if (request.url().endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(request.url()) && failure.includes("ERR_ABORTED")) return;
-  errors.push(`requestfailed: ${request.method()} ${request.url()} ${failure}`);
-});
-
-await page.addInitScript(({ accessToken, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken,
-    refreshToken: "player-create-ux-refresh-token",
-    user: { id: adminId, email: "admin@example.test" },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
-
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const request = route.request();
-  const pathname = new URL(request.url()).pathname;
-  const method = request.method();
-
-  if (method === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players`)) {
-    const body = request.postDataJSON();
-    const payload = flatten(body);
-    writes.push({ pathname, method, headers: request.headers(), body, payload });
+const harness = await createSpecializedQualityHarness("player-create-ux", {
+  handleProxy: ({ method, path, parsedBody }) => {
+    if (method !== "POST" || !path.endsWith(`/games/${GAME_ID}/players`)) return null;
+    const payload = flatten(parsedBody);
     createCount += 1;
-    await route.fulfill({
+    return {
       status: 201,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({
+      body: {
         ok: true,
         player: {
           id: `00000000-0000-4000-8000-${String(300 + createCount).padStart(12, "0")}`,
@@ -170,55 +56,11 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
           status: "active",
           createdAt: new Date().toISOString(),
         },
-      }),
-    });
-    return;
-  }
-
-  const body = pathname.endsWith("/session/bootstrap")
-    ? {
-        data: {
-          admin: {
-            id: ADMIN_ID,
-            accountId: ADMIN_ID,
-            displayName: "Smoke Test Administrator",
-            email: "admin@example.test",
-            role: "game_admin",
-            roles: ["game_admin"],
-          },
-          activeGame: game,
-          games: [game],
-          permissions: ["*"],
-          roles: ["game_admin"],
-          adminRole: "game_admin",
-          csrfToken: "",
-          session: {
-            id: ADMIN_ID,
-            csrfToken: "",
-            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-          },
-          capabilities: {},
-        },
-      }
-    : { data: common };
-
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(body),
-  });
+      },
+    };
+  },
 });
-
-await page.route("**/functions/v1/classroom-api/**", async (route) => {
-  errors.push(`Unexpected direct classroom request: ${route.request().method()} ${route.request().url()}`);
-  await route.fulfill({
-    status: 500,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*" },
-    body: JSON.stringify({ error: { code: "unexpected_direct_request" } }),
-  });
-});
+const { page, errors, writes, dir } = harness;
 
 async function activeControl() {
   return page.evaluate(() => {
@@ -250,7 +92,11 @@ async function openAddPlayer() {
 }
 
 async function assertConfirmationAccessibility(confirmation) {
-  await page.waitForFunction(() => document.activeElement?.hasAttribute?.("data-admin-player-created-copy"), null, { timeout: 3000 });
+  await page.waitForFunction(
+    () => document.activeElement?.hasAttribute?.("data-admin-player-created-copy"),
+    null,
+    { timeout: 3000 },
+  );
   const initial = await activeControl();
   assert(initial.copy && initial.insideConfirmation, `Confirmation initial focus is incorrect: ${JSON.stringify(initial)}.`);
 
@@ -307,11 +153,14 @@ async function submitPlayer({ displayName, rosterLabel, playerIdentifier = "", a
   }
   assert(writes.length === startIndex + 1, `Expected one create request, received ${writes.length - startIndex}.`);
 
+  const rawWrite = writes.at(-1);
+  const normalized = flatten(rawWrite.parsedBody);
+  const write = { ...rawWrite, payload: normalized };
   const confirmation = page.locator("[data-admin-player-created-confirmation]");
   await confirmation.waitFor({ state: "visible", timeout: 5000 });
   await page.waitForTimeout(50);
-  const result = {
-    write: writes.at(-1),
+  return {
+    write,
     title: await confirmation.locator("h3").textContent(),
     identifier: await confirmation.locator("[data-admin-player-created-identifier]").textContent(),
     accessCode: await confirmation.locator("[data-admin-player-created-access-code]").textContent(),
@@ -320,7 +169,6 @@ async function submitPlayer({ displayName, rosterLabel, playerIdentifier = "", a
     notes: await confirmation.locator(".admin-terminal-player-created-credential small").allTextContents(),
     accessibility: await assertConfirmationAccessibility(confirmation),
   };
-  return result;
 }
 
 try {
@@ -347,22 +195,20 @@ try {
   });
   assert(manual.write.payload.playerIdentifier === MANUAL_IDENTIFIER, "Manual Player ID was overwritten.");
   assert(manual.write.payload.accessCode === MANUAL_ACCESS_CODE, "Manual Access Code was overwritten.");
-  assert(manual.identifier === MANUAL_IDENTIFIER && manual.accessCode === MANUAL_ACCESS_CODE, "Manual credentials were not confirmed correctly.");
+  assert(
+    manual.identifier === MANUAL_IDENTIFIER && manual.accessCode === MANUAL_ACCESS_CODE,
+    "Manual credentials were not confirmed correctly.",
+  );
   assert(manual.notes.every((note) => /custom value saved/i.test(note)), `Manual credential notes are incorrect: ${JSON.stringify(manual.notes)}.`);
 
   if (errors.length) throw new Error(errors[0]);
-
-  writeFileSync(`${ARTIFACT_DIR}/player-create-ux-runtime.json`, JSON.stringify({ auto, manual, writes, errors }, null, 2));
-  await page.screenshot({ path: `${ARTIFACT_DIR}/player-create-ux.png`, fullPage: true });
+  writeFileSync(`${dir}/player-create-ux-runtime.json`, JSON.stringify({ auto, manual, writes, errors }, null, 2));
+  await harness.capture("player-create-ux");
+  await harness.finish({ auto, manual });
   console.log("Add Player credentials, acknowledgement modal, focus trap, Escape protection, and focus restoration passed.");
 } catch (error) {
-  writeFileSync(`${ARTIFACT_DIR}/player-create-ux-runtime.json`, JSON.stringify({ writes, errors }, null, 2));
-  await page.screenshot({ path: `${ARTIFACT_DIR}/player-create-ux-failure.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/player-create-ux-failure.html`, await page.content());
-  console.error(error.stack || error.message || String(error));
-  console.error("PLAYER_CREATE_WRITES", JSON.stringify(writes, null, 2));
-  process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
+  writeFileSync(`${dir}/player-create-ux-runtime.json`, JSON.stringify({ writes, errors }, null, 2));
+  await harness.capture("player-create-ux-failure").catch(() => {});
+  await harness.finish({ failure: error.stack || error.message || String(error) });
+  throw error;
 }

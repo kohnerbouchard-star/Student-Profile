@@ -5,10 +5,16 @@ Deployable Supabase assets live here.
 - `migrations/` is where SQL migrations will go once schema work begins.
 - `seed.sql` is the starting point for seed data once schema exists.
 - `functions/` contains Supabase Edge Function projects.
-- `functions/classroom-api/` will become the compatibility API router.
+- `functions/classroom-api/` is the deployed compatibility API router. Browser
+  runtime must not target it directly; it remains required only for bounded
+  server-side forwarding and retained migration compatibility.
 - `functions/stock-market-runner/` will become the scheduled stock update runner.
 - `functions/notification-worker/` will process notification jobs.
 - `functions/_shared/` is for code shared by Edge Functions only.
+
+Do not add new browser integrations or new product capability to
+`classroom-api`. Its authoritative lifecycle status and retirement conditions
+are documented in `functions/classroom-api/README.md`.
 
 ## Supabase implementation order
 

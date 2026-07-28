@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { buildPlayerCraftingCapabilityResponse } from "../../backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts";
 import { buildPlayerCapabilityManifest } from "../../backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts";
+import { isEndpointEnabled, resolveCapabilities } from "../src/api/capabilities.js";
 import { validateStudentProfileCapabilityManifest } from "../src/integrations/student-profile-capability-manifest.js";
 
 const generated = buildPlayerCraftingCapabilityResponse(
@@ -29,6 +30,18 @@ assert.equal(manifest.capabilities.routes.progression, true);
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "dashboard"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "craftingJobClaim"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "progressionClaim"));
+
+const resolved = resolveCapabilities({
+  config: {},
+  session: { capabilities: manifest.capabilities },
+  dashboard: {},
+});
+assert.equal(resolved.actions.marketplaceActivate, true);
+assert.equal(resolved.actions.marketplaceDispute, true);
+assert.equal(isEndpointEnabled(resolved, "marketplaceActivate"), true);
+assert.equal(isEndpointEnabled(resolved, "marketplaceDispute"), true);
+assert.equal(isEndpointEnabled(resolved, "messageThreadCreate"), true);
+assert.equal(isEndpointEnabled(resolved, "messageRead"), true);
 
 const futureManifest = structuredClone(generated);
 futureManifest.capabilities.routes.futureSimulation = true;
@@ -74,4 +87,4 @@ assert.throws(
   "Core capability drift must remain fail closed with bounded diagnostics.",
 );
 
-console.log("Exact backend manifest, feature-scoped optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
+console.log("Exact backend manifest, mutation capability aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");

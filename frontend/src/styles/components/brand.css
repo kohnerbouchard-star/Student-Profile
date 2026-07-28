@@ -25,3 +25,8 @@
   content: none !important;
   display: none !important;
 }
+
+/* The uploaded login logo already contains its intended lighting. */
+.login-root .logo-mark.is-econovaria-logo img {
+  filter: none !important;
+}

@@ -185,11 +185,11 @@ async function createAndOnboardPlayer(index, classId) {
           and source_domain = 'arrival'
           and source_action = 'arrival_package_grant'
       ),
-      'cashBalance', (
+      'checkingBalance', (
         select balance from public.account_balances
         where game_session_id = command_row.game_session_id
           and player_id = command_row.player_id
-          and account_type = 'cash'
+          and account_type = 'checking'
           and currency_code = ${sqlLiteral(binding.currencyCode)}
       ),
       'progressionTitle', (
@@ -220,7 +220,7 @@ async function createAndOnboardPlayer(index, classId) {
   requireCondition(state.grantStatus === "completed", `Player ${index} grant did not complete`);
   requireCondition(Number(state.receiptCount) === 1, `Player ${index} receipt count is incorrect`);
   requireCondition(Number(state.ledgerCount) === 1, `Player ${index} ledger count is incorrect`);
-  requireCondition(Number(state.cashBalance) === Number(binding.approvedBalance), `Player ${index} starting balance is incorrect`);
+  requireCondition(Number(state.checkingBalance) === Number(binding.approvedBalance), `Player ${index} starting balance is incorrect`);
   requireCondition(typeof state.progressionTitle === "string" && state.progressionTitle.length > 0, `Player ${index} progression is missing`);
   requireCondition(state.travelLocation === binding.startingLocationId, `Player ${index} location is incorrect`);
   requireCondition(state.travelStatus === "available", `Player ${index} travel is unavailable`);

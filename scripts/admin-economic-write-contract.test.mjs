@@ -8,28 +8,19 @@ const SOURCE = new URL("../admin/classroom-write-fallback.js", import.meta.url);
 
 async function createHarness() {
   const captured = [];
-  const storage = new Map();
   const document = { dispatchEvent() {} };
   const window = {
     EconovariaRuntimeConfig: {
-      supabaseUrl: "https://staging.supabase.co",
-      supabasePublishableKey: "sb_publishable_test",
-      classroomApiUrl: "https://staging.supabase.co/functions/v1/classroom-api",
+      environment: "development",
+      adminBffApiUrl:
+        "http://127.0.0.1:4173/functions/v1/web-session-api/proxy",
     },
-    location: { href: "http://127.0.0.1:4173/admin/" },
+    location: {
+      href: "http://127.0.0.1:4173/admin/",
+      origin: "http://127.0.0.1:4173",
+    },
     crypto: webcrypto,
     document,
-    sessionStorage: {
-      getItem(key) {
-        return storage.get(key) ?? null;
-      },
-      setItem(key, value) {
-        storage.set(key, String(value));
-      },
-      removeItem(key) {
-        storage.delete(key);
-      },
-    },
     fetch: async (request) => {
       captured.push(request);
       return new Response(JSON.stringify({ ok: true }), {
@@ -45,6 +36,7 @@ async function createHarness() {
     }
   };
   window.CustomEvent = CustomEvent;
+  window.window = window;
 
   const context = vm.createContext({
     window,
@@ -60,6 +52,8 @@ async function createHarness() {
     Date,
     JSON,
     CustomEvent,
+    decodeURIComponent,
+    encodeURIComponent,
   });
 
   vm.runInContext(await readFile(SOURCE, "utf8"), context, {
@@ -68,12 +62,12 @@ async function createHarness() {
   return { captured, window };
 }
 
-test("Admin ledger writes flatten the exact nested terminal envelope and preserve idempotency", async () => {
+test("Admin ledger writes flatten the exact terminal envelope and preserve idempotency inside the BFF boundary", async () => {
   const { captured, window } = await createHarness();
   const idempotencyKey = "ledger.adjustment.browser-envelope.001";
 
   await window.fetch(
-    "http://127.0.0.1:4173/functions/v1/admin-api/games/game-1/players/player-1/ledger-adjustments",
+    "http://127.0.0.1:4173/api/admin/games/game-1/players/player-1/ledger-adjustments",
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -99,6 +93,8 @@ test("Admin ledger writes flatten the exact nested terminal envelope and preserv
   assert.equal(captured.length, 1);
   const request = captured[0];
   const body = await request.json();
+  assert.match(request.url, /\/api\/admin\/games\/game-1\//);
+  assert.doesNotMatch(request.url, /classroom-api|functions\/v1\/admin-api/);
   assert.equal(body.amount, "25");
   assert.equal(body.adjustmentType, "debit");
   assert.equal(body.reason, "Correction");
@@ -109,13 +105,15 @@ test("Admin ledger writes flatten the exact nested terminal envelope and preserv
   assert.equal(body.idempotencyKey, idempotencyKey);
   assert.equal(request.headers.get("x-idempotency-key"), idempotencyKey);
   assert.equal(request.headers.get("content-type"), "application/json");
+  assert.equal(request.headers.get("authorization"), null);
+  assert.equal(request.headers.get("apikey"), null);
 });
 
-test("Admin ledger writes continue to normalize legacy form aliases", async () => {
+test("Admin ledger writes continue to normalize legacy form aliases without creating remote authority", async () => {
   const { captured, window } = await createHarness();
 
   await window.fetch(
-    "http://127.0.0.1:4173/functions/v1/admin-api/games/game-1/players/player-1/ledger-adjustments",
+    "http://127.0.0.1:4173/api/admin/games/game-1/players/player-1/ledger-adjustments",
     {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -137,5 +135,8 @@ test("Admin ledger writes continue to normalize legacy form aliases", async () =
   assert.equal(body.currencyCode, "ECO");
   assert.match(body.idempotencyKey, /^[0-9a-f-]{36}$/i);
   assert.equal(request.headers.get("x-idempotency-key"), body.idempotencyKey);
-  assert.equal(typeof window.EconovariaClassroomWriteFallback.canonicalWrite, "function");
+  assert.equal(
+    window.EconovariaClassroomWriteFallback.legacyClassroomFallbackRetired,
+    true,
+  );
 });

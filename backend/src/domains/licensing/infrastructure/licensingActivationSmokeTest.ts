@@ -5,6 +5,9 @@ import {
   type LicensingActivationHandlerInput,
 } from "./licensingActivationHandler";
 
+const PURCHASE_CODE_HMAC_SECRET =
+  "smoke-test-purchase-code-hmac-secret-0123456789";
+
 export interface LicensingActivationSmokeTestResult {
   readonly ok: boolean;
   readonly httpStatus: number;
@@ -38,6 +41,7 @@ export async function runLicensingActivationHandlerSmokeTest(): Promise<Licensin
         },
       },
       runtime: createSmokeTestRuntime(),
+      purchaseCodeHmacSecret: PURCHASE_CODE_HMAC_SECRET,
     },
   );
 

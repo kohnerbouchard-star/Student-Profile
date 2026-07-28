@@ -225,8 +225,10 @@ Deno.test("economic SQL mutation matrix enforces replay-before-write and zero-le
 
   assertBefore(dispatcher, "handleIdempotentLedgerOperation", "handleAttendanceOperation");
   assertContains(browser, "withEconomicIdempotency");
-  assertContains(browser, "idempotencyKey: lifecycle.requestId");
+  assertContains(browser, "const idempotencyKey = text(");
+  assertContains(browser, "lifecycle.requestId,");
   assertContains(browser, "X-Idempotency-Key");
+  assertContains(browser, "JSON.stringify({ ...normalized, idempotencyKey })");
   assertContains(classroom, "recordIdempotentStaffLedgerAdjustment");
   assertContains(classroom, "ledger_idempotency_key_required");
 });

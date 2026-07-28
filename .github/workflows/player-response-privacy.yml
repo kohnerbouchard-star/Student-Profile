@@ -1,0 +1,49 @@
+name: Player Response Privacy
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/player-response-privacy.yml"
+      - "backend/src/security/playerBrowserResponsePrivacy.ts"
+      - "backend/src/security/playerBrowserResponsePrivacy.test.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/security/playerRateLimitDispatch.test.ts"
+      - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
+      - "backend/src/domains/contracts/api/playerContractRoutePaths.ts"
+      - "backend/src/domains/contracts/api/playerContractRoutePaths.test.ts"
+      - "backend/src/domains/game-dashboard/**"
+      - "backend/src/domains/stocks/**"
+      - "scripts/player-multiplayer-browser-acceptance.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  player-response-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Verify Player response privacy
+        working-directory: backend
+        run: |
+          deno test \
+            --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/security/playerBrowserResponsePrivacy.test.ts \
+            src/security/playerRateLimitDispatch.test.ts \
+            src/domains/contracts/api/playerContractRoutePaths.test.ts
+
+      - name: Typecheck Classroom API
+        working-directory: backend
+        run: deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts

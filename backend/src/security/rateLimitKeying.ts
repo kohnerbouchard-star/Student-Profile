@@ -59,6 +59,7 @@ const UUID_PATTERN =
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const HMAC_SECRET_PATTERN = /^[A-Za-z0-9_-]{43,128}$/u;
 const MINIMUM_HMAC_SECRET_DISTINCT_CHARACTERS = 20;
+const RATE_LIMIT_KEY_NAMESPACE = "econovaria-rate-limit-v2";
 
 export function buildPlayerRateLimitBuckets(
   context: PlayerRateLimitContext,
@@ -107,7 +108,7 @@ export async function buildAuthenticatedRateLimitBuckets(
     dimension,
     keyHash: await hmacSha256Hex(
       hmacSecret,
-      `econovaria-rate-limit-v1\u0000${dimension}\u0000${rawKeys[dimension]}`,
+      `${RATE_LIMIT_KEY_NAMESPACE}\u0000${context.profile}\u0000${dimension}\u0000${rawKeys[dimension]}`,
     ),
     ...policy[dimension],
   })));
@@ -127,11 +128,14 @@ export async function buildPreAuthRateLimitBuckets(
     ip: normalizedIp,
   } as const;
 
-  return Promise.all((["action", "ip"] as const).map(async (dimension) => ({
+  return Promise.all(([
+    "action",
+    "ip",
+  ] as const).map(async (dimension) => ({
     dimension,
     keyHash: await hmacSha256Hex(
       hmacSecret,
-      `econovaria-rate-limit-v1\u0000${dimension}\u0000${rawKeys[dimension]}`,
+      `${RATE_LIMIT_KEY_NAMESPACE}\u0000${context.profile}\u0000${dimension}\u0000${rawKeys[dimension]}`,
     ),
     ...policy[dimension],
   })));

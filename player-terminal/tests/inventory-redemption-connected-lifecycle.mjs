@@ -3,6 +3,19 @@ import assert from "node:assert/strict";
 import { PlayerApi } from "../src/api/player-api.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_inventory_redemption_fixture";
+const secureConfig = {
+  usePreviewData: false,
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
+  requestTimeoutMs: 1000,
+  writeCooldownMs: 250
+};
+
 const requests = [];
 const apiCall = createStudentProfileApiCall({
   request: async (request) => {
@@ -38,13 +51,7 @@ const apiCall = createStudentProfileApiCall({
   }
 });
 
-const api = new PlayerApi({
-  usePreviewData: false,
-  playerSessionToken: "player-token",
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 250,
-  apiCall
-});
+const api = new PlayerApi({ ...secureConfig, apiCall });
 api.readCache.set("GET:inventory:cached", { items: [{ id: "meal-pass" }] });
 api.readCacheUpdatedAt.set("GET:inventory:cached", Date.now());
 
@@ -64,6 +71,11 @@ assert.equal(write.path, "/players/me/inventory/meal-pass/redemptions");
 assert.deepEqual(Object.keys(write.payload).sort(), ["idempotencyKey", "note", "quantity"]);
 assert.equal(typeof write.payload.idempotencyKey, "string");
 assert.equal(write.payload.idempotencyKey.length > 0, true);
+assert.equal(write.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(write.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(write.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(write.headers["x-player-session-token"], undefined);
+assert.equal(write.headers.Authorization, undefined);
 assert.equal("gameSessionId" in write.payload, false);
 assert.equal("playerId" in write.payload, false);
 assert.equal("playerUuid" in write.payload, false);
@@ -75,10 +87,7 @@ assert.equal(committed.result.redemption.status, "pending");
 
 const failedRequests = [];
 const failedApi = new PlayerApi({
-  usePreviewData: false,
-  playerSessionToken: "player-token",
-  requestTimeoutMs: 1000,
-  writeCooldownMs: 250,
+  ...secureConfig,
   apiCall: async (context) => {
     failedRequests.push(context);
     throw Object.assign(new Error("redemption write failed"), {
@@ -99,4 +108,4 @@ await assert.rejects(
 assert.equal(failedRequests.length, 1);
 assert.equal(failedApi.readCache.has("GET:inventory:cached"), true, "A failed write must not invalidate authoritative Inventory state.");
 
-console.log("Connected Inventory redemption committed-success boundary passed.");
+console.log("Connected Inventory redemption cookie-session committed-success boundary passed.");

@@ -6,16 +6,22 @@ import {
 import { handleStaffBootstrapRequest } from "../domains/auth/api/staffBootstrapHttpHandler.ts";
 import { handleLicensingActivationRequest } from "../domains/licensing/api/licensingActivationHttpHandler.ts";
 
-type StaffRow = Record<string, string> & {
+interface StaffRow {
   readonly id: string;
   readonly supabase_auth_user_id: string;
   readonly email: string;
   readonly display_name: string;
-};
+  readonly status: "active";
+  readonly role: "game_admin";
+  readonly permission_version: number;
+  readonly security_version: number;
+  readonly mfa_required: boolean;
+}
 
 interface AuthUser {
   readonly id: string;
   readonly email?: string | null;
+  readonly app_metadata?: Record<string, unknown>;
 }
 
 interface QueryError {
@@ -54,15 +60,25 @@ const ENV: SupabaseEnv = {
 };
 
 const STAFF: StaffRow = {
-  id: "staff-smoke-1",
-  supabase_auth_user_id: "auth-smoke-1",
+  id: "11111111-1111-4111-8111-111111111111",
+  supabase_auth_user_id: "22222222-2222-4222-8222-222222222222",
   email: "staff-smoke@example.test",
   display_name: "Staff Smoke",
+  status: "active",
+  role: "game_admin",
+  permission_version: 1,
+  security_version: 1,
+  mfa_required: true,
 };
 
 const AUTH_USER: AuthUser = {
   id: STAFF.supabase_auth_user_id,
   email: STAFF.email,
+  app_metadata: {
+    econovaria_role: STAFF.role,
+    permission_version: STAFF.permission_version,
+    security_version: STAFF.security_version,
+  },
 };
 
 const tests: readonly [string, () => Promise<void>][] = [
@@ -92,7 +108,7 @@ async function testSharedMissingAuthorization(): Promise<void> {
     { missingMessage: "Missing staff smoke auth." },
   );
 
-  assert(!result.ok, "Expected missing authorization to fail.");
+  assert(result.ok === false, "Expected missing authorization to fail.");
   assertEqual(result.status, 401, "Expected missing authorization status.");
   assertEqual(result.error.code, "missing_staff_auth_user", "Expected missing auth code.");
   assertEqual(result.error.message, "Missing staff smoke auth.", "Expected custom missing auth message.");
@@ -112,7 +128,7 @@ async function testSharedInvalidAuthUser(): Promise<void> {
     { missingMessage: "Invalid staff smoke auth." },
   );
 
-  assert(!result.ok, "Expected invalid auth user to fail.");
+  assert(result.ok === false, "Expected invalid auth user to fail.");
   assertEqual(result.status, 401, "Expected invalid auth status.");
   assertEqual(result.error.code, "missing_staff_auth_user", "Expected invalid auth code.");
   assertEqual(result.error.message, "Invalid staff smoke auth.", "Expected invalid auth message.");
@@ -138,7 +154,7 @@ async function testSharedLookupError(): Promise<void> {
     },
   );
 
-  assert(!result.ok, "Expected staff lookup error to fail.");
+  assert(result.ok === false, "Expected staff lookup error to fail.");
   assertEqual(result.status, 500, "Expected staff lookup error status.");
   assertEqual(result.error.code, "configured_lookup_failed", "Expected configured lookup code.");
   assertEqual(result.error.message, "Configured lookup failed.", "Expected configured lookup message.");
@@ -146,9 +162,7 @@ async function testSharedLookupError(): Promise<void> {
 }
 
 async function testSharedMissingStaff(): Promise<void> {
-  const mock = createMockDependencies({}, {
-    staffRow: null,
-  });
+  const mock = createMockDependencies({}, { staffRow: null });
   const result = await resolveStaffSessionForRequest(
     authorizedRequest("GET", "/staff/bootstrap"),
     ENV,
@@ -156,13 +170,13 @@ async function testSharedMissingStaff(): Promise<void> {
     { missingMessage: "Staff auth is required." },
   );
 
-  assert(!result.ok, "Expected missing staff row to fail.");
+  assert(result.ok === false, "Expected missing staff row to fail.");
   assertEqual(result.status, 403, "Expected missing staff status.");
   assertEqual(result.error.code, "staff_not_found", "Expected missing staff code.");
   assertEqual(
     result.error.message,
-    "No staff user is linked to the Supabase Auth user.",
-    "Expected missing staff message.",
+    "No active staff account is linked to this user.",
+    "Expected non-enumerating missing staff message.",
   );
 }
 
@@ -172,10 +186,13 @@ async function testSharedSuccess(): Promise<void> {
     authorizedRequest("GET", "/staff/bootstrap"),
     ENV,
     mock.dependencies,
-    { missingMessage: "Staff auth is required." },
+    {
+      missingMessage: "Staff auth is required.",
+      skipUniversalRateLimit: true,
+    },
   );
 
-  assert(result.ok, "Expected staff resolution success.");
+  assert(result.ok === true, "Expected staff resolution success.");
   assertEqual(result.authUser.id, AUTH_USER.id, "Expected auth user id.");
   assertEqual(result.authUser.email, AUTH_USER.email, "Expected auth user email.");
   assertEqual(result.staff.id, STAFF.id, "Expected staff id.");
@@ -260,21 +277,15 @@ function createMockDependencies(
     authCreated: 0,
     rpcNames: [],
   };
-  const authClient = createMockClient(
-    {
-      authUser: AUTH_USER,
-      ...authOptions,
-    },
-    calls,
-  );
-  const serviceClient = createMockClient(
-    {
-      staffRow: STAFF,
-      gameSessionRows: [],
-      ...serviceOptions,
-    },
-    calls,
-  );
+  const authClient = createMockClient({
+    authUser: AUTH_USER,
+    ...authOptions,
+  }, calls);
+  const serviceClient = createMockClient({
+    staffRow: STAFF,
+    gameSessionRows: [],
+    ...serviceOptions,
+  }, calls);
 
   return {
     dependencies: {
@@ -297,7 +308,6 @@ function createMockClient(options: MockOptions, calls: MockCalls): EdgeSupabaseC
     auth: {
       getUser: async (accessToken: string) => {
         calls.authTokens.push(accessToken);
-
         return {
           data: { user: options.authUser ?? null },
           error: options.authError ?? null,
@@ -307,7 +317,6 @@ function createMockClient(options: MockOptions, calls: MockCalls): EdgeSupabaseC
     from: (tableName: string) => createQuery(tableName, options),
     rpc: async (functionName: string) => {
       calls.rpcNames.push(functionName);
-
       return { data: null, error: null };
     },
   } as unknown as EdgeSupabaseClient;
@@ -323,9 +332,15 @@ function createQuery(tableName: string, options: MockOptions) {
     maybeSingle: async () => maybeSingleResponse(tableName, options),
     single: async () => maybeSingleResponse(tableName, options),
     then: (
-      onfulfilled: ((value: { readonly data: unknown[]; readonly error: QueryError | null }) => unknown) | null,
+      onfulfilled: ((value: {
+        readonly data: unknown[];
+        readonly error: QueryError | null;
+      }) => unknown) | null,
       onrejected: ((reason: unknown) => unknown) | null,
-    ) => Promise.resolve(listResponse(tableName, options)).then(onfulfilled, onrejected),
+    ) => Promise.resolve(listResponse(tableName, options)).then(
+      onfulfilled,
+      onrejected,
+    ),
   };
 
   return query;
@@ -338,7 +353,6 @@ function maybeSingleResponse(tableName: string, options: MockOptions) {
       error: options.staffError ?? null,
     };
   }
-
   return { data: null, error: null };
 }
 
@@ -349,12 +363,14 @@ function listResponse(tableName: string, options: MockOptions) {
       error: options.gameSessionError ?? null,
     };
   }
-
   return { data: [], error: null };
 }
 
 function request(method: string, path: string, body?: string): Request {
-  return new Request(`https://classroom-api.smoke.test${path}`, { method, body });
+  return new Request(`https://classroom-api.smoke.test${path}`, {
+    method,
+    body,
+  });
 }
 
 function authorizedRequest(method: string, path: string, body?: string): Request {
@@ -365,7 +381,11 @@ function authorizedRequest(method: string, path: string, body?: string): Request
   });
 }
 
-function authorizedJsonRequest(method: string, path: string, body: unknown): Request {
+function authorizedJsonRequest(
+  method: string,
+  path: string,
+  body: unknown,
+): Request {
   return new Request(`https://classroom-api.smoke.test${path}`, {
     method,
     headers: {
@@ -388,28 +408,25 @@ async function assertErrorResponse(
   assert(isObject(body), "Expected response body object.");
   assert(isObject(body.error), "Expected response error object.");
   assertEqual(body.error.code, code, `Expected ${code} error code.`);
-
   if (message !== undefined) {
     assertEqual(body.error.message, message, `Expected ${code} error message.`);
   }
 }
 
 function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) {
-    throw new Error(message);
-  }
+  if (!condition) throw new Error(message);
 }
 
 function assertEqual(actual: unknown, expected: unknown, message: string): void {
   if (actual !== expected) {
-    throw new Error(`${message} Expected ${format(expected)}, received ${format(actual)}.`);
+    throw new Error(
+      `${message} Expected ${format(expected)}, received ${format(actual)}.`,
+    );
   }
 }
 
 function assertSame(actual: unknown, expected: unknown, message: string): void {
-  if (!Object.is(actual, expected)) {
-    throw new Error(message);
-  }
+  if (!Object.is(actual, expected)) throw new Error(message);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

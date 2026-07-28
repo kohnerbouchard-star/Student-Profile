@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { PlayerApi } from "../src/api/player-api.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
+const CSRF_TOKEN = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHABLE_KEY = "sb_publishable_store_fixture";
 const quoteKey = "quote_11111111111111111111111111111111";
 const receiptKey = "receipt_22222222222222222222222222222222";
 let purchased = false;
@@ -186,9 +189,11 @@ const apiCall = createStudentProfileApiCall({
 
 const api = new PlayerApi({
   usePreviewData: false,
-  playerSessionToken: "token-1",
+  authenticated: true,
+  csrfToken: CSRF_TOKEN,
+  publishableKey: PUBLISHABLE_KEY,
+  deviceId: DEVICE_ID,
   gameSessionId: "must-not-be-forwarded",
-  playerSessionId: "must-not-be-forwarded",
   requestTimeoutMs: 1000,
   writeCooldownMs: 250,
   apiCall
@@ -237,14 +242,20 @@ assert.equal("banking" in refreshed.data, false, "Banking remains manifest-disab
 const quoteRequest = calls.find((request) => request.endpointKey === "storeQuote");
 assert.equal(quoteRequest.path, "/players/me/store/quotes");
 assert.deepEqual(quoteRequest.payload, { itemKey: "field_permit", quantity: 2 });
+assert.equal(quoteRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
 
 const purchaseRequest = calls.find((request) => request.endpointKey === "storePurchase");
 assert.equal(purchaseRequest.path, "/players/me/store/purchases");
 assert.equal(purchaseRequest.payload.quoteKey, quoteKey);
+assert.equal(purchaseRequest.headers.apikey, PUBLISHABLE_KEY);
+assert.equal(purchaseRequest.headers["x-econovaria-device-id"], DEVICE_ID);
+assert.equal(purchaseRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
+assert.equal(purchaseRequest.headers["x-player-session-token"], undefined);
+assert.equal(purchaseRequest.headers.Authorization, undefined);
 for (const privateField of ["quoteId", "gameSessionId", "playerId", "playerSessionId", "itemId"]) {
   assert.equal(privateField in purchaseRequest.payload, false);
 }
 assert.equal("x-game-session-id" in purchaseRequest.headers, false);
 assert.equal("x-player-id" in purchaseRequest.headers, false);
 
-console.log("Connected Store purchase passed: manifest gating, ownership rejection, public item/quote/receipt keys, committed settlement, and authoritative Store/Inventory refresh are valid.");
+console.log("Connected Store purchase passed: cookie-session binding, manifest gating, ownership rejection, public keys, settlement, and authoritative refresh are valid.");
