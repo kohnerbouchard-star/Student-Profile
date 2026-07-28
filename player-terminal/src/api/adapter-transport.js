@@ -1,5 +1,9 @@
 import { ApiRequestError, normalizeApiError } from "./errors.js";
 
+const SAFE_READ_METHODS = new Set(["GET", "HEAD"]);
+const RETRYABLE_READ_STATUSES = new Set([500, 502, 503, 504]);
+const SAFE_READ_RETRY_DELAY_MS = 75;
+
 export class AdapterTransport {
   constructor(adapter, config) {
     const request = typeof adapter === "function"
@@ -64,21 +68,36 @@ export class AdapterTransport {
       : this.config.authenticated === true
         ? this.config
         : null;
-    const adapterPromise = Promise.resolve()
-      .then(() => this.requestAdapter({
-        ...context,
-        signal: controller.signal,
-        session: {
-          authenticated: currentSession?.authenticated === true,
-          csrfToken: String(currentSession?.csrfToken || this.config.csrfToken || ""),
-          gameSessionId: String(currentSession?.gameSessionId || this.config.gameSessionId || "")
-        },
-        config: this.config
-      }))
+    const adapterContext = {
+      ...context,
+      signal: controller.signal,
+      session: {
+        authenticated: currentSession?.authenticated === true,
+        csrfToken: String(currentSession?.csrfToken || this.config.csrfToken || ""),
+        gameSessionId: String(currentSession?.gameSessionId || this.config.gameSessionId || "")
+      },
+      config: this.config
+    };
+    const invokeAdapter = () => Promise.resolve()
+      .then(() => this.requestAdapter(adapterContext))
       .then((result) => {
         if (result?.ok === false && Number(result?.status) >= 400) throw result;
         return result;
       });
+    const adapterPromise = invokeAdapter().catch(async (error) => {
+      const method = String(context.method || "GET").toUpperCase();
+      const status = Number(error?.status || 0);
+      if (
+        !SAFE_READ_METHODS.has(method) ||
+        !RETRYABLE_READ_STATUSES.has(status) ||
+        controller.signal.aborted
+      ) {
+        throw error;
+      }
+      await new Promise((resolve) => globalThis.setTimeout(resolve, SAFE_READ_RETRY_DELAY_MS));
+      if (controller.signal.aborted) throw error;
+      return invokeAdapter();
+    });
 
     try {
       return await Promise.race([adapterPromise, timeoutPromise, abortPromise]);
