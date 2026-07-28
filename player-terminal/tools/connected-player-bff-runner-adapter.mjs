@@ -173,6 +173,40 @@ function adaptMarketplaceCountryFixture(source) {
   return source;
 }
 
+function adaptMarketplaceListingDisclosure(source) {
+  if (!source.includes("async function createListing(page, fixtureData, price)")) return source;
+
+  const before = `  const form = page.locator('form[data-endpoint="marketplaceListing"]');
+  const details = form.locator("xpath=ancestor::details[1]");
+  if (await details.count() && !(await details.evaluate((node) => node.open))) await details.locator("summary").click();
+  await form.waitFor({ state: "visible", timeout: 30_000 });`;
+  const after = `  const form = page.locator('form[data-endpoint="marketplaceListing"]');
+  await page.waitForFunction(() => {
+    const select = document.querySelector('form[data-endpoint="marketplaceListing"] select[name="itemKey"]');
+    return Boolean(select && !select.disabled && select.value);
+  }, undefined, { timeout: 30_000 });
+  const details = form.locator("xpath=ancestor::details[1]");
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await details.count() && !(await details.evaluate((node) => node.open))) {
+      await details.locator("summary").click();
+    }
+    try {
+      await form.waitFor({ state: "visible", timeout: 5_000 });
+      break;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await page.waitForTimeout(250);
+    }
+  }`;
+
+  return replaceExactlyOnce(
+    source,
+    "Marketplace settled listing disclosure",
+    before,
+    after,
+  );
+}
+
 function adaptMarketplaceSellerPersistence(source) {
   if (!source.includes("async function activateListing(page, listing)")) return source;
 
@@ -226,6 +260,7 @@ export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Pl
     'fetch(url, { method, headers, body, cache: "no-store", credentials: "include" })',
   );
   source = adaptMarketplaceCountryFixture(source);
+  source = adaptMarketplaceListingDisclosure(source);
   source = adaptMarketplaceSellerPersistence(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
