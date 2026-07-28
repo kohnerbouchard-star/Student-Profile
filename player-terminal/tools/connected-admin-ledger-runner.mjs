@@ -51,7 +51,44 @@ const CONFIRM_TRANSITION = `  await submit.click();
     '[data-admin-terminal-action="confirm-player-balance-adjustment"]:visible',
   ).last();
   if (await followUp.count() && await followUp.isVisible()) await followUp.click();
+  await page.waitForTimeout(250);
+  evidence.adjustmentAfterSubmit = JSON.parse(redact(JSON.stringify(await page.locator(
+    '[role="dialog"]:visible, [data-admin-terminal-modal-backdrop]:visible',
+  ).last().evaluate((node) => ({
+    text: String(node.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 2000),
+    controls: [...node.querySelectorAll("input, select, textarea, button")].map((control) => ({
+      tag: control.tagName,
+      type: control.getAttribute("type") || "",
+      name: control.getAttribute("name") || "",
+      value: "value" in control ? String(control.value || "") : "",
+      checked: "checked" in control ? control.checked === true : false,
+      disabled: "disabled" in control ? control.disabled === true : false,
+      required: "required" in control ? control.required === true : false,
+      action: control.getAttribute("data-admin-terminal-action") || "",
+      text: String(control.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 180),
+    })),
+  }))));
   await completeMfaEnrollmentIfRequired(page, 3_000);`;
+const DIALOG_SEQUENCE = `  const modal = await openAdjustment(page);
+  await fillAdjustment(modal);
+  const original = await submitAdjustment(page, modal);`;
+const DIAGNOSTIC_DIALOG_SEQUENCE = `  const modal = await openAdjustment(page);
+  await fillAdjustment(modal);
+  evidence.adjustmentBeforeSubmit = JSON.parse(redact(JSON.stringify(await modal.evaluate((node) => ({
+    text: String(node.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 2000),
+    controls: [...node.querySelectorAll("input, select, textarea, button")].map((control) => ({
+      tag: control.tagName,
+      type: control.getAttribute("type") || "",
+      name: control.getAttribute("name") || "",
+      value: "value" in control ? String(control.value || "") : "",
+      checked: "checked" in control ? control.checked === true : false,
+      disabled: "disabled" in control ? control.disabled === true : false,
+      required: "required" in control ? control.required === true : false,
+      action: control.getAttribute("data-admin-terminal-action") || "",
+      text: String(control.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 180),
+    })),
+  }))));
+  const original = await submitAdjustment(page, modal);`;
 
 function replaceExactlyOnce(source, label, before, after) {
   const count = source.split(before).length - 1;
@@ -85,6 +122,12 @@ source = replaceExactlyOnce(
   "Admin ledger confirmation transition",
   SINGLE_CONFIRM,
   CONFIRM_TRANSITION,
+);
+source = replaceExactlyOnce(
+  source,
+  "Admin ledger modal diagnostics",
+  DIALOG_SEQUENCE,
+  DIAGNOSTIC_DIALOG_SEQUENCE,
 );
 
 const materializedDirectory = await mkdtemp(
