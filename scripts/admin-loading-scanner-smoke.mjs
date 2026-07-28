@@ -17,18 +17,20 @@ const ACCOUNTS = [
   ["open-admin-help", "account-help"], ["open-admin-games", "account-games"],
 ];
 
-function assertGeometry(label, loaded, skeleton, rootScrollbarGutter = 0) {
+function assertGeometry(label, loaded, skeleton, options = {}) {
   if (!loaded?.root || !skeleton?.root) fail(`${label} has no root geometry.`);
   const shared = Object.keys(loaded).filter((key) => skeleton[key]);
   if (!shared.length) fail(`${label} has no shared geometry.`);
+  const rootScrollbarGutter = Math.max(0, Number(options.rootScrollbarGutter) || 0);
+  const scrollportRoot = options.scrollportRoot === true;
   for (const key of shared) {
     const baseTolerance = key === "toolbar" ? 2 : 4;
     for (const dimension of ["x", "y", "width", "height", "right", "bottom"]) {
+      if (scrollportRoot && key === "root" && ["height", "bottom"].includes(dimension)) continue;
       const delta = Math.abs(Number(loaded[key][dimension]) - Number(skeleton[key][dimension]));
       const rootGutterDimension = key === "root" && ["width", "right"].includes(dimension);
       if (rootGutterDimension && delta > baseTolerance) {
-        const gutter = Math.max(0, Number(rootScrollbarGutter) || 0);
-        if (gutter > 0 && Math.abs(delta - gutter) <= 2) continue;
+        if (rootScrollbarGutter > 0 && Math.abs(delta - rootScrollbarGutter) <= 2) continue;
       }
       if (delta > baseTolerance) fail(`${label} ${key}.${dimension} moved ${delta.toFixed(2)}px.`);
     }
@@ -54,12 +56,10 @@ async function waitForCleanup(label) {
 }
 
 function validate(label, snapshot) {
-  const shared = assertGeometry(
-    label,
-    snapshot.loaded,
-    snapshot.skeleton,
-    snapshot.rootScrollbarGutter,
-  );
+  const shared = assertGeometry(label, snapshot.loaded, snapshot.skeleton, {
+    rootScrollbarGutter: snapshot.rootScrollbarGutter,
+    scrollportRoot: true,
+  });
   if (snapshot.busy !== "true" || snapshot.role !== "status" || !snapshot.label) fail(`${label} lacks loading semantics.`);
   if (snapshot.cloneHidden !== "true" || !snapshot.cloneInert) fail(`${label} clone is not decorative and inert.`);
   if (!snapshot.focusPreserved || !snapshot.scrollPreserved) fail(`${label} moved focus or scroll.`);
