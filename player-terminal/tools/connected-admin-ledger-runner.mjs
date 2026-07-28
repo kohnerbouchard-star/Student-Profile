@@ -67,7 +67,7 @@ const CONFIRM_TRANSITION = `  await submit.click();
       action: control.getAttribute("data-admin-terminal-action") || "",
       text: String(control.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 180),
     })),
-  }))));
+  })))));
   await completeMfaEnrollmentIfRequired(page, 3_000);`;
 const DIALOG_SEQUENCE = `  const modal = await openAdjustment(page);
   await fillAdjustment(modal);
@@ -87,7 +87,7 @@ const DIAGNOSTIC_DIALOG_SEQUENCE = `  const modal = await openAdjustment(page);
       action: control.getAttribute("data-admin-terminal-action") || "",
       text: String(control.textContent || "").replace(/\\s+/gu, " ").trim().slice(0, 180),
     })),
-  }))));
+  })))));
   const original = await submitAdjustment(page, modal);`;
 
 function replaceExactlyOnce(source, label, before, after) {
