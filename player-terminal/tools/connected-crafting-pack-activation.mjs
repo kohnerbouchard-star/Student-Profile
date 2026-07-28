@@ -10,6 +10,7 @@ const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres
 const PACK_PATH = process.env.PHYSICAL_ECONOMY_PACK || "/tmp/physical-economy-runtime-pack.json";
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
+const PLAYER_ID = "BROWSER-PLAYER-ALPHA";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 const evidence = {
@@ -20,6 +21,7 @@ const evidence = {
   activated: false,
   activationReplaySafe: false,
   storeBridgeVerified: false,
+  recipeFixtureEligible: false,
   activePackVerified: false,
   recipeAvailabilityVerified: false,
   productionDenied: false,
@@ -32,6 +34,8 @@ function requireCondition(condition, message) {
 function redact(value) {
   return String(value || "")
     .replace(UUID_PATTERN, "[uuid-redacted]")
+    .replace(/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g, "[game-code-redacted]")
+    .replace(/BROWSER-[A-Z0-9-]+/g, "[credential-redacted]")
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]")
     .replace(/sb_(?:secret|publishable)_[A-Za-z0-9_-]+/g, "[supabase-key-redacted]")
     .slice(0, 5000);
@@ -187,7 +191,7 @@ try {
         100000,
         'active',
         'visible',
-        1000 + row_number() over (order by definition.item_key)
+        (1000 + row_number() over (order by definition.item_key))::integer
       from active_pack
       join public.physical_economy_item_definitions definition
         on definition.pack_id = active_pack.pack_id
@@ -207,6 +211,76 @@ try {
   `), "Crafting Store bridge");
   requireCondition(Number(bridge.storeItemCount) === Number(pack.counts?.items), "Crafting Store bridge did not materialize the authorized item catalog.");
   evidence.storeBridgeVerified = true;
+
+  const fixtureEligibility = parseJsonLine(psql(`
+    with active_pack as (
+      select game_pack.pack_id
+      from public.game_session_physical_economy_packs game_pack
+      join public.physical_economy_content_packs pack_row on pack_row.id = game_pack.pack_id
+      where game_pack.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+        and game_pack.status = 'active'
+        and pack_row.status = 'active'
+        and pack_row.pack_key = ${sqlLiteral(pack.packKey)}
+        and pack_row.content_version = ${sqlLiteral(pack.contentVersion)}
+      limit 1
+    ), player_scope as (
+      select player.id as player_id
+      from public.players player
+      where player.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+        and player.player_identifier = ${sqlLiteral(PLAYER_ID)}
+        and player.status = 'active'
+      limit 1
+    ), candidate as (
+      select recipe.id as recipe_id
+      from active_pack
+      cross join player_scope
+      join public.physical_economy_recipe_definitions recipe
+        on recipe.pack_id = active_pack.pack_id
+       and recipe.status = 'active'
+      join public.game_session_recipe_availability availability
+        on availability.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+       and availability.recipe_id = recipe.id
+      join public.physical_economy_recipe_outputs output
+        on output.recipe_id = recipe.id
+       and output.output_kind = 'equipment'
+      join public.physical_economy_item_definitions definition
+        on definition.pack_id = active_pack.pack_id
+       and definition.item_key = output.item_key
+       and definition.item_class = 'equipment'
+       and definition.status = 'active'
+      join public.physical_economy_salvage_rules salvage
+        on salvage.pack_id = active_pack.pack_id
+       and salvage.equipment_item_key = output.item_key
+       and salvage.enabled = true
+      where not exists (
+        select 1
+        from public.physical_economy_recipe_inputs input
+        left join public.store_items item
+          on item.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+         and item.item_key = input.item_key
+         and item.status = 'active'
+        where input.recipe_id = recipe.id
+          and item.id is null
+      )
+      order by recipe.base_duration_seconds, recipe.recipe_key
+      limit 1
+    ), eligible as (
+      update public.game_session_recipe_availability availability
+      set enabled = true,
+          unlocked_by_default = true,
+          scarcity_band = 'available',
+          country_codes = '{}'::text[],
+          version = availability.version + 1,
+          updated_at = now()
+      from candidate
+      where availability.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+        and availability.recipe_id = candidate.recipe_id
+      returning availability.recipe_id
+    )
+    select jsonb_build_object('eligibleRecipeCount', count(*))::text from eligible;
+  `), "Crafting fixture eligibility");
+  requireCondition(Number(fixtureEligibility.eligibleRecipeCount) === 1, "Crafting fixture could not unlock one authorized equipment recipe.");
+  evidence.recipeFixtureEligible = true;
 
   const state = parseJsonLine(psql(`
     select jsonb_build_object(
