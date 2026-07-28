@@ -17,6 +17,12 @@
     ".admin-shape-surface-overlay",
   ].join(", ");
   const ACTIVATION_KEYS = new Set(["Enter", " ", "Spacebar"]);
+  const EXPLICIT_NATIVE_ACTIONS = new Set([
+    "contract-submission-accept",
+    "contract-submission-reject",
+    "contract-submission-confirm-decision",
+    "contract-submission-cancel-decision",
+  ]);
   const FORWARD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
   const BACKWARD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
   const FOCUS_IDENTITY_ATTRIBUTES = Object.freeze([
@@ -138,6 +144,16 @@
     return true;
   }
 
+  function activateAction(control, event) {
+    if (!ACTIVATION_KEYS.has(event.key) || !enabled(control)) return false;
+    const actionName = control.getAttribute("data-admin-terminal-action") || "";
+    if (nativeInteractive(control) && !EXPLICIT_NATIVE_ACTIONS.has(actionName)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    control.click();
+    return true;
+  }
+
   function onKeyDown(event) {
     if (event.defaultPrevented) return;
     markKeyboardModality();
@@ -166,7 +182,7 @@
     }
 
     const action = target.closest(ACTION_SELECTOR);
-    if (action instanceof HTMLElement) activateNonNative(action, event);
+    if (action instanceof HTMLElement) activateAction(action, event);
   }
 
   document.addEventListener("focusin", rememberFocusIdentity, true);
