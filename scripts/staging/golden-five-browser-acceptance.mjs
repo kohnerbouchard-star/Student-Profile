@@ -86,7 +86,7 @@ function instrument(page, journey) {
   page.on("console", (message) => {
     if (message.type() === "error") journey.consoleErrors.push(redact(message.text()));
   });
-  page.on("pageerror", (error) => journey.pageErrors.push(redact(error?.message || error));
+  page.on("pageerror", (error) => journey.pageErrors.push(redact(error?.message || error)));
   page.on("request", (request) => {
     const url = request.url();
     if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
