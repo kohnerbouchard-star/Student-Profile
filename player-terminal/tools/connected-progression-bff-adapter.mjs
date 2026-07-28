@@ -15,22 +15,16 @@ const before = `async function openProgression(page) {
   await page.locator(".player-terminal-progression-page").waitFor({ state: "visible", timeout: 30_000 });
 }`;
 const after = `async function openProgression(page) {
-  if (locationHash(page) !== "#profile") {
-    const profile = page.locator('[data-route="profile"]:visible').first();
-    await profile.waitFor({ state: "visible", timeout: 30_000 });
-    await profile.click();
-    await page.waitForFunction(() => location.hash === "#profile", undefined, { timeout: 30_000 });
-  }
+  const profile = page.locator('[data-route="profile"]:visible').first();
+  await profile.waitFor({ state: "visible", timeout: 30_000 });
+  await profile.click();
+  await page.waitForFunction(() => location.hash === "#profile", undefined, { timeout: 30_000 });
 
   const progression = page.locator('[data-route="progression"]:visible').first();
   await progression.waitFor({ state: "visible", timeout: 30_000 });
   await progression.click();
   await page.waitForFunction(() => location.hash === "#progression", undefined, { timeout: 30_000 });
   await page.locator(".player-terminal-progression-page").waitFor({ state: "visible", timeout: 30_000 });
-}
-
-function locationHash(page) {
-  return page.url().includes("#") ? `#${page.url().split("#").at(-1)}` : "";
 }`;
 
 const source = await readFile(targetPath, "utf8");
