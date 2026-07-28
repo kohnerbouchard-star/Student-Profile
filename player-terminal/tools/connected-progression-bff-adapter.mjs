@@ -74,6 +74,62 @@ source = replaceExactlyOnce(
 }`,
 );
 
+source = replaceExactlyOnce(
+  source,
+  "Progression unlock UI reconciliation",
+  `  await page.locator('[data-player-progression-tab="Skills"]').click();
+  await page.locator(\`[data-player-skill-unlock="\${skillId}"]\`).waitFor({ state: "visible", timeout: 30_000 });
+  const current = page.locator(\`[data-player-skill-unlock="\${skillId}"]\`);
+  if (!(await current.isDisabled()) || !/Unlocked/i.test(await current.innerText())) {
+    throw new Error("Progression skill did not reconcile to the unlocked state.");
+  }`,
+  `  await page.locator('[data-player-progression-tab="Skills"]').click();
+  await page.waitForFunction((id) => {
+    const current = document.querySelector('[data-player-skill-unlock="' + id + '"]');
+    return current instanceof HTMLButtonElement && current.disabled && /Unlocked/i.test(current.textContent || "");
+  }, skillId, { timeout: 30_000 });`,
+);
+
+source = replaceExactlyOnce(
+  source,
+  "Progression unlock reload persistence",
+  `  await page.locator('[data-player-progression-tab="Skills"]').click();
+  if (!(await page.locator(\`[data-player-skill-unlock="\${skillId}"]\`).isDisabled())) {
+    throw new Error("Progression skill unlock did not persist after reload.");
+  }`,
+  `  await page.locator('[data-player-progression-tab="Skills"]').click();
+  await page.waitForFunction((id) => {
+    const current = document.querySelector('[data-player-skill-unlock="' + id + '"]');
+    return current instanceof HTMLButtonElement && current.disabled && /Unlocked/i.test(current.textContent || "");
+  }, skillId, { timeout: 30_000 });`,
+);
+
+source = replaceExactlyOnce(
+  source,
+  "Progression claim UI reconciliation",
+  `  await page.locator('[data-player-progression-tab="Achievements"]').click();
+  if (await page.locator(\`[data-player-reward-claim="\${rewardId}"]\`).count()) {
+    throw new Error("Claimed Progression reward remained actionable after refresh.");
+  }`,
+  `  await page.locator('[data-player-progression-tab="Achievements"]').click();
+  await page.waitForFunction((id) => {
+    return !document.querySelector('[data-player-reward-claim="' + id + '"]');
+  }, rewardId, { timeout: 30_000 });`,
+);
+
+source = replaceExactlyOnce(
+  source,
+  "Progression claim reload persistence",
+  `  await page.locator('[data-player-progression-tab="Achievements"]').click();
+  if (await page.locator(\`[data-player-reward-claim="\${rewardId}"]\`).count()) {
+    throw new Error("Claimed Progression reward returned after reload.");
+  }`,
+  `  await page.locator('[data-player-progression-tab="Achievements"]').click();
+  await page.waitForFunction((id) => {
+    return !document.querySelector('[data-player-reward-claim="' + id + '"]');
+  }, rewardId, { timeout: 30_000 });`,
+);
+
 const materializedDirectory = await mkdtemp(join(dirname(targetPath), ".connected-progression-navigation-"));
 const materializedPath = join(materializedDirectory, "connected-progression-mutation-runner.mjs");
 try {
