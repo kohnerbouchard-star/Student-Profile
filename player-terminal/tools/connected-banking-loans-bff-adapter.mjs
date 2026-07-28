@@ -52,6 +52,36 @@ source = replaceExactlyOnce(
   'const response = await fetch(url, { method, headers, body, cache: "no-store" });',
   'const response = await fetch(url, { method, headers, body, cache: "no-store", credentials: "include" });',
 );
+source = replaceExactlyOnce(
+  source,
+  "Banking/Loans matched currency balances",
+  `async function bankingBalances(page) {
+  const checking = page.locator('[data-player-banking-balance^="checking:"] h3').first();
+  const savings = page.locator('[data-player-banking-balance^="savings:"] h3').first();
+  await checking.waitFor({ state: "visible", timeout: 30_000 });
+  await savings.waitFor({ state: "visible", timeout: 30_000 });
+  return {
+    checking: numberFromText(await checking.textContent()),
+    savings: numberFromText(await savings.textContent()),
+  };
+}`,
+  `async function bankingBalances(page) {
+  const savingsCard = page.locator('[data-player-banking-balance^="savings:"]').first();
+  await savingsCard.waitFor({ state: "visible", timeout: 30_000 });
+  const savingsKey = String(await savingsCard.getAttribute("data-player-banking-balance") || "");
+  const currencyCode = savingsKey.split(":")[1] || "";
+  if (!currencyCode) throw new Error("Savings balance did not expose its currency code.");
+  const checkingCard = page.locator(
+    \`[data-player-banking-balance="checking:\${currencyCode}"]\`,
+  ).first();
+  await checkingCard.waitFor({ state: "visible", timeout: 30_000 });
+  return {
+    currencyCode,
+    checking: numberFromText(await checkingCard.locator("h3").textContent()),
+    savings: numberFromText(await savingsCard.locator("h3").textContent()),
+  };
+}`,
+);
 
 if (source.includes("/functions/v1/classroom-api/players/login")) {
   throw new Error("Banking/Loans BFF adapter retained the retired Player login route.");
