@@ -158,6 +158,27 @@
     }
   }
 
+  function normalizeAuthorizationSummary(data) {
+    if (!data || typeof data !== "object") return null;
+    const admin = data.admin && typeof data.admin === "object"
+      ? data.admin
+      : {};
+    const rawRoles = Array.isArray(data.roles) ? data.roles : admin.roles;
+    const roles = normalizeRoles(rawRoles, admin);
+    if (!roles.includes("game_admin")) return null;
+
+    const rawPermissions = Array.isArray(data.permissions)
+      ? data.permissions
+      : admin.permissions;
+    const permissions = Array.isArray(rawPermissions) && rawPermissions.includes("*")
+      ? [...ADMIN_PERMISSION_SET].sort()
+      : normalizePermissions(rawPermissions);
+
+    return permissions.length
+      ? { permissions, roles, adminRole: "game_admin" }
+      : null;
+  }
+
   async function requestAuthorizationSummary() {
     if (signingOut) return null;
     const headers = {
@@ -179,17 +200,7 @@
     });
     if (!response.ok || signingOut) return null;
     const payload = await readResponseJson(response);
-    const data = payload?.data;
-    if (!data || typeof data !== "object") return null;
-    const permissions = normalizePermissions(data.permissions);
-    const roles = normalizeRoles(data.roles, data.admin);
-    return permissions.length && roles.includes("game_admin")
-      ? {
-        permissions,
-        roles,
-        adminRole: "game_admin"
-      }
-      : null;
+    return normalizeAuthorizationSummary(payload?.data);
   }
 
   async function requestStatus() {
