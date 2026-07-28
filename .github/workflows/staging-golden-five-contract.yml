@@ -35,10 +35,17 @@ jobs:
 
       - run: npm ci
 
-      - name: Validate scripts and package contract
-        run: |
-          npm run test:staging:scripts
-          node -e "const p=require('./package.json'); for (const name of ['staging:golden:verify','test:staging','preview:staging:codespace']) { if (!p.scripts[name]) throw new Error('Missing script: '+name); }"
+      - name: Validate fixture verifier syntax
+        run: node --check scripts/staging/golden-five-verify.mjs
+
+      - name: Validate browser acceptance syntax
+        run: node --check scripts/staging/golden-five-browser-acceptance.mjs
+
+      - name: Validate Codespaces preview syntax
+        run: node --check scripts/staging/codespace-preview.mjs
+
+      - name: Validate package command contract
+        run: node -e "const p=require('./package.json'); for (const name of ['staging:golden:verify','test:staging','preview:staging:codespace']) { if (!p.scripts[name]) throw new Error('Missing script: '+name); }"
 
       - name: Reject committed fixture secrets
         shell: bash
