@@ -70,6 +70,14 @@ const CANONICAL_REPLAY = `async function replayThroughBrowser(page, original) {
     return { status: response.status, payload: await response.json().catch(() => null) };
   }, original);
 }`;
+const REPLAY_RELOAD = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await waitForAdmin(page);
+  evidence.replayBalance = await readBalance(page);`;
+const REPLAY_REFRESH_SAFE = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 }).catch((error) => {
+    if (!String(error?.message || error).includes("ERR_ABORTED")) throw error;
+  });
+  await waitForAdmin(page);
+  evidence.replayBalance = await readBalance(page);`;
 
 function replaceExactlyOnce(source, label, before, after) {
   const count = source.split(before).length - 1;
@@ -97,6 +105,12 @@ source = replaceExactlyOnce(
   "Admin ledger canonical replay",
   INTERNAL_REPLAY,
   CANONICAL_REPLAY,
+);
+source = replaceExactlyOnce(
+  source,
+  "Admin ledger replay refresh",
+  REPLAY_RELOAD,
+  REPLAY_REFRESH_SAFE,
 );
 
 const materializedDirectory = await mkdtemp(
