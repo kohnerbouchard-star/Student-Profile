@@ -48,6 +48,12 @@ interface StaffBootstrapSessionRow {
   readonly updated_at: string;
 }
 
+interface OptionalDenoEnvironment {
+  readonly env?: {
+    readonly get?: (name: string) => string | undefined;
+  };
+}
+
 const INTERNAL_WEB_SESSION_ORIGIN = "https://web-session.internal";
 const INTERNAL_WEB_SESSION_RATE_LIMIT_IP = "192.0.2.1";
 const DEFAULT_TRUSTED_IP_HEADER: TrustedIpHeader = "x-real-ip";
@@ -158,8 +164,9 @@ function internalWebSessionRequest(request: Request): Request {
 }
 
 function configuredTrustedIpHeader(): TrustedIpHeader {
+  const deno = (globalThis as typeof globalThis & { Deno?: OptionalDenoEnvironment }).Deno;
   const configured = String(
-    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") || "",
+    deno?.env?.get?.("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "",
   ).trim().toLowerCase();
   return configured === "cf-connecting-ip" || configured === "x-real-ip"
     ? configured
