@@ -22,9 +22,29 @@ const after = `async function openProgression(page) {
 
   const progression = page.locator('[data-route="progression"]:visible').first();
   await progression.waitFor({ state: "visible", timeout: 30_000 });
+  const progressionResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/progression") && response.request().method() === "GET",
+    { timeout: 60_000 },
+  );
   await progression.click();
   await page.waitForFunction(() => location.hash === "#progression", undefined, { timeout: 30_000 });
+  const response = await progressionResponse;
+  if (response.status() !== 200) throw new Error("Progression route returned " + response.status() + ".");
+
+  await page.waitForFunction(() => {
+    return Boolean(
+      document.querySelector('[data-player-progression-tab="Skills"]') ||
+      document.querySelector(".player-terminal-route-error"),
+    );
+  }, undefined, { timeout: 30_000 });
+
+  const routeError = page.locator(".player-terminal-route-error");
+  if (await routeError.isVisible().catch(() => false)) {
+    throw new Error("Progression route failed after a successful response: " + String(await routeError.innerText()));
+  }
+
   await page.locator(".player-terminal-progression-page").waitFor({ state: "visible", timeout: 30_000 });
+  await page.locator('[data-player-progression-tab="Skills"]').waitFor({ state: "visible", timeout: 30_000 });
 }`;
 
 const source = await readFile(targetPath, "utf8");
