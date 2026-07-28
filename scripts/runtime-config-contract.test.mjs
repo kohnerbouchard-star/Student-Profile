@@ -8,10 +8,11 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-function execute(config) {
+function execute(config, locationOrigin = "https://preview.example.app") {
   const meta = { content: "" };
   const window = {
     __ECONOVARIA_RUNTIME_CONFIG__: config,
+    location: { origin: locationOrigin },
     document: {
       querySelector(selector) {
         return selector === 'meta[name="econovaria-admin-api-base"]' ? meta : null;
@@ -90,6 +91,25 @@ test("routes reviewed browser APIs through an approved loopback proxy", () => {
   assert.equal(meta.content, runtime.adminBffApiUrl);
 });
 
+test("routes staging APIs through the exact hosted HTTPS origin", () => {
+  const origin = "https://preview.example.app";
+  const { runtime, meta } = execute(
+    {
+      ...stagingConfig,
+      apiProxyUrl: `${origin}/`,
+    },
+    origin,
+  );
+  const functions = `${origin}/functions/v1`;
+
+  assert.equal(runtime.apiProxyUrl, origin);
+  assert.equal(runtime.playerWebSessionApiUrl, `${functions}/player-web-session-api`);
+  assert.equal(runtime.playerApiUrl, `${functions}/player-web-session-api/proxy`);
+  assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
+  assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
+  assert.equal(meta.content, runtime.adminBffApiUrl);
+});
+
 test("uses same-origin BFF routes in production", () => {
   const { runtime, meta } = execute({
     ...stagingConfig,
@@ -141,12 +161,25 @@ test("rejects non-HTTPS remote Supabase URLs", () => {
   );
 });
 
-test("rejects a non-loopback API proxy", () => {
+test("rejects a non-loopback cross-origin API proxy", () => {
   assert.throws(
     () => execute({
       ...stagingConfig,
       apiProxyUrl: "https://proxy.example.com",
     }),
+    /ECONOVARIA_RUNTIME_CONFIG_API_PROXY_MUST_BE_LOOPBACK/,
+  );
+});
+
+test("rejects an HTTP hosted staging proxy", () => {
+  assert.throws(
+    () => execute(
+      {
+        ...stagingConfig,
+        apiProxyUrl: "http://preview.example.app",
+      },
+      "http://preview.example.app",
+    ),
     /ECONOVARIA_RUNTIME_CONFIG_API_PROXY_MUST_BE_LOOPBACK/,
   );
 });

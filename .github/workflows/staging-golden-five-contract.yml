@@ -1,0 +1,60 @@
+name: Staging Golden Five Contract
+
+on:
+  pull_request:
+    paths:
+      - ".devcontainer/devcontainer.json"
+      - ".github/workflows/staging-golden-five-*.yml"
+      - "package.json"
+      - "scripts/staging/codespace-preview.mjs"
+      - "scripts/staging/golden-five-*.mjs"
+  push:
+    branches:
+      - agent/staging-golden-game-acceptance-v1
+    paths:
+      - ".devcontainer/devcontainer.json"
+      - ".github/workflows/staging-golden-five-*.yml"
+      - "package.json"
+      - "scripts/staging/codespace-preview.mjs"
+      - "scripts/staging/golden-five-*.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate fixture verifier syntax
+        run: node --check scripts/staging/golden-five-verify.mjs
+
+      - name: Validate browser acceptance syntax
+        run: node --check scripts/staging/golden-five-browser-acceptance.mjs
+
+      - name: Validate Codespaces preview syntax
+        run: node --check scripts/staging/codespace-preview.mjs
+
+      - name: Validate package command contract
+        run: node -e "const p=require('./package.json'); for (const name of ['staging:golden:verify','test:staging','preview:staging:codespace']) { if (!p.scripts[name]) throw new Error('Missing script: '+name); }"
+
+      - name: Reject committed fixture secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E 'GOLD-[1-5]-[A-Z0-9]{8}' \
+            scripts/staging \
+            .github/workflows/staging-golden-five-*.yml \
+            .devcontainer/devcontainer.json; then
+            echo "A plaintext Golden Five Access Code was committed." >&2
+            exit 1
+          fi
