@@ -3,6 +3,7 @@ type ServeHandler = (request: Request, info?: unknown) => Response | Promise<Res
 const originalServe = Deno.serve.bind(Deno) as (...args: unknown[]) => unknown;
 const MFA_HANDLE_KEY_NAME = "ECONOVARIA_MFA_HANDLE_KEY";
 const MFA_FUNCTION_MARKER = "/staff-mfa-api";
+const MAX_QR_SVG_BYTES = 200_000;
 
 (Deno as unknown as { serve: (...args: unknown[]) => unknown }).serve = (
   ...args: unknown[]
@@ -35,8 +36,6 @@ function wrapHandler(handler: ServeHandler): ServeHandler {
 
     const response = await handler(request, info);
     if (
-      route !== "/staff/mfa" ||
-      request.method !== "GET" ||
       !response.ok ||
       !String(response.headers.get("content-type") || "")
         .toLowerCase()
@@ -45,30 +44,93 @@ function wrapHandler(handler: ServeHandler): ServeHandler {
       return response;
     }
 
-    try {
-      const body = await response.clone().json() as Record<string, unknown>;
-      const factors = Array.isArray(body.factors)
-        ? body.factors.filter((factor) =>
-          Boolean(
-            factor &&
-              typeof factor === "object" &&
-              (factor as Record<string, unknown>).status === "verified",
-          )
-        )
-        : [];
-      body.factors = factors;
-      body.needsEnrollment = factors.length === 0;
-      const headers = new Headers(response.headers);
-      headers.set("content-type", "application/json; charset=utf-8");
-      headers.set("cache-control", "private, no-store, max-age=0");
-      return new Response(JSON.stringify(body), {
-        status: response.status,
-        headers,
-      });
-    } catch {
-      return response;
+    if (route === "/staff/mfa" && request.method === "GET") {
+      return normalizeStatusResponse(response);
     }
+    if (route === "/staff/mfa/enroll" && request.method === "POST") {
+      return normalizeEnrollmentResponse(response);
+    }
+    return response;
   };
+}
+
+async function normalizeStatusResponse(response: Response): Promise<Response> {
+  try {
+    const body = await response.clone().json() as Record<string, unknown>;
+    const factors = Array.isArray(body.factors)
+      ? body.factors.filter((factor) =>
+        Boolean(
+          factor &&
+            typeof factor === "object" &&
+            (factor as Record<string, unknown>).status === "verified",
+        )
+      )
+      : [];
+    body.factors = factors;
+    body.needsEnrollment = factors.length === 0;
+    return jsonResponseFrom(response, body);
+  } catch {
+    return response;
+  }
+}
+
+async function normalizeEnrollmentResponse(response: Response): Promise<Response> {
+  try {
+    const body = await response.clone().json() as Record<string, unknown>;
+    const factor = body.factor && typeof body.factor === "object"
+      ? body.factor as Record<string, unknown>
+      : null;
+    if (!factor) return response;
+
+    const normalizedQrCode = normalizeQrCode(factor.qrCode);
+    if (!normalizedQrCode) {
+      return json(500, {
+        error: {
+          code: "invalid_mfa_qr_payload",
+          message: "Authenticator QR code generation failed.",
+          retryable: true,
+        },
+      });
+    }
+    factor.qrCode = normalizedQrCode;
+    body.factor = factor;
+    return jsonResponseFrom(response, body);
+  } catch {
+    return response;
+  }
+}
+
+function normalizeQrCode(value: unknown): string {
+  const qrCode = String(value || "").trim();
+  if (/^data:image\/(?:png|svg\+xml);base64,[A-Za-z0-9+/=]+$/u.test(qrCode)) {
+    return qrCode;
+  }
+
+  const bytes = new TextEncoder().encode(qrCode);
+  if (
+    bytes.byteLength === 0 ||
+    bytes.byteLength > MAX_QR_SVG_BYTES ||
+    !/^\s*(?:<\?xml[^>]*>\s*)?<svg\b/iu.test(qrCode) ||
+    /<(?:script|foreignObject)\b/iu.test(qrCode) ||
+    /\son[a-z]+\s*=/iu.test(qrCode) ||
+    /(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|data:|javascript:)/iu.test(qrCode)
+  ) {
+    return "";
+  }
+
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `data:image/svg+xml;base64,${btoa(binary)}`;
+}
+
+function jsonResponseFrom(response: Response, body: unknown): Response {
+  const headers = new Headers(response.headers);
+  headers.set("content-type", "application/json; charset=utf-8");
+  headers.set("cache-control", "private, no-store, max-age=0");
+  return new Response(JSON.stringify(body), {
+    status: response.status,
+    headers,
+  });
 }
 
 function validMfaHandleKey(): boolean {
