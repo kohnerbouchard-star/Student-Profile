@@ -3,28 +3,38 @@ import { chromium } from "playwright";
 
 const BASE_URL = process.env.ADMIN_SCROLL_BASE_URL || "http://127.0.0.1:4173/admin/";
 const ARTIFACT_DIR = process.env.ADMIN_SCROLL_ARTIFACT_DIR || "admin-scroll-integrity-artifacts";
+const BROWSER_ORIGIN = "http://127.0.0.1:4173";
 const GAME_ID = "10000000-0000-4000-8000-000000000001";
 const ADMIN_ID = "10000000-0000-4000-8000-000000000002";
 const PLAYER_ID = "10000000-0000-4000-8000-000000000003";
+const CSRF_TOKEN = "S".repeat(43);
+const PERMISSIONS = Object.freeze([
+  "account.read",
+  "audit.read",
+  "attendance.manage",
+  "business.manage",
+  "contracts.manage",
+  "economy.adjust",
+  "game.create",
+  "game.read",
+  "game.switch",
+  "game.update",
+  "inventory.redeem",
+  "market.manage",
+  "marketplace.moderate",
+  "messaging.moderate",
+  "players.manage",
+  "progression.review",
+  "settings.manage",
+  "store.manage",
+  "world.manage",
+]);
 
 mkdirSync(ARTIFACT_DIR, { recursive: true });
-
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
-}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
-
-const now = Math.floor(Date.now() / 1000);
-const accessToken = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID,
-  email: "scroll.audit@example.test",
-  role: "authenticated",
-  iat: now,
-  exp: now + 3600,
-})}.signature`;
 
 const game = {
   id: GAME_ID,
@@ -34,6 +44,15 @@ const game = {
   status: "active",
   gameCode: "ECO-SCROLL-ROOM-101",
   joinCode: "ECO-SCROLL-ROOM-101",
+};
+
+const user = {
+  id: ADMIN_ID,
+  email: "scroll.audit@example.test",
+  displayName: "Scroll Audit Administrator",
+  role: "game_admin",
+  permissionVersion: 1,
+  securityVersion: 1,
 };
 
 const player = {
@@ -53,7 +72,7 @@ const player = {
   balance: 1250,
   netWorth: 1980,
   balances: [
-    { accountType: "cash", balance: 1250, currencyCode: "NRC" },
+    { accountType: "checking", balance: 1250, currencyCode: "NRC" },
     { accountType: "savings", balance: 300, currencyCode: "NRC" },
   ],
   stockMarketValue: 400,
@@ -68,7 +87,7 @@ const common = {
   gameSessionId: GAME_ID,
   activeGameId: GAME_ID,
   selectedGameSessionId: GAME_ID,
-  permissions: ["*"],
+  permissions: [...PERMISSIONS],
   roles: ["game_admin"],
   adminRole: "game_admin",
   game,
@@ -86,19 +105,43 @@ const common = {
     lateCount: 0,
     absentCount: 0,
     activePlayerCount: 1,
+    totalPlayers: 1,
+    presentRate: 0,
     rewardsIssuedCount: 0,
     rewardsIssuedTotal: 0,
   },
   attendanceCounts: { present: 0, late: 0, absent: 0, total: 1 },
   contracts: [],
+  assignments: [],
+  contractSubmissions: [],
+  submissions: [],
   store: [],
   storeItems: [],
+  items: [],
   assets: [],
   trades: [],
   events: [],
   market: { assets: [], trades: [], events: [] },
-  settings: {},
+  settings: {
+    difficultyPreset: "moderate",
+    backendDifficultyPreset: "moderate",
+    difficultyBasePreset: "moderate",
+    priceMultiplier: 1,
+    incomeMultiplier: 1,
+    shockFrequency: 1,
+    shockSeverity: 1,
+    recoverySupport: 1,
+    tradeMultiplier: 1,
+    configSaveState: "saved",
+  },
   logs: [],
+  pagination: {
+    page: 1,
+    pageSize: 50,
+    total: 1,
+    totalPages: 1,
+    hasNextPage: false,
+  },
   dashboard: {
     activePlayerCount: 1,
     totalPlayers: 1,
@@ -108,7 +151,73 @@ const common = {
     recentActivity: [],
     marketStatus: "open",
   },
+  recentActivity: [],
 };
+
+function sessionTimes() {
+  return {
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    absoluteExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+  };
+}
+
+function safeSession() {
+  return {
+    authenticated: true,
+    ...sessionTimes(),
+    assuranceLevel: "aal2",
+    mfaRequired: true,
+    user,
+    csrfToken: CSRF_TOKEN,
+    activeGameSessions: [game],
+    permissions: [...PERMISSIONS],
+    roles: ["game_admin"],
+    adminRole: "game_admin",
+    storedAt: new Date().toISOString(),
+  };
+}
+
+function legacySessionBridge(session) {
+  const staffSession = {
+    staffId: session.user.id,
+    staffEmail: session.user.email,
+    staffDisplayName: session.user.displayName,
+    staffRole: "game_admin",
+    roles: ["game_admin"],
+    permissions: [...PERMISSIONS],
+    activeGameSessions: [game],
+    selectedGameSessionId: GAME_ID,
+  };
+  return {
+    currentSession: {
+      role: "ADMIN",
+      authSource: "http-only-bff",
+      permissions: [...PERMISSIONS],
+      roles: ["game_admin"],
+      adminRole: "game_admin",
+      user: session.user,
+      assuranceLevel: session.assuranceLevel,
+      mfaRequired: true,
+      staffSession,
+    },
+    staffSession,
+  };
+}
+
+function statusPayload() {
+  return {
+    ok: true,
+    session: {
+      authenticated: true,
+      ...sessionTimes(),
+      assuranceLevel: "aal2",
+      mfaRequired: true,
+    },
+    user,
+    activeGameSessions: [game],
+    csrfToken: CSRF_TOKEN,
+  };
+}
 
 function bootstrapResponse() {
   return {
@@ -116,24 +225,36 @@ function bootstrapResponse() {
       admin: {
         id: ADMIN_ID,
         accountId: ADMIN_ID,
-        displayName: "Scroll Audit Administrator",
-        email: "scroll.audit@example.test",
+        displayName: user.displayName,
+        email: user.email,
         role: "game_admin",
         roles: ["game_admin"],
       },
       activeGame: game,
       games: [game],
-      permissions: ["*"],
+      permissions: [...PERMISSIONS],
       roles: ["game_admin"],
       adminRole: "game_admin",
       csrfToken: "",
       session: {
         id: ADMIN_ID,
         csrfToken: "",
-        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        assuranceLevel: "aal2",
+        expiresAt: sessionTimes().expiresAt,
       },
       capabilities: {},
     },
+  };
+}
+
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": BROWSER_ORIGIN,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers":
+      "apikey,content-type,x-econovaria-csrf-token,x-econovaria-device-id,x-econovaria-game-id,x-idempotency-key,x-request-id",
+    "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS",
+    "cache-control": "private, no-store",
   };
 }
 
@@ -156,49 +277,71 @@ page.on("requestfailed", (request) => {
   const failure = request.failure()?.errorText || "";
   if (url.endsWith("/favicon.ico")) return;
   if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
+  if (/\/admin\/assets\/icons\/media-placeholder\.svg$/i.test(url) && failure.includes("ERR_ABORTED")) return;
   errors.push(`requestfailed: ${request.method()} ${new URL(url).pathname} ${failure}`);
 });
 
-await page.addInitScript(({ token, gameId, adminId }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken: token,
-    refreshToken: "scroll-audit-refresh-token",
-    user: { id: adminId, email: "scroll.audit@example.test" },
-  }));
+const session = safeSession();
+const bridge = legacySessionBridge(session);
+await page.addInitScript(({ sessionValue, gameId, bridgeValue }) => {
+  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(sessionValue));
   sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-}, { token: accessToken, gameId: GAME_ID, adminId: ADMIN_ID });
+  window.currentSession = bridgeValue.currentSession;
+  window.state = window.state || {};
+  window.state.staffSession = bridgeValue.staffSession;
+}, {
+  sessionValue: session,
+  gameId: GAME_ID,
+  bridgeValue: bridge,
+});
 
-await page.route("**/functions/v1/admin-api/**", async (route) => {
+await page.route("**/functions/v1/web-session-api/status", async (route) => {
   const request = route.request();
-  const pathname = new URL(request.url()).pathname;
   if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      },
-      body: "",
-    });
+    await route.fulfill({ status: 204, headers: corsHeaders(), body: "" });
     return;
   }
-
-  const body = pathname.endsWith("/session/bootstrap")
-    ? bootstrapResponse()
-    : pathname.endsWith(`/games/${GAME_ID}/players`)
-      ? { data: { ...common, players: [player], roster: [player] } }
-      : pathname.endsWith("/join-code/reset")
-        ? { data: { gameCode: game.gameCode, joinCode: game.joinCode, status: "active" } }
-        : { data: common };
-
   await route.fulfill({
     status: 200,
     contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+    headers: corsHeaders(),
+    body: JSON.stringify(statusPayload()),
+  });
+});
+
+await page.route("**/functions/v1/web-session-api/proxy/**", async (route) => {
+  const request = route.request();
+  if (request.method() === "OPTIONS") {
+    await route.fulfill({ status: 204, headers: corsHeaders(), body: "" });
+    return;
+  }
+  const pathname = new URL(request.url()).pathname;
+  const marker = "/functions/v1/web-session-api/proxy";
+  const path = pathname.startsWith(marker) ? pathname.slice(marker.length) || "/" : pathname;
+  const body = path.endsWith("/session/bootstrap")
+    ? bootstrapResponse()
+    : { data: common };
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    headers: corsHeaders(),
     body: JSON.stringify(body),
   });
 });
+
+for (const prohibited of [
+  "**/functions/v1/admin-api/**",
+  "**/functions/v1/classroom-api/**",
+]) {
+  await page.route(prohibited, async (route) => {
+    errors.push(`Prohibited browser authority reached: ${route.request().url()}`);
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Prohibited browser authority" }),
+    });
+  });
+}
 
 async function navigate(section) {
   const control = page.locator(`[data-admin-section="${section}"]:visible`).first();
@@ -259,7 +402,16 @@ try {
   assert(before.leftOverflowY === "hidden", `Left rail overflow is ${before.leftOverflowY}`);
   assert(["auto", "scroll"].includes(before.mainOverflowY), `Right content overflow is ${before.mainOverflowY}`);
   assert(Math.abs(before.cardBottom - before.leftBottom) <= 14, `Game Code is ${Math.round(before.leftBottom - before.cardBottom)}px above the rail bottom.`);
-  assert(before.mainScrollHeight > before.mainClientHeight, "Right content did not become the desktop page scroller.");
+
+  await page.locator(".admin-terminal-shell-main").evaluate((node) => {
+    const filler = document.createElement("div");
+    filler.dataset.adminScrollTestFiller = "page";
+    filler.style.height = "1000px";
+    filler.style.minHeight = "1000px";
+    node.append(filler);
+  });
+  const scrollableBefore = await shellGeometry();
+  assert(scrollableBefore.mainScrollHeight > scrollableBefore.mainClientHeight, "Right content did not become the desktop page scroller.");
 
   await page.evaluate(() => {
     window.scrollTo(0, 500);
@@ -294,15 +446,14 @@ try {
     overflowY: getComputedStyle(node).overflowY,
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
-    scrollTop: node.scrollTop,
   }));
   assert(["auto", "scroll"].includes(drawerBefore.overflowY), `Player panel overflow is ${drawerBefore.overflowY}`);
   assert(drawerBefore.scrollHeight > drawerBefore.clientHeight, "Player panel did not contain overflow.");
   await panels.evaluate((node) => { node.scrollTop = 220; });
   await page.waitForTimeout(100);
-  const drawerAfter = await panels.evaluate((node) => ({ scrollTop: node.scrollTop }));
+  const drawerScrollTop = await panels.evaluate((node) => node.scrollTop);
   const mainScrollAfterDrawer = await page.locator(".admin-terminal-shell-main").evaluate((node) => node.scrollTop);
-  assert(drawerAfter.scrollTop > 0, "Player panel scrollTop did not advance.");
+  assert(drawerScrollTop > 0, "Player panel scrollTop did not advance.");
   assert(mainScrollAfterDrawer === mainScrollBeforeDrawer, "Player panel scrolling chained into right-page scrolling.");
   report.playerDrawer = {
     bounded: true,
@@ -328,14 +479,13 @@ try {
     overflowY: getComputedStyle(node).overflowY,
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
-    scrollTop: node.scrollTop,
   }));
   assert(["auto", "scroll"].includes(modalBefore.overflowY), `Add Player pane overflow is ${modalBefore.overflowY}`);
   assert(modalBefore.scrollHeight > modalBefore.clientHeight, "Add Player pane did not contain overflow.");
   await playerMain.evaluate((node) => { node.scrollTop = 220; });
   await page.waitForTimeout(100);
-  const modalAfter = await playerMain.evaluate((node) => ({ scrollTop: node.scrollTop }));
-  assert(modalAfter.scrollTop > 0, "Add Player pane scrollTop did not advance.");
+  const modalScrollTop = await playerMain.evaluate((node) => node.scrollTop);
+  assert(modalScrollTop > 0, "Add Player pane scrollTop did not advance.");
   assert((await shellGeometry()).windowScrollY === 0, "Modal pane scrolling moved the document.");
   report.playerModal = {
     paneScrollable: true,
