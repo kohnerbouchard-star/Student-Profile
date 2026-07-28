@@ -20,6 +20,7 @@ const expectedScripts = [
   "./dist/admin-overview-terminal.js",
   "./asset-wiring.js",
   "./classroom-write-fallback.js",
+  "./ledger-adjustment-wiring.js",
   "./create-action-adapter.js",
   "./player-access-code-bridge.js",
   "./modal-accessibility.js",
@@ -61,6 +62,7 @@ const sessionManager = readAdmin("auth-session-manager.js");
 const auth = readAdmin("admin-auth.js");
 const boot = readAdmin("dist/admin-overview-boot.js");
 const fallback = readAdmin("classroom-write-fallback.js");
+const ledgerWiring = readAdmin("ledger-adjustment-wiring.js");
 const createAdapter = readAdmin("create-action-adapter.js");
 const credentialBridge = readAdmin("player-access-code-bridge.js");
 const playerCreateUx = readAdmin("player-create-ux.js");
@@ -109,6 +111,13 @@ assert(!/headers\s*:\s*\{[^}]*Authorization\s*:/s.test(fallback), "Admin write a
 assert(!/headers\.(?:set|append)\(\s*["']Authorization["']/i.test(fallback), "Admin write adapter mutates bearer authorization.");
 assert(!fallback.includes("retryStatuses"), "Admin write adapter still retries through a legacy boundary.");
 
+assert(ledgerWiring.includes('const ACTION = "confirm-player-balance-adjustment"'), "Ledger adjustment wiring is not bounded to its rendered action.");
+assert(ledgerWiring.includes("/api/admin/games/"), "Ledger adjustment wiring does not use the Admin BFF route.");
+assert(ledgerWiring.includes('credentials: "include"'), "Ledger adjustment wiring omits the HttpOnly Admin session.");
+assert(ledgerWiring.includes('accountType: "checking"'), "Ledger adjustment wiring does not use canonical checking semantics.");
+assert(!ledgerWiring.includes("Authorization"), "Ledger adjustment wiring constructs browser-readable authorization.");
+assert(!ledgerWiring.includes("Bearer"), "Ledger adjustment wiring constructs bearer authorization.");
+
 assert(createAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")'), "Create Player omits Player ID.");
 assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Create Player omits Access Code.");
 assert(credentialBridge.includes("econovaria:player-access-code-issued"), "One-time Player credential event is missing.");
@@ -138,4 +147,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell HttpOnly BFF identity, granular authorization, retired classroom fallback, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
+console.log("Admin shell HttpOnly BFF identity, granular authorization, retired classroom fallback, authenticated request, persisted Game Code, bounded Player credential, bounded ledger adjustment, and logout contracts passed.");
