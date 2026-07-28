@@ -6,8 +6,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const CORE_URL = new URL("./connected-admin-ledger-runner-v4.mjs", import.meta.url);
 const SOURCE_DIRECTORY = new URL("./", import.meta.url);
-const RETIRED_MATCHER = `/\\/functions\\/v1\\/web-session-api\\/proxy\\/games\\/[^/]+\\/players\\/[^/]+\\/ledger-adjustments$/u`;
-const CANONICAL_MATCHER = `/\\/api\\/admin\\/games\\/[^/]+\\/players\\/[^/]+\\/ledger-adjustments$/u`;
 const GENERIC_SUBMIT = `  const submit = modal.getByRole(
     "button",
     { name: /save ledger adjustment|apply|confirm|adjust|credit|update/iu },
@@ -53,12 +51,6 @@ function replaceExactlyOnce(source, label, before, after) {
 }
 
 let source = await readFile(CORE_URL, "utf8");
-source = replaceExactlyOnce(
-  source,
-  "Admin ledger response matcher",
-  RETIRED_MATCHER,
-  CANONICAL_MATCHER,
-);
 source = replaceExactlyOnce(
   source,
   "Admin ledger submit control",
