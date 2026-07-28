@@ -20,8 +20,8 @@ const CONNECTED_JOURNEYS = Object.freeze([
     label: "Marketplace",
   }),
   Object.freeze({
-    mode: "adapt",
-    path: "../player-terminal/tools/connected-progression-mutation-runner.mjs",
+    mode: "import",
+    path: "../player-terminal/tools/connected-progression-bff-adapter.mjs",
     label: "Progression",
   }),
   Object.freeze({
