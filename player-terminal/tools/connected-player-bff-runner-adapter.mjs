@@ -89,9 +89,9 @@ function adaptMarketplaceCountryFixture(source) {
     do $$
     begin
       update public.player_country_assignments
-      set country_profile_id = '${countryProfileId}', assigned_at = statement_timestamp()
-      where game_session_id = '${gameId}'
-        and player_id = '${buyerId}'
+      set country_profile_id = '\${countryProfileId}', assigned_at = statement_timestamp()
+      where game_session_id = '\${gameId}'
+        and player_id = '\${buyerId}'
         and status = 'active';
       if not found then
         raise exception 'MARKETPLACE_BUYER_COUNTRY_ASSIGNMENT_NOT_FOUND';
