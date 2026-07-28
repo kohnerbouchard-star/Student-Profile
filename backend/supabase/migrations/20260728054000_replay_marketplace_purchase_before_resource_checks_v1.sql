@@ -130,7 +130,7 @@ begin
   where n.nspname = 'public'
     and p.proname = 'settle_marketplace_purchase_public_v1';
 
-  if position("status in ('completed', 'disputed', 'refunded')" in v_definition) = 0
+  if position('status in (''completed'', ''disputed'', ''refunded'')' in v_definition) = 0
     or position('settle_marketplace_purchase_projection_legacy_v1' in v_definition)
        > position('marketplace_reconcile_inventory_projection_v1' in v_definition)
   then
