@@ -34,6 +34,10 @@ try {
       "__sessionBootstrapPending",
       "loadAdminTerminalSessionBootstrap",
       "authState",
+      "confirm-player-balance-adjustment",
+      "open-player-balance-adjustment",
+      "ledger-adjustments",
+      "adjustmentType",
     ];
     const excerpts = {};
     for (const needle of needles) {
