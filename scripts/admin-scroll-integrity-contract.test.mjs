@@ -22,10 +22,10 @@ test("desktop Admin shell has one right-side page scroller", () => {
   assert.match(css, /\.econovaria-admin-game-session-card[\s\S]*align-self:\s*end/);
 });
 
-test("page skeleton reserves one gutter without becoming the scroll owner", () => {
-  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow-y:\s*scroll/);
-  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-color:\s*transparent transparent/);
-  assert.match(css, /\.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\]::-webkit-scrollbar[\s\S]*width:\s*8px/);
+test("page skeleton reuses the parent gutter without becoming a scroll owner", () => {
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow:\s*hidden/);
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-gutter:\s*auto/);
+  assert.doesNotMatch(css, /\.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\]::-webkit-scrollbar/);
   assert.doesNotMatch(css, /(?:^|\n)\s*\.admin-terminal-shell-main\s*\{[\s\S]*?scrollbar-gutter:/);
 });
 
