@@ -210,7 +210,7 @@ jobs:
 
       - name: Upload transactional evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: seed-beta-transactional-release-${{ github.sha }}
           path: |
@@ -284,7 +284,7 @@ jobs:
 
       - name: Upload connected staging evidence and diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: seed-beta-connected-staging-${{ github.sha }}
           path: |
