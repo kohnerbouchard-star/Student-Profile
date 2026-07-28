@@ -40,8 +40,9 @@ async function installConnectedStory(page, item, options = {}) {
       runtime: window,
       config: {
         usePreviewData: false,
-        playerSessionToken: "browser-session-token",
-        playerSessionId: "browser-session-id",
+        authenticated: true,
+        csrfToken: "a".repeat(43),
+        sessionExpiresAt: "2026-07-20T04:00:00.000Z",
         gameSessionId: "00000000-0000-4000-8000-000000000001",
         sessionInvalidEvent: "test-story-session-invalid",
         storyMediaAssets: {},

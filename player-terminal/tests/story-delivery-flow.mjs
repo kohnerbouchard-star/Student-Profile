@@ -131,7 +131,7 @@ function terminalHarness() {
     status: "ready",
     data: {
       capabilities: { actions: { storyDeliveryState: true } },
-      session: { gameSessionId: "00000000-0000-4000-8000-000000000001" },
+      session: { playerId: "BROWSER-PLAYER-ALPHA", gameSessionId: "" },
     },
     modal: null,
   };
@@ -199,9 +199,9 @@ const api = {
 };
 const config = {
   usePreviewData: false,
-  playerSessionToken: "session-token",
-  playerSessionId: "session-public-id",
-  gameSessionId: "00000000-0000-4000-8000-000000000001",
+  authenticated: true,
+  csrfToken: "a".repeat(43),
+  sessionExpiresAt: "2026-07-20T04:00:00.000Z",
   sessionInvalidEvent: "test-session-invalid",
 };
 const controller = installStoryDeliveryFlow({ mount, terminal, config, api, runtime });

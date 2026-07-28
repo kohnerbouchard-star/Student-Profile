@@ -98,12 +98,12 @@ function errorCode(error) {
 
 function cookieBoundSessionKey(config, state) {
   if (state?.status !== "ready") return "";
-  const game = String(config.gameSessionId || state.data?.session?.gameSessionId || "");
   const csrfToken = String(config.csrfToken || "");
   const expiresAt = String(config.sessionExpiresAt || state.data?.session?.expiresAt || "");
-  const authenticated = config.authenticated === true || Boolean(state.data?.session);
-  if (!authenticated || !game) return "";
-  return `${game}:${expiresAt}:${csrfToken || "http-only-cookie"}`;
+  const game = String(config.gameSessionId || state.data?.session?.gameSessionId || "");
+  const player = String(state.data?.session?.playerId || "");
+  if (config.authenticated !== true || !csrfToken || (!game && !player)) return "";
+  return `${game || player}:${expiresAt}:${csrfToken}`;
 }
 
 export function installStoryDeliveryFlow({ mount, terminal, config, api: suppliedApi = null, runtime = globalThis }) {

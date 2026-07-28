@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
 
@@ -46,12 +47,47 @@ function preserveBffReplayHeaders(source) {
   return result;
 }
 
+function synchronizeInitialSeenListener(source) {
+  source = replaceExactlyOnce(
+    source,
+    "Story early seen listener",
+    '  const requiredSeenPromise = stateResponse(page, "seen");\n  await page.goto',
+    "  await page.goto",
+  );
+  return replaceExactlyOnce(
+    source,
+    "Story login-bound seen listener",
+    '  await page.locator("#playerForm button[type=\'submit\']").click();',
+    '  const requiredSeenPromise = stateResponse(page, "seen");\n  await page.locator("#playerForm button[type=\'submit\']").click();',
+  );
+}
+
 function redact(value) {
   return String(value || "")
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]")
     .replace(/sb_(?:secret|publishable)_[A-Za-z0-9_-]+/g, "[supabase-key-redacted]")
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, "[uuid-redacted]")
     .slice(0, 5000);
+}
+
+function executeMaterializedRunner(materializedPath) {
+  const result = spawnSync(process.execPath, [materializedPath], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const suffix = result.signal ? ` after signal ${result.signal}` : "";
+    const diagnostic = redact(result.stderr || result.stdout || "no child-process diagnostic");
+    throw new Error(
+      `Materialized Story runner exited with status ${String(result.status)}${suffix}: ${diagnostic}`,
+    );
+  }
 }
 
 async function run() {
@@ -78,6 +114,7 @@ async function run() {
     'fetch(url, { method, headers, body, cache: "no-store" })',
     'fetch(url, { method, headers, body, cache: "no-store", credentials: "include" })',
   );
+  source = synchronizeInitialSeenListener(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Story adapter retained the retired Player login route.");
@@ -90,7 +127,7 @@ async function run() {
   const materializedPath = join(materializedDirectory, "connected-story-delivery-mutation-runner.mjs");
   try {
     await writeFile(materializedPath, source, "utf8");
-    await import(pathToFileURL(materializedPath).href);
+    executeMaterializedRunner(materializedPath);
   } finally {
     await rm(materializedDirectory, { recursive: true, force: true });
   }

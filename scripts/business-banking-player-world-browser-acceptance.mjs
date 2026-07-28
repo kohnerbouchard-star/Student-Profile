@@ -38,6 +38,11 @@ const CONNECTED_JOURNEYS = Object.freeze([
     label: "Story delivery",
   }),
   Object.freeze({
+    mode: "direct",
+    path: "../player-terminal/tools/connected-crafting-pack-activation.mjs",
+    label: "Crafting pack activation",
+  }),
+  Object.freeze({
     mode: "adapt",
     path: "../player-terminal/tools/connected-crafting-mutation-runner.mjs",
     label: "Crafting",
