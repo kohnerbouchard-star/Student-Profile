@@ -1,0 +1,25 @@
+{
+  "name": "Econovaria Staging Preview",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [4174],
+  "portsAttributes": {
+    "4174": {
+      "label": "Econovaria staging preview",
+      "onAutoForward": "openPreview",
+      "protocol": "http",
+      "visibility": "private"
+    }
+  },
+  "postCreateCommand": "npm ci",
+  "remoteEnv": {
+    "ECONOVARIA_PROJECT_REF": "eecvbssdvarfcykcfrny",
+    "ECONOVARIA_PREVIEW_PORT": "4174"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
