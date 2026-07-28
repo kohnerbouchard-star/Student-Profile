@@ -72,7 +72,7 @@ test("builds an isolated static deployment without swallowing Vercel functions",
       path.join(outputRoot, "runtime-config.env.js"),
       "utf8",
     );
-    assert.match(runtimeSource, /environment: "production"/);
+    assert.match(runtimeSource, /"environment": "production"/);
     assert.match(runtimeSource, /cgiukdjwicykrmtkhudh/);
     assert.doesNotMatch(runtimeSource, /sb_secret_|service_role/i);
 
