@@ -17,15 +17,20 @@ const ACCOUNTS = [
   ["open-admin-help", "account-help"], ["open-admin-games", "account-games"],
 ];
 
-function assertGeometry(label, loaded, skeleton) {
+function assertGeometry(label, loaded, skeleton, rootScrollbarGutter = 0) {
   if (!loaded?.root || !skeleton?.root) fail(`${label} has no root geometry.`);
   const shared = Object.keys(loaded).filter((key) => skeleton[key]);
   if (!shared.length) fail(`${label} has no shared geometry.`);
   for (const key of shared) {
-    const tolerance = key === "toolbar" ? 2 : 4;
+    const baseTolerance = key === "toolbar" ? 2 : 4;
     for (const dimension of ["x", "y", "width", "height", "right", "bottom"]) {
       const delta = Math.abs(Number(loaded[key][dimension]) - Number(skeleton[key][dimension]));
-      if (delta > tolerance) fail(`${label} ${key}.${dimension} moved ${delta.toFixed(2)}px.`);
+      const rootGutterDimension = key === "root" && ["width", "right"].includes(dimension);
+      if (rootGutterDimension && delta > baseTolerance) {
+        const gutter = Math.max(0, Number(rootScrollbarGutter) || 0);
+        if (gutter > 0 && Math.abs(delta - gutter) <= 2) continue;
+      }
+      if (delta > baseTolerance) fail(`${label} ${key}.${dimension} moved ${delta.toFixed(2)}px.`);
     }
   }
   return shared;
@@ -49,7 +54,12 @@ async function waitForCleanup(label) {
 }
 
 function validate(label, snapshot) {
-  const shared = assertGeometry(label, snapshot.loaded, snapshot.skeleton);
+  const shared = assertGeometry(
+    label,
+    snapshot.loaded,
+    snapshot.skeleton,
+    snapshot.rootScrollbarGutter,
+  );
   if (snapshot.busy !== "true" || snapshot.role !== "status" || !snapshot.label) fail(`${label} lacks loading semantics.`);
   if (snapshot.cloneHidden !== "true" || !snapshot.cloneInert) fail(`${label} clone is not decorative and inert.`);
   if (!snapshot.focusPreserved || !snapshot.scrollPreserved) fail(`${label} moved focus or scroll.`);
@@ -74,6 +84,7 @@ async function manualSnapshot(route, label) {
       focusPreserved: document.activeElement === focus,
       scrollPreserved: window.scrollX === scroll[0] && window.scrollY === scroll[1] && (main?.scrollTop || 0) === scroll[2],
       overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth,
+      rootScrollbarGutter: Math.max(0, (main?.offsetWidth || 0) - (main?.clientWidth || 0)),
       motion: shape ? getComputedStyle(shape, "::after").animationName : "",
     };
     controller?.hide?.();
@@ -200,6 +211,7 @@ async function automaticSnapshot(route, label) {
       focusPreserved: document.activeElement === probe?.focus,
       scrollPreserved: window.scrollX === probe?.x && window.scrollY === probe?.y && (main?.scrollTop || 0) === probe?.main,
       overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth,
+      rootScrollbarGutter: Math.max(0, (main?.offsetWidth || 0) - (main?.clientWidth || 0)),
       generation: controller?.generation || 0,
     };
   });
