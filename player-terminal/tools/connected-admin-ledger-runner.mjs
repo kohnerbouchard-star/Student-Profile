@@ -41,6 +41,35 @@ const REQUIRED_COMPLETION = `  const note = modal.locator('textarea[name="ledger
       await control.fill(inputType === "number" ? String(ADJUSTMENT) : "Connected browser mutation verification");
     }
   }`;
+const INTERNAL_REPLAY = `async function replayThroughBrowser(page, original) {
+  return page.evaluate(async ({ url, headers, body }) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      cache: "no-store",
+      credentials: "include",
+    });
+    return { status: response.status, payload: await response.json().catch(() => null) };
+  }, original);
+}`;
+const CANONICAL_REPLAY = `async function replayThroughBrowser(page, original) {
+  return page.evaluate(async ({ url, headers, body }) => {
+    const internal = new URL(url, window.location.href);
+    const prefix = "/functions/v1/web-session-api/proxy";
+    const replayUrl = internal.pathname.startsWith(prefix)
+      ? \`/api/admin\${internal.pathname.slice(prefix.length)}\${internal.search}\`
+      : url;
+    const response = await fetch(replayUrl, {
+      method: "POST",
+      headers,
+      body,
+      cache: "no-store",
+      credentials: "include",
+    });
+    return { status: response.status, payload: await response.json().catch(() => null) };
+  }, original);
+}`;
 
 function replaceExactlyOnce(source, label, before, after) {
   const count = source.split(before).length - 1;
@@ -62,6 +91,12 @@ source = replaceExactlyOnce(
   "Admin ledger required fields",
   NOTE_COMPLETION,
   REQUIRED_COMPLETION,
+);
+source = replaceExactlyOnce(
+  source,
+  "Admin ledger canonical replay",
+  INTERNAL_REPLAY,
+  CANONICAL_REPLAY,
 );
 
 const materializedDirectory = await mkdtemp(
