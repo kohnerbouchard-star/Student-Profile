@@ -19,6 +19,7 @@ const evidence = {
   importReplaySafe: false,
   activated: false,
   activationReplaySafe: false,
+  storeBridgeVerified: false,
   activePackVerified: false,
   recipeAvailabilityVerified: false,
   productionDenied: false,
@@ -149,6 +150,63 @@ try {
   `), "Crafting activation replay");
   requireCondition(activationReplay.replayed === true, "Crafting activation replay was not idempotent.");
   evidence.activationReplaySafe = true;
+
+  const bridge = parseJsonLine(psql(`
+    with active_pack as (
+      select game_pack.pack_id
+      from public.game_session_physical_economy_packs game_pack
+      join public.physical_economy_content_packs pack_row on pack_row.id = game_pack.pack_id
+      where game_pack.game_session_id = ${sqlLiteral(scope.gameId)}::uuid
+        and game_pack.status = 'active'
+        and pack_row.status = 'active'
+        and pack_row.pack_key = ${sqlLiteral(pack.packKey)}
+        and pack_row.content_version = ${sqlLiteral(pack.contentVersion)}
+      limit 1
+    ), bridged as (
+      insert into public.store_items (
+        game_session_id,
+        item_key,
+        name,
+        description,
+        category,
+        price,
+        currency_code,
+        stock_quantity,
+        status,
+        visibility,
+        sort_order
+      )
+      select
+        ${sqlLiteral(scope.gameId)}::uuid,
+        definition.item_key,
+        definition.name,
+        nullif(btrim(definition.description), ''),
+        definition.item_class,
+        0,
+        definition.currency_code,
+        100000,
+        'active',
+        'visible',
+        1000 + row_number() over (order by definition.item_key)
+      from active_pack
+      join public.physical_economy_item_definitions definition
+        on definition.pack_id = active_pack.pack_id
+       and definition.status = 'active'
+      on conflict (game_session_id, item_key) do update set
+        name = excluded.name,
+        description = excluded.description,
+        category = excluded.category,
+        currency_code = excluded.currency_code,
+        stock_quantity = greatest(public.store_items.stock_quantity, excluded.stock_quantity),
+        status = 'active',
+        visibility = 'visible',
+        updated_at = now()
+      returning id
+    )
+    select jsonb_build_object('storeItemCount', count(*))::text from bridged;
+  `), "Crafting Store bridge");
+  requireCondition(Number(bridge.storeItemCount) === Number(pack.counts?.items), "Crafting Store bridge did not materialize the authorized item catalog.");
+  evidence.storeBridgeVerified = true;
 
   const state = parseJsonLine(psql(`
     select jsonb_build_object(
