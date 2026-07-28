@@ -44,6 +44,35 @@ function preserveBffReplayHeaders(source, label) {
   return result;
 }
 
+function adaptMarketplaceSellerPersistence(source) {
+  if (!source.includes("async function activateListing(page, listing)")) return source;
+
+  const before = `  await reloadMarketplace(page);
+  const card = page.locator(\`[data-player-marketplace-select="\${listing.listingId}"]\`);
+  await card.waitFor({ state: "visible", timeout: 30_000 });
+  evidence.listing.persisted = true;`;
+  const after = `  await reloadMarketplace(page);
+  const activeListing = page.locator(
+    \`form[data-endpoint="marketplaceCancel"] input[name="listingId"][value="\${listing.listingId}"]\`,
+  ).locator("xpath=ancestor::article[1]");
+  await activeListing.waitFor({ state: "visible", timeout: 30_000 });
+  if (await activeListing.locator('form[data-endpoint="marketplaceActivate"]').count()) {
+    throw new Error("Activated Marketplace listing remained in draft state.");
+  }
+  const activeListingText = String(await activeListing.innerText());
+  if (!/\\bactive\\b/iu.test(activeListingText)) {
+    throw new Error(\`Activated Marketplace listing did not render an active status: \${redact(activeListingText)}\`);
+  }
+  evidence.listing.persisted = true;`;
+
+  return replaceExactlyOnce(
+    source,
+    "Marketplace seller persistence",
+    before,
+    after,
+  );
+}
+
 export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Player journey") {
   const targetPath = fileURLToPath(targetUrl);
   let source = await readFile(targetPath, "utf8");
@@ -67,6 +96,7 @@ export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Pl
     'fetch(url, { method, headers, body, cache: "no-store" })',
     'fetch(url, { method, headers, body, cache: "no-store", credentials: "include" })',
   );
+  source = adaptMarketplaceSellerPersistence(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error(`${label} retained the retired Player login route.`);
