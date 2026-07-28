@@ -44,6 +44,67 @@ function preserveBffReplayHeaders(source, label) {
   return result;
 }
 
+function adaptMarketplaceCountryFixture(source) {
+  if (!source.includes("function seedMarketplace()")) return source;
+
+  source = replaceExactlyOnce(
+    source,
+    "Marketplace country-currency selection",
+    `    ), selected_currency as (
+      select coalesce(
+        (select balance.currency_code from public.account_balances balance, scope where balance.game_session_id = scope.game_id and balance.player_id = scope.seller_id and balance.account_type = 'cash' limit 1),
+        'ECO'
+      ) as currency_code
+    )
+    select scope.game_id, scope.seller_id, scope.buyer_id, selected_item.item_id, selected_item.item_key, selected_currency.currency_code
+    from scope, selected_item, selected_currency;
+  \`, true).split("|");
+  if (row.length !== 6) throw new Error("Marketplace fixture could not resolve game, players, item, and currency.");
+  const [gameId, sellerId, buyerId, itemId, itemKey, currency] = row;`,
+    `    ), selected_country as (
+      select assignment.country_profile_id, profile.currency_code
+      from public.player_country_assignments assignment
+      join public.country_profiles profile on profile.id = assignment.country_profile_id
+      cross join scope
+      where assignment.game_session_id = scope.game_id
+        and assignment.player_id = scope.seller_id
+        and assignment.status = 'active'
+      order by assignment.assigned_at desc
+      limit 1
+    )
+    select scope.game_id, scope.seller_id, scope.buyer_id, selected_item.item_id, selected_item.item_key,
+      selected_country.country_profile_id, selected_country.currency_code
+    from scope, selected_item, selected_country;
+  \`, true).split("|");
+  if (row.length !== 7) throw new Error("Marketplace fixture could not resolve game, players, item, country, and currency.");
+  const [gameId, sellerId, buyerId, itemId, itemKey, countryProfileId, currency] = row;`,
+  );
+
+  source = replaceExactlyOnce(
+    source,
+    "Marketplace buyer-country alignment",
+    `  psql(\`
+    insert into public.inventory_holdings (game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved)`,
+    `  psql(\`
+    do $$
+    begin
+      update public.player_country_assignments
+      set country_profile_id = '${countryProfileId}', assigned_at = statement_timestamp()
+      where game_session_id = '${gameId}'
+        and player_id = '${buyerId}'
+        and status = 'active';
+      if not found then
+        raise exception 'MARKETPLACE_BUYER_COUNTRY_ASSIGNMENT_NOT_FOUND';
+      end if;
+    end
+    $$;
+
+    insert into public.inventory_holdings (game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved)`,
+  );
+
+  return source;
+}
+
 function adaptMarketplaceSellerPersistence(source) {
   if (!source.includes("async function activateListing(page, listing)")) return source;
 
@@ -96,6 +157,7 @@ export async function runPlayerBffAdaptedRunner(targetUrl, label = "Connected Pl
     'fetch(url, { method, headers, body, cache: "no-store" })',
     'fetch(url, { method, headers, body, cache: "no-store", credentials: "include" })',
   );
+  source = adaptMarketplaceCountryFixture(source);
   source = adaptMarketplaceSellerPersistence(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
