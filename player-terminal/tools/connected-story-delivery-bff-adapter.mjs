@@ -47,6 +47,21 @@ function preserveBffReplayHeaders(source) {
   return result;
 }
 
+function synchronizeInitialSeenListener(source) {
+  source = replaceExactlyOnce(
+    source,
+    "Story early seen listener",
+    '  const requiredSeenPromise = stateResponse(page, "seen");\n  await page.goto',
+    "  await page.goto",
+  );
+  return replaceExactlyOnce(
+    source,
+    "Story login-bound seen listener",
+    '  await page.locator("#playerForm button[type=\'submit\']").click();',
+    '  const requiredSeenPromise = stateResponse(page, "seen");\n  await page.locator("#playerForm button[type=\'submit\']").click();',
+  );
+}
+
 function redact(value) {
   return String(value || "")
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]")
@@ -99,6 +114,7 @@ async function run() {
     'fetch(url, { method, headers, body, cache: "no-store" })',
     'fetch(url, { method, headers, body, cache: "no-store", credentials: "include" })',
   );
+  source = synchronizeInitialSeenListener(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Story adapter retained the retired Player login route.");
