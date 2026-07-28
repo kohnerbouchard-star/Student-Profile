@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const PACK_PATH = process.env.PHYSICAL_ECONOMY_PACK || "/tmp/physical-economy-runtime-pack.json";
@@ -44,11 +47,18 @@ function jsonSql(value, tag = "pack") {
 }
 
 function psql(sql) {
-  return execFileSync("psql", [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", sql], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    maxBuffer: 30 * 1024 * 1024,
-  }).trim();
+  const directory = mkdtempSync(join(tmpdir(), "econovaria-crafting-pack-"));
+  const statementPath = join(directory, "statement.sql");
+  writeFileSync(statementPath, `${String(sql).trim()}\n`, "utf8");
+  try {
+    return execFileSync("psql", [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-f", statementPath], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 30 * 1024 * 1024,
+    }).trim();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 }
 
 function parseJsonLine(output, label) {
