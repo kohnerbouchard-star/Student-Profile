@@ -8,7 +8,10 @@ import {
   readSupabaseEnv,
   resolveStaffSessionForRequest,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { overwriteTrustedClientIpHeaders } from "../../../security/rateLimitKeying.ts";
+import {
+  overwriteTrustedClientIpHeaders,
+  type TrustedIpHeader,
+} from "../../../security/rateLimitKeying.ts";
 
 interface StaffBootstrapDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -47,7 +50,7 @@ interface StaffBootstrapSessionRow {
 
 const INTERNAL_WEB_SESSION_ORIGIN = "https://web-session.internal";
 const INTERNAL_WEB_SESSION_RATE_LIMIT_IP = "192.0.2.1";
-const TRUSTED_IP_HEADER = "x-real-ip";
+const DEFAULT_TRUSTED_IP_HEADER: TrustedIpHeader = "x-real-ip";
 
 export async function handleStaffBootstrapRequest(
   request: Request,
@@ -143,12 +146,22 @@ function internalWebSessionRequest(request: Request): Request {
   // The web-session handler has already authenticated the browser request and
   // is the only owner of this synthetic internal origin. Preserve universal
   // Staff limiting without accepting a browser-supplied network header. The
-  // external login boundary remains keyed to the proxy-overwritten client IP.
+  // internal request must use the same trusted header selected by runtime
+  // configuration; otherwise the shared limiter fails before consuming.
   return new Request(request, {
     headers: overwriteTrustedClientIpHeaders(
       request.headers,
-      TRUSTED_IP_HEADER,
+      configuredTrustedIpHeader(),
       INTERNAL_WEB_SESSION_RATE_LIMIT_IP,
     ),
   });
+}
+
+function configuredTrustedIpHeader(): TrustedIpHeader {
+  const configured = String(
+    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") || "",
+  ).trim().toLowerCase();
+  return configured === "cf-connecting-ip" || configured === "x-real-ip"
+    ? configured
+    : DEFAULT_TRUSTED_IP_HEADER;
 }
