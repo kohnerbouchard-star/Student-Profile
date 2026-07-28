@@ -61,7 +61,7 @@ function adaptMarketplaceCountryFixture(source) {
   \`, true).split("|");
   if (row.length !== 6) throw new Error("Marketplace fixture could not resolve game, players, item, and currency.");
   const [gameId, sellerId, buyerId, itemId, itemKey, currency] = row;`,
-    `    ), selected_country as (
+    `    ), seller_country as (
       select assignment.country_profile_id, profile.currency_code
       from public.player_country_assignments assignment
       join public.country_profiles profile on profile.id = assignment.country_profile_id
@@ -71,13 +71,34 @@ function adaptMarketplaceCountryFixture(source) {
         and assignment.status = 'active'
       order by assignment.assigned_at desc
       limit 1
+    ), buyer_country as (
+      select assignment.id as buyer_assignment_id,
+        assignment.country_profile_id as buyer_country_profile_id
+      from public.player_country_assignments assignment
+      cross join scope
+      where assignment.game_session_id = scope.game_id
+        and assignment.player_id = scope.buyer_id
+        and assignment.status = 'active'
+      order by assignment.assigned_at desc
+      limit 1
     )
     select scope.game_id, scope.seller_id, scope.buyer_id, selected_item.item_id, selected_item.item_key,
-      selected_country.country_profile_id, selected_country.currency_code
-    from scope, selected_item, selected_country;
+      seller_country.country_profile_id, seller_country.currency_code,
+      buyer_country.buyer_assignment_id, buyer_country.buyer_country_profile_id
+    from scope, selected_item, seller_country, buyer_country;
   \`, true).split("|");
-  if (row.length !== 7) throw new Error("Marketplace fixture could not resolve game, players, item, country, and currency.");
-  const [gameId, sellerId, buyerId, itemId, itemKey, countryProfileId, currency] = row;`,
+  if (row.length !== 9) throw new Error("Marketplace fixture could not resolve game, players, item, country, and currency.");
+  const [
+    gameId,
+    sellerId,
+    buyerId,
+    itemId,
+    itemKey,
+    countryProfileId,
+    currency,
+    buyerAssignmentId,
+    buyerCountryProfileId,
+  ] = row;`,
   );
 
   source = replaceExactlyOnce(
@@ -87,14 +108,61 @@ function adaptMarketplaceCountryFixture(source) {
     insert into public.inventory_holdings (game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved)`,
     `  psql(\`
     do $$
+    declare
+      v_migrated_at timestamptz := statement_timestamp();
+      v_new_assignment_id uuid := gen_random_uuid();
     begin
-      update public.player_country_assignments
-      set country_profile_id = '\${countryProfileId}', assigned_at = statement_timestamp()
-      where game_session_id = '\${gameId}'
-        and player_id = '\${buyerId}'
-        and status = 'active';
-      if not found then
-        raise exception 'MARKETPLACE_BUYER_COUNTRY_ASSIGNMENT_NOT_FOUND';
+      if '\${buyerCountryProfileId}' <> '\${countryProfileId}' then
+        update public.player_country_assignments
+        set status = 'inactive', ended_at = v_migrated_at
+        where id = '\${buyerAssignmentId}'
+          and game_session_id = '\${gameId}'
+          and player_id = '\${buyerId}'
+          and country_profile_id = '\${buyerCountryProfileId}'
+          and status = 'active';
+        if not found then
+          raise exception 'MARKETPLACE_BUYER_COUNTRY_ASSIGNMENT_NOT_FOUND';
+        end if;
+
+        insert into public.player_country_assignments (
+          id,
+          game_session_id,
+          player_id,
+          country_profile_id,
+          status,
+          assignment_reason,
+          assigned_at
+        ) values (
+          v_new_assignment_id,
+          '\${gameId}',
+          '\${buyerId}',
+          '\${countryProfileId}',
+          'active',
+          'acceptance_marketplace_fixture',
+          v_migrated_at
+        );
+
+        insert into public.player_country_migration_events (
+          game_session_id,
+          player_id,
+          from_country_profile_id,
+          to_country_profile_id,
+          from_assignment_id,
+          to_assignment_id,
+          migration_reason,
+          metadata,
+          migrated_at
+        ) values (
+          '\${gameId}',
+          '\${buyerId}',
+          '\${buyerCountryProfileId}',
+          '\${countryProfileId}',
+          '\${buyerAssignmentId}',
+          v_new_assignment_id,
+          'acceptance_marketplace_fixture',
+          '{"disposable":true}'::jsonb,
+          v_migrated_at
+        );
       end if;
     end
     $$;
