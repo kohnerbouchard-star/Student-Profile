@@ -137,7 +137,59 @@ replacements = (
     ),
     (
         '\n\ndef normalize_content_type(value: object) -> str:\n',
-        '''\n\ndef _sha256_hex(value: bytes) -> str:\n    return hashlib.sha256(value).hexdigest()\n\n\ndef signed_local_admin_bff_headers(\n    headers: dict[str, str],\n    *,\n    method: str,\n    target_url: str,\n    body: bytes | None,\n) -> dict[str, str]:\n    result = dict(headers)\n    timestamp = int(time.time())\n    nonce = str(uuid.uuid4())\n    client_ip = "127.0.0.1"\n    result[ADMIN_BFF_TIMESTAMP_HEADER] = str(timestamp)\n    result[ADMIN_BFF_NONCE_HEADER] = nonce\n    result[ADMIN_BFF_CLIENT_IP_HEADER] = client_ip\n    result[ADMIN_BFF_MODE_HEADER] = "local"\n    normalized = {str(name).lower(): str(value) for name, value in result.items()}\n    context = "\\n".join(\n        f"{name}:{normalized.get(name, '')}"\n        for name in ADMIN_BFF_SIGNED_CONTEXT_HEADERS\n    )\n    parsed = urlsplit(target_url)\n    canonical = "\\n".join((\n        ADMIN_BFF_SIGNATURE_VERSION,\n        f"timestamp:{timestamp}",\n        f"nonce:{nonce}",\n        f"method:{method.upper()}",\n        f"target-origin:{parsed.scheme}://{parsed.netloc}",\n        f"path:{parsed.path}{('?' + parsed.query) if parsed.query else ''}",\n        f"browser-origin:{normalized.get('origin', '')}",\n        f"client-ip:{client_ip}",\n        f"context-sha256:{_sha256_hex(context.encode('utf-8'))}",\n        f"body-sha256:{_sha256_hex(body or b'')}",\n    ))\n    signing_key = hmac.new(\n        ADMIN_BFF_LOCAL_SIGNING_MATERIAL,\n        ADMIN_BFF_SIGNING_KEY_CONTEXT,\n        hashlib.sha256,\n    ).digest()\n    signature = hmac.new(\n        signing_key, canonical.encode("utf-8"), hashlib.sha256\n    ).digest()\n    result[ADMIN_BFF_SIGNATURE_HEADER] = f"v1={encode_base64url(signature)}"\n    return result\n\n\ndef normalize_content_type(value: object) -> str:\n''',
+        '''
+
+def _sha256_hex(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def signed_local_admin_bff_headers(
+    headers: dict[str, str],
+    *,
+    method: str,
+    target_url: str,
+    body: bytes | None,
+) -> dict[str, str]:
+    result = dict(headers)
+    timestamp = int(time.time())
+    nonce = str(uuid.uuid4())
+    client_ip = "127.0.0.1"
+    result[ADMIN_BFF_TIMESTAMP_HEADER] = str(timestamp)
+    result[ADMIN_BFF_NONCE_HEADER] = nonce
+    result[ADMIN_BFF_CLIENT_IP_HEADER] = client_ip
+    result[ADMIN_BFF_MODE_HEADER] = "local"
+    normalized = {str(name).lower(): str(value) for name, value in result.items()}
+    context = "\n".join(
+        f"{name}:{normalized.get(name, '')}"
+        for name in ADMIN_BFF_SIGNED_CONTEXT_HEADERS
+    )
+    parsed = urlsplit(target_url)
+    canonical = "\n".join((
+        ADMIN_BFF_SIGNATURE_VERSION,
+        f"timestamp:{timestamp}",
+        f"nonce:{nonce}",
+        f"method:{method.upper()}",
+        f"target-origin:{parsed.scheme}://{parsed.netloc}",
+        f"path:{parsed.path}{('?' + parsed.query) if parsed.query else ''}",
+        f"browser-origin:{normalized.get('origin', '')}",
+        f"client-ip:{client_ip}",
+        f"context-sha256:{_sha256_hex(context.encode('utf-8'))}",
+        f"body-sha256:{_sha256_hex(body or b'')}",
+    ))
+    signing_key = hmac.new(
+        ADMIN_BFF_LOCAL_SIGNING_MATERIAL,
+        ADMIN_BFF_SIGNING_KEY_CONTEXT,
+        hashlib.sha256,
+    ).digest()
+    signature = hmac.new(
+        signing_key, canonical.encode("utf-8"), hashlib.sha256
+    ).digest()
+    result[ADMIN_BFF_SIGNATURE_HEADER] = f"v1={encode_base64url(signature)}"
+    return result
+
+
+def normalize_content_type(value: object) -> str:
+''',
         "local Admin BFF signing helper",
     ),
     (
@@ -166,7 +218,7 @@ replacements = (
         '                upstream_headers = signed_local_admin_bff_headers(\n'
         '                    upstream_headers,\n'
         '                    method=self.command,\n'
-        '                    target_url=f"{upstream.scheme}://{upstream.netloc}{self.path}",\n'
+        '                    target_url=f"http://kong:8000{self.path}",\n'
         '                    body=body,\n'
         '                )\n'
         '            connection.request(\n'
