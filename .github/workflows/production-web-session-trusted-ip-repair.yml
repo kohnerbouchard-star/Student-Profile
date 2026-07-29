@@ -1,0 +1,391 @@
+name: Production Web Session Trusted IP Repair
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-trusted-ip-repair.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-trusted-ip-repair.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-web-session-trusted-ip-repair
+  cancel-in-progress: false
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  FUNCTION_NAME: web-session-api
+  TRUSTED_CLIENT_IP_HEADER: cf-connecting-ip
+  STATUS_CONTEXT: econovaria/web-session-trusted-ip-repair
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  validate:
+    name: Validate bounded trusted-IP repair
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out reviewed workflow
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate repair contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='.github/workflows/production-web-session-trusted-ip-repair.yml'
+          grep -Fq 'environment: staging' "$file"
+          grep -Fq 'environment: production' "$file"
+          grep -Fq 'cf-connecting-ip' "$file"
+          grep -Fq 'diagnostic.invalid@econovaria.test' "$file"
+          grep -Fq 'invalid_staff_credentials' "$file"
+          grep -Fq 'No production login attempt performed' "$file"
+          grep -Fq 'Database schema changed: `false`' "$file"
+          grep -Fq 'Edge Functions deployed: `false`' "$file"
+          grep -Fq 'statuses: write' "$file"
+          ! grep -Fq 'x-forwarded-for' "$file"
+          ! grep -Fq 'ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' "$file"
+          ! grep -Fq 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' "$file"
+
+  verify-staging:
+    name: Repair and verify staging trusted-IP binding
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$TRUSTED_CLIENT_IP_HEADER" = 'cf-connecting-ip'
+          test "$FUNCTION_NAME" = 'web-session-api'
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Configure hosted staging network metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF"
+
+      - name: Verify valid-shaped staging login reaches credential decision
+        shell: bash
+        env:
+          KEYS_PATH: ${{ runner.temp }}/staging-api-keys.json
+          HEALTH_PATH: ${{ runner.temp }}/staging-health.json
+          LOGIN_PATH: ${{ runner.temp }}/staging-login.json
+        run: |
+          set -euo pipefail
+          cleanup() {
+            rm -f "$KEYS_PATH" "$HEALTH_PATH" "$LOGIN_PATH"
+            unset publishable_key
+          }
+          trap cleanup EXIT
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/api-keys?reveal=true" \
+            > "$KEYS_PATH"
+          publishable_key="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.KEYS_PATH, 'utf8'));
+          const key = rows
+            .map((row) => String(row?.api_key || row?.apiKey || ''))
+            .find((value) => value.startsWith('sb_publishable_')) || '';
+          if (!key) throw new Error('Staging publishable key was not available.');
+          process.stdout.write(key);
+          NODE
+          )"
+          echo "::add-mask::$publishable_key"
+
+          base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          for attempt in $(seq 1 18); do
+            health_status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$HEALTH_PATH" \
+              --write-out '%{http_code}' \
+              "$base/health")"
+            if [[ "$health_status" == '200' ]] && node -e '
+              const fs = require("node:fs");
+              const body = JSON.parse(fs.readFileSync(process.env.HEALTH_PATH, "utf8"));
+              if (body?.ok !== true || body?.status !== "ready") process.exit(1);
+            '; then
+              break
+            fi
+            if [[ "$attempt" == '18' ]]; then
+              echo "Staging health did not recover after configuration propagation." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          login_status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --output "$LOGIN_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H 'Content-Type: application/json' \
+            -H 'x-econovaria-device-id: 00000000-0000-4000-8000-000000000004' \
+            --data '{"email":"diagnostic.invalid@econovaria.test","password":"Not-A-Real-Production-Password-2026!"}')"
+          export LOGIN_STATUS="$login_status"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const status = Number(process.env.LOGIN_STATUS || 0);
+          const body = JSON.parse(fs.readFileSync(process.env.LOGIN_PATH, 'utf8'));
+          const code = String(body?.error?.code || body?.code || '');
+          const allowed = new Map([
+            [401, 'invalid_staff_credentials'],
+            [429, 'authentication_temporarily_locked'],
+          ]);
+          if (allowed.get(status) !== code) {
+            throw new Error(`Staging credential-decision contract failed: ${status}:${code || 'unknown'}`);
+          }
+          NODE
+
+      - name: Record bounded staging evidence
+        shell: bash
+        run: |
+          {
+            echo '## Hosted staging trusted-IP binding verified'
+            echo '- Trusted header: `cf-connecting-ip`'
+            echo '- Valid-shaped synthetic login reached credential decision: `true`'
+            echo '- Valid production credentials supplied: `false`'
+            echo '- Production changed: `false`'
+            echo '- Edge Functions deployed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-pending:
+    name: Publish protected production repair location
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - verify-staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Publish pending repair status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: 'pending',
+            target_url: process.env.RUN_URL,
+            description: 'Staging passed; production trusted-IP repair awaits approval.',
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+  repair-production:
+    name: Repair production trusted-IP binding
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - verify-staging
+      - publish-pending
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce protected production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$TRUSTED_CLIENT_IP_HEADER" = 'cf-connecting-ip'
+          test "$FUNCTION_NAME" = 'web-session-api'
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Configure hosted production network metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+      - name: Verify production function remains ready
+        shell: bash
+        env:
+          HEALTH_PATH: ${{ runner.temp }}/production-health.json
+          INVALID_PATH: ${{ runner.temp }}/production-invalid.json
+          KEYS_PATH: ${{ runner.temp }}/production-api-keys.json
+        run: |
+          set -euo pipefail
+          cleanup() {
+            rm -f "$HEALTH_PATH" "$INVALID_PATH" "$KEYS_PATH"
+            unset publishable_key
+          }
+          trap cleanup EXIT
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+            > "$KEYS_PATH"
+          publishable_key="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.KEYS_PATH, 'utf8'));
+          const key = rows
+            .map((row) => String(row?.api_key || row?.apiKey || ''))
+            .find((value) => value.startsWith('sb_publishable_')) || '';
+          if (!key) throw new Error('Production publishable key was not available.');
+          process.stdout.write(key);
+          NODE
+          )"
+          echo "::add-mask::$publishable_key"
+
+          base="https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          for attempt in $(seq 1 18); do
+            health_status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$HEALTH_PATH" \
+              --write-out '%{http_code}' \
+              "$base/health")"
+            if [[ "$health_status" == '200' ]] && node -e '
+              const fs = require("node:fs");
+              const body = JSON.parse(fs.readFileSync(process.env.HEALTH_PATH, "utf8"));
+              if (body?.ok !== true || body?.status !== "ready") process.exit(1);
+            '; then
+              break
+            fi
+            if [[ "$attempt" == '18' ]]; then
+              echo "Production health did not recover after configuration propagation." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          invalid_status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 20 \
+            --output "$INVALID_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H 'Content-Type: application/json' \
+            --data '{}')"
+          test "$invalid_status" = '400'
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.INVALID_PATH, 'utf8'));
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'route_not_found' || code === 'staff_login_unavailable') {
+            throw new Error(`Production invalid-input contract failed: ${code || 'unknown'}`);
+          }
+          NODE
+
+      - name: Record bounded production repair evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production trusted-IP binding repaired'
+            echo '- Project binding: `production exact`'
+            echo '- Trusted header: `cf-connecting-ip`'
+            echo '- Staging credential-decision proof: `passed`'
+            echo '- Production health: `200 ready`'
+            echo '- Production invalid-input response: `400 controlled`'
+            echo '- No production login attempt performed: `true`'
+            echo '- Database schema changed: `false`'
+            echo '- Application data written: `false`'
+            echo '- Edge Functions deployed: `false`'
+            echo '- Cryptographic secrets changed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-final:
+    name: Publish trusted-IP repair result
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - verify-staging
+      - publish-pending
+      - repair-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Publish terminal repair status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+          STAGING_RESULT: ${{ needs.verify-staging.result }}
+          PENDING_RESULT: ${{ needs.publish-pending.result }}
+          PRODUCTION_RESULT: ${{ needs.repair-production.result }}
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const success =
+            process.env.STAGING_RESULT === 'success' &&
+            process.env.PENDING_RESULT === 'success' &&
+            process.env.PRODUCTION_RESULT === 'success';
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: success ? 'success' : 'failure',
+            target_url: process.env.RUN_URL,
+            description: success
+              ? 'Production trusted-IP repair completed successfully.'
+              : `Trusted-IP repair failed: staging=${process.env.STAGING_RESULT}, production=${process.env.PRODUCTION_RESULT}.`,
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
