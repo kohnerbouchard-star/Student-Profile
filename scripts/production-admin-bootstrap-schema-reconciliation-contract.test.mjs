@@ -96,21 +96,21 @@ test("migration is additive, transaction-bounded, and row-preserving", () => {
   );
 });
 
-test("workflow is production-protected and temporarily self-triggers only on merged main", () => {
+test("workflow is manual-only, production-protected, and merged-main-bound", () => {
   assert.match(workflow, /^\s*workflow_dispatch:/mu);
-  assert.match(workflow, /^\s*push:/mu);
-  assert.match(workflow, /branches:\s*\n\s+- main/u);
-  assert.match(
-    workflow,
-    /paths:\s*\n\s+- \.github\/workflows\/production-admin-bootstrap-schema-reconcile\.yml/u,
-  );
+  assert.doesNotMatch(workflow, /^\s*(?:push|pull_request):/mu);
   assert.match(workflow, /environment: production/u);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/u);
-  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(
     workflow,
-    /test "\$GITHUB_SHA" = "\$RUN_SOURCE_COMMIT"/u,
+    /RUN_SOURCE_COMMIT: \$\{\{ inputs\.source_commit \}\}/u,
   );
+  assert.match(
+    workflow,
+    /test "\$GITHUB_EVENT_NAME" = "workflow_dispatch"/u,
+  );
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
+  assert.doesNotMatch(workflow, /github\.event_name\s*==/u);
   assert.match(
     workflow,
     /test "\$RUN_CONFIRM_PROJECT_REF" = "\$EXPECTED_PRODUCTION_PROJECT_REF"/u,

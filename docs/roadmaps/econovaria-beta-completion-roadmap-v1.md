@@ -2,7 +2,7 @@
 
 **Document ID:** `ECON-BETA-ROADMAP-V1`  
 **Roadmap authority:** Chat 1  
-**Audited main:** `69588ed410d34b796dff1a6ea5facbff8320090b`
+**Audited main:** `ebe62a64d6cd4234f7b2792020b519a6a15ff39e`
 **Audit date:** 2026-07-29
 **Current decision:** `BLOCKED`  
 **Production deployment authorized:** No
@@ -34,16 +34,17 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 - **`BETA-PROD-ADMIN-LOGIN-005` — Production Admin login schema and metadata convergence**
   - Status: `IN_PROGRESS`
-  - Current owner branch: `agent/production-admin-bootstrap-schema-reconcile-v1`; the preceding Staff repair was owned by `agent/production-admin-staff-security-reconcile-v1`.
+  - Current owner branch: `agent/production-admin-bootstrap-schema-trigger-cleanup-v1`; the schema repair was owned by `agent/production-admin-bootstrap-schema-reconcile-v1`, and the preceding Staff repair was owned by `agent/production-admin-staff-security-reconcile-v1`.
   - Production fault chain: a real administrator password reached Supabase Auth successfully, but the deployed login handler masked missing authorization and bootstrap projections as credential failures.
   - Staff root cause and repair: production `public.staff_users` had only the legacy six columns, and the linked Auth identity lacked the matching controlled `app_metadata`. PR #415 added the protected reconciliation plane; protected run `30450963053` then applied `20260726091000_add_staff_security_state_v2`, reconciled controlled Auth metadata, and proved all Staff schema, metadata, ledger, and PostgREST postconditions. PR #418 restored that workflow to manual-only after the one-time trigger.
-  - Remaining bootstrap root cause: after Staff authorization became healthy, the deployed handler's next projection required `public.game_sessions.game_join_code`, but production has only the other six bootstrap columns. Applying the older memorable-code migration wholesale is unsafe because it also defines game-creation functions whose prerequisites are absent in production.
-  - Forward repair: `backend/supabase/migrations/20260729123000_reconcile_admin_bootstrap_join_code_v1.sql` adds only the nullable `game_join_code` column, its format constraint, its partial unique index, and its comment. `.github/workflows/production-admin-bootstrap-schema-reconcile.yml` binds that exact migration to the protected production environment and verifies Staff prerequisites, the migration ledger, direct SQL projection, and PostgREST projection.
+  - Bootstrap root cause: after Staff authorization became healthy, the deployed handler's next projection required `public.game_sessions.game_join_code`, but production had only the other six bootstrap columns. Applying the older memorable-code migration wholesale was unsafe because it also defines game-creation functions whose prerequisites are absent in production.
+  - Forward repair: PR #419 merged as `ebe62a64d6cd4234f7b2792020b519a6a15ff39e`. `backend/supabase/migrations/20260729123000_reconcile_admin_bootstrap_join_code_v1.sql` adds only the nullable `game_join_code` column, its format constraint, its partial unique index, and its comment. Protected run `30454172663` applied that exact migration and passed every authorization, precondition, atomic ledger, direct SQL, and PostgREST postcondition.
   - Authorization manifest: `docs/operations/evidence/production-admin-bootstrap-schema-reconciliation-v1.json`.
   - Safety boundary: exact merged-main SHA, exact production project binding, staging denial, production environment protection, aggregate-only evidence, no application-row writes or backfill, no database-function writes, no Auth metadata writes, no Edge deployment, no secret rotation, and no destructive rollback.
-  - Runtime evidence: Staff security reconciliation is complete; protected bootstrap reconciliation and one successful real administrator login remain pending.
-  - Unresolved blocker: merge the additive bootstrap repair, complete its protected production run and independent postcondition check, then complete one successful real administrator login.
-  - Next exact roadmap item: pass repository checks, merge the bootstrap repair PR, verify all schema and PostgREST postconditions from the resulting `main` SHA, remove the one-time trigger, and complete one successful real administrator login.
+  - Runtime evidence: all 48 exact-head repository checks passed. Independent production SQL verification found all seven bootstrap columns, the nullable text column, validated constraint, valid unique index, zero invalid codes, one exact ledger row, one bootstrap projection row, all eight Staff security columns, one active Game Admin, zero missing Auth links, and zero metadata mismatches.
+  - Trigger cleanup: `agent/production-admin-bootstrap-schema-trigger-cleanup-v1` restores `.github/workflows/production-admin-bootstrap-schema-reconcile.yml` to protected manual-only dispatch after the single successful push run.
+  - Unresolved blocker: one successful real administrator login.
+  - Next exact roadmap item: complete one real administrator login; if it succeeds, mark `BETA-PROD-ADMIN-LOGIN-005` `VERIFIED_COMPLETE`.
 
 - **`BETA-BRAND-LOGIN-003` — Product-owner login logo replacement**
   - Status: `VERIFIED_COMPLETE`
