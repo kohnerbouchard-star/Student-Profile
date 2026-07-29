@@ -20,13 +20,13 @@ async function signedRequest({
   invalidSignature = false,
   strippedRuntimePath = false,
 } = {}) {
-const url = local
-  ? strippedRuntimePath
-    ? "http://kong:8000/web-session-api/login"
-    : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
-  : strippedRuntimePath
-    ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
-    : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
+  const url = local
+    ? strippedRuntimePath
+      ? "http://kong:8000/web-session-api/login"
+      : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+    : strippedRuntimePath
+      ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
+      : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
   const origin = local
     ? "http://127.0.0.1:4173"
     : "https://econovaria.vercel.app";
@@ -40,9 +40,9 @@ const url = local
   if (local) headers.set(ADMIN_BFF_AUTH_HEADERS.mode, "local");
   else headers.set("authorization", `Bearer ${TOKEN}`);
 
-const signatureUrl = local
-  ? "http://kong:8000/functions/v1/web-session-api/login"
-  : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
+  const signatureUrl = local
+    ? "http://kong:8000/functions/v1/web-session-api/login"
+    : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
   const canonicalPayload = await buildAdminBffSignaturePayload({
     timestampSeconds: TIMESTAMP_SECONDS,
     nonce: NONCE,
