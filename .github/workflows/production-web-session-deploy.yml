@@ -58,6 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "${{ inputs.confirm_action }}" = "DEPLOY WEB SESSION API"
@@ -236,6 +237,27 @@ jobs:
             --no-verify-jwt \
             --use-api
 
+      - name: Verify production bundle digest matches staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions-after.json"
+          DEPLOYED_DIGEST="$(node - <<'NODE'
+          const rows = require(process.env.FUNCTIONS_PATH);
+          const row = rows.find((v) => v.slug === process.env.FUNCTION_NAME);
+          const digest = String(row?.ezbr_sha256 || '');
+          if (!/^[a-f0-9]{64}$/.test(digest) || row?.verify_jwt !== false) process.exit(1);
+          process.stdout.write(digest);
+          NODE
+          )"
+          test "$DEPLOYED_DIGEST" = "${{ inputs.candidate_digest }}"
+          rm -f "$RUNNER_TEMP/production-functions-after.json"
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/production-functions-after.json
+
       - name: Verify direct production startup and invalid-input contract
         shell: bash
         run: |
@@ -319,12 +341,14 @@ jobs:
         run: |
           {
             echo '## Production web-session recovery deployed'
+            echo "- Source ref: \`$GITHUB_REF\`"
             echo "- Source commit: \`${{ inputs.source_commit }}\`"
             echo "- Source SHA-256: \`${{ inputs.source_sha256 }}\`"
             echo "- Staging candidate digest: \`${{ inputs.candidate_digest }}\`"
             echo "- Candidate run: \`${{ inputs.candidate_run_id }}\`"
             echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
             echo "- Function: \`$FUNCTION_NAME\`"
+            echo '- Production bundle digest equals staging: `true`'
             echo '- Platform JWT verification: `false` (custom browser-session boundary)'
             echo '- Database schema changed by this workflow: `false`'
             echo '- Other functions deployed: `false`'
