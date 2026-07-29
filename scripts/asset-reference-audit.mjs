@@ -37,11 +37,17 @@ function walk(path) {
 }
 
 function normalizeReference(raw) {
-  return String(raw || "")
+  const normalized = String(raw || "")
     .trim()
     .replace(/^[\'"]|[\'"]$/g, "")
     .split("#")[0]
     .split("?")[0];
+
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
+  }
 }
 
 function isLocalAssetReference(reference) {
