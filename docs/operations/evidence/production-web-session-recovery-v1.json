@@ -21,6 +21,11 @@
   "secretValuesRecorded": false,
   "overwriteExistingCryptographicKeys": false,
   "productionDeployRequiresManualApproval": true,
+  "actionsAdmission": {
+    "ownerReportedRestored": true,
+    "reportedAt": "2026-07-29T13:22:55+09:00",
+    "verificationRequired": "fresh PR-head runner with normal steps and logs"
+  },
   "requiredVerification": [
     "repository-local module graph",
     "no private remote imports",
