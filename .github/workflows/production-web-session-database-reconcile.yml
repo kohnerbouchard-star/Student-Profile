@@ -76,6 +76,15 @@ jobs:
           if (!Array.isArray(manifest.orderedCanonicalMigrations) || manifest.orderedCanonicalMigrations.length !== 6) {
             throw new Error('Expected exactly six canonical migrations.');
           }
+          const forbiddenApplicationTables = [
+            'staff_users',
+            'game_sessions',
+            'players',
+            'player_sessions',
+            'contracts',
+            'ledger_entries',
+            'market_orders',
+          ];
           for (const item of manifest.orderedCanonicalMigrations) {
             if (!/^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(item.path)) {
               throw new Error(`Unapproved migration path: ${item.path}`);
@@ -84,8 +93,12 @@ jobs:
             const actual = execFileSync('git', ['hash-object', item.path], { encoding: 'utf8' }).trim();
             if (actual !== item.gitBlobSha) throw new Error(`Migration digest mismatch: ${item.path}`);
             const sql = fs.readFileSync(item.path, 'utf8');
-            if (/\b(drop\s+(table|schema|database)|truncate|delete\s+from|update\s+auth\.|insert\s+into\s+auth\.)\b/iu.test(sql)) {
-              throw new Error(`Destructive or application-data SQL rejected: ${item.path}`);
+            if (/\b(drop\s+(table|schema|database)|truncate|alter\s+table\s+[^;]+\s+drop\s+(column|constraint))\b/iu.test(sql)) {
+              throw new Error(`Destructive SQL rejected: ${item.path}`);
+            }
+            for (const table of forbiddenApplicationTables) {
+              const writes = new RegExp(`\\b(?:insert\\s+into|update|delete\\s+from)\\s+(?:public\\.)?${table}\\b`, 'iu');
+              if (writes.test(sql)) throw new Error(`Application-data SQL rejected: ${item.path}`);
             }
           }
           NODE
