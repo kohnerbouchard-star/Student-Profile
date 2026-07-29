@@ -1,0 +1,230 @@
+name: Apply Admin BFF Local Canonical Contract
+
+on:
+  push:
+    branches:
+      - agent/secure-admin-bff-oidc
+    paths:
+      - .github/workflows/agent-admin-bff-local-canonical.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/secure-admin-bff-oidc
+          fetch-depth: 0
+
+      - name: Apply exact local canonical and malformed-envelope contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
+          source = auth_path.read_text(encoding="utf-8")
+
+          old = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return authenticationFailure();
+          }'''
+          new = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return malformedEnvelopeFailure();
+          }'''
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif "return malformedEnvelopeFailure();" not in source:
+              raise SystemExit("Malformed-envelope branch was not found")
+
+          old = '''  const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds,
+            nonce,
+            method: request.method,
+            targetUrl: request.url,
+            browserOrigin: String(request.headers.get("origin") || ""),'''
+          new = '''  let signatureTargetUrl = request.url;
+          if (deploymentEnvironment === "local") {
+            try {
+              signatureTargetUrl = canonicalLocalAdminBffTargetUrl(request.url);
+            } catch {
+              return malformedEnvelopeFailure();
+            }
+          }
+          const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds,
+            nonce,
+            method: request.method,
+            targetUrl: signatureTargetUrl,
+            browserOrigin: String(request.headers.get("origin") || ""),'''
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif "canonicalLocalAdminBffTargetUrl(request.url)" not in source:
+              raise SystemExit("Canonical payload construction was not found")
+
+          marker = '''function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
+          helper = '''function canonicalLocalAdminBffTargetUrl(value: string): string {
+            const url = new URL(value);
+            const marker = "/web-session-api";
+            const index = url.pathname.indexOf(marker);
+            if (index < 0) throw new Error("invalid local Admin BFF path");
+            const suffix = url.pathname.slice(index + marker.length);
+            if (
+              !suffix.startsWith("/") ||
+              suffix.includes("\\\\") ||
+              suffix.split("/").includes("..")
+            ) throw new Error("invalid local Admin BFF path");
+            return `http://kong:8000/functions/v1/web-session-api${suffix}${url.search}`;
+          }
+
+          function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
+          if marker in source and "function canonicalLocalAdminBffTargetUrl" not in source:
+              source = source.replace(marker, helper, 1)
+
+          marker = '''function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+          replacement = '''function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
+            return failure(
+              400,
+              "admin_bff_envelope_invalid",
+              "Administrator request envelope is missing or invalid.",
+            );
+          }
+
+          function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+          if marker in source:
+              source = source.replace(marker, replacement, 1)
+          elif "function malformedEnvelopeFailure" not in source:
+              raise SystemExit("Authentication failure helper was not found")
+          auth_path.write_text(source, encoding="utf-8")
+
+          test_path = Path("scripts/admin-bff-request-auth.test.mjs")
+          test_source = test_path.read_text(encoding="utf-8")
+          old = '''async function signedRequest({ local = false, invalidSignature = false } = {}) {
+            const url = local
+              ? "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+              : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
+          new = '''async function signedRequest({
+            local = false,
+            invalidSignature = false,
+            strippedLocalPath = false,
+          } = {}) {
+            const url = local
+              ? strippedLocalPath
+                ? "http://kong:8000/web-session-api/login"
+                : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+              : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
+          if old in test_source:
+              test_source = test_source.replace(old, new, 1)
+          elif "strippedLocalPath = false" not in test_source:
+              raise SystemExit("Signed request helper was not found")
+
+          old = '''  const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds: TIMESTAMP_SECONDS,
+            nonce: NONCE,
+            method: "POST",
+            targetUrl: url,'''
+          new = '''  const signatureUrl = local
+            ? "http://kong:8000/functions/v1/web-session-api/login"
+            : url;
+            const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds: TIMESTAMP_SECONDS,
+            nonce: NONCE,
+            method: "POST",
+            targetUrl: signatureUrl,'''
+          if old in test_source:
+              test_source = test_source.replace(old, new, 1)
+          elif "const signatureUrl = local" not in test_source:
+              raise SystemExit("Test canonical payload construction was not found")
+
+          marker = '''test("rejects a modified request before claiming its nonce", async () => {'''
+          addition = '''test("rejects a request missing the signed BFF envelope as malformed", async () => {
+            let claimed = false;
+            const result = await authorizeAdminBffRequest(new Request(
+              "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login",
+              {
+                method: "POST",
+                headers: {
+                  origin: "https://econovaria.vercel.app",
+                  "content-type": "application/json",
+                },
+                body: BODY,
+              },
+            ), {
+              supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+              dependencies: {
+                now: () => NOW,
+                verifyOidc: async () => true,
+                claimNonce: async () => {
+                  claimed = true;
+                  return true;
+                },
+              },
+            });
+
+            assert.equal(result.ok, false);
+            assert.equal(result.response.status, 400);
+            assert.equal(claimed, false);
+          });
+
+          test("rejects a modified request before claiming its nonce", async () => {'''
+          if marker in test_source and "missing the signed BFF envelope" not in test_source:
+              test_source = test_source.replace(marker, addition, 1)
+
+          marker = '''test("accepts local mode only at the loopback boundary", async () => {'''
+          addition = '''test("accepts the stripped internal Supabase Edge path using the same local canonical target", async () => {
+            const result = await authorizeAdminBffRequest(await signedRequest({
+              local: true,
+              strippedLocalPath: true,
+            }), {
+              supabaseUrl: "http://kong:8000",
+              dependencies: {
+                now: () => NOW,
+                claimNonce: async () => true,
+              },
+            });
+
+            assert.equal(result.ok, true);
+            assert.equal(result.deploymentEnvironment, "local");
+          });
+
+          test("accepts local mode only at the loopback boundary", async () => {'''
+          if marker in test_source and "stripped internal Supabase Edge path" not in test_source:
+              test_source = test_source.replace(marker, addition, 1)
+          test_path.write_text(test_source, encoding="utf-8")
+          PY
+
+      - name: Validate and commit exact patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types --test scripts/admin-bff-request-auth.test.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/src/security/adminBffRequestAuth.ts scripts/admin-bff-request-auth.test.mjs
+          git diff --cached --check
+          git commit -m "Canonicalize local Admin BFF request identity"
+          git push origin HEAD:agent/secure-admin-bff-oidc
