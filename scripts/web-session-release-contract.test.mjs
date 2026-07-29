@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -8,7 +9,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRYPOINT = "backend/supabase/functions/web-session-api/index.ts";
 const DEPLOY_WORKFLOW = ".github/workflows/production-web-session-deploy.yml";
 const SECRET_WORKFLOW = ".github/workflows/production-web-session-secrets.yml";
+const DATABASE_WORKFLOW = ".github/workflows/production-web-session-database-reconcile.yml";
 const AUTHORIZATION = "docs/operations/evidence/production-web-session-recovery-v1.json";
+const DATABASE_AUTHORIZATION = "docs/operations/evidence/production-web-session-database-reconciliation-v1.json";
 const RELATIVE_IMPORT = /(?:from\s+|import\s*)["'](\.{1,2}\/[^"']+)["']/gu;
 
 function read(relativePath) {
@@ -53,6 +56,8 @@ test("production deployment is manual, protected, immutable and bounded", () => 
   assert.match(workflow, /environment:\s*production/u);
   assert.match(workflow, /EXPECTED_PRODUCTION_PROJECT_REF:\s*cgiukdjwicykrmtkhudh/u);
   assert.match(workflow, /DENIED_STAGING_PROJECT_REF:\s*eecvbssdvarfcykcfrny/u);
+  assert.match(workflow, /candidate_run_id:/u);
+  assert.match(workflow, /candidate_digest:/u);
   assert.match(workflow, /sha256sum\s+--check/u);
   assert.match(workflow, /supabase functions deploy "\$FUNCTION_NAME"/u);
   assert.match(workflow, /--project-ref "\$EXPECTED_PRODUCTION_PROJECT_REF"/u);
@@ -61,6 +66,7 @@ test("production deployment is manual, protected, immutable and bounded", () => 
   assert.match(workflow, /\/health/u);
   assert.match(workflow, /api\/admin-session\/login/u);
   assert.match(workflow, /Unexpected Vercel proxy status/u);
+  assert.match(workflow, /Real administrator login: `required before incident closure`/u);
 });
 
 test("production secret provisioning is manual and missing-only", () => {
@@ -78,6 +84,36 @@ test("production secret provisioning is manual and missing-only", () => {
   assert.doesNotMatch(workflow, /echo\s+"?\$session_key/u);
 });
 
+test("database reconciliation is manual, digest-bound and non-destructive", () => {
+  const workflow = read(DATABASE_WORKFLOW);
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.doesNotMatch(workflow, /^\s*push:/mu);
+  assert.match(workflow, /environment:\s*production/u);
+  assert.match(workflow, /SUPABASE_DB_URL/u);
+  assert.match(workflow, /git\s+hash-object/u);
+  assert.match(workflow, /psql\s+"\$SUPABASE_DB_URL"/u);
+  assert.match(workflow, /Application-data SQL rejected/u);
+  assert.match(workflow, /authenticatorDenied/u);
+  assert.match(workflow, /relforcerowsecurity/u);
+
+  const manifest = JSON.parse(read(DATABASE_AUTHORIZATION));
+  assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.targetProjectRef, "cgiukdjwicykrmtkhudh");
+  assert.ok(manifest.deniedProjectRefs.includes("eecvbssdvarfcykcfrny"));
+  assert.equal(manifest.productionDataWritesAllowed, false);
+  assert.equal(manifest.destructiveChangesAllowed, false);
+  assert.equal(manifest.orderedCanonicalMigrations.length, 6);
+  for (const item of manifest.orderedCanonicalMigrations) {
+    assert.match(item.path, /^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/u);
+    assert.match(item.gitBlobSha, /^[a-f0-9]{40}$/u);
+    const actual = execFileSync("git", ["hash-object", item.path], {
+      cwd: ROOT,
+      encoding: "utf8",
+    }).trim();
+    assert.equal(actual, item.gitBlobSha, `migration digest mismatch: ${item.path}`);
+  }
+});
+
 test("authorization manifest denies staging and limits production scope", () => {
   const manifest = JSON.parse(read(AUTHORIZATION));
   assert.equal(manifest.schemaVersion, 1);
@@ -85,12 +121,14 @@ test("authorization manifest denies staging and limits production scope", () => 
   assert.ok(manifest.deniedProjectRefs.includes("eecvbssdvarfcykcfrny"));
   assert.equal(manifest.functionName, "web-session-api");
   assert.equal(manifest.verifyJwt, false);
+  assert.equal(manifest.customAuthenticationRequired, true);
   assert.equal(manifest.databaseChangesAllowed, true);
   assert.deepEqual(manifest.allowedDatabaseChanges, [
     "canonical web-session request-rate-limit contracts",
     "canonical authentication-throttle contracts",
   ]);
   assert.equal(manifest.otherFunctionsAllowed, false);
+  assert.equal(manifest.productionDataWritesAllowed, false);
   assert.equal(manifest.secretValuesRecorded, false);
   assert.equal(manifest.productionDeployRequiresManualApproval, true);
 });
