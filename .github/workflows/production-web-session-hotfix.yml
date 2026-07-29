@@ -1,4 +1,4 @@
-name: Production Web Session Build
+name: Web Session Recovery Candidate
 
 on:
   pull_request:
@@ -7,110 +7,86 @@ on:
     paths:
       - ".github/workflows/production-web-session-hotfix.yml"
       - ".github/workflows/production-web-session-deploy.yml"
-      - "docs/operations/evidence/production-web-session-hotfix-v1.json"
+      - ".github/workflows/production-web-session-secrets.yml"
+      - "docs/operations/evidence/production-web-session-recovery-v1.json"
       - "backend/supabase/functions/web-session-api/**"
       - "backend/supabase/functions/_shared/**"
       - "backend/src/domains/auth/**"
       - "backend/src/platform/supabase/**"
       - "backend/src/security/**"
+      - "scripts/web-session-release-contract.test.mjs"
       - "package.json"
       - "package-lock.json"
       - "backend/package.json"
       - "backend/package-lock.json"
-  push:
-    branches:
-      - main
-    paths:
-      - "docs/operations/evidence/production-web-session-hotfix-v1.json"
   workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact merged main commit to package"
+        required: true
+        type: string
+      confirm_staging_project_ref:
+        description: "Type the exact staging project ref"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
-concurrency:
-  group: production-web-session-build-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
-  AUTHORIZATION_PATH: docs/operations/evidence/production-web-session-hotfix-v1.json
-  EXPECTED_COMMIT_SUBJECT: "hotfix(production): deploy web-session-api (#391)"
-  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-  FUNCTION_NAME: web-session-api
+  AUTHORIZATION_PATH: docs/operations/evidence/production-web-session-recovery-v1.json
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_FUNCTION_NAME: web-session-api
+  CANDIDATE_FUNCTION_NAME: web-session-api-repair-candidate
   SUPABASE_CLI_VERSION: 2.109.1
 
 jobs:
-  validate-and-build:
-    name: Validate and build immutable web-session source
+  validate-and-package:
+    name: Validate and package immutable web-session source
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     outputs:
+      source_commit: ${{ steps.identity.outputs.source_commit }}
       source_sha256: ${{ steps.package.outputs.source_sha256 }}
     steps:
-      - name: Check out exact source
-        uses: actions/checkout@v7
+      - name: Check out reviewed source
+        uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Validate one-purpose authorization
+      - name: Enforce source identity
+        id: identity
         shell: bash
         run: |
           set -euo pipefail
-          test -f "$AUTHORIZATION_PATH"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const path = process.env.AUTHORIZATION_PATH;
-          const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const expected = {
-            schemaVersion: 1,
-            authorizedPullRequest: 391,
-            sourceRef: 'refs/heads/main',
-            targetProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
-            functionName: process.env.FUNCTION_NAME,
-            verifyJwt: false,
-            productionOrigin: 'https://econovaria.vercel.app',
-            supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
-            databaseChangesAllowed: false,
-            otherFunctionsAllowed: false,
-          };
-          for (const [key, value] of Object.entries(expected)) {
-            if (manifest[key] !== value) throw new Error(`Authorization mismatch: ${key}`);
-          }
-          if (manifest.requiredCommitSubject !== process.env.EXPECTED_COMMIT_SUBJECT) {
-            throw new Error('Authorization commit subject mismatch.');
-          }
-          if (!Array.isArray(manifest.deniedProjectRefs) ||
-              !manifest.deniedProjectRefs.includes(process.env.DENIED_STAGING_PROJECT_REF)) {
-            throw new Error('Staging project denial is missing.');
-          }
-          if (manifest.secretPolicy?.overwriteExistingEncryptionKey !== false ||
-              manifest.secretPolicy?.recordSecretValues !== false) {
-            throw new Error('Secret policy must fail closed.');
-          }
-          NODE
-
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            test "$GITHUB_REF" = "refs/heads/main"
-            test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-            test "$(git log -1 --pretty=%s)" = "$EXPECTED_COMMIT_SUBJECT"
-            git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          source_commit="$(git rev-parse HEAD)"
+          [[ "$source_commit" =~ ^[a-f0-9]{40}$ ]]
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            test "$source_commit" = "${{ inputs.source_commit }}"
+            test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
+            test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+            git fetch origin main --depth=1
+            git merge-base --is-ancestor "$source_commit" origin/main
           fi
+          echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v6
         with:
           node-version: "22.23.1"
           cache: npm
-
-      - name: Pin npm
-        run: npm install --global npm@10.9.8
 
       - name: Install repository tooling
         run: npm ci
 
       - name: Install backend tooling
         run: npm --prefix backend ci
+
+      - name: Run web-session release contract
+        run: npm run test:web-session-release
 
       - name: Run authentication boundary tests
         run: npm run test:auth-boundaries
@@ -121,66 +97,42 @@ jobs:
       - name: Scan committed source for credentials
         run: npm run security:secrets
 
-      - name: Reject private remote source imports
-        shell: bash
-        run: |
-          set -euo pipefail
-          if grep -R --line-number --fixed-strings \
-            "raw.githubusercontent.com/kohnerbouchard-star/Student-Profile" \
-            backend/supabase/functions/web-session-api \
-            backend/supabase/functions/_shared \
-            backend/src/domains/auth \
-            backend/src/platform/supabase \
-            backend/src/security; then
-            echo "Production source must be repository-local." >&2
-            exit 1
-          fi
-
-      - name: Validate pinned deployment CLI contract
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.109.1
-
-      - name: Check deployment command surface
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
-          supabase functions deploy --help > "$RUNNER_TEMP/functions-deploy-help.txt"
-          grep -q -- "--project-ref" "$RUNNER_TEMP/functions-deploy-help.txt"
-          grep -q -- "--no-verify-jwt" "$RUNNER_TEMP/functions-deploy-help.txt"
-          grep -q -- "--use-api" "$RUNNER_TEMP/functions-deploy-help.txt"
-
-      - name: Package immutable repository-owned source
+      - name: Package deterministic repository-owned source
         id: package
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/production-web-session
           tar \
+            --sort=name \
+            --mtime='UTC 1970-01-01' \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
             --exclude='backend/node_modules' \
             --exclude='backend/.temp' \
             --exclude='backend/supabase/.temp' \
-            -czf dist/production-web-session/backend-source.tgz \
-            backend
+            -cf - backend | gzip -n > dist/production-web-session/backend-source.tgz
           source_sha256="$(sha256sum dist/production-web-session/backend-source.tgz | awk '{print $1}')"
           [[ "$source_sha256" =~ ^[a-f0-9]{64}$ ]]
           printf '%s  %s\n' "$source_sha256" "backend-source.tgz" \
             > dist/production-web-session/backend-source.tgz.sha256
           cp "$AUTHORIZATION_PATH" dist/production-web-session/authorization.json
-          SOURCE_SHA256="$source_sha256" node - <<'NODE'
+          SOURCE_SHA256="$source_sha256" SOURCE_COMMIT="${{ steps.identity.outputs.source_commit }}" node - <<'NODE'
           const fs = require('node:fs');
           const manifest = {
             schemaVersion: 1,
-            sourceCommit: process.env.GITHUB_SHA,
-            sourceRef: process.env.GITHUB_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            sourceRef: 'refs/heads/main',
             sourceSha256: process.env.SOURCE_SHA256,
-            functionName: process.env.FUNCTION_NAME,
-            targetProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
-            deniedProjectRef: process.env.DENIED_STAGING_PROJECT_REF,
+            sourceFunctionName: process.env.SOURCE_FUNCTION_NAME,
+            candidateFunctionName: process.env.CANDIDATE_FUNCTION_NAME,
+            stagingProjectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
+            deniedProductionProjectRef: process.env.DENIED_PRODUCTION_PROJECT_REF,
             verifyJwt: false,
-            supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
-            rebuildDuringDeployment: false,
+            repositoryLocalModuleGraph: true,
+            privateRemoteImports: false,
+            dataUrlImports: false,
           };
           fs.writeFileSync(
             'dist/production-web-session/build-manifest.json',
@@ -189,26 +141,159 @@ jobs:
           NODE
           echo "source_sha256=$source_sha256" >> "$GITHUB_OUTPUT"
 
-      - name: Upload immutable source artifact
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+      - name: Upload immutable candidate source
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v5
         with:
-          name: production-web-session-${{ github.sha }}
+          name: production-web-session-${{ steps.identity.outputs.source_commit }}
           path: dist/production-web-session
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
           overwrite: false
 
-      - name: Record build result
+  deploy-staging-candidate:
+    name: Deploy and verify staging candidate
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate-and-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce staging-only boundary
         shell: bash
         run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+
+      - name: Download exact immutable source
+        uses: actions/download-artifact@v5
+        with:
+          name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
+          path: dist/production-web-session
+
+      - name: Verify and restore artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/production-web-session
+          sha256sum --check backend-source.tgz.sha256
+          test "$(awk '{print $1}' backend-source.tgz.sha256)" = "${{ needs.validate-and-package.outputs.source_sha256 }}"
+          cd "$GITHUB_WORKSPACE"
+          rm -rf backend
+          tar -xzf dist/production-web-session/backend-source.tgz
+          test -f backend/supabase/functions/web-session-api/index.ts
+          ! grep -R --line-number --fixed-strings 'raw.githubusercontent.com/kohnerbouchard-star/Student-Profile' \
+            backend/supabase/functions/web-session-api \
+            backend/supabase/functions/_shared \
+            backend/src/domains/auth \
+            backend/src/platform/supabase \
+            backend/src/security
+          ! grep -R --line-number --fixed-strings 'data:text/javascript' \
+            backend/supabase/functions/web-session-api \
+            backend/supabase/functions/_shared \
+            backend/src/domains/auth \
+            backend/src/platform/supabase \
+            backend/src/security
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Prepare isolated candidate function directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "backend/supabase/functions/$CANDIDATE_FUNCTION_NAME"
+          cp -R \
+            "backend/supabase/functions/$SOURCE_FUNCTION_NAME" \
+            "backend/supabase/functions/$CANDIDATE_FUNCTION_NAME"
+
+      - name: Deploy only staging candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$CANDIDATE_FUNCTION_NAME" \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt \
+            --use-api
+
+      - name: Verify staging startup and request contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${CANDIDATE_FUNCTION_NAME}"
+          health_status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$base/health")"
+          test "$health_status" = "200"
+          node -e 'const b=require(process.argv[1]); if(b.ok!==true||b.status!=="ready") process.exit(1)' "$RUNNER_TEMP/health.json"
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/api-keys?reveal=true" \
+            > "$RUNNER_TEMP/api-keys.json"
+          publishable_key="$(node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((v) => String(v.api_key || '').startsWith('sb_publishable_')) ||
+            rows.find((v) => v.name === 'anon' || v.type === 'anon');
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+          )"
+          test -n "$publishable_key"
+          echo "::add-mask::$publishable_key"
+
+          invalid_status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/invalid.json" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: https://econovaria.vercel.app" \
+            -H "Content-Type: application/json" \
+            --data '{}')"
+          test "$invalid_status" = "400"
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+
+          rm -f "$RUNNER_TEMP/health.json" "$RUNNER_TEMP/api-keys.json" "$RUNNER_TEMP/invalid.json"
+          unset publishable_key
+        env:
+          KEYS_PATH: ${{ runner.temp }}/api-keys.json
+          INVALID_PATH: ${{ runner.temp }}/invalid.json
+
+      - name: Record candidate deployment digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions.json"
+          CANDIDATE_DIGEST="$(node - <<'NODE'
+          const rows = require(process.env.FUNCTIONS_PATH);
+          const row = rows.find((v) => v.slug === process.env.CANDIDATE_FUNCTION_NAME);
+          const digest = String(row?.ezbr_sha256 || '');
+          if (!/^[a-f0-9]{64}$/.test(digest)) process.exit(1);
+          process.stdout.write(digest);
+          NODE
+          )"
+          echo "candidate_digest=$CANDIDATE_DIGEST" >> "$GITHUB_OUTPUT"
           {
-            echo '## Production web-session source'
-            echo "- Commit: \`$GITHUB_SHA\`"
-            echo "- Source SHA-256: \`${{ steps.package.outputs.source_sha256 }}\`"
-            echo '- Repository-local imports: `pass`'
-            echo '- Auth-boundary tests: `pass`'
-            echo '- Backend typecheck: `pass`'
-            echo '- Production credentials used: `false`'
+            echo '## Staging web-session candidate verified'
+            echo "- Source commit: \`${{ needs.validate-and-package.outputs.source_commit }}\`"
+            echo "- Source SHA-256: \`${{ needs.validate-and-package.outputs.source_sha256 }}\`"
+            echo "- Candidate digest: \`$CANDIDATE_DIGEST\`"
+            echo '- Health: `200 ready`'
+            echo '- Invalid input: `400 controlled`'
+            echo '- Production changed: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/functions.json"
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/functions.json
