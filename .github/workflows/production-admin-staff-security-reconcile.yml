@@ -15,11 +15,6 @@ on:
         description: "Type RECONCILE ADMIN STAFF SECURITY"
         required: true
         type: string
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/production-admin-staff-security-reconcile.yml
 
 permissions:
   contents: read
@@ -32,9 +27,6 @@ env:
   MANIFEST_PATH: docs/operations/evidence/production-admin-staff-security-reconciliation-v1.json
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-  RUN_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
-  RUN_CONFIRM_PROJECT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_project_ref || 'cgiukdjwicykrmtkhudh' }}
-  RUN_CONFIRM_ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_action || 'RECONCILE ADMIN STAFF SECURITY' }}
 
 jobs:
   reconcile:
@@ -51,24 +43,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "$GITHUB_EVENT_NAME" in
-            workflow_dispatch)
-              test "$GITHUB_REF" = "refs/heads/main"
-              ;;
-            push)
-              test "$GITHUB_REF" = "refs/heads/main"
-              test "$GITHUB_SHA" = "$RUN_SOURCE_COMMIT"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_DB_URL"
           test -n "${SUPABASE_SECRET_KEY:-}${SUPABASE_SERVICE_ROLE_KEY:-}"
-          test "$RUN_CONFIRM_PROJECT_REF" = "$EXPECTED_PRODUCTION_PROJECT_REF"
-          test "$RUN_CONFIRM_ACTION" = "RECONCILE ADMIN STAFF SECURITY"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "RECONCILE ADMIN STAFF SECURITY"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
-          [[ "$RUN_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
           command -v psql >/dev/null
 
           node - <<'NODE'
@@ -89,7 +70,7 @@ jobs:
       - name: Check out exact merged main commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ env.RUN_SOURCE_COMMIT }}
+          ref: ${{ inputs.source_commit }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -97,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$RUN_SOURCE_COMMIT"
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
           git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
           git merge-base --is-ancestor HEAD origin/main
           test -f "$MANIFEST_PATH"
@@ -531,7 +512,7 @@ jobs:
           {
             echo '## Production Admin Staff Security Reconciliation'
             echo
-            echo "- Source commit: \`$RUN_SOURCE_COMMIT\`"
+            echo "- Source commit: \`${{ inputs.source_commit }}\`"
             echo "- Target project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
             echo "- Canonical migration: \`20260726091000_add_staff_security_state_v2\`"
             echo "- Schema operation: additive, idempotent, forward-only"
