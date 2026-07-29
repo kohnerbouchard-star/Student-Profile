@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "purpose": "restore-production-admin-web-session",
+  "authorizedPullRequest": 391,
+  "requiredCommitSubject": "hotfix(production): deploy web-session-api (#391)",
+  "sourceRef": "refs/heads/main",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "functionName": "web-session-api",
+  "verifyJwt": false,
+  "productionOrigin": "https://econovaria.vercel.app",
+  "supabaseCliVersion": "2.109.1",
+  "databaseChangesAllowed": false,
+  "otherFunctionsAllowed": false,
+  "secretPolicy": {
+    "allowedOriginsValue": "https://econovaria.vercel.app",
+    "createEncryptionKeyOnlyWhenMissing": true,
+    "overwriteExistingEncryptionKey": false,
+    "recordSecretValues": false
+  },
+  "verification": {
+    "directHealthRequired": true,
+    "directLoginValidationRequired": true,
+    "vercelProxyValidationRequired": true,
+    "expectedInvalidLoginStatus": 400
+  },
+  "emergencyDeployment": {
+    "performed": true,
+    "projectRef": "cgiukdjwicykrmtkhudh",
+    "functionId": "290824a5-8c29-479a-bd41-477c5b119cdf",
+    "functionVersion": 1,
+    "status": "ACTIVE",
+    "verifyJwt": false,
+    "compiledSourceSha256": "8931513ab27b75e63b61953edd8472cf21236b239b0a999e466a984dc6180f13",
+    "deploymentBundleSha256": "3866173c0abfb998025b2d01e38b0269e5ac36edf83539cb80c7fb7422fcc941",
+    "databaseSchemaChanged": false,
+    "otherFunctionsChanged": false,
+    "deploymentMechanism": "connected-supabase-control-plane",
+    "githubRunnerAdmissionBlocked": true
+  }
+}

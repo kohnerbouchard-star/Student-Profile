@@ -1,0 +1,291 @@
+name: Production Web Session Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Production Web Session Build
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-web-session-deploy
+  cancel-in-progress: false
+
+env:
+  EXPECTED_COMMIT_SUBJECT: "hotfix(production): deploy web-session-api (#391)"
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  FUNCTION_NAME: web-session-api
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  deploy:
+    name: Deploy and verify production web-session-api
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out exact merged main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce production and source boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "$EXPECTED_PRODUCTION_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test "$(git rev-parse HEAD)" = "${{ github.event.workflow_run.head_sha }}"
+          test "$(git log -1 --pretty=%s)" = "$EXPECTED_COMMIT_SUBJECT"
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor HEAD origin/main
+          echo "SUPABASE_URL=https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - name: Download exact immutable source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: production-web-session-${{ github.event.workflow_run.head_sha }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/production-web-session
+
+      - name: Verify artifact identity and digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/production-web-session
+          sha256sum --check backend-source.tgz.sha256
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const manifest = JSON.parse(fs.readFileSync('build-manifest.json', 'utf8'));
+          const authorization = JSON.parse(fs.readFileSync('authorization.json', 'utf8'));
+          const source = fs.readFileSync('backend-source.tgz');
+          const actualSha = crypto.createHash('sha256').update(source).digest('hex');
+          const expected = {
+            sourceCommit: process.env.EXPECTED_SOURCE_COMMIT,
+            sourceRef: 'refs/heads/main',
+            functionName: process.env.FUNCTION_NAME,
+            targetProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
+            deniedProjectRef: process.env.DENIED_STAGING_PROJECT_REF,
+            verifyJwt: false,
+            supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
+            rebuildDuringDeployment: false,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (manifest[key] !== value) throw new Error(`Build manifest mismatch: ${key}`);
+          }
+          if (manifest.sourceSha256 !== actualSha) throw new Error('Source digest mismatch.');
+          if (authorization.requiredCommitSubject !== process.env.EXPECTED_COMMIT_SUBJECT ||
+              authorization.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+              authorization.functionName !== process.env.FUNCTION_NAME ||
+              authorization.verifyJwt !== false ||
+              authorization.databaseChangesAllowed !== false ||
+              authorization.otherFunctionsAllowed !== false) {
+            throw new Error('Production authorization contract mismatch.');
+          }
+          NODE
+        env:
+          EXPECTED_SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Validate deployment command surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase functions deploy --help > "$RUNNER_TEMP/functions-deploy-help.txt"
+          supabase secrets list --help > "$RUNNER_TEMP/secrets-list-help.txt"
+          supabase secrets set --help > "$RUNNER_TEMP/secrets-set-help.txt"
+          grep -q -- "--project-ref" "$RUNNER_TEMP/functions-deploy-help.txt"
+          grep -q -- "--no-verify-jwt" "$RUNNER_TEMP/functions-deploy-help.txt"
+          grep -q -- "--use-api" "$RUNNER_TEMP/functions-deploy-help.txt"
+          grep -q -- "--project-ref" "$RUNNER_TEMP/secrets-list-help.txt"
+          grep -q -- "--project-ref" "$RUNNER_TEMP/secrets-set-help.txt"
+
+      - name: Provision one-purpose production session configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            > "$RUNNER_TEMP/production-secret-names.txt"
+
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+          if ! grep -q 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY' \
+            "$RUNNER_TEMP/production-secret-names.txt"; then
+            session_key="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))')"
+            test "${#session_key}" -eq 43
+            echo "::add-mask::$session_key"
+            supabase secrets set \
+              "ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=$session_key" \
+              --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+            unset session_key
+          fi
+
+          rm -f "$RUNNER_TEMP/production-secret-names.txt"
+
+      - name: Restore exact source artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf backend
+          tar -xzf dist/production-web-session/backend-source.tgz
+          test -f backend/supabase/functions/web-session-api/index.ts
+          if grep -R --line-number --fixed-strings \
+            "raw.githubusercontent.com/kohnerbouchard-star/Student-Profile" \
+            backend/supabase/functions/web-session-api \
+            backend/supabase/functions/_shared \
+            backend/src/domains/auth \
+            backend/src/platform/supabase \
+            backend/src/security; then
+            echo "Remote private source import detected after artifact restoration." >&2
+            exit 1
+          fi
+
+      - name: Deploy only production web-session-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_NAME" \
+            --workdir backend \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            --no-verify-jwt \
+            --use-api
+
+      - name: Verify direct Supabase route
+        id: direct
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            "$SUPABASE_URL/functions/v1/$FUNCTION_NAME/health" \
+            > "$RUNNER_TEMP/web-session-health.json"
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.HEALTH_PATH, 'utf8'));
+          if (body.ok !== true || body.service !== 'web-session-api' || body.status !== 'ready') {
+            throw new Error('Production health contract failed.');
+          }
+          NODE
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+            > "$RUNNER_TEMP/production-api-keys.json"
+
+          publishable_key="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.KEYS_PATH, 'utf8'));
+          const match = rows.find((row) => String(row.api_key || '').startsWith('sb_publishable_')) ||
+            rows.find((row) => row.name === 'anon' || row.type === 'anon');
+          process.stdout.write(String(match?.api_key || match?.apiKey || ''));
+          NODE
+          )"
+          test -n "$publishable_key"
+          echo "::add-mask::$publishable_key"
+
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/web-session-login-probe.json" \
+            --write-out '%{http_code}' \
+            --request POST \
+            "$SUPABASE_URL/functions/v1/$FUNCTION_NAME/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{}')"
+          test "$status" = "400"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.LOGIN_PATH, 'utf8'));
+          const code = String(body?.error?.code || '');
+          if (!code || ['route_not_found', 'missing_edge_runtime_config', 'web_session_failed'].includes(code)) {
+            throw new Error(`Unexpected direct login response: ${code || 'missing code'}`);
+          }
+          NODE
+
+          rm -f \
+            "$RUNNER_TEMP/web-session-health.json" \
+            "$RUNNER_TEMP/production-api-keys.json" \
+            "$RUNNER_TEMP/web-session-login-probe.json"
+          unset publishable_key
+        env:
+          HEALTH_PATH: ${{ runner.temp }}/web-session-health.json
+          KEYS_PATH: ${{ runner.temp }}/production-api-keys.json
+          LOGIN_PATH: ${{ runner.temp }}/web-session-login-probe.json
+
+      - name: Verify Vercel production proxy route
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error \
+              --output "$RUNNER_TEMP/vercel-login-probe.json" \
+              --write-out '%{http_code}' \
+              --request POST \
+              "$PRODUCTION_ORIGIN/api/admin-session/login" \
+              -H "Origin: $PRODUCTION_ORIGIN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+            if [[ "$status" == "400" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "12" ]]; then
+              echo "Unexpected Vercel proxy status: $status" >&2
+              cat "$RUNNER_TEMP/vercel-login-probe.json" >&2 || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.VERCEL_LOGIN_PATH, 'utf8'));
+          const code = String(body?.error?.code || '');
+          if (!code || ['route_not_found', 'missing_edge_runtime_config', 'web_session_failed'].includes(code)) {
+            throw new Error(`Unexpected Vercel login response: ${code || 'missing code'}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/vercel-login-probe.json"
+        env:
+          VERCEL_LOGIN_PATH: ${{ runner.temp }}/vercel-login-probe.json
+
+      - name: Record bounded production hotfix evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production web-session hotfix complete'
+            echo "- Source commit: \`${{ github.event.workflow_run.head_sha }}\`"
+            echo "- Source workflow run: \`${{ github.event.workflow_run.id }}\`"
+            echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Function: \`$FUNCTION_NAME\`"
+            echo '- Platform JWT verification: `false` (repository custom browser-session boundary)'
+            echo '- Database schema changed: `false`'
+            echo '- Other functions deployed: `false`'
+            echo '- Direct health probe: `pass`'
+            echo '- Direct login route probe: `pass`'
+            echo '- Vercel proxy login route probe: `pass`'
+          } >> "$GITHUB_STEP_SUMMARY"
