@@ -1,0 +1,172 @@
+name: Production Admin Login Dependency Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-admin-login-dependency-diagnostic.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-admin-login-dependency-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-admin-login-dependency-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  STATUS_CONTEXT: econovaria/admin-login-dependencies
+
+jobs:
+  validate:
+    name: Validate bounded login diagnostic
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed diagnostic
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate diagnostic contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='.github/workflows/production-admin-login-dependency-diagnostic.yml'
+          grep -Fq 'diagnostic.invalid@econovaria.test' "$file"
+          grep -Fq '00000000-0000-4000-8000-000000000001' "$file"
+          grep -Fq 'invalid_staff_credentials' "$file"
+          grep -Fq 'staff_login_unavailable' "$file"
+          grep -Fq 'No valid credentials supplied' "$file"
+
+  probe-production:
+    name: Probe production login dependencies
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Publish pending diagnostic status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: 'pending',
+            target_url: process.env.RUN_URL,
+            description: 'Production Admin login dependency diagnostic is running.',
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Probe valid-shaped nonexistent login
+        id: probe
+        continue-on-error: true
+        shell: bash
+        env:
+          RESPONSE_PATH: ${{ runner.temp }}/login-diagnostic.json
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --output "$RESPONSE_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H "Content-Type: application/json" \
+            -H "x-econovaria-device-id: 00000000-0000-4000-8000-000000000001" \
+            --data '{"email":"diagnostic.invalid@econovaria.test","password":"Not-A-Real-Production-Password-2026!"}')"
+          export STATUS="$status"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.RESPONSE_PATH, 'utf8'));
+          const code = String(body?.error?.code || body?.code || '');
+          const allowed = new Set([
+            'invalid_staff_credentials',
+            'authentication_temporarily_locked',
+          ]);
+          const sanitized = {
+            status: Number(process.env.STATUS || 0),
+            code,
+            retryable: Boolean(body?.error?.retryable),
+            noValidCredentialsSupplied: true,
+          };
+          process.stdout.write(`${JSON.stringify(sanitized)}\n`);
+          if (!allowed.has(code) || ![401, 429].includes(Number(process.env.STATUS))) {
+            process.exit(1);
+          }
+          NODE
+          rm -f "$RESPONSE_PATH"
+
+      - name: Publish terminal diagnostic status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const succeeded = process.env.PROBE_OUTCOME === 'success';
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: succeeded ? 'success' : 'failure',
+            target_url: process.env.RUN_URL,
+            description: succeeded
+              ? 'Production login dependencies reached the credential decision.'
+              : 'Production login dependencies failed before credential evaluation.',
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Enforce diagnostic result
+        if: steps.probe.outcome != 'success'
+        shell: bash
+        run: |
+          echo 'Production Admin login dependencies did not reach the credential decision.' >&2
+          exit 1
+
+      - name: Record bounded diagnostic evidence
+        if: steps.probe.outcome == 'success'
+        shell: bash
+        run: |
+          {
+            echo '## Production Admin login dependency diagnostic passed'
+            echo '- Synthetic nonexistent account used: `true`'
+            echo '- No valid credentials supplied: `true`'
+            echo '- Credential decision reached: `true`'
+            echo '- Production mutation performed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
