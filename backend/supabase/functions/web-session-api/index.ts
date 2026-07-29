@@ -7,10 +7,9 @@ import {
 import { handleStaffLoginRequest } from "../../../src/domains/auth/api/staffLoginHttpHandler.ts";
 import { handleStaffBootstrapRequest } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
 import {
-  readTrustedClientIp,
-  type TrustedIpHeader,
-} from "../../../src/security/rateLimitKeying.ts";
-import { readPlayerRateLimitConfig } from "../../../src/security/playerRateLimitService.ts";
+  authorizeAdminBffRequest,
+} from "../../../src/security/adminBffRequestAuth.ts";
+import { readTrustedClientIp } from "../../../src/security/rateLimitKeying.ts";
 import {
   constantTimeTextEqual,
   createWebAdminSessionPayload,
@@ -31,6 +30,7 @@ const MAX_PROXY_PATH_BYTES = 2_048;
 const CSRF_HEADER = "x-econovaria-csrf-token";
 const GAME_HEADER = "x-econovaria-game-id";
 const DEVICE_HEADER = "x-econovaria-device-id";
+const INTERNAL_TRUSTED_IP_HEADER = "x-real-ip" as const;
 const FORWARDED_REQUEST_HEADERS = new Map([
   ["content-type", "Content-Type"],
   ["x-idempotency-key", "X-Idempotency-Key"],
@@ -89,29 +89,53 @@ interface CurrentSession {
 }
 
 interface TrustedClientIp {
-  readonly header: TrustedIpHeader;
+  readonly header: typeof INTERNAL_TRUSTED_IP_HEADER;
   readonly address: string;
 }
 
-Deno.serve(async (request: Request) => {
-  const route = routePath(new URL(request.url).pathname);
+Deno.serve(async (incomingRequest: Request) => {
+  const route = routePath(new URL(incomingRequest.url).pathname);
 
-  if (request.method === "OPTIONS") return preflightResponse(request);
-  if (route === "/health" && request.method === "GET") {
-    return json(request, 200, {
+  if (incomingRequest.method === "OPTIONS") return preflightResponse(incomingRequest);
+  if (route === "/health" && incomingRequest.method === "GET") {
+    return json(incomingRequest, 200, {
       ok: true,
       service: "web-session-api",
       status: "ready",
     });
   }
 
-  const originFailure = requireAllowedOrigin(request);
+  const originFailure = requireAllowedOrigin(incomingRequest);
   if (originFailure) return originFailure;
-  const publishableFailure = await requirePublishableRequest(request);
-  if (publishableFailure) return withCors(request, publishableFailure);
+  const publishableFailure = await requirePublishableRequest(incomingRequest);
+  if (publishableFailure) return withCors(incomingRequest, publishableFailure);
 
   const env = readEdgeSupabaseEnv();
-  if (!env.ok) return serviceUnavailable(request);
+  if (!env.ok) return serviceUnavailable(incomingRequest);
+
+  const replayClient = createServiceClient(env.value);
+  const authorization = await authorizeAdminBffRequest(incomingRequest, {
+    supabaseUrl: env.value.supabaseUrl,
+    dependencies: {
+      claimNonce: async (claim) => {
+        const { data, error } = await replayClient.rpc<boolean>(
+          "claim_internal_runner_nonce_v2",
+          {
+            p_runner_name: claim.runnerName,
+            p_nonce_hash: claim.nonceHash,
+            p_timestamp_seconds: claim.timestampSeconds,
+            p_expires_at: claim.expiresAt,
+          },
+        );
+        if (error) throw new Error("ADMIN_BFF_NONCE_CLAIM_FAILED");
+        return data === true;
+      },
+    },
+  });
+  if (!authorization.ok) {
+    return withCors(incomingRequest, authorization.response);
+  }
+  const request = authorization.request;
 
   let key: Uint8Array;
   try {
@@ -311,12 +335,7 @@ async function handleMfa(
   }
 
   const clientIp = trustedClientIp(request);
-  if (!clientIp) {
-    return json(request, 400, errorBody(
-      "trusted_client_ip_unavailable",
-      "Trusted client network metadata is unavailable.",
-    ));
-  }
+  if (!clientIp) return networkMetadataUnavailable(request);
 
   const bodyResult = await readBoundedBody(request);
   if (bodyResult.ok === false) return bodyResult.response;
@@ -346,7 +365,7 @@ async function handleMfa(
     },
   ).catch(() => null);
   if (!upstream) {
-    return json(request, 502, errorBody(
+    return json(request, 502, retryableErrorBody(
       "staff_mfa_unavailable",
       "Administrator MFA service is unavailable.",
     ));
@@ -451,12 +470,7 @@ async function handleProxy(
     ));
   }
   const clientIp = trustedClientIp(request);
-  if (!clientIp) {
-    return json(request, 400, errorBody(
-      "trusted_client_ip_unavailable",
-      "Trusted client network metadata is unavailable.",
-    ));
-  }
+  if (!clientIp) return networkMetadataUnavailable(request);
 
   const bodyResult = await readBoundedBody(request);
   if (bodyResult.ok === false) return bodyResult.response;
@@ -735,10 +749,9 @@ function allowedOrigins(): ReadonlySet<string> {
 
 function trustedClientIp(request: Request): TrustedClientIp | null {
   try {
-    const trustedIpHeader = readPlayerRateLimitConfig().trustedIpHeader;
     return {
-      header: trustedIpHeader,
-      address: readTrustedClientIp(request, trustedIpHeader),
+      header: INTERNAL_TRUSTED_IP_HEADER,
+      address: readTrustedClientIp(request, INTERNAL_TRUSTED_IP_HEADER),
     };
   } catch {
     return null;
@@ -932,14 +945,25 @@ function methodNotAllowed(request: Request, expected: string): Response {
 }
 
 function serviceUnavailable(request: Request): Response {
-  return json(request, 503, errorBody(
+  return json(request, 503, retryableErrorBody(
     "web_session_unavailable",
     "Administrator web sessions are unavailable.",
   ));
 }
 
+function networkMetadataUnavailable(request: Request): Response {
+  return json(request, 503, retryableErrorBody(
+    "trusted_client_ip_unavailable",
+    "Trusted client network metadata is unavailable.",
+  ));
+}
+
 function errorBody(code: string, message: string) {
   return { ok: false, error: { code, message, retryable: false } };
+}
+
+function retryableErrorBody(code: string, message: string) {
+  return { ok: false, error: { code, message, retryable: true } };
 }
 
 function normalizeContentType(value: string | null): string {
