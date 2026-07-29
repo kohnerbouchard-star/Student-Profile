@@ -1,0 +1,365 @@
+name: Production Admin Login Dependency Isolation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-admin-login-dependency-isolation.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-admin-login-dependency-isolation.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-admin-login-dependency-isolation
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  STATUS_CONTEXT: econovaria/admin-login-dependency-isolation
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  validate:
+    name: Validate bounded production diagnostic
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed diagnostic
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate isolation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='.github/workflows/production-admin-login-dependency-isolation.yml'
+          grep -Fq 'environment: production' "$file"
+          grep -Fq 'cgiukdjwicykrmtkhudh' "$file"
+          grep -Fq 'eecvbssdvarfcykcfrny' "$file"
+          grep -Fq 'api-keys?reveal=true' "$file"
+          grep -Fq 'consume_pre_auth_request_rate_limits_v1' "$file"
+          grep -Fq 'auth_throttle_check_v2' "$file"
+          grep -Fq 'delete from public.request_rate_limit_buckets' "$file"
+          grep -Fq 'No valid production credentials supplied' "$file"
+          grep -Fq 'statuses: write' "$file"
+
+  isolate-production:
+    name: Isolate production Admin login dependency
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce production diagnostic boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_URL"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "$EXPECTED_PRODUCTION_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test "$PRODUCTION_ORIGIN" = 'https://econovaria.vercel.app'
+
+      - name: Publish pending diagnostic status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: 'pending',
+            target_url: process.env.RUN_URL,
+            description: 'Production Admin login dependency isolation is running.',
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Isolate auth provider and service-role RPCs
+        id: isolate
+        continue-on-error: true
+        shell: bash
+        env:
+          API_KEYS_PATH: ${{ runner.temp }}/api-keys.json
+          SELECTED_KEYS_PATH: ${{ runner.temp }}/selected-keys.json
+          SECRET_NAMES_PATH: ${{ runner.temp }}/secret-names.txt
+          AUTH_PATH: ${{ runner.temp }}/auth.json
+          PREAUTH_PATH: ${{ runner.temp }}/preauth.json
+          THROTTLE_PATH: ${{ runner.temp }}/throttle.json
+          EDGE_PATH: ${{ runner.temp }}/edge.json
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          psql --version > /dev/null
+
+          supabase secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            > "$SECRET_NAMES_PATH"
+
+          generic_secret_present=false
+          if grep -Eq '(^|[[:space:]])SECRET_KEY([[:space:]]|$)' "$SECRET_NAMES_PATH"; then
+            generic_secret_present=true
+          fi
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+            > "$API_KEYS_PATH"
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.API_KEYS_PATH, 'utf8'));
+          const value = (row) => String(row?.api_key || row?.apiKey || '');
+          const publishable = rows.find((row) => value(row).startsWith('sb_publishable_')) ||
+            rows.find((row) => row?.name === 'anon' || row?.type === 'anon');
+          const secret = rows.find((row) => value(row).startsWith('sb_secret_'));
+          const serviceRole = rows.find((row) =>
+            (row?.name === 'service_role' || row?.type === 'service_role') &&
+            value(row).split('.').length === 3
+          );
+          const selected = {
+            publishable: value(publishable),
+            secret: value(secret),
+            serviceRole: value(serviceRole),
+          };
+          if (!selected.publishable || (!selected.secret && !selected.serviceRole)) {
+            throw new Error('Required production API key classes were not available.');
+          }
+          fs.writeFileSync(process.env.SELECTED_KEYS_PATH, JSON.stringify(selected));
+          NODE
+
+          publishable_key="$(node -p "require(process.env.SELECTED_KEYS_PATH).publishable")"
+          secret_key="$(node -p "require(process.env.SELECTED_KEYS_PATH).secret")"
+          service_role_key="$(node -p "require(process.env.SELECTED_KEYS_PATH).serviceRole")"
+          echo "::add-mask::$publishable_key"
+          if [[ -n "$secret_key" ]]; then echo "::add-mask::$secret_key"; fi
+          if [[ -n "$service_role_key" ]]; then echo "::add-mask::$service_role_key"; fi
+
+          base="https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co"
+          action_hash="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          ip_hash="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          account_hash="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          device_hash="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          throttle_ip_hash="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+
+          cleanup() {
+            set +e
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -q <<SQL > /dev/null
+          delete from public.request_rate_limit_buckets
+          where key_hash in ('$action_hash', '$ip_hash');
+          delete from public.authentication_throttle_buckets
+          where key_hash in ('$account_hash', '$device_hash', '$throttle_ip_hash');
+          SQL
+            rm -f \
+              "$API_KEYS_PATH" "$SELECTED_KEYS_PATH" "$SECRET_NAMES_PATH" \
+              "$AUTH_PATH" "$PREAUTH_PATH" "$THROTTLE_PATH" "$EDGE_PATH"
+            unset publishable_key secret_key service_role_key
+          }
+          trap cleanup EXIT
+
+          auth_status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --output "$AUTH_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$base/auth/v1/token?grant_type=password" \
+            -H "apikey: $publishable_key" \
+            -H 'Content-Type: application/json' \
+            --data '{"email":"diagnostic.invalid@econovaria.test","password":"Not-A-Real-Production-Password-2026!"}')"
+          export AUTH_STATUS="$auth_status"
+          auth_ok="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const status = Number(process.env.AUTH_STATUS || 0);
+          const body = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
+          const code = String(body?.error_code || body?.code || body?.error || '');
+          const ok = status >= 400 && status < 500 && Boolean(code);
+          process.stdout.write(ok ? 'true' : 'false');
+          NODE
+          )"
+
+          preauth_payload="$(node -e 'process.stdout.write(JSON.stringify({p_buckets:[{dimension:"action",keyHash:process.argv[1],limit:1000,windowSeconds:60,blockSeconds:60},{dimension:"ip",keyHash:process.argv[2],limit:1000,windowSeconds:60,blockSeconds:60}]}))' "$action_hash" "$ip_hash")"
+          throttle_payload="$(node -e 'process.stdout.write(JSON.stringify({p_buckets:[{dimension:"account",keyHash:process.argv[1]},{dimension:"device",keyHash:process.argv[2]},{dimension:"ip",keyHash:process.argv[3]}]}))' "$account_hash" "$device_hash" "$throttle_ip_hash")"
+
+          probe_rpc() {
+            local key="$1"
+            local rpc="$2"
+            local payload="$3"
+            local output="$4"
+            if [[ -z "$key" ]]; then
+              printf 'absent'
+              return 0
+            fi
+            local status
+            status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 30 \
+              --output "$output" \
+              --write-out '%{http_code}' \
+              --request POST "$base/rest/v1/rpc/$rpc" \
+              -H "apikey: $key" \
+              -H "Authorization: Bearer $key" \
+              -H 'Content-Type: application/json' \
+              --data "$payload")"
+            STATUS="$status" OUTPUT="$output" node - <<'NODE'
+          const fs = require('node:fs');
+          const status = Number(process.env.STATUS || 0);
+          let body = null;
+          try { body = JSON.parse(fs.readFileSync(process.env.OUTPUT, 'utf8')); } catch {}
+          const ok = status === 200 && (Array.isArray(body) || body === null);
+          process.stdout.write(ok ? 'pass' : `fail:${status}:${String(body?.code || 'unknown')}`);
+          NODE
+          }
+
+          service_pre="$(probe_rpc "$service_role_key" 'consume_pre_auth_request_rate_limits_v1' "$preauth_payload" "$PREAUTH_PATH")"
+          service_throttle="$(probe_rpc "$service_role_key" 'auth_throttle_check_v2' "$throttle_payload" "$THROTTLE_PATH")"
+          secret_pre="$(probe_rpc "$secret_key" 'consume_pre_auth_request_rate_limits_v1' "$preauth_payload" "$PREAUTH_PATH")"
+          secret_throttle="$(probe_rpc "$secret_key" 'auth_throttle_check_v2' "$throttle_payload" "$THROTTLE_PATH")"
+
+          edge_status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --output "$EDGE_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H 'Content-Type: application/json' \
+            -H 'x-econovaria-device-id: 00000000-0000-4000-8000-000000000002' \
+            --data '{"email":"diagnostic.invalid@econovaria.test","password":"Not-A-Real-Production-Password-2026!"}')"
+          export EDGE_STATUS="$edge_status"
+          edge_code="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.EDGE_PATH, 'utf8'));
+          process.stdout.write(String(body?.error?.code || body?.code || 'unknown'));
+          NODE
+          )"
+
+          classification='unknown'
+          if [[ "$auth_ok" != 'true' ]]; then
+            classification='auth_provider_unavailable'
+          elif [[ "$service_pre" == pass && "$service_throttle" == pass && ( "$secret_pre" != pass || "$secret_throttle" != pass ) ]]; then
+            classification='secret_key_service_role_incompatibility'
+          elif [[ "$service_pre" == pass && "$service_throttle" == pass && "$secret_pre" == pass && "$secret_throttle" == pass && "$edge_status" == '503' ]]; then
+            classification='edge_service_key_selection_or_runtime_binding'
+          elif [[ "$service_pre" != pass && "$secret_pre" != pass ]]; then
+            classification='pre_auth_rate_limit_rpc_unavailable'
+          elif [[ "$service_throttle" != pass && "$secret_throttle" != pass ]]; then
+            classification='authentication_throttle_rpc_unavailable'
+          elif [[ "$edge_status" == '401' ]]; then
+            classification='production_login_dependency_healthy'
+          fi
+
+          CLASSIFICATION="$classification" \
+          GENERIC_SECRET_PRESENT="$generic_secret_present" \
+          AUTH_OK="$auth_ok" \
+          SERVICE_PRE="$service_pre" \
+          SERVICE_THROTTLE="$service_throttle" \
+          SECRET_PRE="$secret_pre" \
+          SECRET_THROTTLE="$secret_throttle" \
+          EDGE_STATUS="$edge_status" \
+          EDGE_CODE="$edge_code" node - <<'NODE'
+          const evidence = {
+            classification: process.env.CLASSIFICATION,
+            genericSecretKeyPresent: process.env.GENERIC_SECRET_PRESENT === 'true',
+            authProviderReachable: process.env.AUTH_OK === 'true',
+            legacyServiceRolePreAuthRpc: process.env.SERVICE_PRE,
+            legacyServiceRoleThrottleRpc: process.env.SERVICE_THROTTLE,
+            secretKeyPreAuthRpc: process.env.SECRET_PRE,
+            secretKeyThrottleRpc: process.env.SECRET_THROTTLE,
+            edgeLoginStatus: Number(process.env.EDGE_STATUS || 0),
+            edgeLoginCode: process.env.EDGE_CODE,
+            noValidProductionCredentialsSupplied: true,
+            syntheticCounterCleanupRegistered: true,
+          };
+          process.stdout.write(`${JSON.stringify(evidence)}\n`);
+          NODE
+
+          echo "classification=$classification" >> "$GITHUB_OUTPUT"
+          test "$classification" = 'production_login_dependency_healthy'
+
+      - name: Publish terminal diagnostic status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+          ISOLATE_OUTCOME: ${{ steps.isolate.outcome }}
+          CLASSIFICATION: ${{ steps.isolate.outputs.classification }}
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const succeeded = process.env.ISOLATE_OUTCOME === 'success';
+          const classification = String(process.env.CLASSIFICATION || 'dependency_isolation_failed');
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: succeeded ? 'success' : 'failure',
+            target_url: process.env.RUN_URL,
+            description: (succeeded
+              ? 'Production Admin login dependency chain is healthy.'
+              : `Production Admin login isolation: ${classification}.`).slice(0, 140),
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Enforce isolated dependency result
+        if: steps.isolate.outcome != 'success'
+        shell: bash
+        run: |
+          echo "Production Admin login dependency classification: ${{ steps.isolate.outputs.classification }}" >&2
+          exit 1
+
+      - name: Record bounded production evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Production Admin login dependency isolation'
+            echo "- Classification: \`${{ steps.isolate.outputs.classification || 'unavailable' }}\`"
+            echo '- No valid production credentials supplied: `true`'
+            echo '- Raw API keys recorded: `false`'
+            echo '- Raw identifiers recorded: `false`'
+            echo '- Synthetic counter cleanup: `registered`'
+            echo '- Schema migration performed: `false`'
+            echo '- Edge Function deployment performed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
