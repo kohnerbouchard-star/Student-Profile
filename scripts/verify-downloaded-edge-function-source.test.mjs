@@ -20,25 +20,20 @@ const FILES = new Map([
   ["src/security/webAdminSession.ts", "export const session = true;\n"],
 ]);
 
-test("canonical verifier accepts the known backend source-root difference", () => {
+test("canonical verifier accepts the known downloaded backend source-root difference", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "edge-source-verify-"));
   const staging = path.join(root, "staging");
   const production = path.join(root, "production");
   try {
     writeTree(staging, "");
     writeTree(production, `supabase/functions/${FUNCTION_NAME}/backend/`);
-    const digest = execFileSync(
-      process.execPath,
-      [SCRIPT, staging, production, FUNCTION_NAME],
-      { encoding: "utf8" },
-    ).trim();
-    assert.match(digest, /^[a-f0-9]{64}$/u);
+    assertDigest(staging, production);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("canonical verifier rejects any deployed source-byte difference", () => {
+test("canonical verifier rejects any downloaded source-byte difference", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "edge-source-verify-"));
   const staging = path.join(root, "staging");
   const production = path.join(root, "production");
@@ -52,15 +47,56 @@ test("canonical verifier rejects any deployed source-byte difference", () => {
       ),
       "// drift\n",
     );
-    assert.throws(() => execFileSync(
-      process.execPath,
-      [SCRIPT, staging, production, FUNCTION_NAME],
-      { encoding: "utf8", stdio: "pipe" },
-    ));
+    assertMismatch(staging, production);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("canonical verifier accepts Management API files with the known backend prefix", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "edge-source-json-"));
+  const staging = path.join(root, "staging.json");
+  const production = path.join(root, "production.json");
+  try {
+    writeFunctionJson(staging, "");
+    writeFunctionJson(production, "backend/");
+    assertDigest(staging, production);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("canonical verifier rejects Management API source-byte drift", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "edge-source-json-"));
+  const staging = path.join(root, "staging.json");
+  const production = path.join(root, "production.json");
+  try {
+    writeFunctionJson(staging, "");
+    writeFunctionJson(production, "backend/", {
+      "src/security/webAdminSession.ts": "// drift\n",
+    });
+    assertMismatch(staging, production);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function assertDigest(staging, production) {
+  const digest = execFileSync(
+    process.execPath,
+    [SCRIPT, staging, production, FUNCTION_NAME],
+    { encoding: "utf8" },
+  ).trim();
+  assert.match(digest, /^[a-f0-9]{64}$/u);
+}
+
+function assertMismatch(staging, production) {
+  assert.throws(() => execFileSync(
+    process.execPath,
+    [SCRIPT, staging, production, FUNCTION_NAME],
+    { encoding: "utf8", stdio: "pipe" },
+  ));
+}
 
 function writeTree(root, prefix) {
   for (const [name, content] of FILES) {
@@ -68,4 +104,18 @@ function writeTree(root, prefix) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content);
   }
+}
+
+function writeFunctionJson(target, prefix, overrides = {}) {
+  const files = [...FILES].map(([name, content]) => ({
+    name: `${prefix}${name}`,
+    content: `${content}${overrides[name] || ""}`,
+  }));
+  fs.writeFileSync(target, JSON.stringify({
+    slug: FUNCTION_NAME,
+    name: FUNCTION_NAME,
+    status: "ACTIVE",
+    verify_jwt: false,
+    files,
+  }));
 }
