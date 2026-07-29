@@ -66,6 +66,7 @@ jobs:
           [[ "$source_commit" =~ ^[a-f0-9]{40}$ ]]
           test "$SOURCE_FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/main"
             test "$source_commit" = "${{ inputs.source_commit }}"
             test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
             test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
@@ -98,28 +99,24 @@ jobs:
       - name: Scan committed source for credentials
         run: npm run security:secrets
 
-      - name: Package deterministic repository-owned source
+      - name: Package deterministic tracked source
         id: package
         shell: bash
         run: |
           set -euo pipefail
+          source_commit="${{ steps.identity.outputs.source_commit }}"
           mkdir -p dist/production-web-session
-          tar \
-            --sort=name \
-            --mtime='UTC 1970-01-01' \
-            --owner=0 \
-            --group=0 \
-            --numeric-owner \
-            --exclude='backend/node_modules' \
-            --exclude='backend/.temp' \
-            --exclude='backend/supabase/.temp' \
-            -cf - backend | gzip -n > dist/production-web-session/backend-source.tgz
+          git archive \
+            --format=tar \
+            --prefix=backend/ \
+            "$source_commit:backend" | gzip -n \
+            > dist/production-web-session/backend-source.tgz
           source_sha256="$(sha256sum dist/production-web-session/backend-source.tgz | awk '{print $1}')"
           [[ "$source_sha256" =~ ^[a-f0-9]{64}$ ]]
           printf '%s  %s\n' "$source_sha256" "backend-source.tgz" \
             > dist/production-web-session/backend-source.tgz.sha256
           cp "$AUTHORIZATION_PATH" dist/production-web-session/authorization.json
-          SOURCE_SHA256="$source_sha256" SOURCE_COMMIT="${{ steps.identity.outputs.source_commit }}" node - <<'NODE'
+          SOURCE_SHA256="$source_sha256" SOURCE_COMMIT="$source_commit" node - <<'NODE'
           const fs = require('node:fs');
           const manifest = {
             schemaVersion: 1,
@@ -131,6 +128,7 @@ jobs:
             stagingProjectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
             deniedProductionProjectRef: process.env.DENIED_PRODUCTION_PROJECT_REF,
             verifyJwt: false,
+            trackedGitTreeOnly: true,
             repositoryLocalModuleGraph: true,
             privateRemoteImports: false,
             dataUrlImports: false,
@@ -156,7 +154,7 @@ jobs:
 
   deploy-staging-candidate:
     name: Deploy and verify staging candidate
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: validate-and-package
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -168,6 +166,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
@@ -274,16 +273,18 @@ jobs:
           const rows = require(process.env.FUNCTIONS_PATH);
           const row = rows.find((v) => v.slug === process.env.SOURCE_FUNCTION_NAME);
           const digest = String(row?.ezbr_sha256 || '');
-          if (!/^[a-f0-9]{64}$/.test(digest)) process.exit(1);
+          if (!/^[a-f0-9]{64}$/.test(digest) || row?.verify_jwt !== false) process.exit(1);
           process.stdout.write(digest);
           NODE
           )"
           {
             echo '## Staging web-session candidate verified'
+            echo "- Source ref: \`$GITHUB_REF\`"
             echo "- Source commit: \`${{ needs.validate-and-package.outputs.source_commit }}\`"
             echo "- Source SHA-256: \`${{ needs.validate-and-package.outputs.source_sha256 }}\`"
             echo "- Candidate digest: \`$CANDIDATE_DIGEST\`"
             echo "- Function identity: \`$SOURCE_FUNCTION_NAME\`"
+            echo '- Tracked Git tree only: `true`'
             echo '- Health: `200 ready`'
             echo '- Invalid input: `400 controlled`'
             echo '- Production changed: `false`'
