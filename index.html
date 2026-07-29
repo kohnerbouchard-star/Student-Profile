@@ -29,20 +29,21 @@
 
     .login-root .brand-block {
       gap: 0;
-      padding: 22px 24px 16px;
+      padding: 12px 14px 8px;
     }
 
     .login-root .logo-mark.is-econovaria-logo {
-      width: min(286px, 100%);
-      height: auto;
-      aspect-ratio: 1672 / 941;
+      width: min(312px, 100%);
+      height: 212px;
+      aspect-ratio: auto;
       animation: none;
     }
 
     .login-root .logo-mark.is-econovaria-logo img {
       display: block;
-      width: 100%;
-      height: 100%;
+      width: 500px;
+      max-width: none;
+      height: auto;
       object-fit: contain;
       filter: drop-shadow(0 0 22px rgba(0, 212, 255, .24)) drop-shadow(0 0 26px rgba(255, 0, 238, .14));
     }
@@ -55,8 +56,11 @@
     }
 
     .login-root .logo-mark.is-econovaria-logo img {
-      position: relative;
+      position: absolute;
+      top: 50%;
+      left: 50%;
       z-index: 1;
+      transform: translate(-50%, -50%);
     }
 
     .login-root .logo-mark.has-brand-error img {
