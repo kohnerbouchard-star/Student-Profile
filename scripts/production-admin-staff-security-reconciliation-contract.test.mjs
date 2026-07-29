@@ -74,14 +74,13 @@ test("canonical migration remains additive, bounded, and Staff-only", () => {
 
 test("workflow requires an exact protected source and production authorization", () => {
   assert.match(workflow, /^\s*workflow_dispatch:/mu);
-  assert.match(workflow, /^\s*push:\s*\n\s+branches:\s*\n\s+- ops\/production-admin-staff-security-reconcile-v1/mu);
+  assert.match(
+    workflow,
+    /^\s*push:\s*\n\s+branches:\s*\n\s+- main\s*\n\s+paths:\s*\n\s+- \.github\/workflows\/production-admin-staff-security-reconcile\.yml/mu,
+  );
   assert.doesNotMatch(workflow, /^\s*pull_request:/mu);
   assert.match(workflow, /environment: production/u);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/u);
-  assert.match(
-    workflow,
-    /ONE_TIME_TRIGGER_BRANCH: ops\/production-admin-staff-security-reconcile-v1/u,
-  );
   assert.match(
     workflow,
     /RUN_SOURCE_COMMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.source_commit \|\| github\.sha \}\}/u,
@@ -90,7 +89,7 @@ test("workflow requires an exact protected source and production authorization",
   assert.match(workflow, /workflow_dispatch\)\s*\n\s+test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(
     workflow,
-    /push\)\s*\n\s+test "\$GITHUB_REF" = "refs\/heads\/\$ONE_TIME_TRIGGER_BRANCH"\s*\n\s+test "\$GITHUB_SHA" = "\$RUN_SOURCE_COMMIT"/u,
+    /push\)\s*\n\s+test "\$GITHUB_REF" = "refs\/heads\/main"\s*\n\s+test "\$GITHUB_SHA" = "\$RUN_SOURCE_COMMIT"/u,
   );
   assert.match(
     workflow,
