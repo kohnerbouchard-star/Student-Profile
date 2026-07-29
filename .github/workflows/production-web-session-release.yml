@@ -1,0 +1,667 @@
+name: Production Web Session Release Orchestrator
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-release.yml"
+      - "docs/operations/release-requests/production-web-session-release-v1.json"
+      - "docs/operations/evidence/production-web-session-recovery-v1.json"
+      - "docs/operations/evidence/production-web-session-database-reconciliation-v1.json"
+      - "backend/supabase/functions/web-session-api/**"
+      - "backend/supabase/functions/_shared/**"
+      - "backend/src/domains/auth/**"
+      - "backend/src/platform/supabase/**"
+      - "backend/src/security/**"
+      - "scripts/web-session-release-contract.test.mjs"
+      - "scripts/verify-edge-function-multipart-source.mjs"
+      - "scripts/verify-edge-function-multipart-source.test.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/operations/release-requests/production-web-session-release-v1.json"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-web-session-release-orchestrator
+  cancel-in-progress: false
+
+env:
+  RELEASE_REQUEST_PATH: docs/operations/release-requests/production-web-session-release-v1.json
+  AUTHORIZATION_PATH: docs/operations/evidence/production-web-session-recovery-v1.json
+  DATABASE_AUTHORIZATION_PATH: docs/operations/evidence/production-web-session-database-reconciliation-v1.json
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  FUNCTION_NAME: web-session-api
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  TRUSTED_CLIENT_IP_HEADER: x-real-ip
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  validate-and-package:
+    name: Validate release request and package immutable source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    outputs:
+      request_id: ${{ steps.request.outputs.request_id }}
+      source_commit: ${{ steps.request.outputs.source_commit }}
+      source_sha256: ${{ steps.package.outputs.source_sha256 }}
+    steps:
+      - name: Check out reviewed trigger commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate repository-owned release request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_commit="$(git rev-parse HEAD)"
+          [[ "$source_commit" =~ ^[a-f0-9]{40}$ ]]
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+            test "$source_commit" = "$(git rev-parse origin/main)"
+          fi
+          SOURCE_COMMIT="$source_commit" node - <<'NODE'
+          const fs = require('node:fs');
+          const request = JSON.parse(fs.readFileSync(process.env.RELEASE_REQUEST_PATH, 'utf8'));
+          const expected = {
+            schemaVersion: 1,
+            state: 'approved',
+            sourceMode: 'trigger_commit',
+            sourceRef: 'refs/heads/main',
+            functionName: process.env.FUNCTION_NAME,
+            stagingFunctionName: process.env.FUNCTION_NAME,
+            stagingProjectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
+            productionProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
+            productionOrigin: process.env.PRODUCTION_ORIGIN,
+            trustedClientIpHeader: process.env.TRUSTED_CLIENT_IP_HEADER,
+            verifyJwt: false,
+            customAuthenticationRequired: true,
+            productionEnvironmentApprovalRequired: true,
+            databaseChangesAllowed: false,
+            secretChangesAllowed: false,
+            productionDataWritesAllowed: false,
+            otherFunctionsAllowed: false,
+            realAdministratorLoginRequiredForClosure: true,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (request[key] !== value) throw new Error(`Release request mismatch: ${key}`);
+          }
+          if (!/^[a-z0-9][a-z0-9._-]{7,127}$/u.test(String(request.requestId || ''))) {
+            throw new Error('Release request ID is invalid.');
+          }
+          if (
+            !Array.isArray(request.allowedProductionMutations) ||
+            request.allowedProductionMutations.length !== 1 ||
+            request.allowedProductionMutations[0] !== 'deploy web-session-api only'
+          ) {
+            throw new Error('Release request mutation scope is invalid.');
+          }
+          if (process.env.EXPECTED_STAGING_PROJECT_REF === process.env.EXPECTED_PRODUCTION_PROJECT_REF) {
+            throw new Error('Staging and production project refs must differ.');
+          }
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `request_id=${request.requestId}\nsource_commit=${process.env.SOURCE_COMMIT}\n`,
+          );
+          NODE
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Install backend tooling
+        run: npm --prefix backend ci
+
+      - name: Run web-session release contracts
+        run: npm run test:web-session-release
+
+      - name: Run authentication boundary tests
+        run: npm run test:auth-boundaries
+
+      - name: Typecheck backend
+        run: npm --prefix backend run typecheck
+
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
+
+      - name: Package deterministic tracked backend source
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_commit="${{ steps.request.outputs.source_commit }}"
+          mkdir -p dist/production-web-session
+          git archive --format=tar "$source_commit" backend | gzip -n \
+            > dist/production-web-session/backend-source.tgz
+          source_sha256="$(sha256sum dist/production-web-session/backend-source.tgz | awk '{print $1}')"
+          [[ "$source_sha256" =~ ^[a-f0-9]{64}$ ]]
+          printf '%s  %s\n' "$source_sha256" backend-source.tgz \
+            > dist/production-web-session/backend-source.tgz.sha256
+          cp "$RELEASE_REQUEST_PATH" dist/production-web-session/release-request.json
+          cp "$AUTHORIZATION_PATH" dist/production-web-session/authorization.json
+          cp "$DATABASE_AUTHORIZATION_PATH" dist/production-web-session/database-authorization.json
+          SOURCE_COMMIT="$source_commit" SOURCE_SHA256="$source_sha256" node - <<'NODE'
+          const fs = require('node:fs');
+          const request = JSON.parse(fs.readFileSync(process.env.RELEASE_REQUEST_PATH, 'utf8'));
+          const manifest = {
+            schemaVersion: 2,
+            requestId: request.requestId,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            sourceRef: 'refs/heads/main',
+            sourceSha256: process.env.SOURCE_SHA256,
+            sourceFunctionName: process.env.FUNCTION_NAME,
+            candidateFunctionName: process.env.FUNCTION_NAME,
+            stagingProjectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
+            productionProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
+            verifyJwt: false,
+            trackedGitTreeOnly: true,
+            repositoryLocalModuleGraph: true,
+            privateRemoteImports: false,
+            dataUrlImports: false,
+            productionEnvironmentApprovalRequired: true,
+            databaseChangesAllowed: false,
+            secretChangesAllowed: false,
+          };
+          fs.writeFileSync(
+            'dist/production-web-session/build-manifest.json',
+            `${JSON.stringify(manifest, null, 2)}\n`,
+          );
+          NODE
+          echo "source_sha256=$source_sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable release artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v5
+        with:
+          name: production-web-session-${{ steps.request.outputs.source_commit }}
+          path: dist/production-web-session
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+          overwrite: false
+
+  deploy-staging:
+    name: Deploy and verify staging candidate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate-and-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    outputs:
+      candidate_digest: ${{ steps.candidate.outputs.candidate_digest }}
+      candidate_version: ${{ steps.candidate.outputs.candidate_version }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$FUNCTION_NAME" = "web-session-api"
+          test "${{ needs.validate-and-package.outputs.request_id }}" != ""
+
+      - name: Check out orchestration control plane
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+
+      - name: Download exact immutable release artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
+          path: dist/production-web-session
+
+      - name: Verify and restore tracked source artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/production-web-session
+          sha256sum --check backend-source.tgz.sha256
+          test "$(awk '{print $1}' backend-source.tgz.sha256)" = "${{ needs.validate-and-package.outputs.source_sha256 }}"
+          SOURCE_COMMIT="${{ needs.validate-and-package.outputs.source_commit }}" \
+          SOURCE_SHA="${{ needs.validate-and-package.outputs.source_sha256 }}" \
+          REQUEST_ID="${{ needs.validate-and-package.outputs.request_id }}" node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('build-manifest.json', 'utf8'));
+          if (
+            manifest.schemaVersion !== 2 ||
+            manifest.requestId !== process.env.REQUEST_ID ||
+            manifest.sourceCommit !== process.env.SOURCE_COMMIT ||
+            manifest.sourceSha256 !== process.env.SOURCE_SHA ||
+            manifest.sourceFunctionName !== process.env.FUNCTION_NAME ||
+            manifest.candidateFunctionName !== process.env.FUNCTION_NAME ||
+            manifest.stagingProjectRef !== process.env.EXPECTED_STAGING_PROJECT_REF ||
+            manifest.productionProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            manifest.verifyJwt !== false ||
+            manifest.trackedGitTreeOnly !== true
+          ) throw new Error('Release artifact manifest mismatch.');
+          NODE
+          cd "$GITHUB_WORKSPACE"
+          rm -rf backend
+          tar -xzf dist/production-web-session/backend-source.tgz
+          test -f backend/supabase/functions/web-session-api/index.ts
+          ! grep -R --line-number --fixed-strings 'data:text/javascript' \
+            backend/supabase/functions/web-session-api \
+            backend/supabase/functions/_shared \
+            backend/src/domains/auth \
+            backend/src/platform/supabase \
+            backend/src/security
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Configure bounded staging settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF"
+
+      - name: Deploy exact function identity to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_NAME" \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt \
+            --use-api
+
+      - name: Verify staging startup and invalid-input contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$base/health")"
+            if [[ "$status" == "200" ]]; then break; fi
+            if [[ "$attempt" == "12" ]]; then cat "$RUNNER_TEMP/health.json" >&2 || true; exit 1; fi
+            sleep 5
+          done
+          node -e 'const b=require(process.argv[1]); if(b.ok!==true||b.service!=="web-session-api"||b.status!=="ready") process.exit(1)' "$RUNNER_TEMP/health.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/api-keys?reveal=true" \
+            > "$RUNNER_TEMP/api-keys.json"
+          publishable_key="$(node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((v) => String(v.api_key || '').startsWith('sb_publishable_')) ||
+            rows.find((v) => v.name === 'anon' || v.type === 'anon');
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+          )"
+          test -n "$publishable_key"
+          echo "::add-mask::$publishable_key"
+          invalid_status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/invalid.json" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{}')"
+          test "$invalid_status" = "400"
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+          rm -f "$RUNNER_TEMP/health.json" "$RUNNER_TEMP/api-keys.json" "$RUNNER_TEMP/invalid.json"
+          unset publishable_key
+        env:
+          KEYS_PATH: ${{ runner.temp }}/api-keys.json
+          INVALID_PATH: ${{ runner.temp }}/invalid.json
+
+      - name: Record staging candidate identity
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === process.env.FUNCTION_NAME);
+          const digest = String(row?.ezbr_sha256 || '');
+          if (
+            !/^[a-f0-9]{64}$/u.test(digest) ||
+            row?.verify_jwt !== false ||
+            row?.status !== 'ACTIVE' ||
+            !Number.isSafeInteger(Number(row?.version))
+          ) throw new Error('Staging candidate metadata is invalid.');
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `candidate_digest=${digest}\ncandidate_version=${row.version}\n`,
+          );
+          NODE
+          rm -f "$RUNNER_TEMP/functions.json"
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/functions.json
+
+  deploy-and-verify-production:
+    name: Approve, deploy, and verify production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - validate-and-package
+      - deploy-staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce protected production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_URL"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          [[ "${{ needs.validate-and-package.outputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          [[ "${{ needs.validate-and-package.outputs.source_sha256 }}" =~ ^[a-f0-9]{64}$ ]]
+          [[ "${{ needs.deploy-staging.outputs.candidate_digest }}" =~ ^[a-f0-9]{64}$ ]]
+          test "${{ needs.validate-and-package.outputs.request_id }}" != ""
+
+      - name: Check out exact release control plane
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+
+      - name: Download exact staging-verified artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
+          path: dist/production-web-session
+
+      - name: Verify artifact identity and exact tracked source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/production-web-session
+          sha256sum --check backend-source.tgz.sha256
+          actual_sha="$(sha256sum backend-source.tgz | awk '{print $1}')"
+          test "$actual_sha" = "${{ needs.validate-and-package.outputs.source_sha256 }}"
+          cd "$GITHUB_WORKSPACE"
+          expected_dir="$RUNNER_TEMP/expected-backend"
+          artifact_dir="$RUNNER_TEMP/artifact-backend"
+          expected_tar="$RUNNER_TEMP/expected.tar"
+          artifact_tar="$RUNNER_TEMP/artifact.tar"
+          mkdir -p "$expected_dir" "$artifact_dir"
+          git archive --format=tar "${{ needs.validate-and-package.outputs.source_commit }}" backend | tar -xf - -C "$expected_dir"
+          tar -xzf dist/production-web-session/backend-source.tgz -C "$artifact_dir"
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner --format=gnu -cf "$expected_tar" -C "$expected_dir" backend
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner --format=gnu -cf "$artifact_tar" -C "$artifact_dir" backend
+          cmp --silent "$expected_tar" "$artifact_tar"
+          rm -rf "$expected_dir" "$artifact_dir" "$expected_tar" "$artifact_tar"
+
+      - name: Verify production secrets and database preconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          names="$RUNNER_TEMP/production-secret-names.txt"
+          npx --yes supabase@2.109.1 secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" > "$names"
+          grep -q 'ECONOVARIA_WEB_ALLOWED_ORIGINS' "$names"
+          grep -q 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER' "$names"
+          grep -q 'ECONOVARIA_RATE_LIMIT_HMAC_SECRET' "$names"
+          grep -q 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY' "$names"
+          rm -f "$names"
+          RECONCILIATION_VERSION="$(node -p "require('./$DATABASE_AUTHORIZATION_PATH').reconciliationVersion")"
+          RECONCILIATION_NAME="$(node -p "require('./$DATABASE_AUTHORIZATION_PATH').reconciliationName")"
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align \
+            --set=reconciliation_version="$RECONCILIATION_VERSION" \
+            --set=reconciliation_name="$RECONCILIATION_NAME" <<'SQL' > "$RUNNER_TEMP/preconditions.json"
+          select json_build_object(
+            'preAuthRpc', to_regprocedure('public.consume_pre_auth_request_rate_limits_v1(jsonb)') is not null,
+            'checkRpc', to_regprocedure('public.auth_throttle_check_v2(jsonb)') is not null,
+            'failureRpc', to_regprocedure('public.auth_throttle_record_failure_v2(jsonb)') is not null,
+            'successRpc', to_regprocedure('public.auth_throttle_record_success_v2(jsonb)') is not null,
+            'serviceCanPreAuth', has_function_privilege('service_role', 'public.consume_pre_auth_request_rate_limits_v1(jsonb)', 'execute'),
+            'browserDenied', not has_function_privilege('authenticated', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'requestLimitRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.request_rate_limit_buckets'::regclass),
+            'authThrottleRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.authentication_throttle_buckets'::regclass),
+            'ledgerRecordedOnce', (
+              select count(*) = 1
+              from supabase_migrations.schema_migrations
+              where version = :'reconciliation_version'
+                and name = :'reconciliation_name'
+                and created_by = 'github-actions-production-recovery'
+                and idempotency_key = :'reconciliation_name'
+            )
+          );
+          SQL
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.PRECONDITIONS_PATH, 'utf8').trim());
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Production precondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/preconditions.json"
+        env:
+          PRECONDITIONS_PATH: ${{ runner.temp }}/preconditions.json
+
+      - name: Verify approved staging candidate is still active
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          EXPECTED_DIGEST="${{ needs.deploy-staging.outputs.candidate_digest }}" node - <<'NODE'
+          const rows = require(process.env.FUNCTIONS_PATH);
+          const row = rows.find((value) => value.slug === process.env.FUNCTION_NAME);
+          if (
+            row?.ezbr_sha256 !== process.env.EXPECTED_DIGEST ||
+            row?.verify_jwt !== false ||
+            row?.status !== 'ACTIVE'
+          ) throw new Error('Approved staging candidate drifted before production deployment.');
+          NODE
+          rm -f "$RUNNER_TEMP/staging-functions.json"
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/staging-functions.json
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Restore exact source artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          rm -rf backend
+          tar -xzf dist/production-web-session/backend-source.tgz
+          test -f backend/supabase/functions/web-session-api/index.ts
+          ! grep -R --line-number --fixed-strings 'data:text/javascript' \
+            backend/supabase/functions/web-session-api \
+            backend/supabase/functions/_shared \
+            backend/src/domains/auth \
+            backend/src/platform/supabase \
+            backend/src/security
+
+      - name: Deploy only production web-session-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_NAME" \
+            --workdir backend \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            --no-verify-jwt \
+            --use-api
+
+      - name: Compare every deployed staging and production source byte
+        id: source_compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Accept: multipart/form-data" \
+            --dump-header "$RUNNER_TEMP/staging-body.headers" \
+            --output "$RUNNER_TEMP/staging-body.bin" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions/$FUNCTION_NAME/body"
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Accept: multipart/form-data" \
+            --dump-header "$RUNNER_TEMP/production-body.headers" \
+            --output "$RUNNER_TEMP/production-body.bin" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions/$FUNCTION_NAME/body"
+          canonical_digest="$(node scripts/verify-edge-function-multipart-source.mjs \
+            "$RUNNER_TEMP/staging-body.bin" \
+            "$RUNNER_TEMP/staging-body.headers" \
+            "$RUNNER_TEMP/production-body.bin" \
+            "$RUNNER_TEMP/production-body.headers" \
+            "$FUNCTION_NAME")"
+          [[ "$canonical_digest" =~ ^[a-f0-9]{64}$ ]]
+          echo "canonical_digest=$canonical_digest" >> "$GITHUB_OUTPUT"
+          rm -f "$RUNNER_TEMP/staging-body.headers" "$RUNNER_TEMP/staging-body.bin" "$RUNNER_TEMP/production-body.headers" "$RUNNER_TEMP/production-body.bin"
+
+      - name: Verify direct production startup and invalid-input contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$base/health")"
+            if [[ "$status" == "200" ]]; then break; fi
+            if [[ "$attempt" == "12" ]]; then cat "$RUNNER_TEMP/health.json" >&2 || true; exit 1; fi
+            sleep 5
+          done
+          node -e 'const b=require(process.argv[1]); if(b.ok!==true||b.service!=="web-session-api"||b.status!=="ready") process.exit(1)' "$RUNNER_TEMP/health.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+            > "$RUNNER_TEMP/api-keys.json"
+          publishable_key="$(node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((v) => String(v.api_key || '').startsWith('sb_publishable_')) ||
+            rows.find((v) => v.name === 'anon' || v.type === 'anon');
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+          )"
+          test -n "$publishable_key"
+          echo "::add-mask::$publishable_key"
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/direct-invalid.json" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{}')"
+          test "$status" = "400"
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+          rm -f "$RUNNER_TEMP/health.json" "$RUNNER_TEMP/api-keys.json" "$RUNNER_TEMP/direct-invalid.json"
+          unset publishable_key
+        env:
+          KEYS_PATH: ${{ runner.temp }}/api-keys.json
+          INVALID_PATH: ${{ runner.temp }}/direct-invalid.json
+
+      - name: Verify Vercel production proxy route
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error \
+              --output "$RUNNER_TEMP/vercel-invalid.json" \
+              --write-out '%{http_code}' \
+              --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+              -H "Origin: $PRODUCTION_ORIGIN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+            if [[ "$status" == "400" ]]; then break; fi
+            if [[ "$attempt" == "12" ]]; then
+              echo "Unexpected Vercel proxy status: $status" >&2
+              cat "$RUNNER_TEMP/vercel-invalid.json" >&2 || true
+              exit 1
+            fi
+            sleep 5
+          done
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+          rm -f "$RUNNER_TEMP/vercel-invalid.json"
+        env:
+          INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
+
+      - name: Record bounded orchestrated release evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production web-session release completed'
+            echo "- Release request: \`${{ needs.validate-and-package.outputs.request_id }}\`"
+            echo "- Source commit: \`${{ needs.validate-and-package.outputs.source_commit }}\`"
+            echo "- Immutable source SHA-256: \`${{ needs.validate-and-package.outputs.source_sha256 }}\`"
+            echo "- Staging candidate digest: \`${{ needs.deploy-staging.outputs.candidate_digest }}\`"
+            echo "- Staging candidate version: \`${{ needs.deploy-staging.outputs.candidate_version }}\`"
+            echo "- Canonical deployed-source digest: \`${{ steps.source_compare.outputs.canonical_digest }}\`"
+            echo '- Production environment approval: `required and satisfied`'
+            echo '- Database mutation performed: `false`'
+            echo '- Secret mutation performed in production: `false`'
+            echo '- Production function deployed: `web-session-api only`'
+            echo '- Production deployed source equals staging: `true`'
+            echo '- Direct health probe: `pass`'
+            echo '- Direct invalid-input probe: `pass`'
+            echo '- Vercel proxy invalid-input probe: `pass`'
+            echo '- Real administrator login: `required before incident closure`'
+          } >> "$GITHUB_STEP_SUMMARY"

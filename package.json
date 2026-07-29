@@ -43,7 +43,7 @@
     "test:admin-economic-writes": "node --test scripts/admin-economic-write-contract.test.mjs",
     "test:admin-messaging": "node scripts/admin-messaging-moderation-contract.mjs",
     "test:auth-boundaries": "node --test scripts/auth-boundary-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs scripts/internal-runner-auth-contract.test.mjs",
-    "test:web-session-release": "node --test scripts/web-session-release-contract.test.mjs scripts/verify-downloaded-edge-function-source.test.mjs",
+    "test:web-session-release": "node --test scripts/web-session-release-contract.test.mjs scripts/verify-downloaded-edge-function-source.test.mjs scripts/verify-edge-function-multipart-source.test.mjs scripts/production-web-session-release-orchestrator.test.mjs",
     "test:beta-e2e": "node --test scripts/beta-e2e-pilot.test.mjs",
     "test:branch-hygiene": "node --test scripts/branch-hygiene-policy.test.mjs",
     "test:deployment-readiness": "node --test scripts/deployment-readiness-preflight.test.mjs",
