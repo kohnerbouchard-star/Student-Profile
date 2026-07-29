@@ -21,6 +21,17 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BETA-PROD-ADMIN-LOGIN-004` — Production Admin login trusted-header reconciliation**
+  - Status: `IN_PROGRESS`
+  - Repair pull request: PR #412, merged as `9350e5a8e3716779561db6432f8c11e345fa65c9`.
+  - Regression-guard branch: `agent/production-admin-login-regression-guard-v1`.
+  - Root cause: production `web-session-api` version 15 returned `503 staff_login_unavailable` before emitting its first PostgREST or Auth request. Dependency-isolation run `30444485873` proved direct Auth and all three login-throttle RPCs were healthy. The remaining fail-closed boundary was the configured `x-real-ip` metadata, which was unavailable after the Supabase gateway hop.
+  - Production repair: protected run `30446280999` verified the same `cf-connecting-ip` binding on staging, applied it to production project `cgiukdjwicykrmtkhudh`, preserved the healthy function, and made no database, application-data, Edge Function, or cryptographic-secret change.
+  - End-to-end evidence: rerun attempt 2 of diagnostic run `30443924751`, job `90559844451`, traversed the production Vercel route with a synthetic nonexistent account and returned exact `401 invalid_staff_credentials`; no valid credential was supplied and no production mutation was performed by the diagnostic.
+  - Regression prevention: the production web-session provisioning workflow and its repository contract now require `cf-connecting-ip`, preventing a later manual provisioning run from restoring the broken `x-real-ip` binding.
+  - Unresolved blocker: one real administrator login remains required to close the incident; the production transport and credential-decision path are verified operational.
+  - Next exact roadmap item: merge the regression guard, then complete one real administrator login and record the incident as `VERIFIED_COMPLETE`.
+
 - **`BETA-BRAND-LOGIN-003` — Product-owner login logo replacement**
   - Status: `IMPLEMENTED_NOT_MERGED`
   - Owner branch: `fix/login-logo-replacement-v2`
