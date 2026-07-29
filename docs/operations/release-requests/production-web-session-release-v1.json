@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "requestId": "production-web-session-2026-07-29-orchestrated-recovery",
+  "state": "approved",
+  "sourceMode": "trigger_commit",
+  "sourceRef": "refs/heads/main",
+  "functionName": "web-session-api",
+  "stagingFunctionName": "web-session-api",
+  "stagingProjectRef": "eecvbssdvarfcykcfrny",
+  "productionProjectRef": "cgiukdjwicykrmtkhudh",
+  "productionOrigin": "https://econovaria.vercel.app",
+  "trustedClientIpHeader": "x-real-ip",
+  "verifyJwt": false,
+  "customAuthenticationRequired": true,
+  "productionEnvironmentApprovalRequired": true,
+  "allowedProductionMutations": [
+    "deploy web-session-api only"
+  ],
+  "databaseChangesAllowed": false,
+  "secretChangesAllowed": false,
+  "productionDataWritesAllowed": false,
+  "otherFunctionsAllowed": false,
+  "realAdministratorLoginRequiredForClosure": true
+}
