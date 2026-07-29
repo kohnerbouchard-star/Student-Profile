@@ -159,12 +159,12 @@ def signed_local_admin_bff_headers(
     result[ADMIN_BFF_CLIENT_IP_HEADER] = client_ip
     result[ADMIN_BFF_MODE_HEADER] = "local"
     normalized = {str(name).lower(): str(value) for name, value in result.items()}
-    context = "\n".join(
+    context = "\\n".join(
         f"{name}:{normalized.get(name, '')}"
         for name in ADMIN_BFF_SIGNED_CONTEXT_HEADERS
     )
     parsed = urlsplit(target_url)
-    canonical = "\n".join((
+    canonical = "\\n".join((
         ADMIN_BFF_SIGNATURE_VERSION,
         f"timestamp:{timestamp}",
         f"nonce:{nonce}",
