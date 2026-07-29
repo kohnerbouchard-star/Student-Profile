@@ -119,6 +119,13 @@ jobs:
 
           const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
           const statementArray = ledgerStatements.map(literal).join(', ');
+          const ledgerPredicate = [
+            `version = ${literal(manifest.reconciliationVersion)}`,
+            `name = ${literal(manifest.reconciliationName)}`,
+            `statements = array[${statementArray}]`,
+            `created_by = 'github-actions-production-recovery'`,
+            `idempotency_key = ${literal(manifest.reconciliationName)}`,
+          ].join(' and ');
           const generated = [
             'begin;',
             ...bodies,
@@ -129,7 +136,8 @@ jobs:
             'alter table supabase_migrations.schema_migrations add column if not exists created_by text;',
             'alter table supabase_migrations.schema_migrations add column if not exists idempotency_key text unique;',
             'alter table supabase_migrations.schema_migrations add column if not exists rollback text[];',
-            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(manifest.reconciliationVersion)}, ${literal(manifest.reconciliationName)}, array[${statementArray}], 'github-actions-production-recovery', ${literal(manifest.reconciliationName)}) on conflict (version) do update set name = excluded.name, statements = excluded.statements, created_by = excluded.created_by, idempotency_key = excluded.idempotency_key;`,
+            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(manifest.reconciliationVersion)}, ${literal(manifest.reconciliationName)}, array[${statementArray}], 'github-actions-production-recovery', ${literal(manifest.reconciliationName)}) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where ${ledgerPredicate}) then raise exception 'Migration ledger conflict for version ${manifest.reconciliationVersion}'; end if; end $$;`,
             "notify pgrst, 'reload schema';",
             'commit;',
             '',
@@ -180,6 +188,8 @@ jobs:
               from supabase_migrations.schema_migrations
               where version = :'reconciliation_version'
                 and name = :'reconciliation_name'
+                and created_by = 'github-actions-production-recovery'
+                and idempotency_key = :'reconciliation_name'
             )
           );
           SQL
