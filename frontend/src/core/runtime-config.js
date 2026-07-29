@@ -187,6 +187,30 @@
   );
   if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
 
+  function createAdminLogoutScriptUrl() {
+    const expected = new URL("admin-logout-override.js", runtimeScriptUrl);
+    const runtimeScript = new URL(runtimeScriptUrl);
+    if (expected.origin !== runtimeScript.origin) {
+      throw new Error("ECONOVARIA_ADMIN_LOGOUT_SCRIPT_ORIGIN_MISMATCH");
+    }
+
+    const trustedTypesFactory = globalObject.trustedTypes;
+    if (typeof trustedTypesFactory?.createPolicy !== "function") {
+      return expected.href;
+    }
+
+    const policy = trustedTypesFactory.createPolicy("econovaria", {
+      createScriptURL(value) {
+        const candidate = new URL(text(value), runtimeScriptUrl);
+        if (candidate.href !== expected.href) {
+          throw new TypeError("ECONOVARIA_TRUSTED_SCRIPT_URL_REJECTED");
+        }
+        return candidate.href;
+      },
+    });
+    return policy.createScriptURL(expected.href);
+  }
+
   function installAdminLogoutOverride() {
     const adminOrLoginShell = Boolean(
       adminApiMeta ||
@@ -203,8 +227,15 @@
       return;
     }
 
+    let trustedScriptUrl;
+    try {
+      trustedScriptUrl = createAdminLogoutScriptUrl();
+    } catch (_) {
+      return;
+    }
+
     const logoutOverride = documentObject.createElement("script");
-    logoutOverride.src = new URL("admin-logout-override.js", runtimeScriptUrl).href;
+    logoutOverride.src = trustedScriptUrl;
     logoutOverride.async = true;
     logoutOverride.dataset.econovariaAdminLogoutOverride = "true";
     documentObject.head.append(logoutOverride);

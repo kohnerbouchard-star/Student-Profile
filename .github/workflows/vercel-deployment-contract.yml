@@ -1,0 +1,60 @@
+name: Vercel Deployment Contract
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - "frontend/src/core/runtime-config.js"
+      - "scripts/build-vercel-runtime-config.mjs"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-trusted-types-contract.test.mjs"
+      - "scripts/vercel-deployment-contract.test.mjs"
+      - "vercel.json"
+      - ".github/workflows/vercel-deployment-contract.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "api/**"
+      - "frontend/src/core/runtime-config.js"
+      - "scripts/build-vercel-runtime-config.mjs"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-trusted-types-contract.test.mjs"
+      - "scripts/vercel-deployment-contract.test.mjs"
+      - "vercel.json"
+      - ".github/workflows/vercel-deployment-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-deployment-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate deployment source syntax
+        run: |
+          node --check scripts/build-vercel-runtime-config.mjs
+          node --check frontend/src/core/runtime-config.js
+          node -e 'JSON.parse(require("node:fs").readFileSync("vercel.json", "utf8"))'
+
+      - name: Validate runtime and deployment contracts
+        run: |
+          node --test \
+            scripts/runtime-config-contract.test.mjs \
+            scripts/runtime-trusted-types-contract.test.mjs \
+            scripts/vercel-deployment-contract.test.mjs
