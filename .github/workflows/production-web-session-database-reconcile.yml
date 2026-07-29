@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
-          git fetch origin main --depth=1
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
           git merge-base --is-ancestor HEAD origin/main
           test -f "$MANIFEST_PATH"
           OUTPUT_PATH="$RUNNER_TEMP/web-session-reconciliation.sql" node - <<'NODE'
