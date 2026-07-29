@@ -11,6 +11,16 @@ on:
       - "backend/src/domains/auth/**"
       - "backend/src/platform/supabase/**"
       - "backend/src/security/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-hotfix.yml"
+      - "backend/supabase/functions/web-session-api/**"
+      - "backend/supabase/functions/_shared/**"
+      - "backend/src/domains/auth/**"
+      - "backend/src/platform/supabase/**"
+      - "backend/src/security/**"
   workflow_dispatch:
 
 permissions:
@@ -23,6 +33,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy and verify production web-session-api
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/production-web-session-hotfix'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: production
