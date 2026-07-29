@@ -33,6 +33,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: web-session-recovery-candidate
+  cancel-in-progress: false
+
 env:
   AUTHORIZATION_PATH: docs/operations/evidence/production-web-session-recovery-v1.json
   EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
@@ -40,6 +44,8 @@ env:
   SOURCE_FUNCTION_NAME: web-session-api
   CANDIDATE_FUNCTION_NAME: web-session-api
   SUPABASE_CLI_VERSION: 2.109.1
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  TRUSTED_CLIENT_IP_HEADER: x-real-ip
 
 jobs:
   validate-and-package:
@@ -70,7 +76,7 @@ jobs:
             test "$source_commit" = "${{ inputs.source_commit }}"
             test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
             test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
-            git fetch origin main --depth=1
+            git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
             git merge-base --is-ancestor "$source_commit" origin/main
           fi
           echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
@@ -171,6 +177,8 @@ jobs:
           test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
           test "$SOURCE_FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
+          test "$PRODUCTION_ORIGIN" = "https://econovaria.vercel.app"
+          test "$TRUSTED_CLIENT_IP_HEADER" = "x-real-ip"
 
       - name: Download exact immutable source
         uses: actions/download-artifact@v5
@@ -206,6 +214,15 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: 2.109.1
+
+      - name: Configure bounded staging web-session settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF"
 
       - name: Deploy exact function identity to staging
         shell: bash
