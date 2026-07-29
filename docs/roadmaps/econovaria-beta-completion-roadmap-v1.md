@@ -2,7 +2,7 @@
 
 **Document ID:** `ECON-BETA-ROADMAP-V1`  
 **Roadmap authority:** Chat 1  
-**Audited main:** `7bc72758162bf5a9b955fb93c40fecf096da6674`
+**Audited main:** `69588ed410d34b796dff1a6ea5facbff8320090b`
 **Audit date:** 2026-07-29
 **Current decision:** `BLOCKED`  
 **Production deployment authorized:** No
@@ -32,19 +32,18 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Unresolved blocker: none for the trusted-header boundary. The subsequent real-account authorization failure is owned separately by `BETA-PROD-ADMIN-LOGIN-005`.
   - Next exact roadmap item: `BETA-PROD-ADMIN-LOGIN-005`.
 
-- **`BETA-PROD-ADMIN-LOGIN-005` — Production Staff security schema and metadata convergence**
+- **`BETA-PROD-ADMIN-LOGIN-005` — Production Admin login schema and metadata convergence**
   - Status: `IN_PROGRESS`
-  - Owner branch: `agent/production-admin-staff-security-reconcile-v1`.
-  - Production fault: a real administrator password reached Supabase Auth successfully, but `web-session-api` still returned `401 invalid_staff_credentials` while loading the linked Staff authorization row.
-  - Root cause: production `public.staff_users` contains only the legacy six columns. Deployed login code requires `status`, `role`, `permission_version`, `security_version`, and `mfa_required`; the linked Auth identity also lacks the matching controlled `app_metadata`. The missing PostgREST projection is incorrectly masked by the current handler as a credential failure.
-  - Live evidence: the production Auth identity exists, is confirmed, has a password, is not banned or deleted, and has one linked Staff row. Staging has all eight canonical Staff security columns; production has none of them. Raw identifiers and credentials were not recorded.
-  - Canonical migration: `backend/supabase/migrations/20260726091000_add_staff_security_state_v2.sql`, already merged in `main`, exact Git blob `9146d65204f7fcc045247ca5593f3e88e984ac36`.
-  - Protected reconciliation: `.github/workflows/production-admin-staff-security-reconcile.yml` applies only the canonical additive migration, records its exact migration identity, reloads PostgREST, and runs `scripts/security/reconcile-staff-security-metadata.mjs` against controlled Auth `app_metadata`.
-  - Authorization manifest: `docs/operations/evidence/production-admin-staff-security-reconciliation-v1.json`.
-  - Safety boundary: exact merged-main SHA, exact production project binding, explicit typed confirmation, staging denial, production environment protection, locked operator dependencies, aggregate-only evidence, no application-row writes, no Edge deployment, no secret rotation, and no destructive rollback.
-  - Runtime evidence: pending protected production reconciliation and one successful real administrator login.
-  - Unresolved blocker: merge the protected reconciliation control plane and run it against production.
-  - Next exact roadmap item: pass repository checks, merge the repair PR, dispatch the protected reconciliation from the resulting `main` SHA, verify all schema/metadata postconditions, and complete one real administrator login.
+  - Current owner branch: `agent/production-admin-bootstrap-schema-reconcile-v1`; the preceding Staff repair was owned by `agent/production-admin-staff-security-reconcile-v1`.
+  - Production fault chain: a real administrator password reached Supabase Auth successfully, but the deployed login handler masked missing authorization and bootstrap projections as credential failures.
+  - Staff root cause and repair: production `public.staff_users` had only the legacy six columns, and the linked Auth identity lacked the matching controlled `app_metadata`. PR #415 added the protected reconciliation plane; protected run `30450963053` then applied `20260726091000_add_staff_security_state_v2`, reconciled controlled Auth metadata, and proved all Staff schema, metadata, ledger, and PostgREST postconditions. PR #418 restored that workflow to manual-only after the one-time trigger.
+  - Remaining bootstrap root cause: after Staff authorization became healthy, the deployed handler's next projection required `public.game_sessions.game_join_code`, but production has only the other six bootstrap columns. Applying the older memorable-code migration wholesale is unsafe because it also defines game-creation functions whose prerequisites are absent in production.
+  - Forward repair: `backend/supabase/migrations/20260729123000_reconcile_admin_bootstrap_join_code_v1.sql` adds only the nullable `game_join_code` column, its format constraint, its partial unique index, and its comment. `.github/workflows/production-admin-bootstrap-schema-reconcile.yml` binds that exact migration to the protected production environment and verifies Staff prerequisites, the migration ledger, direct SQL projection, and PostgREST projection.
+  - Authorization manifest: `docs/operations/evidence/production-admin-bootstrap-schema-reconciliation-v1.json`.
+  - Safety boundary: exact merged-main SHA, exact production project binding, staging denial, production environment protection, aggregate-only evidence, no application-row writes or backfill, no database-function writes, no Auth metadata writes, no Edge deployment, no secret rotation, and no destructive rollback.
+  - Runtime evidence: Staff security reconciliation is complete; protected bootstrap reconciliation and one successful real administrator login remain pending.
+  - Unresolved blocker: merge the additive bootstrap repair, complete its protected production run and independent postcondition check, then complete one successful real administrator login.
+  - Next exact roadmap item: pass repository checks, merge the bootstrap repair PR, verify all schema and PostgREST postconditions from the resulting `main` SHA, remove the one-time trigger, and complete one successful real administrator login.
 
 - **`BETA-BRAND-LOGIN-003` — Product-owner login logo replacement**
   - Status: `VERIFIED_COMPLETE`

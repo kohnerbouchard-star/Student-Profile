@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "roadmapItem": "BETA-PROD-ADMIN-LOGIN-005",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "canonicalMigration": {
+    "version": "20260729123000",
+    "name": "reconcile_admin_bootstrap_join_code_v1",
+    "path": "backend/supabase/migrations/20260729123000_reconcile_admin_bootstrap_join_code_v1.sql",
+    "gitBlobSha": "1a12c63686b936a40f56403da5c162bf3c79b2df"
+  },
+  "staffSecurityPrerequisiteRequired": true,
+  "gameSessionSchemaWritesAllowed": true,
+  "databaseFunctionWritesAllowed": false,
+  "applicationRowWritesAllowed": false,
+  "authMetadataWritesAllowed": false,
+  "edgeFunctionDeploymentAllowed": false,
+  "credentialRotationAllowed": false,
+  "destructiveChangesAllowed": false,
+  "rollbackStrategy": "forward-only-idempotent-rerun",
+  "requiredBootstrapColumns": [
+    "id",
+    "name",
+    "status",
+    "game_join_code",
+    "game_join_code_status",
+    "created_at",
+    "updated_at"
+  ],
+  "requiredBootstrapConstraint": "game_sessions_readable_join_code_valid",
+  "requiredBootstrapIndex": "game_sessions_active_readable_join_code_unique"
+}
