@@ -4,6 +4,8 @@ import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const { proxyAdminBff } = require("../api/_admin-bff-proxy.js");
+const adminProxyRoute = require("../api/admin/[...path].js");
+const adminSessionRoute = require("../api/admin-session/[...path].js");
 const passwordResetProxy = require("../api/password-reset.js");
 
 const ORIGINAL_FETCH = globalThis.fetch;
@@ -49,6 +51,67 @@ test("Admin BFF overwrites browser IP with Vercel trusted IP", async () => {
   assert.match(upstreamRequest.url, /web-session-api\/status$/u);
   assert.equal(upstreamRequest.options.headers.get("x-real-ip"), "203.0.113.25");
   assert.equal(upstreamRequest.options.headers.has("x-vercel-forwarded-for"), false);
+});
+
+test("Admin session route ignores prefixed Vercel catch-all query shape", async () => {
+  let upstreamRequest = null;
+  globalThis.fetch = async (url, options) => {
+    upstreamRequest = { url: String(url), options };
+    return new Response(JSON.stringify({
+      ok: false,
+      error: { code: "invalid_login_request", retryable: false },
+    }), {
+      status: 400,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const response = mockResponse();
+  await adminSessionRoute({
+    method: "POST",
+    query: { path: ["admin-session", "login"] },
+    url: "/api/admin-session/login?path=admin-session%2Flogin&probe=1",
+    body: {},
+    headers: {
+      host: "econovaria.example",
+      "x-forwarded-host": "econovaria.example",
+      "x-vercel-forwarded-for": "203.0.113.25",
+      origin: "https://econovaria.example",
+      "content-type": "application/json",
+    },
+    socket: { remoteAddress: "192.0.2.44" },
+  }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.match(upstreamRequest.url, /web-session-api\/login\?probe=1$/u);
+  assert.doesNotMatch(upstreamRequest.url, /web-session-api\/admin-session/u);
+});
+
+test("Admin proxy route derives canonical suffix from request URL", async () => {
+  let upstreamRequest = null;
+  globalThis.fetch = async (url, options) => {
+    upstreamRequest = { url: String(url), options };
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const response = mockResponse();
+  await adminProxyRoute({
+    method: "GET",
+    query: { path: ["admin", "games"] },
+    url: "/api/admin/games?limit=2",
+    headers: {
+      host: "econovaria.example",
+      "x-forwarded-host": "econovaria.example",
+      "x-vercel-forwarded-for": "203.0.113.25",
+    },
+    socket: { remoteAddress: "192.0.2.44" },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.match(upstreamRequest.url, /web-session-api\/proxy\/games\?limit=2$/u);
 });
 
 test("Admin BFF fails closed without trusted network metadata", async () => {
