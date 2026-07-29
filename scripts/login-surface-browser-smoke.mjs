@@ -95,8 +95,8 @@ try {
   assert.ok(Number(surface.panelOpacity) > 0.9);
   assert.ok(surface.logoNaturalWidth > 0);
   assert.ok(surface.logoNaturalHeight > 0);
-  assert.ok(surface.logoWidth >= 490);
-  assert.ok(surface.logoHeight >= 270);
+  assert.ok(surface.logoWidth >= 390);
+  assert.ok(surface.logoHeight >= 218);
   assert.ok(surface.logoMarkWidth >= 300);
   assert.ok(surface.logoMarkHeight >= 200);
   assert.equal(surface.logoFilter, "none");
