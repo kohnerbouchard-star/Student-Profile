@@ -7,7 +7,7 @@
     "eecvbssdvarfcykcfrny"
   ],
   "functionName": "web-session-api",
-  "stagingCandidateFunctionName": "web-session-api-repair-candidate",
+  "stagingFunctionName": "web-session-api",
   "verifyJwt": false,
   "customAuthenticationRequired": true,
   "productionOrigin": "https://econovaria.vercel.app",
@@ -25,6 +25,7 @@
     "repository-local module graph",
     "no private remote imports",
     "no data URL imports",
+    "identical staging and production function slug",
     "staging health 200",
     "staging invalid body 400",
     "staging invalid credentials controlled 401 or 429",
