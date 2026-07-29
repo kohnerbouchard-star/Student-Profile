@@ -41,11 +41,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_DB_URL"
           test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "${{ inputs.confirm_action }}" = "RECONCILE WEB SESSION DATABASE"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
           [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          command -v psql >/dev/null
 
       - name: Check out exact merged main commit
         uses: actions/checkout@v6
@@ -54,7 +56,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify source and migration allow-list
+      - name: Verify source and generate one atomic reconciliation
         shell: bash
         run: |
           set -euo pipefail
@@ -62,7 +64,7 @@ jobs:
           git fetch origin main --depth=1
           git merge-base --is-ancestor HEAD origin/main
           test -f "$MANIFEST_PATH"
-          node - <<'NODE'
+          OUTPUT_PATH="$RUNNER_TEMP/web-session-reconciliation.sql" node - <<'NODE'
           const fs = require('node:fs');
           const { execFileSync } = require('node:child_process');
           const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, 'utf8'));
@@ -71,11 +73,15 @@ jobs:
             manifest.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
             !manifest.deniedProjectRefs?.includes(process.env.DENIED_STAGING_PROJECT_REF) ||
             manifest.productionDataWritesAllowed !== false ||
-            manifest.destructiveChangesAllowed !== false
+            manifest.migrationLedgerWriteAllowed !== true ||
+            manifest.destructiveChangesAllowed !== false ||
+            !/^\d{14}$/.test(manifest.reconciliationVersion) ||
+            !/^[a-z0-9_]{1,96}$/.test(manifest.reconciliationName)
           ) throw new Error('Database reconciliation authorization mismatch.');
           if (!Array.isArray(manifest.orderedCanonicalMigrations) || manifest.orderedCanonicalMigrations.length !== 6) {
             throw new Error('Expected exactly six canonical migrations.');
           }
+
           const forbiddenApplicationTables = [
             'staff_users',
             'game_sessions',
@@ -85,6 +91,8 @@ jobs:
             'ledger_entries',
             'market_orders',
           ];
+          const bodies = [];
+          const ledgerStatements = [];
           for (const item of manifest.orderedCanonicalMigrations) {
             if (!/^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(item.path)) {
               throw new Error(`Unapproved migration path: ${item.path}`);
@@ -92,7 +100,10 @@ jobs:
             if (!/^[a-f0-9]{40}$/.test(item.gitBlobSha)) throw new Error('Invalid Git blob SHA.');
             const actual = execFileSync('git', ['hash-object', item.path], { encoding: 'utf8' }).trim();
             if (actual !== item.gitBlobSha) throw new Error(`Migration digest mismatch: ${item.path}`);
-            const sql = fs.readFileSync(item.path, 'utf8');
+            const sql = fs.readFileSync(item.path, 'utf8').trim();
+            if (!/^begin;\s*/iu.test(sql) || !/\s*commit;$/iu.test(sql)) {
+              throw new Error(`Canonical migration is not transaction-bounded: ${item.path}`);
+            }
             if (/\b(drop\s+(table|schema|database)|truncate|alter\s+table\s+[^;]+\s+drop\s+(column|constraint))\b/iu.test(sql)) {
               throw new Error(`Destructive SQL rejected: ${item.path}`);
             }
@@ -100,36 +111,56 @@ jobs:
               const writes = new RegExp(`\\b(?:insert\\s+into|update|delete\\s+from)\\s+(?:public\\.)?${table}\\b`, 'iu');
               if (writes.test(sql)) throw new Error(`Application-data SQL rejected: ${item.path}`);
             }
+            const body = sql.replace(/^begin;\s*/iu, '').replace(/\s*commit;$/iu, '').trim();
+            if (!body) throw new Error(`Canonical migration body is empty: ${item.path}`);
+            bodies.push(`-- source: ${item.path}\n${body}`);
+            ledgerStatements.push(`${item.path}@${item.gitBlobSha}`);
           }
-          NODE
 
-      - name: Apply only allow-listed canonical migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t migrations < <(node - <<'NODE'
-          const manifest = require(`./${process.env.MANIFEST_PATH}`);
-          for (const item of manifest.orderedCanonicalMigrations) console.log(item.path);
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const statementArray = ledgerStatements.map(literal).join(', ');
+          const generated = [
+            'begin;',
+            ...bodies,
+            'create schema if not exists supabase_migrations;',
+            'create table if not exists supabase_migrations.schema_migrations (version text not null primary key);',
+            'alter table supabase_migrations.schema_migrations add column if not exists statements text[];',
+            'alter table supabase_migrations.schema_migrations add column if not exists name text;',
+            'alter table supabase_migrations.schema_migrations add column if not exists created_by text;',
+            'alter table supabase_migrations.schema_migrations add column if not exists idempotency_key text unique;',
+            'alter table supabase_migrations.schema_migrations add column if not exists rollback text[];',
+            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(manifest.reconciliationVersion)}, ${literal(manifest.reconciliationName)}, array[${statementArray}], 'github-actions-production-recovery', ${literal(manifest.reconciliationName)}) on conflict (version) do update set name = excluded.name, statements = excluded.statements, created_by = excluded.created_by, idempotency_key = excluded.idempotency_key;`,
+            "notify pgrst, 'reload schema';",
+            'commit;',
+            '',
+          ].join('\n\n');
+          fs.writeFileSync(process.env.OUTPUT_PATH, generated, { mode: 0o600 });
           NODE
-          )
-          test "${#migrations[@]}" -eq 6
-          for migration in "${migrations[@]}"; do
-            echo "Applying reviewed migration: $migration"
-            psql "$SUPABASE_DB_URL" \
-              --set=ON_ERROR_STOP=1 \
-              --no-psqlrc \
-              --file "$migration"
-          done
+          test -s "$RUNNER_TEMP/web-session-reconciliation.sql"
 
-      - name: Verify final security postconditions
+      - name: Apply the atomic reconciliation
         shell: bash
         run: |
           set -euo pipefail
           psql "$SUPABASE_DB_URL" \
             --set=ON_ERROR_STOP=1 \
             --no-psqlrc \
+            --file "$RUNNER_TEMP/web-session-reconciliation.sql"
+          rm -f "$RUNNER_TEMP/web-session-reconciliation.sql"
+
+      - name: Verify final security and ledger postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECONCILIATION_VERSION="$(node -p "require('./$MANIFEST_PATH').reconciliationVersion")"
+          RECONCILIATION_NAME="$(node -p "require('./$MANIFEST_PATH').reconciliationName")"
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
             --tuples-only \
-            --no-align <<'SQL' > "$RUNNER_TEMP/postconditions.txt"
+            --no-align \
+            --set=reconciliation_version="$RECONCILIATION_VERSION" \
+            --set=reconciliation_name="$RECONCILIATION_NAME" <<'SQL' > "$RUNNER_TEMP/postconditions.txt"
           select json_build_object(
             'preAuthRpc', to_regprocedure('public.consume_pre_auth_request_rate_limits_v1(jsonb)') is not null,
             'checkRpc', to_regprocedure('public.auth_throttle_check_v2(jsonb)') is not null,
@@ -143,7 +174,13 @@ jobs:
             'authenticatedDenied', not has_function_privilege('authenticated', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
             'authenticatorDenied', not has_function_privilege('authenticator', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
             'requestLimitRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.request_rate_limit_buckets'::regclass),
-            'authThrottleRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.authentication_throttle_buckets'::regclass)
+            'authThrottleRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.authentication_throttle_buckets'::regclass),
+            'ledgerRecordedOnce', (
+              select count(*) = 1
+              from supabase_migrations.schema_migrations
+              where version = :'reconciliation_version'
+                and name = :'reconciliation_name'
+            )
           );
           SQL
           POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.txt" node - <<'NODE'
@@ -160,9 +197,12 @@ jobs:
         run: |
           {
             echo '## Production web-session database reconciled'
+            echo "- Source ref: \`$GITHUB_REF\`"
             echo "- Source commit: \`${{ inputs.source_commit }}\`"
             echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
-            echo '- Canonical migrations applied: `6`'
+            echo '- Canonical definitions: `6`'
+            echo '- Atomic transaction: `true`'
+            echo '- Migration ledger entry: `recorded once`'
             echo '- Destructive SQL allowed: `false`'
             echo '- Application data writes allowed: `false`'
             echo '- Service-role RPC execution: `pass`'
