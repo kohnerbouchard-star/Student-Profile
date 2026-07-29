@@ -1,12 +1,22 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
-// This test verifies that the login logo and favicon use repository-owned assets.
+// This test verifies that the login logo and favicon use valid repository-owned assets.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const logoPath = path.join(root, "assets", "brand", "Econovaria Logo.png");
+const logoBytes = readFileSync(logoPath);
+assert.ok(logoBytes.length > 100_000, "Login logo asset is unexpectedly small");
+assert.deepEqual(
+  Array.from(logoBytes.subarray(0, 8)),
+  [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  "Login logo asset is not a valid PNG",
+);
+
 const port = 4317;
 const origin = "http://127.0.0.1:" + port;
 const server = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", root], { stdio: ["ignore", "pipe", "pipe"] });
@@ -39,7 +49,7 @@ try {
     contentType: "application/javascript",
     body: 'window.__ECONOVARIA_RUNTIME_CONFIG__=Object.freeze({environment:"staging",projectRef:"eecvbssdvarfcykcfrny",supabaseUrl:"https://eecvbssdvarfcykcfrny.supabase.co",apiProxyUrl:"http://127.0.0.1:4317",supabasePublishableKey:"sb_publishable_login_surface_test"});',
   }));
-  await page.goto(origin + "/?login-smoke=20260729.1", { waitUntil: "networkidle" });
+  await page.goto(origin + "/?login-smoke=20260729.2", { waitUntil: "networkidle" });
   await page.locator(".login-panel-frame").waitFor({ state: "visible" });
 
   const surface = await page.evaluate(async () => {
@@ -86,7 +96,7 @@ try {
   assert.equal(surface.logoFilter, "none");
   assert.equal(surface.logoStatus, 200);
   assert.match(surface.logoType, /image\/png/);
-  assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260729.1");
+  assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260729.2");
   assert.equal(surface.logoMode, "asset");
   assert.equal(surface.fallbackPresent, false);
   assert.equal(surface.iconStatus, 200);
