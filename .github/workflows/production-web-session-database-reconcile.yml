@@ -1,0 +1,222 @@
+name: Production Web Session Database Reconcile
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact merged main source commit"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type RECONCILE WEB SESSION DATABASE"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-web-session-database-reconcile
+  cancel-in-progress: false
+
+env:
+  MANIFEST_PATH: docs/operations/evidence/production-web-session-database-reconciliation-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+
+jobs:
+  reconcile:
+    name: Apply canonical web-session security migrations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce explicit production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "RECONCILE WEB SESSION DATABASE"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          command -v psql >/dev/null
+
+      - name: Check out exact merged main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source and generate one atomic reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor HEAD origin/main
+          test -f "$MANIFEST_PATH"
+          OUTPUT_PATH="$RUNNER_TEMP/web-session-reconciliation.sql" node - <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, 'utf8'));
+          if (
+            manifest.schemaVersion !== 1 ||
+            manifest.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            !manifest.deniedProjectRefs?.includes(process.env.DENIED_STAGING_PROJECT_REF) ||
+            manifest.productionDataWritesAllowed !== false ||
+            manifest.migrationLedgerWriteAllowed !== true ||
+            manifest.destructiveChangesAllowed !== false ||
+            !/^\d{14}$/.test(manifest.reconciliationVersion) ||
+            !/^[a-z0-9_]{1,96}$/.test(manifest.reconciliationName)
+          ) throw new Error('Database reconciliation authorization mismatch.');
+          if (!Array.isArray(manifest.orderedCanonicalMigrations) || manifest.orderedCanonicalMigrations.length !== 6) {
+            throw new Error('Expected exactly six canonical migrations.');
+          }
+
+          const forbiddenApplicationTables = [
+            'staff_users',
+            'game_sessions',
+            'players',
+            'player_sessions',
+            'contracts',
+            'ledger_entries',
+            'market_orders',
+          ];
+          const bodies = [];
+          const ledgerStatements = [];
+          for (const item of manifest.orderedCanonicalMigrations) {
+            if (!/^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(item.path)) {
+              throw new Error(`Unapproved migration path: ${item.path}`);
+            }
+            if (!/^[a-f0-9]{40}$/.test(item.gitBlobSha)) throw new Error('Invalid Git blob SHA.');
+            const actual = execFileSync('git', ['hash-object', item.path], { encoding: 'utf8' }).trim();
+            if (actual !== item.gitBlobSha) throw new Error(`Migration digest mismatch: ${item.path}`);
+            const sql = fs.readFileSync(item.path, 'utf8').trim();
+            if (!/^begin;\s*/iu.test(sql) || !/\s*commit;$/iu.test(sql)) {
+              throw new Error(`Canonical migration is not transaction-bounded: ${item.path}`);
+            }
+            if (/\b(drop\s+(table|schema|database)|truncate|alter\s+table\s+[^;]+\s+drop\s+(column|constraint))\b/iu.test(sql)) {
+              throw new Error(`Destructive SQL rejected: ${item.path}`);
+            }
+            for (const table of forbiddenApplicationTables) {
+              const writes = new RegExp(`\\b(?:insert\\s+into|update|delete\\s+from)\\s+(?:public\\.)?${table}\\b`, 'iu');
+              if (writes.test(sql)) throw new Error(`Application-data SQL rejected: ${item.path}`);
+            }
+            const body = sql.replace(/^begin;\s*/iu, '').replace(/\s*commit;$/iu, '').trim();
+            if (!body) throw new Error(`Canonical migration body is empty: ${item.path}`);
+            bodies.push(`-- source: ${item.path}\n${body}`);
+            ledgerStatements.push(`${item.path}@${item.gitBlobSha}`);
+          }
+
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const statementArray = ledgerStatements.map(literal).join(', ');
+          const ledgerPredicate = [
+            `version = ${literal(manifest.reconciliationVersion)}`,
+            `name = ${literal(manifest.reconciliationName)}`,
+            `statements = array[${statementArray}]`,
+            `created_by = 'github-actions-production-recovery'`,
+            `idempotency_key = ${literal(manifest.reconciliationName)}`,
+          ].join(' and ');
+          const generated = [
+            'begin;',
+            ...bodies,
+            'create schema if not exists supabase_migrations;',
+            'create table if not exists supabase_migrations.schema_migrations (version text not null primary key);',
+            'alter table supabase_migrations.schema_migrations add column if not exists statements text[];',
+            'alter table supabase_migrations.schema_migrations add column if not exists name text;',
+            'alter table supabase_migrations.schema_migrations add column if not exists created_by text;',
+            'alter table supabase_migrations.schema_migrations add column if not exists idempotency_key text unique;',
+            'alter table supabase_migrations.schema_migrations add column if not exists rollback text[];',
+            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(manifest.reconciliationVersion)}, ${literal(manifest.reconciliationName)}, array[${statementArray}], 'github-actions-production-recovery', ${literal(manifest.reconciliationName)}) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where ${ledgerPredicate}) then raise exception 'Migration ledger conflict for version ${manifest.reconciliationVersion}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            'commit;',
+            '',
+          ].join('\n\n');
+          fs.writeFileSync(process.env.OUTPUT_PATH, generated, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/web-session-reconciliation.sql"
+
+      - name: Apply the atomic reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/web-session-reconciliation.sql"
+          rm -f "$RUNNER_TEMP/web-session-reconciliation.sql"
+
+      - name: Verify final security and ledger postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECONCILIATION_VERSION="$(node -p "require('./$MANIFEST_PATH').reconciliationVersion")"
+          RECONCILIATION_NAME="$(node -p "require('./$MANIFEST_PATH').reconciliationName")"
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align \
+            --set=reconciliation_version="$RECONCILIATION_VERSION" \
+            --set=reconciliation_name="$RECONCILIATION_NAME" <<'SQL' > "$RUNNER_TEMP/postconditions.txt"
+          select json_build_object(
+            'preAuthRpc', to_regprocedure('public.consume_pre_auth_request_rate_limits_v1(jsonb)') is not null,
+            'checkRpc', to_regprocedure('public.auth_throttle_check_v2(jsonb)') is not null,
+            'failureRpc', to_regprocedure('public.auth_throttle_record_failure_v2(jsonb)') is not null,
+            'successRpc', to_regprocedure('public.auth_throttle_record_success_v2(jsonb)') is not null,
+            'serviceCanPreAuth', has_function_privilege('service_role', 'public.consume_pre_auth_request_rate_limits_v1(jsonb)', 'execute'),
+            'serviceCanCheck', has_function_privilege('service_role', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'serviceCanFailure', has_function_privilege('service_role', 'public.auth_throttle_record_failure_v2(jsonb)', 'execute'),
+            'serviceCanSuccess', has_function_privilege('service_role', 'public.auth_throttle_record_success_v2(jsonb)', 'execute'),
+            'anonDenied', not has_function_privilege('anon', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'authenticatedDenied', not has_function_privilege('authenticated', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'authenticatorDenied', not has_function_privilege('authenticator', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'requestLimitRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.request_rate_limit_buckets'::regclass),
+            'authThrottleRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.authentication_throttle_buckets'::regclass),
+            'ledgerRecordedOnce', (
+              select count(*) = 1
+              from supabase_migrations.schema_migrations
+              where version = :'reconciliation_version'
+                and name = :'reconciliation_name'
+                and created_by = 'github-actions-production-recovery'
+                and idempotency_key = :'reconciliation_name'
+            )
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.txt" node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim());
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Database postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/postconditions.txt"
+
+      - name: Record bounded reconciliation evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production web-session database reconciled'
+            echo "- Source ref: \`$GITHUB_REF\`"
+            echo "- Source commit: \`${{ inputs.source_commit }}\`"
+            echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo '- Canonical definitions: `6`'
+            echo '- Atomic transaction: `true`'
+            echo '- Migration ledger entry: `recorded once`'
+            echo '- Destructive SQL allowed: `false`'
+            echo '- Application data writes allowed: `false`'
+            echo '- Service-role RPC execution: `pass`'
+            echo '- Browser-role RPC execution denied: `pass`'
+            echo '- Forced RLS on counter tables: `pass`'
+            echo '- Secret values recorded: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"

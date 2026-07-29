@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "purpose": "reconcile-production-web-session-security-contracts",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "reconciliationVersion": "20260729033000",
+  "reconciliationName": "reconcile_production_web_session_security_v1",
+  "productionDataWritesAllowed": false,
+  "migrationLedgerWriteAllowed": true,
+  "destructiveChangesAllowed": false,
+  "allowedObjectFamilies": [
+    "request_rate_limit_buckets",
+    "authentication_throttle_buckets",
+    "consume_pre_auth_request_rate_limits_v1",
+    "authentication throttle service-role RPCs",
+    "supabase_migrations.schema_migrations reconciliation entry"
+  ],
+  "orderedCanonicalMigrations": [
+    {
+      "path": "backend/supabase/migrations/20260718190000_add_pre_auth_rate_limit_rpc_v1.sql",
+      "gitBlobSha": "43a8ef7fd3c2aba5eeb4b242dcaa098331fae975"
+    },
+    {
+      "path": "backend/supabase/migrations/20260725091000_restore_rate_limit_json_compat_and_grants_v1.sql",
+      "gitBlobSha": "aa2a27dea154c28c225715a01d4e3832e5797185"
+    },
+    {
+      "path": "backend/supabase/migrations/20260726090000_add_authentication_throttle_v2.sql",
+      "gitBlobSha": "3f176c8a4255593991e6f0b0c700e598e5cdf1b3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260726114500_expose_authentication_throttle_rpc_wrappers_v2.sql",
+      "gitBlobSha": "cb536c50cc4639ce8ffb498dbb435596dce44735"
+    },
+    {
+      "path": "backend/supabase/migrations/20260726120000_expose_auth_throttle_wrappers_to_postgrest_v2.sql",
+      "gitBlobSha": "179447b409bd85d49524f862e8242026f0cadc97"
+    },
+    {
+      "path": "backend/supabase/migrations/20260726121000_finalize_authentication_throttle_postgrest_contract_v2.sql",
+      "gitBlobSha": "742e3cbf67d0e075f5d2cdbd85b5deedb984b0cb"
+    }
+  ],
+  "postconditions": [
+    "all six canonical definitions commit atomically",
+    "reconciliation version is recorded once in the migration ledger",
+    "all four web-session RPC names resolve through PostgREST",
+    "service_role can execute each RPC",
+    "anon cannot execute each RPC",
+    "authenticated cannot execute each RPC",
+    "authenticator cannot execute final authentication-throttle wrappers",
+    "counter tables retain forced row-level security",
+    "raw credentials and raw network identifiers are not stored"
+  ],
+  "evidencePolicy": {
+    "recordSecretValues": false,
+    "recordRawIdentifiers": false,
+    "recordOnlyObjectNamesAndBooleanPostconditions": true
+  }
+}
