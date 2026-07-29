@@ -9,10 +9,8 @@ const ECONOVARIA_API_PLAYER_STATE_STORAGE_KEY = "econovaria.player.auth.v1";
 const ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
-const ADMIN_MFA_MODULE_URL = "frontend/src/core/admin-mfa.js";
 let inMemoryPlayerCsrfToken = "";
 let inMemoryAdminCsrfToken = "";
-let adminMfaModulePromise = null;
 
 function getApiRouteUrl(surface, path) {
   const constants = window.Econovaria?.core?.constants || {};
@@ -120,30 +118,10 @@ function readSelectedAdminGameId() {
 }
 
 function loadAdminMfaModule() {
-  if (window.Econovaria?.adminMfa?.ensureAal2) {
-    return Promise.resolve(window.Econovaria.adminMfa);
-  }
-  if (adminMfaModulePromise) return adminMfaModulePromise;
-
-  adminMfaModulePromise = new Promise((resolve, reject) => {
-    const script = window.document.createElement("script");
-    script.src = new URL(ADMIN_MFA_MODULE_URL, window.document.baseURI).href;
-    script.async = true;
-    script.dataset.econovariaAdminMfaModule = "true";
-    script.addEventListener("load", () => {
-      const module = window.Econovaria?.adminMfa;
-      if (module?.ensureAal2) resolve(module);
-      else reject(new Error("Administrator MFA module did not initialize."));
-    }, { once: true });
-    script.addEventListener("error", () => {
-      reject(new Error("Administrator MFA module could not be loaded."));
-    }, { once: true });
-    window.document.head.append(script);
-  }).catch((error) => {
-    adminMfaModulePromise = null;
-    throw error;
-  });
-  return adminMfaModulePromise;
+  const module = window.Econovaria?.adminMfa;
+  return module?.ensureAal2
+    ? Promise.resolve(module)
+    : Promise.reject(new Error("Administrator MFA module did not initialize."));
 }
 
 async function readJsonResponse(response) {
