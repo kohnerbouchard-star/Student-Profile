@@ -93,6 +93,20 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/production-web-session
 
+      - name: Reproduce artifact from the exact tracked Git tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$RUNNER_TEMP/expected-backend-source.tgz"
+          git archive \
+            --format=tar \
+            --prefix=backend/ \
+            "${{ inputs.source_commit }}:backend" | gzip -n > "$expected"
+          expected_sha="$(sha256sum "$expected" | awk '{print $1}')"
+          test "$expected_sha" = "${{ inputs.source_sha256 }}"
+          cmp --silent "$expected" dist/production-web-session/backend-source.tgz
+          rm -f "$expected"
+
       - name: Verify artifact identity and authorization
         shell: bash
         run: |
@@ -116,6 +130,7 @@ jobs:
             stagingProjectRef: process.env.DENIED_STAGING_PROJECT_REF,
             deniedProductionProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
             verifyJwt: false,
+            trackedGitTreeOnly: true,
             repositoryLocalModuleGraph: true,
             privateRemoteImports: false,
             dataUrlImports: false,
@@ -151,7 +166,7 @@ jobs:
           const rows = require(process.env.FUNCTIONS_PATH);
           const row = rows.find((v) => v.slug === process.env.CANDIDATE_FUNCTION_NAME);
           const digest = String(row?.ezbr_sha256 || '');
-          if (!/^[a-f0-9]{64}$/.test(digest)) process.exit(1);
+          if (!/^[a-f0-9]{64}$/.test(digest) || row?.verify_jwt !== false) process.exit(1);
           process.stdout.write(digest);
           NODE
           )"
@@ -348,6 +363,7 @@ jobs:
             echo "- Candidate run: \`${{ inputs.candidate_run_id }}\`"
             echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
             echo "- Function: \`$FUNCTION_NAME\`"
+            echo '- Artifact reproduced from tracked Git tree: `true`'
             echo '- Production bundle digest equals staging: `true`'
             echo '- Platform JWT verification: `false` (custom browser-session boundary)'
             echo '- Database schema changed by this workflow: `false`'
