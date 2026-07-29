@@ -54,10 +54,12 @@ try {
 
   const surface = await page.evaluate(async () => {
     const logo = document.querySelector("[data-econovaria-brand-image]");
+    const logoMark = logo?.closest(".logo-mark");
     const fallback = document.querySelector(".logo-mark-fallback");
     const panel = document.querySelector(".login-panel-frame");
     const playerForm = document.getElementById("playerForm");
     const rect = logo?.getBoundingClientRect();
+    const markRect = logoMark?.getBoundingClientRect();
     const panelStyle = panel ? getComputedStyle(panel) : null;
     const logoStyle = logo ? getComputedStyle(logo) : null;
     const logoResponse = await fetch(logo?.getAttribute("src") || "");
@@ -72,6 +74,8 @@ try {
       logoNaturalHeight: logo?.naturalHeight || 0,
       logoWidth: rect?.width || 0,
       logoHeight: rect?.height || 0,
+      logoMarkWidth: markRect?.width || 0,
+      logoMarkHeight: markRect?.height || 0,
       logoFilter: logoStyle?.filter || "",
       logoStatus: logoResponse.status,
       logoType: logoResponse.headers.get("content-type") || "",
@@ -91,8 +95,10 @@ try {
   assert.ok(Number(surface.panelOpacity) > 0.9);
   assert.ok(surface.logoNaturalWidth > 0);
   assert.ok(surface.logoNaturalHeight > 0);
-  assert.ok(surface.logoWidth >= 240);
-  assert.ok(surface.logoHeight >= 80);
+  assert.ok(surface.logoWidth >= 490);
+  assert.ok(surface.logoHeight >= 270);
+  assert.ok(surface.logoMarkWidth >= 300);
+  assert.ok(surface.logoMarkHeight >= 200);
   assert.equal(surface.logoFilter, "none");
   assert.equal(surface.logoStatus, 200);
   assert.match(surface.logoType, /image\/png/);
