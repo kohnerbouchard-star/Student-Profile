@@ -15,12 +15,6 @@ on:
         description: "Type RECONCILE ADMIN BOOTSTRAP SCHEMA"
         required: true
         type: string
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/production-admin-bootstrap-schema-reconcile.yml
-
 permissions:
   contents: read
 
@@ -32,9 +26,9 @@ env:
   MANIFEST_PATH: docs/operations/evidence/production-admin-bootstrap-schema-reconciliation-v1.json
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-  RUN_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
-  RUN_CONFIRM_PROJECT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_project_ref || 'cgiukdjwicykrmtkhudh' }}
-  RUN_CONFIRM_ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_action || 'RECONCILE ADMIN BOOTSTRAP SCHEMA' }}
+  RUN_SOURCE_COMMIT: ${{ inputs.source_commit }}
+  RUN_CONFIRM_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+  RUN_CONFIRM_ACTION: ${{ inputs.confirm_action }}
 
 jobs:
   reconcile:
@@ -51,17 +45,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "$GITHUB_EVENT_NAME" in
-            workflow_dispatch|push)
-              test "$GITHUB_REF" = "refs/heads/main"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            test "$GITHUB_SHA" = "$RUN_SOURCE_COMMIT"
-          fi
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_DB_URL"
           test -n "${SUPABASE_SECRET_KEY:-}${SUPABASE_SERVICE_ROLE_KEY:-}"
           test "$RUN_CONFIRM_PROJECT_REF" = "$EXPECTED_PRODUCTION_PROJECT_REF"
