@@ -1,0 +1,169 @@
+name: Production Web Session Route Observer
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-route-observer.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-route-observer.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-web-session-route-observer-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  STATUS_CONTEXT: econovaria/vercel-admin-session-route
+
+jobs:
+  validate:
+    name: Validate route observer contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed workflow
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate bounded observer
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='.github/workflows/production-web-session-route-observer.yml'
+          grep -Fq 'statuses: write' "$file"
+          grep -Fq 'econovaria/vercel-admin-session-route' "$file"
+          grep -Fq '/api/admin-session/login' "$file"
+          grep -Fq 'route_not_found' "$file"
+          grep -Fq 'Supabase deployment performed: `false`' "$file"
+
+  verify-production:
+    name: Verify live Vercel Admin session route
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Publish pending route status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/route-status.json
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: 'pending',
+            target_url: process.env.RUN_URL,
+            description: 'Production Admin session route verification is running.',
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Wait for controlled production route response
+        id: route_probe
+        continue-on-error: true
+        shell: bash
+        env:
+          INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 72); do
+            status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$INVALID_PATH" \
+              --write-out '%{http_code}' \
+              --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+              -H "Origin: $PRODUCTION_ORIGIN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+
+            if [[ "$status" == '400' ]] && node -e '
+              const fs = require("node:fs");
+              const body = JSON.parse(fs.readFileSync(process.env.INVALID_PATH, "utf8"));
+              const code = String(body?.error?.code || "");
+              const forbidden = new Set(["", "route_not_found", "web_session_failed", "WORKER_ERROR", "admin_bff_unavailable"]);
+              if (forbidden.has(code)) process.exit(1);
+            '; then
+              rm -f "$INVALID_PATH"
+              exit 0
+            fi
+
+            if [[ "$attempt" == '72' ]]; then
+              echo "Unexpected Vercel Admin route status after deployment window: $status" >&2
+              cat "$INVALID_PATH" >&2 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Publish terminal route status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD_PATH: ${{ runner.temp }}/route-status.json
+          PROBE_OUTCOME: ${{ steps.route_probe.outcome }}
+        run: |
+          set -euo pipefail
+          export RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const succeeded = process.env.PROBE_OUTCOME === 'success';
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify({
+            state: succeeded ? 'success' : 'failure',
+            target_url: process.env.RUN_URL,
+            description: succeeded
+              ? 'Production Admin session route returned the controlled 400 contract.'
+              : `Production Admin session route probe ended with ${process.env.PROBE_OUTCOME || 'failure'}.`,
+            context: process.env.STATUS_CONTEXT,
+          }));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$PAYLOAD_PATH" > /dev/null
+          rm -f "$PAYLOAD_PATH"
+
+      - name: Enforce route verification
+        if: steps.route_probe.outcome != 'success'
+        shell: bash
+        run: exit 1
+
+      - name: Record bounded route evidence
+        if: steps.route_probe.outcome == 'success'
+        shell: bash
+        run: |
+          {
+            echo '## Production Admin BFF route verified'
+            echo '- Endpoint: `/api/admin-session/login`'
+            echo '- Controlled invalid-input response: `400`'
+            echo '- Route-not-found response: `rejected`'
+            echo '- Supabase deployment performed: `false`'
+            echo '- Secret or database mutation performed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
