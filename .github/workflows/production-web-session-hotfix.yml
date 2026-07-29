@@ -38,7 +38,7 @@ env:
   EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   SOURCE_FUNCTION_NAME: web-session-api
-  CANDIDATE_FUNCTION_NAME: web-session-api-repair-candidate
+  CANDIDATE_FUNCTION_NAME: web-session-api
   SUPABASE_CLI_VERSION: 2.109.1
 
 jobs:
@@ -64,6 +64,7 @@ jobs:
           set -euo pipefail
           source_commit="$(git rev-parse HEAD)"
           [[ "$source_commit" =~ ^[a-f0-9]{40}$ ]]
+          test "$SOURCE_FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             test "$source_commit" = "${{ inputs.source_commit }}"
             test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
@@ -133,6 +134,7 @@ jobs:
             repositoryLocalModuleGraph: true,
             privateRemoteImports: false,
             dataUrlImports: false,
+            identicalFunctionIdentityAcrossEnvironments: true,
           };
           fs.writeFileSync(
             'dist/production-web-session/build-manifest.json',
@@ -169,6 +171,7 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          test "$SOURCE_FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
 
       - name: Download exact immutable source
         uses: actions/download-artifact@v5
@@ -205,20 +208,11 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Prepare isolated candidate function directory
+      - name: Deploy exact function identity to staging
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf "backend/supabase/functions/$CANDIDATE_FUNCTION_NAME"
-          cp -R \
-            "backend/supabase/functions/$SOURCE_FUNCTION_NAME" \
-            "backend/supabase/functions/$CANDIDATE_FUNCTION_NAME"
-
-      - name: Deploy only staging candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase functions deploy "$CANDIDATE_FUNCTION_NAME" \
+          supabase functions deploy "$SOURCE_FUNCTION_NAME" \
             --workdir backend \
             --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
             --no-verify-jwt \
@@ -228,7 +222,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${CANDIDATE_FUNCTION_NAME}"
+          base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${SOURCE_FUNCTION_NAME}"
           health_status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$base/health")"
           test "$health_status" = "200"
           node -e 'const b=require(process.argv[1]); if(b.ok!==true||b.status!=="ready") process.exit(1)' "$RUNNER_TEMP/health.json"
@@ -278,18 +272,18 @@ jobs:
             > "$RUNNER_TEMP/functions.json"
           CANDIDATE_DIGEST="$(node - <<'NODE'
           const rows = require(process.env.FUNCTIONS_PATH);
-          const row = rows.find((v) => v.slug === process.env.CANDIDATE_FUNCTION_NAME);
+          const row = rows.find((v) => v.slug === process.env.SOURCE_FUNCTION_NAME);
           const digest = String(row?.ezbr_sha256 || '');
           if (!/^[a-f0-9]{64}$/.test(digest)) process.exit(1);
           process.stdout.write(digest);
           NODE
           )"
-          echo "candidate_digest=$CANDIDATE_DIGEST" >> "$GITHUB_OUTPUT"
           {
             echo '## Staging web-session candidate verified'
             echo "- Source commit: \`${{ needs.validate-and-package.outputs.source_commit }}\`"
             echo "- Source SHA-256: \`${{ needs.validate-and-package.outputs.source_sha256 }}\`"
             echo "- Candidate digest: \`$CANDIDATE_DIGEST\`"
+            echo "- Function identity: \`$SOURCE_FUNCTION_NAME\`"
             echo '- Health: `200 ready`'
             echo '- Invalid input: `400 controlled`'
             echo '- Production changed: `false`'
