@@ -82,7 +82,8 @@ async function proxyAdminBff(request, response, options = {}) {
       Authorization: `Bearer ${oidcToken}`,
       [BFF_TIMESTAMP_HEADER]: String(timestampSeconds),
       [BFF_NONCE_HEADER]: nonce,
-      [BFF_CLIENT_IP_HEADER]: clientIp
+      [BFF_CLIENT_IP_HEADER]: clientIp,
+      "x-real-ip": clientIp
     });
     const cookie = safeHeaderValue(request.headers?.cookie);
     if (cookie) headers.set("Cookie", cookie);

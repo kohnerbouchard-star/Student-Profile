@@ -58,7 +58,11 @@ test("Admin BFF signs exact requests with Vercel OIDC and overwrites browser met
   assert.equal(headers.get(BFF_NONCE_HEADER), FIXED_NONCE);
   assert.equal(headers.get(BFF_TIMESTAMP_HEADER), "1785362400");
   assert.match(headers.get(BFF_SIGNATURE_HEADER), /^v1=[A-Za-z0-9_-]{43}$/u);
-  assert.equal(headers.has("x-real-ip"), false);
+  assert.equal(
+    headers.get("x-real-ip"),
+    "203.0.113.25",
+    "The signed client IP is carried for compatibility with the currently deployed legacy function.",
+  );
   assert.equal(headers.has("x-vercel-forwarded-for"), false);
 
   const canonicalPayload = buildAdminBffSignaturePayload({
