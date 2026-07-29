@@ -87,6 +87,30 @@ type AuthUserLookupClient = {
   };
 };
 
+type PostgrestQueryResult<T> = {
+  data: T;
+  error: unknown;
+};
+
+type StaffBootstrapRow = {
+  id: string;
+  supabase_auth_user_id: string | null;
+  email: string;
+  display_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type GameBootstrapRow = {
+  id: string;
+  name: string;
+  status: string;
+  game_join_code: string | null;
+  game_join_code_status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function resolveContext(request) {
   const token = bearerToken(request);
   if (!token) {
@@ -116,11 +140,16 @@ export async function resolveContext(request) {
     };
   }
 
-  const staffResult = await service
+  const staffQuery = service
     .from("staff_users")
     .select("id,supabase_auth_user_id,email,display_name,created_at,updated_at")
     .eq("supabase_auth_user_id", user.id)
     .maybeSingle();
+  const staffResult = await (
+    staffQuery as unknown as Promise<
+      PostgrestQueryResult<StaffBootstrapRow | null>
+    >
+  );
   if (staffResult.error || !staffResult.data) {
     return {
       ok: false,
@@ -129,11 +158,16 @@ export async function resolveContext(request) {
     };
   }
 
-  const gamesResult = await service
+  const gamesQuery = service
     .from("game_sessions")
     .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
     .eq("owner_staff_user_id", staffResult.data.id)
     .order("created_at", { ascending: false });
+  const gamesResult = await (
+    gamesQuery as unknown as Promise<
+      PostgrestQueryResult<GameBootstrapRow[] | null>
+    >
+  );
   if (gamesResult.error) {
     return {
       ok: false,
