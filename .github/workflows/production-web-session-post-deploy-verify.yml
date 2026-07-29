@@ -1,0 +1,335 @@
+name: Production Web Session Post-Deploy Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: "Successful staging candidate workflow run ID"
+        required: true
+        type: string
+      source_commit:
+        description: "Exact merged main source commit deployed to production"
+        required: true
+        type: string
+      source_sha256:
+        description: "Immutable backend source artifact SHA-256"
+        required: true
+        type: string
+      candidate_digest:
+        description: "Verified staging candidate Edge Function digest"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type VERIFY WEB SESSION API"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-web-session-post-deploy-verify
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  FUNCTION_NAME: web-session-api
+  CANDIDATE_FUNCTION_NAME: web-session-api
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  verify:
+    name: Verify deployed production web-session-api
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce read-only production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "VERIFY WEB SESSION API"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          [[ "${{ inputs.source_sha256 }}" =~ ^[a-f0-9]{64}$ ]]
+          [[ "${{ inputs.candidate_digest }}" =~ ^[a-f0-9]{64}$ ]]
+          [[ "${{ inputs.candidate_run_id }}" =~ ^[0-9]+$ ]]
+
+      - name: Check out verification control plane
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out exact deployed source commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: reviewed-source
+
+      - name: Verify deployed source remains in current main history
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C reviewed-source rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git -C reviewed-source fetch --no-tags --prune origin \
+            "+refs/heads/main:refs/remotes/origin/main"
+          git -C reviewed-source merge-base --is-ancestor HEAD origin/main
+          test -f reviewed-source/docs/operations/evidence/production-web-session-recovery-v1.json
+          test -f scripts/verify-downloaded-edge-function-source.mjs
+
+      - name: Download exact staging-verified artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: production-web-session-${{ inputs.source_commit }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/production-web-session
+
+      - name: Verify immutable artifact identity and tracked source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/production-web-session
+          sha256sum --check backend-source.tgz.sha256
+          actual_sha="$(sha256sum backend-source.tgz | awk '{print $1}')"
+          test "$actual_sha" = "${{ inputs.source_sha256 }}"
+          SOURCE_COMMIT="${{ inputs.source_commit }}" \
+          SOURCE_SHA="$actual_sha" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('build-manifest.json', 'utf8'));
+          if (
+            manifest.sourceCommit !== process.env.SOURCE_COMMIT ||
+            manifest.sourceRef !== 'refs/heads/main' ||
+            manifest.sourceSha256 !== process.env.SOURCE_SHA ||
+            manifest.sourceFunctionName !== process.env.FUNCTION_NAME ||
+            manifest.candidateFunctionName !== process.env.CANDIDATE_FUNCTION_NAME ||
+            manifest.stagingProjectRef !== process.env.DENIED_STAGING_PROJECT_REF ||
+            manifest.deniedProductionProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            manifest.verifyJwt !== false ||
+            manifest.trackedGitTreeOnly !== true ||
+            manifest.repositoryLocalModuleGraph !== true
+          ) {
+            throw new Error('Immutable source manifest mismatch.');
+          }
+          NODE
+          cd ../..
+
+          expected_dir="$RUNNER_TEMP/expected-backend-tree"
+          artifact_dir="$RUNNER_TEMP/artifact-backend-tree"
+          expected_tar="$RUNNER_TEMP/expected-backend-canonical.tar"
+          artifact_tar="$RUNNER_TEMP/artifact-backend-canonical.tar"
+          mkdir -p "$expected_dir" "$artifact_dir"
+          git -C reviewed-source archive \
+            --format=tar \
+            "${{ inputs.source_commit }}" \
+            backend | tar -xf - -C "$expected_dir"
+          tar -xzf dist/production-web-session/backend-source.tgz -C "$artifact_dir"
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner --format=gnu \
+            -cf "$expected_tar" -C "$expected_dir" backend
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner --format=gnu \
+            -cf "$artifact_tar" -C "$artifact_dir" backend
+          cmp --silent "$expected_tar" "$artifact_tar"
+          rm -rf "$expected_dir" "$artifact_dir" "$expected_tar" "$artifact_tar"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Verify staging binding and production function metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$DENIED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const staging = JSON.parse(fs.readFileSync(process.env.STAGING_PATH, 'utf8'));
+          const production = JSON.parse(fs.readFileSync(process.env.PRODUCTION_PATH, 'utf8'));
+          const candidate = staging.find((value) => value.slug === process.env.CANDIDATE_FUNCTION_NAME);
+          const deployed = production.find((value) => value.slug === process.env.FUNCTION_NAME);
+          if (
+            candidate?.ezbr_sha256 !== process.env.EXPECTED_CANDIDATE_DIGEST ||
+            candidate?.verify_jwt !== false ||
+            candidate?.status !== 'ACTIVE'
+          ) {
+            throw new Error('Recorded staging candidate no longer matches the approved digest.');
+          }
+          if (
+            !deployed ||
+            deployed.verify_jwt !== false ||
+            deployed.status !== 'ACTIVE' ||
+            !/^[a-f0-9]{64}$/u.test(String(deployed.ezbr_sha256 || ''))
+          ) {
+            throw new Error('Production function metadata is invalid.');
+          }
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `production_platform_digest=${deployed.ezbr_sha256}\nproduction_version=${deployed.version}\n`,
+          );
+          NODE
+          rm -f "$RUNNER_TEMP/staging-functions.json" "$RUNNER_TEMP/production-functions.json"
+        env:
+          STAGING_PATH: ${{ runner.temp }}/staging-functions.json
+          PRODUCTION_PATH: ${{ runner.temp }}/production-functions.json
+          EXPECTED_CANDIDATE_DIGEST: ${{ inputs.candidate_digest }}
+
+      - name: Download and compare deployed source trees
+        id: deployed_source
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging_workdir="$RUNNER_TEMP/staging-download"
+          production_workdir="$RUNNER_TEMP/production-download"
+          rm -rf "$staging_workdir" "$production_workdir"
+          mkdir -p "$staging_workdir" "$production_workdir"
+
+          supabase functions download "$CANDIDATE_FUNCTION_NAME" \
+            --workdir "$staging_workdir" \
+            --project-ref "$DENIED_STAGING_PROJECT_REF" \
+            --use-api \
+            --yes
+          supabase functions download "$FUNCTION_NAME" \
+            --workdir "$production_workdir" \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            --use-api \
+            --yes
+
+          canonical_digest="$(node scripts/verify-downloaded-edge-function-source.mjs \
+            "$staging_workdir" \
+            "$production_workdir" \
+            "$FUNCTION_NAME")"
+          [[ "$canonical_digest" =~ ^[a-f0-9]{64}$ ]]
+          echo "canonical_digest=$canonical_digest" >> "$GITHUB_OUTPUT"
+          rm -rf "$staging_workdir" "$production_workdir"
+
+      - name: Verify direct production startup and invalid-input contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          for attempt in $(seq 1 12); do
+            health_status="$(curl --silent --show-error \
+              --output "$RUNNER_TEMP/health.json" \
+              --write-out '%{http_code}' \
+              "$base/health")"
+            if [[ "$health_status" == "200" ]]; then break; fi
+            if [[ "$attempt" == "12" ]]; then
+              cat "$RUNNER_TEMP/health.json" >&2 || true
+              exit 1
+            fi
+            sleep 5
+          done
+          node -e 'const b=require(process.argv[1]); if(b.ok!==true||b.service!=="web-session-api"||b.status!=="ready") process.exit(1)' \
+            "$RUNNER_TEMP/health.json"
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+            > "$RUNNER_TEMP/api-keys.json"
+          publishable_key="$(node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((value) => String(value.api_key || '').startsWith('sb_publishable_')) ||
+            rows.find((value) => value.name === 'anon' || value.type === 'anon');
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+          )"
+          test -n "$publishable_key"
+          echo "::add-mask::$publishable_key"
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/direct-invalid.json" \
+            --write-out '%{http_code}' \
+            --request POST "$base/login" \
+            -H "apikey: $publishable_key" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{}')"
+          test "$status" = "400"
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+          rm -f "$RUNNER_TEMP/health.json" "$RUNNER_TEMP/api-keys.json" "$RUNNER_TEMP/direct-invalid.json"
+          unset publishable_key
+        env:
+          KEYS_PATH: ${{ runner.temp }}/api-keys.json
+          INVALID_PATH: ${{ runner.temp }}/direct-invalid.json
+
+      - name: Verify Vercel production proxy route
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error \
+              --output "$RUNNER_TEMP/vercel-invalid.json" \
+              --write-out '%{http_code}' \
+              --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+              -H "Origin: $PRODUCTION_ORIGIN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+            if [[ "$status" == "400" ]]; then break; fi
+            if [[ "$attempt" == "12" ]]; then
+              echo "Unexpected Vercel proxy status: $status" >&2
+              cat "$RUNNER_TEMP/vercel-invalid.json" >&2 || true
+              exit 1
+            fi
+            sleep 5
+          done
+          node - <<'NODE'
+          const body = require(process.env.INVALID_PATH);
+          const code = String(body?.error?.code || '');
+          if (!code || code === 'web_session_failed' || code === 'WORKER_ERROR') process.exit(1);
+          NODE
+          rm -f "$RUNNER_TEMP/vercel-invalid.json"
+        env:
+          INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
+
+      - name: Record bounded production verification evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production web-session post-deploy verification'
+            echo "- Verification ref: \`$GITHUB_REF\`"
+            echo "- Deployed source commit: \`${{ inputs.source_commit }}\`"
+            echo "- Immutable source SHA-256: \`${{ inputs.source_sha256 }}\`"
+            echo "- Staging candidate digest: \`${{ inputs.candidate_digest }}\`"
+            echo "- Production platform digest: \`${{ steps.metadata.outputs.production_platform_digest }}\`"
+            echo "- Production function version: \`${{ steps.metadata.outputs.production_version }}\`"
+            echo "- Canonical deployed-source digest: \`${{ steps.deployed_source.outputs.canonical_digest }}\`"
+            echo "- Candidate run: \`${{ inputs.candidate_run_id }}\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo '- Production mutation performed by this workflow: `false`'
+            echo '- Production deployed source equals staging: `true`'
+            echo '- Platform JWT verification: `false` (custom browser-session boundary)'
+            echo '- Direct health probe: `pass`'
+            echo '- Direct invalid-input probe: `pass`'
+            echo '- Vercel proxy invalid-input probe: `pass`'
+            echo '- Real administrator login: `required before incident closure`'
+          } >> "$GITHUB_STEP_SUMMARY"
