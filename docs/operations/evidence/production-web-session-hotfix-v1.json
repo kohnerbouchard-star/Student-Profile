@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "purpose": "restore-production-admin-web-session",
+  "authorizedPullRequest": 391,
+  "requiredCommitSubject": "hotfix(production): deploy web-session-api (#391)",
+  "sourceRef": "refs/heads/main",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "functionName": "web-session-api",
+  "verifyJwt": false,
+  "productionOrigin": "https://econovaria.vercel.app",
+  "supabaseCliVersion": "2.109.1",
+  "databaseChangesAllowed": false,
+  "otherFunctionsAllowed": false,
+  "secretPolicy": {
+    "allowedOriginsValue": "https://econovaria.vercel.app",
+    "createEncryptionKeyOnlyWhenMissing": true,
+    "overwriteExistingEncryptionKey": false,
+    "recordSecretValues": false
+  },
+  "verification": {
+    "directHealthRequired": true,
+    "directLoginValidationRequired": true,
+    "vercelProxyValidationRequired": true,
+    "expectedInvalidLoginStatus": 400
+  }
+}
