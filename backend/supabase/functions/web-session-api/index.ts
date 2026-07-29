@@ -6,7 +6,11 @@ import {
 } from "../_shared/econovariaAuth.ts";
 import { handleStaffLoginRequest } from "../../../src/domains/auth/api/staffLoginHttpHandler.ts";
 import { handleStaffBootstrapRequest } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
-import { readTrustedClientIp } from "../../../src/security/rateLimitKeying.ts";
+import {
+  readTrustedClientIp,
+  type TrustedIpHeader,
+} from "../../../src/security/rateLimitKeying.ts";
+import { readPlayerRateLimitConfig } from "../../../src/security/playerRateLimitService.ts";
 import {
   constantTimeTextEqual,
   createWebAdminSessionPayload,
@@ -27,7 +31,6 @@ const MAX_PROXY_PATH_BYTES = 2_048;
 const CSRF_HEADER = "x-econovaria-csrf-token";
 const GAME_HEADER = "x-econovaria-game-id";
 const DEVICE_HEADER = "x-econovaria-device-id";
-const TRUSTED_IP_HEADER = "x-real-ip";
 const FORWARDED_REQUEST_HEADERS = new Map([
   ["content-type", "Content-Type"],
   ["x-idempotency-key", "X-Idempotency-Key"],
@@ -83,6 +86,11 @@ interface CurrentSession {
   readonly ok: true;
   readonly payload: WebAdminSessionPayload;
   readonly refreshed: boolean;
+}
+
+interface TrustedClientIp {
+  readonly header: TrustedIpHeader;
+  readonly address: string;
 }
 
 Deno.serve(async (request: Request) => {
@@ -521,12 +529,12 @@ async function sendAdminRequest(
   accessToken: string,
   publishableKey: string,
   selectedGameId: string,
-  clientIp: string,
+  clientIp: TrustedClientIp,
 ): Promise<Response> {
   const headers = new Headers({
     apikey: publishableKey,
     Authorization: `Bearer ${accessToken}`,
-    [TRUSTED_IP_HEADER]: clientIp,
+    [clientIp.header]: clientIp.address,
   });
   if (selectedGameId) headers.set("X-Econovaria-Game-Id", selectedGameId);
   const deviceId = source.headers.get(DEVICE_HEADER);
@@ -550,13 +558,13 @@ function mfaRequestHeaders(
   source: Request,
   publishableKey: string,
   accessToken: string,
-  clientIp: string,
+  clientIp: TrustedClientIp,
   hasBody: boolean,
 ): Headers {
   const headers = new Headers({
     apikey: publishableKey,
     Authorization: `Bearer ${accessToken}`,
-    [TRUSTED_IP_HEADER]: clientIp,
+    [clientIp.header]: clientIp.address,
   });
   const deviceId = source.headers.get(DEVICE_HEADER);
   if (deviceId && isSafeHeaderValue(deviceId)) {
@@ -725,9 +733,13 @@ function allowedOrigins(): ReadonlySet<string> {
   ]);
 }
 
-function trustedClientIp(request: Request): string | null {
+function trustedClientIp(request: Request): TrustedClientIp | null {
   try {
-    return readTrustedClientIp(request, TRUSTED_IP_HEADER);
+    const trustedIpHeader = readPlayerRateLimitConfig().trustedIpHeader;
+    return {
+      header: trustedIpHeader,
+      address: readTrustedClientIp(request, trustedIpHeader),
+    };
   } catch {
     return null;
   }
