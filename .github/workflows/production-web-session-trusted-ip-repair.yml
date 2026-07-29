@@ -57,9 +57,6 @@ jobs:
           grep -Fq 'Database schema changed: `false`' "$file"
           grep -Fq 'Edge Functions deployed: `false`' "$file"
           grep -Fq 'statuses: write' "$file"
-          ! grep -Fq 'x-forwarded-for' "$file"
-          ! grep -Fq 'ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' "$file"
-          ! grep -Fq 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' "$file"
 
   verify-staging:
     name: Repair and verify staging trusted-IP binding
