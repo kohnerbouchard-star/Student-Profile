@@ -132,7 +132,7 @@ test("rejects a stale signed request", async () => {
 
 test("accepts local mode only at the loopback boundary", async () => {
   const result = await authorizeAdminBffRequest(await signedRequest({ local: true }), {
-    supabaseUrl: "http://127.0.0.1:54321",
+    supabaseUrl: "http://kong:8000",
     dependencies: {
       now: () => NOW,
       claimNonce: async () => true,
