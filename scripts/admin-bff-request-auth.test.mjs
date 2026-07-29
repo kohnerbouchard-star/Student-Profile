@@ -15,9 +15,17 @@ const NONCE = "123e4567-e89b-42d3-a456-426614174000";
 const BODY = Buffer.from(JSON.stringify({ email: "a@b.co", password: "test" }));
 const SIGNING_KEY_CONTEXT = "econovaria-admin-bff-signing-key-v1";
 
-async function signedRequest({ local = false, invalidSignature = false } = {}) {
-  const url = local
-    ? "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+async function signedRequest({
+  local = false,
+  invalidSignature = false,
+  strippedRuntimePath = false,
+} = {}) {
+const url = local
+  ? strippedRuntimePath
+    ? "http://kong:8000/web-session-api/login"
+    : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+  : strippedRuntimePath
+    ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
     : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
   const origin = local
     ? "http://127.0.0.1:4173"
@@ -32,11 +40,14 @@ async function signedRequest({ local = false, invalidSignature = false } = {}) {
   if (local) headers.set(ADMIN_BFF_AUTH_HEADERS.mode, "local");
   else headers.set("authorization", `Bearer ${TOKEN}`);
 
+const signatureUrl = local
+  ? "http://kong:8000/functions/v1/web-session-api/login"
+  : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
   const canonicalPayload = await buildAdminBffSignaturePayload({
     timestampSeconds: TIMESTAMP_SECONDS,
     nonce: NONCE,
     method: "POST",
-    targetUrl: url,
+    targetUrl: signatureUrl,
     browserOrigin: origin,
     clientIp: "203.0.113.25",
     headers,
@@ -78,6 +89,35 @@ test("accepts an exact hosted Vercel request and rewrites trusted IP", async () 
   assert.equal(result.request.headers.has("x-forwarded-for"), false);
   assert.equal(result.request.headers.has(ADMIN_BFF_AUTH_HEADERS.signature), false);
   assert.equal(nonceClaim.runnerName, "admin-bff-vercel");
+});
+
+test("rejects a request missing the signed BFF envelope as malformed", async () => {
+  let claimed = false;
+  const result = await authorizeAdminBffRequest(new Request(
+    "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login",
+    {
+      method: "POST",
+      headers: {
+        origin: "https://econovaria.vercel.app",
+        "content-type": "application/json",
+      },
+      body: BODY,
+    },
+  ), {
+    supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+    dependencies: {
+      now: () => NOW,
+      verifyOidc: async () => true,
+      claimNonce: async () => {
+        claimed = true;
+        return true;
+      },
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.response.status, 400);
+  assert.equal(claimed, false);
 });
 
 test("rejects a modified request before claiming its nonce", async () => {
@@ -128,6 +168,32 @@ test("rejects a stale signed request", async () => {
 
   assert.equal(result.ok, false);
   assert.equal(result.response.status, 401);
+});
+
+test("accepts runtime-stripped hosted and local paths using one canonical target", async () => {
+  const hosted = await authorizeAdminBffRequest(await signedRequest({
+    strippedRuntimePath: true,
+  }), {
+    supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+    dependencies: {
+      now: () => NOW,
+      verifyOidc: async () => true,
+      claimNonce: async () => true,
+    },
+  });
+  const local = await authorizeAdminBffRequest(await signedRequest({
+    local: true,
+    strippedRuntimePath: true,
+  }), {
+    supabaseUrl: "http://kong:8000",
+    dependencies: {
+      now: () => NOW,
+      claimNonce: async () => true,
+    },
+  });
+
+  assert.equal(hosted.ok, true);
+  assert.equal(local.ok, true);
 });
 
 test("accepts local mode only at the loopback boundary", async () => {

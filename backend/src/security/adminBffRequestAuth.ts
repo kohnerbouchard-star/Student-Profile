@@ -147,7 +147,7 @@ export async function authorizeAdminBffRequest(
     !UUID_V4_PATTERN.test(nonce) ||
     !signatureMatch
   ) {
-    return authenticationFailure();
+    return malformedEnvelopeFailure();
   }
 
   const timestampSeconds = Number(timestampText);
@@ -205,11 +205,20 @@ export async function authorizeAdminBffRequest(
     );
   }
 
+let signatureTargetUrl: string;
+try {
+  signatureTargetUrl = canonicalAdminBffTargetUrl(
+    request.url,
+    options.supabaseUrl,
+  );
+} catch {
+  return malformedEnvelopeFailure();
+}
   const canonicalPayload = await buildAdminBffSignaturePayload({
     timestampSeconds,
     nonce,
     method: request.method,
-    targetUrl: request.url,
+    targetUrl: signatureTargetUrl,
     browserOrigin: String(request.headers.get("origin") || ""),
     clientIp,
     headers: request.headers,
@@ -479,6 +488,29 @@ function normalizeIpAddress(value: string): string {
   return hostname.slice(1, -1).toLowerCase();
 }
 
+function canonicalAdminBffTargetUrl(
+  requestUrlValue: string,
+  supabaseUrlValue: string,
+): string {
+  const requestUrl = new URL(requestUrlValue);
+  const supabaseUrl = new URL(supabaseUrlValue);
+  const prefixes = [
+    "/functions/v1/web-session-api",
+    "/web-session-api",
+  ] as const;
+  const prefix = prefixes.find((candidate) =>
+    requestUrl.pathname.startsWith(candidate)
+  );
+  if (!prefix) throw new Error("invalid Admin BFF path");
+  const suffix = requestUrl.pathname.slice(prefix.length);
+  if (
+    !suffix.startsWith("/") ||
+    suffix.includes("\\") ||
+    suffix.split("/").includes("..")
+  ) throw new Error("invalid Admin BFF path");
+  return `${supabaseUrl.origin}/functions/v1/web-session-api${suffix}${requestUrl.search}`;
+}
+
 function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {
   let url: URL;
   try {
@@ -551,6 +583,14 @@ function ownedArrayBuffer(value: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(value.byteLength);
   copy.set(value);
   return copy.buffer;
+}
+
+function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
+  return failure(
+    400,
+    "admin_bff_envelope_invalid",
+    "Administrator request envelope is missing or invalid.",
+  );
 }
 
 function authenticationFailure(): AdminBffRequestAuthResult {
