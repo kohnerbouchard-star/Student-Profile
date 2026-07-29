@@ -1,0 +1,524 @@
+name: Production Admin Staff Security Reconcile
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact merged main source commit"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type RECONCILE ADMIN STAFF SECURITY"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-admin-staff-security-reconcile
+  cancel-in-progress: false
+
+env:
+  MANIFEST_PATH: docs/operations/evidence/production-admin-staff-security-reconciliation-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+
+jobs:
+  reconcile:
+    name: Reconcile Staff security schema and Auth metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Enforce explicit production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          test -n "${SUPABASE_SECRET_KEY:-}${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "RECONCILE ADMIN STAFF SECURITY"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          command -v psql >/dev/null
+
+          node - <<'NODE'
+          const expected = process.env.EXPECTED_PRODUCTION_PROJECT_REF;
+          const parsed = new URL(process.env.SUPABASE_DB_URL);
+          const username = decodeURIComponent(parsed.username || "");
+          const directHost = parsed.hostname === `db.${expected}.supabase.co`;
+          const poolerUser = username === `postgres.${expected}` ||
+            username.endsWith(`.${expected}`);
+          if (parsed.protocol !== "postgresql:" && parsed.protocol !== "postgres:") {
+            throw new Error("Production database URL must use PostgreSQL.");
+          }
+          if (!directHost && !poolerUser) {
+            throw new Error("Production database URL is not bound to the expected project.");
+          }
+          NODE
+
+      - name: Check out exact merged main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source, manifest, and canonical migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          git merge-base --is-ancestor HEAD origin/main
+          test -f "$MANIFEST_PATH"
+
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const { execFileSync } = require("node:child_process");
+          const manifest = JSON.parse(
+            fs.readFileSync(process.env.MANIFEST_PATH, "utf8"),
+          );
+          const migration = manifest.canonicalMigration;
+          if (
+            manifest.schemaVersion !== 1 ||
+            manifest.roadmapItem !== "BETA-PROD-ADMIN-LOGIN-005" ||
+            manifest.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            !manifest.deniedProjectRefs?.includes(process.env.DENIED_STAGING_PROJECT_REF) ||
+            manifest.staffSchemaWritesAllowed !== true ||
+            manifest.authAppMetadataWritesAllowed !== true ||
+            manifest.applicationRowWritesAllowed !== false ||
+            manifest.edgeFunctionDeploymentAllowed !== false ||
+            manifest.credentialRotationAllowed !== false ||
+            manifest.destructiveChangesAllowed !== false ||
+            manifest.rollbackStrategy !== "forward-only-idempotent-rerun" ||
+            migration?.version !== "20260726091000" ||
+            migration?.name !== "add_staff_security_state_v2" ||
+            migration?.path !==
+              "backend/supabase/migrations/20260726091000_add_staff_security_state_v2.sql" ||
+            !/^[a-f0-9]{40}$/u.test(migration?.gitBlobSha || "") ||
+            manifest.requiredStaffColumns?.length !== 8 ||
+            manifest.requiredStaffConstraints?.length !== 6 ||
+            manifest.requiredAuthMetadataKeys?.length !== 5
+          ) {
+            throw new Error("Staff security reconciliation authorization mismatch.");
+          }
+
+          const actualBlob = execFileSync(
+            "git",
+            ["hash-object", migration.path],
+            { encoding: "utf8" },
+          ).trim();
+          if (actualBlob !== migration.gitBlobSha) {
+            throw new Error("Canonical Staff security migration digest mismatch.");
+          }
+
+          const sql = fs.readFileSync(migration.path, "utf8").trim();
+          if (!/^begin;\s*/iu.test(sql) || !/\s*commit;$/iu.test(sql)) {
+            throw new Error("Canonical Staff security migration is not transaction-bounded.");
+          }
+          if (!/alter\s+table\s+public\.staff_users/iu.test(sql)) {
+            throw new Error("Canonical Staff security migration target is missing.");
+          }
+          for (const column of manifest.requiredStaffColumns) {
+            if (!new RegExp(`\\b${column}\\b`, "u").test(sql)) {
+              throw new Error(`Canonical Staff security column missing: ${column}`);
+            }
+          }
+          if (
+            /\b(?:insert\s+into|update|delete\s+from)\s+(?:public\.)?staff_users\b/iu.test(sql) ||
+            /\b(?:drop\s+(?:table|schema|database)|truncate|drop\s+column)\b/iu.test(sql) ||
+            /\b(?:create|alter|drop)\s+table\s+(?!public\.staff_users\b)/iu.test(sql)
+          ) {
+            throw new Error("Unapproved SQL found in canonical Staff security migration.");
+          }
+          NODE
+
+      - name: Install locked operator dependencies
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install locked operator package
+        shell: bash
+        run: npm ci --ignore-scripts
+
+      - name: Verify production Auth administrator access
+        shell: bash
+        env:
+          SUPABASE_URL: https://cgiukdjwicykrmtkhudh.supabase.co
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import { createClient } from "@supabase/supabase-js";
+          const key = String(
+            process.env.SUPABASE_SECRET_KEY ||
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            "",
+          ).trim();
+          const client = createClient(process.env.SUPABASE_URL, key, {
+            auth: { autoRefreshToken: false, persistSession: false },
+          });
+          const { error } = await client.auth.admin.listUsers({
+            page: 1,
+            perPage: 1,
+          });
+          if (error) throw new Error("Production Auth administrator access failed.");
+          NODE
+
+      - name: Verify bounded database preconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/staff-security-preconditions.json"
+          select json_build_object(
+            'staffRows', (select count(*) from public.staff_users),
+            'linkedStaffRows', (
+              select count(*)
+              from public.staff_users as staff
+              join auth.users as auth_user
+                on auth_user.id = staff.supabase_auth_user_id
+            ),
+            'unlinkedStaffRows', (
+              select count(*)
+              from public.staff_users as staff
+              left join auth.users as auth_user
+                on auth_user.id = staff.supabase_auth_user_id
+              where auth_user.id is null
+            ),
+            'requiredColumnsPresent', (
+              select count(*)
+              from information_schema.columns
+              where table_schema = 'public'
+                and table_name = 'staff_users'
+                and column_name in (
+                  'status',
+                  'role',
+                  'permission_version',
+                  'security_version',
+                  'mfa_required',
+                  'security_hold_reason',
+                  'suspended_at',
+                  'compromised_at'
+                )
+            ),
+            'canonicalLedgerRows', (
+              select count(*)
+              from supabase_migrations.schema_migrations
+              where version = '20260726091000'
+            )
+          );
+          SQL
+
+          PRECONDITIONS_PATH="$RUNNER_TEMP/staff-security-preconditions.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.PRECONDITIONS_PATH, "utf8").trim(),
+          );
+          if (
+            Number(result.staffRows) < 1 ||
+            Number(result.linkedStaffRows) !== Number(result.staffRows) ||
+            Number(result.unlinkedStaffRows) !== 0 ||
+            ![0, 8].includes(Number(result.requiredColumnsPresent)) ||
+            ![0, 1].includes(Number(result.canonicalLedgerRows)) ||
+            (
+              Number(result.canonicalLedgerRows) === 1 &&
+              Number(result.requiredColumnsPresent) !== 8
+            )
+          ) {
+            throw new Error("Production Staff security preconditions failed.");
+          }
+          NODE
+
+      - name: Generate one atomic forward reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT_PATH="$RUNNER_TEMP/staff-security-reconciliation.sql" node - <<'NODE'
+          const fs = require("node:fs");
+          const manifest = JSON.parse(
+            fs.readFileSync(process.env.MANIFEST_PATH, "utf8"),
+          );
+          const migration = manifest.canonicalMigration;
+          const sql = fs.readFileSync(migration.path, "utf8").trim();
+          const body = sql
+            .replace(/^begin;\s*/iu, "")
+            .replace(/\s*commit;$/iu, "")
+            .trim();
+          if (!body) throw new Error("Canonical Staff security migration body is empty.");
+
+          const literal = (value) =>
+            `'${String(value).replaceAll("'", "''")}'`;
+          const statement = `${migration.path}@${migration.gitBlobSha}`;
+          const ledgerPredicate = [
+            `version = ${literal(migration.version)}`,
+            `name = ${literal(migration.name)}`,
+            `statements = array[${literal(statement)}]`,
+            `created_by = 'github-actions-production-recovery'`,
+            `idempotency_key = ${literal(migration.name)}`,
+          ].join(" and ");
+
+          const generated = [
+            "begin;",
+            `-- source: ${migration.path}`,
+            body,
+            "create schema if not exists supabase_migrations;",
+            "create table if not exists supabase_migrations.schema_migrations (version text not null primary key);",
+            "alter table supabase_migrations.schema_migrations add column if not exists statements text[];",
+            "alter table supabase_migrations.schema_migrations add column if not exists name text;",
+            "alter table supabase_migrations.schema_migrations add column if not exists created_by text;",
+            "alter table supabase_migrations.schema_migrations add column if not exists idempotency_key text unique;",
+            "alter table supabase_migrations.schema_migrations add column if not exists rollback text[];",
+            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(migration.version)}, ${literal(migration.name)}, array[${literal(statement)}], 'github-actions-production-recovery', ${literal(migration.name)}) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where ${ledgerPredicate}) then raise exception 'Migration ledger conflict for version ${migration.version}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            "commit;",
+            "",
+          ].join("\n\n");
+          fs.writeFileSync(process.env.OUTPUT_PATH, generated, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/staff-security-reconciliation.sql"
+
+      - name: Apply canonical Staff security schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/staff-security-reconciliation.sql"
+          rm -f "$RUNNER_TEMP/staff-security-reconciliation.sql"
+
+      - name: Reconcile controlled Auth app metadata
+        shell: bash
+        env:
+          SUPABASE_URL: https://cgiukdjwicykrmtkhudh.supabase.co
+          ECONOVARIA_PROJECT_REF: cgiukdjwicykrmtkhudh
+          ECONOVARIA_PRODUCTION_PROJECT_REFS: cgiukdjwicykrmtkhudh
+          ECONOVARIA_PRODUCTION_CHANGE_CONFIRMATION: cgiukdjwicykrmtkhudh
+        run: |
+          set -euo pipefail
+          node scripts/security/reconcile-staff-security-metadata.mjs \
+            --apply \
+            --allow-production \
+            > "$RUNNER_TEMP/staff-security-metadata-apply.json"
+
+          METADATA_PATH="$RUNNER_TEMP/staff-security-metadata-apply.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.METADATA_PATH, "utf8"),
+          );
+          const counters = result.counters || {};
+          if (
+            result.ok !== true ||
+            result.mode !== "apply" ||
+            result.projectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            result.productionProject !== true ||
+            Number(counters.inspected) < 1 ||
+            Number(counters.skippedMissingAuthUser) !== 0 ||
+            Number(counters.failures) !== 0 ||
+            Number(counters.updated) !== Number(counters.requiresUpdate) ||
+            Number(counters.alreadyCurrent) + Number(counters.requiresUpdate) !==
+              Number(counters.inspected)
+          ) {
+            throw new Error("Production Auth metadata reconciliation failed.");
+          }
+          NODE
+
+      - name: Verify final security, metadata, and ledger postconditions
+        shell: bash
+        env:
+          SUPABASE_URL: https://cgiukdjwicykrmtkhudh.supabase.co
+          ECONOVARIA_PROJECT_REF: cgiukdjwicykrmtkhudh
+          ECONOVARIA_PRODUCTION_PROJECT_REFS: cgiukdjwicykrmtkhudh
+          ECONOVARIA_PRODUCTION_CHANGE_CONFIRMATION: cgiukdjwicykrmtkhudh
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/staff-security-postconditions.json"
+          with staff_auth as (
+            select
+              staff.*,
+              auth_user.id as auth_user_id,
+              auth_user.raw_app_meta_data
+            from public.staff_users as staff
+            left join auth.users as auth_user
+              on auth_user.id = staff.supabase_auth_user_id
+          )
+          select json_build_object(
+            'requiredColumnsPresent', (
+              select count(*)
+              from information_schema.columns
+              where table_schema = 'public'
+                and table_name = 'staff_users'
+                and column_name in (
+                  'status',
+                  'role',
+                  'permission_version',
+                  'security_version',
+                  'mfa_required',
+                  'security_hold_reason',
+                  'suspended_at',
+                  'compromised_at'
+                )
+            ),
+            'requiredConstraintsPresent', (
+              select count(*)
+              from pg_constraint
+              where conrelid = 'public.staff_users'::regclass
+                and conname in (
+                  'staff_users_status_check',
+                  'staff_users_role_check',
+                  'staff_users_permission_version_check',
+                  'staff_users_security_version_check',
+                  'staff_users_security_hold_reason_check',
+                  'staff_users_security_state_check'
+                )
+            ),
+            'statusRoleIndexPresent',
+              to_regclass('public.staff_users_status_role_idx') is not null,
+            'invalidStaffRows', (
+              select count(*)
+              from staff_auth
+              where status not in ('active', 'suspended', 'disabled', 'compromised')
+                or role not in ('game_admin', 'security_operator')
+                or permission_version < 1
+                or security_version < 1
+            ),
+            'activeGameAdmins', (
+              select count(*)
+              from staff_auth
+              where status = 'active'
+                and role = 'game_admin'
+            ),
+            'missingAuthLinks', (
+              select count(*)
+              from staff_auth
+              where auth_user_id is null
+            ),
+            'metadataMismatches', (
+              select count(*)
+              from staff_auth
+              where auth_user_id is null
+                or raw_app_meta_data ->> 'econovaria_role' is distinct from role
+                or case
+                    when coalesce(raw_app_meta_data ->> 'permission_version', '')
+                      ~ '^[1-9][0-9]*$'
+                    then (raw_app_meta_data ->> 'permission_version')::bigint
+                    else null
+                  end is distinct from permission_version::bigint
+                or case
+                    when coalesce(raw_app_meta_data ->> 'security_version', '')
+                      ~ '^[1-9][0-9]*$'
+                    then (raw_app_meta_data ->> 'security_version')::bigint
+                    else null
+                  end is distinct from security_version
+                or raw_app_meta_data ->> 'econovaria_account_status'
+                  is distinct from status
+                or case
+                    when raw_app_meta_data ->> 'econovaria_mfa_required' = 'true'
+                      then true
+                    when raw_app_meta_data ->> 'econovaria_mfa_required' = 'false'
+                      then false
+                    else null
+                  end is distinct from mfa_required
+            ),
+            'ledgerRecordedOnce', (
+              select count(*) = 1
+              from supabase_migrations.schema_migrations
+              where version = '20260726091000'
+                and name = 'add_staff_security_state_v2'
+                and statements = array[
+                  'backend/supabase/migrations/20260726091000_add_staff_security_state_v2.sql@9146d65204f7fcc045247ca5593f3e88e984ac36'
+                ]
+                and created_by = 'github-actions-production-recovery'
+                and idempotency_key = 'add_staff_security_state_v2'
+            )
+          );
+          SQL
+
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/staff-security-postconditions.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.POSTCONDITIONS_PATH, "utf8").trim(),
+          );
+          if (
+            Number(result.requiredColumnsPresent) !== 8 ||
+            Number(result.requiredConstraintsPresent) !== 6 ||
+            result.statusRoleIndexPresent !== true ||
+            Number(result.invalidStaffRows) !== 0 ||
+            Number(result.activeGameAdmins) < 1 ||
+            Number(result.missingAuthLinks) !== 0 ||
+            Number(result.metadataMismatches) !== 0 ||
+            result.ledgerRecordedOnce !== true
+          ) {
+            throw new Error("Production Staff security postconditions failed.");
+          }
+          NODE
+
+          node scripts/security/reconcile-staff-security-metadata.mjs \
+            --allow-production \
+            > "$RUNNER_TEMP/staff-security-metadata-verify.json"
+          VERIFY_PATH="$RUNNER_TEMP/staff-security-metadata-verify.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(fs.readFileSync(process.env.VERIFY_PATH, "utf8"));
+          const counters = result.counters || {};
+          if (
+            result.ok !== true ||
+            result.mode !== "dry-run" ||
+            Number(counters.inspected) < 1 ||
+            Number(counters.requiresUpdate) !== 0 ||
+            Number(counters.alreadyCurrent) !== Number(counters.inspected) ||
+            Number(counters.skippedMissingAuthUser) !== 0 ||
+            Number(counters.failures) !== 0
+          ) {
+            throw new Error("Production Auth metadata verification failed.");
+          }
+          NODE
+
+          response_code="$(
+            curl --silent --show-error \
+              --output "$RUNNER_TEMP/staff-security-postgrest.json" \
+              --write-out "%{http_code}" \
+              --header "apikey: ${SUPABASE_SECRET_KEY:-$SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SECRET_KEY:-$SUPABASE_SERVICE_ROLE_KEY}" \
+              "$SUPABASE_URL/rest/v1/staff_users?select=id,status,role,permission_version,security_version,mfa_required&limit=1"
+          )"
+          test "$response_code" = "200"
+          rm -f "$RUNNER_TEMP/staff-security-postgrest.json"
+
+      - name: Record sanitized reconciliation summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Production Admin Staff Security Reconciliation'
+            echo
+            echo "- Source commit: \`${{ inputs.source_commit }}\`"
+            echo "- Target project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Canonical migration: \`20260726091000_add_staff_security_state_v2\`"
+            echo "- Schema operation: additive, idempotent, forward-only"
+            echo "- Auth operation: controlled app_metadata reconciliation"
+            echo "- Application rows changed: no"
+            echo "- Edge Functions deployed: no"
+            echo "- Credentials or cryptographic keys rotated: no"
+            echo "- Raw identifiers or email addresses recorded: no"
+          } >> "$GITHUB_STEP_SUMMARY"

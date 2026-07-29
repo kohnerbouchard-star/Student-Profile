@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "roadmapItem": "BETA-PROD-ADMIN-LOGIN-005",
+  "purpose": "reconcile-production-admin-staff-security-schema-and-auth-metadata",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "canonicalMigration": {
+    "version": "20260726091000",
+    "name": "add_staff_security_state_v2",
+    "path": "backend/supabase/migrations/20260726091000_add_staff_security_state_v2.sql",
+    "gitBlobSha": "9146d65204f7fcc045247ca5593f3e88e984ac36"
+  },
+  "requiredStaffColumns": [
+    "status",
+    "role",
+    "permission_version",
+    "security_version",
+    "mfa_required",
+    "security_hold_reason",
+    "suspended_at",
+    "compromised_at"
+  ],
+  "requiredStaffConstraints": [
+    "staff_users_status_check",
+    "staff_users_role_check",
+    "staff_users_permission_version_check",
+    "staff_users_security_version_check",
+    "staff_users_security_hold_reason_check",
+    "staff_users_security_state_check"
+  ],
+  "requiredAuthMetadataKeys": [
+    "econovaria_role",
+    "permission_version",
+    "security_version",
+    "econovaria_account_status",
+    "econovaria_mfa_required"
+  ],
+  "staffSchemaWritesAllowed": true,
+  "authAppMetadataWritesAllowed": true,
+  "applicationRowWritesAllowed": false,
+  "edgeFunctionDeploymentAllowed": false,
+  "credentialRotationAllowed": false,
+  "destructiveChangesAllowed": false,
+  "rollbackStrategy": "forward-only-idempotent-rerun",
+  "postconditions": [
+    "the exact canonical migration is recorded once in the migration ledger",
+    "all required staff security columns and constraints exist",
+    "every linked staff row has a valid active authorization state",
+    "every linked Auth user has app_metadata matching the database role and versions",
+    "PostgREST can select the canonical staff security projection",
+    "no raw identifiers, email addresses, credentials, or tokens are emitted"
+  ],
+  "evidencePolicy": {
+    "recordSecretValues": false,
+    "recordRawIdentifiers": false,
+    "recordEmailAddresses": false,
+    "recordOnlyAggregateCountsAndBooleanPostconditions": true
+  }
+}
