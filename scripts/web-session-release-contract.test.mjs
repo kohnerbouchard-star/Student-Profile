@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRYPOINT = "backend/supabase/functions/web-session-api/index.ts";
+const CANDIDATE_WORKFLOW = ".github/workflows/production-web-session-hotfix.yml";
 const DEPLOY_WORKFLOW = ".github/workflows/production-web-session-deploy.yml";
 const SECRET_WORKFLOW = ".github/workflows/production-web-session-secrets.yml";
 const DATABASE_WORKFLOW = ".github/workflows/production-web-session-database-reconcile.yml";
@@ -49,16 +50,39 @@ test("web-session source is a complete repository-local module graph", () => {
   assert.ok(graph.size >= 8, `unexpectedly small web-session graph: ${graph.size}`);
 });
 
-test("production deployment is manual, protected, immutable and bounded", () => {
+test("staging candidate is main-bound and built from the tracked Git tree", () => {
+  const workflow = read(CANDIDATE_WORKFLOW);
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
+  assert.match(workflow, /git archive/u);
+  assert.match(workflow, /"\$source_commit:backend"/u);
+  assert.match(workflow, /trackedGitTreeOnly:\s*true/u);
+  assert.match(workflow, /SOURCE_FUNCTION_NAME:\s*web-session-api/u);
+  assert.match(workflow, /CANDIDATE_FUNCTION_NAME:\s*web-session-api/u);
+  assert.match(workflow, /test "\$SOURCE_FUNCTION_NAME" = "\$CANDIDATE_FUNCTION_NAME"/u);
+  assert.doesNotMatch(workflow, /web-session-api-repair-candidate/u);
+  assert.match(workflow, /environment:\s*staging/u);
+  assert.match(workflow, /--project-ref "\$EXPECTED_STAGING_PROJECT_REF"/u);
+  assert.match(workflow, /\/health/u);
+  assert.match(workflow, /Invalid input: `400 controlled`/u);
+});
+
+test("production deployment is manual, protected, reproducible and bounded", () => {
   const workflow = read(DEPLOY_WORKFLOW);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /^\s*push:/mu);
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(workflow, /environment:\s*production/u);
   assert.match(workflow, /EXPECTED_PRODUCTION_PROJECT_REF:\s*cgiukdjwicykrmtkhudh/u);
   assert.match(workflow, /DENIED_STAGING_PROJECT_REF:\s*eecvbssdvarfcykcfrny/u);
   assert.match(workflow, /candidate_run_id:/u);
   assert.match(workflow, /candidate_digest:/u);
+  assert.match(workflow, /git archive/u);
+  assert.match(workflow, /cmp --silent/u);
+  assert.match(workflow, /trackedGitTreeOnly:\s*true/u);
   assert.match(workflow, /sha256sum\s+--check/u);
+  assert.match(workflow, /Verify production bundle digest matches staging/u);
+  assert.match(workflow, /test "\$DEPLOYED_DIGEST" =/u);
   assert.match(workflow, /supabase functions deploy "\$FUNCTION_NAME"/u);
   assert.match(workflow, /--project-ref "\$EXPECTED_PRODUCTION_PROJECT_REF"/u);
   assert.match(workflow, /--no-verify-jwt/u);
@@ -69,10 +93,11 @@ test("production deployment is manual, protected, immutable and bounded", () => 
   assert.match(workflow, /Real administrator login: `required before incident closure`/u);
 });
 
-test("production secret provisioning is manual and missing-only", () => {
+test("production secret provisioning is main-bound and missing-only", () => {
   const workflow = read(SECRET_WORKFLOW);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /^\s*push:/mu);
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(workflow, /environment:\s*production/u);
   assert.match(workflow, /ECONOVARIA_RATE_LIMIT_HMAC_SECRET/u);
   assert.match(workflow, /ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY/u);
@@ -84,13 +109,19 @@ test("production secret provisioning is manual and missing-only", () => {
   assert.doesNotMatch(workflow, /echo\s+"?\$session_key/u);
 });
 
-test("database reconciliation is manual, digest-bound and non-destructive", () => {
+test("database reconciliation is main-bound, atomic, digest-bound and non-destructive", () => {
   const workflow = read(DATABASE_WORKFLOW);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /^\s*push:/mu);
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(workflow, /environment:\s*production/u);
   assert.match(workflow, /SUPABASE_DB_URL/u);
   assert.match(workflow, /git\s+hash-object/u);
+  assert.match(workflow, /web-session-reconciliation\.sql/u);
+  assert.match(workflow, /'begin;'/u);
+  assert.match(workflow, /'commit;'/u);
+  assert.match(workflow, /supabase_migrations\.schema_migrations/u);
+  assert.match(workflow, /ledgerRecordedOnce/u);
   assert.match(workflow, /psql\s+"\$SUPABASE_DB_URL"/u);
   assert.match(workflow, /Application-data SQL rejected/u);
   assert.match(workflow, /authenticatorDenied/u);
@@ -100,7 +131,10 @@ test("database reconciliation is manual, digest-bound and non-destructive", () =
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.targetProjectRef, "cgiukdjwicykrmtkhudh");
   assert.ok(manifest.deniedProjectRefs.includes("eecvbssdvarfcykcfrny"));
+  assert.match(manifest.reconciliationVersion, /^\d{14}$/u);
+  assert.match(manifest.reconciliationName, /^[a-z0-9_]{1,96}$/u);
   assert.equal(manifest.productionDataWritesAllowed, false);
+  assert.equal(manifest.migrationLedgerWriteAllowed, true);
   assert.equal(manifest.destructiveChangesAllowed, false);
   assert.equal(manifest.orderedCanonicalMigrations.length, 6);
   for (const item of manifest.orderedCanonicalMigrations) {
@@ -120,6 +154,7 @@ test("authorization manifest denies staging and limits production scope", () => 
   assert.equal(manifest.targetProjectRef, "cgiukdjwicykrmtkhudh");
   assert.ok(manifest.deniedProjectRefs.includes("eecvbssdvarfcykcfrny"));
   assert.equal(manifest.functionName, "web-session-api");
+  assert.equal(manifest.stagingFunctionName, manifest.functionName);
   assert.equal(manifest.verifyJwt, false);
   assert.equal(manifest.customAuthenticationRequired, true);
   assert.equal(manifest.databaseChangesAllowed, true);
