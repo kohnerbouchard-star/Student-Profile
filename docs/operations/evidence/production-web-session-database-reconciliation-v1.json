@@ -5,13 +5,17 @@
   "deniedProjectRefs": [
     "eecvbssdvarfcykcfrny"
   ],
+  "reconciliationVersion": "20260729033000",
+  "reconciliationName": "reconcile_production_web_session_security_v1",
   "productionDataWritesAllowed": false,
+  "migrationLedgerWriteAllowed": true,
   "destructiveChangesAllowed": false,
   "allowedObjectFamilies": [
     "request_rate_limit_buckets",
     "authentication_throttle_buckets",
     "consume_pre_auth_request_rate_limits_v1",
-    "authentication throttle service-role RPCs"
+    "authentication throttle service-role RPCs",
+    "supabase_migrations.schema_migrations reconciliation entry"
   ],
   "orderedCanonicalMigrations": [
     {
@@ -40,6 +44,8 @@
     }
   ],
   "postconditions": [
+    "all six canonical definitions commit atomically",
+    "reconciliation version is recorded once in the migration ledger",
     "all four web-session RPC names resolve through PostgREST",
     "service_role can execute each RPC",
     "anon cannot execute each RPC",
