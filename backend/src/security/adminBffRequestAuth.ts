@@ -490,6 +490,7 @@ function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | n
     ["localhost", "127.0.0.1"].includes(url.hostname) &&
     ["http:", "https:"].includes(url.protocol)
   ) return "local";
+  if (url.protocol === "http:" && url.hostname === "kong") return "local";
   if (url.protocol !== "https:") return null;
   if (url.hostname === `${PRODUCTION_PROJECT_REF}.supabase.co`) return "production";
   if (url.hostname === `${STAGING_PROJECT_REF}.supabase.co`) return "preview";
@@ -500,7 +501,7 @@ function isLocalRequest(request: Request): boolean {
   try {
     const target = new URL(request.url);
     const origin = new URL(String(request.headers.get("origin") || ""));
-    return ["localhost", "127.0.0.1"].includes(target.hostname) &&
+    return ["localhost", "127.0.0.1", "kong"].includes(target.hostname) &&
       ["localhost", "127.0.0.1"].includes(origin.hostname) &&
       origin.protocol === "http:";
   } catch {
