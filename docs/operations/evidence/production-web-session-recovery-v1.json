@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "purpose": "recover-production-web-session-with-reviewed-artifact",
+  "sourceBranch": "main",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "functionName": "web-session-api",
+  "stagingCandidateFunctionName": "web-session-api-repair-candidate",
+  "verifyJwt": false,
+  "customAuthenticationRequired": true,
+  "productionOrigin": "https://econovaria.vercel.app",
+  "databaseChangesAllowed": true,
+  "allowedDatabaseChanges": [
+    "canonical web-session request-rate-limit contracts",
+    "canonical authentication-throttle contracts"
+  ],
+  "otherFunctionsAllowed": false,
+  "productionDataWritesAllowed": false,
+  "secretValuesRecorded": false,
+  "overwriteExistingCryptographicKeys": false,
+  "productionDeployRequiresManualApproval": true,
+  "requiredVerification": [
+    "repository-local module graph",
+    "no private remote imports",
+    "no data URL imports",
+    "staging health 200",
+    "staging invalid body 400",
+    "staging invalid credentials controlled 401 or 429",
+    "production health 200",
+    "production Vercel proxy invalid body 400",
+    "real administrator login",
+    "status and CSRF validation",
+    "logout and cookie deletion"
+  ],
+  "rollback": {
+    "required": true,
+    "strategy": "restore the previously recorded active Edge Function version and stop promotion"
+  }
+}
