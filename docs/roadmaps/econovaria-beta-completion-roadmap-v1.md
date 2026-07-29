@@ -74,4 +74,18 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Validation: `npm run audit:assets`; JavaScript syntax check; whitespace validation; computed responsive crop confirms approximately 262×204 px of visible artwork inside a 312×212 px header window.
   - Staging/runtime evidence: merged after required repository and browser checks; production asset wiring remains unchanged.
   - Unresolved blocker: none.
-  - Next exact roadmap item: none.
+  - Next exact roadmap item: `BETA-BRAND-LOGIN-005`.
+
+- **`BETA-BRAND-LOGIN-005` — Reduce the enlarged login logo treatment**
+  - Status: `IN_PROGRESS`
+  - Owner branch: `fix/login-logo-sizing-v2`
+  - Pull request: not opened.
+  - Implementation commit: pending.
+  - Dependencies: `BETA-BRAND-LOGIN-004`, merged by PR #413.
+  - Beta impact: visual branding only; no feature semantics, authentication, API, database, asset, favicon, or production-deployment change.
+  - Implementation files: `index.html` and `scripts/login-surface-browser-smoke.mjs`.
+  - Migrations, routes, and RPCs: none.
+  - Validation: pending focused asset, syntax, whitespace, and responsive crop checks.
+  - Staging/runtime evidence: pending CI browser validation; production is unchanged.
+  - Unresolved blocker: none.
+  - Next exact roadmap item: reduce the rendered login logo image width from 500 px to the product-owner-selected 400 px and validate the matching browser bounds.
