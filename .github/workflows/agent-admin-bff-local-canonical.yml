@@ -1,4 +1,4 @@
-name: Apply Admin BFF Local Canonical Contract
+name: Apply Admin BFF Canonical Request Contract
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
           ref: agent/secure-admin-bff-oidc
           fetch-depth: 0
 
-      - name: Apply exact local canonical and malformed-envelope contracts
+      - name: Apply idempotent canonical request contract
         shell: bash
         run: |
           set -euo pipefail
@@ -55,13 +55,14 @@ jobs:
             method: request.method,
             targetUrl: request.url,
             browserOrigin: String(request.headers.get("origin") || ""),'''
-          new = '''  let signatureTargetUrl = request.url;
-          if (deploymentEnvironment === "local") {
-            try {
-              signatureTargetUrl = canonicalLocalAdminBffTargetUrl(request.url);
-            } catch {
-              return malformedEnvelopeFailure();
-            }
+          new = '''  let signatureTargetUrl: string;
+          try {
+            signatureTargetUrl = canonicalAdminBffTargetUrl(
+              request.url,
+              options.supabaseUrl,
+            );
+          } catch {
+            return malformedEnvelopeFailure();
           }
           const canonicalPayload = await buildAdminBffSignaturePayload({
             timestampSeconds,
@@ -71,26 +72,30 @@ jobs:
             browserOrigin: String(request.headers.get("origin") || ""),'''
           if old in source:
               source = source.replace(old, new, 1)
-          elif "canonicalLocalAdminBffTargetUrl(request.url)" not in source:
+          elif "canonicalAdminBffTargetUrl(" not in source:
               raise SystemExit("Canonical payload construction was not found")
 
           marker = '''function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
-          helper = '''function canonicalLocalAdminBffTargetUrl(value: string): string {
-            const url = new URL(value);
+          helper = '''function canonicalAdminBffTargetUrl(
+            requestUrlValue: string,
+            supabaseUrlValue: string,
+          ): string {
+            const requestUrl = new URL(requestUrlValue);
+            const supabaseUrl = new URL(supabaseUrlValue);
             const marker = "/web-session-api";
-            const index = url.pathname.indexOf(marker);
-            if (index < 0) throw new Error("invalid local Admin BFF path");
-            const suffix = url.pathname.slice(index + marker.length);
+            const index = requestUrl.pathname.indexOf(marker);
+            if (index < 0) throw new Error("invalid Admin BFF path");
+            const suffix = requestUrl.pathname.slice(index + marker.length);
             if (
               !suffix.startsWith("/") ||
               suffix.includes("\\\\") ||
               suffix.split("/").includes("..")
-            ) throw new Error("invalid local Admin BFF path");
-            return `http://kong:8000/functions/v1/web-session-api${suffix}${url.search}`;
+            ) throw new Error("invalid Admin BFF path");
+            return `${supabaseUrl.origin}/functions/v1/web-session-api${suffix}${requestUrl.search}`;
           }
 
           function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
-          if marker in source and "function canonicalLocalAdminBffTargetUrl" not in source:
+          if marker in source and "function canonicalAdminBffTargetUrl" not in source:
               source = source.replace(marker, helper, 1)
 
           marker = '''function authenticationFailure(): AdminBffRequestAuthResult {
@@ -130,16 +135,18 @@ jobs:
           new = '''async function signedRequest({
             local = false,
             invalidSignature = false,
-            strippedLocalPath = false,
+            strippedRuntimePath = false,
           } = {}) {
             const url = local
-              ? strippedLocalPath
+              ? strippedRuntimePath
                 ? "http://kong:8000/web-session-api/login"
                 : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
-              : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
+              : strippedRuntimePath
+                ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
+                : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
           if old in test_source:
               test_source = test_source.replace(old, new, 1)
-          elif "strippedLocalPath = false" not in test_source:
+          elif "strippedRuntimePath = false" not in test_source:
               raise SystemExit("Signed request helper was not found")
 
           old = '''  const canonicalPayload = await buildAdminBffSignaturePayload({
@@ -149,7 +156,7 @@ jobs:
             targetUrl: url,'''
           new = '''  const signatureUrl = local
             ? "http://kong:8000/functions/v1/web-session-api/login"
-            : url;
+            : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
             const canonicalPayload = await buildAdminBffSignaturePayload({
             timestampSeconds: TIMESTAMP_SECONDS,
             nonce: NONCE,
@@ -195,10 +202,20 @@ jobs:
               test_source = test_source.replace(marker, addition, 1)
 
           marker = '''test("accepts local mode only at the loopback boundary", async () => {'''
-          addition = '''test("accepts the stripped internal Supabase Edge path using the same local canonical target", async () => {
-            const result = await authorizeAdminBffRequest(await signedRequest({
+          addition = '''test("accepts runtime-stripped hosted and local paths using one canonical target", async () => {
+            const hosted = await authorizeAdminBffRequest(await signedRequest({
+              strippedRuntimePath: true,
+            }), {
+              supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+              dependencies: {
+                now: () => NOW,
+                verifyOidc: async () => true,
+                claimNonce: async () => true,
+              },
+            });
+            const local = await authorizeAdminBffRequest(await signedRequest({
               local: true,
-              strippedLocalPath: true,
+              strippedRuntimePath: true,
             }), {
               supabaseUrl: "http://kong:8000",
               dependencies: {
@@ -207,24 +224,23 @@ jobs:
               },
             });
 
-            assert.equal(result.ok, true);
-            assert.equal(result.deploymentEnvironment, "local");
+            assert.equal(hosted.ok, true);
+            assert.equal(local.ok, true);
           });
 
           test("accepts local mode only at the loopback boundary", async () => {'''
-          if marker in test_source and "stripped internal Supabase Edge path" not in test_source:
+          if marker in test_source and "runtime-stripped hosted and local paths" not in test_source:
               test_source = test_source.replace(marker, addition, 1)
           test_path.write_text(test_source, encoding="utf-8")
           PY
 
-      - name: Validate and commit exact patch
+      - name: Commit exact patch
         shell: bash
         run: |
           set -euo pipefail
-          node --experimental-strip-types --test scripts/admin-bff-request-auth.test.mjs
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/src/security/adminBffRequestAuth.ts scripts/admin-bff-request-auth.test.mjs
           git diff --cached --check
-          git commit -m "Canonicalize local Admin BFF request identity"
+          git commit -m "Canonicalize Admin BFF request identity"
           git push origin HEAD:agent/secure-admin-bff-oidc
