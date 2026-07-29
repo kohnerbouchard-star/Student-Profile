@@ -105,6 +105,12 @@ test("production secret provisioning is main-bound and missing-only", () => {
   assert.match(workflow, /ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY/u);
   assert.match(workflow, /ECONOVARIA_WEB_ALLOWED_ORIGINS/u);
   assert.match(workflow, /ECONOVARIA_TRUSTED_CLIENT_IP_HEADER/u);
+  assert.match(workflow, /TRUSTED_CLIENT_IP_HEADER:\s*cf-connecting-ip/u);
+  assert.match(
+    workflow,
+    /test "\$TRUSTED_CLIENT_IP_HEADER" = "cf-connecting-ip"/u,
+  );
+  assert.doesNotMatch(workflow, /TRUSTED_CLIENT_IP_HEADER:\s*x-real-ip/u);
   assert.match(workflow, /if ! grep -q 'ECONOVARIA_RATE_LIMIT_HMAC_SECRET'/u);
   assert.match(workflow, /if ! grep -q 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY'/u);
   assert.doesNotMatch(workflow, /echo\s+"?\$rate_key/u);
