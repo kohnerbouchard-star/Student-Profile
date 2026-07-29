@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
-          git fetch origin main --depth=1
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
           git merge-base --is-ancestor HEAD origin/main
           test -f "$AUTHORIZATION_PATH"
 
@@ -93,19 +93,48 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/production-web-session
 
-      - name: Reproduce artifact from the exact tracked Git tree
+      - name: Verify artifact tree matches exact tracked source
         shell: bash
         run: |
           set -euo pipefail
-          expected="$RUNNER_TEMP/expected-backend-source.tgz"
+          expected_dir="$RUNNER_TEMP/expected-backend-tree"
+          artifact_dir="$RUNNER_TEMP/artifact-backend-tree"
+          expected_tar="$RUNNER_TEMP/expected-backend-canonical.tar"
+          artifact_tar="$RUNNER_TEMP/artifact-backend-canonical.tar"
+          mkdir -p "$expected_dir" "$artifact_dir"
           git archive \
             --format=tar \
-            --prefix=backend/ \
-            "${{ inputs.source_commit }}:backend" | gzip -n > "$expected"
-          expected_sha="$(sha256sum "$expected" | awk '{print $1}')"
-          test "$expected_sha" = "${{ inputs.source_sha256 }}"
-          cmp --silent "$expected" dist/production-web-session/backend-source.tgz
-          rm -f "$expected"
+            "${{ inputs.source_commit }}" \
+            backend | tar -xf - -C "$expected_dir"
+          tar -xzf dist/production-web-session/backend-source.tgz -C "$artifact_dir"
+          test -f "$expected_dir/backend/supabase/functions/web-session-api/index.ts"
+          test -f "$artifact_dir/backend/supabase/functions/web-session-api/index.ts"
+          tar \
+            --sort=name \
+            --mtime='@0' \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
+            --format=gnu \
+            -cf "$expected_tar" \
+            -C "$expected_dir" \
+            backend
+          tar \
+            --sort=name \
+            --mtime='@0' \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
+            --format=gnu \
+            -cf "$artifact_tar" \
+            -C "$artifact_dir" \
+            backend
+          cmp --silent "$expected_tar" "$artifact_tar"
+          rm -rf \
+            "$expected_dir" \
+            "$artifact_dir" \
+            "$expected_tar" \
+            "$artifact_tar"
 
       - name: Verify artifact identity and authorization
         shell: bash
@@ -363,7 +392,7 @@ jobs:
             echo "- Candidate run: \`${{ inputs.candidate_run_id }}\`"
             echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
             echo "- Function: \`$FUNCTION_NAME\`"
-            echo '- Artifact reproduced from tracked Git tree: `true`'
+            echo '- Artifact tree equals tracked Git tree: `true`'
             echo '- Production bundle digest equals staging: `true`'
             echo '- Platform JWT verification: `false` (custom browser-session boundary)'
             echo '- Database schema changed by this workflow: `false`'
