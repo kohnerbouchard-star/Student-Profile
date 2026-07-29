@@ -20,214 +20,241 @@ jobs:
           ref: agent/secure-admin-bff-oidc
           fetch-depth: 0
 
-      - name: Apply exact reviewed patch
+      - name: Apply bounded source transformations
         shell: bash
         run: |
-          set -euo pipefail
-          cat > "$RUNNER_TEMP/admin-bff-canonical.patch" <<'PATCH'
-          diff --git a/backend/src/security/adminBffRequestAuth.ts b/backend/src/security/adminBffRequestAuth.ts
-          index d11d29a..0000000 100644
-          --- a/backend/src/security/adminBffRequestAuth.ts
-          +++ b/backend/src/security/adminBffRequestAuth.ts
-          @@ -149,7 +149,7 @@ export async function authorizeAdminBffRequest(
-               !UUID_V4_PATTERN.test(nonce) ||
-               !signatureMatch
-             ) {
-          -    return authenticationFailure();
-          +    return malformedEnvelopeFailure();
-             }
-           
-             const timestampSeconds = Number(timestampText);
-          @@ -207,11 +207,20 @@ export async function authorizeAdminBffRequest(
-               );
-             }
-           
-          +  let signatureTargetUrl: string;
-          +  try {
-          +    signatureTargetUrl = canonicalAdminBffTargetUrl(
-          +      request.url,
-          +      options.supabaseUrl,
-          +    );
-          +  } catch {
-          +    return malformedEnvelopeFailure();
-          +  }
-             const canonicalPayload = await buildAdminBffSignaturePayload({
-               timestampSeconds,
-               nonce,
-               method: request.method,
-          -    targetUrl: request.url,
-          +    targetUrl: signatureTargetUrl,
-               browserOrigin: String(request.headers.get("origin") || ""),
-               clientIp,
-               headers: request.headers,
-          @@ -481,6 +490,29 @@ function normalizeIpAddress(value: string): string {
-             return hostname.slice(1, -1).toLowerCase();
-           }
-           
-          +function canonicalAdminBffTargetUrl(
-          +  requestUrlValue: string,
-          +  supabaseUrlValue: string,
-          +): string {
-          +  const requestUrl = new URL(requestUrlValue);
-          +  const supabaseUrl = new URL(supabaseUrlValue);
-          +  const prefixes = [
-          +    "/functions/v1/web-session-api",
-          +    "/web-session-api",
-          +  ] as const;
-          +  const prefix = prefixes.find((candidate) =>
-          +    requestUrl.pathname.startsWith(candidate)
-          +  );
-          +  if (!prefix) throw new Error("invalid Admin BFF path");
-          +  const suffix = requestUrl.pathname.slice(prefix.length);
-          +  if (
-          +    !suffix.startsWith("/") ||
-          +    suffix.includes("\\") ||
-          +    suffix.split("/").includes("..")
-          +  ) throw new Error("invalid Admin BFF path");
-          +  return `${supabaseUrl.origin}/functions/v1/web-session-api${suffix}${requestUrl.search}`;
-          +}
-          +
-           function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {
-             let url: URL;
-             try {
-          @@ -555,6 +587,15 @@ function ownedArrayBuffer(value: Uint8Array): ArrayBuffer {
-             return copy.buffer;
-           }
-           
-          +function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
-          +  return failure(
-          +    400,
-          +    "admin_bff_envelope_invalid",
-          +    "Administrator request envelope is missing or invalid.",
-          +  );
-          +}
-          +
-           function authenticationFailure(): AdminBffRequestAuthResult {
-             return failure(
-               401,
-          diff --git a/scripts/admin-bff-request-auth.test.mjs b/scripts/admin-bff-request-auth.test.mjs
-          index 122ed61..0000000 100644
-          --- a/scripts/admin-bff-request-auth.test.mjs
-          +++ b/scripts/admin-bff-request-auth.test.mjs
-          @@ -17,10 +17,19 @@ const NONCE = "123e4567-e89b-42d3-a456-426614174000";
-           const BODY = Buffer.from(JSON.stringify({ email: "a@b.co", password: "test" }));
-           const SIGNING_KEY_CONTEXT = "econovaria-admin-bff-signing-key-v1";
-           
-          -async function signedRequest({ local = false, invalidSignature = false } = {}) {
-          +async function signedRequest({
-          +  local = false,
-          +  invalidSignature = false,
-          +  strippedRuntimePath = false,
-          +} = {}) {
-             const url = local
-          -    ? "http://127.0.0.1:54321/functions/v1/web-session-api/login"
-          -    : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
-          +    ? strippedRuntimePath
-          +      ? "http://kong:8000/web-session-api/login"
-          +      : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
-          +    : strippedRuntimePath
-          +      ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
-          +      : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
-             const origin = local
-               ? "http://127.0.0.1:4173"
-               : "https://econovaria.vercel.app";
-          @@ -34,11 +43,14 @@ async function signedRequest({ local = false, invalidSignature = false } = {}) {
-             if (local) headers.set(ADMIN_BFF_AUTH_HEADERS.mode, "local");
-             else headers.set("authorization", `Bearer ${TOKEN}`);
-           
-          +  const signatureUrl = local
-          +    ? "http://kong:8000/functions/v1/web-session-api/login"
-          +    : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
-             const canonicalPayload = await buildAdminBffSignaturePayload({
-               timestampSeconds: TIMESTAMP_SECONDS,
-               nonce: NONCE,
-               method: "POST",
-          -    targetUrl: url,
-          +    targetUrl: signatureUrl,
-               browserOrigin: origin,
-               clientIp: "203.0.113.25",
-               headers,
-          @@ -82,6 +94,37 @@ test("accepts an exact hosted Vercel request and rewrites trusted IP", async () =
-             assert.equal(nonceClaim.runnerName, "admin-bff-vercel");
-           });
-           
-          +test("rejects a request missing the signed BFF envelope as malformed", async () => {
-          +  let claimed = false;
-          +  const result = await authorizeAdminBffRequest(new Request(
-          +    "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login",
-          +    {
-          +      method: "POST",
-          +      headers: {
-          +        origin: "https://econovaria.vercel.app",
-          +        "content-type": "application/json",
-          +      },
-          +      body: BODY,
-          +    },
-          +  ), {
-          +    supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
-          +    dependencies: {
-          +      now: () => NOW,
-          +      verifyOidc: async () => true,
-          +      claimNonce: async () => {
-          +        claimed = true;
-          +        return true;
-          +      },
-          +    },
-          +  });
-          +
-          +  assert.equal(result.ok, false);
-          +  assert.equal(result.response.status, 400);
-          +  assert.equal(claimed, false);
-          +});
-          +
-           test("rejects a modified request before claiming its nonce", async () => {
-             let claimed = false;
-             const result = await authorizeAdminBffRequest(
-          @@ -132,6 +175,34 @@ test("rejects a stale signed request", async () => {
-             assert.equal(result.response.status, 401);
-           });
-           
-          +test("accepts runtime-stripped hosted and local paths using one canonical target", async () => {
-          +  const hosted = await authorizeAdminBffRequest(await signedRequest({
-          +    strippedRuntimePath: true,
-          +  }), {
-          +    supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
-          +    dependencies: {
-          +      now: () => NOW,
-          +      verifyOidc: async () => true,
-          +      claimNonce: async () => true,
-          +    },
-          +  });
-          +  const local = await authorizeAdminBffRequest(await signedRequest({
-          +    local: true,
-          +    strippedRuntimePath: true,
-          +  }), {
-          +    supabaseUrl: "http://kong:8000",
-          +    dependencies: {
-          +      now: () => NOW,
-          +      claimNonce: async () => true,
-          +    },
-          +  });
-          +
-          +  assert.equal(hosted.ok, true);
-          +  assert.equal(local.ok, true);
-          +});
-          +
-           test("accepts local mode only at the loopback boundary", async () => {
-             const result = await authorizeAdminBffRequest(await signedRequest({ local: true }), {
-               supabaseUrl: "http://kong:8000",
-          PATCH
-          git apply --check "$RUNNER_TEMP/admin-bff-canonical.patch"
-          git apply "$RUNNER_TEMP/admin-bff-canonical.patch"
+          set -u
+          python3 - <<'PY'
+          from pathlib import Path
+          import traceback
 
-      - name: Commit patch and remove one-time workflow
+          status = Path(".agent-admin-bff-patch-status.txt")
+          try:
+              auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
+              source = auth_path.read_text(encoding="utf-8")
+
+              old = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return authenticationFailure();
+          }'''
+              new = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return malformedEnvelopeFailure();
+          }'''
+              if source.count(old) != 1:
+                  raise RuntimeError(f"malformed-envelope branch count={source.count(old)}")
+              source = source.replace(old, new, 1)
+
+              old = '''  const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds,
+            nonce,
+            method: request.method,
+            targetUrl: request.url,
+            browserOrigin: String(request.headers.get("origin") || ""),'''
+              new = '''  let signatureTargetUrl: string;
+          try {
+            signatureTargetUrl = canonicalAdminBffTargetUrl(
+              request.url,
+              options.supabaseUrl,
+            );
+          } catch {
+            return malformedEnvelopeFailure();
+          }
+          const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds,
+            nonce,
+            method: request.method,
+            targetUrl: signatureTargetUrl,
+            browserOrigin: String(request.headers.get("origin") || ""),'''
+              if source.count(old) != 1:
+                  raise RuntimeError(f"canonical payload block count={source.count(old)}")
+              source = source.replace(old, new, 1)
+
+              marker = '''function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
+              helper = '''function canonicalAdminBffTargetUrl(
+            requestUrlValue: string,
+            supabaseUrlValue: string,
+          ): string {
+            const requestUrl = new URL(requestUrlValue);
+            const supabaseUrl = new URL(supabaseUrlValue);
+            const prefixes = [
+              "/functions/v1/web-session-api",
+              "/web-session-api",
+            ] as const;
+            const prefix = prefixes.find((candidate) =>
+              requestUrl.pathname.startsWith(candidate)
+            );
+            if (!prefix) throw new Error("invalid Admin BFF path");
+            const suffix = requestUrl.pathname.slice(prefix.length);
+            if (
+              !suffix.startsWith("/") ||
+              suffix.includes("\\\\") ||
+              suffix.split("/").includes("..")
+            ) throw new Error("invalid Admin BFF path");
+            return `${supabaseUrl.origin}/functions/v1/web-session-api${suffix}${requestUrl.search}`;
+          }
+
+          function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {'''
+              if source.count(marker) != 1:
+                  raise RuntimeError(f"environment helper marker count={source.count(marker)}")
+              source = source.replace(marker, helper, 1)
+
+              marker = '''function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+              replacement = '''function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
+            return failure(
+              400,
+              "admin_bff_envelope_invalid",
+              "Administrator request envelope is missing or invalid.",
+            );
+          }
+
+          function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+              if source.count(marker) != 1:
+                  raise RuntimeError(f"authentication helper marker count={source.count(marker)}")
+              auth_path.write_text(source.replace(marker, replacement, 1), encoding="utf-8")
+
+              test_path = Path("scripts/admin-bff-request-auth.test.mjs")
+              tests = test_path.read_text(encoding="utf-8")
+              old = '''async function signedRequest({ local = false, invalidSignature = false } = {}) {
+            const url = local
+              ? "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+              : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
+              new = '''async function signedRequest({
+            local = false,
+            invalidSignature = false,
+            strippedRuntimePath = false,
+          } = {}) {
+            const url = local
+              ? strippedRuntimePath
+                ? "http://kong:8000/web-session-api/login"
+                : "http://127.0.0.1:54321/functions/v1/web-session-api/login"
+              : strippedRuntimePath
+                ? "https://cgiukdjwicykrmtkhudh.supabase.co/web-session-api/login"
+                : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";'''
+              if tests.count(old) != 1:
+                  raise RuntimeError(f"signed request helper count={tests.count(old)}")
+              tests = tests.replace(old, new, 1)
+
+              old = '''  const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds: TIMESTAMP_SECONDS,
+            nonce: NONCE,
+            method: "POST",
+            targetUrl: url,'''
+              new = '''  const signatureUrl = local
+            ? "http://kong:8000/functions/v1/web-session-api/login"
+            : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
+          const canonicalPayload = await buildAdminBffSignaturePayload({
+            timestampSeconds: TIMESTAMP_SECONDS,
+            nonce: NONCE,
+            method: "POST",
+            targetUrl: signatureUrl,'''
+              if tests.count(old) != 1:
+                  raise RuntimeError(f"test canonical block count={tests.count(old)}")
+              tests = tests.replace(old, new, 1)
+
+              marker = '''test("rejects a modified request before claiming its nonce", async () => {'''
+              addition = '''test("rejects a request missing the signed BFF envelope as malformed", async () => {
+            let claimed = false;
+            const result = await authorizeAdminBffRequest(new Request(
+              "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login",
+              {
+                method: "POST",
+                headers: {
+                  origin: "https://econovaria.vercel.app",
+                  "content-type": "application/json",
+                },
+                body: BODY,
+              },
+            ), {
+              supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+              dependencies: {
+                now: () => NOW,
+                verifyOidc: async () => true,
+                claimNonce: async () => {
+                  claimed = true;
+                  return true;
+                },
+              },
+            });
+
+            assert.equal(result.ok, false);
+            assert.equal(result.response.status, 400);
+            assert.equal(claimed, false);
+          });
+
+          test("rejects a modified request before claiming its nonce", async () => {'''
+              if tests.count(marker) != 1:
+                  raise RuntimeError(f"modified request marker count={tests.count(marker)}")
+              tests = tests.replace(marker, addition, 1)
+
+              marker = '''test("accepts local mode only at the loopback boundary", async () => {'''
+              addition = '''test("accepts runtime-stripped hosted and local paths using one canonical target", async () => {
+            const hosted = await authorizeAdminBffRequest(await signedRequest({
+              strippedRuntimePath: true,
+            }), {
+              supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+              dependencies: {
+                now: () => NOW,
+                verifyOidc: async () => true,
+                claimNonce: async () => true,
+              },
+            });
+            const local = await authorizeAdminBffRequest(await signedRequest({
+              local: true,
+              strippedRuntimePath: true,
+            }), {
+              supabaseUrl: "http://kong:8000",
+              dependencies: {
+                now: () => NOW,
+                claimNonce: async () => true,
+              },
+            });
+
+            assert.equal(hosted.ok, true);
+            assert.equal(local.ok, true);
+          });
+
+          test("accepts local mode only at the loopback boundary", async () => {'''
+              if tests.count(marker) != 1:
+                  raise RuntimeError(f"local request marker count={tests.count(marker)}")
+              test_path.write_text(tests.replace(marker, addition, 1), encoding="utf-8")
+              status.write_text("ok\n", encoding="utf-8")
+          except Exception:
+              status.write_text(traceback.format_exc(), encoding="utf-8")
+          PY
+
+      - name: Commit result
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/agent-admin-bff-local-canonical.yml
-          git add backend/src/security/adminBffRequestAuth.ts scripts/admin-bff-request-auth.test.mjs
-          git diff --cached --check
-          git commit -m "Canonicalize Admin BFF request identity"
+          if grep -qx 'ok' .agent-admin-bff-patch-status.txt; then
+            git rm .github/workflows/agent-admin-bff-local-canonical.yml
+            rm .agent-admin-bff-patch-status.txt
+            git add backend/src/security/adminBffRequestAuth.ts scripts/admin-bff-request-auth.test.mjs
+            git diff --cached --check
+            git commit -m "Canonicalize Admin BFF request identity"
+          else
+            git add .agent-admin-bff-patch-status.txt
+            git commit -m "Record Admin BFF patch diagnostic"
+          fi
           git push origin HEAD:agent/secure-admin-bff-oidc
