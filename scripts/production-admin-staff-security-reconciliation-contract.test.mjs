@@ -72,32 +72,19 @@ test("canonical migration remains additive, bounded, and Staff-only", () => {
   );
 });
 
-test("workflow requires an exact protected source and production authorization", () => {
+test("workflow requires merged main, exact project confirmation, and production protection", () => {
   assert.match(workflow, /^\s*workflow_dispatch:/mu);
-  assert.match(
-    workflow,
-    /^\s*push:\s*\n\s+branches:\s*\n\s+- main\s*\n\s+paths:\s*\n\s+- \.github\/workflows\/production-admin-staff-security-reconcile\.yml/mu,
-  );
-  assert.doesNotMatch(workflow, /^\s*pull_request:/mu);
+  assert.doesNotMatch(workflow, /^\s*(?:push|pull_request):/mu);
   assert.match(workflow, /environment: production/u);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/u);
+  assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(
     workflow,
-    /RUN_SOURCE_COMMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.source_commit \|\| github\.sha \}\}/u,
-  );
-  assert.match(workflow, /case "\$GITHUB_EVENT_NAME" in/u);
-  assert.match(workflow, /workflow_dispatch\)\s*\n\s+test "\$GITHUB_REF" = "refs\/heads\/main"/u);
-  assert.match(
-    workflow,
-    /push\)\s*\n\s+test "\$GITHUB_REF" = "refs\/heads\/main"\s*\n\s+test "\$GITHUB_SHA" = "\$RUN_SOURCE_COMMIT"/u,
+    /test "\$\{\{ inputs\.confirm_project_ref \}\}" = "\$EXPECTED_PRODUCTION_PROJECT_REF"/u,
   );
   assert.match(
     workflow,
-    /test "\$RUN_CONFIRM_PROJECT_REF" = "\$EXPECTED_PRODUCTION_PROJECT_REF"/u,
-  );
-  assert.match(
-    workflow,
-    /test "\$RUN_CONFIRM_ACTION" = "RECONCILE ADMIN STAFF SECURITY"/u,
+    /test "\$\{\{ inputs\.confirm_action \}\}" = "RECONCILE ADMIN STAFF SECURITY"/u,
   );
   assert.match(
     workflow,
