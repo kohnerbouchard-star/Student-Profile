@@ -281,7 +281,8 @@ jobs:
             --no-verify-jwt \
             --use-api
 
-      - name: Verify production bundle digest matches staging
+      - name: Verify deployed production source equals staging candidate
+        id: deployed_source
         shell: bash
         run: |
           set -euo pipefail
@@ -289,18 +290,73 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
             > "$RUNNER_TEMP/production-functions-after.json"
-          DEPLOYED_DIGEST="$(node - <<'NODE'
-          const rows = require(process.env.FUNCTIONS_PATH);
-          const row = rows.find((v) => v.slug === process.env.FUNCTION_NAME);
-          const digest = String(row?.ezbr_sha256 || '');
-          if (!/^[a-f0-9]{64}$/.test(digest) || row?.verify_jwt !== false) process.exit(1);
-          process.stdout.write(digest);
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$DENIED_STAGING_PROJECT_REF/functions/$CANDIDATE_FUNCTION_NAME/body" \
+            > "$RUNNER_TEMP/staging-function-body.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions/$FUNCTION_NAME/body" \
+            > "$RUNNER_TEMP/production-function-body.json"
+          node - <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+
+          const metadata = JSON.parse(fs.readFileSync(process.env.METADATA_PATH, 'utf8'));
+          const row = metadata.find((value) => value.slug === process.env.FUNCTION_NAME);
+          if (!row || row.verify_jwt !== false || row.status !== 'ACTIVE') {
+            throw new Error('Production function metadata is invalid.');
+          }
+
+          function bodyFiles(value) {
+            const candidates = [value?.files, value?.body?.files, value?.body, value];
+            const files = candidates.find(Array.isArray);
+            if (!files?.length) throw new Error('Deployed function body is empty.');
+            return files;
+          }
+
+          function canonicalSourceDigest(value) {
+            const names = new Set();
+            const rows = bodyFiles(value).map((file) => {
+              let name = String(file?.name || file?.path || '')
+                .replaceAll('\\', '/')
+                .replace(/^\.\//u, '');
+              if (name.startsWith('backend/')) name = name.slice('backend/'.length);
+              if (
+                !name ||
+                name.startsWith('/') ||
+                name.split('/').includes('..') ||
+                typeof file?.content !== 'string' ||
+                names.has(name)
+              ) {
+                throw new Error('Deployed function body contains an invalid file.');
+              }
+              names.add(name);
+              return { name, content: file.content };
+            }).sort((left, right) => left.name.localeCompare(right.name));
+            if (!rows.some((file) => file.name === 'supabase/functions/web-session-api/index.ts')) {
+              throw new Error('Deployed function entrypoint is missing.');
+            }
+            return crypto.createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+          }
+
+          const staging = JSON.parse(fs.readFileSync(process.env.STAGING_BODY_PATH, 'utf8'));
+          const production = JSON.parse(fs.readFileSync(process.env.PRODUCTION_BODY_PATH, 'utf8'));
+          const stagingDigest = canonicalSourceDigest(staging);
+          const productionDigest = canonicalSourceDigest(production);
+          if (stagingDigest !== productionDigest) {
+            throw new Error('Production deployed source differs from the staging candidate.');
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `canonical_digest=${productionDigest}\n`);
           NODE
-          )"
-          test "$DEPLOYED_DIGEST" = "${{ inputs.candidate_digest }}"
-          rm -f "$RUNNER_TEMP/production-functions-after.json"
+          rm -f \
+            "$RUNNER_TEMP/production-functions-after.json" \
+            "$RUNNER_TEMP/staging-function-body.json" \
+            "$RUNNER_TEMP/production-function-body.json"
         env:
-          FUNCTIONS_PATH: ${{ runner.temp }}/production-functions-after.json
+          METADATA_PATH: ${{ runner.temp }}/production-functions-after.json
+          STAGING_BODY_PATH: ${{ runner.temp }}/staging-function-body.json
+          PRODUCTION_BODY_PATH: ${{ runner.temp }}/production-function-body.json
 
       - name: Verify direct production startup and invalid-input contract
         shell: bash
@@ -389,11 +445,12 @@ jobs:
             echo "- Source commit: \`${{ inputs.source_commit }}\`"
             echo "- Source SHA-256: \`${{ inputs.source_sha256 }}\`"
             echo "- Staging candidate digest: \`${{ inputs.candidate_digest }}\`"
+            echo "- Canonical deployed-source digest: \`${{ steps.deployed_source.outputs.canonical_digest }}\`"
             echo "- Candidate run: \`${{ inputs.candidate_run_id }}\`"
             echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
             echo "- Function: \`$FUNCTION_NAME\`"
             echo '- Artifact tree equals tracked Git tree: `true`'
-            echo '- Production bundle digest equals staging: `true`'
+            echo '- Production deployed source equals staging: `true`'
             echo '- Platform JWT verification: `false` (custom browser-session boundary)'
             echo '- Database schema changed by this workflow: `false`'
             echo '- Other functions deployed: `false`'

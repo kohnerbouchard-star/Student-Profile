@@ -81,8 +81,10 @@ test("production deployment is manual, protected, reproducible and bounded", () 
   assert.match(workflow, /cmp --silent/u);
   assert.match(workflow, /trackedGitTreeOnly:\s*true/u);
   assert.match(workflow, /sha256sum\s+--check/u);
-  assert.match(workflow, /Verify production bundle digest matches staging/u);
-  assert.match(workflow, /test "\$DEPLOYED_DIGEST" =/u);
+  assert.match(workflow, /Verify deployed production source equals staging candidate/u);
+  assert.match(workflow, /\/functions\/\$FUNCTION_NAME\/body/u);
+  assert.match(workflow, /canonicalSourceDigest/u);
+  assert.match(workflow, /Production deployed source equals staging/u);
   assert.match(workflow, /supabase functions deploy "\$FUNCTION_NAME"/u);
   assert.match(workflow, /--project-ref "\$EXPECTED_PRODUCTION_PROJECT_REF"/u);
   assert.match(workflow, /--no-verify-jwt/u);
