@@ -116,11 +116,14 @@ test("database reconciliation is main-bound, atomic, digest-bound and non-destru
   assert.match(workflow, /test "\$GITHUB_REF" = "refs\/heads\/main"/u);
   assert.match(workflow, /environment:\s*production/u);
   assert.match(workflow, /SUPABASE_DB_URL/u);
-  assert.match(workflow, /git\s+hash-object/u);
+  assert.match(workflow, /execFileSync\('git', \['hash-object'/u);
   assert.match(workflow, /web-session-reconciliation\.sql/u);
   assert.match(workflow, /'begin;'/u);
   assert.match(workflow, /'commit;'/u);
   assert.match(workflow, /supabase_migrations\.schema_migrations/u);
+  assert.match(workflow, /on conflict \(version\) do nothing/u);
+  assert.doesNotMatch(workflow, /on conflict \(version\) do update/u);
+  assert.match(workflow, /Migration ledger conflict/u);
   assert.match(workflow, /ledgerRecordedOnce/u);
   assert.match(workflow, /psql\s+"\$SUPABASE_DB_URL"/u);
   assert.match(workflow, /Application-data SQL rejected/u);
