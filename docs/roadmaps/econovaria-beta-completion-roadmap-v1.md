@@ -18,3 +18,19 @@ Use only `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_MERGED`, `IN_PROGRESS`, `PLANNED`
 PR #296 is closed without merge. PR #298 is the preceding merged controller authority. PRs #248, #249, and #261 are explicitly reactivated. PRs #299 and #300 are active authorities.
 
 The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared convergence, #295, continuous pilot, and final go/no-go. Production promotion requires a separate explicit product-owner instruction.
+
+## Scope Intake
+
+- **`BETA-BRAND-LOGIN-003` — Product-owner login logo replacement**
+  - Status: `IMPLEMENTED_NOT_MERGED`
+  - Owner branch: `fix/login-logo-replacement-v2`
+  - Pull request: not opened.
+  - Implementation commit: `688c07f1ce9665afbf1c337a7b2d5be02d12550d`.
+  - Dependencies: existing asset-backed login wiring merged by PR #400.
+  - Beta impact: visual branding only; no feature semantics, authentication, API, database, or production-deployment change.
+  - Implementation files: `assets/brand/Econovaria Logo.png`, `index.html`, `frontend/src/core/constants.js`, and `scripts/login-surface-browser-smoke.mjs`.
+  - Migrations, routes, and RPCs: none.
+  - Validation: exact supplied-file SHA-256 `f19b3ae263d2183b6b208d464996ec5f3f94bb6f2471b66b39557d19a8413726`; 2048×1149 TrueColorAlpha PNG with transparent pixels; `npm run audit:assets`; JavaScript syntax checks; HTTP `image/png` response and byte-identity check; cache-key consistency at `20260729.4`.
+  - Staging/runtime evidence: not yet required for this visual-only unmerged change; production is unchanged.
+  - Unresolved blocker: the local Playwright smoke cannot launch because Chromium is not installed in this workspace; the unchanged CI browser smoke remains required before merge.
+  - Next exact roadmap item: publish the branch, open its pull request, require the browser and repository checks, then merge only after all required checks pass.

@@ -49,7 +49,7 @@ try {
     contentType: "application/javascript",
     body: 'window.__ECONOVARIA_RUNTIME_CONFIG__=Object.freeze({environment:"staging",projectRef:"eecvbssdvarfcykcfrny",supabaseUrl:"https://eecvbssdvarfcykcfrny.supabase.co",apiProxyUrl:"http://127.0.0.1:4317",supabasePublishableKey:"sb_publishable_login_surface_test"});',
   }));
-  await page.goto(origin + "/?login-smoke=20260729.3", { waitUntil: "networkidle" });
+  await page.goto(origin + "/?login-smoke=20260729.4", { waitUntil: "networkidle" });
   await page.locator(".login-panel-frame").waitFor({ state: "visible" });
 
   const surface = await page.evaluate(async () => {
@@ -96,7 +96,7 @@ try {
   assert.equal(surface.logoFilter, "none");
   assert.equal(surface.logoStatus, 200);
   assert.match(surface.logoType, /image\/png/);
-  assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260729.3");
+  assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260729.4");
   assert.equal(surface.logoMode, "asset");
   assert.equal(surface.fallbackPresent, false);
   assert.equal(surface.iconStatus, 200);
