@@ -17,7 +17,9 @@ on:
         type: string
   push:
     branches:
-      - ops/production-admin-staff-security-reconcile-v1
+      - main
+    paths:
+      - .github/workflows/production-admin-staff-security-reconcile.yml
 
 permissions:
   contents: read
@@ -30,7 +32,6 @@ env:
   MANIFEST_PATH: docs/operations/evidence/production-admin-staff-security-reconciliation-v1.json
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-  ONE_TIME_TRIGGER_BRANCH: ops/production-admin-staff-security-reconcile-v1
   RUN_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
   RUN_CONFIRM_PROJECT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_project_ref || 'cgiukdjwicykrmtkhudh' }}
   RUN_CONFIRM_ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_action || 'RECONCILE ADMIN STAFF SECURITY' }}
@@ -55,7 +56,7 @@ jobs:
               test "$GITHUB_REF" = "refs/heads/main"
               ;;
             push)
-              test "$GITHUB_REF" = "refs/heads/$ONE_TIME_TRIGGER_BRANCH"
+              test "$GITHUB_REF" = "refs/heads/main"
               test "$GITHUB_SHA" = "$RUN_SOURCE_COMMIT"
               ;;
             *)
