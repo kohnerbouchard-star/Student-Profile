@@ -11,7 +11,10 @@ test("web-session BFF owns Staff MFA token elevation", async () => {
   assert.match(source, /route === "\/mfa" \|\| route\.startsWith\("\/mfa\/"\)/);
   assert.match(source, /\/functions\/v1\/staff-mfa-api/);
   assert.match(source, /constantTimeTextEqual\(suppliedCsrf, current\.payload\.csrfToken\)/);
-  assert.match(source, /readTrustedClientIp\(request, TRUSTED_IP_HEADER\)/);
+  assert.match(source, /readPlayerRateLimitConfig\(\)\.trustedIpHeader/);
+  assert.match(source, /address: readTrustedClientIp\(request, trustedIpHeader\)/);
+  assert.match(source, /\[clientIp\.header\]: clientIp\.address/);
+  assert.doesNotMatch(source, /const TRUSTED_IP_HEADER = "x-real-ip"/);
   assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(source, /const elevated: WebAdminSessionPayload/);
   assert.match(source, /accessToken,/);
