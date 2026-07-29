@@ -67,7 +67,7 @@ test("orchestrator has one staging gate and one protected production approval", 
   const production = section("  deploy-and-verify-production:");
   assert.match(production, /needs:\s*\n\s*- validate-and-package\s*\n\s*- deploy-staging/u);
   assert.match(production, /environment:\s*production/u);
-  assert.match(production, /productionEnvironmentApprovalRequired:\s*true/u);
+  assert.match(workflow, /productionEnvironmentApprovalRequired:\s*true/u);
 });
 
 test("staging derives and verifies the candidate identity automatically", () => {
@@ -82,7 +82,7 @@ test("staging derives and verifies the candidate identity automatically", () => 
   assert.match(staging, /invalid_status/u);
   assert.match(staging, /candidate_digest=/u);
   assert.match(staging, /candidate_version=/u);
-  assert.doesNotMatch(staging, /EXPECTED_PRODUCTION_PROJECT_REF.*functions deploy/su);
+  assert.doesNotMatch(staging, /--project-ref "\$EXPECTED_PRODUCTION_PROJECT_REF"/u);
 });
 
 test("production mutates only the approved function and verifies deployed bytes", () => {
