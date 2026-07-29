@@ -24,6 +24,7 @@ env:
   EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  PRODUCTION_ALLOWED_ORIGINS: https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app
   FUNCTION_NAME: web-session-api
   TRUSTED_CLIENT_IP_HEADER: cf-connecting-ip
   STATUS_CONTEXT: econovaria/web-session-trusted-ip-repair
@@ -51,6 +52,7 @@ jobs:
           grep -Fq 'environment: staging' "$file"
           grep -Fq 'environment: production' "$file"
           grep -Fq 'cf-connecting-ip' "$file"
+          grep -Fq 'PRODUCTION_ALLOWED_ORIGINS: https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app' "$file"
           grep -Fq 'diagnostic.invalid@econovaria.test' "$file"
           grep -Fq 'invalid_staff_credentials' "$file"
           grep -Fq 'No production login attempt performed' "$file"
@@ -75,6 +77,8 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "$TRUSTED_CLIENT_IP_HEADER" = 'cf-connecting-ip'
+          test "$PRODUCTION_ALLOWED_ORIGINS" = 'https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app'
+          [[ "$PRODUCTION_ALLOWED_ORIGINS" != *'*'* ]]
           test "$FUNCTION_NAME" = 'web-session-api'
 
       - name: Install pinned Supabase CLI
@@ -88,7 +92,7 @@ jobs:
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
           supabase secrets set \
-            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ALLOWED_ORIGINS" \
             "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
             --project-ref "$EXPECTED_STAGING_PROJECT_REF"
 
@@ -123,6 +127,61 @@ jobs:
           echo "::add-mask::$publishable_key"
 
           base="https://${EXPECTED_STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          verify_origin_contract() {
+            local candidate_origin="$1"
+            local expected_status="$2"
+            local expected_code="$3"
+            local actual_status
+            actual_status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$LOGIN_PATH" \
+              --write-out '%{http_code}' \
+              --request POST "$base/login" \
+              -H "apikey: $publishable_key" \
+              -H "Origin: $candidate_origin" \
+              -H 'Content-Type: application/json' \
+              --data '{}')"
+            export ACTUAL_STATUS="$actual_status"
+            export EXPECTED_STATUS="$expected_status"
+            export EXPECTED_CODE="$expected_code"
+            ORIGIN_RESULT_PATH="$LOGIN_PATH" node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(
+            fs.readFileSync(process.env.ORIGIN_RESULT_PATH, 'utf8'),
+          );
+          const actualStatus = Number(process.env.ACTUAL_STATUS || 0);
+          const expectedStatus = Number(process.env.EXPECTED_STATUS || 0);
+          const expectedCode = String(process.env.EXPECTED_CODE || '');
+          const actualCode = String(body?.error?.code || body?.code || '');
+          if (actualStatus !== expectedStatus) {
+            throw new Error(
+              `Origin contract status mismatch: ${actualStatus}:${actualCode || 'unknown'}`,
+            );
+          }
+          if (expectedCode && actualCode !== expectedCode) {
+            throw new Error(
+              `Origin contract code mismatch: ${actualCode || 'unknown'}`,
+            );
+          }
+          if (!expectedCode && (!actualCode || actualCode === 'origin_not_allowed')) {
+            throw new Error(
+              `Allowed origin was rejected: ${actualCode || 'unknown'}`,
+            );
+          }
+          NODE
+          }
+
+          IFS=',' read -r -a allowed_origins <<< "$PRODUCTION_ALLOWED_ORIGINS"
+          test "${#allowed_origins[@]}" -eq 3
+          for allowed_origin in "${allowed_origins[@]}"; do
+            verify_origin_contract "$allowed_origin" '400' ''
+          done
+          verify_origin_contract \
+            'https://econovaria-git-preview-denied-econovaria.vercel.app' \
+            '403' \
+            'origin_not_allowed'
+
           for attempt in $(seq 1 18); do
             health_status="$(curl --silent --show-error \
               --connect-timeout 10 \
@@ -176,6 +235,8 @@ jobs:
           {
             echo '## Hosted staging trusted-IP binding verified'
             echo '- Trusted header: `cf-connecting-ip`'
+            echo '- Exact production origins accepted: `3/3`'
+            echo '- Unlisted preview origin denied: `true`'
             echo '- Valid-shaped synthetic login reached credential decision: `true`'
             echo '- Valid production credentials supplied: `false`'
             echo '- Production changed: `false`'
@@ -236,6 +297,8 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "$TRUSTED_CLIENT_IP_HEADER" = 'cf-connecting-ip'
+          test "$PRODUCTION_ALLOWED_ORIGINS" = 'https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app'
+          [[ "$PRODUCTION_ALLOWED_ORIGINS" != *'*'* ]]
           test "$FUNCTION_NAME" = 'web-session-api'
 
       - name: Install pinned Supabase CLI
@@ -249,7 +312,7 @@ jobs:
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
           supabase secrets set \
-            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$PRODUCTION_ALLOWED_ORIGINS" \
             "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_CLIENT_IP_HEADER" \
             --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
 
@@ -284,6 +347,61 @@ jobs:
           echo "::add-mask::$publishable_key"
 
           base="https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_NAME}"
+          verify_origin_contract() {
+            local candidate_origin="$1"
+            local expected_status="$2"
+            local expected_code="$3"
+            local actual_status
+            actual_status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$INVALID_PATH" \
+              --write-out '%{http_code}' \
+              --request POST "$base/login" \
+              -H "apikey: $publishable_key" \
+              -H "Origin: $candidate_origin" \
+              -H 'Content-Type: application/json' \
+              --data '{}')"
+            export ACTUAL_STATUS="$actual_status"
+            export EXPECTED_STATUS="$expected_status"
+            export EXPECTED_CODE="$expected_code"
+            ORIGIN_RESULT_PATH="$INVALID_PATH" node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(
+            fs.readFileSync(process.env.ORIGIN_RESULT_PATH, 'utf8'),
+          );
+          const actualStatus = Number(process.env.ACTUAL_STATUS || 0);
+          const expectedStatus = Number(process.env.EXPECTED_STATUS || 0);
+          const expectedCode = String(process.env.EXPECTED_CODE || '');
+          const actualCode = String(body?.error?.code || body?.code || '');
+          if (actualStatus !== expectedStatus) {
+            throw new Error(
+              `Origin contract status mismatch: ${actualStatus}:${actualCode || 'unknown'}`,
+            );
+          }
+          if (expectedCode && actualCode !== expectedCode) {
+            throw new Error(
+              `Origin contract code mismatch: ${actualCode || 'unknown'}`,
+            );
+          }
+          if (!expectedCode && (!actualCode || actualCode === 'origin_not_allowed')) {
+            throw new Error(
+              `Allowed origin was rejected: ${actualCode || 'unknown'}`,
+            );
+          }
+          NODE
+          }
+
+          IFS=',' read -r -a allowed_origins <<< "$PRODUCTION_ALLOWED_ORIGINS"
+          test "${#allowed_origins[@]}" -eq 3
+          for allowed_origin in "${allowed_origins[@]}"; do
+            verify_origin_contract "$allowed_origin" '400' ''
+          done
+          verify_origin_contract \
+            'https://econovaria-git-preview-denied-econovaria.vercel.app' \
+            '403' \
+            'origin_not_allowed'
+
           for attempt in $(seq 1 18); do
             health_status="$(curl --silent --show-error \
               --connect-timeout 10 \
@@ -332,6 +450,8 @@ jobs:
             echo '## Production trusted-IP binding repaired'
             echo '- Project binding: `production exact`'
             echo '- Trusted header: `cf-connecting-ip`'
+            echo '- Exact production origins accepted: `3/3`'
+            echo '- Unlisted preview origin denied: `true`'
             echo '- Staging credential-decision proof: `passed`'
             echo '- Production health: `200 ready`'
             echo '- Production invalid-input response: `400 controlled`'

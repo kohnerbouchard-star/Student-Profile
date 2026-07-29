@@ -10,6 +10,7 @@ const ENTRYPOINT = "backend/supabase/functions/web-session-api/index.ts";
 const CANDIDATE_WORKFLOW = ".github/workflows/production-web-session-hotfix.yml";
 const DEPLOY_WORKFLOW = ".github/workflows/production-web-session-deploy.yml";
 const SECRET_WORKFLOW = ".github/workflows/production-web-session-secrets.yml";
+const TRUSTED_IP_REPAIR_WORKFLOW = ".github/workflows/production-web-session-trusted-ip-repair.yml";
 const DATABASE_WORKFLOW = ".github/workflows/production-web-session-database-reconcile.yml";
 const AUTHORIZATION = "docs/operations/evidence/production-web-session-recovery-v1.json";
 const DATABASE_AUTHORIZATION = "docs/operations/evidence/production-web-session-database-reconciliation-v1.json";
@@ -115,6 +116,35 @@ test("production secret provisioning is main-bound and missing-only", () => {
   assert.match(workflow, /if ! grep -q 'ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY'/u);
   assert.doesNotMatch(workflow, /echo\s+"?\$rate_key/u);
   assert.doesNotMatch(workflow, /echo\s+"?\$session_key/u);
+});
+
+test("production web origins are exact across provisioning and repair", () => {
+  const expected =
+    "https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app";
+  for (const relativePath of [SECRET_WORKFLOW, TRUSTED_IP_REPAIR_WORKFLOW]) {
+    const workflow = read(relativePath);
+    assert.equal(
+      workflow.includes(`PRODUCTION_ALLOWED_ORIGINS: ${expected}`),
+      true,
+    );
+    assert.match(
+      workflow,
+      /ECONOVARIA_WEB_ALLOWED_ORIGINS=\$PRODUCTION_ALLOWED_ORIGINS/u,
+    );
+    assert.doesNotMatch(
+      workflow,
+      /ECONOVARIA_WEB_ALLOWED_ORIGINS=\*/u,
+    );
+  }
+
+  const repair = read(TRUSTED_IP_REPAIR_WORKFLOW);
+  assert.match(repair, /verify_origin_contract/u);
+  assert.match(
+    repair,
+    /https:\/\/econovaria-git-preview-denied-econovaria\.vercel\.app/u,
+  );
+  assert.match(repair, /origin_not_allowed/u);
+  assert.match(repair, /No production login attempt performed/u);
 });
 
 test("database reconciliation is main-bound, atomic, digest-bound and non-destructive", () => {
