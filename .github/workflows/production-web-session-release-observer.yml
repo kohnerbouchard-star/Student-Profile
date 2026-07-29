@@ -1,0 +1,208 @@
+name: Production Web Session Release Observer
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-release-observer.yml"
+      - ".github/workflows/production-web-session-release.yml"
+      - "docs/operations/release-requests/production-web-session-release-v1.json"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-web-session-release-observer.yml"
+      - ".github/workflows/production-web-session-release.yml"
+      - "docs/operations/release-requests/production-web-session-release-v1.json"
+  workflow_run:
+    workflows:
+      - Production Web Session Release Orchestrator
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-web-session-release-observer-${{ github.event_name }}-${{ github.event.workflow_run.id || github.sha }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_WORKFLOW_NAME: Production Web Session Release Orchestrator
+  STATUS_CONTEXT: econovaria/web-session-release
+  RELEASE_REQUEST_PATH: docs/operations/release-requests/production-web-session-release-v1.json
+
+jobs:
+  validate:
+    name: Validate release observer contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed observer
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate bounded observer and release request
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const workflow = fs.readFileSync('.github/workflows/production-web-session-release-observer.yml', 'utf8');
+          const request = JSON.parse(fs.readFileSync(process.env.RELEASE_REQUEST_PATH, 'utf8'));
+          const required = [
+            'Production Web Session Release Orchestrator',
+            'econovaria/web-session-release',
+            'statuses: write',
+            "github.event_name == 'push'",
+            "github.event_name == 'workflow_run'",
+          ];
+          for (const value of required) {
+            if (!workflow.includes(value)) throw new Error(`Observer contract missing: ${value}`);
+          }
+          if (!/^[a-z0-9][a-z0-9._-]{7,127}$/u.test(String(request.requestId || ''))) {
+            throw new Error('Release request ID is invalid.');
+          }
+          if (
+            request.state !== 'approved' ||
+            request.productionEnvironmentApprovalRequired !== true ||
+            request.allowedProductionMutations?.length !== 1 ||
+            request.allowedProductionMutations[0] !== 'deploy web-session-api only'
+          ) {
+            throw new Error('Release request is not bounded for orchestration.');
+          }
+          NODE
+
+  publish-pending:
+    name: Publish orchestrator run location
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Locate merge-triggered orchestrator run
+        id: locate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          run_url=''
+          run_id=''
+          for attempt in $(seq 1 30); do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push&per_page=100" \
+              > "$RUNNER_TEMP/runs.json"
+            readarray -t values < <(node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.RUNS_PATH, 'utf8'));
+          const run = body.workflow_runs?.find((value) =>
+            value.name === process.env.RELEASE_WORKFLOW_NAME &&
+            value.event === 'push' &&
+            value.head_sha === process.env.GITHUB_SHA
+          );
+          if (run?.html_url && Number.isSafeInteger(Number(run.id))) {
+            process.stdout.write(`${run.html_url}\n${run.id}\n`);
+          }
+          NODE
+            )
+            run_url="${values[0]:-}"
+            run_id="${values[1]:-}"
+            if [[ "$run_url" =~ ^https://github.com/[^/]+/[^/]+/actions/runs/[0-9]+$ ]] && [[ "$run_id" =~ ^[0-9]+$ ]]; then
+              break
+            fi
+            if [[ "$attempt" == '30' ]]; then
+              echo 'The merge-triggered web-session orchestrator run was not found.' >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "run_url=$run_url" >> "$GITHUB_OUTPUT"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          rm -f "$RUNNER_TEMP/runs.json"
+        env:
+          RUNS_PATH: ${{ runner.temp }}/runs.json
+
+      - name: Publish pending release status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ steps.locate.outputs.run_url }}
+          RUN_ID: ${{ steps.locate.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          RUN_URL="$RUN_URL" RUN_ID="$RUN_ID" node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = {
+            state: 'pending',
+            target_url: process.env.RUN_URL,
+            description: `Release run ${process.env.RUN_ID} is running or awaiting approval.`,
+            context: process.env.STATUS_CONTEXT,
+          };
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary "@$RUNNER_TEMP/status.json" > /dev/null
+          rm -f "$RUNNER_TEMP/status.json"
+        env:
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
+
+  publish-final:
+    name: Publish orchestrator completion status
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Publish terminal release status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$RUN_URL" =~ ^https://github.com/[^/]+/[^/]+/actions/runs/[0-9]+$ ]]
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          HEAD_SHA="$HEAD_SHA" RUN_URL="$RUN_URL" RUN_ID="$RUN_ID" CONCLUSION="$CONCLUSION" node - <<'NODE'
+          const fs = require('node:fs');
+          const succeeded = process.env.CONCLUSION === 'success';
+          const payload = {
+            state: succeeded ? 'success' : 'failure',
+            target_url: process.env.RUN_URL,
+            description: succeeded
+              ? `Release run ${process.env.RUN_ID} completed successfully.`
+              : `Release run ${process.env.RUN_ID} ended with ${process.env.CONCLUSION || 'failure'}.`,
+            context: process.env.STATUS_CONTEXT,
+          };
+          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
+          NODE
+          curl --fail --silent --show-error \
+            --request POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            --data-binary "@$RUNNER_TEMP/status.json" > /dev/null
+          rm -f "$RUNNER_TEMP/status.json"
+        env:
+          PAYLOAD_PATH: ${{ runner.temp }}/status.json
