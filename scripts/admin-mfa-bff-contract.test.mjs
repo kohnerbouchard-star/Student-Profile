@@ -5,16 +5,26 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("web-session BFF owns Staff MFA token elevation", async () => {
-  const source = await read("backend/supabase/functions/web-session-api/index.ts");
+test("web-session BFF owns Staff MFA token elevation behind signed deployment requests", async () => {
+  const [source, authSource] = await Promise.all([
+    read("backend/supabase/functions/web-session-api/index.ts"),
+    read("backend/src/security/adminBffRequestAuth.ts"),
+  ]);
 
   assert.match(source, /route === "\/mfa" \|\| route\.startsWith\("\/mfa\/"\)/);
   assert.match(source, /\/functions\/v1\/staff-mfa-api/);
   assert.match(source, /constantTimeTextEqual\(suppliedCsrf, current\.payload\.csrfToken\)/);
-  assert.match(source, /readPlayerRateLimitConfig\(\)\.trustedIpHeader/);
-  assert.match(source, /address: readTrustedClientIp\(request, trustedIpHeader\)/);
+  assert.match(source, /authorizeAdminBffRequest\(incomingRequest/);
+  assert.match(source, /claim_internal_runner_nonce_v2/);
+  assert.match(source, /const INTERNAL_TRUSTED_IP_HEADER = "x-real-ip" as const/);
+  assert.match(source, /readTrustedClientIp\(request, INTERNAL_TRUSTED_IP_HEADER\)/);
   assert.match(source, /\[clientIp\.header\]: clientIp\.address/);
-  assert.doesNotMatch(source, /const TRUSTED_IP_HEADER = "x-real-ip"/);
+  assert.doesNotMatch(source, /readPlayerRateLimitConfig\(\)\.trustedIpHeader/);
+  assert.match(authSource, /payload\.owner_id === VERCEL_OWNER_ID/);
+  assert.match(authSource, /payload\.project_id === VERCEL_PROJECT_ID/);
+  assert.match(authSource, /claimNonce/);
+  assert.match(authSource, /headers\.delete\("authorization"\)/);
+  assert.match(authSource, /headers\.delete\(BFF_SIGNATURE_HEADER\)/);
   assert.match(source, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(source, /const elevated: WebAdminSessionPayload/);
   assert.match(source, /accessToken,/);
@@ -34,11 +44,12 @@ test("web-session BFF owns Staff MFA token elevation", async () => {
   );
 });
 
-test("browser API completes password sign-in through memory-only MFA state", async () => {
+test("browser API completes password sign-in through statically loaded memory-only MFA state", async () => {
   const source = await read("frontend/src/core/api.js");
 
   assert.match(source, /let inMemoryAdminCsrfToken = ""/);
   assert.match(source, /function loadAdminMfaModule\(\)/);
+  assert.match(source, /const module = window\.Econovaria\?\.adminMfa/);
   assert.match(source, /const mfa = await loadAdminMfaModule\(\)/);
   assert.match(source, /const elevated = await mfa\.ensureAal2\(status\)/);
   assert.match(source, /callAdminMfaStatus/);
@@ -46,6 +57,8 @@ test("browser API completes password sign-in through memory-only MFA state", asy
   assert.match(source, /callAdminMfaVerify/);
   assert.match(source, /requireCsrf: true/);
   assert.match(source, /credentials: "include"/);
+  assert.doesNotMatch(source, /document\.createElement\("script"\)/);
+  assert.doesNotMatch(source, /\.src\s*=\s*new URL\(/);
   assert.doesNotMatch(source, /sessionStorage\.setItem/);
   assert.doesNotMatch(source, /localStorage\.setItem\([^\n]*mfa/i);
   assert.doesNotMatch(source, /Authorization/);
