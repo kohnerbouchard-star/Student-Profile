@@ -1,0 +1,159 @@
+name: Production Web Session Database Reconcile
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact merged main source commit"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type RECONCILE WEB SESSION DATABASE"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-web-session-database-reconcile
+  cancel-in-progress: false
+
+env:
+  MANIFEST_PATH: docs/operations/evidence/production-web-session-database-reconciliation-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+
+jobs:
+  reconcile:
+    name: Apply canonical web-session security migrations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce explicit production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "RECONCILE WEB SESSION DATABASE"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Check out exact merged main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source and migration allow-list
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor HEAD origin/main
+          test -f "$MANIFEST_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, 'utf8'));
+          if (
+            manifest.schemaVersion !== 1 ||
+            manifest.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF ||
+            !manifest.deniedProjectRefs?.includes(process.env.DENIED_STAGING_PROJECT_REF) ||
+            manifest.productionDataWritesAllowed !== false ||
+            manifest.destructiveChangesAllowed !== false
+          ) throw new Error('Database reconciliation authorization mismatch.');
+          if (!Array.isArray(manifest.orderedCanonicalMigrations) || manifest.orderedCanonicalMigrations.length !== 6) {
+            throw new Error('Expected exactly six canonical migrations.');
+          }
+          for (const item of manifest.orderedCanonicalMigrations) {
+            if (!/^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(item.path)) {
+              throw new Error(`Unapproved migration path: ${item.path}`);
+            }
+            if (!/^[a-f0-9]{40}$/.test(item.gitBlobSha)) throw new Error('Invalid Git blob SHA.');
+            const actual = execFileSync('git', ['hash-object', item.path], { encoding: 'utf8' }).trim();
+            if (actual !== item.gitBlobSha) throw new Error(`Migration digest mismatch: ${item.path}`);
+            const sql = fs.readFileSync(item.path, 'utf8');
+            if (/\b(drop\s+(table|schema|database)|truncate|delete\s+from|update\s+auth\.|insert\s+into\s+auth\.)\b/iu.test(sql)) {
+              throw new Error(`Destructive or application-data SQL rejected: ${item.path}`);
+            }
+          }
+          NODE
+
+      - name: Apply only allow-listed canonical migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(node - <<'NODE'
+          const manifest = require(`./${process.env.MANIFEST_PATH}`);
+          for (const item of manifest.orderedCanonicalMigrations) console.log(item.path);
+          NODE
+          )
+          test "${#migrations[@]}" -eq 6
+          for migration in "${migrations[@]}"; do
+            echo "Applying reviewed migration: $migration"
+            psql "$SUPABASE_DB_URL" \
+              --set=ON_ERROR_STOP=1 \
+              --no-psqlrc \
+              --file "$migration"
+          done
+
+      - name: Verify final security postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/postconditions.txt"
+          select json_build_object(
+            'preAuthRpc', to_regprocedure('public.consume_pre_auth_request_rate_limits_v1(jsonb)') is not null,
+            'checkRpc', to_regprocedure('public.auth_throttle_check_v2(jsonb)') is not null,
+            'failureRpc', to_regprocedure('public.auth_throttle_record_failure_v2(jsonb)') is not null,
+            'successRpc', to_regprocedure('public.auth_throttle_record_success_v2(jsonb)') is not null,
+            'serviceCanPreAuth', has_function_privilege('service_role', 'public.consume_pre_auth_request_rate_limits_v1(jsonb)', 'execute'),
+            'serviceCanCheck', has_function_privilege('service_role', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'serviceCanFailure', has_function_privilege('service_role', 'public.auth_throttle_record_failure_v2(jsonb)', 'execute'),
+            'serviceCanSuccess', has_function_privilege('service_role', 'public.auth_throttle_record_success_v2(jsonb)', 'execute'),
+            'anonDenied', not has_function_privilege('anon', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'authenticatedDenied', not has_function_privilege('authenticated', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'authenticatorDenied', not has_function_privilege('authenticator', 'public.auth_throttle_check_v2(jsonb)', 'execute'),
+            'requestLimitRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.request_rate_limit_buckets'::regclass),
+            'authThrottleRlsForced', (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.authentication_throttle_buckets'::regclass)
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.txt" node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim());
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Database postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/postconditions.txt"
+
+      - name: Record bounded reconciliation evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production web-session database reconciled'
+            echo "- Source commit: \`${{ inputs.source_commit }}\`"
+            echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo '- Canonical migrations applied: `6`'
+            echo '- Destructive SQL allowed: `false`'
+            echo '- Application data writes allowed: `false`'
+            echo '- Service-role RPC execution: `pass`'
+            echo '- Browser-role RPC execution denied: `pass`'
+            echo '- Forced RLS on counter tables: `pass`'
+            echo '- Secret values recorded: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
