@@ -1,0 +1,123 @@
+name: Apply Admin BFF Envelope Contract Patch
+
+on:
+  push:
+    branches:
+      - agent/secure-admin-bff-oidc
+    paths:
+      - .github/workflows/agent-admin-bff-envelope-contract.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/secure-admin-bff-oidc
+          fetch-depth: 0
+
+      - name: Apply exact malformed-envelope contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
+          source = auth_path.read_text(encoding="utf-8")
+          old = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return authenticationFailure();
+          }'''
+          new = '''  if (
+            !TIMESTAMP_PATTERN.test(timestampText) ||
+            !UUID_V4_PATTERN.test(nonce) ||
+            !signatureMatch
+          ) {
+            return malformedEnvelopeFailure();
+          }'''
+          if source.count(old) != 1:
+              raise SystemExit(f"Expected one malformed-envelope branch, found {source.count(old)}")
+          source = source.replace(old, new, 1)
+
+          marker = '''function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+          replacement = '''function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
+            return failure(
+              400,
+              "admin_bff_envelope_invalid",
+              "Administrator request envelope is missing or invalid.",
+            );
+          }
+
+          function authenticationFailure(): AdminBffRequestAuthResult {
+            return failure(
+              401,
+              "admin_bff_authentication_failed",
+              "Administrator request authentication failed.",
+            );
+          }'''
+          if source.count(marker) != 1:
+              raise SystemExit(f"Expected one authentication failure helper, found {source.count(marker)}")
+          auth_path.write_text(source.replace(marker, replacement, 1), encoding="utf-8")
+
+          test_path = Path("scripts/admin-bff-request-auth.test.mjs")
+          test_source = test_path.read_text(encoding="utf-8")
+          marker = '''test("rejects a modified request before claiming its nonce", async () => {'''
+          addition = '''test("rejects a request missing the signed BFF envelope as malformed", async () => {
+            let claimed = false;
+            const result = await authorizeAdminBffRequest(new Request(
+              "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login",
+              {
+                method: "POST",
+                headers: {
+                  origin: "https://econovaria.vercel.app",
+                  "content-type": "application/json",
+                },
+                body: BODY,
+              },
+            ), {
+              supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+              dependencies: {
+                now: () => NOW,
+                verifyOidc: async () => true,
+                claimNonce: async () => {
+                  claimed = true;
+                  return true;
+                },
+              },
+            });
+
+            assert.equal(result.ok, false);
+            assert.equal(result.response.status, 400);
+            assert.equal(claimed, false);
+          });
+
+          test("rejects a modified request before claiming its nonce", async () => {'''
+          if test_source.count(marker) != 1:
+              raise SystemExit(f"Expected one modified-request test marker, found {test_source.count(marker)}")
+          test_path.write_text(test_source.replace(marker, addition, 1), encoding="utf-8")
+          PY
+
+      - name: Commit exact patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/src/security/adminBffRequestAuth.ts scripts/admin-bff-request-auth.test.mjs
+          git diff --cached --check
+          git commit -m "Distinguish malformed BFF envelopes from invalid identity"
+          git push origin HEAD:agent/secure-admin-bff-oidc
