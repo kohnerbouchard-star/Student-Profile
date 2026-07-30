@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "econovaria.production-canonical-source-bootstrap.v1",
+  "action": "BOOTSTRAP_NON_JOINABLE_CANONICAL_SOURCE",
+  "authorizedAt": "2026-07-30T12:35:00Z",
+  "authorizedBy": "repository-owner",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "mergedMainOnly": true,
+  "canonicalSourceJoinable": false,
+  "copyStagingAuthUsers": false,
+  "copyStagingStaffUsers": false,
+  "copyStagingPlayers": false,
+  "mutateExistingPlayerData": false,
+  "activateDeterministicSeedWorldCrafting": true,
+  "runDisposableProvisioningProbe": true,
+  "cleanupProvisioningProbe": true,
+  "packId": "econovaria.beta-seed-pack.v1",
+  "packVersion": "1.0.0-beta",
+  "packSha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
+  "sourceEnvironmentLabel": "staging",
+  "productionDataPreservationRequired": true,
+  "explicitExclusions": [
+    "copying staging authentication users",
+    "copying staging staff or player rows",
+    "copying staging synthetic games",
+    "making the canonical source player-joinable",
+    "recording plaintext Game Codes",
+    "deleting or rewriting the quarantined legacy game"
+  ]
+}
