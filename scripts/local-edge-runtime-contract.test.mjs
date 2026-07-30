@@ -10,6 +10,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "player-web-session-api": false,
   "bootstrap-api": false,
   "web-session-api": false,
+  "admin-password-recovery": false,
   "admin-logout-api": false,
   "staff-api": true,
   "admin-api": true,
@@ -22,6 +23,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "stock-market-player-read": false,
   "stock-market-trading": false,
 });
+const CUSTOM_AUTH_FUNCTIONS = new Set(["admin-password-recovery"]);
 
 function section(source, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -57,7 +59,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
 
   for (const [name, source] of Object.entries(functionSources)) {
     assert.doesNotMatch(source, /Authorization[^\n]+sb_publishable_/i);
-    if (FUNCTION_POLICIES[name] === false) {
+    if (FUNCTION_POLICIES[name] === false && !CUSTOM_AUTH_FUNCTIONS.has(name)) {
       assert.match(source, /requirePublishableRequest\((?:request|incomingRequest)\)/);
     }
   }
@@ -79,6 +81,12 @@ test("local Supabase starts every declared split Edge security boundary", async 
     functionSources["web-session-api"],
     /const request = authorization\.request/,
   );
+  assert.match(functionSources["admin-password-recovery"], /request\.method\.toUpperCase\(\)/);
+  assert.match(functionSources["admin-password-recovery"], /method === "GET"/);
+  assert.match(functionSources["admin-password-recovery"], /method === "POST"/);
+  assert.match(functionSources["admin-password-recovery"], /constantTimeEqual\(challenge, cookieChallenge\)/);
+  assert.match(functionSources["admin-password-recovery"], /\/auth\/v1\/verify/);
+  assert.doesNotMatch(functionSources["admin-password-recovery"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
   assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
   assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);
