@@ -58,7 +58,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
   for (const [name, source] of Object.entries(functionSources)) {
     assert.doesNotMatch(source, /Authorization[^\n]+sb_publishable_/i);
     if (FUNCTION_POLICIES[name] === false) {
-      assert.match(source, /requirePublishableRequest\(request\)/);
+      assert.match(source, /requirePublishableRequest\((?:request|incomingRequest)\)/);
     }
   }
 
@@ -71,6 +71,14 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["password-reset-api"], /validateStaffPassword/);
   assert.match(functionSources["web-session-api"], /WEB_ADMIN_SESSION_COOKIE/);
   assert.match(functionSources["web-session-api"], /\/functions\/v1\/staff-mfa-api/);
+  assert.match(
+    functionSources["web-session-api"],
+    /authorizeAdminBffRequest\(incomingRequest/,
+  );
+  assert.match(
+    functionSources["web-session-api"],
+    /const request = authorization\.request/,
+  );
   assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
   assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
   assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);

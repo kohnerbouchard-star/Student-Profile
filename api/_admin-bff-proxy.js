@@ -1,11 +1,27 @@
 "use strict";
 
+const {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual
+} = require("node:crypto");
 const { isIP } = require("node:net");
 
 const MAX_BODY_BYTES = 1_048_576;
 const MAX_PATH_BYTES = 2_048;
+const MAX_OIDC_TOKEN_BYTES = 16_384;
 const SAFE_VALUE_PATTERN = /^[^\r\n\u0000]{0,8192}$/u;
 const COOKIE_ENVELOPE_PATTERN = /^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{24,3900}$/u;
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const OIDC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,12288}\.[A-Za-z0-9_-]{8,4096}$/u;
+const SIGNATURE_VERSION = "econovaria-admin-bff-request-v1";
+const SIGNING_KEY_CONTEXT = "econovaria-admin-bff-signing-key-v1";
+const BFF_TIMESTAMP_HEADER = "x-econovaria-bff-timestamp";
+const BFF_NONCE_HEADER = "x-econovaria-bff-nonce";
+const BFF_CLIENT_IP_HEADER = "x-econovaria-bff-client-ip";
+const BFF_SIGNATURE_HEADER = "x-econovaria-bff-signature";
+const BFF_MODE_HEADER = "x-econovaria-bff-mode";
 const FORWARDED_HEADERS = Object.freeze({
   "content-type": "content-type",
   "x-econovaria-csrf-token": "x-econovaria-csrf-token",
@@ -14,8 +30,17 @@ const FORWARDED_HEADERS = Object.freeze({
   "x-idempotency-key": "x-idempotency-key",
   "x-request-id": "x-request-id"
 });
+const SIGNED_CONTEXT_HEADERS = Object.freeze([
+  "content-type",
+  "cookie",
+  "x-econovaria-csrf-token",
+  "x-econovaria-device-id",
+  "x-econovaria-game-id",
+  "x-idempotency-key",
+  "x-request-id"
+]);
 
-async function proxyAdminBff(request, response, options) {
+async function proxyAdminBff(request, response, options = {}) {
   try {
     const config = readConfig();
     const path = normalizedPath(request.query?.path);
@@ -30,15 +55,34 @@ async function proxyAdminBff(request, response, options) {
       "Administrator request body is too large."
     ));
 
-    const clientIp = trustedClientIp(request);
-    if (!clientIp) return sendJson(response, 400, errorBody(
-      "trusted_client_ip_unavailable",
-      "Trusted client network metadata is unavailable."
+    const clientIp = trustedVercelClientIp(request);
+    if (!clientIp) return sendJson(response, 503, retryableErrorBody(
+      "admin_bff_network_metadata_unavailable",
+      "Administrator request protection is temporarily unavailable."
     ));
+
+    const oidcToken = vercelOidcToken(request);
+    if (!oidcToken) return sendJson(response, 503, retryableErrorBody(
+      "admin_bff_identity_unavailable",
+      "Administrator request protection is temporarily unavailable."
+    ));
+
+    const origin = requestOrigin(request);
+    const targetPath = options.proxyAdmin
+      ? `/functions/v1/web-session-api/proxy${path}`
+      : `/functions/v1/web-session-api${path}`;
+    const search = filteredSearch(request.url);
+    const targetUrl = `${config.supabaseUrl}${targetPath}${search}`;
+    const timestampSeconds = Math.floor(normalizedNow(options.now).getTime() / 1000);
+    const nonce = normalizedNonce(options.nonceFactory?.() || randomUUID());
 
     const headers = new Headers({
       apikey: config.publishableKey,
-      Origin: requestOrigin(request),
+      Origin: origin,
+      Authorization: `Bearer ${oidcToken}`,
+      [BFF_TIMESTAMP_HEADER]: String(timestampSeconds),
+      [BFF_NONCE_HEADER]: nonce,
+      [BFF_CLIENT_IP_HEADER]: clientIp,
       "x-real-ip": clientIp
     });
     const cookie = safeHeaderValue(request.headers?.cookie);
@@ -48,11 +92,22 @@ async function proxyAdminBff(request, response, options) {
       if (value) headers.set(target, value);
     }
 
-    const targetPath = options.proxyAdmin
-      ? `/functions/v1/web-session-api/proxy${path}`
-      : `/functions/v1/web-session-api${path}`;
-    const search = filteredSearch(request.url);
-    const upstream = await fetch(`${config.supabaseUrl}${targetPath}${search}`, {
+    const canonicalPayload = buildAdminBffSignaturePayload({
+      timestampSeconds,
+      nonce,
+      method: String(request.method || "GET"),
+      targetUrl,
+      browserOrigin: origin,
+      clientIp,
+      headers,
+      bodyBytes: body.bytes
+    });
+    headers.set(
+      BFF_SIGNATURE_HEADER,
+      `v1=${signAdminBffPayload(oidcToken, canonicalPayload)}`
+    );
+
+    const upstream = await (options.fetchImpl || globalThis.fetch)(targetUrl, {
       method: String(request.method || "GET").toUpperCase(),
       headers,
       body: body.value,
@@ -85,7 +140,7 @@ async function proxyAdminBff(request, response, options) {
     if (cookies.length) response.setHeader("Set-Cookie", cookies);
     response.end(Buffer.from(bytes));
   } catch (_) {
-    sendJson(response, 502, errorBody(
+    sendJson(response, 502, retryableErrorBody(
       "admin_bff_unavailable",
       "Administrator session service is unavailable."
     ));
@@ -144,9 +199,7 @@ function filteredSearch(rawUrl) {
 
 function requestOrigin(request) {
   const supplied = safeHeaderValue(request.headers?.origin);
-  const host = safeHeaderValue(
-    request.headers?.["x-forwarded-host"] || request.headers?.host
-  );
+  const host = safeHeaderValue(request.headers?.host);
   if (!host || !/^[A-Za-z0-9.-]+(?::\d{1,5})?$/u.test(host)) {
     throw new Error("invalid request host");
   }
@@ -158,11 +211,10 @@ function requestOrigin(request) {
   return expected;
 }
 
-function trustedClientIp(request) {
+function trustedVercelClientIp(request) {
   const candidates = [
-    request.headers?.["x-vercel-forwarded-for"],
     request.headers?.["x-real-ip"],
-    request.socket?.remoteAddress
+    request.headers?.["x-vercel-forwarded-for"]
   ];
   for (const candidate of candidates) {
     const value = safeHeaderValue(candidate).trim();
@@ -176,9 +228,29 @@ function trustedClientIp(request) {
   return "";
 }
 
+function vercelOidcToken(request) {
+  const value = safeHeaderValue(request.headers?.["x-vercel-oidc-token"]).trim();
+  if (!value || Buffer.byteLength(value, "utf8") > MAX_OIDC_TOKEN_BYTES) return "";
+  return OIDC_TOKEN_PATTERN.test(value) ? value : "";
+}
+
+function normalizedNonce(value) {
+  const nonce = String(value || "").trim().toLowerCase();
+  if (!UUID_V4_PATTERN.test(nonce)) throw new Error("invalid BFF nonce");
+  return nonce;
+}
+
+function normalizedNow(now) {
+  const value = typeof now === "function" ? now() : new Date();
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error("invalid BFF clock");
+  return date;
+}
+
 function readBody(request) {
   if (["GET", "HEAD"].includes(String(request.method || "GET").toUpperCase())) {
-    return { ok: true, value: undefined };
+    const bytes = Buffer.alloc(0);
+    return { ok: true, value: undefined, bytes };
   }
   const declared = Number(request.headers?.["content-length"] || 0);
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return { ok: false };
@@ -193,8 +265,60 @@ function readBody(request) {
     value = Buffer.from(JSON.stringify(request.body), "utf8");
   }
   return value.byteLength <= MAX_BODY_BYTES
-    ? { ok: true, value }
+    ? { ok: true, value, bytes: value }
     : { ok: false };
+}
+
+function buildAdminBffSignaturePayload(input) {
+  const target = new URL(input.targetUrl);
+  const contextHash = hashSignedContext(input.headers);
+  const bodyHash = sha256Hex(input.bodyBytes || Buffer.alloc(0));
+  return [
+    SIGNATURE_VERSION,
+    `timestamp:${input.timestampSeconds}`,
+    `nonce:${String(input.nonce || "").toLowerCase()}`,
+    `method:${String(input.method || "").toUpperCase()}`,
+    `target-origin:${target.origin}`,
+    `path:${target.pathname}${target.search}`,
+    `browser-origin:${input.browserOrigin}`,
+    `client-ip:${input.clientIp}`,
+    `context-sha256:${contextHash}`,
+    `body-sha256:${bodyHash}`
+  ].join("\n");
+}
+
+function hashSignedContext(headers) {
+  const source = headers instanceof Headers ? headers : new Headers(headers || {});
+  const canonical = SIGNED_CONTEXT_HEADERS
+    .map((name) => `${name}:${String(source.get(name) || "")}`)
+    .join("\n");
+  return sha256Hex(Buffer.from(canonical, "utf8"));
+}
+
+function signAdminBffPayload(oidcToken, canonicalPayload) {
+  const key = deriveAdminBffSigningKey(oidcToken);
+  return createHmac("sha256", key).update(canonicalPayload, "utf8").digest("base64url");
+}
+
+function deriveAdminBffSigningKey(oidcToken) {
+  return createHmac("sha256", Buffer.from(oidcToken, "utf8"))
+    .update(SIGNING_KEY_CONTEXT, "utf8")
+    .digest();
+}
+
+function verifyAdminBffSignature(oidcToken, canonicalPayload, supplied) {
+  const expected = Buffer.from(signAdminBffPayload(oidcToken, canonicalPayload), "base64url");
+  let actual;
+  try {
+    actual = Buffer.from(String(supplied || "").replace(/^v1=/u, ""), "base64url");
+  } catch {
+    return false;
+  }
+  return actual.byteLength === expected.byteLength && timingSafeEqual(actual, expected);
+}
+
+function sha256Hex(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function safeHeaderValue(value) {
@@ -254,4 +378,19 @@ function errorBody(code, message) {
   return { ok: false, error: { code, message, retryable: false } };
 }
 
-module.exports = { proxyAdminBff };
+function retryableErrorBody(code, message) {
+  return { ok: false, error: { code, message, retryable: true } };
+}
+
+module.exports = {
+  BFF_CLIENT_IP_HEADER,
+  BFF_NONCE_HEADER,
+  BFF_SIGNATURE_HEADER,
+  BFF_TIMESTAMP_HEADER,
+  buildAdminBffSignaturePayload,
+  deriveAdminBffSigningKey,
+  hashSignedContext,
+  proxyAdminBff,
+  signAdminBffPayload,
+  verifyAdminBffSignature
+};
