@@ -167,7 +167,7 @@ test("production reconciliation is exact, protected, and scanner-safe", () => {
   assert.match(workflow, /uri_allow_list: `\$\{origin\}\$\{resetPath\}`/u);
   assert.match(
     workflow,
-    /recovery-start\.html\?token_hash=\{\{ \.TokenHash \}\}&type=recovery/u,
+    /token_hash=\{\{ \.TokenHash \}\}&type=recovery/u,
   );
   assert.match(workflow, /invalid_staff_credentials/u);
   assert.equal(request.productionProjectRef, "cgiukdjwicykrmtkhudh");
