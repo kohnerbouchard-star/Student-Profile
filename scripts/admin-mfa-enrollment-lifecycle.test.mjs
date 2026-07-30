@@ -10,7 +10,7 @@ const ADAPTER = new URL(
 test("MFA enrollment authorizes before stale-factor cleanup", async () => {
   const source = await readFile(ADAPTER, "utf8");
   const authorization = source.indexOf("authorizeEnrollment(handler, request, info)");
-  const cleanup = source.indexOf("cleanupAbandonedEnrollment(request)");
+  const cleanup = source.indexOf("cleanupAbandonedEnrollment(request)", authorization);
   assert.ok(authorization >= 0, "authorization probe must be present");
   assert.ok(cleanup > authorization, "cleanup must run only after staff authorization");
 });
