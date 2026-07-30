@@ -1,0 +1,77 @@
+name: Production Canonical Source Run Discovery
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-canonical-source-run-discovery.yml"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-canonical-source-run-discovery
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Report protected bootstrap workflow runs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OBSERVABILITY_ISSUE_NUMBER: "449"
+      TARGET_WORKFLOW: production-canonical-source-bootstrap-v1.yml
+
+    steps:
+      - name: Enforce merged-main read-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Discover recent protected workflow runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${TARGET_WORKFLOW}/runs?per_page=10" \
+            > "$RUNNER_TEMP/protected-runs.json"
+          RUNS_PATH="$RUNNER_TEMP/protected-runs.json" node - <<'NODE' > "$RUNNER_TEMP/protected-runs-comment.txt"
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.RUNS_PATH, 'utf8'));
+          const rows = (payload.workflow_runs || [])
+            .filter((run) => run.event === 'push')
+            .slice(0, 6)
+            .map((run) => ({
+              id: String(run.id),
+              status: String(run.status || 'unknown'),
+              conclusion: String(run.conclusion || 'pending'),
+              commit: String(run.head_sha || '').slice(0, 12),
+              createdAt: String(run.created_at || ''),
+              url: String(run.html_url || ''),
+            }));
+          const lines = [
+            'Protected production canonical-source workflow discovery:',
+            '',
+            ...(rows.length
+              ? rows.map((run) => `- run ${run.id}: ${run.status}/${run.conclusion}; commit ${run.commit}; created ${run.createdAt}; ${run.url}`)
+              : ['- no push-triggered runs were returned']),
+            '',
+            'This report contains workflow metadata only. It does not contain credentials, database URLs, Game Codes, project references, or internal application identifiers.',
+          ];
+          process.stdout.write(lines.join('\n'));
+          NODE
+
+      - name: Post sanitized discovery report
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(cat "$RUNNER_TEMP/protected-runs-comment.txt")"
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVABILITY_ISSUE_NUMBER}/comments" \
+            -f body="$body" >/dev/null
