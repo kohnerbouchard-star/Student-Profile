@@ -5,11 +5,6 @@ import {
   type TrustedIpHeader,
 } from "./rateLimitKeying.ts";
 
-const DIRECT_GATEWAY_IP_HEADERS = [
-  "cf-connecting-ip",
-  "x-real-ip",
-] as const;
-
 export function bindGatewayTrustedClientIp(
   request: Request,
   configuredHeader: string | null | undefined,
@@ -18,7 +13,7 @@ export function bindGatewayTrustedClientIp(
   if (!trustedHeader) return request;
 
   const clientIp = readSafeIp(request.headers.get(trustedHeader)) ||
-    readGatewayClientIp(request.headers);
+    readRightmostForwardedIp(request.headers);
   if (!clientIp) return request;
 
   return new Request(request, {
@@ -43,14 +38,8 @@ function normalizeTrustedHeader(
   return normalized as TrustedIpHeader;
 }
 
-function readGatewayClientIp(headers: Headers): string {
-  for (const header of DIRECT_GATEWAY_IP_HEADERS) {
-    const value = readSafeIp(headers.get(header));
-    if (value) return value;
-  }
-
-  const forwarded = String(headers.get("x-forwarded-for") || "");
-  const candidates = forwarded
+function readRightmostForwardedIp(headers: Headers): string {
+  const candidates = String(headers.get("x-forwarded-for") || "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
