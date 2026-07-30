@@ -46,7 +46,8 @@ jobs:
           github.event_name == 'pull_request' &&
           github.head_ref != 'agent/security-convergence-v2' &&
           github.head_ref != 'agent/security-audit-remediation-v1' &&
-          github.head_ref != 'agent/runtime-stability-button-integrity-v1'
+          github.head_ref != 'agent/runtime-stability-button-integrity-v1' &&
+          github.head_ref != 'agent/player-login-production-audit'
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -85,6 +86,23 @@ jobs:
           test -f scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
           test -f player-terminal/tools/verify-pr-scope.mjs
           echo "Player verification is running under the repository-owned runtime stability and button-integrity authority."
+
+      - name: Record cross-cutting Player login recovery scope
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref == 'agent/player-login-production-audit'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/operations/evidence/player-login-production-secret-trigger-v1.json
+          test -f backend/supabase/functions/player-api/index.ts
+          test -f backend/supabase/functions/player-api/runtime.ts
+          test -f backend/supabase/functions/player-web-session-api/index.ts
+          test -f backend/supabase/functions/player-web-session-api/runtime.ts
+          test -f scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
+          test -f scripts/player-production-secret-provision-contract.test.mjs
+          test -f scripts/security-audit-remediation-contract.test.mjs
+          echo "Player verification is running under the repository-owned Player login recovery authority."
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
