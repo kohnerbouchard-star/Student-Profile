@@ -1,0 +1,368 @@
+name: Production Runtime Promotion V2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-runtime-promotion-v2.yml"
+      - "docs/operations/evidence/production-runtime-promotion-v1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-runtime-promotion-v2
+  cancel-in-progress: false
+
+env:
+  AUTHORIZATION_PATH: docs/operations/evidence/production-runtime-promotion-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  promote:
+    name: Promote canonical runtime to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Enforce merged-main production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify authorization contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f "$AUTHORIZATION_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const value = JSON.parse(fs.readFileSync(process.env.AUTHORIZATION_PATH, 'utf8'));
+          const failures = [];
+          if (value.schemaVersion !== 'econovaria.production-runtime-promotion.v1') failures.push('schemaVersion');
+          if (value.action !== 'PROMOTE_STAGING_RUNTIME_TO_PRODUCTION') failures.push('action');
+          if (value.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) failures.push('targetProjectRef');
+          if (value.deniedProjectRef !== process.env.DENIED_STAGING_PROJECT_REF) failures.push('deniedProjectRef');
+          if (value.mergedMainOnly !== true) failures.push('mergedMainOnly');
+          if (value.schemaPromotionAllowed !== true) failures.push('schemaPromotionAllowed');
+          if (value.edgeFunctionPromotionAllowed !== true) failures.push('edgeFunctionPromotionAllowed');
+          if (value.productionDataPreservationRequired !== true) failures.push('productionDataPreservationRequired');
+          if (value.stagingUserDataImportAllowed !== false) failures.push('stagingUserDataImportAllowed');
+          if (value.seedContentActivationAllowed !== false) failures.push('seedContentActivationAllowed');
+          if (value.destructiveTableOperationsAllowed !== false) failures.push('destructiveTableOperationsAllowed');
+          if (failures.length) throw new Error(`Authorization mismatch: ${failures.join(', ')}`);
+          NODE
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Verify and link exact production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = new URL(process.env.SUPABASE_DB_URL);
+          const expected = process.env.EXPECTED_PRODUCTION_PROJECT_REF;
+          const username = decodeURIComponent(parsed.username || '');
+          const direct = parsed.hostname === `db.${expected}.supabase.co`;
+          const pooler = username === `postgres.${expected}` || username.endsWith(`.${expected}`);
+          if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) throw new Error('Database URL must be PostgreSQL.');
+          if (!direct && !pooler) throw new Error('Database URL is not bound to the production project.');
+          const password = decodeURIComponent(parsed.password || '');
+          if (!password) throw new Error('Production database URL does not contain a password.');
+          fs.writeFileSync('/tmp/production-db-password', password, { mode: 0o600 });
+          NODE
+          SUPABASE_DB_PASSWORD="$(cat /tmp/production-db-password)"
+          echo "::add-mask::$SUPABASE_DB_PASSWORD"
+          printf 'SUPABASE_DB_PASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          export PGSSLMODE=require
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c 'select current_database()')" = "postgres"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${EXPECTED_PRODUCTION_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked production identity.' >&2; exit 1 ;;
+          esac
+
+      - name: Capture sanitized production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > "$RUNNER_TEMP/production-runtime-before.json"
+          select json_build_object(
+            'capturedAt', clock_timestamp(),
+            'migrationCount', (select count(*) from supabase_migrations.schema_migrations),
+            'migrationHead', (select max(version) from supabase_migrations.schema_migrations),
+            'publicTableCount', (select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'),
+            'publicFunctionCount', (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'),
+            'gameCount', (select count(*) from public.game_sessions),
+            'playerCount', (select count(*) from public.players),
+            'activeCredentialCount', (select count(*) from public.player_access_credentials where status='active'),
+            'accountBalanceCount', (select count(*) from public.account_balances)
+          );
+          SQL
+
+      - name: Reconcile equivalent migration identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+
+          const db = process.env.SUPABASE_DB_URL;
+          const root = 'backend/supabase/migrations';
+          const files = fs.readdirSync(root).filter((name) => /^\d{14}_.+\.sql$/.test(name)).sort();
+          const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const scalar = (sql) => execFileSync('psql', [db, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', sql], { encoding: 'utf8' }).trim();
+          const run = (sql) => execFileSync('psql', [db, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'inherit' });
+
+          run(`create schema if not exists supabase_migrations;
+            create table if not exists supabase_migrations.schema_migrations (version text primary key);
+            alter table supabase_migrations.schema_migrations add column if not exists name text;
+            alter table supabase_migrations.schema_migrations add column if not exists statements text[];`);
+
+          const explicitAliases = new Map([
+            ['20260718190000', 'restore_pre_auth_rate_limit_rpc_v1'],
+            ['20260721002625', 'restore_rate_limit_json_compat_and_grants_v1'],
+            ['20260721003228', 'restore_rate_limit_json_compat_and_grants_v1'],
+            ['20260724234454', 'restore_rate_limit_json_compat_and_grants_v1'],
+            ['20260728103005', 'fix_auth_throttle_failure_column_ambiguity_v2'],
+          ]);
+
+          for (const file of files) {
+            const match = file.match(/^(\d{14})_(.+)\.sql$/);
+            const [, version, name] = match;
+            if (scalar(`select count(*) from supabase_migrations.schema_migrations where version=${quote(version)}`) !== '0') continue;
+
+            let equivalentName = null;
+            if (scalar(`select count(*) from supabase_migrations.schema_migrations where name=${quote(name)}`) !== '0') {
+              equivalentName = name;
+            } else if (explicitAliases.has(version)) {
+              const candidate = explicitAliases.get(version);
+              if (scalar(`select count(*) from supabase_migrations.schema_migrations where name=${quote(candidate)}`) !== '0') equivalentName = candidate;
+            }
+
+            if (!equivalentName) continue;
+            run(`insert into supabase_migrations.schema_migrations(version,name,statements)
+              values (${quote(version)},${quote(name)},array[${quote(`equivalent:${equivalentName}`)}])
+              on conflict(version) do nothing;`);
+            console.log(`Aligned ${version}_${name} to live ${equivalentName}`);
+          }
+          NODE
+
+      - name: Materialize production-only migration placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const root = 'backend/supabase/migrations';
+          const localVersions = new Set(
+            fs.readdirSync(root)
+              .map((name) => name.match(/^(\d{14})_.+\.sql$/)?.[1])
+              .filter(Boolean),
+          );
+          const text = execFileSync(
+            'psql',
+            [process.env.SUPABASE_DB_URL, '-X', '-qAt', '-F', '\t', '-v', 'ON_ERROR_STOP=1', '-c',
+              "select version, coalesce(nullif(name,''),'production_live_only') from supabase_migrations.schema_migrations order by version"],
+            { encoding: 'utf8' },
+          );
+          for (const line of text.trim().split('\n').filter(Boolean)) {
+            const [version, rawName] = line.split('\t');
+            if (localVersions.has(version)) continue;
+            const name = rawName.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'production_live_only';
+            const file = `${root}/${version}_${name}.sql`;
+            fs.writeFileSync(file, `-- Production-only migration identity retained during canonical runtime promotion.\n-- No statement is replayed; the live ledger row is authoritative.\n`);
+            console.log(`Materialized live-only placeholder ${file}`);
+          }
+          NODE
+
+      - name: Preview complete canonical migration promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --dry-run \
+            --password "$SUPABASE_DB_PASSWORD" \
+            | tee "$RUNNER_TEMP/production-db-push-dry-run.log"
+
+      - name: Apply complete canonical migration promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Deploy canonical Edge Functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          deploy_jwt() {
+            local name="$1"
+            test -d "backend/supabase/functions/$name"
+            supabase functions deploy "$name" --workdir backend --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" --use-api
+          }
+          deploy_public() {
+            local name="$1"
+            test -d "backend/supabase/functions/$name"
+            supabase functions deploy "$name" --workdir backend --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" --use-api --no-verify-jwt
+          }
+
+          deploy_jwt classroom-api
+          deploy_jwt admin-api
+          deploy_jwt stock-market-player-read
+          deploy_jwt stock-market-read
+          deploy_jwt stock-market-runner
+          deploy_jwt stock-market-seed-copy
+          deploy_jwt stock-market-trading
+          deploy_public bootstrap-api
+          deploy_public web-session-api
+          deploy_jwt staff-mfa-api
+          deploy_public player-web-session-api
+          deploy_public admin-password-recovery
+
+      - name: Restore readable Game Codes where permitted
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          psql "$SUPABASE_DB_URL" -X -q -v ON_ERROR_STOP=1 <<'SQL'
+          do $repair$
+          declare
+            game_row record;
+          begin
+            if to_regprocedure('public.issue_game_join_code_v1(uuid,uuid)') is null then
+              raise exception 'issue_game_join_code_v1 is unavailable after promotion';
+            end if;
+            for game_row in
+              select id, owner_staff_user_id
+              from public.game_sessions
+              where status='active'
+                and game_join_code is null
+                and owner_staff_user_id is not null
+            loop
+              perform public.issue_game_join_code_v1(game_row.id, game_row.owner_staff_user_id);
+            end loop;
+          end
+          $repair$;
+          SQL
+
+      - name: Verify promoted production runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.create_provisioned_game_v2(uuid,text,jsonb,text,text)') is not null")" = "t"
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.issue_game_join_code_v1(uuid,uuid)') is not null")" = "t"
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.complete_game_feature_activation_v2(uuid,uuid,uuid,timestamptz)') is not null")" = "t"
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_sessions where status='active' and game_join_code is null")" = "0"
+
+          curl --fail --silent --show-error \
+            "https://${EXPECTED_PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/classroom-api/health" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            > "$RUNNER_TEMP/classroom-health.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/classroom-health.json', 'utf8'));
+          if (body.ok !== true) throw new Error('classroom-api health failed');
+          NODE
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-after.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const required = new Map([
+            ['classroom-api', true], ['admin-api', true], ['stock-market-player-read', true],
+            ['stock-market-read', true], ['stock-market-runner', true], ['stock-market-seed-copy', true],
+            ['stock-market-trading', true], ['bootstrap-api', false], ['web-session-api', false],
+            ['staff-mfa-api', true], ['player-web-session-api', false], ['admin-password-recovery', false],
+          ]);
+          for (const [slug, verifyJwt] of required) {
+            const row = rows.find((entry) => entry.slug === slug);
+            if (!row || row.status !== 'ACTIVE' || row.verify_jwt !== verifyJwt) {
+              throw new Error(`Function verification failed: ${slug}`);
+            }
+          }
+          NODE
+
+      - name: Capture sanitized promotion result
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          export PGSSLMODE=require
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > "$RUNNER_TEMP/production-runtime-after.json"
+          select json_build_object(
+            'capturedAt', clock_timestamp(),
+            'migrationCount', (select count(*) from supabase_migrations.schema_migrations),
+            'migrationHead', (select max(version) from supabase_migrations.schema_migrations),
+            'publicTableCount', (select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'),
+            'publicFunctionCount', (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'),
+            'gameCount', (select count(*) from public.game_sessions),
+            'playerCount', (select count(*) from public.players),
+            'activeCredentialCount', (select count(*) from public.player_access_credentials where status='active'),
+            'accountBalanceCount', (select count(*) from public.account_balances),
+            'activeGamesWithoutReadableCode', (select count(*) from public.game_sessions where status='active' and game_join_code is null)
+          );
+          SQL
+
+      - name: Upload sanitized promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-runtime-promotion-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/production-runtime-before.json
+            ${{ runner.temp }}/production-runtime-after.json
+            ${{ runner.temp }}/production-db-push-dry-run.log
+          if-no-files-found: warn
+          retention-days: 90
