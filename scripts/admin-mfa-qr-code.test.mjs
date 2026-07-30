@@ -29,15 +29,31 @@ function decodeSvg(dataUrl) {
   return Buffer.from(dataUrl.slice(prefix.length), "base64").toString("utf8");
 }
 
-test("normalizes the exact Supabase SDK TOTP QR payload", () => {
-  const svg = supabaseSvg();
-  assert.equal(decodeSvg(normalizeMfaQrCode(sdkPayload(svg))), svg.trim());
+function assertCompactStaticQr(dataUrl, modules) {
+  const compact = decodeSvg(dataUrl);
+  const size = modules + 8;
+  assert.match(
+    compact,
+    new RegExp(`^<svg xmlns="http://www\\.w3\\.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" shape-rendering="crispEdges">`),
+  );
+  assert.match(compact, /<rect width="\d+" height="\d+" fill="#fff"\/>/u);
+  assert.match(compact, /<path fill="#000" d="M/u);
+  assert.doesNotMatch(compact, /<\?xml|<!--|xmlns:xlink|<script|<image|href=/iu);
+  return compact;
+}
+
+test("reconstructs the exact Supabase SDK TOTP QR payload as a compact inert SVG", () => {
+  const normalized = normalizeMfaQrCode(sdkPayload(supabaseSvg()));
+  const compact = assertCompactStaticQr(normalized, 21);
+  assert.ok(compact.length < 20_000);
 });
 
-test("accepts large static Supabase QR output without weakening the element allowlist", () => {
+test("compacts large static Supabase QR output below the browser transport bound", () => {
   const svg = supabaseSvg(81);
   assert.ok(Buffer.byteLength(svg, "utf8") > 200_000);
-  assert.equal(decodeSvg(normalizeMfaQrCode(sdkPayload(svg))), svg.trim());
+  const normalized = normalizeMfaQrCode(sdkPayload(svg));
+  assertCompactStaticQr(normalized, 81);
+  assert.ok(normalized.length < 200_000);
 });
 
 test("rejects non-Supabase serialization forms", () => {
