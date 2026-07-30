@@ -18,14 +18,23 @@ test("recovery GET is confirmation-only and does not verify a token", () => {
   assert.match(renderSource, /Continue to Password Reset/u);
   assert.match(renderSource, /name="token_hash"/u);
   assert.match(renderSource, /name="challenge"/u);
+  assert.match(renderSource, /const action = recoveryFunctionUrl\(runtime\)/u);
   assert.doesNotMatch(renderSource, /\/auth\/v1\/verify/u);
   assert.doesNotMatch(renderSource, /ConfirmationURL/u);
 });
 
-test("recovery POST is same-origin, challenge-bound, bounded and one-time", () => {
+test("recovery POST is public-origin, challenge-bound, bounded and one-time", () => {
   assert.match(
     source,
-    /request\.headers\.get\("origin"\)[\s\S]*requestUrl\.origin/u,
+    /const publicOrigin = new URL\(runtime\.supabaseUrl\)\.origin/u,
+  );
+  assert.match(
+    source,
+    /request\.headers\.get\("origin"\)[\s\S]*publicOrigin/u,
+  );
+  assert.match(
+    source,
+    /return `\$\{runtime\.supabaseUrl\}\$\{FUNCTION_PATH\}`/u,
   );
   assert.match(source, /application\/x-www-form-urlencoded/u);
   assert.match(source, /MAX_FORM_BYTES = 2_048/u);
