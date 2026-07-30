@@ -84,6 +84,12 @@ verify_jwt = false
 [functions.web-session-api]
 verify_jwt = false
 
+# Public recovery confirmation surface. GET only renders a no-store confirmation
+# form. The recovery TokenHash is exchanged only after a same-origin POST with an
+# HttpOnly double-submit challenge; no user JWT exists before that exchange.
+[functions.admin-password-recovery]
+verify_jwt = false
+
 # Explicit Admin sign-out is isolated so it can fail closed when Auth session
 # revocation cannot be confirmed while still clearing the local HttpOnly cookie.
 [functions.admin-logout-api]
