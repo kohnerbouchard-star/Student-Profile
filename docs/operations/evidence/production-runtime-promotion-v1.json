@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "econovaria.production-runtime-promotion.v1",
+  "action": "PROMOTE_STAGING_RUNTIME_TO_PRODUCTION",
+  "authorizedAt": "2026-07-30T11:06:00Z",
+  "authorizedBy": "repository-owner",
+  "baselineMainCommit": "dc236ad99ec4505c350fe8155c15ad37d3cf6868",
+  "sourceBranch": "agent/promote-staging-runtime-to-production",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "mergedMainOnly": true,
+  "schemaPromotionAllowed": true,
+  "edgeFunctionPromotionAllowed": true,
+  "productionDataPreservationRequired": true,
+  "stagingUserDataImportAllowed": false,
+  "seedContentActivationAllowed": false,
+  "destructiveTableOperationsAllowed": false,
+  "migrationStrategy": "atomic-forward-replay-with-equivalent-ledger-alignment",
+  "functionStrategy": "deploy-current-main-canonical-function-set",
+  "dataRepairScope": [
+    "issue missing readable Game Codes for existing active owned games"
+  ],
+  "explicitExclusions": [
+    "copying staging Auth users",
+    "copying staging Staff or Player rows",
+    "copying synthetic staging game sessions",
+    "activating a production Seed release without a separate exact authorization contract",
+    "dropping production tables",
+    "deleting production application data"
+  ]
+}
