@@ -8,6 +8,9 @@ import {
   type EdgeSupabaseClient,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
+  bindGatewayTrustedClientIp,
+} from "../../../src/security/edgeGatewayClientIp.ts";
+import {
   createAuthClient,
   createServiceClient,
   readEdgeSupabaseEnv,
@@ -27,8 +30,13 @@ const MAX_BODY_BYTES = 8_192;
 const MAX_FRIENDLY_NAME_LENGTH = 80;
 const FACTOR_HANDLE_TTL_SECONDS = 15 * 60;
 
-Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return jsonResponse(204, null);
+Deno.serve(async (incomingRequest) => {
+  if (incomingRequest.method === "OPTIONS") return jsonResponse(204, null);
+
+  const request = bindGatewayTrustedClientIp(
+    incomingRequest,
+    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),
+  );
 
   const publishableFailure = await requirePublishableRequest(request);
   if (publishableFailure) return publishableFailure;
