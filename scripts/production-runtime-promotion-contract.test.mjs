@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const workflow = readFileSync('.github/workflows/production-runtime-promotion-v1.yml', 'utf8');
+const workflow = readFileSync('.github/workflows/production-runtime-promotion-v2.yml', 'utf8');
 const authorization = JSON.parse(
   readFileSync('docs/operations/evidence/production-runtime-promotion-v1.json', 'utf8'),
 );
@@ -23,7 +23,12 @@ for (const marker of [
   'refs/heads/main',
   'EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh',
   'DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny',
-  'Apply missing canonical migrations atomically',
+  'Preview complete canonical migration promotion',
+  'Apply complete canonical migration promotion',
+  'supabase db push',
+  '--include-all',
+  '--dry-run',
+  'Materialize production-only migration placeholders',
   'Deploy canonical Edge Functions',
   'Restore readable Game Codes where permitted',
   'productionDataPreservationRequired',
