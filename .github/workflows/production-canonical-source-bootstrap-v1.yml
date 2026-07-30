@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: production-canonical-source-bootstrap-v1
@@ -22,6 +23,7 @@ env:
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
   EVIDENCE_PATH: /tmp/production-canonical-source-bootstrap.json
+  OBSERVABILITY_ISSUE_NUMBER: "449"
 
 jobs:
   bootstrap:
@@ -30,6 +32,7 @@ jobs:
     timeout-minutes: 55
     environment: production
     env:
+      GH_TOKEN: ${{ github.token }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
       CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -38,16 +41,28 @@ jobs:
       RELEASE_COMMIT: ${{ github.sha }}
 
     steps:
+      - name: Record protected job start
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'runner-start\n' > "$RUNNER_TEMP/production-source-phase"
+          body="Production canonical-source bootstrap started. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}; commit: ${GITHUB_SHA}; phase: runner-start."
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVABILITY_ISSUE_NUMBER}/comments" \
+            -f body="$body" >/dev/null || true
+
       - name: Enforce merged-main production boundary
         shell: bash
         run: |
           set -euo pipefail
+          printf 'production-boundary-check\n' > "$RUNNER_TEMP/production-source-phase"
           test "$GITHUB_EVENT_NAME" = "push"
           test "$GITHUB_REF" = "refs/heads/main"
           test "$SUPABASE_PROJECT_REF" = "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "$SUPABASE_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$DATABASE_URL"
+          printf 'production-boundary-verified\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Check out exact merged source
         uses: actions/checkout@v7
@@ -55,6 +70,9 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Record source checkout
+        run: printf 'source-checkout-complete\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -64,15 +82,18 @@ jobs:
 
       - name: Install and validate repository tooling
         run: |
+          printf 'repository-tooling-install\n' > "$RUNNER_TEMP/production-source-phase"
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/production-canonical-source-bootstrap.mjs
           test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          printf 'repository-tooling-verified\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Verify exact production authorization
         shell: bash
         run: |
           set -euo pipefail
+          printf 'authorization-verification\n' > "$RUNNER_TEMP/production-source-phase"
           node - <<'NODE'
           const fs = require('node:fs');
           const a = JSON.parse(fs.readFileSync(process.env.AUTHORIZATION_PATH, 'utf8'));
@@ -92,11 +113,13 @@ jobs:
           if (a.sourceEnvironmentLabel !== 'staging' || i.productionAuthorized !== false) failures.push('sourceBoundary');
           if (failures.length) throw new Error(`Authorization mismatch: ${failures.join(', ')}`);
           NODE
+          printf 'authorization-verified\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Verify database binding and capture protected baseline
         shell: bash
         run: |
           set -euo pipefail
+          printf 'database-binding-verification\n' > "$RUNNER_TEMP/production-source-phase"
           node - <<'NODE'
           const parsed = new URL(process.env.DATABASE_URL);
           const ref = process.env.EXPECTED_PRODUCTION_PROJECT_REF;
@@ -116,11 +139,13 @@ jobs:
             'accountBalanceCount', (select count(*) from public.account_balances)
           );
           SQL
+          printf 'database-baseline-captured\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |
           set -euo pipefail
+          printf 'crafting-pack-build\n' > "$RUNNER_TEMP/production-source-phase"
           SOURCE_COMMIT="$(node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const contract = JSON.parse(await readFile(
@@ -135,11 +160,13 @@ jobs:
             --source-commit "$SOURCE_COMMIT" \
             --approved-source-commit "$SOURCE_COMMIT" \
             --output "$PHYSICAL_ECONOMY_PACK"
+          printf 'crafting-pack-built\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Resolve protected production service credential
         shell: bash
         run: |
           set -euo pipefail
+          printf 'service-credential-resolution\n' > "$RUNNER_TEMP/production-source-phase"
           service="$CONFIGURED_SERVICE_ROLE_KEY"
           if [ -z "$service" ]; then
             curl --fail --silent --show-error \
@@ -158,17 +185,31 @@ jobs:
           echo "::add-mask::$service"
           printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
           rm -f "$RUNNER_TEMP/project-api-keys.json" /tmp/production-source-service-key
+          printf 'service-credential-resolved\n' > "$RUNNER_TEMP/production-source-phase"
+
+      - name: Record pre-write checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'database-write-ready\n' > "$RUNNER_TEMP/production-source-phase"
+          body="Production canonical-source bootstrap preflight completed. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}; phase: database-write-ready. The first controlled Supabase write is next."
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVABILITY_ISSUE_NUMBER}/comments" \
+            -f body="$body" >/dev/null || true
 
       - name: Bootstrap canonical source and run connected provisioning probe
         shell: bash
         run: |
           set -euo pipefail
+          printf 'canonical-source-bootstrap\n' > "$RUNNER_TEMP/production-source-phase"
           node scripts/production-canonical-source-bootstrap.mjs
+          printf 'canonical-source-bootstrap-complete\n' > "$RUNNER_TEMP/production-source-phase"
 
       - name: Verify source completeness, zero probe residue, and protected data preservation
         shell: bash
         run: |
           set -euo pipefail
+          printf 'post-bootstrap-verification\n' > "$RUNNER_TEMP/production-source-phase"
           export PGSSLMODE=require
           psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > "$RUNNER_TEMP/production-source-after.json"
           with source_game as (
@@ -204,14 +245,15 @@ jobs:
             if (after[key] !== before[key]) throw new Error(`Protected production count changed: ${key}`);
           }
           NODE
+          printf 'post-bootstrap-verification-complete\n' > "$RUNNER_TEMP/production-source-phase"
 
-      - name: Scan and upload sanitized evidence
-        if: always()
+      - name: Scan sanitized evidence
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f "$EVIDENCE_PATH" ]; then
-            node - <<'NODE'
+          printf 'evidence-scan\n' > "$RUNNER_TEMP/production-source-phase"
+          test -f "$EVIDENCE_PATH"
+          node - <<'NODE'
           const fs = require('node:fs');
           const text = fs.readFileSync(process.env.EVIDENCE_PATH, 'utf8');
           const evidence = JSON.parse(text);
@@ -221,7 +263,30 @@ jobs:
           const forbidden = /(eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role_key|authorization:\s*bearer|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
           if (forbidden.test(text)) throw new Error('Evidence appears to contain a secret or internal identifier.');
           NODE
-          fi
+          printf 'evidence-scan-complete\n' > "$RUNNER_TEMP/production-source-phase"
+
+      - name: Record successful completion
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'completed\n' > "$RUNNER_TEMP/production-source-phase"
+          body="Production canonical-source bootstrap completed successfully. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}; commit: ${GITHUB_SHA}; phase: completed."
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVABILITY_ISSUE_NUMBER}/comments" \
+            -f body="$body" >/dev/null || true
+
+      - name: Record sanitized failure phase
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          phase="$(cat "$RUNNER_TEMP/production-source-phase" 2>/dev/null || printf 'job-not-started')"
+          phase="$(printf '%s' "$phase" | tr -cd 'A-Za-z0-9._-')"
+          body="Production canonical-source bootstrap failed before completion. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}; commit: ${GITHUB_SHA}; last phase: ${phase}. No credential, database URL, Game Code, or internal identifier is included in this report."
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVABILITY_ISSUE_NUMBER}/comments" \
+            -f body="$body" >/dev/null || true
 
       - name: Upload production canonical source evidence
         if: always()

@@ -33,8 +33,17 @@ for (const marker of [
   'Verify source completeness, zero probe residue, and protected data preservation',
   "const SOURCE_NAME = '[SYSTEM] Econovaria Canonical Source'",
   "p_target_environment: 'staging'",
-  "canonicalSourceJoinable: false",
-  "existingPlayerDataMutated: false",
+  'canonicalSourceJoinable: false',
+  'existingPlayerDataMutated: false',
+  'issues: write',
+  'OBSERVABILITY_ISSUE_NUMBER: "449"',
+  'Record protected job start',
+  'Record pre-write checkpoint',
+  'Record successful completion',
+  'Record sanitized failure phase',
+  'production-source-phase',
+  'database-write-ready',
+  'gh api --method POST',
 ]) {
   assert.ok(`${workflow}\n${script}`.includes(marker), `missing boundary marker: ${marker}`);
 }
@@ -48,6 +57,31 @@ for (const forbidden of [
 ]) {
   assert.ok(!script.toLowerCase().includes(forbidden.toLowerCase()), `forbidden source behavior: ${forbidden}`);
 }
+
+const diagnosticBodies = workflow
+  .split(/\r?\n/)
+  .filter((line) => line.trimStart().startsWith('body='))
+  .join('\n');
+for (const forbiddenDiagnosticValue of [
+  '$SUPABASE_ACCESS_TOKEN',
+  '$SUPABASE_SERVICE_ROLE_KEY',
+  '$CONFIGURED_SERVICE_ROLE_KEY',
+  '$DATABASE_URL',
+  '$SUPABASE_DB_URL',
+  '$SUPABASE_PROJECT_REF',
+  'game_join_code',
+]) {
+  assert.ok(
+    !diagnosticBodies.includes(forbiddenDiagnosticValue),
+    `diagnostic body contains forbidden value: ${forbiddenDiagnosticValue}`,
+  );
+}
+
+const diagnosticCommands = workflow
+  .split(/\r?\n/)
+  .filter((line) => line.includes('gh api --method POST'));
+assert.equal(diagnosticCommands.length, 4);
+assert.equal((workflow.match(/-f body="\$body" >\/dev\/null \|\| true/g) ?? []).length, 4);
 
 assert.ok(script.includes("delete from public.game_sessions where id = ${sqlLiteral(created.gameSessionId)}::uuid"));
 assert.ok(script.includes("name = ${sqlLiteral(SOURCE_NAME)}"));
