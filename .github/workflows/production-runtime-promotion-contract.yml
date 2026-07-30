@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/production-runtime-promotion-v1.yml"
+      - ".github/workflows/production-runtime-promotion-v2.yml"
       - ".github/workflows/production-runtime-promotion-contract.yml"
       - "docs/operations/evidence/production-runtime-promotion-v1.json"
       - "scripts/production-runtime-promotion-contract.test.mjs"
