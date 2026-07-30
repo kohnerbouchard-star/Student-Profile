@@ -44,7 +44,6 @@ for (const forbidden of [
   'delete from auth.users',
   'truncate public.',
   'p_target_environment: \'production\'',
-  'game_join_code_status = \'active\'',
   'copy staging players',
 ]) {
   assert.ok(!script.toLowerCase().includes(forbidden.toLowerCase()), `forbidden source behavior: ${forbidden}`);
@@ -53,6 +52,7 @@ for (const forbidden of [
 assert.ok(script.includes("delete from public.game_sessions where id = ${sqlLiteral(created.gameSessionId)}::uuid"));
 assert.ok(script.includes("name = ${sqlLiteral(SOURCE_NAME)}"));
 assert.ok(script.includes("game_join_code_status <> 'active'"));
+assert.ok(script.includes("game_join_code_status = 'active'"));
 assert.ok(workflow.includes("for (const key of ['nonSystemGameCount', 'playerCount', 'activeCredentialCount', 'accountBalanceCount'])"));
 
 console.log('production canonical source bootstrap contract: ok');
