@@ -8,6 +8,12 @@
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin-proxy?path=:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
