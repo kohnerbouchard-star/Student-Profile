@@ -16,24 +16,30 @@
   "destructiveTableOperationsAllowed": false,
   "migrationStrategy": "atomic-forward-replay-with-equivalent-ledger-alignment",
   "functionStrategy": "deploy-current-main-canonical-function-set",
-  "resume": {
-    "requestedAt": "2026-07-30T11:37:00Z",
-    "reason": "The first promotion applied add_storyline_schema_v1 and then stopped at the historical Contracts foundation because production already contained the equivalent repair_contracts_schema_v1 schema.",
-    "lastRecordedCanonicalMigration": "20260625120000_add_storyline_schema_v1",
-    "semanticAlignment": {
+  "recoveryCheckpoints": [
+    {
+      "requestedAt": "2026-07-30T11:37:00Z",
+      "lastRecordedCanonicalMigration": "20260625120000_add_storyline_schema_v1",
       "canonicalVersion": "20260625123000",
       "canonicalName": "add_contracts_schema_v1",
       "equivalentLiveMigration": "repair_contracts_schema_v1",
-      "preconditionsVerified": [
-        "public.contract_templates exists",
-        "public.game_session_contracts exists",
-        "public.player_contract_progress exists",
-        "repair_contracts_schema_v1 is recorded"
-      ]
+      "reason": "Production already contained all three canonical Contracts tables under the repair migration."
     },
+    {
+      "requestedAt": "2026-07-30T11:51:00Z",
+      "lastRecordedCanonicalMigration": "20260719200000_add_game_lifecycle_controls_v1",
+      "canonicalVersion": "20260720235900",
+      "canonicalName": "harden_canonical_database_exposure_v1",
+      "equivalentLiveMigration": "reconcile_harden_canonical_database_exposure_v1",
+      "reason": "The canonical hardening migration referenced the retired seed_default_store_items(uuid) RPC. All live tables and functions were hardened; the absent retired RPC was explicitly skipped."
+    }
+  ],
+  "recoveryAssertions": {
     "applicationRowsDeleted": false,
     "productionGameCountPreserved": 1,
-    "productionPlayerCountPreserved": 9
+    "productionPlayerCountPreserved": 9,
+    "currenciesRlsEnabled": true,
+    "gameLifecycleTransitionRequestsRlsEnabled": true
   },
   "dataRepairScope": [
     "issue missing readable Game Codes for existing active owned games"
