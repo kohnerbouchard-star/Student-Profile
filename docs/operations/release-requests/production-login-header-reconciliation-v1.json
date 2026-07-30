@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "requestId": "production-login-header-2026-07-30-01",
+  "state": "approved",
+  "sourceRef": "refs/heads/main",
+  "productionProjectRef": "cgiukdjwicykrmtkhudh",
+  "productionOrigin": "https://econovaria.vercel.app",
+  "trustedClientIpHeader": "x-real-ip",
+  "productionEnvironmentApprovalRequired": true,
+  "allowedProductionMutations": [
+    "set ECONOVARIA_TRUSTED_CLIENT_IP_HEADER to x-real-ip",
+    "run one synthetic invalid-credential login verification"
+  ],
+  "databaseChangesAllowed": false,
+  "edgeFunctionDeploymentsAllowed": false,
+  "productionDataWritesAllowed": "bounded authentication throttle verification only",
+  "realAdministratorCredentialsAllowed": false
+}
