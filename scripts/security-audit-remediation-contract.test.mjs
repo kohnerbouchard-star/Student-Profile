@@ -67,12 +67,17 @@ test("Player browser runtime contains no opaque session token", async () => {
 
 test("Player BFF seals the token in an HttpOnly CSRF-bound cookie", async () => {
   const helper = await read("backend/src/security/webPlayerSession.ts");
-  const edge = await read("backend/supabase/functions/player-web-session-api/index.ts");
+  const [entrypoint, runtime] = await Promise.all([
+    read("backend/supabase/functions/player-web-session-api/index.ts"),
+    read("backend/supabase/functions/player-web-session-api/runtime.ts"),
+  ]);
+  const edge = `${entrypoint}\n${runtime}`;
   const proxy = await read("api/_player-bff-proxy.js");
   const config = await read("backend/supabase/config.toml");
   assert.match(helper, /AES-GCM/);
   assert.match(helper, /ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY/);
   assert.match(helper, /WEB_PLAYER_SESSION_ABSOLUTE_SECONDS = 4 \* 60 \* 60/);
+  assert.match(entrypoint, /bindGatewayTrustedClientIp/);
   assert.match(edge, /requireAllowedOrigin\(request\)/);
   assert.match(edge, /requirePublishableRequest\(request\)/);
   assert.match(edge, /constantTimePlayerTextEqual\(suppliedCsrf/);
