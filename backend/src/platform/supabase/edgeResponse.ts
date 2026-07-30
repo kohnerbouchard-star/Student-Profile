@@ -28,7 +28,10 @@ export class EdgeActivationError extends Error {
   }
 }
 
-const PRODUCTION_BROWSER_ORIGIN = "https://kohnerbouchard-star.github.io";
+const PRODUCTION_BROWSER_ORIGIN = "https://econovaria.vercel.app";
+const RETIRED_BROWSER_ORIGINS = new Set([
+  "https://kohnerbouchard-star.github.io",
+]);
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 
 type DenoEnvironmentRuntime = {
@@ -53,6 +56,9 @@ function validatedBrowserOrigin(value: string): string {
     const secure = url.protocol === "https:";
     const loopback = url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
     if ((!secure && !loopback) || url.pathname !== "/" || url.search || url.hash) {
+      return PRODUCTION_BROWSER_ORIGIN;
+    }
+    if (RETIRED_BROWSER_ORIGINS.has(url.origin)) {
       return PRODUCTION_BROWSER_ORIGIN;
     }
     return url.origin;
