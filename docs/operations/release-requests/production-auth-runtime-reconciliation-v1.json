@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "requestId": "production-auth-runtime-2026-07-30-login-recovery-01",
+  "state": "approved",
+  "sourceMode": "trigger_commit",
+  "sourceRef": "refs/heads/main",
+  "productionProjectRef": "cgiukdjwicykrmtkhudh",
+  "productionOrigin": "https://econovaria.vercel.app",
+  "trustedClientIpHeader": "x-real-ip",
+  "siteUrl": "https://econovaria.vercel.app",
+  "recoveryStartPath": "/auth/recovery-start.html",
+  "passwordResetPath": "/auth/reset-password.html",
+  "productionEnvironmentApprovalRequired": true,
+  "allowedProductionMutations": [
+    "set trusted client IP header secret to x-real-ip",
+    "set production Auth site URL and redirect allow list",
+    "set scanner-safe recovery email subject and template"
+  ],
+  "databaseChangesAllowed": false,
+  "edgeFunctionDeploymentsAllowed": false,
+  "productionDataWritesAllowed": false,
+  "realAdministratorCredentialsAllowed": false
+}
