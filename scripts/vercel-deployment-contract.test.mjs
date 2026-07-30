@@ -35,6 +35,10 @@ const criticalRouteFixtures = new Map([
     `"use strict";\nconst { proxyAdminBff } = require("../_admin-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/admin-session") };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
   ],
   [
+    "api/admin-proxy.js",
+    `"use strict";\nconst { proxyAdminBff } = require("./_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const path = request.query?.path;\n  if (typeof path !== "string") return response.end(JSON.stringify({ error: { code: "invalid_proxy_path" } }));\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
+  ],
+  [
     "api/admin/[...path].js",
     `"use strict";\nconst { proxyAdminBff } = require("../_admin-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/admin") };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
   ],
@@ -156,7 +160,7 @@ test("rejects a placeholder in any protected authentication route before output"
   }
 });
 
-test("rejects missing recovery routes and retired logout targets", async () => {
+test("rejects missing recovery routes and retired or unsafe proxy targets", async () => {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-vercel-auth-"));
   const fixtureRoot = path.join(temporaryRoot, "repository");
   await mkdir(fixtureRoot, { recursive: true });
@@ -177,7 +181,20 @@ test("rejects missing recovery routes and retired logout targets", async () => {
     );
     await assert.rejects(
       validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
-      /retired target: api\/admin-logout\.js/u,
+      /retired or unsafe target: api\/admin-logout\.js/u,
+    );
+
+    await writeFile(
+      path.join(fixtureRoot, "api", "admin-logout.js"),
+      criticalRouteFixtures.get("api/admin-logout.js"),
+    );
+    await writeFile(
+      path.join(fixtureRoot, "api", "admin-proxy.js"),
+      `${criticalRouteFixtures.get("api/admin-proxy.js")}\nfetch("https://unsafe.supabase.co/functions/v1/admin-api");\n`,
+    );
+    await assert.rejects(
+      validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
+      /retired or unsafe target: api\/admin-proxy\.js/u,
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
