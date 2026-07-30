@@ -96,14 +96,12 @@ window.Econovaria = window.Econovaria || {};
     let secretNode = null;
     if (enrollment) {
       const setup = createElement("div", "econovaria-mfa-setup");
-      if (qrCode) {
-        const qrWrap = createElement("div", "econovaria-mfa-qr-wrap");
-        const image = createElement("img", "econovaria-mfa-qr");
-        image.alt = "Authenticator enrollment QR code";
-        image.src = qrCode;
-        qrWrap.append(image);
-        setup.append(qrWrap);
-      }
+      const qrWrap = createElement("div", "econovaria-mfa-qr-wrap");
+      const image = createElement("img", "econovaria-mfa-qr");
+      image.alt = "Authenticator enrollment QR code";
+      image.src = qrCode;
+      qrWrap.append(image);
+      setup.append(qrWrap);
       const secretWrap = createElement("div", "econovaria-mfa-secret-wrap");
       const secretLabel = createElement(
         "span",
@@ -304,7 +302,7 @@ window.Econovaria = window.Econovaria || {};
       factorHandle = validFactorHandle(enrolled?.factor?.handle);
       qrCode = validQrCode(enrolled?.factor?.qrCode);
       secret = validSecret(enrolled?.factor?.secret);
-      if (!enrolled?.ok || !factorHandle || !secret) {
+      if (!enrolled?.ok || !factorHandle || !qrCode || !secret) {
         throw new Error(
           statusMessage(enrolled, "Authenticator enrollment could not be started.")
         );
