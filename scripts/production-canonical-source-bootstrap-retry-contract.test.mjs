@@ -93,7 +93,7 @@ for (const forbidden of [
   'truncate public.',
   'copy staging players',
   'SUPABASE_PROJECT_REF: eecvbssdvarfcykcfrny',
-  `delete from public.game_sessions where name=${SOURCE_NAME}`,
+  "delete from public.game_sessions where name='[SYSTEM] Econovaria Canonical Source'",
 ]) {
   assert.ok(!`${runner}\n${workflow}`.includes(forbidden), `forbidden retry behavior: ${forbidden}`);
 }
