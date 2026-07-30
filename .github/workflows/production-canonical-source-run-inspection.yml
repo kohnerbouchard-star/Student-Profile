@@ -1,4 +1,4 @@
-name: Production Canonical Source Run Inspection
+name: Production Canonical Source Retry Run Inspection
 
 on:
   pull_request:
@@ -13,12 +13,12 @@ permissions:
 
 jobs:
   inspect:
-    name: Inspect protected bootstrap push runs
+    name: Inspect canonical source retry push runs
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      TARGET_WORKFLOW: production-canonical-source-bootstrap-v1.yml
+      TARGET_WORKFLOW: production-canonical-source-bootstrap-retry-v1.yml
 
     steps:
       - name: Enforce read-only pull-request scope
@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = "pull_request"
 
-      - name: Print sanitized protected workflow run metadata
+      - name: Print sanitized retry workflow run metadata
         shell: bash
         run: |
           set -euo pipefail
@@ -49,5 +49,5 @@ jobs:
               updatedAt: String(run.updated_at || ''),
               url: String(run.html_url || ''),
             }));
-          console.log('PROTECTED_BOOTSTRAP_RUNS=' + JSON.stringify(rows));
+          console.log('PROTECTED_RETRY_RUNS=' + JSON.stringify(rows));
           NODE
