@@ -1,0 +1,12 @@
+{
+  "format": "econovaria.production-runtime-promotion.scope.v1",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "branch": "agent/promote-staging-runtime-to-production",
+  "baseCommit": "dc236ad99ec4505c350fe8155c15ad37d3cf6868",
+  "target": "production",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "sourceRuntimeAuthority": "current merged repository and validated staging architecture",
+  "preserveProductionRows": true,
+  "copyStagingRows": false,
+  "activateSeedContent": false
+}
