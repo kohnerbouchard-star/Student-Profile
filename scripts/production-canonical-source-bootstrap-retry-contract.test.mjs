@@ -41,10 +41,15 @@ assert.ok(
   'compatibility marker must be applied only after endpoint binding validation',
 );
 
+for (const assignmentPattern of [
+  /parsed\.hostname\s*=(?!=)/,
+  /parsed\.username\s*=(?!=)/,
+  /parsed\.password\s*=(?!=)/,
+]) {
+  assert.ok(!assignmentPattern.test(runner), `runner mutates protected URL identity: ${assignmentPattern}`);
+}
+
 for (const forbidden of [
-  'parsed.hostname =',
-  'parsed.username =',
-  'parsed.password =',
   'delete from public.players',
   'delete from auth.users',
   'truncate public.',
