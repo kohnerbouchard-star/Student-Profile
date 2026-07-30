@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "econovaria.production-admin-api-join-code-read-hotfix.v1",
+  "authorizedAt": "2026-07-30T19:17:00+09:00",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "functionName": "admin-api",
+  "expectedBeforeVersion": 23,
+  "expectedBeforeDigest": "38e0edb0dbfe0988755edb6b28c785c4b725d03e72d4e54d9997edf37b877b55",
+  "sourceCommit": "d28c98db96e6468c2a328a68529446c80ad50a0e",
+  "scope": [
+    "authenticated owner-scoped GET join-code read"
+  ],
+  "databaseMigrationsAllowed": false,
+  "otherFunctionsAllowed": false,
+  "verifyJwtRequired": true
+}
