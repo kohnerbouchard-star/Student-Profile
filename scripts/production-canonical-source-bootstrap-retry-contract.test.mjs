@@ -106,7 +106,7 @@ assert.ok(runner.includes("source.name=${sqlLiteral(SOURCE_NAME)}"));
 assert.ok(runner.includes("owner.email=${sqlLiteral(SOURCE_STAFF_EMAIL)}"));
 assert.ok(runner.includes("source.game_join_code_status<>'active'"));
 assert.ok(runner.includes("probe.game_join_code_status='active'"));
-assert.ok(runner.includes("probe.provisioning_status='ready'"));
+assert.ok(runner.includes("and provisioning_status='ready'"));
 assert.ok(workflow.includes("after.sourceCount !== 1 || after.sourceJoinable !== false"));
 assert.ok(workflow.includes('after.releaseMembers !== 590'));
 assert.ok(workflow.includes('after.probeResidue !== 0'));
