@@ -57,6 +57,7 @@ verify_jwt = true
 
 [functions.staff-mfa-api]
 verify_jwt = true
+entrypoint = "./functions/staff-mfa-api/entrypoint.ts"
 
 # The one-time recovery JWT is platform-verified, resolved with auth.getUser and
 # linked to an active Staff account before a server-side password update.
