@@ -11,20 +11,15 @@ import {
   bindGatewayTrustedClientIp,
 } from "../../../src/security/edgeGatewayClientIp.ts";
 import {
+  createCanonicalTotpEnrollment,
+  readVerifiedTotpFactors,
+} from "./mfaEnrollmentLifecycle.ts";
+import {
   createAuthClient,
   createServiceClient,
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
-
-interface MfaFactor {
-  readonly id: string;
-  readonly friendly_name?: string;
-  readonly factor_type?: string;
-  readonly status?: string;
-  readonly created_at?: string;
-  readonly updated_at?: string;
-}
 
 const MAX_BODY_BYTES = 8_192;
 const MAX_FRIENDLY_NAME_LENGTH = 80;
@@ -118,7 +113,7 @@ async function handleStatus(userClient: any, userId: string): Promise<Response> 
     ]);
   if (factorError || aalError) return mfaFailure();
 
-  const factors = enrolledFactors(factorData);
+  const factors = readVerifiedTotpFactors(factorData);
   return jsonResponse(200, {
     ok: true,
     assuranceLevel: normalizeAal(aalData?.currentLevel),
@@ -127,8 +122,8 @@ async function handleStatus(userClient: any, userId: string): Promise<Response> 
     factors: await Promise.all(factors.map(async (factor) => ({
       handle: await createFactorHandle(userId, factor.id),
       friendlyName: safeFriendlyName(factor.friendly_name),
-      factorType: factor.factor_type === "totp" ? "totp" : "unknown",
-      status: factor.status === "verified" ? "verified" : "unverified",
+      factorType: "totp",
+      status: "verified",
       createdAt: safeIsoDate(factor.created_at),
       updatedAt: safeIsoDate(factor.updated_at),
     }))),
@@ -143,25 +138,47 @@ async function handleEnroll(
   rejectUnknownFields(body, new Set(["friendlyName"]));
   const friendlyName = safeFriendlyName(body.friendlyName) || "Econovaria Admin";
 
-  const { data, error } = await userClient.auth.mfa.enroll({
-    factorType: "totp",
-    friendlyName,
-  });
-  const factorId = String(data?.id || "");
-  const qrCode = String(data?.totp?.qr_code || "");
-  const secret = String(data?.totp?.secret || "");
-  const uri = String(data?.totp?.uri || "");
-  if (error || !factorId || !qrCode || !secret || !uri) return mfaFailure();
+  const handleKey = await factorHandleKey();
+  const enrollment = await createCanonicalTotpEnrollment(userClient, friendlyName);
+  if (!enrollment.ok) {
+    throw new MfaRequestError(
+      enrollment.code,
+      enrollment.message,
+      enrollment.status,
+      enrollment.retryable,
+    );
+  }
+
+  let factorHandle: string;
+  try {
+    factorHandle = await createFactorHandleWithKey(
+      userId,
+      enrollment.factorId,
+      handleKey,
+    );
+  } catch {
+    await userClient.auth.mfa.unenroll({ factorId: enrollment.factorId }).catch?.(
+      () => null,
+    );
+    throw new MfaRequestError(
+      "mfa_enrollment_finalization_failed",
+      "Authenticator enrollment could not be finalized safely.",
+      503,
+      true,
+    );
+  }
 
   return jsonResponse(201, {
     ok: true,
+    contractVersion: "econovaria.staff-mfa-enrollment.v1",
     factor: {
-      handle: await createFactorHandle(userId, factorId),
+      handle: factorHandle,
       factorType: "totp",
+      status: "unverified",
       friendlyName,
-      qrCode,
-      secret,
-      uri,
+      qrCode: enrollment.qrCode,
+      secret: enrollment.secret,
+      uri: enrollment.uri,
     },
     expiresInSeconds: FACTOR_HANDLE_TTL_SECONDS,
   }, privateHeaders());
@@ -189,7 +206,7 @@ async function handleVerify(
   });
   const accessToken = String(data?.access_token || data?.session?.access_token || "");
   const refreshToken = String(data?.refresh_token || data?.session?.refresh_token || "");
-  if (error || !accessToken) {
+  if (error || !accessToken || !refreshToken) {
     throw new MfaRequestError(
       "mfa_verification_failed",
       "The authenticator code is invalid or expired.",
@@ -218,19 +235,6 @@ async function handleUnenroll(
   const { error } = await userClient.auth.mfa.unenroll({ factorId });
   if (error) return mfaFailure();
   return jsonResponse(200, { ok: true, removed: true }, privateHeaders());
-}
-
-function enrolledFactors(value: unknown): MfaFactor[] {
-  const record = value && typeof value === "object"
-    ? value as Record<string, unknown>
-    : {};
-  const all = [
-    ...(Array.isArray(record.totp) ? record.totp : []),
-    ...(Array.isArray(record.phone) ? record.phone : []),
-  ];
-  return all.filter((factor): factor is MfaFactor =>
-    Boolean(factor && typeof factor === "object" && String((factor as any).id || ""))
-  );
 }
 
 async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
@@ -316,7 +320,14 @@ function normalizeAal(value: unknown): "aal1" | "aal2" | "unknown" {
 }
 
 async function createFactorHandle(userId: string, factorId: string): Promise<string> {
-  const key = await factorHandleKey();
+  return createFactorHandleWithKey(userId, factorId, await factorHandleKey());
+}
+
+async function createFactorHandleWithKey(
+  userId: string,
+  factorId: string,
+  key: CryptoKey,
+): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const payload = new TextEncoder().encode(JSON.stringify({
     sub: userId,
@@ -325,7 +336,11 @@ async function createFactorHandle(userId: string, factorId: string): Promise<str
     nonce: crypto.randomUUID(),
   }));
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1") },
+    {
+      name: "AES-GCM",
+      iv,
+      additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1"),
+    },
     key,
     payload,
   );
@@ -381,7 +396,10 @@ async function factorHandleKey(): Promise<CryptoKey> {
     "SHA-256",
     new TextEncoder().encode(secret),
   );
-  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
+  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
 function functionPath(request: Request): string {
