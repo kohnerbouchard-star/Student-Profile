@@ -35,6 +35,19 @@ export const VERCEL_CRITICAL_ROUTE_CONTRACTS = Object.freeze([
     /canonicalCatchAllPath\(request\.url,\s*"\/api\/admin-session"\)/u,
     /proxyAdmin:\s*false/u,
   ]),
+  handlerContract("api/admin-proxy.js", [
+    /proxyAdminBff/u,
+    /typeof path !== "string"/u,
+    /invalid_proxy_path/u,
+    /proxyAdmin:\s*true/u,
+  ], [
+    /supabase\.co/iu,
+    /functions\/v1/iu,
+    /\bAuthorization\b/u,
+    /\bBearer\b/u,
+    /service_role/iu,
+    /\bfetch\s*\(/u,
+  ]),
   handlerContract("api/admin/[...path].js", [
     /proxyAdminBff/u,
     /canonicalCatchAllPath/u,
@@ -161,7 +174,7 @@ export async function validateCriticalVercelRoutes({
     }
     for (const forbiddenPattern of contract.forbiddenPatterns) {
       if (forbiddenPattern.test(source)) {
-        throw new Error(`Required Vercel route contains a retired target: ${contract.relativePath}`);
+        throw new Error(`Required Vercel route contains a retired or unsafe target: ${contract.relativePath}`);
       }
     }
   }
