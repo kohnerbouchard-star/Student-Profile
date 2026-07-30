@@ -6,8 +6,14 @@ const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 const JWT_PATTERN = /^[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,12288}\.[A-Za-z0-9_-]{8,4096}$/u;
 const PRODUCTION_RESET_URL = "https://econovaria.vercel.app/auth/reset-password.html";
+const FUNCTION_PATH = "/functions/v1/admin-password-recovery";
 
 Deno.serve(handleAdminPasswordRecoveryRequest);
+
+interface RecoveryRuntimeConfig {
+  readonly supabaseUrl: string;
+  readonly publishableKey: string;
+}
 
 export async function handleAdminPasswordRecoveryRequest(
   request: Request,
@@ -18,24 +24,27 @@ export async function handleAdminPasswordRecoveryRequest(
   return htmlResponse(405, errorPage(
     "Unsupported request",
     "Use the password recovery link from the administrator sign-in page.",
-  ), {
-    Allow: "GET, POST",
-  });
+  ), { Allow: "GET, POST" });
 }
 
 function renderConfirmation(request: Request): Response {
-  const url = new URL(request.url);
+  const runtime = readRuntimeConfig();
+  if (!runtime) return recoveryUnavailable();
+
+  let url: URL;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return invalidRecoveryRequest();
+  }
   const tokenHash = String(url.searchParams.get("token_hash") || "").trim();
   const type = String(url.searchParams.get("type") || "").trim().toLowerCase();
   if (type !== "recovery" || !TOKEN_HASH_PATTERN.test(tokenHash)) {
-    return htmlResponse(400, errorPage(
-      "Invalid recovery request",
-      "This password recovery link is invalid or incomplete. Request a new email from the administrator sign-in page.",
-    ));
+    return invalidRecoveryRequest();
   }
 
   const challenge = randomBase64Url(32);
-  const action = `${url.origin}${url.pathname}`;
+  const action = recoveryFunctionUrl(runtime);
   const body = `<!doctype html>
 <html lang="en">
 <head>
@@ -69,19 +78,17 @@ function renderConfirmation(request: Request): Response {
 }
 
 async function consumeRecoveryRequest(request: Request): Promise<Response> {
-  let requestUrl: URL;
-  try {
-    requestUrl = new URL(request.url);
-  } catch {
-    return recoveryFailure();
-  }
+  const runtime = readRuntimeConfig();
+  if (!runtime) return recoveryUnavailable();
 
-  if (String(request.headers.get("origin") || "") !== requestUrl.origin) {
+  const publicOrigin = new URL(runtime.supabaseUrl).origin;
+  if (String(request.headers.get("origin") || "") !== publicOrigin) {
     return htmlResponse(403, errorPage(
       "Recovery request rejected",
       "Open the newest recovery email and use the confirmation button on that page.",
     ), clearChallengeHeaders());
   }
+
   const contentType = String(request.headers.get("content-type") || "")
     .split(";", 1)[0]
     .trim()
@@ -122,14 +129,6 @@ async function consumeRecoveryRequest(request: Request): Promise<Response> {
     return recoveryFailure();
   }
 
-  const runtime = readRuntimeConfig();
-  if (!runtime) {
-    return htmlResponse(503, errorPage(
-      "Recovery temporarily unavailable",
-      "Password recovery is temporarily unavailable. Try again shortly.",
-    ), clearChallengeHeaders());
-  }
-
   const verification = await fetch(`${runtime.supabaseUrl}/auth/v1/verify`, {
     method: "POST",
     headers: {
@@ -140,12 +139,7 @@ async function consumeRecoveryRequest(request: Request): Promise<Response> {
     cache: "no-store",
     redirect: "error",
   }).catch(() => null);
-  if (!verification) {
-    return htmlResponse(503, errorPage(
-      "Recovery temporarily unavailable",
-      "Password recovery is temporarily unavailable. Try again shortly.",
-    ), clearChallengeHeaders());
-  }
+  if (!verification) return recoveryUnavailable();
 
   const responseBytes = new Uint8Array(await verification.arrayBuffer());
   if (responseBytes.byteLength === 0 || responseBytes.byteLength > MAX_AUTH_RESPONSE_BYTES) {
@@ -176,6 +170,17 @@ async function consumeRecoveryRequest(request: Request): Promise<Response> {
   });
 }
 
+function recoveryFunctionUrl(runtime: RecoveryRuntimeConfig): string {
+  return `${runtime.supabaseUrl}${FUNCTION_PATH}`;
+}
+
+function invalidRecoveryRequest(): Response {
+  return htmlResponse(400, errorPage(
+    "Invalid recovery request",
+    "This password recovery link is invalid or incomplete. Request a new email from the administrator sign-in page.",
+  ));
+}
+
 function recoveryFailure(status = 400): Response {
   return htmlResponse(status, errorPage(
     "Recovery link unavailable",
@@ -183,10 +188,14 @@ function recoveryFailure(status = 400): Response {
   ), clearChallengeHeaders());
 }
 
-function readRuntimeConfig(): {
-  readonly supabaseUrl: string;
-  readonly publishableKey: string;
-} | null {
+function recoveryUnavailable(): Response {
+  return htmlResponse(503, errorPage(
+    "Recovery temporarily unavailable",
+    "Password recovery is temporarily unavailable. Try again shortly.",
+  ), clearChallengeHeaders());
+}
+
+function readRuntimeConfig(): RecoveryRuntimeConfig | null {
   const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "")
     .trim()
     .replace(/\/+$/u, "");
@@ -201,6 +210,9 @@ function readRuntimeConfig(): {
     if (
       parsed.protocol !== "https:" ||
       !parsed.hostname.endsWith(".supabase.co") ||
+      parsed.pathname !== "/" ||
+      parsed.search ||
+      parsed.hash ||
       !publishableKey
     ) return null;
     return { supabaseUrl: parsed.origin, publishableKey };
