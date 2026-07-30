@@ -15,6 +15,9 @@ import {
   enforceEdgeRequestBoundary,
 } from "../../../src/security/edgeRequestBoundary.ts";
 import {
+  bindGatewayTrustedClientIp,
+} from "../../../src/security/edgeGatewayClientIp.ts";
+import {
   createAuthClient,
   createServiceClient,
   readEdgeSupabaseEnv,
@@ -27,6 +30,14 @@ interface EdgeHealthBody {
   readonly status: "ready";
 }
 
+function environmentValue(name: string): string {
+  try {
+    return String(Deno.env.get(name) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 Deno.serve(async (incomingRequest: Request) => {
   if (incomingRequest.method === "OPTIONS") return jsonResponse(204, null);
 
@@ -36,7 +47,10 @@ Deno.serve(async (incomingRequest: Request) => {
     requireJsonBody: true,
   });
   if (!boundary.ok) return boundary.response;
-  const request = boundary.request;
+  const request = bindGatewayTrustedClientIp(
+    boundary.request,
+    environmentValue("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),
+  );
   const url = new URL(request.url);
 
   if (url.pathname.endsWith("/health")) {
