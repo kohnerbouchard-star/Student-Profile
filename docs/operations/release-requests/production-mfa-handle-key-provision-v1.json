@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "requestId": "production-mfa-handle-key-2026-07-30-01",
+  "requestedAt": "2026-07-30T05:25:00Z",
+  "expiresAt": "2026-07-31T00:00:00Z",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRefs": [
+    "eecvbssdvarfcykcfrny"
+  ],
+  "secretName": "ECONOVARIA_MFA_HANDLE_KEY",
+  "secretPurpose": "Encrypt short-lived administrator MFA factor handles",
+  "generation": {
+    "randomBytes": 32,
+    "encoding": "base64url",
+    "expectedLength": 43
+  },
+  "missingOnly": true,
+  "overwriteExisting": false,
+  "recordSecretValue": false,
+  "databaseChangesAllowed": false,
+  "edgeFunctionDeploymentsAllowed": false,
+  "authorizationPhrase": "PROVISION DEDICATED MFA HANDLE KEY"
+}

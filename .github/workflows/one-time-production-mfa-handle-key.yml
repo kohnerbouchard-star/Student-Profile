@@ -1,0 +1,135 @@
+name: One-time Production MFA Handle Key Provision
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/operations/release-requests/production-mfa-handle-key-provision-v1.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-time-production-mfa-handle-key
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SECRET_NAME: ECONOVARIA_MFA_HANDLE_KEY
+  REQUEST_PATH: docs/operations/release-requests/production-mfa-handle-key-provision-v1.json
+  WORKFLOW_PATH: .github/workflows/one-time-production-mfa-handle-key.yml
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  provision:
+    name: Provision dedicated production MFA key
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Enforce one-time authorization boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$DENIED_STAGING_PROJECT_REF" = "eecvbssdvarfcykcfrny"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$SECRET_NAME" = "ECONOVARIA_MFA_HANDLE_KEY"
+          test -f "$REQUEST_PATH"
+
+          mapfile -t changed < <(git diff --name-only "$GITHUB_SHA^" "$GITHUB_SHA" | sort)
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "$WORKFLOW_PATH"
+          test "${changed[1]}" = "$REQUEST_PATH"
+
+          REQUEST_PATH="$REQUEST_PATH" node -e '
+            const fs = require("node:fs");
+            const request = JSON.parse(fs.readFileSync(process.env.REQUEST_PATH, "utf8"));
+            const fail = (condition, message) => { if (!condition) throw new Error(message); };
+            fail(request.schemaVersion === 1, "schema version mismatch");
+            fail(request.requestId === "production-mfa-handle-key-2026-07-30-01", "request id mismatch");
+            fail(request.targetProjectRef === "cgiukdjwicykrmtkhudh", "production project mismatch");
+            fail(Array.isArray(request.deniedProjectRefs) && request.deniedProjectRefs.includes("eecvbssdvarfcykcfrny"), "staging denial missing");
+            fail(request.secretName === "ECONOVARIA_MFA_HANDLE_KEY", "secret name mismatch");
+            fail(request.generation?.randomBytes === 32, "random byte count mismatch");
+            fail(request.generation?.encoding === "base64url", "encoding mismatch");
+            fail(request.generation?.expectedLength === 43, "length mismatch");
+            fail(request.missingOnly === true, "missing-only boundary absent");
+            fail(request.overwriteExisting === false, "overwrite prohibited");
+            fail(request.recordSecretValue === false, "secret recording prohibited");
+            fail(request.databaseChangesAllowed === false, "database changes prohibited");
+            fail(request.edgeFunctionDeploymentsAllowed === false, "function deployment prohibited");
+            fail(request.authorizationPhrase === "PROVISION DEDICATED MFA HANDLE KEY", "authorization phrase mismatch");
+            const expires = Date.parse(request.expiresAt);
+            fail(Number.isFinite(expires) && Date.now() < expires, "authorization expired");
+          '
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Provision missing-only dedicated key
+        id: provision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          names="$RUNNER_TEMP/production-secret-names.txt"
+          supabase secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            > "$names"
+
+          if grep -q "$SECRET_NAME" "$names"; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            mfa_handle_key="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))')"
+            test "${#mfa_handle_key}" -eq 43
+            MFA_HANDLE_KEY="$mfa_handle_key" node -e '
+              const value = process.env.MFA_HANDLE_KEY || "";
+              if (!/^[A-Za-z0-9_-]{43}$/.test(value) || new Set(value).size < 16) {
+                throw new Error("Generated MFA handle key failed validation.");
+              }
+            '
+            echo "::add-mask::$mfa_handle_key"
+            supabase secrets set \
+              "$SECRET_NAME=$mfa_handle_key" \
+              --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+            unset mfa_handle_key
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          supabase secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            > "$names"
+          grep -q "$SECRET_NAME" "$names"
+          rm -f "$names"
+
+      - name: Record bounded evidence
+        shell: bash
+        run: |
+          {
+            echo '## Dedicated production MFA handle key provisioned'
+            echo "- Project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Secret name: \`$SECRET_NAME\`"
+            echo "- Newly generated: \`${{ steps.provision.outputs.created }}\`"
+            echo '- Missing-only: `true`'
+            echo '- Existing key overwritten: `false`'
+            echo '- Secret value recorded: `false`'
+            echo '- Staging project denied: `true`'
+            echo '- Database changed: `false`'
+            echo '- Edge Function deployed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
