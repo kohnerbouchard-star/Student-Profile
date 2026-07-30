@@ -1,4 +1,5 @@
 const MAX_QR_SVG_BYTES = 1_000_000;
+const MAX_COMPACT_QR_DATA_URL_LENGTH = 1_000_000;
 const SUPABASE_SVG_DATA_URL = /^data:image\/svg\+xml;utf-8,/iu;
 
 export function normalizeMfaQrCode(value: unknown): string {
@@ -48,6 +49,7 @@ export function normalizeMfaQrCode(value: unknown): string {
   const expected = modules * modules;
   const maximumCoordinate = 12 + (modules - 1) * 3;
   const seen = new Set<string>();
+  const blackCells = new Set<string>();
   let count = 0;
   let cursor = 0;
 
@@ -72,17 +74,45 @@ export function normalizeMfaQrCode(value: unknown): string {
       return "";
     }
 
-    const coordinate = `${x}:${y}`;
+    const column = x / 3 - 4;
+    const row = y / 3 - 4;
+    const coordinate = `${column}:${row}`;
     if (seen.has(coordinate)) return "";
     seen.add(coordinate);
+    if (match[3] === "black") blackCells.add(coordinate);
     count += 1;
     cursor = rect.lastIndex;
     if (count > expected) return "";
   }
 
-  if (count !== expected) return "";
+  if (count !== expected || blackCells.size === 0 || blackCells.size === expected) return "";
 
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return `data:image/svg+xml;base64,${btoa(binary)}`;
+  const compactSvg = buildCompactQrSvg(modules, blackCells);
+  const dataUrl = `data:image/svg+xml;base64,${btoa(compactSvg)}`;
+  return dataUrl.length <= MAX_COMPACT_QR_DATA_URL_LENGTH ? dataUrl : "";
+}
+
+function buildCompactQrSvg(modules: number, blackCells: ReadonlySet<string>): string {
+  const size = modules + 8;
+  const segments: string[] = [];
+
+  for (let row = 0; row < modules; row += 1) {
+    let runStart = -1;
+    for (let column = 0; column <= modules; column += 1) {
+      const black = column < modules && blackCells.has(`${column}:${row}`);
+      if (black && runStart < 0) {
+        runStart = column;
+        continue;
+      }
+      if (!black && runStart >= 0) {
+        const x = runStart + 4;
+        const y = row + 4;
+        const length = column - runStart;
+        segments.push(`M${x} ${y}h${length}v1h-${length}z`);
+        runStart = -1;
+      }
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path fill="#000" d="${segments.join("")}"/></svg>`;
 }
