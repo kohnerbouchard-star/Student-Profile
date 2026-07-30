@@ -18,17 +18,58 @@ export const BROWSER_ROOTS = Object.freeze([
   "auth",
 ]);
 
+const handlerContract = (relativePath, requiredPatterns, forbiddenPatterns = []) =>
+  Object.freeze({
+    relativePath,
+    requiredPatterns: Object.freeze([
+      /module\.exports\s*=/u,
+      ...requiredPatterns,
+    ]),
+    forbiddenPatterns: Object.freeze(forbiddenPatterns),
+  });
+
 export const VERCEL_CRITICAL_ROUTE_CONTRACTS = Object.freeze([
-  Object.freeze({
-    relativePath: "api/admin-logout.js",
-    routePattern: /path:\s*\["logout"\]/u,
-    proxyPattern: /proxyAdmin:\s*false/u,
-  }),
-  Object.freeze({
-    relativePath: "api/admin/session/bootstrap.js",
-    routePattern: /path:\s*\["session",\s*"bootstrap"\]/u,
-    proxyPattern: /proxyAdmin:\s*true/u,
-  }),
+  handlerContract("api/admin-session/[...path].js", [
+    /proxyAdminBff/u,
+    /canonicalCatchAllPath/u,
+    /canonicalCatchAllPath\(request\.url,\s*"\/api\/admin-session"\)/u,
+    /proxyAdmin:\s*false/u,
+  ]),
+  handlerContract("api/admin/[...path].js", [
+    /proxyAdminBff/u,
+    /canonicalCatchAllPath/u,
+    /canonicalCatchAllPath\(request\.url,\s*"\/api\/admin"\)/u,
+    /proxyAdmin:\s*true/u,
+  ]),
+  handlerContract("api/admin-session/mfa/enroll.js", [
+    /proxyAdminBff/u,
+    /path:\s*\["mfa",\s*"enroll"\]/u,
+    /proxyAdmin:\s*false/u,
+  ]),
+  handlerContract("api/admin-session/mfa/verify.js", [
+    /proxyAdminBff/u,
+    /path:\s*\["mfa",\s*"verify"\]/u,
+    /proxyAdmin:\s*false/u,
+  ]),
+  handlerContract("api/admin/session/bootstrap.js", [
+    /proxyAdminBff/u,
+    /path:\s*\["session",\s*"bootstrap"\]/u,
+    /proxyAdmin:\s*true/u,
+  ]),
+  handlerContract("api/admin-logout.js", [
+    /proxyAdminBff/u,
+    /path:\s*\["logout"\]/u,
+    /proxyAdmin:\s*false/u,
+  ], [
+    /admin-logout-api/u,
+  ]),
+  handlerContract("api/password-reset.js", [
+    /MAX_BODY_BYTES\s*=\s*4_096/u,
+    /functions\/v1\/password-reset-api/u,
+    /Authorization:\s*`Bearer \$\{match\[1\]\}`/u,
+    /redirect:\s*"manual"/u,
+    /x-vercel-forwarded-for/u,
+  ]),
 ]);
 
 const ALLOWED_ENVIRONMENTS = new Set(["staging", "production"]);
@@ -113,14 +154,15 @@ export async function validateCriticalVercelRoutes({
     if (!normalized || PLACEHOLDER_ROUTE_PATTERN.test(normalized)) {
       throw new Error(`Required Vercel route is a placeholder: ${contract.relativePath}`);
     }
-    if (!/module\.exports\s*=/u.test(source)) {
-      throw new Error(`Required Vercel route has no exported handler: ${contract.relativePath}`);
+    for (const requiredPattern of contract.requiredPatterns) {
+      if (!requiredPattern.test(source)) {
+        throw new Error(`Required Vercel route contract is invalid: ${contract.relativePath}`);
+      }
     }
-    if (!/proxyAdminBff/u.test(source)) {
-      throw new Error(`Required Vercel route bypasses the signed Admin BFF: ${contract.relativePath}`);
-    }
-    if (!contract.routePattern.test(source) || !contract.proxyPattern.test(source)) {
-      throw new Error(`Required Vercel route contract is invalid: ${contract.relativePath}`);
+    for (const forbiddenPattern of contract.forbiddenPatterns) {
+      if (forbiddenPattern.test(source)) {
+        throw new Error(`Required Vercel route contains a retired target: ${contract.relativePath}`);
+      }
     }
   }
 }

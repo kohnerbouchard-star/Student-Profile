@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   BROWSER_ROOTS,
+  VERCEL_CRITICAL_ROUTE_CONTRACTS,
   buildVercelDeployment,
   validateCriticalVercelRoutes,
 } from "./build-vercel-runtime-config.mjs";
@@ -28,6 +29,37 @@ const productionEnvironment = Object.freeze({
     "sb_publishable_contract-test-not-a-secret",
 });
 
+const criticalRouteFixtures = new Map([
+  [
+    "api/admin-session/[...path].js",
+    `"use strict";\nconst { proxyAdminBff } = require("../_admin-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/admin-session") };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
+  ],
+  [
+    "api/admin/[...path].js",
+    `"use strict";\nconst { proxyAdminBff } = require("../_admin-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/admin") };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
+  ],
+  [
+    "api/admin-session/mfa/enroll.js",
+    `"use strict";\nconst { proxyAdminBff } = require("../../_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["mfa", "enroll"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
+  ],
+  [
+    "api/admin-session/mfa/verify.js",
+    `"use strict";\nconst { proxyAdminBff } = require("../../_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["mfa", "verify"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
+  ],
+  [
+    "api/admin/session/bootstrap.js",
+    `"use strict";\nconst { proxyAdminBff } = require("../../_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["session", "bootstrap"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
+  ],
+  [
+    "api/admin-logout.js",
+    `"use strict";\nconst { proxyAdminBff } = require("./_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["logout"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
+  ],
+  [
+    "api/password-reset.js",
+    `"use strict";\nconst MAX_BODY_BYTES = 4_096;\nmodule.exports = async function passwordResetProxy(request, response) {\n  const match = [null, "token"];\n  const clientIp = String(request.headers?.["x-vercel-forwarded-for"] || "");\n  return fetch("https://example.supabase.co/functions/v1/password-reset-api", {\n    method: "POST",\n    headers: { Authorization: \`Bearer \${match[1]}\`, "x-real-ip": clientIp },\n    redirect: "manual"\n  });\n};\n`,
+  ],
+]);
+
 async function fixtureRepository(root) {
   for (const relativePath of BROWSER_ROOTS) {
     const target = path.join(root, relativePath);
@@ -39,25 +71,22 @@ async function fixtureRepository(root) {
     await writeFile(path.join(target, "fixture.txt"), `${relativePath}\n`);
   }
 
-  await mkdir(path.join(root, "api", "admin-session"), { recursive: true });
-  await writeFile(
-    path.join(root, "api", "admin-session", "[...path].js"),
-    "module.exports = () => {};\n",
-  );
-
-  await mkdir(path.join(root, "api", "admin", "session"), { recursive: true });
-  await writeFile(
-    path.join(root, "api", "admin-logout.js"),
-    `"use strict";\nconst { proxyAdminBff } = require("./_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["logout"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
-  );
-  await writeFile(
-    path.join(root, "api", "admin", "session", "bootstrap.js"),
-    `"use strict";\nconst { proxyAdminBff } = require("../../_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["session", "bootstrap"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
-  );
+  for (const [relativePath, source] of criticalRouteFixtures) {
+    const target = path.join(root, relativePath);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, source);
+  }
 
   await mkdir(path.join(root, "scripts"), { recursive: true });
   await writeFile(path.join(root, "scripts", "private-fixture.txt"), "private\n");
 }
+
+test("critical route manifest covers every administrator authentication entry point", () => {
+  assert.deepEqual(
+    VERCEL_CRITICAL_ROUTE_CONTRACTS.map((contract) => contract.relativePath),
+    [...criticalRouteFixtures.keys()],
+  );
+});
 
 test("builds an isolated static deployment without swallowing Vercel functions", async () => {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-vercel-"));
@@ -97,21 +126,21 @@ test("builds an isolated static deployment without swallowing Vercel functions",
   }
 });
 
-test("rejects placeholder critical Vercel routes before producing output", async () => {
+test("rejects a placeholder in any protected authentication route before output", async () => {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-vercel-route-"));
   const fixtureRoot = path.join(temporaryRoot, "repository");
   const outputRoot = path.join(temporaryRoot, "dist");
   await mkdir(fixtureRoot, { recursive: true });
   await fixtureRepository(fixtureRoot);
   await writeFile(
-    path.join(fixtureRoot, "api", "admin", "session", "bootstrap.js"),
+    path.join(fixtureRoot, "api", "admin-session", "mfa", "enroll.js"),
     "placeholder\n",
   );
 
   try {
     await assert.rejects(
       validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
-      /placeholder: api\/admin\/session\/bootstrap\.js/u,
+      /placeholder: api\/admin-session\/mfa\/enroll\.js/u,
     );
     await assert.rejects(
       buildVercelDeployment({
@@ -119,9 +148,37 @@ test("rejects placeholder critical Vercel routes before producing output", async
         outputRoot,
         environment: productionEnvironment,
       }),
-      /placeholder: api\/admin\/session\/bootstrap\.js/u,
+      /placeholder: api\/admin-session\/mfa\/enroll\.js/u,
     );
     await assert.rejects(access(outputRoot));
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("rejects missing recovery routes and retired logout targets", async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-vercel-auth-"));
+  const fixtureRoot = path.join(temporaryRoot, "repository");
+  await mkdir(fixtureRoot, { recursive: true });
+  await fixtureRepository(fixtureRoot);
+
+  try {
+    const recoveryPath = path.join(fixtureRoot, "api", "password-reset.js");
+    await rm(recoveryPath);
+    await assert.rejects(
+      validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
+      /missing: api\/password-reset\.js/u,
+    );
+
+    await writeFile(recoveryPath, criticalRouteFixtures.get("api/password-reset.js"));
+    await writeFile(
+      path.join(fixtureRoot, "api", "admin-logout.js"),
+      `${criticalRouteFixtures.get("api/admin-logout.js")}\n// retired admin-logout-api target\n`,
+    );
+    await assert.rejects(
+      validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
+      /retired target: api\/admin-logout\.js/u,
+    );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
