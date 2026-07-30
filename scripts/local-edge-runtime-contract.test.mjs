@@ -24,6 +24,10 @@ const FUNCTION_POLICIES = Object.freeze({
   "stock-market-trading": false,
 });
 const CUSTOM_AUTH_FUNCTIONS = new Set(["admin-password-recovery"]);
+const WRAPPED_RUNTIME_FUNCTIONS = new Set([
+  "player-api",
+  "player-web-session-api",
+]);
 
 function section(source, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,7 +47,14 @@ test("local Supabase starts every declared split Edge security boundary", async 
   for (const [name, verifyJwt] of Object.entries(FUNCTION_POLICIES)) {
     const policy = section(config, `functions.${name}`);
     assert.match(policy, new RegExp(`verify_jwt\\s*=\\s*${verifyJwt}`));
-    functionSources[name] = await readFile(new URL(`${name}/index.ts`, FUNCTION_ROOT), "utf8");
+    const entrypoint = await readFile(
+      new URL(`${name}/index.ts`, FUNCTION_ROOT),
+      "utf8",
+    );
+    const runtime = WRAPPED_RUNTIME_FUNCTIONS.has(name)
+      ? await readFile(new URL(`${name}/runtime.ts`, FUNCTION_ROOT), "utf8")
+      : "";
+    functionSources[name] = `${entrypoint}\n${runtime}`;
   }
 
   const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
