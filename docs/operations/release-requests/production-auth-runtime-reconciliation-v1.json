@@ -14,10 +14,11 @@
   "allowedProductionMutations": [
     "set trusted client IP header secret to x-real-ip",
     "set production Auth site URL and redirect allow list",
-    "set scanner-safe recovery email subject and template"
+    "set scanner-safe recovery email subject and template",
+    "run one synthetic invalid-credential login verification"
   ],
   "databaseChangesAllowed": false,
   "edgeFunctionDeploymentsAllowed": false,
-  "productionDataWritesAllowed": false,
+  "productionDataWritesAllowed": "bounded authentication throttle verification only",
   "realAdministratorCredentialsAllowed": false
 }
