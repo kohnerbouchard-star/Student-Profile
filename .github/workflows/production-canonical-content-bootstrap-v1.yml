@@ -1,0 +1,269 @@
+name: Production Canonical Content Bootstrap V1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-canonical-content-bootstrap-v1.yml"
+      - "backend/supabase/migrations/20260730123000_add_production_content_promotion_ledger_v1.sql"
+      - "scripts/production-canonical-content-bootstrap.mjs"
+      - "docs/operations/evidence/production-content-promotion-v1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-canonical-content-bootstrap-v1
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SUPABASE_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+  RELEASE_COMMIT: ${{ github.sha }}
+  PRODUCTION_CONTENT_AUTHORIZATION: docs/operations/evidence/production-content-promotion-v1.json
+  PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+  EVIDENCE_PATH: /tmp/production-canonical-content-bootstrap.json
+
+jobs:
+  bootstrap:
+    name: Promote canonical content and create ready production game
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Enforce merged-main production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact authorization contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const auth = JSON.parse(fs.readFileSync(process.env.PRODUCTION_CONTENT_AUTHORIZATION, 'utf8'));
+          const failures = [];
+          if (auth.schemaVersion !== 'econovaria.production-content-promotion.v1') failures.push('schemaVersion');
+          if (auth.allowProductionContentPromotion !== true) failures.push('allowProductionContentPromotion');
+          if (auth.productionAuthorized !== true) failures.push('productionAuthorized');
+          if (auth.projectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) failures.push('projectRef');
+          if (auth.deniedProjectRef !== process.env.DENIED_STAGING_PROJECT_REF) failures.push('deniedProjectRef');
+          if (auth.packId !== 'econovaria.beta-seed-pack.v1') failures.push('packId');
+          if (auth.packVersion !== '1.0.0-beta') failures.push('packVersion');
+          if (auth.packSha256 !== '31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7') failures.push('packSha256');
+          if (auth.physicalEconomyContentDigest !== '749e1c4c9bb8464ce1574ebd73218690e9837a8328b815fe5d36d2d71987d3e7') failures.push('physicalEconomyContentDigest');
+          if (auth.physicalEconomySourceCommit !== '04824da5ed8ea47bbabd893ab27f7ac285f050f2') failures.push('physicalEconomySourceCommit');
+          if (auth.preserveLegacyGame !== true) failures.push('preserveLegacyGame');
+          if (auth.copyStagingUserRows !== false) failures.push('copyStagingUserRows');
+          if (auth.recordPlaintextJoinCode !== false) failures.push('recordPlaintextJoinCode');
+          if (Date.parse(auth.authorizedAt) > Date.now() || Date.parse(auth.expiresAt) <= Date.now()) failures.push('authorizationWindow');
+          if (failures.length) throw new Error(`Authorization mismatch: ${failures.join(', ')}`);
+          NODE
+
+      - name: Set up pinned Node runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install and validate repository tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/production-canonical-content-bootstrap.mjs
+          node scripts/production-content-promotion-contract.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Build exact authorized physical-economy pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const contract = JSON.parse(await readFile(
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
+            'utf8',
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          test "$SOURCE_COMMIT" = "04824da5ed8ea47bbabd893ab27f7ac285f050f2"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const auth = JSON.parse(fs.readFileSync(process.env.PRODUCTION_CONTENT_AUTHORIZATION, 'utf8'));
+          const pack = JSON.parse(fs.readFileSync(process.env.PHYSICAL_ECONOMY_PACK, 'utf8'));
+          if (pack.contentDigest !== auth.physicalEconomyContentDigest) throw new Error('Physical-economy digest mismatch');
+          if (pack.sourceCommit !== auth.physicalEconomySourceCommit) throw new Error('Physical-economy source mismatch');
+          NODE
+
+      - name: Verify and link exact production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = new URL(process.env.SUPABASE_DB_URL);
+          const expected = process.env.EXPECTED_PRODUCTION_PROJECT_REF;
+          const username = decodeURIComponent(parsed.username || '');
+          const direct = parsed.hostname === `db.${expected}.supabase.co`;
+          const pooler = username === `postgres.${expected}` || username.endsWith(`.${expected}`);
+          if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) throw new Error('Database URL must be PostgreSQL');
+          if (!direct && !pooler) throw new Error('Database URL is not production-bound');
+          const password = decodeURIComponent(parsed.password || '');
+          if (!password) throw new Error('Database URL does not contain a password');
+          fs.writeFileSync('/tmp/production-db-password', password, { mode: 0o600 });
+          NODE
+          SUPABASE_DB_PASSWORD="$(cat /tmp/production-db-password)"
+          echo "::add-mask::$SUPABASE_DB_PASSWORD"
+          printf 'SUPABASE_DB_PASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'SUPABASE_URL=https://%s.supabase.co\n' "$EXPECTED_PRODUCTION_PROJECT_REF" >> "$GITHUB_ENV"
+          export PGSSLMODE=require
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c 'select current_database()')" = "postgres"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${EXPECTED_PRODUCTION_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked production identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+
+      - name: Materialize production-only migration placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const root = 'backend/supabase/migrations';
+          const localVersions = new Set(
+            fs.readdirSync(root)
+              .map((name) => name.match(/^(\d{14})_.+\.sql$/)?.[1])
+              .filter(Boolean),
+          );
+          const text = execFileSync(
+            'psql',
+            [process.env.SUPABASE_DB_URL, '-X', '-qAt', '-F', '\t', '-v', 'ON_ERROR_STOP=1', '-c',
+              "select version, coalesce(nullif(name,''),'production_live_only') from supabase_migrations.schema_migrations order by version"],
+            { encoding: 'utf8' },
+          );
+          for (const line of text.trim().split('\n').filter(Boolean)) {
+            const [version, rawName] = line.split('\t');
+            if (localVersions.has(version)) continue;
+            const name = rawName.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'production_live_only';
+            const file = `${root}/${version}_${name}.sql`;
+            fs.writeFileSync(file, '-- Production-only migration identity retained. No SQL is replayed.\n');
+          }
+          NODE
+
+      - name: Preview promotion-ledger migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --dry-run \
+            --password "$SUPABASE_DB_PASSWORD" \
+            | tee /tmp/production-content-db-push-dry-run.log
+
+      - name: Apply promotion-ledger migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Promote exact canonical content and provision production game
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/production-canonical-content-bootstrap.mjs
+
+      - name: Verify final production state
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.production_content_promotions where authorization_id='production-content-promotion-20260730-v1' and status='completed' and consumed_at is not null")" = "1"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_sessions where name='Econovaria Production' and status='active' and provisioning_status='ready' and game_join_code_status='active' and game_join_code is not null")" = "1"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_sessions where name='Test game' and status='disabled'")" = "1"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.players p join public.game_sessions g on g.id=p.game_session_id where g.name='Test game'")" = "9"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_session_stock_assets a join public.game_sessions g on g.id=a.game_session_id where g.name='Econovaria Production' and a.is_active")" = "240"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_session_contracts c join public.game_sessions g on g.id=c.game_session_id where g.name='Econovaria Production' and c.status='active' and c.visibility='public'")" = "30"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.store_items i join public.game_sessions g on g.id=i.game_session_id where g.name='Econovaria Production' and i.status='active' and i.visibility='visible'")" = "50"
+
+      - name: Verify hosted Classroom health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            "$SUPABASE_URL/functions/v1/classroom-api/health" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            > /tmp/classroom-health.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/classroom-health.json', 'utf8'));
+          if (body.ok !== true) throw new Error('classroom-api health failed');
+          NODE
+
+      - name: Upload sanitized production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-canonical-content-${{ github.sha }}
+          path: |
+            /tmp/production-content-db-push-dry-run.log
+            /tmp/production-canonical-content-bootstrap.json
+          if-no-files-found: warn
+          retention-days: 90
