@@ -6,10 +6,19 @@ on:
       - main
     paths:
       - ".github/workflows/production-canonical-content-bootstrap-v1.yml"
+      - ".github/workflows/production-staff-mfa-normalization-v1.yml"
       - ".github/workflows/production-content-promotion-contract.yml"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/config.next.toml"
+      - "backend/supabase/functions/staff-mfa-api/entrypoint.ts"
+      - "backend/supabase/functions/staff-mfa-api/runtime-adapter.ts"
+      - "backend/supabase/functions/staff-mfa-api/mfaQrCode.ts"
       - "backend/supabase/migrations/20260730123000_add_production_content_promotion_ledger_v1.sql"
+      - "scripts/admin-browser-reconnaissance.mjs"
+      - "scripts/admin-mfa-enrollment-lifecycle.test.mjs"
       - "scripts/production-canonical-content-bootstrap.mjs"
       - "scripts/production-content-promotion-contract.test.mjs"
+      - "scripts/production-staff-mfa-normalization-contract.test.mjs"
       - "docs/operations/evidence/production-content-promotion-v1.json"
 
 permissions:
@@ -29,5 +38,8 @@ jobs:
         with:
           node-version: "22.23.1"
       - run: node --check scripts/production-canonical-content-bootstrap.mjs
+      - run: node --check scripts/admin-browser-reconnaissance.mjs
       - run: node scripts/production-content-promotion-contract.test.mjs
+      - run: node scripts/production-staff-mfa-normalization-contract.test.mjs
+      - run: node --test scripts/admin-mfa-qr-code.test.mjs scripts/admin-mfa-enrollment-lifecycle.test.mjs
       - run: git diff --check
