@@ -1,0 +1,136 @@
+name: Production Login Header Reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-login-header-reconciliation.yml"
+      - "docs/operations/release-requests/production-login-header-reconciliation-v1.json"
+  push:
+    branches: [main]
+    paths:
+      - "docs/operations/release-requests/production-login-header-reconciliation-v1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-login-header-reconciliation
+  cancel-in-progress: false
+
+env:
+  REQUEST_PATH: docs/operations/release-requests/production-login-header-reconciliation-v1.json
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  TRUSTED_IP_HEADER: x-real-ip
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate exact authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const request = JSON.parse(fs.readFileSync(process.env.REQUEST_PATH, 'utf8'));
+          const expected = {
+            schemaVersion: 1,
+            state: 'approved',
+            sourceRef: 'refs/heads/main',
+            productionProjectRef: process.env.PRODUCTION_PROJECT_REF,
+            productionOrigin: process.env.PRODUCTION_ORIGIN,
+            trustedClientIpHeader: process.env.TRUSTED_IP_HEADER,
+            productionEnvironmentApprovalRequired: true,
+            databaseChangesAllowed: false,
+            edgeFunctionDeploymentsAllowed: false,
+            productionDataWritesAllowed: 'bounded authentication throttle verification only',
+            realAdministratorCredentialsAllowed: false,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (request[key] !== value) throw new Error(`Request mismatch: ${key}`);
+          }
+          const mutations = [
+            'set ECONOVARIA_TRUSTED_CLIENT_IP_HEADER to x-real-ip',
+            'run one synthetic invalid-credential login verification',
+          ];
+          if (JSON.stringify(request.allowedProductionMutations) !== JSON.stringify(mutations)) {
+            throw new Error('Mutation scope mismatch.');
+          }
+          NODE
+
+  reconcile-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$TRUSTED_IP_HEADER" = "x-real-ip"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Set authenticated Admin IP handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets set \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$TRUSTED_IP_HEADER" \
+            --project-ref "$PRODUCTION_PROJECT_REF"
+
+      - name: Wait for web-session runtime restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/web-session-api/health"
+          for attempt in $(seq 1 24); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$health" || true)"
+            if [[ "$status" == "200" ]]; then exit 0; fi
+            if [[ "$attempt" == "24" ]]; then cat "$RUNNER_TEMP/health.json" >&2 || true; exit 1; fi
+            sleep 5
+          done
+
+      - name: Verify login reaches credential validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          device_id="$(python3 - <<'PY'
+          import uuid
+          print(uuid.uuid4())
+          PY
+          )"
+          email="auth-probe-$(date +%s)-$RANDOM@invalid.example"
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/login.json" \
+            --write-out '%{http_code}' \
+            --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+            --header 'Content-Type: application/json' \
+            --header "X-Econovaria-Device-Id: $device_id" \
+            --data "{\"email\":\"$email\",\"password\":\"SyntheticProbeOnly!2026\"}")"
+          test "$status" = "401"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/login.json', 'utf8'));
+          if (body?.error?.code !== 'invalid_staff_credentials') {
+            throw new Error(`Unexpected login response: ${body?.error?.code || 'missing'}`);
+          }
+          NODE
