@@ -1,6 +1,7 @@
 import {
   cp,
   mkdir,
+  readFile,
   rm,
   stat,
   writeFile,
@@ -17,7 +18,21 @@ export const BROWSER_ROOTS = Object.freeze([
   "auth",
 ]);
 
+export const VERCEL_CRITICAL_ROUTE_CONTRACTS = Object.freeze([
+  Object.freeze({
+    relativePath: "api/admin-logout.js",
+    routePattern: /path:\s*\["logout"\]/u,
+    proxyPattern: /proxyAdmin:\s*false/u,
+  }),
+  Object.freeze({
+    relativePath: "api/admin/session/bootstrap.js",
+    routePattern: /path:\s*\["session",\s*"bootstrap"\]/u,
+    proxyPattern: /proxyAdmin:\s*true/u,
+  }),
+]);
+
 const ALLOWED_ENVIRONMENTS = new Set(["staging", "production"]);
+const PLACEHOLDER_ROUTE_PATTERN = /^(?:placeholder|todo|not[ -]?implemented)\s*;?$/iu;
 const DEFAULT_REPO_ROOT = path.resolve(
   fileURLToPath(new URL("..", import.meta.url)),
 );
@@ -82,6 +97,34 @@ function deploymentConfiguration(environment) {
   });
 }
 
+export async function validateCriticalVercelRoutes({
+  repoRoot = DEFAULT_REPO_ROOT,
+} = {}) {
+  for (const contract of VERCEL_CRITICAL_ROUTE_CONTRACTS) {
+    const absolutePath = path.join(repoRoot, contract.relativePath);
+    let source;
+    try {
+      source = await readFile(absolutePath, "utf8");
+    } catch {
+      throw new Error(`Required Vercel route is missing: ${contract.relativePath}`);
+    }
+
+    const normalized = source.trim();
+    if (!normalized || PLACEHOLDER_ROUTE_PATTERN.test(normalized)) {
+      throw new Error(`Required Vercel route is a placeholder: ${contract.relativePath}`);
+    }
+    if (!/module\.exports\s*=/u.test(source)) {
+      throw new Error(`Required Vercel route has no exported handler: ${contract.relativePath}`);
+    }
+    if (!/proxyAdminBff/u.test(source)) {
+      throw new Error(`Required Vercel route bypasses the signed Admin BFF: ${contract.relativePath}`);
+    }
+    if (!contract.routePattern.test(source) || !contract.proxyPattern.test(source)) {
+      throw new Error(`Required Vercel route contract is invalid: ${contract.relativePath}`);
+    }
+  }
+}
+
 async function copyBrowserRoot(repoRoot, outputRoot, relativePath) {
   const source = path.join(repoRoot, relativePath);
   const metadata = await stat(source);
@@ -101,6 +144,7 @@ export async function buildVercelDeployment({
   environment = process.env,
 } = {}) {
   const configuration = deploymentConfiguration(environment);
+  await validateCriticalVercelRoutes({ repoRoot });
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputRoot, { recursive: true });
 

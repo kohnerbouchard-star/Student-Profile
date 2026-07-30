@@ -205,11 +205,10 @@ test("Player and Admin callers remain bound to their own identities", async () =
 });
 
 test("server-side Admin BFF is the only Staff credential transport", async () => {
-  const [edge, vercel, recoveryProxy, logoutEdge, logoutProxy, sessionManager, adminRoute, sessionRoute] = await Promise.all([
+  const [edge, vercel, recoveryProxy, logoutProxy, sessionManager, adminRoute, sessionRoute] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
     read("api/_admin-bff-proxy.js"),
     read("api/password-reset.js"),
-    read("backend/supabase/functions/admin-logout-api/index.ts"),
     read("api/admin-logout.js"),
     read("admin/auth-session-manager.js"),
     read("api/admin/[...path].js"),
@@ -221,12 +220,37 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
   assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff|x-vercel-forwarded-for/);
   assert.match(recoveryProxy, /password-reset-api/);
-  assert.match(logoutEdge, /response\?\.ok \|\| response\?\.status === 401/);
-  assert.match(logoutEdge, /staff_logout_revocation_failed/);
-  assert.match(logoutProxy, /admin-logout-api/);
+  assert.match(logoutProxy, /proxyAdminBff/);
+  assert.match(logoutProxy, /path:\s*\["logout"\]/);
+  assert.match(logoutProxy, /proxyAdmin:\s*false/);
+  assert.doesNotMatch(logoutProxy, /admin-logout-api/);
   assert.match(sessionManager, /ADMIN_LOGOUT_API|staff_logout_revocation_failed/);
   assert.match(adminRoute, /proxyAdmin:\s*true/);
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
+});
+
+test("explicit Admin session routes cannot be placeholder stubs", async () => {
+  const routes = [
+    {
+      path: "api/admin-logout.js",
+      routePattern: /path:\s*\["logout"\]/,
+      proxyPattern: /proxyAdmin:\s*false/,
+    },
+    {
+      path: "api/admin/session/bootstrap.js",
+      routePattern: /path:\s*\["session",\s*"bootstrap"\]/,
+      proxyPattern: /proxyAdmin:\s*true/,
+    },
+  ];
+
+  for (const route of routes) {
+    const source = await read(route.path);
+    assert.notEqual(source.trim().toLowerCase(), "placeholder", `${route.path} is a placeholder`);
+    assert.match(source, /module\.exports\s*=/, `${route.path} must export a Vercel handler`);
+    assert.match(source, /proxyAdminBff/, `${route.path} must use the signed Admin BFF`);
+    assert.match(source, route.routePattern, `${route.path} must bind its exact upstream route`);
+    assert.match(source, route.proxyPattern, `${route.path} must bind the correct proxy mode`);
+  }
 });
 
 test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
