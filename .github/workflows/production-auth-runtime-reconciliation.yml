@@ -1,0 +1,268 @@
+name: Production Auth Runtime Reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-auth-runtime-reconciliation.yml"
+      - "docs/operations/release-requests/production-auth-runtime-reconciliation-v1.json"
+      - "auth/recovery-start.html"
+      - "auth/recovery-start.js"
+      - "auth/reset-password.html"
+      - "auth/reset-password.js"
+      - "scripts/password-recovery-link-contract.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - "docs/operations/release-requests/production-auth-runtime-reconciliation-v1.json"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-auth-runtime-reconciliation
+  cancel-in-progress: false
+
+env:
+  RELEASE_REQUEST_PATH: docs/operations/release-requests/production-auth-runtime-reconciliation-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  EXPECTED_PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  EXPECTED_TRUSTED_IP_HEADER: x-real-ip
+  RECOVERY_START_PATH: /auth/recovery-start.html
+  PASSWORD_RESET_PATH: /auth/reset-password.html
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  validate:
+    name: Validate bounded reconciliation contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out reviewed source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate repository-owned authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const request = JSON.parse(fs.readFileSync(process.env.RELEASE_REQUEST_PATH, 'utf8'));
+          const expected = {
+            schemaVersion: 1,
+            state: 'approved',
+            sourceMode: 'trigger_commit',
+            sourceRef: 'refs/heads/main',
+            productionProjectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
+            productionOrigin: process.env.EXPECTED_PRODUCTION_ORIGIN,
+            trustedClientIpHeader: process.env.EXPECTED_TRUSTED_IP_HEADER,
+            siteUrl: process.env.EXPECTED_PRODUCTION_ORIGIN,
+            recoveryStartPath: process.env.RECOVERY_START_PATH,
+            passwordResetPath: process.env.PASSWORD_RESET_PATH,
+            productionEnvironmentApprovalRequired: true,
+            databaseChangesAllowed: false,
+            edgeFunctionDeploymentsAllowed: false,
+            productionDataWritesAllowed: 'bounded authentication throttle verification only',
+            realAdministratorCredentialsAllowed: false,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (request[key] !== value) throw new Error(`Reconciliation request mismatch: ${key}`);
+          }
+          const mutations = [
+            'set trusted client IP header secret to x-real-ip',
+            'set production Auth site URL and redirect allow list',
+            'set scanner-safe recovery email subject and template',
+            'run one synthetic invalid-credential login verification',
+          ];
+          if (JSON.stringify(request.allowedProductionMutations) !== JSON.stringify(mutations)) {
+            throw new Error('Reconciliation mutation scope is invalid.');
+          }
+          if (!/^[a-z0-9][a-z0-9._-]{7,127}$/u.test(String(request.requestId || ''))) {
+            throw new Error('Reconciliation request ID is invalid.');
+          }
+          NODE
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Validate scanner-safe recovery contract
+        run: node --test scripts/password-recovery-link-contract.test.mjs
+
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
+
+  reconcile-production:
+    name: Approve and reconcile production Auth runtime
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce protected production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$EXPECTED_PRODUCTION_ORIGIN" = "https://econovaria.vercel.app"
+          test "$EXPECTED_TRUSTED_IP_HEADER" = "x-real-ip"
+
+      - name: Check out exact authorization commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Wait for scanner-safe recovery page deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$EXPECTED_PRODUCTION_ORIGIN$RECOVERY_START_PATH"
+          for attempt in $(seq 1 48); do
+            body="$(curl --silent --show-error --location --max-time 15 "$target" || true)"
+            if grep -q 'id="continueRecovery"' <<<"$body"; then exit 0; fi
+            if [[ "$attempt" == "48" ]]; then
+              echo "Production recovery confirmation page did not become available." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Reconcile trusted Admin client-IP header
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=$EXPECTED_TRUSTED_IP_HEADER" \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+      - name: Build bounded Auth configuration patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const origin = process.env.EXPECTED_PRODUCTION_ORIGIN;
+          const recoveryPath = process.env.RECOVERY_START_PATH;
+          const resetPath = process.env.PASSWORD_RESET_PATH;
+          const template = [
+            '<h2>Reset your Econovaria administrator password</h2>',
+            '<p>We received a request to reset your administrator password.</p>',
+            `<p><a href="{{ .SiteURL }}${recoveryPath}?token_hash={{ .TokenHash }}&type=recovery">Continue password recovery</a></p>`,
+            '<p>The link opens a confirmation page first and is consumed only after you choose to continue.</p>',
+            '<p>If you did not request this, you can safely ignore this email.</p>',
+          ].join('');
+          if (template.includes('{{ .ConfirmationURL }}')) throw new Error('Unsafe direct recovery URL.');
+          fs.writeFileSync(process.env.AUTH_PATCH_PATH, JSON.stringify({
+            site_url: origin,
+            uri_allow_list: `${origin}${resetPath}`,
+            mailer_subjects_recovery: 'Reset your Econovaria administrator password',
+            mailer_templates_recovery_content: template,
+          }));
+          NODE
+        env:
+          AUTH_PATCH_PATH: ${{ runner.temp }}/auth-patch.json
+
+      - name: Reconcile production Auth URL and recovery template
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request PATCH \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data-binary "@$AUTH_PATCH_PATH" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
+            > "$AUTH_RESULT_PATH"
+        env:
+          AUTH_PATCH_PATH: ${{ runner.temp }}/auth-patch.json
+          AUTH_RESULT_PATH: ${{ runner.temp }}/auth-result.json
+
+      - name: Verify exact production Auth configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
+            > "$AUTH_CONFIG_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const config = JSON.parse(fs.readFileSync(process.env.AUTH_CONFIG_PATH, 'utf8'));
+          const origin = process.env.EXPECTED_PRODUCTION_ORIGIN;
+          const expectedRedirect = `${origin}${process.env.PASSWORD_RESET_PATH}`;
+          const rawRedirects = config.uri_allow_list;
+          const redirects = Array.isArray(rawRedirects)
+            ? rawRedirects.map(String)
+            : String(rawRedirects || '').split(',').map((value) => value.trim()).filter(Boolean);
+          const template = String(config.mailer_templates_recovery_content || '');
+          if (config.site_url !== origin) throw new Error('Production Auth Site URL mismatch.');
+          if (!redirects.includes(expectedRedirect)) throw new Error('Recovery redirect is not allow-listed.');
+          if (!template.includes(`{{ .SiteURL }}${process.env.RECOVERY_START_PATH}?token_hash={{ .TokenHash }}&type=recovery`)) {
+            throw new Error('Scanner-safe recovery template mismatch.');
+          }
+          if (template.includes('{{ .ConfirmationURL }}')) throw new Error('Unsafe direct recovery URL remains.');
+          NODE
+        env:
+          AUTH_CONFIG_PATH: ${{ runner.temp }}/auth-config.json
+
+      - name: Wait for web-session runtime restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="https://$EXPECTED_PRODUCTION_PROJECT_REF.supabase.co/functions/v1/web-session-api/health"
+          for attempt in $(seq 1 24); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/health.json" --write-out '%{http_code}' "$health" || true)"
+            if [[ "$status" == "200" ]]; then exit 0; fi
+            if [[ "$attempt" == "24" ]]; then cat "$RUNNER_TEMP/health.json" >&2 || true; exit 1; fi
+            sleep 5
+          done
+
+      - name: Verify live production login reaches credential validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          device_id="$(python3 - <<'PY'
+          import uuid
+          print(uuid.uuid4())
+          PY
+          )"
+          email="auth-probe-$(date +%s)-$RANDOM@invalid.example"
+          status="$(curl --silent --show-error \
+            --output "$LOGIN_RESULT_PATH" \
+            --write-out '%{http_code}' \
+            --request POST "$EXPECTED_PRODUCTION_ORIGIN/api/admin-session/login" \
+            --header 'Content-Type: application/json' \
+            --header "X-Econovaria-Device-Id: $device_id" \
+            --data "{\"email\":\"$email\",\"password\":\"NotARealPassword!2026\"}")"
+          test "$status" = "401"
+          node - <<'NODE'
+          const body = require(process.env.LOGIN_RESULT_PATH);
+          if (body?.error?.code !== 'invalid_staff_credentials') {
+            throw new Error(`Unexpected production login response: ${body?.error?.code || 'missing'}`);
+          }
+          NODE
+        env:
+          LOGIN_RESULT_PATH: ${{ runner.temp }}/login-result.json
