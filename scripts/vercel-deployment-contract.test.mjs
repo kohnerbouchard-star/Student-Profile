@@ -39,6 +39,10 @@ const criticalRouteFixtures = new Map([
     `"use strict";\nconst { proxyAdminBff } = require("../_admin-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/admin") };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
   ],
   [
+    "api/admin-proxy.js",
+    `"use strict";\nconst { proxyAdminBff } = require("./_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const path = request.query?.path;\n  if (typeof path !== "string") return response.end("invalid_proxy_path");\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: true });\n};\n`,
+  ],
+  [
     "api/admin-session/mfa/enroll.js",
     `"use strict";\nconst { proxyAdminBff } = require("../../_admin-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: ["mfa", "enroll"] };\n  return proxyAdminBff(normalizedRequest, response, { proxyAdmin: false });\n};\n`,
   ],
@@ -184,7 +188,27 @@ test("rejects missing recovery routes and retired logout targets", async () => {
   }
 });
 
-test("Vercel config preserves API function discovery", async () => {
+test("rejects direct upstream transport in the Admin namespace proxy", async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-vercel-admin-proxy-"));
+  const fixtureRoot = path.join(temporaryRoot, "repository");
+  await mkdir(fixtureRoot, { recursive: true });
+  await fixtureRepository(fixtureRoot);
+
+  try {
+    await writeFile(
+      path.join(fixtureRoot, "api", "admin-proxy.js"),
+      `${criticalRouteFixtures.get("api/admin-proxy.js")}\nfetch("/functions/v1/admin-api");\n`,
+    );
+    await assert.rejects(
+      validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
+      /retired target: api\/admin-proxy\.js/u,
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("Vercel config preserves API function discovery and Admin namespace routing", async () => {
   const configuration = JSON.parse(
     await readFile(path.join(repositoryRoot, "vercel.json"), "utf8"),
   );
@@ -196,9 +220,21 @@ test("Vercel config preserves API function discovery", async () => {
     "node scripts/build-vercel-runtime-config.mjs",
   );
   assert.equal(configuration.functions?.["api/**/*.js"]?.maxDuration, 30);
+  assert.deepEqual(
+    configuration.rewrites?.find((entry) => entry.source === "/api/admin/:path*"),
+    {
+      source: "/api/admin/:path*",
+      destination: "/api/admin-proxy?path=:path*",
+    },
+  );
 
   const adminSessionRoute = await stat(
     path.join(repositoryRoot, "api", "admin-session", "[...path].js"),
   );
   assert.equal(adminSessionRoute.isFile(), true);
+
+  const adminNamespaceProxy = await stat(
+    path.join(repositoryRoot, "api", "admin-proxy.js"),
+  );
+  assert.equal(adminNamespaceProxy.isFile(), true);
 });
