@@ -6,6 +6,12 @@ const ADAPTER = new URL(
   "../backend/supabase/functions/staff-mfa-api/runtime-adapter.ts",
   import.meta.url,
 );
+const ENTRYPOINT = new URL(
+  "../backend/supabase/functions/staff-mfa-api/entrypoint.ts",
+  import.meta.url,
+);
+const LOCAL_CONFIG = new URL("../backend/supabase/config.toml", import.meta.url);
+const DEPLOY_CONFIG = new URL("../backend/supabase/config.next.toml", import.meta.url);
 
 test("MFA enrollment authorizes before stale-factor cleanup", async () => {
   const source = await readFile(ADAPTER, "utf8");
@@ -33,4 +39,20 @@ test("failed QR normalization removes only the abandoned unverified setup", asyn
   );
   assert.ok(cleanupBeforeFailure >= 0, "failed rendering must clean the abandoned factor");
   assert.ok(cleanupBeforeFailure < invalidPayload);
+});
+
+test("local and hosted Staff MFA deployment use the normalization adapter", async () => {
+  const [entrypoint, localConfig, deployConfig] = await Promise.all([
+    readFile(ENTRYPOINT, "utf8"),
+    readFile(LOCAL_CONFIG, "utf8"),
+    readFile(DEPLOY_CONFIG, "utf8"),
+  ]);
+  assert.match(entrypoint, /^import "\.\/runtime-adapter\.ts";\s+import "\.\/index\.ts";\s*$/u);
+  for (const config of [localConfig, deployConfig]) {
+    assert.match(config, /\[functions\.staff-mfa-api\][\s\S]*?verify_jwt\s*=\s*true/u);
+    assert.match(
+      config,
+      /entrypoint\s*=\s*"\.\/functions\/staff-mfa-api\/entrypoint\.ts"/u,
+    );
+  }
 });
