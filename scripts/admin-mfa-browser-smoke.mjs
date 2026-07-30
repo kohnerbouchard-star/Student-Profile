@@ -13,7 +13,8 @@ const INITIAL_CSRF = "A".repeat(43);
 const ELEVATED_CSRF = "B".repeat(43);
 const FACTOR_HANDLE = `mfa1.${"C".repeat(16)}.${"D".repeat(64)}`;
 const GAME_ID = "11111111-1111-4111-8111-111111111111";
-const QR_CODE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const QR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="29" height="29" shape-rendering="crispEdges"><rect width="29" height="29" fill="#fff"/><path fill="#000" d="M4 4h7v1h-7zM4 5h1v5h-1zM10 5h1v5h-1zM4 10h7v1h-7zM14 4h7v1h-7zM14 5h1v5h-1zM20 5h1v5h-1zM14 10h7v1h-7zM4 14h7v1h-7zM4 15h1v5h-1zM10 15h1v5h-1zM4 20h7v1h-7zM13 13h3v3h-3zM18 18h3v3h-3z"/></svg>';
+const QR_CODE = `data:image/svg+xml;base64,${Buffer.from(QR_SVG, "utf8").toString("base64")}`;
 const SECRET = "JBSWY3DPEHPK3PXP";
 
 const server = spawn(
@@ -239,7 +240,15 @@ try {
   await dialog.waitFor({ state: "visible", timeout: 10_000 });
   assert.equal(await dialog.getAttribute("aria-modal"), "true");
   assert.equal(await page.locator(".econovaria-mfa-secret").textContent(), SECRET);
-  assert.equal(await page.locator(".econovaria-mfa-qr").getAttribute("src"), QR_CODE);
+  const qrImage = page.locator(".econovaria-mfa-qr");
+  assert.equal(await qrImage.getAttribute("src"), QR_CODE);
+  await assert.doesNotReject(async () => {
+    await qrImage.evaluate((image) => {
+      if (!(image instanceof HTMLImageElement) || !image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+        throw new Error("Authenticator QR image did not render.");
+      }
+    });
+  });
 
   await page.locator(".econovaria-mfa-code").fill("123456");
   await page.locator(".econovaria-mfa-submit").click();
@@ -271,7 +280,7 @@ try {
     "/functions/v1/web-session-api/mfa/verify",
   ]);
   assert.deepEqual(browserErrors, []);
-  console.log("Admin password login, TOTP enrollment, AAL2 elevation, and browser secrecy smoke passed.");
+  console.log("Admin password login, rendered TOTP QR enrollment, AAL2 elevation, and browser secrecy smoke passed.");
 } finally {
   await browser?.close();
   server.kill("SIGTERM");
