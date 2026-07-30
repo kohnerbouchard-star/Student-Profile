@@ -1,0 +1,102 @@
+name: Production Staff MFA Normalization V1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-staff-mfa-normalization-v1.yml"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/config.next.toml"
+      - "backend/supabase/functions/staff-mfa-api/entrypoint.ts"
+      - "backend/supabase/functions/staff-mfa-api/runtime-adapter.ts"
+      - "backend/supabase/functions/staff-mfa-api/mfaQrCode.ts"
+      - "backend/supabase/functions/staff-mfa-api/index.ts"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-staff-mfa-normalization-v1
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  deploy:
+    name: Deploy normalized Staff MFA entrypoint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Enforce merged-main production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify normalized function entrypoint contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f backend/supabase/functions/staff-mfa-api/entrypoint.ts
+          grep -Fx 'import "./runtime-adapter.ts";' backend/supabase/functions/staff-mfa-api/entrypoint.ts
+          grep -Fx 'import "./index.ts";' backend/supabase/functions/staff-mfa-api/entrypoint.ts
+          grep -F 'entrypoint = "./functions/staff-mfa-api/entrypoint.ts"' backend/supabase/config.toml
+          node --test scripts/admin-mfa-qr-code.test.mjs scripts/admin-mfa-enrollment-lifecycle.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Deploy Staff MFA from exact merged source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase functions deploy staff-mfa-api \
+            --workdir backend \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            --use-api
+
+      - name: Verify hosted function metadata and platform JWT gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > /tmp/functions.json
+          FUNCTIONS_PATH=/tmp/functions.json node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const row = rows.find((entry) => entry.slug === 'staff-mfa-api');
+          if (!row || row.status !== 'ACTIVE' || row.verify_jwt !== true) {
+            throw new Error('Hosted staff-mfa-api metadata verification failed');
+          }
+          if (!String(row.entrypoint_path || '').endsWith('/backend/supabase/functions/staff-mfa-api/entrypoint.ts')) {
+            throw new Error('Hosted staff-mfa-api did not use the normalized entrypoint');
+          }
+          NODE
+
+          status="$(curl --silent --output /tmp/unauthenticated.json --write-out '%{http_code}' \
+            "https://$EXPECTED_PRODUCTION_PROJECT_REF.supabase.co/functions/v1/staff-mfa-api/staff/mfa")"
+          test "$status" = "401"
