@@ -1,0 +1,53 @@
+name: Production Canonical Source Run Inspection
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-canonical-source-run-inspection.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect protected bootstrap push runs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_WORKFLOW: production-canonical-source-bootstrap-v1.yml
+
+    steps:
+      - name: Enforce read-only pull-request scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "pull_request"
+
+      - name: Print sanitized protected workflow run metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${TARGET_WORKFLOW}/runs?per_page=20" \
+            > "$RUNNER_TEMP/protected-runs.json"
+          RUNS_PATH="$RUNNER_TEMP/protected-runs.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.RUNS_PATH, 'utf8'));
+          const rows = (payload.workflow_runs || [])
+            .filter((run) => run.event === 'push')
+            .slice(0, 10)
+            .map((run) => ({
+              id: String(run.id),
+              status: String(run.status || 'unknown'),
+              conclusion: String(run.conclusion || 'pending'),
+              commit: String(run.head_sha || '').slice(0, 12),
+              createdAt: String(run.created_at || ''),
+              updatedAt: String(run.updated_at || ''),
+              url: String(run.html_url || ''),
+            }));
+          console.log('PROTECTED_BOOTSTRAP_RUNS=' + JSON.stringify(rows));
+          NODE
