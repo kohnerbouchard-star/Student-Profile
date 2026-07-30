@@ -35,12 +35,18 @@ source = replaceExactlyOnce(
   await modal.waitFor({ state: "hidden", timeout: 10_000 });
 }`,
 );
-source = replaceExactlyOnce(
-  source,
-  "Player creation BFF route",
-  `(candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`,
-  `(candidate) => /\/functions\/v1\/web-session-api\/proxy\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`,
-);
+const legacyPlayerRoute = String.raw`(candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`;
+const canonicalPlayerRoute = String.raw`(candidate) => /\/functions\/v1\/web-session-api\/proxy\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`;
+if (source.includes(legacyPlayerRoute)) {
+  source = replaceExactlyOnce(
+    source,
+    "Player creation BFF route",
+    legacyPlayerRoute,
+    canonicalPlayerRoute,
+  );
+} else if (!source.includes(canonicalPlayerRoute)) {
+  throw new Error("Player creation BFF route is neither legacy nor canonical.");
+}
 source = replaceExactlyOnce(
   source,
   "Logout revocation response settlement",
