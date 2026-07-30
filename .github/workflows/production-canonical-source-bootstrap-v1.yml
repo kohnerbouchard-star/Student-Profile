@@ -1,0 +1,236 @@
+name: Production Canonical Source Bootstrap V1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-canonical-source-bootstrap-v1.yml"
+      - "docs/operations/evidence/production-canonical-source-bootstrap-v1.json"
+      - "scripts/production-canonical-source-bootstrap.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-canonical-source-bootstrap-v1
+  cancel-in-progress: false
+
+env:
+  AUTHORIZATION_PATH: docs/operations/evidence/production-canonical-source-bootstrap-v1.json
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+  EVIDENCE_PATH: /tmp/production-canonical-source-bootstrap.json
+
+jobs:
+  bootstrap:
+    name: Bootstrap non-joinable canonical source and verify provisioning
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_PROJECT_REF: cgiukdjwicykrmtkhudh
+      SUPABASE_URL: https://cgiukdjwicykrmtkhudh.supabase.co
+      RELEASE_COMMIT: ${{ github.sha }}
+
+    steps:
+      - name: Enforce merged-main production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$DATABASE_URL"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install and validate repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/production-canonical-source-bootstrap.mjs
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+
+      - name: Verify exact production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const a = JSON.parse(fs.readFileSync(process.env.AUTHORIZATION_PATH, 'utf8'));
+          const i = JSON.parse(fs.readFileSync('docs/seed-content/executable/beta-pack-v1/integrity-manifest-v1.json', 'utf8'));
+          const failures = [];
+          if (a.schemaVersion !== 'econovaria.production-canonical-source-bootstrap.v1') failures.push('schemaVersion');
+          if (a.action !== 'BOOTSTRAP_NON_JOINABLE_CANONICAL_SOURCE') failures.push('action');
+          if (a.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) failures.push('targetProjectRef');
+          if (a.deniedProjectRef !== process.env.DENIED_STAGING_PROJECT_REF) failures.push('deniedProjectRef');
+          if (a.mergedMainOnly !== true) failures.push('mergedMainOnly');
+          if (a.canonicalSourceJoinable !== false) failures.push('canonicalSourceJoinable');
+          if (a.copyStagingAuthUsers !== false || a.copyStagingStaffUsers !== false || a.copyStagingPlayers !== false) failures.push('stagingCopies');
+          if (a.mutateExistingPlayerData !== false || a.productionDataPreservationRequired !== true) failures.push('dataPreservation');
+          if (a.activateDeterministicSeedWorldCrafting !== true) failures.push('contentActivation');
+          if (a.runDisposableProvisioningProbe !== true || a.cleanupProvisioningProbe !== true) failures.push('probe');
+          if (a.packId !== i.packId || a.packVersion !== i.version || a.packSha256 !== i.packSha256) failures.push('packIdentity');
+          if (a.sourceEnvironmentLabel !== 'staging' || i.productionAuthorized !== false) failures.push('sourceBoundary');
+          if (failures.length) throw new Error(`Authorization mismatch: ${failures.join(', ')}`);
+          NODE
+
+      - name: Verify database binding and capture protected baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          const ref = process.env.EXPECTED_PRODUCTION_PROJECT_REF;
+          const username = decodeURIComponent(parsed.username || '');
+          const direct = parsed.hostname === `db.${ref}.supabase.co`;
+          const pooler = username === `postgres.${ref}` || username.endsWith(`.${ref}`);
+          if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || (!direct && !pooler)) {
+            throw new Error('Database URL is not bound to production.');
+          }
+          NODE
+          export PGSSLMODE=require
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > "$RUNNER_TEMP/production-source-before.json"
+          select json_build_object(
+            'nonSystemGameCount', (select count(*) from public.game_sessions where name <> '[SYSTEM] Econovaria Canonical Source'),
+            'playerCount', (select count(*) from public.players),
+            'activeCredentialCount', (select count(*) from public.player_access_credentials where status='active'),
+            'accountBalanceCount', (select count(*) from public.account_balances)
+          );
+          SQL
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const contract = JSON.parse(await readFile(
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
+            'utf8',
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Resolve protected production service credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$service" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/api-keys?reveal=true" \
+              > "$RUNNER_TEMP/project-api-keys.json"
+            SERVICE_KEYS_PATH="$RUNNER_TEMP/project-api-keys.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.SERVICE_KEYS_PATH, 'utf8'));
+          const service = rows.find((row) => row.name === 'service_role' && row.api_key)?.api_key || '';
+          fs.writeFileSync('/tmp/production-source-service-key', service, { mode: 0o600 });
+          NODE
+            service="$(cat /tmp/production-source-service-key)"
+          fi
+          test -n "$service"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/project-api-keys.json" /tmp/production-source-service-key
+
+      - name: Bootstrap canonical source and run connected provisioning probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/production-canonical-source-bootstrap.mjs
+
+      - name: Verify source completeness, zero probe residue, and protected data preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGSSLMODE=require
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > "$RUNNER_TEMP/production-source-after.json"
+          with source_game as (
+            select id from public.game_sessions where name='[SYSTEM] Econovaria Canonical Source'
+          )
+          select json_build_object(
+            'sourceCount', (select count(*) from source_game),
+            'sourceJoinable', exists (
+              select 1 from public.game_sessions g join source_game s on s.id=g.id
+              where g.game_join_code_status='active' and g.game_join_code is not null
+            ),
+            'releaseMembers', (select count(*) from public.seed_content_release_members m join public.seed_content_releases r on r.id=m.release_id join source_game s on s.id=r.game_session_id where r.status='applied_active'),
+            'worldLocations', (select count(*) from public.world_location_states l join source_game s on s.id=l.game_session_id),
+            'worldRoutes', (select count(*) from public.world_route_states r join source_game s on s.id=r.game_session_id),
+            'worldCountries', (select count(*) from public.world_country_runtime c join source_game s on s.id=c.game_session_id),
+            'arrivalClassGrants', (select count(*) from public.arrival_class_grant_runtime a join source_game s on s.id=a.game_session_id),
+            'activeCraftingPacks', (select count(*) from public.game_session_physical_economy_packs p join source_game s on s.id=p.game_session_id where p.status='active'),
+            'probeResidue', (select count(*) from public.game_sessions where name='[SYNTHETIC] Production Provisioning Probe'),
+            'nonSystemGameCount', (select count(*) from public.game_sessions where name <> '[SYSTEM] Econovaria Canonical Source'),
+            'playerCount', (select count(*) from public.players),
+            'activeCredentialCount', (select count(*) from public.player_access_credentials where status='active'),
+            'accountBalanceCount', (select count(*) from public.account_balances)
+          );
+          SQL
+          BEFORE_PATH="$RUNNER_TEMP/production-source-before.json" AFTER_PATH="$RUNNER_TEMP/production-source-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+          const after = JSON.parse(fs.readFileSync(process.env.AFTER_PATH, 'utf8'));
+          if (after.sourceCount !== 1 || after.sourceJoinable !== false) throw new Error('Canonical source boundary failed.');
+          if (after.releaseMembers !== 590 || after.worldLocations !== 50 || after.worldRoutes !== 13 || after.worldCountries !== 10 || after.arrivalClassGrants !== 8 || after.activeCraftingPacks !== 1) throw new Error('Canonical source completeness failed.');
+          if (after.probeResidue !== 0) throw new Error('Synthetic provisioning probe residue remains.');
+          for (const key of ['nonSystemGameCount', 'playerCount', 'activeCredentialCount', 'accountBalanceCount']) {
+            if (after[key] !== before[key]) throw new Error(`Protected production count changed: ${key}`);
+          }
+          NODE
+
+      - name: Scan and upload sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "$EVIDENCE_PATH" ]; then
+            node - <<'NODE'
+          const fs = require('node:fs');
+          const text = fs.readFileSync(process.env.EVIDENCE_PATH, 'utf8');
+          const evidence = JSON.parse(text);
+          if (evidence.canonicalSourceReady !== true || evidence.canonicalSourceJoinable !== false) throw new Error('Canonical source evidence failed.');
+          if (evidence.syntheticProbeCleaned !== true || evidence.existingPlayerDataMutated !== false) throw new Error('Production preservation evidence failed.');
+          if (evidence.credentialsRecorded !== false || evidence.rawInternalIdentifiersRecorded !== false) throw new Error('Evidence privacy flags failed.');
+          const forbidden = /(eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role_key|authorization:\s*bearer|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
+          if (forbidden.test(text)) throw new Error('Evidence appears to contain a secret or internal identifier.');
+          NODE
+          fi
+
+      - name: Upload production canonical source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-canonical-source-${{ github.sha }}
+          path: |
+            /tmp/production-canonical-source-bootstrap.json
+            ${{ runner.temp }}/production-source-before.json
+            ${{ runner.temp }}/production-source-after.json
+          if-no-files-found: warn
+          retention-days: 90
