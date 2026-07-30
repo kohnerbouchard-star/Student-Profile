@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "econovaria.production-content-promotion.v1",
+  "authorizationId": "production-content-promotion-20260730-v1",
+  "allowProductionContentPromotion": true,
+  "productionAuthorized": true,
+  "projectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "sourceGameSessionId": "65b8afc8-3b8e-55b4-897a-deb2af4720bb",
+  "ownerStaffUserId": "1f98d582-deaa-47db-b1eb-1d523c7e6415",
+  "targetGameName": "Econovaria Production",
+  "idempotencyKey": "production.canonical.game.v1.20260730",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "packVersion": "1.0.0-beta",
+  "packSha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
+  "physicalEconomyContentDigest": "749e1c4c9bb8464ce1574ebd73218690e9837a8328b815fe5d36d2d71987d3e7",
+  "physicalEconomySourceCommit": "04824da5ed8ea47bbabd893ab27f7ac285f050f2",
+  "authorizedBy": "Kohner Bouchard",
+  "authorizedAt": "2026-07-30T12:10:00Z",
+  "expiresAt": "2026-07-31T23:59:59Z",
+  "preserveLegacyGame": true,
+  "copyStagingUserRows": false,
+  "recordPlaintextJoinCode": false
+}
