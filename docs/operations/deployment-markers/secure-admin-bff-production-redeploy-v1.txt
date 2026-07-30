@@ -1,0 +1,6 @@
+Econovaria production redeploy marker
+
+Purpose: trigger the Vercel production build after PR #424 merged while the prior Git-triggered deployment was suppressed by the deployment rate limit.
+Source merge: 323384f6a0ca6fbcac00da6e55e789bff8a841ae
+Release authorization: b83eac993f26bf8499f8faeadab92da801bf3ecd
+Scope: deployment trigger only; no application semantics changed.
