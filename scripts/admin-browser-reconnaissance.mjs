@@ -38,8 +38,25 @@ source = replaceExactlyOnce(
 source = replaceExactlyOnce(
   source,
   "Player creation BFF route",
-  `(candidate) => /\\/functions\\/v1\\/admin-api\\/games\\/[^/]+\\/players$/.test(new URL(candidate.url()).pathname) &&`,
-  `(candidate) => /\\/functions\\/v1\\/web-session-api\\/proxy\\/games\\/[^/]+\\/players$/.test(new URL(candidate.url()).pathname) &&`,
+  `(candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`,
+  `(candidate) => /\/functions\/v1\/web-session-api\/proxy\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&`,
+);
+source = replaceExactlyOnce(
+  source,
+  "Logout revocation response settlement",
+  `  await logoutConfirmation.locator("[data-econovaria-logout-confirm]").click();
+  await page.waitForURL(/reason=signed-out/, { timeout: 60_000 });
+  evidence.logout.redirected = true;`,
+  `  const revokedStatusResponsePromise = page.waitForResponse((response) => {
+    const request = response.request();
+    return request.method() === "GET" &&
+      response.status() === 401 &&
+      new URL(response.url()).pathname.endsWith("/functions/v1/web-session-api/status");
+  }, { timeout: 60_000 });
+  await logoutConfirmation.locator("[data-econovaria-logout-confirm]").click();
+  await page.waitForURL(/reason=signed-out/, { timeout: 60_000 });
+  await revokedStatusResponsePromise;
+  evidence.logout.redirected = true;`,
 );
 source = replaceExactlyOnce(
   source,
