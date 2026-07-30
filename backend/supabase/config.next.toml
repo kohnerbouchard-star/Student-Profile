@@ -40,5 +40,9 @@ enable_signup = false
 [edge_runtime]
 enabled = false
 
+[functions.staff-mfa-api]
+verify_jwt = true
+entrypoint = "./functions/staff-mfa-api/entrypoint.ts"
+
 [analytics]
 enabled = false
