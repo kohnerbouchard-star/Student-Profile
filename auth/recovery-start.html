@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Continue Econovaria Password Recovery</title>
+  <link rel="stylesheet" href="./reset-password.css" />
+  <script defer src="../runtime-config.env.js"></script>
+  <script defer src="../frontend/src/core/runtime-config.js"></script>
+  <script defer src="./recovery-start.js"></script>
+</head>
+<body>
+  <main class="reset-shell">
+    <section class="reset-card" aria-labelledby="recoveryTitle">
+      <span class="reset-kicker">Verified staff recovery</span>
+      <h1 id="recoveryTitle">Continue password recovery</h1>
+      <p id="recoveryIntro">
+        Continue only if you requested an administrator password reset.
+      </p>
+
+      <button id="continueRecovery" type="button" hidden>
+        Continue to Password Reset
+      </button>
+
+      <p id="recoveryMessage" class="reset-message" role="status" aria-live="polite"></p>
+      <a class="reset-back" href="../?mode=admin">Return to administrator sign-in</a>
+    </section>
+  </main>
+</body>
+</html>
