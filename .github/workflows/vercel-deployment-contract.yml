@@ -5,6 +5,7 @@ on:
     paths:
       - "api/**"
       - "frontend/src/core/runtime-config.js"
+      - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
@@ -17,6 +18,7 @@ on:
     paths:
       - "api/**"
       - "frontend/src/core/runtime-config.js"
+      - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
@@ -55,6 +57,7 @@ jobs:
       - name: Validate runtime and deployment contracts
         run: |
           node --test \
+            scripts/admin-vercel-namespace-routing-contract.test.mjs \
             scripts/runtime-config-contract.test.mjs \
             scripts/runtime-trusted-types-contract.test.mjs \
             scripts/vercel-deployment-contract.test.mjs
