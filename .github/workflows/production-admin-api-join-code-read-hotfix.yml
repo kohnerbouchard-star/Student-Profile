@@ -3,7 +3,9 @@ name: Production Admin API Join Code Read Hotfix
 on:
   push:
     branches:
-      - release/production-admin-api-join-code-read-v1
+      - main
+    paths:
+      - docs/operations/evidence/production-admin-api-join-code-read-hotfix-v1.json
 
 permissions:
   contents: read
@@ -13,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  AUTHORIZATION_PATH: docs/operations/evidence/production-admin-api-join-code-read-hotfix-v1.json
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   FUNCTION_NAME: admin-api
@@ -32,15 +35,47 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
-      - name: Enforce one-time production scope
+      - name: Enforce merged-main production scope
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = "push"
-          test "$GITHUB_REF" = "refs/heads/release/production-admin-api-join-code-read-v1"
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
           test "$FUNCTION_NAME" = "admin-api"
+
+      - name: Check out exact authorization commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify merged authorization contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f "$AUTHORIZATION_PATH"
+          git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA" | grep -Fx "$AUTHORIZATION_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const value = JSON.parse(fs.readFileSync(process.env.AUTHORIZATION_PATH, 'utf8'));
+          const failures = [];
+          if (value.schemaVersion !== 'econovaria.production-admin-api-join-code-read-hotfix.v1') failures.push('schemaVersion');
+          if (value.targetProjectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) failures.push('targetProjectRef');
+          if (value.deniedProjectRef !== process.env.DENIED_STAGING_PROJECT_REF) failures.push('deniedProjectRef');
+          if (value.functionName !== process.env.FUNCTION_NAME) failures.push('functionName');
+          if (String(value.expectedBeforeVersion) !== process.env.EXPECTED_BEFORE_VERSION) failures.push('expectedBeforeVersion');
+          if (value.expectedBeforeDigest !== process.env.EXPECTED_BEFORE_DIGEST) failures.push('expectedBeforeDigest');
+          if (value.sourceCommit !== process.env.SOURCE_COMMIT) failures.push('sourceCommit');
+          if (value.databaseMigrationsAllowed !== false) failures.push('databaseMigrationsAllowed');
+          if (value.otherFunctionsAllowed !== false) failures.push('otherFunctionsAllowed');
+          if (value.verifyJwtRequired !== true) failures.push('verifyJwtRequired');
+          if (!Array.isArray(value.scope) || value.scope.length !== 1 || value.scope[0] !== 'authenticated owner-scoped GET join-code read') failures.push('scope');
+          if (failures.length) throw new Error(`Authorization mismatch: ${failures.join(', ')}`);
+          NODE
 
       - name: Check out exact production-era source
         uses: actions/checkout@v6
@@ -69,17 +104,11 @@ jobs:
           const fs = require('node:fs');
           const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
           const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
-          const row = rows.find((value) => value.slug === process.env.FUNCTION_NAME);
+          const row = rows.find((entry) => entry.slug === process.env.FUNCTION_NAME);
           if (!row) throw new Error('Production admin-api is missing.');
-          if (String(row.version) !== process.env.EXPECTED_BEFORE_VERSION) {
-            throw new Error(`Unexpected production version: ${row.version}`);
-          }
-          if (row.ezbr_sha256 !== process.env.EXPECTED_BEFORE_DIGEST) {
-            throw new Error('Production admin-api digest drifted.');
-          }
-          if (row.verify_jwt !== true || row.status !== 'ACTIVE') {
-            throw new Error('Production admin-api security metadata is invalid.');
-          }
+          if (String(row.version) !== process.env.EXPECTED_BEFORE_VERSION) throw new Error(`Unexpected production version: ${row.version}`);
+          if (row.ezbr_sha256 !== process.env.EXPECTED_BEFORE_DIGEST) throw new Error('Production admin-api digest drifted.');
+          if (row.verify_jwt !== true || row.status !== 'ACTIVE') throw new Error('Production admin-api security metadata is invalid.');
           NODE
 
       - name: Apply the single-route patch
@@ -172,7 +201,7 @@ jobs:
           const fs = require('node:fs');
           const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
           const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
-          const row = rows.find((value) => value.slug === process.env.FUNCTION_NAME);
+          const row = rows.find((entry) => entry.slug === process.env.FUNCTION_NAME);
           if (!row) process.exit(1);
           if (Number(row.version) <= Number(process.env.EXPECTED_BEFORE_VERSION)) process.exit(1);
           if (row.ezbr_sha256 === process.env.EXPECTED_BEFORE_DIGEST) process.exit(1);
@@ -188,16 +217,10 @@ jobs:
           const fs = require('node:fs');
           const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
           const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
-          const row = rows.find((value) => value.slug === process.env.FUNCTION_NAME);
-          if (!row || Number(row.version) <= Number(process.env.EXPECTED_BEFORE_VERSION)) {
-            throw new Error('Production admin-api version did not advance.');
-          }
-          if (row.ezbr_sha256 === process.env.EXPECTED_BEFORE_DIGEST) {
-            throw new Error('Production admin-api digest did not change.');
-          }
-          if (row.verify_jwt !== true || row.status !== 'ACTIVE') {
-            throw new Error('Production admin-api security metadata changed unexpectedly.');
-          }
+          const row = rows.find((entry) => entry.slug === process.env.FUNCTION_NAME);
+          if (!row || Number(row.version) <= Number(process.env.EXPECTED_BEFORE_VERSION)) throw new Error('Production admin-api version did not advance.');
+          if (row.ezbr_sha256 === process.env.EXPECTED_BEFORE_DIGEST) throw new Error('Production admin-api digest did not change.');
+          if (row.verify_jwt !== true || row.status !== 'ACTIVE') throw new Error('Production admin-api security metadata changed unexpectedly.');
           console.log(`admin-api version ${row.version}; verify_jwt=true; status=ACTIVE`);
           NODE
 
