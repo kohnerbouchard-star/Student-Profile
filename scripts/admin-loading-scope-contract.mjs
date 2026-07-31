@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 const compatibility = await readFile(new URL("../admin/overview-quick-actions.js", import.meta.url), "utf8");
 const bootstrap = await readFile(new URL("../admin/admin-bootstrap.js", import.meta.url), "utf8");
 const interactionQuality = await readFile(new URL("../admin/interaction-quality.js", import.meta.url), "utf8");
+const interactionQualityCss = await readFile(new URL("../admin/css/interaction-quality.css", import.meta.url), "utf8");
 const responsiveGrid = await readFile(new URL("../admin/css/responsive-card-grid.css", import.meta.url), "utf8");
 const sessionSkeleton = await readFile(new URL("../admin/css/session-skeleton.css", import.meta.url), "utf8");
 const index = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
@@ -37,6 +38,11 @@ assert.doesNotMatch(
   interactionQuality,
   /reconcile\([^)]*\)[\s\S]*showPageSkeleton\(\)[\s\S]*900/,
   "Mount reconciliation must not create a second startup skeleton."
+);
+assert.doesNotMatch(
+  interactionQualityCss,
+  /\.admin-session-skeleton(?:\b|__)/,
+  "Route-loading styles must not override the authoritative session skeleton."
 );
 
 assert.match(sessionSkeleton, /single startup loader/i, "The retained loader stylesheet must declare its single-loader ownership.");
