@@ -38,7 +38,7 @@ enable_signup = false
 
 [auth.email.template.confirmation]
 subject = "Confirm your Econovaria administrator email"
-content_path = "./templates/confirmation.html"
+content_path = "./supabase/templates/confirmation.html"
 
 # Supabase CLI local Auth disables TOTP enrollment and verification by default.
 # Enable both for disposable local browser acceptance; hosted project settings are
