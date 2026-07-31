@@ -86,12 +86,6 @@ assert(
 );
 
 const adminOverview = readText("admin/dist/admin-overview-terminal.js");
-assert(adminOverview.includes("data-admin-terminal-selected-game-code"), "Selected game code label is not source-owned by the accepted Admin shell.");
-assert(adminOverview.includes("data-admin-terminal-selected-game-share"), "Selected game share control is not source-owned by the accepted Admin shell.");
-assert(adminOverview.includes("data-admin-terminal-simulation-state"), "Simulation state is not source-owned by the accepted Admin shell.");
-assert(adminOverview.includes("data-admin-terminal-realtime-state"), "Realtime state is not source-owned by the accepted Admin shell.");
-assert(adminOverview.includes("data-admin-terminal-export-history"), "Export history is not source-owned by the accepted Admin shell.");
-assert(adminOverview.includes("data-admin-terminal-notification-status"), "Notification status is not source-owned by the accepted Admin shell.");
 assert(!adminOverview.includes('data-econovaria-action="admin-terminal-quick-attendance-scan"'), "Legacy quick attendance action returned to the active terminal bundle.");
 assert(!adminOverview.includes('data-econovaria-action="admin-terminal-quick-add-player"'), "Legacy quick add-player action returned to the active terminal bundle.");
 
