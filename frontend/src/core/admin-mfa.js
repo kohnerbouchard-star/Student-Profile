@@ -148,8 +148,10 @@ window.Econovaria = window.Econovaria || {};
     face.append(breadcrumb, eyebrow, title, description);
 
     let secretNode = null;
+    let setup = null;
+    let setupContinue = null;
     if (enrollment) {
-      const setup = createElement("div", "econovaria-mfa-setup");
+      setup = createElement("div", "econovaria-mfa-setup");
       const qrWrap = createElement("div", "econovaria-mfa-qr-wrap");
       const image = createElement("img", "econovaria-mfa-qr");
       image.alt = "Authenticator enrollment QR code";
@@ -164,11 +166,20 @@ window.Econovaria = window.Econovaria || {};
       );
       secretNode = createElement("code", "econovaria-mfa-secret", secret);
       secretWrap.append(secretLabel, secretNode);
-      setup.append(qrWrap, secretWrap);
+      setupContinue = createElement(
+        "button",
+        "submit-btn amber econovaria-mfa-setup-continue",
+        "Continue"
+      );
+      setupContinue.type = "button";
+      setup.append(qrWrap, secretWrap, setupContinue);
       face.append(setup);
     }
 
-    const form = createElement("form", "econovaria-mfa-form");
+    const form = createElement(
+      "form",
+      enrollment ? "econovaria-mfa-form hidden" : "econovaria-mfa-form"
+    );
     const label = createElement("label");
     label.append(createElement("span", "", "Six-digit code"));
     const input = createElement("input", "econovaria-mfa-code");
@@ -188,13 +199,25 @@ window.Econovaria = window.Econovaria || {};
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
 
+    const verifyActions = createElement("div", "econovaria-mfa-verify-actions");
+    let backToSetup = null;
+    if (enrollment) {
+      backToSetup = createElement(
+        "button",
+        "econovaria-mfa-inline-back",
+        "Back to QR"
+      );
+      backToSetup.type = "button";
+      verifyActions.append(backToSetup);
+    }
     const submit = createElement(
       "button",
       "submit-btn amber econovaria-mfa-submit",
       "Verify and continue"
     );
     submit.type = "submit";
-    form.append(label, message, submit);
+    verifyActions.append(submit);
+    form.append(label, message, verifyActions);
     face.append(form);
     host.append(face);
     showMfaSurface(host);
@@ -207,7 +230,13 @@ window.Econovaria = window.Econovaria || {};
       message,
       submit,
       breadcrumb,
+      title,
+      description,
+      setup,
+      setupContinue,
+      backToSetup,
       secretNode,
+      enrollment,
       factorHandle
     };
   }
@@ -216,6 +245,8 @@ window.Econovaria = window.Econovaria || {};
     view.input.disabled = busy;
     view.submit.disabled = busy;
     view.breadcrumb.disabled = busy;
+    if (view.setupContinue) view.setupContinue.disabled = busy;
+    if (view.backToSetup) view.backToSetup.disabled = busy;
     view.submit.textContent = busy ? "Verifying..." : "Verify and continue";
   }
 
@@ -248,7 +279,27 @@ window.Econovaria = window.Econovaria || {};
         }
       };
 
-      runtime.setTimeout(() => view.input.focus(), 0);
+      if (!view.enrollment) runtime.setTimeout(() => view.input.focus(), 0);
+
+      view.setupContinue?.addEventListener("click", () => {
+        view.setup?.classList.add("hidden");
+        view.form.classList.remove("hidden");
+        view.title.textContent = "Verify authenticator";
+        view.description.textContent =
+          "Enter the current six-digit code from your authenticator app.";
+        runtime.setTimeout(() => view.input.focus(), 0);
+      });
+
+      view.backToSetup?.addEventListener("click", () => {
+        clearError(view);
+        view.input.value = "";
+        view.form.classList.add("hidden");
+        view.setup?.classList.remove("hidden");
+        view.title.textContent = "Set up authenticator";
+        view.description.textContent =
+          "Scan the QR code, then enter the current six-digit code.";
+        runtime.setTimeout(() => view.setupContinue?.focus(), 0);
+      });
 
       view.breadcrumb.addEventListener("click", async () => {
         setBusy(view, true);
