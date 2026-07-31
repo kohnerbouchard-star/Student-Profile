@@ -97,6 +97,8 @@ test("Supabase remains the only verification-token authority", () => {
   assert.doesNotMatch(linkAdapter, /crypto\.subtle|randomBase64Url/u);
   assert.match(emailDelivery, /searchParams\.set\("token_hash", input\.tokenHash\)/u);
   assert.match(emailDelivery, /searchParams\.set\("type", input\.verificationType\)/u);
+  assert.match(emailDelivery, /Authentication-link click tracking must be disabled/u);
+  assert.match(emailDelivery, /Delivery,[\s\S]*bounce and complaint telemetry may remain enabled/u);
   assert.doesNotMatch(emailDelivery, /verificationToken/u);
   assert.match(linkAuthorityMigration, /Supabase remains the verification-token authority/u);
 });
