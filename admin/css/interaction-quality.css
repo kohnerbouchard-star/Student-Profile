@@ -1,4 +1,4 @@
-/* Admin-only interaction quality states: validation, progress, completion, errors, and skeleton loading. */
+/* Admin-only interaction quality states: validation, progress, completion, errors, and route loading. */
 
 .admin-qol-sr-only {
   position: absolute !important;
@@ -12,34 +12,16 @@
   border: 0 !important;
 }
 
-.admin-session-skeleton {
-  width: min(920px, calc(100vw - 48px));
-  display: grid;
-  gap: 18px;
-  padding: 24px;
-  border: 1px solid rgba(116, 226, 255, 0.12);
-  background: rgba(5, 17, 31, 0.74);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.42);
-}
-
-.admin-session-skeleton__top,
-.admin-session-skeleton__grid,
 .admin-qol-skeleton-head,
 .admin-qol-skeleton-grid {
   display: grid;
   gap: 12px;
 }
 
-.admin-session-skeleton__top {
-  grid-template-columns: 180px minmax(120px, 1fr);
-}
-
-.admin-session-skeleton__grid,
 .admin-qol-skeleton-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.admin-session-skeleton i,
 .admin-qol-page-skeleton i {
   display: block;
   min-height: 18px;
@@ -50,12 +32,10 @@
   animation: adminQolSkeletonSweep 1.25s linear infinite;
 }
 
-.admin-session-skeleton__top i:first-child,
 .admin-qol-skeleton-head i:first-child {
   min-height: 26px;
 }
 
-.admin-session-skeleton__grid i,
 .admin-qol-skeleton-grid i {
   min-height: 138px;
 }
@@ -248,26 +228,17 @@ button[data-admin-qol-state="error"] .admin-qol-button-status::before {
 }
 
 @media (max-width: 900px) {
-  .admin-session-skeleton__grid,
   .admin-qol-skeleton-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 620px) {
-  .admin-session-skeleton {
-    width: calc(100vw - 24px);
-    padding: 16px;
-  }
-
-  .admin-session-skeleton__top,
-  .admin-session-skeleton__grid,
   .admin-qol-skeleton-head,
   .admin-qol-skeleton-grid {
     grid-template-columns: 1fr;
   }
 
-  .admin-session-skeleton__grid i,
   .admin-qol-skeleton-grid i {
     min-height: 100px;
   }
@@ -279,7 +250,6 @@ button[data-admin-qol-state="error"] .admin-qol-button-status::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .admin-session-skeleton i,
   .admin-qol-page-skeleton i,
   button[data-admin-qol-state="loading"] .admin-qol-button-status::before,
   .admin-terminal-scanner-video-container[data-admin-qol-scanner-state="processing"] .admin-terminal-mode-dot,
