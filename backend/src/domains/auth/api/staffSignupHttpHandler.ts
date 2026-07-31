@@ -18,21 +18,18 @@ import {
 import { enforcePreAuthRateLimit } from "../../../security/playerRateLimitService.ts";
 import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
 import { validateStaffPassword } from "../../../security/staffPasswordPolicy.ts";
-
-declare const Deno: {
-  readonly env: {
-    get(name: string): string | undefined;
-  };
-};
+import {
+  sendStaffSignupVerificationEmail,
+} from "../application/staffSignupVerificationEmail.ts";
 
 interface StaffSignupDependencies {
-  readonly createAuthClient?: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
   readonly buildThrottleBuckets?: typeof buildAuthenticationThrottleBuckets;
   readonly checkThrottle?: typeof checkAuthenticationThrottle;
   readonly recordFailure?: typeof recordAuthenticationFailure;
   readonly recordSuccess?: typeof recordAuthenticationSuccess;
+  readonly sendVerificationEmail?: typeof sendStaffSignupVerificationEmail;
 }
 
 interface StaffSignupInput {
@@ -45,15 +42,11 @@ interface SignupClaimRow {
   readonly decision?: unknown;
   readonly signup_request_id?: unknown;
   readonly verification_expires_at?: unknown;
-  readonly send_verification?: unknown;
 }
 
-interface SignupEmailAuthClient {
-  resend(input: {
-    readonly type: "signup";
-    readonly email: string;
-    readonly options: { readonly emailRedirectTo: string };
-  }): PromiseLike<{ readonly error: { readonly message?: string } | null }>;
+interface VerificationDeliveryRow {
+  readonly normalized_email?: unknown;
+  readonly delivery_version?: unknown;
 }
 
 const MAX_EMAIL_LENGTH = 320;
@@ -79,15 +72,14 @@ export async function handleStaffSignupRequest(
 
     const input = parseStaffSignupInput(await readJsonBody(request));
     const serviceClient = dependencies.createServiceClient(envResult.value);
-    const authClient = (dependencies.createAuthClient ?? dependencies.createServiceClient)(
-      envResult.value,
-    );
     const enforceVolumetric = dependencies.enforceVolumetric ?? enforcePreAuthRateLimit;
     const buildThrottleBuckets = dependencies.buildThrottleBuckets ??
       buildAuthenticationThrottleBuckets;
     const checkThrottle = dependencies.checkThrottle ?? checkAuthenticationThrottle;
     const recordFailure = dependencies.recordFailure ?? recordAuthenticationFailure;
     const recordSuccess = dependencies.recordSuccess ?? recordAuthenticationSuccess;
+    const sendVerificationEmail = dependencies.sendVerificationEmail ??
+      sendStaffSignupVerificationEmail;
 
     const volumetricDecision = await enforceVolumetric({
       action: "staff.signup.attempt",
@@ -171,21 +163,48 @@ export async function handleStaffSignupRequest(
         });
         return signupUnavailableResponse();
       }
+
+      const verificationToken = randomBase64Url(32);
+      const verificationTokenHash = await sha256Hex(
+        `econovaria.staff-signup.verification.v1\n${verificationToken}`,
+      );
+      const deliveryResponse = await serviceClient.rpc<VerificationDeliveryRow[]>(
+        "prepare_staff_signup_verification_delivery_v1",
+        {
+          p_signup_request_id: signupRequestId,
+          p_auth_user_id: authUser.id,
+          p_token_hash: verificationTokenHash,
+          p_token_expires_at: verificationExpiresAt,
+        },
+      );
+      const delivery = firstDeliveryRow(deliveryResponse.data);
+      const deliveryVersion = Number(delivery?.delivery_version);
+      if (
+        deliveryResponse.error ||
+        String(delivery?.normalized_email || "") !== input.email ||
+        !Number.isSafeInteger(deliveryVersion) ||
+        deliveryVersion < 1
+      ) {
+        await compensateAuthUser(serviceClient, authUser.id);
+        await serviceClient.rpc("cancel_staff_signup_v1", {
+          p_continuation_handle_hash: handleHash,
+        });
+        return signupUnavailableResponse();
+      }
+
       returnHandle = continuationHandle;
-      await sendSignupVerification(
-        authClient,
-        input.email,
-        verificationRedirectUrl(envResult.value),
-      );
-      await recordSuccess(serviceClient, throttleBuckets);
-    } else if (decision === "resume_pending" && claim?.send_verification === true) {
-      await sendSignupVerification(
-        authClient,
-        input.email,
-        verificationRedirectUrl(envResult.value),
-      );
+      await sendVerificationEmail({
+        email: input.email,
+        displayName: input.displayName,
+        verificationToken,
+        signupRequestId,
+        deliveryVersion,
+        expiresAt: verificationExpiresAt,
+      });
       await recordSuccess(serviceClient, throttleBuckets);
     } else {
+      // Existing verified and pending identities are intentionally
+      // indistinguishable and do not trigger email from a fresh public signup.
       await recordSuccess(serviceClient, throttleBuckets);
     }
 
@@ -301,43 +320,12 @@ function firstRow(value: SignupClaimRow[] | null): SignupClaimRow | null {
     : isRecord(value) ? value as SignupClaimRow : null;
 }
 
-async function sendSignupVerification(
-  authClient: EdgeSupabaseClient,
-  email: string,
-  redirectTo: string,
-): Promise<boolean> {
-  try {
-    const result = await (authClient.auth as unknown as SignupEmailAuthClient)
-      .resend({
-        type: "signup",
-        email,
-        options: { emailRedirectTo: redirectTo },
-      });
-    return !result.error;
-  } catch {
-    return false;
-  }
-}
-
-function verificationRedirectUrl(env: SupabaseEnv): string {
-  const configured = environmentValue("ECONOVARIA_EMAIL_VERIFICATION_URL");
-  const fallback = `${env.supabaseUrl.replace(/\/+$/u, "")}/functions/v1/admin-email-verification`;
-  const candidate = configured || fallback;
-  try {
-    const parsed = new URL(candidate);
-    if (parsed.protocol !== "https:") throw new Error("invalid protocol");
-    return parsed.href;
-  } catch {
-    return fallback;
-  }
-}
-
-function environmentValue(name: string): string {
-  try {
-    return String(Deno.env.get(name) || "").trim();
-  } catch {
-    return "";
-  }
+function firstDeliveryRow(
+  value: VerificationDeliveryRow[] | null,
+): VerificationDeliveryRow | null {
+  return Array.isArray(value) && isRecord(value[0])
+    ? value[0] as VerificationDeliveryRow
+    : isRecord(value) ? value as VerificationDeliveryRow : null;
 }
 
 async function compensateAuthUser(
