@@ -1,13 +1,11 @@
-/* Login-card MFA and Create Game internal navigation. The existing login visual system remains authoritative. */
+/* Login-card MFA, verified signup and authenticated game selection. */
 
 .login-panel-frame {
   height: min(680px, calc(100vh - 72px));
   min-height: 620px;
 }
 
-.login-panel {
-  height: 100%;
-}
+.login-panel { height: 100%; }
 
 .login-root .mode-pane {
   height: 336px;
@@ -15,27 +13,22 @@
   overflow: visible;
 }
 
-.login-root .panel-footer {
-  margin-top: auto;
-}
-
-.login-root .mode-tabs.is-auth-locked {
-  opacity: 0.64;
-}
-
-.login-root .mode-tab:disabled {
-  cursor: not-allowed;
-}
+.login-root .panel-footer { margin-top: auto; }
+.login-root .mode-tabs.is-auth-locked { opacity: 0.64; }
+.login-root .mode-tab:disabled { cursor: not-allowed; }
 
 .econovaria-mfa-card-host.hidden,
-.econovaria-create-step.hidden {
+.econovaria-create-step.hidden,
+.login-root #adminLoginStep.hidden,
+.login-root #adminGamesStep.hidden,
+.login-root #adminCreateGameStep.hidden,
+.login-root #createAccountStep.hidden,
+.login-root #createVerificationStep.hidden,
+.login-root .game-pagination.hidden {
   display: none;
 }
 
-.econovaria-mfa-card-face {
-  display: grid;
-  gap: 8px;
-}
+.econovaria-mfa-card-face { display: grid; gap: 8px; }
 
 .econovaria-mfa-breadcrumb,
 .econovaria-create-back {
@@ -58,21 +51,12 @@
 }
 
 .econovaria-mfa-breadcrumb:hover,
-.econovaria-create-back:hover {
-  text-decoration: underline;
-}
+.econovaria-create-back:hover { text-decoration: underline; }
+.econovaria-mfa-breadcrumb:disabled { cursor: wait; opacity: 0.55; }
+.econovaria-mfa-back-icon { font-size: 14px; line-height: 1; }
 
-.econovaria-mfa-breadcrumb:disabled {
-  cursor: wait;
-  opacity: 0.55;
-}
-
-.econovaria-mfa-back-icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.econovaria-mfa-eyebrow {
+.econovaria-mfa-eyebrow,
+.verification-eyebrow {
   margin: 0;
   color: color-mix(in srgb, var(--login-input) 66%, transparent);
   font: 900 8px/1.2 Rajdhani, "Arial Narrow", Impact, sans-serif;
@@ -80,7 +64,8 @@
   text-transform: uppercase;
 }
 
-.econovaria-mfa-title {
+.econovaria-mfa-title,
+.verification-face h2 {
   margin: 0;
   color: var(--login-text);
   font: 800 18px/1.05 Rajdhani, "Arial Narrow", Impact, sans-serif;
@@ -88,10 +73,11 @@
   text-transform: uppercase;
 }
 
-.econovaria-mfa-description {
+.econovaria-mfa-description,
+.verification-face > p {
   margin: 0 0 2px;
   color: rgba(255, 255, 255, 0.46);
-  font: 500 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
+  font: 500 9px/1.45 "JetBrains Mono", ui-monospace, monospace;
 }
 
 .econovaria-mfa-setup {
@@ -111,16 +97,8 @@
   background: #ffffff;
 }
 
-.econovaria-mfa-qr {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.econovaria-mfa-secret-wrap {
-  min-width: 0;
-}
+.econovaria-mfa-qr { display: block; width: 100%; height: 100%; object-fit: contain; }
+.econovaria-mfa-secret-wrap { min-width: 0; }
 
 .econovaria-mfa-secret-label {
   display: block;
@@ -142,32 +120,96 @@
   user-select: all;
 }
 
-.econovaria-mfa-form {
+.econovaria-mfa-form { display: grid; gap: 8px; }
+.econovaria-mfa-code { text-align: center; font-size: 16px !important; font-weight: 800; letter-spacing: 0.32em !important; }
+.econovaria-mfa-message { min-height: 14px; margin: 0; color: rgba(74, 222, 128, 0.9); font: 600 9px/1.35 "JetBrains Mono", ui-monospace, monospace; }
+.econovaria-mfa-message.is-error { color: rgba(255, 90, 95, 0.92); }
+.econovaria-mfa-submit { margin-top: 0; }
+
+.login-root #adminGamesStep,
+.login-root #adminCreateGameStep,
+.login-root #createVerificationStep {
+  height: 100%;
+}
+
+.login-root #adminGamesStep {
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 7px;
+}
+
+.login-root #adminGamesStep.hidden { display: none; }
+
+.login-root #adminGameList {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+}
+
+.login-root #adminGameList .game-row {
+  min-height: 48px;
+  padding: 8px 10px;
+}
+
+.login-root .game-pagination {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.48);
+  font: 700 8px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  text-align: center;
+}
+
+.login-root .game-pagination button {
+  min-height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  padding: 0 8px;
+  color: var(--login-input-text);
+  background: rgba(0, 0, 0, 0.18);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.login-root .game-pagination button:disabled { opacity: 0.38; }
+.login-root #createNewAdminGame { height: 34px; min-height: 34px; margin: 0; }
+
+.login-root #adminCreateGameStep {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
 }
 
-.econovaria-mfa-code {
-  text-align: center;
-  font-size: 16px !important;
-  font-weight: 800;
-  letter-spacing: 0.32em !important;
-}
+.login-root #adminCreateGameStep.hidden { display: none; }
+.login-root #adminCreateGameForm { gap: 6px; }
+.login-root #adminCreateGameForm label { gap: 3px; }
+.login-root #adminCreateGameForm input,
+.login-root #adminCreateGameForm select { min-height: 32px; height: 32px; }
+.login-root #adminCreateGameForm .submit-btn { min-height: 34px; height: 34px; margin-top: 0; }
 
-.econovaria-mfa-message {
-  min-height: 14px;
+.game-ownership-notice {
   margin: 0;
-  color: rgba(74, 222, 128, 0.9);
-  font: 600 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
+  border-left: 2px solid color-mix(in srgb, var(--login-input) 56%, transparent);
+  padding: 5px 8px;
+  color: rgba(255, 255, 255, 0.42);
+  background: rgba(0, 0, 0, 0.13);
+  font: 600 8px/1.35 "JetBrains Mono", ui-monospace, monospace;
 }
 
-.econovaria-mfa-message.is-error {
-  color: rgba(255, 90, 95, 0.92);
+.verification-face {
+  display: grid;
+  align-content: center;
+  gap: 11px;
+  height: 100%;
 }
 
-.econovaria-mfa-submit {
-  margin-top: 0;
-}
+.verification-face strong { color: var(--login-input-text); overflow-wrap: anywhere; }
+.verification-face .submit-btn { min-height: 38px; margin-top: 3px; }
+.verification-face .auth-link-button { justify-self: center; }
+
+.login-root #adminNewGameTimeZone,
+.login-root #adminNewGameDifficulty { color: var(--login-input-text); }
 
 .econovaria-create-progress {
   display: grid;
@@ -199,119 +241,33 @@
   font-size: 8px;
 }
 
-.econovaria-create-progress-item.is-active {
-  border-bottom-color: color-mix(in srgb, var(--login-input) 68%, transparent);
-  color: var(--login-input-text);
-}
-
-.econovaria-create-progress-item.is-complete {
-  color: color-mix(in srgb, var(--login-green) 70%, transparent);
-}
-
-.econovaria-create-step {
-  display: grid;
-  gap: 10px;
-}
-
-.econovaria-create-step .two-col {
-  grid-template-columns: 1fr;
-}
-
-.econovaria-create-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 2px;
-}
-
-.econovaria-create-actions.split {
-  justify-content: space-between;
-}
-
-.econovaria-create-actions .submit-btn {
-  width: auto;
-  min-width: 132px;
-  padding: 0 16px;
-}
-
-.login-root #gameTimeZone,
-.login-root #difficultyLevel {
-  color: var(--login-input-text);
-}
-
-.login-root #gameTimeZoneHelp {
-  color: rgba(255, 255, 255, 0.3);
-  font: 500 8px/1.35 "JetBrains Mono", ui-monospace, monospace;
-  letter-spacing: 0.02em;
-}
+.econovaria-create-progress-item.is-active { border-bottom-color: color-mix(in srgb, var(--login-input) 68%, transparent); color: var(--login-input-text); }
+.econovaria-create-progress-item.is-complete { color: color-mix(in srgb, var(--login-green) 70%, transparent); }
+.econovaria-create-step { display: grid; gap: 10px; }
+.econovaria-create-step .two-col { grid-template-columns: 1fr; }
+.econovaria-create-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 2px; }
+.econovaria-create-actions.split { justify-content: space-between; }
+.econovaria-create-actions .submit-btn { width: auto; min-width: 132px; padding: 0 16px; }
 
 @media (max-width: 760px) {
-  .login-panel-frame {
-    height: 680px;
-    min-height: 680px;
-  }
+  .login-panel-frame { height: 680px; min-height: 680px; }
 }
 
 @media (max-width: 520px) {
-  .login-root .mode-pane {
-    height: 336px;
-    min-height: 336px;
-  }
-
-  .econovaria-mfa-setup {
-    grid-template-columns: 96px minmax(0, 1fr);
-  }
-
-  .econovaria-mfa-qr-wrap {
-    width: 96px;
-    height: 96px;
-  }
-
-  .econovaria-create-progress-item > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  .login-root .mode-pane { height: 336px; min-height: 336px; }
+  .econovaria-mfa-setup { grid-template-columns: 96px minmax(0, 1fr); }
+  .econovaria-mfa-qr-wrap { width: 96px; height: 96px; }
+  .econovaria-create-progress-item > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .econovaria-mfa-card-face,
-  .econovaria-create-step {
-    scroll-behavior: auto;
-  }
+  .econovaria-create-step { scroll-behavior: auto; }
 }
 
 .econovaria-mfa-form.hidden,
-.econovaria-mfa-setup.hidden {
-  display: none;
-}
-
-.econovaria-mfa-setup-continue {
-  grid-column: 1 / -1;
-}
-
-.econovaria-mfa-verify-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.econovaria-mfa-inline-back {
-  width: auto;
-  border: 0;
-  padding: 0;
-  color: color-mix(in srgb, var(--login-input) 72%, white 8%);
-  background: transparent;
-  cursor: pointer;
-  font: 800 8px/1.2 "JetBrains Mono", ui-monospace, monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.econovaria-mfa-verify-actions .submit-btn {
-  width: auto;
-  min-width: 160px;
-  padding: 0 14px;
-}
+.econovaria-mfa-setup.hidden { display: none; }
+.econovaria-mfa-setup-continue { grid-column: 1 / -1; }
+.econovaria-mfa-verify-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.econovaria-mfa-inline-back { width: auto; border: 0; padding: 0; color: color-mix(in srgb, var(--login-input) 72%, white 8%); background: transparent; cursor: pointer; font: 800 8px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.econovaria-mfa-verify-actions .submit-btn { width: auto; min-width: 160px; padding: 0 14px; }
