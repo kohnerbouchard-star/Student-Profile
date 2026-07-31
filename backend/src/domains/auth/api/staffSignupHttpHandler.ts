@@ -381,12 +381,24 @@ async function safelyPadGenericResponse(
 }
 
 async function padGenericSignupResponse(startedAtMs: number): Promise<void> {
-  const jitterSource = crypto.getRandomValues(new Uint16Array(1))[0] ?? 0;
-  const jitterMs = jitterSource % (MAXIMUM_GENERIC_RESPONSE_JITTER_MS + 1);
+  const jitterMs = secureRandomInteger(MAXIMUM_GENERIC_RESPONSE_JITTER_MS);
   const targetMs = MINIMUM_GENERIC_RESPONSE_MS + jitterMs;
   const remainingMs = Math.ceil(targetMs - (monotonicNow() - startedAtMs));
   if (remainingMs <= 0) return;
   await new Promise<void>((resolve) => setTimeout(resolve, remainingMs));
+}
+
+function secureRandomInteger(maximumInclusive: number): number {
+  if (!Number.isSafeInteger(maximumInclusive) || maximumInclusive < 0 || maximumInclusive > 255) {
+    throw new RangeError("maximumInclusive must be an integer between 0 and 255.");
+  }
+
+  // Rejection sampling avoids modulo bias. For the current 0..200 range,
+  // values 201..255 are discarded and a fresh cryptographic byte is drawn.
+  while (true) {
+    const candidate = crypto.getRandomValues(new Uint8Array(1))[0];
+    if (candidate <= maximumInclusive) return candidate;
+  }
 }
 
 function monotonicNow(): number {
