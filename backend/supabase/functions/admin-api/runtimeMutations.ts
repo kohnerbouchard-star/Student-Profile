@@ -42,17 +42,17 @@ export async function handleRuntimeMutation(
   );
   if (!dispatch) return null;
 
-  const value = await request.clone().json().catch(() => ({}));
   if (dispatch.kind === "direct") {
     return proxyClassroom(
       request,
       context,
       dispatch.classroomPath,
       "POST",
-      value,
+      {},
     );
   }
 
+  const value = await request.clone().json().catch(() => ({}));
   const normalized = normalizeRuntimeMutation(
     gameId,
     suffix,
