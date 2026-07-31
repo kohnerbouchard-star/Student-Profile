@@ -234,17 +234,15 @@ jobs:
 
       - name: Execute rendered Create Game and Admin journey
         id: browser
-        continue-on-error: true
         run: node scripts/admin-browser-reconnaissance.mjs
 
       - name: Execute secure Admin ledger mutation journey
         id: ledger_mutation
         if: ${{ always() && steps.browser.outcome == 'success' }}
-        continue-on-error: true
         run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
 
       - name: Capture sanitized server diagnostics
-        if: steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure'
+        if: ${{ always() && (steps.browser.outcome == 'failure' || steps.ledger_mutation.outcome == 'failure') }}
         shell: bash
         run: |
           set +e
