@@ -4,6 +4,10 @@ import { spawnSync } from "node:child_process";
 const index = readFileSync("admin/index.html", "utf8");
 const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 const controls = readFileSync("admin/game-session-controls.js", "utf8");
+const mountLifecycle = readFileSync(
+  "admin/game-session-mount-lifecycle.js",
+  "utf8",
+);
 const gameCodeWiring = readFileSync("admin/game-code-wiring.js", "utf8");
 const logoutController = readFileSync(
   "admin/admin-logout-controller.js",
@@ -33,6 +37,7 @@ function checkJavaScript(path) {
 }
 
 checkJavaScript("admin/game-session-controls.js");
+checkJavaScript("admin/game-session-mount-lifecycle.js");
 checkJavaScript("admin/game-code-wiring.js");
 checkJavaScript("admin/admin-logout-controller.js");
 checkJavaScript("admin/game-session-share-link-contract.js");
@@ -52,8 +57,32 @@ assert(
 assert(
   bootstrap.includes('name: "game-session-access"') &&
     bootstrap.includes('"./admin-logout-controller.js"') &&
-    bootstrap.includes('"./game-session-share-link-contract.js"'),
-  "Admin bootstrap must load the logout owner and canonical share-link contract.",
+    bootstrap.includes('"./game-session-share-link-contract.js"') &&
+    bootstrap.includes('"./game-session-mount-lifecycle.js"'),
+  "Admin bootstrap must load logout, share-link, and explicit game-session mount ownership.",
+);
+assert(
+  !bootstrap.includes('"./shape-accurate-skeleton-lifecycle.js"'),
+  "The deleted skeleton lifecycle must not remain in dynamic Admin bootstrap.",
+);
+for (const contract of [
+  "econovaria:admin-route-mounted",
+  "econovaria:admin-account-surface-ready",
+  "econovaria:admin-session-refreshed",
+  "econovaria:admin-bootstrap-complete",
+  "EconovariaAdminGameSessionControls?.reconcile?.()",
+  "requestAnimationFrame",
+]) {
+  assert(
+    mountLifecycle.includes(contract),
+    `Selected-game mount lifecycle is missing ${contract}.`,
+  );
+}
+assert(
+  !mountLifecycle.includes("MutationObserver") &&
+    !mountLifecycle.includes("setInterval") &&
+    !mountLifecycle.includes("setTimeout"),
+  "Selected-game mount ownership must use explicit events rather than observation or timer polling.",
 );
 
 for (const contract of [
@@ -203,6 +232,7 @@ for (const contract of [
 
 console.log(JSON.stringify({
   selectedGameCard: true,
+  explicitMountLifecycle: true,
   persistedGameCodeAuthority: true,
   sharePanelResponsive: true,
   canonicalPlayerShareRoute: true,
