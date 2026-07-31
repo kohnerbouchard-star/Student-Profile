@@ -71,6 +71,68 @@ jobs:
       - name: Apply bounded remediation
         run: node scripts/apply-codeql-security-remediation.mjs
 
+      - name: Patch reformatted live findings
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
+          auth = auth_path.read_text()
+          before_auth = '''  const audience = Array.isArray(payload.aud)
+            ? payload.aud
+            : [payload.aud];
+          const exp = Number(payload.exp);
+          const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
+          const iat = payload.iat === undefined ? null : Number(payload.iat);
+          return payload.iss === VERCEL_ISSUER &&
+            audience.includes(VERCEL_AUDIENCE) &&'''
+          after_auth = '''  const audience = Array.isArray(payload.aud)
+            ? payload.aud
+            : [payload.aud];
+          const hasExpectedAudience = audience.some(
+            (candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE,
+          );
+          const exp = Number(payload.exp);
+          const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
+          const iat = payload.iat === undefined ? null : Number(payload.iat);
+          return payload.iss === VERCEL_ISSUER &&
+            hasExpectedAudience &&'''
+          if before_auth in auth:
+              auth_path.write_text(auth.replace(before_auth, after_auth, 1))
+          elif "audience.includes(VERCEL_AUDIENCE)" in auth:
+              raise SystemExit("The live audience check moved to an unreviewed form")
+
+          player_path = Path("backend/src/domains/players/api/playerLoginHttpHandler.ts")
+          player = player_path.read_text()
+          before_player = '''function generateCompactCode(length: number): string {
+            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            const bytes = crypto.getRandomValues(new Uint8Array(length));
+            return [...bytes]
+              .map((byte) => alphabet[byte % alphabet.length])
+              .join("");
+          }'''
+          after_player = '''function generateCompactCode(length: number): string {
+            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            const maximumUnbiasedByte = 256 - (256 % alphabet.length);
+            let output = "";
+
+            while (output.length < length) {
+              const bytes = crypto.getRandomValues(new Uint8Array(length - output.length));
+              for (const byte of bytes) {
+                if (byte >= maximumUnbiasedByte) continue;
+                output += alphabet[byte % alphabet.length];
+                if (output.length === length) break;
+              }
+            }
+
+            return output;
+          }'''
+          if before_player in player:
+              player_path.write_text(player.replace(before_player, after_player, 1))
+          elif "byte % alphabet.length" in player and "maximumUnbiasedByte" not in player:
+              raise SystemExit("The live random-code generator moved to an unreviewed form")
+          PY
+
       - name: Verify focused security contracts
         run: |
           node --test scripts/admin-game-selection-memory.test.mjs scripts/codeql-security-remediation.test.mjs
