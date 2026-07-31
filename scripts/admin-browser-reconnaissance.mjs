@@ -409,8 +409,7 @@ source = replaceExactlyOnce(
 source = replaceSection(
   source,
   "Replace retired public Create Game journey",
-  `try {
-  await page.goto(\`${BASE_URL}/?mode=create\`, { waitUntil: "domcontentloaded", timeout: 120_000 });`,
+  'try {\n  await page.goto(`${BASE_URL}/?mode=create`, { waitUntil: "domcontentloaded", timeout: 120_000 });',
   `  for (const section of ["Attendance", "Players", "Contracts", "Store", "Marketplace", "Settings", "Logs", "Overview"]) {`,
   `try {
   await createConnectedAdminFixture();
