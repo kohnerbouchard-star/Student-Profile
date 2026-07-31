@@ -26,7 +26,7 @@ declare const Deno: {
 };
 
 interface StaffSignupDependencies {
-  readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly createAuthClient?: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
   readonly buildThrottleBuckets?: typeof buildAuthenticationThrottleBuckets;
@@ -79,7 +79,9 @@ export async function handleStaffSignupRequest(
 
     const input = parseStaffSignupInput(await readJsonBody(request));
     const serviceClient = dependencies.createServiceClient(envResult.value);
-    const authClient = dependencies.createAuthClient(envResult.value);
+    const authClient = (dependencies.createAuthClient ?? dependencies.createServiceClient)(
+      envResult.value,
+    );
     const enforceVolumetric = dependencies.enforceVolumetric ?? enforcePreAuthRateLimit;
     const buildThrottleBuckets = dependencies.buildThrottleBuckets ??
       buildAuthenticationThrottleBuckets;
