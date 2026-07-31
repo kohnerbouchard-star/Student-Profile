@@ -281,6 +281,7 @@ window.Econovaria.login = window.Econovaria.login || {};
         const detail = runtime.document.createElement("span");
         button.type = "button";
         button.className = "game-row";
+        button.dataset.gameId = session.id;
         name.textContent = session.name;
         detail.textContent = `${session.status} session`;
         button.append(name, detail);
@@ -307,8 +308,15 @@ window.Econovaria.login = window.Econovaria.login || {};
   function openAdminTerminal(gameSessionId) {
     const id = String(gameSessionId || "").trim();
     if (!id) return;
-    runtime.EconovariaAdminGameSelection?.write?.(id);
-    runtime.location.assign(new URL("admin/", runtime.document.baseURI).href);
+    const destination = new URL("admin/", runtime.document.baseURI).href;
+    const scopedDestination = runtime.EconovariaAdminGameSelection?.urlFor?.(
+      id,
+      destination,
+    );
+    if (!scopedDestination) {
+      throw new Error("The administrator game route could not be created.");
+    }
+    runtime.location.assign(scopedDestination);
   }
 
   function showAdminGameCreation() {
