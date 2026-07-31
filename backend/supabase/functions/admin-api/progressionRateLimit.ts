@@ -1,4 +1,7 @@
 import {
+  bindGatewayTrustedClientIp,
+} from "../../../src/security/edgeGatewayClientIp.ts";
+import {
   buildStaffRateLimitBuckets,
   readTrustedClientIp,
   TRUSTED_IP_HEADERS,
@@ -42,11 +45,19 @@ export async function consumeAdminProgressionRateLimit(
   const configuredHeader = (Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "")
     .trim()
     .toLowerCase();
-  if (!TRUSTED_IP_HEADERS.includes(configuredHeader as TrustedIpHeader)) {
+  if (
+    !TRUSTED_IP_HEADERS.includes(configuredHeader as TrustedIpHeader) ||
+    configuredHeader === "x-forwarded-for"
+  ) {
     throw new Error("rate limit configuration unavailable");
   }
-  const ipAddress = readTrustedClientIp(
+
+  const normalizedRequest = bindGatewayTrustedClientIp(
     input.request,
+    configuredHeader,
+  );
+  const ipAddress = readTrustedClientIp(
+    normalizedRequest,
     configuredHeader as TrustedIpHeader,
   );
   const buckets = await buildStaffRateLimitBuckets({
