@@ -36,6 +36,10 @@ additional_redirect_urls = ["http://localhost:4173"]
 jwt_expiry = 3600
 enable_signup = false
 
+[auth.email.template.confirmation]
+subject = "Confirm your Econovaria administrator email"
+content_path = "./templates/confirmation.html"
+
 # Supabase CLI local Auth disables TOTP enrollment and verification by default.
 # Enable both for disposable local browser acceptance; hosted project settings are
 # configured separately and are not changed by this repository file.
@@ -82,6 +86,12 @@ verify_jwt = false
 # verifies allowed origins, decrypts an HttpOnly session envelope, enforces CSRF,
 # and forwards a server-held real Staff JWT to platform-verified Staff services.
 [functions.web-session-api]
+verify_jwt = false
+
+# Public verification confirmation surface. GET only renders a no-store review
+# form. The signup TokenHash is consumed only after a same-origin POST with an
+# HttpOnly challenge, then any temporary AAL1 Auth session is revoked.
+[functions.admin-email-verification]
 verify_jwt = false
 
 # Public recovery confirmation surface. GET only renders a no-store confirmation
