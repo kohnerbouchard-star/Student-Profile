@@ -75,7 +75,7 @@ Deno.test("new signup claims identity before creating one unconfirmed Auth user"
   assertEquals(body.ok, true);
   assertEquals(body.signupStatus, "check_email_or_sign_in");
   assertMatches(body.verification.continuationHandle, /^[A-Za-z0-9_-]{43}$/u);
-  assertEquals(body.verification.maskedEmail, "t•••••••@example.com");
+  assertEquals(body.verification.maskedEmail, "t••••••@example.com");
   assertEquals(mock.calls.rpcCalls[0].name, "claim_staff_signup_identity_v1");
   assertEquals(mock.calls.authCreateInputs.length, 1);
   assertEquals(mock.calls.rpcCalls[1].name, "attach_staff_signup_auth_user_v1");
