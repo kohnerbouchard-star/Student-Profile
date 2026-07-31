@@ -7,6 +7,12 @@ import {
 import { enforcePreAuthRateLimit } from "../../../security/playerRateLimitService.ts";
 import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
 
+declare const Deno: {
+  readonly env: {
+    get(name: string): string | undefined;
+  };
+};
+
 interface Dependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
