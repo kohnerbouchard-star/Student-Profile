@@ -1,27 +1,20 @@
 const MAX_FORM_BYTES = 2_048;
-const MAX_SERVICE_RESPONSE_BYTES = 64 * 1_024;
+const MAX_AUTH_RESPONSE_BYTES = 64 * 1_024;
 const CHALLENGE_TTL_SECONDS = 10 * 60;
 const CHALLENGE_COOKIE = "__Host-econovaria_email_verification_challenge";
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
-const TOKEN_HASH_PATTERN = /^[0-9a-f]{64}$/u;
+const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const JWT_PATTERN = /^[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,12288}\.[A-Za-z0-9_-]{8,4096}$/u;
 const FUNCTION_PATH = "/functions/v1/admin-email-verification";
 const DEFAULT_RETURN_URL = "https://econovaria.vercel.app/?mode=admin&reason=email-verified";
+const VERIFICATION_TYPES = new Set(["signup", "magiclink"]);
 
 Deno.serve(handleAdminEmailVerificationRequest);
 
 interface RuntimeConfig {
   readonly supabaseUrl: string;
-  readonly serviceRoleKey: string;
+  readonly publishableKey: string;
   readonly returnUrl: string;
-}
-
-interface VerificationResolutionRow {
-  readonly signup_request_id?: unknown;
-  readonly auth_user_id?: unknown;
-  readonly decision?: unknown;
 }
 
 export async function handleAdminEmailVerificationRequest(
@@ -46,8 +39,11 @@ function renderConfirmation(request: Request): Response {
   } catch {
     return invalidRequest();
   }
-  const token = String(url.searchParams.get("token") || "").trim();
-  if (!TOKEN_PATTERN.test(token)) return invalidRequest();
+  const tokenHash = String(url.searchParams.get("token_hash") || "").trim();
+  const type = String(url.searchParams.get("type") || "").trim().toLowerCase();
+  if (!TOKEN_HASH_PATTERN.test(tokenHash) || !VERIFICATION_TYPES.has(type)) {
+    return invalidRequest();
+  }
 
   const challenge = randomBase64Url(32);
   const action = `${runtime.supabaseUrl}${FUNCTION_PATH}`;
@@ -67,7 +63,8 @@ function renderConfirmation(request: Request): Response {
       <h1 id="verification-title">Confirm your email address</h1>
       <p>Continue only if you created this Econovaria administrator account.</p>
       <form method="post" action="${escapeHtml(action)}" autocomplete="off">
-        <input type="hidden" name="token" value="${escapeHtml(token)}">
+        <input type="hidden" name="token_hash" value="${escapeHtml(tokenHash)}">
+        <input type="hidden" name="type" value="${escapeHtml(type)}">
         <input type="hidden" name="challenge" value="${challenge}">
         <button type="submit">Confirm Email Address</button>
       </form>
@@ -106,59 +103,61 @@ async function consumeConfirmation(request: Request): Promise<Response> {
     return verificationFailure(rawBody ? 413 : 400, runtime.returnUrl);
   }
   const form = new URLSearchParams(rawBody);
-  if ([...form.keys()].some((key) => !["token", "challenge"].includes(key))) {
+  if ([...form.keys()].some((key) => !["token_hash", "type", "challenge"].includes(key))) {
     return verificationFailure(400, runtime.returnUrl);
   }
-  const token = String(form.get("token") || "").trim();
+  const tokenHash = String(form.get("token_hash") || "").trim();
+  const type = String(form.get("type") || "").trim().toLowerCase();
   const challenge = String(form.get("challenge") || "").trim();
   const cookieChallenge = readCookie(request.headers.get("cookie"), CHALLENGE_COOKIE);
   if (
-    !TOKEN_PATTERN.test(token) ||
+    !TOKEN_HASH_PATTERN.test(tokenHash) ||
+    !VERIFICATION_TYPES.has(type) ||
     !CHALLENGE_PATTERN.test(challenge) ||
     !constantTimeEqual(challenge, cookieChallenge)
   ) {
     return verificationFailure(400, runtime.returnUrl);
   }
 
-  const tokenHash = await sha256Hex(
-    `econovaria.staff-signup.verification.v1\n${token}`,
-  );
-  if (!TOKEN_HASH_PATTERN.test(tokenHash)) {
+  const verification = await fetch(`${runtime.supabaseUrl}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      apikey: runtime.publishableKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token_hash: tokenHash, type }),
+    cache: "no-store",
+    redirect: "error",
+  }).catch(() => null);
+  if (!verification) return unavailable(runtime.returnUrl);
+
+  const bytes = new Uint8Array(await verification.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_AUTH_RESPONSE_BYTES) {
+    return verificationFailure(400, runtime.returnUrl);
+  }
+  let payload: Record<string, unknown> | null = null;
+  try {
+    payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    payload = null;
+  }
+  const accessToken = String(payload?.access_token || "").trim();
+  if (!verification.ok || !JWT_PATTERN.test(accessToken)) {
     return verificationFailure(400, runtime.returnUrl);
   }
 
-  const resolution = await serviceRpc<VerificationResolutionRow[]>(
-    runtime,
-    "resolve_staff_signup_verification_token_v1",
-    { p_token_hash: tokenHash },
-  );
-  const row = firstResolutionRow(resolution);
-  const signupRequestId = String(row?.signup_request_id || "").trim();
-  const authUserId = String(row?.auth_user_id || "").trim();
-  const decision = String(row?.decision || "").trim();
-  if (
-    !UUID_PATTERN.test(signupRequestId) ||
-    !UUID_PATTERN.test(authUserId) ||
-    !["confirm", "already_verified"].includes(decision)
-  ) {
-    return verificationFailure(400, runtime.returnUrl);
-  }
-
-  if (decision === "confirm") {
-    const confirmed = await confirmAuthEmail(runtime, authUserId);
-    if (!confirmed) return unavailable(runtime.returnUrl);
-
-    const completed = await serviceRpc<boolean>(
-      runtime,
-      "complete_staff_signup_email_verification_v1",
-      {
-        p_signup_request_id: signupRequestId,
-        p_auth_user_id: authUserId,
-        p_token_hash: tokenHash,
-      },
-    );
-    if (completed !== true) return unavailable(runtime.returnUrl);
-  }
+  // Supabase may mint a temporary AAL1 session while confirming the mailbox.
+  // It never reaches the browser and is revoked immediately. The administrator
+  // must still enter the password and complete the existing TOTP flow.
+  await fetch(`${runtime.supabaseUrl}/auth/v1/logout?scope=local`, {
+    method: "POST",
+    headers: {
+      apikey: runtime.publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: "no-store",
+    redirect: "error",
+  }).catch(() => null);
 
   return new Response(null, {
     status: 303,
@@ -169,93 +168,13 @@ async function consumeConfirmation(request: Request): Promise<Response> {
   });
 }
 
-async function confirmAuthEmail(
-  runtime: RuntimeConfig,
-  authUserId: string,
-): Promise<boolean> {
-  const response = await fetch(
-    `${runtime.supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(authUserId)}`,
-    {
-      method: "PUT",
-      headers: serviceHeaders(runtime, true),
-      body: JSON.stringify({ email_confirm: true }),
-      cache: "no-store",
-      redirect: "error",
-    },
-  ).catch(() => null);
-  if (!response) return false;
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (!response.ok || bytes.byteLength === 0 || bytes.byteLength > MAX_SERVICE_RESPONSE_BYTES) {
-    return false;
-  }
-  try {
-    const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-    return String(value?.id || value?.user?.id || "") === authUserId &&
-      Boolean(value?.email_confirmed_at || value?.user?.email_confirmed_at);
-  } catch {
-    return false;
-  }
-}
-
-async function serviceRpc<T>(
-  runtime: RuntimeConfig,
-  functionName: string,
-  body: Record<string, unknown>,
-): Promise<T | null> {
-  const response = await fetch(
-    `${runtime.supabaseUrl}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
-    {
-      method: "POST",
-      headers: {
-        ...serviceHeaders(runtime, true),
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-      cache: "no-store",
-      redirect: "error",
-    },
-  ).catch(() => null);
-  if (!response) return null;
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (!response.ok || bytes.byteLength === 0 || bytes.byteLength > MAX_SERVICE_RESPONSE_BYTES) {
-    return null;
-  }
-  try {
-    return JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-    ) as T;
-  } catch {
-    return null;
-  }
-}
-
-function serviceHeaders(
-  runtime: RuntimeConfig,
-  json: boolean,
-): Record<string, string> {
-  return {
-    apikey: runtime.serviceRoleKey,
-    Authorization: `Bearer ${runtime.serviceRoleKey}`,
-    ...(json ? { "Content-Type": "application/json" } : {}),
-  };
-}
-
-function firstResolutionRow(
-  value: VerificationResolutionRow[] | null,
-): VerificationResolutionRow | null {
-  return Array.isArray(value) && value[0] && typeof value[0] === "object"
-    ? value[0]
-    : null;
-}
-
 function readRuntimeConfig(): RuntimeConfig | null {
-  const supabaseUrl = environmentValue("SUPABASE_URL")
-    .replace(/\/+$/u, "");
-  const serviceRoleKey = firstConfigured([
-    environmentValue("SUPABASE_SECRET_KEY"),
-    environmentValue("SECRET_KEY"),
-    ...dictionaryValues(environmentValue("SUPABASE_SECRET_KEYS")),
-    environmentValue("SUPABASE_SERVICE_ROLE_KEY"),
+  const supabaseUrl = environmentValue("SUPABASE_URL").replace(/\/+$/u, "");
+  const publishableKey = firstConfigured([
+    environmentValue("SUPABASE_PUBLISHABLE_KEY"),
+    environmentValue("PUBLISHABLE_KEY"),
+    ...dictionaryValues(environmentValue("SUPABASE_PUBLISHABLE_KEYS")),
+    environmentValue("SUPABASE_ANON_KEY"),
   ]);
   const returnUrl = environmentValue("ECONOVARIA_EMAIL_VERIFICATION_RETURN_URL") ||
     DEFAULT_RETURN_URL;
@@ -263,22 +182,30 @@ function readRuntimeConfig(): RuntimeConfig | null {
     const parsedSupabase = new URL(supabaseUrl);
     const parsedReturn = new URL(returnUrl);
     if (
-      parsedSupabase.protocol !== "https:" ||
-      !parsedSupabase.hostname.endsWith(".supabase.co") ||
-      parsedSupabase.pathname !== "/" ||
-      !serviceRoleKey ||
-      parsedReturn.protocol !== "https:" ||
-      parsedReturn.username ||
-      parsedReturn.password
+      !isAllowedRuntimeUrl(parsedSupabase) ||
+      !publishableKey ||
+      !isAllowedReturnUrl(parsedReturn)
     ) return null;
     return {
       supabaseUrl: parsedSupabase.origin,
-      serviceRoleKey,
+      publishableKey,
       returnUrl: parsedReturn.href,
     };
   } catch {
     return null;
   }
+}
+
+function isAllowedRuntimeUrl(url: URL): boolean {
+  if (url.username || url.password || url.pathname !== "/") return false;
+  if (url.protocol === "https:" && url.hostname.endsWith(".supabase.co")) return true;
+  return url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname);
+}
+
+function isAllowedReturnUrl(url: URL): boolean {
+  if (url.username || url.password) return false;
+  if (url.protocol === "https:") return true;
+  return url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname);
 }
 
 function environmentValue(name: string): string {
@@ -355,16 +282,6 @@ function constantTimeEqual(left: string, right: string): boolean {
     difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
   }
   return difference === 0;
-}
-
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 function randomBase64Url(size: number): string {
