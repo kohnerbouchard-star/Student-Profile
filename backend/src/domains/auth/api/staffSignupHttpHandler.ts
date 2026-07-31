@@ -19,6 +19,12 @@ import { enforcePreAuthRateLimit } from "../../../security/playerRateLimitServic
 import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
 import { validateStaffPassword } from "../../../security/staffPasswordPolicy.ts";
 
+declare const Deno: {
+  readonly env: {
+    get(name: string): string | undefined;
+  };
+};
+
 interface StaffSignupDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -178,8 +184,6 @@ export async function handleStaffSignupRequest(
       );
       await recordSuccess(serviceClient, throttleBuckets);
     } else {
-      // Existing verified accounts, held identities and cooldown responses are
-      // intentionally indistinguishable from a new signup to prevent enumeration.
       await recordSuccess(serviceClient, throttleBuckets);
     }
 
@@ -342,14 +346,12 @@ async function compensateAuthUser(
     const result = await serviceClient.auth.admin.deleteUser(authUserId);
     if (!result.error) return;
   } catch {
-    // Fall through to a long-lived ban when deletion cannot be confirmed.
   }
   try {
     await serviceClient.auth.admin.updateUserById(authUserId, {
       ban_duration: "876000h",
     });
   } catch {
-    // No internal Auth error is exposed to the anonymous browser.
   }
 }
 
