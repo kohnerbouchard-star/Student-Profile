@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [mfaSource, mfaStyles, loginSource, apiSource] = await Promise.all([
+const [mfaSource, mfaStyles, appStyles, loginSource, apiSource] = await Promise.all([
   read("frontend/src/core/admin-mfa.js"),
   read("frontend/src/styles/admin-mfa.css"),
+  read("frontend/src/styles/app.css"),
   read("frontend/src/core/login.js"),
   read("frontend/src/core/api.js")
 ]);
@@ -55,8 +56,10 @@ test("Timezone list is complete, silent, and device-first", () => {
   assert.doesNotMatch(mfaSource, /Detected timezone/i);
 });
 
-test("Every login state shares stable card geometry", () => {
+test("Every login state shares stable card geometry from first paint", () => {
+  assert.match(appStyles, /@import url\("\.\/admin-mfa\.css"\)/);
   assert.match(mfaStyles, /\.login-panel-frame\s*\{[\s\S]*height:/);
+  assert.match(mfaStyles, /height: min\(614px,/);
   assert.match(mfaStyles, /\.login-root \.mode-pane\s*\{[\s\S]*height: 270px/);
   assert.match(mfaStyles, /scrollbar-gutter: stable/);
   assert.match(mfaStyles, /econovaria-mfa-form\.hidden/);
