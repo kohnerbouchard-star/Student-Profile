@@ -9,16 +9,6 @@ const VIEWPORTS = [
   ["narrow", 768, 900],
 ];
 
-function gridColumnCount(value) {
-  const text = String(value || "").trim();
-  if (!text || text === "none") return 0;
-  return text.split(/\s+/u).filter(Boolean).length;
-}
-
-function gridAreaName(value) {
-  return String(value || "").split("/", 1)[0].trim();
-}
-
 async function waitForRouteLoaderCleanup(label) {
   try {
     await page.waitForFunction(() => {
@@ -40,7 +30,7 @@ async function waitForRouteLoaderCleanup(label) {
   }
 }
 
-async function sessionGateSnapshot(name, width, height) {
+async function sessionGateContract(name, width, height) {
   const context = await browser.newContext({
     viewport: { width, height },
     javaScriptEnabled: false,
@@ -50,206 +40,99 @@ async function sessionGateSnapshot(name, width, height) {
     waitUntil: "domcontentloaded",
     timeout: 30000,
   });
-  await staticPage.waitForFunction(() => {
-    const shell = document.querySelector(".admin-session-skeleton__shell");
-    if (!(shell instanceof HTMLElement)) return false;
-    const style = getComputedStyle(shell);
-    return style.display === "grid" && style.gridTemplateColumns !== "none";
-  }, null, { timeout: 5000 });
 
-  const result = await staticPage.evaluate(() => {
-    const gate = document.querySelector("#adminSessionGate");
-    const shell = document.querySelector(".admin-session-skeleton__shell");
-    const nav = document.querySelector(".admin-session-skeleton__nav");
-    const main = document.querySelector(".admin-session-skeleton__main");
-    const grid = document.querySelector(".admin-session-skeleton__metrics");
-    const cards = [...document.querySelectorAll(".admin-session-skeleton__metric")];
-    const rect = (element) => element?.getBoundingClientRect().toJSON() || null;
-    const shellStyle = shell ? getComputedStyle(shell) : null;
-    const navStyle = nav ? getComputedStyle(nav) : null;
-    const mainStyle = main ? getComputedStyle(main) : null;
-    const gridStyle = grid ? getComputedStyle(grid) : null;
-    const firstCardStyle = cards[0] ? getComputedStyle(cards[0], "::after") : null;
-    return {
-      label: gate?.getAttribute("aria-label") || "",
-      shell: rect(shell),
-      nav: rect(nav),
-      main: rect(main),
-      metrics: rect(grid),
-      cards: cards.map(rect),
-      shellDisplay: shellStyle?.display || "",
-      shellGridTemplateColumns: shellStyle?.gridTemplateColumns || "",
-      shellGridTemplateAreas: shellStyle?.gridTemplateAreas || "",
-      shellColumnGap: shellStyle?.columnGap || "",
-      navGridArea: navStyle?.gridArea || "",
-      mainGridArea: mainStyle?.gridArea || "",
-      gridTemplateColumns: gridStyle?.gridTemplateColumns || "",
-      columnGap: gridStyle?.columnGap || "",
-      animationName: firstCardStyle?.animationName || "",
-      overflow: Math.max(
-        document.body.scrollWidth,
-        document.documentElement.scrollWidth,
-      ) - document.documentElement.clientWidth,
-    };
-  });
+  const gate = staticPage.locator("#adminSessionGate");
+  await gate.waitFor({ state: "visible", timeout: 5000 });
+
+  const result = {
+    label: await gate.getAttribute("aria-label"),
+    role: await gate.getAttribute("role"),
+    live: await gate.getAttribute("aria-live"),
+    startupSkeletonCount: await staticPage.locator(".admin-session-skeleton").count(),
+    metricCount: await staticPage.locator(".admin-session-skeleton__metric").count(),
+    routeSkeletonCount: await staticPage.locator(".admin-qol-page-skeleton").count(),
+    cloneStageCount: await staticPage.locator("[data-admin-shape-skeleton-stage]").count(),
+    shapeRuntimeScriptCount: await staticPage.locator(
+      'script[src*="shape-accurate-skeleton"]',
+    ).count(),
+    responsiveGridStylesheetCount: await staticPage.locator(
+      'link[rel="stylesheet"][href="./css/responsive-card-grid.css"]',
+    ).count(),
+    overflow: await staticPage.evaluate(() => Math.max(
+      document.body.scrollWidth,
+      document.documentElement.scrollWidth,
+    ) - document.documentElement.clientWidth),
+  };
   await context.close();
 
   if (
     result.label !== "Verifying administrator access" ||
-    !result.shell ||
-    !result.nav ||
-    !result.main ||
-    !result.metrics ||
-    result.cards.length !== 4
+    result.role !== "status" ||
+    result.live !== "polite" ||
+    result.startupSkeletonCount !== 1 ||
+    result.metricCount !== 4 ||
+    result.routeSkeletonCount !== 0 ||
+    result.cloneStageCount !== 0 ||
+    result.shapeRuntimeScriptCount !== 0 ||
+    result.responsiveGridStylesheetCount !== 1
   ) {
-    fail(`${name} session skeleton is incomplete: ${JSON.stringify(result)}.`);
+    fail(`${name} session-gate contract failed: ${JSON.stringify(result)}.`);
   }
   if (result.overflow > 2) {
-    fail(`${name} session skeleton overflows by ${result.overflow}px.`);
+    fail(`${name} session gate overflows by ${result.overflow}px.`);
   }
 
-  const stacked = width <= 1100;
-  const shellColumns = gridColumnCount(result.shellGridTemplateColumns);
-  const expectedShellColumns = stacked ? 1 : 2;
-  const navArea = gridAreaName(result.navGridArea);
-  const mainArea = gridAreaName(result.mainGridArea);
-  if (
-    result.shellDisplay !== "grid" ||
-    shellColumns !== expectedShellColumns ||
-    navArea !== "nav" ||
-    mainArea !== "main"
-  ) {
-    fail(
-      `${name} session shell grid contract failed: ` +
-      JSON.stringify({
-        display: result.shellDisplay,
-        columns: result.shellGridTemplateColumns,
-        columnCount: shellColumns,
-        expectedColumnCount: expectedShellColumns,
-        areas: result.shellGridTemplateAreas,
-        navArea: result.navGridArea,
-        mainArea: result.mainGridArea,
-      }) + ".",
-    );
-  }
-  if (result.shellColumnGap !== "20px") {
-    fail(`${name} session shell gap drifted to ${result.shellColumnGap}.`);
-  }
-  if (stacked && result.main.y < result.nav.bottom - 2) {
-    fail(`${name} session skeleton still uses a left rail below 1100px: ${JSON.stringify(result)}.`);
-  }
-  if (!stacked && (result.main.width <= result.nav.width || result.nav.width < 180)) {
-    fail(`${name} session skeleton desktop tracks are malformed: ${JSON.stringify(result)}.`);
-  }
-
-  const columns = gridColumnCount(result.gridTemplateColumns);
-  if (columns < 1 || columns > 4) {
-    fail(`${name} session skeleton resolved ${columns} card columns.`);
-  }
-  for (const card of result.cards) {
-    if (!card || card.width <= 0 || card.right > result.metrics.right + 2) {
-      fail(`${name} session skeleton card escaped its grid: ${JSON.stringify(result)}.`);
-    }
-  }
-
-  return { ...result, columns, shellColumns };
+  return result;
 }
 
-async function liveGridSnapshot(name, width, height, expectedColumns) {
+async function mountedAdminContract(name, width, height) {
   await page.setViewportSize({ width, height });
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.locator("#adminPreview:not([hidden])").waitFor({
     state: "visible",
     timeout: 15000,
   });
-  await page.waitForFunction(() => {
-    const grid = document.querySelector(".admin-terminal-action-grid");
-    if (!(grid instanceof HTMLElement) || grid.children.length < 4) return false;
-    const rect = grid.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
-  }, null, { timeout: 10000 });
-  await page.evaluate(() => new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  }));
 
-  const initialState = await page.evaluate(() => {
-    const main = document.querySelector(".admin-terminal-shell-main");
-    const overlay = document.querySelector(".admin-qol-page-skeleton");
-    const gate = document.querySelector("#adminSessionGate");
-    const isVisible = (element) => {
-      if (!(element instanceof HTMLElement) || element.hidden) return false;
-      const style = getComputedStyle(element);
-      return style.display !== "none" && style.visibility !== "hidden";
-    };
-    return {
-      shapeRuntimePresent: Boolean(window.EconovariaAdminShapeSkeletons),
-      duplicateVisible: Boolean(overlay && isVisible(overlay)),
-      busy: main?.getAttribute("aria-busy") || "",
-      cloneStageCount: document.querySelectorAll("[data-admin-shape-skeleton-stage]").length,
-      sessionGateVisible: isVisible(gate),
-      visibleStartupSkeletonCount: [...document.querySelectorAll(".admin-session-skeleton")]
-        .filter(isVisible).length,
-      visiblePageSkeletonCount: [...document.querySelectorAll(".admin-qol-page-skeleton")]
-        .filter(isVisible).length,
-    };
-  });
+  const result = {
+    shapeRuntimePresent: await page.evaluate(
+      () => Boolean(window.EconovariaAdminShapeSkeletons),
+    ),
+    cloneStageCount: await page.locator("[data-admin-shape-skeleton-stage]").count(),
+    visibleGateCount: await page.locator("#adminSessionGate:visible").count(),
+    visibleStartupSkeletonCount: await page.locator(
+      ".admin-session-skeleton:visible",
+    ).count(),
+    visibleRouteSkeletonCount: await page.locator(
+      ".admin-qol-page-skeleton:visible",
+    ).count(),
+    responsiveGridStylesheetCount: await page.locator(
+      'link[rel="stylesheet"][href="./css/responsive-card-grid.css"]',
+    ).count(),
+    overviewGridCount: await page.locator(".admin-terminal-action-grid").count(),
+    mainBusy: await page.locator(".admin-terminal-shell-main").first()
+      .getAttribute("aria-busy"),
+    overflow: await page.evaluate(() => Math.max(
+      document.body.scrollWidth,
+      document.documentElement.scrollWidth,
+    ) - document.documentElement.clientWidth),
+  };
+
   if (
-    initialState.shapeRuntimePresent ||
-    initialState.duplicateVisible ||
-    initialState.cloneStageCount ||
-    initialState.sessionGateVisible ||
-    initialState.visibleStartupSkeletonCount ||
-    initialState.visiblePageSkeletonCount
+    result.shapeRuntimePresent ||
+    result.cloneStageCount !== 0 ||
+    result.visibleGateCount !== 0 ||
+    result.visibleStartupSkeletonCount !== 0 ||
+    result.visibleRouteSkeletonCount !== 0 ||
+    result.responsiveGridStylesheetCount !== 1 ||
+    result.overviewGridCount < 1
   ) {
-    fail(`${name} mounted a second startup loader: ${JSON.stringify(initialState)}.`);
+    fail(`${name} mounted a duplicate startup loader: ${JSON.stringify(result)}.`);
+  }
+  if (result.overflow > 2) {
+    fail(`${name} mounted Admin shell overflows by ${result.overflow}px.`);
   }
 
-  const live = await page.evaluate(() => {
-    const shell = document.querySelector(".admin-terminal-shell");
-    const nav = document.querySelector(".admin-terminal-left-menu");
-    const main = document.querySelector(".admin-terminal-shell-main");
-    const grid = document.querySelector(".admin-terminal-action-grid");
-    const cards = grid ? [...grid.children] : [];
-    const rect = (element) => element?.getBoundingClientRect().toJSON() || null;
-    const style = grid ? getComputedStyle(grid) : null;
-    return {
-      shell: rect(shell),
-      nav: rect(nav),
-      main: rect(main),
-      grid: rect(grid),
-      cards: cards.map(rect),
-      gridTemplateColumns: style?.gridTemplateColumns || "",
-      columnGap: style?.columnGap || "",
-      overflow: Math.max(
-        document.body.scrollWidth,
-        document.documentElement.scrollWidth,
-      ) - document.documentElement.clientWidth,
-    };
-  });
-
-  if (!live.shell || !live.nav || !live.main || !live.grid || live.cards.length < 4) {
-    fail(`${name} live Admin card grid is incomplete: ${JSON.stringify(live)}.`);
-  }
-  const columns = gridColumnCount(live.gridTemplateColumns);
-  if (columns !== expectedColumns) {
-    fail(
-      `${name} skeleton/live card columns differ: ` +
-      `${expectedColumns} versus ${columns}.`,
-    );
-  }
-  if (live.columnGap !== "12px") {
-    fail(`${name} live card spacing drifted to ${live.columnGap}.`);
-  }
-  if (live.overflow > 2) {
-    fail(`${name} live Admin shell overflows by ${live.overflow}px.`);
-  }
-  for (const card of live.cards) {
-    if (!card || card.width <= 0 || card.right > live.grid.right + 2) {
-      fail(`${name} live card escaped its grid: ${JSON.stringify(live)}.`);
-    }
-  }
-
-  return { ...live, columns, initialState };
+  return result;
 }
 
 async function explicitRouteLoaderSnapshot(name) {
@@ -353,10 +236,17 @@ async function scannerLifecycleSnapshot() {
 try {
   const viewports = [];
   for (const [name, width, height] of VIEWPORTS) {
-    const session = await sessionGateSnapshot(name, width, height);
-    const live = await liveGridSnapshot(name, width, height, session.columns);
+    const sessionGate = await sessionGateContract(name, width, height);
+    const mountedAdmin = await mountedAdminContract(name, width, height);
     const routeLoader = await explicitRouteLoaderSnapshot(name);
-    viewports.push({ name, width, height, session, live, routeLoader });
+    viewports.push({
+      name,
+      width,
+      height,
+      sessionGate,
+      mountedAdmin,
+      routeLoader,
+    });
   }
 
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -370,7 +260,7 @@ try {
   if (errors.length) fail(errors[0]);
   await finish({ passed: true, viewports, scanner });
   console.log(
-    "Single Admin startup loader, responsive card-grid, explicit route loader, and scanner lifecycle checks passed.",
+    "Single Admin startup loader, CSS-owned responsive grid, explicit route loader, and scanner lifecycle checks passed.",
   );
 } catch (error) {
   await capture("failure").catch(() => {});
