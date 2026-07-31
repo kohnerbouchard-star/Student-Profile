@@ -124,6 +124,8 @@ export async function handleGameProvisioningOperation(
     };
   }
 
+  // Internal entitlement and purchase-code identifiers terminate at the
+  // licensing service. The browser receives only its public game model.
   const gameId = activationResult.body.activation.gameSessionId;
   const completeOnboarding = dependencies.completeOnboarding ?? defaultCompleteOnboarding;
   const completed = await completeOnboarding(service, operation.staffUserId, gameId);
@@ -143,13 +145,13 @@ export async function handleGameProvisioningOperation(
   const game = await readGame(service, operation.staffUserId, gameId) ?? {};
   const requestBody = isRecord(body) ? body : {};
   const joinCode = text(game.game_join_code);
+  const joinCodeStatus = text(game.game_join_code_status) || "active";
 
   return {
     handled: true,
     status: activationResult.httpStatus,
     body: {
       ok: true,
-      activation: activationResult.body.activation,
       data: {
         game: {
           id: gameId,
@@ -158,14 +160,14 @@ export async function handleGameProvisioningOperation(
           status: text(game.status) || "active",
           lifecycleState: text(game.status) || "active",
           provisioningStatus: "ready",
-          joinCodeStatus: text(game.game_join_code_status) || "active",
+          joinCodeStatus,
           joinCode,
           gameCode: joinCode,
           createdAt: text(game.created_at) || null,
           updatedAt: text(game.updated_at) || null,
         },
         joinCode,
-        joinCodeStatus: text(game.game_join_code_status) || "active",
+        joinCodeStatus,
       },
     },
   };
