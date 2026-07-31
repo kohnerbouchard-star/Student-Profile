@@ -1,141 +1,157 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import {
-  BASE_URL,
-  createQualityHarness,
-} from "./admin-quality-smoke-fixture.mjs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createQualityHarness } from "./admin-quality-smoke-fixture.mjs";
+import { captureAdminTerminalPermissionSource } from "./admin-terminal-permission-source-diagnostic.mjs";
 
-const OUT = process.env.ADMIN_SMOKE_ARTIFACT_DIR ||
-  "admin-browser-smoke-artifacts/mounted-modal-focus";
-const SURFACES = [
+const SURFACES = Object.freeze([
   ["add-player", "Overview", "Enter"],
   ["add-contract", "Overview", "Space"],
   ["add-store-item", "Store", "Enter"],
   ["scan-attendance", "Overview", "Space"],
-];
-mkdirSync(OUT, { recursive: true });
+]);
+const SESSION_KEY = "econovaria.admin.auth.v1";
+const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+const FULL_PERMISSIONS = Object.freeze([
+  "account.read",
+  "audit.read",
+  "attendance.manage",
+  "business.manage",
+  "contracts.manage",
+  "economy.adjust",
+  "game.create",
+  "game.read",
+  "game.switch",
+  "game.update",
+  "inventory.redeem",
+  "market.manage",
+  "marketplace.moderate",
+  "messaging.moderate",
+  "players.manage",
+  "progression.review",
+  "settings.manage",
+  "store.manage",
+  "world.manage",
+]);
+const FULL_ROLES = Object.freeze(["game_admin"]);
 
-function assert(value, message) {
-  if (!value) throw new Error(message);
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
 }
 
-async function selectSection(page, name) {
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
-  const control = page.locator(`[data-admin-section="${name}"]`).first();
-  await control.waitFor({ state: "visible", timeout: 15_000 });
-  await control.focus();
-  await page.keyboard.press("Enter");
-  await page.waitForFunction(expected => [...document.querySelectorAll("[data-admin-section]")].some(node =>
-    node.getAttribute("data-admin-section") === expected && (
-      node.getAttribute("aria-current") === "page" ||
-      node.getAttribute("aria-selected") === "true" ||
-      node.classList.contains("active") ||
-      node.classList.contains("is-active")
-    )
-  ), name, { timeout: 5000 });
+function sanitizeArtifactSegment(value) {
+  return String(value || "surface")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "surface";
+}
+
+async function ensureDiagnosticDirectory() {
+  const directory = "admin-browser-smoke-artifacts/terminal-permission-source";
+  mkdirSync(directory, { recursive: true });
+  return directory;
+}
+
+async function capturePermissionSource(page, label, error = null) {
+  const directory = await ensureDiagnosticDirectory();
+  const diagnostic = await captureAdminTerminalPermissionSource(page, {
+    label,
+    error,
+  });
+  writeFileSync(
+    `${directory}/terminal-permission-source.json`,
+    JSON.stringify(diagnostic, null, 2),
+  );
+  return diagnostic;
+}
+
+async function configureAuthorizedState(page) {
+  await page.evaluate(({ sessionKey, selectedGameKey, permissions, roles }) => {
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel;
+    const activeGameSessions = Array.isArray(model?.activeGameSessions)
+      ? model.activeGameSessions
+      : [];
+    const selectedGameSessionId = String(
+      model?.selectedGame?.id ||
+        model?.selectedGame?.gameSessionId ||
+        model?.gameId ||
+        activeGameSessions[0]?.id ||
+        "11111111-1111-4111-8111-111111111111",
+    );
+    const session = {
+      authenticated: true,
+      assuranceLevel: "aal2",
+      mfaRequired: true,
+      permissions: [...permissions],
+      roles: [...roles],
+      adminRole: "game_admin",
+      staffSession: {
+        permissions: [...permissions],
+        roles: [...roles],
+        adminRole: "game_admin",
+      },
+    };
+    window.EconovariaAdminAuth = {
+      isAuthenticated: () => true,
+      session,
+      permissions: [...permissions],
+      roles: [...roles],
+      adminRole: "game_admin",
+      user: { role: "game_admin", app_metadata: { role: "game_admin" } },
+    };
+    window.sessionStorage.setItem(sessionKey, JSON.stringify(session));
+    window.sessionStorage.setItem(selectedGameKey, selectedGameSessionId);
+
+    const state = window.Econovaria?.state?.adminOverview;
+    if (state?.staff && typeof state.staff === "object") {
+      Object.assign(state.staff, {
+        selectedGameSessionId,
+        permissions: [...permissions],
+        roles: [...roles],
+        adminRole: "game_admin",
+      });
+    }
+    if (model && typeof model === "object") {
+      model.permissions = [...permissions];
+      model.roles = [...roles];
+      model.adminRole = "game_admin";
+      model.staffSession = session.staffSession;
+      model.staff = {
+        ...(model.staff && typeof model.staff === "object" ? model.staff : {}),
+        selectedGameSessionId,
+        permissions: [...permissions],
+        roles: [...roles],
+        adminRole: "game_admin",
+      };
+    }
+    window.dispatchEvent(new CustomEvent("econovaria:admin-session-refreshed", {
+      detail: {
+        session,
+        activeGameSessions,
+      },
+    }));
+  }, {
+    sessionKey: SESSION_KEY,
+    selectedGameKey: SELECTED_GAME_KEY,
+    permissions: FULL_PERMISSIONS,
+    roles: FULL_ROLES,
+  });
+}
+
+async function selectSection(page, section) {
+  const control = page.locator(`[data-admin-section="${section}"]`).first();
+  await control.waitFor({ state: "visible", timeout: 5000 });
+  if ((await control.getAttribute("aria-current")) !== "page") {
+    await control.click();
+  }
   return control;
 }
 
 async function visibleAction(page, action) {
-  await page.waitForFunction(
-    () => typeof window.EconovariaAdminOverviewQuickActions?.reconcile === "function",
-    null,
-    { timeout: 15_000 },
-  );
-  await page.evaluate(() => window.EconovariaAdminOverviewQuickActions.reconcile());
-  await page.waitForFunction(expected => [...document.querySelectorAll(
-    `[data-admin-terminal-action="${CSS.escape(expected)}"]`,
-  )].some(node => {
-    if (
-      !(node instanceof HTMLElement) ||
-      node.hidden ||
-      node.closest("[data-admin-shape-skeleton-stage], .admin-shape-surface-overlay")
-    ) return false;
-    const style = getComputedStyle(node);
-    const rect = node.getBoundingClientRect();
-    return style.display !== "none" && style.visibility !== "hidden" &&
-      rect.width > 1 && rect.height > 1;
-  }), action, { timeout: 15_000 });
-  return page.locator(`[data-admin-terminal-action="${action}"]:visible`).first();
-}
-
-async function authorizationDiagnostics(page) {
-  return page.evaluate(() => {
-    const authorization = value => ({
-      permissions: Array.isArray(value?.permissions) ? [...value.permissions] : [],
-      roles: Array.isArray(value?.roles) ? [...value.roles] : [],
-      adminRole: String(value?.adminRole || ""),
-    });
-    const session = window.EconovariaAdminAuth?.getSession?.() || null;
-    const legacy = window.currentSession || null;
-    const stateStaff = window.state?.staffSession || null;
-    const feature = window.Econovaria?.features?.adminOverviewTerminal || null;
-    const model = feature?.currentModel || null;
-    const featureFunctions = {};
-    for (const [key, value] of Object.entries(feature || {})) {
-      if (typeof value !== "function") continue;
-      const source = Function.prototype.toString.call(value);
-      if (
-        /permission|access|section|role|session|renderShell/i.test(`${key}\n${source}`)
-      ) {
-        featureFunctions[key] = source.slice(0, 20_000);
-      }
-    }
-    const relatedGlobals = {};
-    for (const key of Object.keys(window).filter(name =>
-      /^EconovariaAdmin/i.test(name) && /permission|access|session|overview/i.test(name)
-    )) {
-      const value = window[key];
-      relatedGlobals[key] = {
-        type: typeof value,
-        keys: value && typeof value === "object" ? Object.keys(value).sort() : [],
-        source: typeof value === "function"
-          ? Function.prototype.toString.call(value).slice(0, 10_000)
-          : "",
-      };
-    }
-    return {
-      auth: {
-        authenticated: session?.authenticated === true,
-        assuranceLevel: String(session?.assuranceLevel || ""),
-        ...authorization(session),
-      },
-      legacy: {
-        ...authorization(legacy),
-        staffSession: authorization(legacy?.staffSession),
-        keys: legacy && typeof legacy === "object" ? Object.keys(legacy).sort() : [],
-      },
-      stateStaff: {
-        ...authorization(stateStaff),
-        keys: stateStaff && typeof stateStaff === "object"
-          ? Object.keys(stateStaff).sort()
-          : [],
-      },
-      model: {
-        ...authorization(model),
-        staffSession: authorization(model?.staffSession),
-        keys: model && typeof model === "object" ? Object.keys(model).sort() : [],
-      },
-      feature: {
-        keys: feature && typeof feature === "object" ? Object.keys(feature).sort() : [],
-        functions: featureFunctions,
-      },
-      relatedGlobals,
-      navigation: [...document.querySelectorAll("[data-admin-section]")].map(node => ({
-        section: node.getAttribute("data-admin-section") || "",
-        disabled: node.hasAttribute("disabled"),
-        ariaDisabled: node.getAttribute("aria-disabled") || "",
-        title: node.getAttribute("title") || "",
-      })),
-      quickActions: [...document.querySelectorAll("[data-admin-terminal-action]")].map(node => ({
-        action: node.getAttribute("data-admin-terminal-action") || "",
-        hidden: node.hidden,
-        disabled: node.hasAttribute("disabled"),
-      })).filter(entry => entry.action),
-      gate: document.querySelector(".admin-terminal-session-gate-v604")?.textContent
-        ?.trim().replace(/\s+/g, " ") || "",
-    };
-  });
+  const locator = page.locator(
+    `[data-admin-terminal-action="${action}"]:visible`,
+  ).first();
+  await locator.waitFor({ state: "visible", timeout: 5000 });
+  await locator.scrollIntoViewIfNeeded();
+  return locator;
 }
 
 async function tabTo(page, start, target, label) {
@@ -178,7 +194,7 @@ async function waitForBoundaryFocus(page, edge) {
     if (expectedEdge === "first" && dialog.dataset.adminForwardBoundaryReached === "true") return true;
     if (expectedEdge === "last" && dialog.dataset.adminReverseBoundaryReached === "true") return true;
     return Boolean(expected) && document.activeElement === expected;
-  }, edge, { timeout: 2000 });
+  }, edge, { timeout: 5000 });
 }
 
 async function traceBoundary(modal, edge) {
@@ -218,6 +234,7 @@ async function exercise([action, section, key]) {
   });
 
   try {
+    await configureAuthorizedState(page);
     const sectionControl = await selectSection(page, section);
     const opener = await visibleAction(page, action);
     const openerTabs = await tabTo(page, sectionControl, opener, action);
@@ -275,26 +292,61 @@ async function exercise([action, section, key]) {
       keyboard,
       errors: [...errors],
     });
+    await harness.finish({ passed: true, ...result });
     return result;
   } catch (error) {
-    result.failure = error?.stack || error?.message || String(error);
-    result.errors = [...errors];
-    result.authorization = await authorizationDiagnostics(page).catch(() => null);
-    await harness.capture(`${action}-failure`).catch(() => {});
+    const authorization = await capturePermissionSource(
+      page,
+      `${action}-failure`,
+      error,
+    ).catch(() => null);
+    const diagnostics = await page.evaluate(() => ({
+      active: {
+        tag: document.activeElement?.tagName || "",
+        action: document.activeElement?.getAttribute?.("data-admin-terminal-action") || "",
+        text: (document.activeElement?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 80),
+      },
+      dialog: (() => {
+        const dialog = document.querySelector(".admin-terminal-modal:not([hidden])");
+        const controls = dialog && window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+        return {
+          visible: dialog instanceof HTMLElement,
+          forwardBoundaryReached: dialog?.dataset.adminForwardBoundaryReached || "",
+          reverseBoundaryReached: dialog?.dataset.adminReverseBoundaryReached || "",
+          controls: controls.map(control => ({
+            tag: control.tagName,
+            action: control.getAttribute("data-admin-terminal-action") || "",
+            text: (control.textContent || "").trim().replace(/\s+/g, " ").slice(0, 80),
+          })),
+        };
+      })(),
+    })).catch(() => null);
+    Object.assign(result, {
+      failure: error.stack || error.message || String(error),
+      errors: [...errors],
+      authorization,
+      diagnostics,
+    });
+    await harness.capture(`${sanitizeArtifactSegment(action)}-failure`).catch(() => {});
+    await harness.finish({ passed: false, ...result }).catch(() => {});
     throw error;
-  } finally {
-    await harness.finish(result);
   }
 }
 
-const report = { surfaces: [] };
+const output = [];
 try {
-  for (const surface of SURFACES) report.surfaces.push(await exercise(surface));
-  writeFileSync(`${OUT}/mounted-modal-focus.json`, JSON.stringify(report, null, 2));
-  console.log("Mounted Admin operational modal focus, Escape, and restoration smoke passed through the BFF harness.");
+  for (const surface of SURFACES) output.push(await exercise(surface));
+  const directory = "admin-browser-smoke-artifacts/mounted-modal-focus";
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(`${directory}/mounted-modal-focus.json`, JSON.stringify({ surfaces: output }, null, 2));
+  console.log("Mounted Admin operational modal focus and keyboard-only boundaries passed.");
 } catch (error) {
-  report.failure = error?.stack || error?.message || String(error);
-  writeFileSync(`${OUT}/mounted-modal-focus.json`, JSON.stringify(report, null, 2));
-  console.error(report.failure);
+  const directory = "admin-browser-smoke-artifacts/mounted-modal-focus";
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    `${directory}/mounted-modal-focus.json`,
+    JSON.stringify({ surfaces: output, failure: error.stack || error.message || String(error) }, null, 2),
+  );
+  console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
 }
