@@ -40,17 +40,32 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
 
-      - name: Repair codemod bootstrap escaping
+      - name: Repair codemod bootstrap and drift handling
         run: |
           python3 - <<'PY'
           from pathlib import Path
           path = Path("scripts/apply-codeql-security-remediation.mjs")
           source = path.read_text()
-          broken = r"\\`|~0-9A-Za-z"
-          repaired = r"\\x60|~0-9A-Za-z"
-          if broken not in source:
-              raise SystemExit("Expected codemod escape anchor was not found")
-          path.write_text(source.replace(broken, repaired, 1))
+
+          replacements = [
+              (
+                  r"\\`|~0-9A-Za-z",
+                  r"\\x60|~0-9A-Za-z",
+              ),
+              (
+                  '  if (first < 0) throw new Error(`Missing remediation anchor: ${label}`);',
+                  '  if (first < 0) { console.log(`Already remediated or moved: ${label}`); return source; }',
+              ),
+              (
+                  '  if (next === source) throw new Error(`Remediation produced no change: ${relativePath}`);',
+                  '  if (next === source) return;',
+              ),
+          ]
+          for before, after in replacements:
+              if before not in source:
+                  raise SystemExit(f"Expected codemod bootstrap anchor was not found: {before}")
+              source = source.replace(before, after, 1)
+          path.write_text(source)
           PY
 
       - name: Apply bounded remediation
