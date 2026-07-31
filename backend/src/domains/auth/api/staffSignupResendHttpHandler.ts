@@ -6,35 +6,29 @@ import {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { enforcePreAuthRateLimit } from "../../../security/playerRateLimitService.ts";
 import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
-
-declare const Deno: {
-  readonly env: {
-    get(name: string): string | undefined;
-  };
-};
+import {
+  sendStaffSignupVerificationEmail,
+} from "../application/staffSignupVerificationEmail.ts";
 
 interface Dependencies {
-  readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
-}
-
-interface SignupEmailAuthClient {
-  resend(input: {
-    readonly type: "signup";
-    readonly email: string;
-    readonly options: { readonly emailRedirectTo: string };
-  }): PromiseLike<{ readonly error: { readonly message?: string } | null }>;
+  readonly sendVerificationEmail?: typeof sendStaffSignupVerificationEmail;
 }
 
 interface ResendClaimRow {
   readonly normalized_email?: unknown;
+  readonly display_name?: unknown;
+  readonly signup_request_id?: unknown;
   readonly allowed?: unknown;
   readonly retry_after_seconds?: unknown;
+  readonly delivery_version?: unknown;
+  readonly token_expires_at?: unknown;
 }
 
 const MAX_BODY_BYTES = 2_048;
 const HANDLE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const RESEND_TOKEN_TTL_HOURS = 24;
 
 export async function handleStaffSignupResendRequest(
   request: Request,
@@ -65,28 +59,49 @@ export async function handleStaffSignupResendRequest(
     : "";
   if (!HANDLE_PATTERN.test(handle)) return genericResponse(60);
 
+  const verificationToken = randomBase64Url(32);
+  const tokenHash = await sha256Hex(
+    `econovaria.staff-signup.verification.v1\n${verificationToken}`,
+  );
+  const requestedExpiresAt = new Date(
+    Date.now() + RESEND_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+  ).toISOString();
   const handleHash = await sha256Hex(
     `econovaria.staff-signup.handle.v1\n${handle}`,
   );
   const claimResult = await serviceClient.rpc<ResendClaimRow[]>(
     "claim_staff_signup_resend_v1",
-    { p_continuation_handle_hash: handleHash },
+    {
+      p_continuation_handle_hash: handleHash,
+      p_token_hash: tokenHash,
+      p_requested_token_expires_at: requestedExpiresAt,
+    },
   );
-  const claim = Array.isArray(claimResult.data) ? claimResult.data[0] : null;
+  const claim = firstRow(claimResult.data);
   const retryAfterSeconds = boundedSeconds(claim?.retry_after_seconds, 60);
   const email = String(claim?.normalized_email || "").trim().toLowerCase();
+  const displayName = String(claim?.display_name || "Administrator").trim();
+  const signupRequestId = String(claim?.signup_request_id || "").trim();
+  const deliveryVersion = Number(claim?.delivery_version);
+  const tokenExpiresAt = safeIsoDate(claim?.token_expires_at);
 
-  if (!claimResult.error && claim?.allowed === true && email) {
-    try {
-      await (dependencies.createAuthClient(env.value).auth as unknown as SignupEmailAuthClient)
-        .resend({
-          type: "signup",
-          email,
-          options: { emailRedirectTo: verificationRedirectUrl(env.value) },
-        });
-    } catch {
-      // The public response remains generic; the user can retry after cooldown.
-    }
+  if (
+    !claimResult.error &&
+    claim?.allowed === true &&
+    email &&
+    signupRequestId &&
+    Number.isSafeInteger(deliveryVersion) &&
+    deliveryVersion >= 1 &&
+    tokenExpiresAt
+  ) {
+    await (dependencies.sendVerificationEmail ?? sendStaffSignupVerificationEmail)({
+      email,
+      displayName,
+      verificationToken,
+      signupRequestId,
+      deliveryVersion,
+      expiresAt: tokenExpiresAt,
+    });
   }
 
   return genericResponse(retryAfterSeconds);
@@ -124,28 +139,23 @@ async function readBody(request: Request): Promise<
   }
 }
 
-function verificationRedirectUrl(env: SupabaseEnv): string {
-  const configured = environmentValue("ECONOVARIA_EMAIL_VERIFICATION_URL");
-  const fallback = `${env.supabaseUrl.replace(/\/+$/u, "")}/functions/v1/admin-email-verification`;
-  try {
-    const parsed = new URL(configured || fallback);
-    return parsed.protocol === "https:" ? parsed.href : fallback;
-  } catch {
-    return fallback;
+function firstRow(value: ResendClaimRow[] | null): ResendClaimRow | null {
+  if (Array.isArray(value) && value[0] && typeof value[0] === "object") {
+    return value[0];
   }
-}
-
-function environmentValue(name: string): string {
-  try {
-    return String(Deno.env.get(name) || "").trim();
-  } catch {
-    return "";
-  }
+  return value && typeof value === "object" ? value as ResendClaimRow : null;
 }
 
 function boundedSeconds(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(1, Math.min(3600, Math.ceil(parsed))) : fallback;
+}
+
+function safeIsoDate(value: unknown): string {
+  const date = new Date(String(value || ""));
+  return Number.isFinite(date.getTime()) && date.getTime() > Date.now()
+    ? date.toISOString()
+    : "";
 }
 
 function genericResponse(retryAfterSeconds: number): Response {
@@ -166,6 +176,16 @@ async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function randomBase64Url(size: number): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(size));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/gu, "-")
+    .replace(/\//gu, "_")
+    .replace(/=+$/gu, "");
 }
 
 function unavailable(): Response {
