@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const compatibility = await readFile(new URL("../admin/overview-quick-actions.js", import.meta.url), "utf8");
+const bootstrap = await readFile(new URL("../admin/admin-bootstrap.js", import.meta.url), "utf8");
 const interactionQuality = await readFile(new URL("../admin/interaction-quality.js", import.meta.url), "utf8");
 const responsiveGrid = await readFile(new URL("../admin/css/responsive-card-grid.css", import.meta.url), "utf8");
 const sessionSkeleton = await readFile(new URL("../admin/css/session-skeleton.css", import.meta.url), "utf8");
@@ -20,6 +21,11 @@ assert.match(index, /\.\/css\/responsive-card-grid\.css/, "The startup skeleton 
 assert.doesNotMatch(index, /shape-accurate-skeletons\.js/, "The duplicate shape-skeleton runtime must not be loaded.");
 assert.doesNotMatch(index, /shape-accurate-skeletons\.css/, "The removed shape-skeleton stylesheet must not be loaded.");
 assert.doesNotMatch(index, /loading-scope-overrides\.css/, "The removed shape-loader scope overrides must not be loaded.");
+assert.doesNotMatch(
+  bootstrap,
+  /shape-accurate-skeleton-lifecycle\.js/,
+  "The removed shape-skeleton lifecycle must not be dynamically loaded."
+);
 
 assert.doesNotMatch(interactionQuality, /initialPageLoad/, "The page loader must not have an automatic initial-load mode.");
 assert.match(
