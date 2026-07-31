@@ -84,7 +84,10 @@ test("account-dependent public signup outcomes share a bounded timing envelope",
   assert.match(signup, /MAXIMUM_GENERIC_RESPONSE_JITTER_MS\s*=\s*200/u);
   assert.match(signup, /padGenericSignupResponse/u);
   assert.match(signup, /safelyPadGenericResponse\(padGenericResponse, responseTimingStartedAt\)/u);
-  assert.match(signup, /crypto\.getRandomValues\(new Uint16Array\(1\)\)/u);
+  assert.match(signup, /secureRandomInteger\(MAXIMUM_GENERIC_RESPONSE_JITTER_MS\)/u);
+  assert.match(signup, /crypto\.getRandomValues\(new Uint8Array\(1\)\)/u);
+  assert.match(signup, /if \(candidate <= maximumInclusive\) return candidate/u);
+  assert.doesNotMatch(signup, /jitterSource\s*%|candidate\s*%|%\s*\(MAXIMUM_GENERIC_RESPONSE_JITTER_MS/u);
   assert.match(signup, /new Promise<void>\(\(resolve\) => setTimeout\(resolve, remainingMs\)\)/u);
 });
 
