@@ -31,6 +31,29 @@ interface RateLimitRpcRow {
   readonly reset_at?: unknown;
 }
 
+export interface NormalizedAdminRateLimitRequest {
+  readonly request: Request;
+  readonly trustedHeader: TrustedIpHeader;
+}
+
+export function normalizeAdminRateLimitRequest(
+  request: Request,
+  configuredHeader: string,
+): NormalizedAdminRateLimitRequest {
+  const trustedHeader = String(configuredHeader || "").trim().toLowerCase();
+  if (
+    !TRUSTED_IP_HEADERS.includes(trustedHeader as TrustedIpHeader) ||
+    trustedHeader === "x-forwarded-for"
+  ) {
+    throw new Error("rate limit configuration unavailable");
+  }
+
+  return {
+    request: bindGatewayTrustedClientIp(request, trustedHeader),
+    trustedHeader: trustedHeader as TrustedIpHeader,
+  };
+}
+
 export async function consumeAdminProgressionRateLimit(
   service: RateLimitService,
   input: {
@@ -42,23 +65,14 @@ export async function consumeAdminProgressionRateLimit(
   },
 ): Promise<RateLimitDecision> {
   const hmacSecret = Deno.env.get("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ?? "";
-  const configuredHeader = (Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "")
-    .trim()
-    .toLowerCase();
-  if (
-    !TRUSTED_IP_HEADERS.includes(configuredHeader as TrustedIpHeader) ||
-    configuredHeader === "x-forwarded-for"
-  ) {
-    throw new Error("rate limit configuration unavailable");
-  }
-
-  const normalizedRequest = bindGatewayTrustedClientIp(
+  const configuredHeader = Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "";
+  const normalized = normalizeAdminRateLimitRequest(
     input.request,
     configuredHeader,
   );
   const ipAddress = readTrustedClientIp(
-    normalizedRequest,
-    configuredHeader as TrustedIpHeader,
+    normalized.request,
+    normalized.trustedHeader,
   );
   const buckets = await buildStaffRateLimitBuckets({
     action: input.action,
