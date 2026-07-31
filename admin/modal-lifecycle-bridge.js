@@ -63,6 +63,18 @@
     window.setTimeout(focusResolvedOpener, 360);
   }
 
+  function announceModalClosed(binding, reason) {
+    document.dispatchEvent(new CustomEvent("econovaria:admin-modal-closed", {
+      detail: Object.freeze({
+        reason: String(reason || "closed"),
+        modalId: String(binding?.backdrop?.dataset?.modalId || ""),
+        openerAction: String(
+          binding?.opener?.getAttribute?.("data-admin-terminal-action") || "",
+        ),
+      }),
+    }));
+  }
+
   function liveBackdrop(dialog) {
     const backdrop = dialog.closest(BACKDROP_SELECTOR);
     return backdrop instanceof HTMLElement && visible(backdrop) ? backdrop : null;
@@ -141,6 +153,7 @@
           if (!backdropSharedByParent && backdrop.isConnected) backdrop.remove();
         }
         restoreOpenerAfterBundleClose(binding.opener);
+        announceModalClosed(binding, reason);
       },
     });
 
