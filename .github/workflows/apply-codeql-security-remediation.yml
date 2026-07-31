@@ -48,10 +48,7 @@ jobs:
           source = path.read_text()
 
           replacements = [
-              (
-                  r"\\`|~0-9A-Za-z",
-                  r"\\x60|~0-9A-Za-z",
-              ),
+              (r"\\`|~0-9A-Za-z", r"\\x60|~0-9A-Za-z"),
               (
                   '  if (first < 0) throw new Error(`Missing remediation anchor: ${label}`);',
                   '  if (first < 0) { console.log(`Already remediated or moved: ${label}`); return source; }',
@@ -75,62 +72,50 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
           auth = auth_path.read_text()
-          before_auth = '''  const audience = Array.isArray(payload.aud)
-            ? payload.aud
-            : [payload.aud];
-          const exp = Number(payload.exp);
-          const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
-          const iat = payload.iat === undefined ? null : Number(payload.iat);
-          return payload.iss === VERCEL_ISSUER &&
-            audience.includes(VERCEL_AUDIENCE) &&'''
-          after_auth = '''  const audience = Array.isArray(payload.aud)
-            ? payload.aud
-            : [payload.aud];
-          const hasExpectedAudience = audience.some(
-            (candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE,
-          );
-          const exp = Number(payload.exp);
-          const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
-          const iat = payload.iat === undefined ? null : Number(payload.iat);
-          return payload.iss === VERCEL_ISSUER &&
-            hasExpectedAudience &&'''
-          if before_auth in auth:
-              auth_path.write_text(auth.replace(before_auth, after_auth, 1))
-          elif "audience.includes(VERCEL_AUDIENCE)" in auth:
-              raise SystemExit("The live audience check moved to an unreviewed form")
+          old_audience = "audience.includes(VERCEL_AUDIENCE)"
+          new_audience = 'audience.some((candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE)'
+          audience_count = auth.count(old_audience)
+          if audience_count == 1:
+              auth_path.write_text(auth.replace(old_audience, new_audience, 1))
+          elif audience_count > 1:
+              raise SystemExit("Multiple live audience checks require manual review")
 
           player_path = Path("backend/src/domains/players/api/playerLoginHttpHandler.ts")
           player = player_path.read_text()
-          before_player = '''function generateCompactCode(length: number): string {
-            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-            const bytes = crypto.getRandomValues(new Uint8Array(length));
-            return [...bytes]
-              .map((byte) => alphabet[byte % alphabet.length])
-              .join("");
-          }'''
-          after_player = '''function generateCompactCode(length: number): string {
-            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-            const maximumUnbiasedByte = 256 - (256 % alphabet.length);
-            let output = "";
-
-            while (output.length < length) {
-              const bytes = crypto.getRandomValues(new Uint8Array(length - output.length));
-              for (const byte of bytes) {
-                if (byte >= maximumUnbiasedByte) continue;
-                output += alphabet[byte % alphabet.length];
-                if (output.length === length) break;
-              }
-            }
-
-            return output;
-          }'''
-          if before_player in player:
-              player_path.write_text(player.replace(before_player, after_player, 1))
+          player_pattern = re.compile(
+              r'function generateCompactCode\(length: number\): string \{\n'
+              r'  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";\n'
+              r'  const bytes = crypto\.getRandomValues\(new Uint8Array\(length\)\);\n'
+              r'  return \[\.\.\.bytes\]\n'
+              r'    \.map\(\(byte\) => alphabet\[byte % alphabet\.length\]\)\n'
+              r'    \.join\(""\);\n'
+              r'\}',
+          )
+          replacement = (
+              'function generateCompactCode(length: number): string {\n'
+              '  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";\n'
+              '  const maximumUnbiasedByte = 256 - (256 % alphabet.length);\n'
+              '  let output = "";\n\n'
+              '  while (output.length < length) {\n'
+              '    const bytes = crypto.getRandomValues(new Uint8Array(length - output.length));\n'
+              '    for (const byte of bytes) {\n'
+              '      if (byte >= maximumUnbiasedByte) continue;\n'
+              '      output += alphabet[byte % alphabet.length];\n'
+              '      if (output.length === length) break;\n'
+              '    }\n'
+              '  }\n\n'
+              '  return output;\n'
+              '}'
+          )
+          player, player_count = player_pattern.subn(replacement, player, count=1)
+          if player_count == 1:
+              player_path.write_text(player)
           elif "byte % alphabet.length" in player and "maximumUnbiasedByte" not in player:
-              raise SystemExit("The live random-code generator moved to an unreviewed form")
+              raise SystemExit("The live random-code generator requires manual review")
           PY
 
       - name: Verify focused security contracts
