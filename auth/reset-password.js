@@ -121,7 +121,7 @@
       accessToken = "";
       form.reset();
       window.sessionStorage.removeItem("econovaria.admin.auth.v1");
-      window.sessionStorage.removeItem("econovaria.admin.selected-game.v1");
+      window.EconovariaAdminGameSelection?.clear?.();
       form.hidden = true;
       setMessage(
         "Password updated and existing administrator sessions revoked. Returning to sign-in."

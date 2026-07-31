@@ -420,7 +420,7 @@ async function verifyVercelOidcToken(
   const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
   const iat = payload.iat === undefined ? null : Number(payload.iat);
   return payload.iss === VERCEL_ISSUER &&
-    audience.includes(VERCEL_AUDIENCE) &&
+    audience.some((candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE) &&
     payload.sub === expectedSubject &&
     payload.owner_id === VERCEL_OWNER_ID &&
     payload.project_id === VERCEL_PROJECT_ID &&

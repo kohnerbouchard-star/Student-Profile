@@ -34,7 +34,7 @@
   function selectedGameId() {
     return text(
       window.EconovariaAdminAuth?.getSelectedGameId?.() ||
-      window.sessionStorage.getItem(SELECTED_GAME_KEY) ||
+      window.EconovariaAdminGameSelection?.read?.() ||
       "",
     );
   }
@@ -110,7 +110,7 @@
     try {
       window.EconovariaAdminAuthSession?.clear?.();
       window.sessionStorage.removeItem(SESSION_KEY);
-      window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+      window.EconovariaAdminGameSelection?.clear?.();
       window.sessionStorage.removeItem(CSRF_TOKEN_KEY);
     } catch (_) {}
     window.ECONOVARIA_CSRF_TOKEN = "";

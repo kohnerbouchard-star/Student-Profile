@@ -1,7 +1,10 @@
 const MAX_QR_SVG_BYTES = 1_000_000;
 const MAX_COMPACT_QR_DATA_URL_LENGTH = 200_000;
-const SVG_DATA_URL = /^data:image\/svg\+xml(?:(?:;charset=utf-8)|(?:;utf-8))?(;base64)?,([\s\S]*)$/iu;
-const SAFE_ROOT_TAG = /^\s*(?:<\?xml[^>]*\?>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/iu;
+const SVG_DATA_URL_METADATA = new Set([
+  "data:image/svg+xml",
+  "data:image/svg+xml;charset=utf-8",
+  "data:image/svg+xml;utf-8",
+]);
 const ATTRIBUTE = /([A-Za-z_:][A-Za-z0-9:._-]*)\s*=\s*"([^"]*)"/gu;
 const RECT = /<rect\b([^>]*)\/\s*>/giu;
 
@@ -9,10 +12,10 @@ export function normalizeMfaQrCode(value: unknown): string {
   const svg = decodeSvgDataUrl(value);
   if (!svg || !isSafeStaticSvg(svg)) return "";
 
-  const root = SAFE_ROOT_TAG.exec(svg);
+  const root = readSvgEnvelope(svg);
   if (!root) return "";
 
-  const rootAttributes = readAttributes(root[1]);
+  const rootAttributes = readAttributes(root.attributes);
   if (!rootAttributes) return "";
   if (rootAttributes.get("xmlns") !== "http://www.w3.org/2000/svg") return "";
 
@@ -39,7 +42,8 @@ export function normalizeMfaQrCode(value: unknown): string {
     return "";
   }
 
-  const body = stripComments(root[2]);
+  const body = stripComments(root.body);
+  if (body === null) return "";
   const blackCells = readQrCells(body, modules);
   if (!blackCells) return "";
 
@@ -50,13 +54,19 @@ export function normalizeMfaQrCode(value: unknown): string {
 
 function decodeSvgDataUrl(value: unknown): string {
   const input = String(value || "").trim();
-  const match = SVG_DATA_URL.exec(input);
-  if (!match) return "";
+  const separator = input.indexOf(",");
+  if (separator <= 0) return "";
+
+  const metadata = input.slice(0, separator).toLowerCase();
+  const payload = input.slice(separator + 1);
+  const isBase64 = metadata.endsWith(";base64");
+  const mediaType = isBase64 ? metadata.slice(0, -7) : metadata;
+  if (!SVG_DATA_URL_METADATA.has(mediaType)) return "";
 
   try {
-    const raw = match[1]
-      ? decodeBase64Utf8(match[2])
-      : decodeTextPayload(match[2]);
+    const raw = isBase64
+      ? decodeBase64Utf8(payload)
+      : decodeTextPayload(payload);
     const normalized = raw.trim();
     const bytes = new TextEncoder().encode(normalized);
     return bytes.byteLength > 0 && bytes.byteLength <= MAX_QR_SVG_BYTES
@@ -168,8 +178,64 @@ function readAttributes(source: string): Map<string, string> | null {
   return remainder.trim() ? null : attributes;
 }
 
-function stripComments(value: string): string {
-  return value.replace(/<!--[\s\S]*?-->/gu, "");
+function readSvgEnvelope(svg: string): { attributes: string; body: string } | null {
+  let source = svg.trim();
+  if (source.startsWith("<?xml")) {
+    const declarationEnd = source.indexOf("?>", 5);
+    if (declarationEnd < 0) return null;
+    source = source.slice(declarationEnd + 2).trimStart();
+  }
+
+  while (source.startsWith("<!--")) {
+    const commentEnd = source.indexOf("-->", 4);
+    if (commentEnd < 0) return null;
+    source = source.slice(commentEnd + 3).trimStart();
+  }
+
+  if (source.slice(0, 4).toLowerCase() !== "<svg") return null;
+  const boundary = source.charAt(4);
+  if (boundary && boundary !== ">" && !/\s/u.test(boundary)) return null;
+
+  const openingEnd = findTagEnd(source, 4);
+  if (openingEnd < 0) return null;
+  const lowerSource = source.toLowerCase();
+  const closingStart = lowerSource.lastIndexOf("</svg>");
+  if (closingStart <= openingEnd || source.slice(closingStart + 6).trim()) return null;
+
+  const body = source.slice(openingEnd + 1, closingStart);
+  if (body.toLowerCase().includes("</svg>")) return null;
+  return { attributes: source.slice(4, openingEnd), body };
+}
+
+function findTagEnd(source: string, start: number): number {
+  let quoted = false;
+  for (let index = start; index < source.length; index += 1) {
+    const character = source.charAt(index);
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && character === ">") return index;
+    if (!quoted && character === "<") return -1;
+  }
+  return -1;
+}
+
+function stripComments(value: string): string | null {
+  let output = "";
+  let cursor = 0;
+  while (cursor < value.length) {
+    const start = value.indexOf("<!--", cursor);
+    if (start < 0) {
+      output += value.slice(cursor);
+      return output;
+    }
+    output += value.slice(cursor, start);
+    const end = value.indexOf("-->", start + 4);
+    if (end < 0) return null;
+    cursor = end + 3;
+  }
+  return output;
 }
 
 function parsePositiveInteger(value: string | undefined): number | null {
