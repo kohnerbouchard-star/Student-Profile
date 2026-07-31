@@ -79,6 +79,15 @@ test("public account creation uses Supabase generateLink and creates no game aut
   assert.doesNotMatch(html, /id="gameTimeZone"/u);
 });
 
+test("account-dependent public signup outcomes share a bounded timing envelope", () => {
+  assert.match(signup, /MINIMUM_GENERIC_RESPONSE_MS\s*=\s*1_200/u);
+  assert.match(signup, /MAXIMUM_GENERIC_RESPONSE_JITTER_MS\s*=\s*200/u);
+  assert.match(signup, /padGenericSignupResponse/u);
+  assert.match(signup, /safelyPadGenericResponse\(padGenericResponse, responseTimingStartedAt\)/u);
+  assert.match(signup, /crypto\.getRandomValues\(new Uint16Array\(1\)\)/u);
+  assert.match(signup, /new Promise<void>\(\(resolve\) => setTimeout\(resolve, remainingMs\)\)/u);
+});
+
 test("Supabase remains the only verification-token authority", () => {
   assert.match(linkAdapter, /generateLink\(input/u);
   assert.match(linkAdapter, /type: "signup"/u);
@@ -115,6 +124,10 @@ test("email verification is prefetch-safe, publishable-key-only and grants no ga
   assert.match(confirmation, /String\(request\.headers\.get\("origin"\)/u);
   assert.match(confirmation, /\/auth\/v1\/verify/u);
   assert.match(confirmation, /\/auth\/v1\/logout\?scope=local/u);
+  assert.match(confirmation, /logoutResponse && \(logoutResponse\.ok \|\| logoutStatus === 401\)/u);
+  assert.match(confirmation, /staff_email_verification_session_revocation_failed/u);
+  assert.match(confirmation, /return cleanupFailure\(runtime\.returnUrl\)/u);
+  assert.match(confirmation, /No session token was exposed to this browser/u);
   assert.match(confirmation, /SUPABASE_PUBLISHABLE_KEY/u);
   assert.doesNotMatch(confirmation, /SERVICE_ROLE|serviceRoleKey|\/rest\/v1\/rpc/u);
   assert.match(confirmation, /VERIFICATION_TYPES = new Set\(\["signup", "magiclink"\]\)/u);
