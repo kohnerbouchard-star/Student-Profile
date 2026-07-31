@@ -237,7 +237,7 @@ async function executeAuthenticatedAdminOnboardingJourney() {
     provisionResponsePromise,
     refreshedStatusPromise,
   ]);
-  if (provisionResponse.status() !== 201) {
+  if (![200, 201].includes(provisionResponse.status())) {
     const body = sanitize(await provisionResponse.text().catch(() => ""));
     throw new Error(
       `Rendered authenticated game creation returned ${provisionResponse.status()}: ${body.slice(0, 500)}`,
