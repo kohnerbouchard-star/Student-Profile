@@ -20,10 +20,6 @@
     return url.href;
   }
 
-  function clearTransferredSession() {
-    sessionManager?.clear();
-  }
-
   function redirectToMainLogin(reason) {
     if (redirecting) return;
     redirecting = true;
@@ -161,9 +157,13 @@
       // carries no browser summary, the manager rebuilds a sanitized summary
       // from /status and the scoped BFF bootstrap before this gate decides.
       session = await sessionManager.getUsableSession();
-    } catch (_) {
-      clearTransferredSession();
-      redirectToMainLogin("session-expired");
+    } catch (error) {
+      const failure = sessionManager.describeFailure?.(error);
+      showError(
+        failure?.retryable === true
+          ? "The administrator service is temporarily unavailable. Your authenticated session has been preserved. Reload this page to retry or return to sign in."
+          : "Administrator access could not be verified. Your authenticated session has been preserved. Reload this page to retry or return to sign in.",
+      );
       return;
     }
     if (!session) {
