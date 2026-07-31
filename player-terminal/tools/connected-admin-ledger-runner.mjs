@@ -6,41 +6,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const CORE_URL = new URL("./connected-admin-ledger-runner-v4.mjs", import.meta.url);
 const SOURCE_DIRECTORY = new URL("./", import.meta.url);
-const LEGACY_MFA = `async function completeMfaEnrollmentIfRequired(page, timeoutMs = 20_000) {
-  const dialog = page.locator(".econovaria-mfa-dialog");
-  await dialog.waitFor({ state: "visible", timeout: timeoutMs }).catch(() => {});
-  if (!await dialog.isVisible().catch(() => false)) return;
-
-  const secretNode = dialog.locator(".econovaria-mfa-secret");
-  await secretNode.waitFor({ state: "visible", timeout: 20_000 });
-  const secret = String(await secretNode.textContent() || "").trim();
-  const remainingSeconds = 30 - (Math.floor(Date.now() / 1000) % 30);
-  if (remainingSeconds < 5) {
-    await page.waitForTimeout((remainingSeconds + 1) * 1000);
-  }
-  await dialog.locator(".econovaria-mfa-code").fill(generateTotp(secret));
-  await dialog.locator(".econovaria-mfa-submit").click();
-  await dialog.waitFor({ state: "detached", timeout: 30_000 });
-}`;
-const IN_CARD_MFA = `async function completeMfaEnrollmentIfRequired(page, timeoutMs = 20_000) {
-  const host = page.locator("#econovariaAdminMfaStep:not(.hidden)");
-  await host.waitFor({ state: "visible", timeout: timeoutMs }).catch(() => {});
-  if (!await host.isVisible().catch(() => false)) return;
-
-  const secretNode = host.locator(".econovaria-mfa-secret");
-  await secretNode.waitFor({ state: "visible", timeout: 20_000 });
-  const secret = String(await secretNode.textContent() || "").trim();
-  const remainingSeconds = 30 - (Math.floor(Date.now() / 1000) % 30);
-  if (remainingSeconds < 5) {
-    await page.waitForTimeout((remainingSeconds + 1) * 1000);
-  }
-  await host.locator(".econovaria-mfa-setup-continue").click();
-  const form = host.locator(".econovaria-mfa-form:not(.hidden)");
-  await form.waitFor({ state: "visible", timeout: 20_000 });
-  await form.locator(".econovaria-mfa-code").fill(generateTotp(secret));
-  await form.locator(".econovaria-mfa-submit").click();
-  await page.locator("#econovariaAdminMfaStep").waitFor({ state: "hidden", timeout: 30_000 });
-}`;
 const GENERIC_SUBMIT = `  const submit = modal.getByRole(
     "button",
     { name: /save ledger adjustment|apply|confirm|adjust|credit|update/iu },
@@ -123,12 +88,6 @@ function replaceExactlyOnce(source, label, before, after) {
 }
 
 let source = await readFile(CORE_URL, "utf8");
-source = replaceExactlyOnce(
-  source,
-  "In-card Admin MFA enrollment",
-  LEGACY_MFA,
-  IN_CARD_MFA,
-);
 source = replaceExactlyOnce(
   source,
   "Admin ledger submit control",
