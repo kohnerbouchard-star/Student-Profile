@@ -20,25 +20,19 @@
         radial-gradient(circle at 88% 78%, rgba(37, 99, 235, .18), transparent 34%),
         #0f172a;
     }
-
     html.preload .login-panel-frame { opacity: 0; }
-    html:not(.preload) .login-panel-frame {
-      opacity: 1;
-      transition: opacity 120ms ease;
-    }
-
-    .login-root .brand-block {
-      gap: 0;
-      padding: 12px 14px 8px;
-    }
-
+    html:not(.preload) .login-panel-frame { opacity: 1; transition: opacity 120ms ease; }
+    .login-root .brand-block { gap: 0; padding: 12px 14px 8px; }
     .login-root .logo-mark.is-econovaria-logo {
       width: min(312px, 100%);
       height: 212px;
       aspect-ratio: auto;
       animation: none;
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
     }
-
     .login-root .logo-mark.is-econovaria-logo img {
       display: block;
       width: 400px;
@@ -46,27 +40,13 @@
       height: auto;
       object-fit: contain;
       filter: drop-shadow(0 0 22px rgba(0, 212, 255, .24)) drop-shadow(0 0 26px rgba(255, 0, 238, .14));
-    }
-
-    .login-root .logo-mark.is-econovaria-logo {
-      position: relative;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-    }
-
-    .login-root .logo-mark.is-econovaria-logo img {
       position: absolute;
       top: 50%;
       left: 50%;
       z-index: 1;
       transform: translate(-50%, -50%);
     }
-
-    .login-root .logo-mark.has-brand-error img {
-      display: none;
-    }
-
+    .login-root .logo-mark.has-brand-error img { display: none; }
     @media (prefers-reduced-motion: reduce) {
       html:not(.preload) .login-panel-frame { transition: none; }
     }
@@ -86,16 +66,8 @@
 
     <div id="audioControl" class="audio-control" aria-label="Background music controls">
       <button id="musicToggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle background music">
-        <svg class="audio-icon audio-icon-off" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
-          <path d="M17 9l4 6"></path>
-          <path d="M21 9l-4 6"></path>
-        </svg>
-        <svg class="audio-icon audio-icon-on" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
-          <path d="M16.5 8.5a5 5 0 0 1 0 7"></path>
-          <path d="M19 6a8.5 8.5 0 0 1 0 12"></path>
-        </svg>
+        <svg class="audio-icon audio-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M17 9l4 6"></path><path d="M21 9l-4 6"></path></svg>
+        <svg class="audio-icon audio-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7"></path><path d="M19 6a8.5 8.5 0 0 1 0 12"></path></svg>
       </button>
       <div id="volumeControl" class="volume-control">
         <label for="musicVolume">VOL</label>
@@ -125,44 +97,26 @@
 
     <div class="login-panel-wrap" aria-live="polite">
       <div class="login-panel-frame">
-        <div class="corner corner-tl"></div>
-        <div class="corner corner-tr"></div>
-        <div class="corner corner-bl"></div>
-        <div class="corner corner-br"></div>
-
+        <div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div>
         <section class="login-panel">
           <div class="panel-accent panel-accent-top"></div>
           <div class="brand-block">
             <div class="logo-mark is-econovaria-logo">
-              <img
-                src="assets/brand/Econovaria%20Logo.png?v=20260729.4"
-                alt="Econovaria"
-                data-econovaria-brand-image
-                data-econovaria-brand-source="asset"
-              />
+              <img src="assets/brand/Econovaria%20Logo.png?v=20260729.4" alt="Econovaria" data-econovaria-brand-image data-econovaria-brand-source="asset" />
             </div>
           </div>
 
           <div class="mode-tabs" role="tablist" aria-label="Login mode">
             <button class="mode-tab active" data-mode="player" type="button" role="tab" aria-selected="true">Player</button>
             <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin</button>
-            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">Create Game</button>
+            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">Create Account</button>
           </div>
 
           <div id="playerPane" class="mode-pane active">
             <form id="playerForm" class="form-stack">
-              <label>
-                <span>Game / Session Code</span>
-                <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" required />
-              </label>
-              <label>
-                <span>Player ID / RFID Card</span>
-                <input id="playerId" autocomplete="off" placeholder="Scan RFID card or enter Player ID" required />
-              </label>
-              <label>
-                <span>Access Code</span>
-                <input id="playerAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required />
-              </label>
+              <label><span>Game / Session Code</span><input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" required /></label>
+              <label><span>Player ID / RFID Card</span><input id="playerId" autocomplete="off" placeholder="Scan RFID card or enter Player ID" required /></label>
+              <label><span>Access Code</span><input id="playerAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required /></label>
               <div id="playerMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn cyan" type="submit">Enter Game</button>
             </form>
@@ -171,14 +125,8 @@
           <div id="adminPane" class="mode-pane">
             <div id="adminLoginStep">
               <form id="adminForm" class="form-stack">
-                <label>
-                  <span>Admin Email</span>
-                  <input id="adminEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required />
-                </label>
-                <label>
-                  <span>Access Code</span>
-                  <input id="adminAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required />
-                </label>
+                <label><span>Admin Email</span><input id="adminEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required /></label>
+                <label><span>Access Code</span><input id="adminAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required /></label>
                 <div id="adminMessage" class="login-message status-message hidden"></div>
                 <button class="submit-btn amber" type="submit">Admin Login</button>
                 <button id="forgotAdminAccessCode" class="auth-link-button" type="button">Forgot Access Code?</button>
@@ -186,73 +134,56 @@
             </div>
 
             <div id="adminGamesStep" class="hidden">
-              <div class="step-header">
-                <span>Select Active Game</span>
-                <button id="backToAdminLogin" type="button">Back</button>
-              </div>
+              <div class="step-header"><span>Your Games</span><button id="backToAdminLogin" type="button">Sign Out</button></div>
               <div id="selectedGameMessage" class="login-message status-message hidden"></div>
               <div id="adminGameList" class="game-list"></div>
+              <div id="adminGamePagination" class="game-pagination hidden" aria-label="Game list pages">
+                <button id="previousAdminGames" type="button">Previous</button>
+                <span id="adminGamePageLabel">1 / 1</span>
+                <button id="nextAdminGames" type="button">Next</button>
+              </div>
+              <button id="createNewAdminGame" class="submit-btn amber" type="button">+ Create New Game</button>
+            </div>
+
+            <div id="adminCreateGameStep" class="hidden">
+              <div class="step-header"><span>Create New Game</span><button id="cancelAdminGameCreation" type="button">Back</button></div>
+              <form id="adminCreateGameForm" class="form-stack form-stack-compact">
+                <label><span>License / Purchase Code</span><input id="adminNewLicenseCode" autocomplete="off" placeholder="Enter License Code" required /></label>
+                <label><span>Game Name</span><input id="adminNewGameName" autocomplete="off" placeholder="Period 3 Economy" required /></label>
+                <label><span>Game Timezone</span><select id="adminNewGameTimeZone" required><option value="" selected disabled>Select timezone</option><option value="Asia/Seoul">Seoul — Asia/Seoul</option><option value="America/New_York">New York — America/New_York</option><option value="America/Los_Angeles">Los Angeles — America/Los_Angeles</option><option value="Europe/London">London — Europe/London</option><option value="UTC">UTC</option></select></label>
+                <label><span>Difficulty</span><select id="adminNewGameDifficulty" required><option value="" selected disabled>Select difficulty</option><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option><option value="insane">Insane</option></select></label>
+                <p id="adminGameOwnershipNotice" class="game-ownership-notice">This license will be permanently assigned to the signed-in administrator.</p>
+                <div id="adminNewGameMessage" class="login-message status-message hidden"></div>
+                <button class="submit-btn amber" type="submit">Redeem Code and Create Game</button>
+              </form>
             </div>
           </div>
 
           <div id="createPane" class="mode-pane">
-            <form id="createForm" class="form-stack form-stack-compact">
-              <label>
-                <span>License / Purchase Code</span>
-                <input id="licenseCode" autocomplete="off" placeholder="Enter License Code" required />
-              </label>
-              <label>
-                <span>Teacher / Admin Email</span>
-                <input id="createEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required />
-              </label>
-              <label>
-                <span>Display Name</span>
-                <input id="createDisplayName" autocomplete="name" placeholder="Teacher Name" required />
-              </label>
-              <label>
-                <span>Game Name</span>
-                <input id="sessionName" autocomplete="off" placeholder="Period 3 Economy" required />
-              </label>
-              <label>
-                <span>Game Timezone</span>
-                <select id="gameTimeZone" required aria-describedby="gameTimeZoneHelp">
-                  <option value="" selected disabled>Select timezone</option>
-                  <option value="Asia/Seoul">Seoul — Asia/Seoul</option>
-                  <option value="Asia/Tokyo">Tokyo — Asia/Tokyo</option>
-                  <option value="America/New_York">New York — America/New_York</option>
-                  <option value="America/Chicago">Chicago — America/Chicago</option>
-                  <option value="America/Denver">Denver — America/Denver</option>
-                  <option value="America/Los_Angeles">Los Angeles — America/Los_Angeles</option>
-                  <option value="Europe/London">London — Europe/London</option>
-                  <option value="Europe/Paris">Paris — Europe/Paris</option>
-                  <option value="Australia/Sydney">Sydney — Australia/Sydney</option>
-                  <option value="UTC">UTC</option>
-                </select>
-                <small id="gameTimeZoneHelp">Controls market hours for every exchange in this game.</small>
-              </label>
-              <label>
-                <span>Difficulty</span>
-                <select id="difficultyLevel" required>
-                  <option value="" selected disabled>Select difficulty</option>
-                  <option value="easy">Easy</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="hard">Hard</option>
-                  <option value="insane">Insane</option>
-                </select>
-              </label>
-              <div class="two-col">
-                <label>
-                  <span>Access Code</span>
-                  <input id="createAccessCode" type="password" autocomplete="new-password" minlength="8" placeholder="Minimum 8 characters" required />
-                </label>
-                <label>
-                  <span>Confirm</span>
-                  <input id="confirmAccessCode" type="password" autocomplete="new-password" minlength="8" placeholder="Confirm Access Code" required />
-                </label>
+            <div id="createAccountStep">
+              <form id="createForm" class="form-stack form-stack-compact">
+                <label><span>Teacher / Admin Email</span><input id="createEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required /></label>
+                <label><span>Display Name</span><input id="createDisplayName" autocomplete="name" placeholder="Teacher Name" required /></label>
+                <div class="two-col">
+                  <label><span>Password</span><input id="createAccessCode" type="password" autocomplete="new-password" minlength="15" placeholder="15+ mixed characters" required /></label>
+                  <label><span>Confirm Password</span><input id="confirmAccessCode" type="password" autocomplete="new-password" minlength="15" placeholder="Confirm Password" required /></label>
+                </div>
+                <div id="createMessage" class="login-message status-message hidden"></div>
+                <button class="submit-btn purple" type="submit">Create Account</button>
+              </form>
+            </div>
+
+            <div id="createVerificationStep" class="hidden">
+              <div class="verification-face">
+                <p class="verification-eyebrow">Account security</p>
+                <h2>Verify your email</h2>
+                <p>We sent a confirmation link to <strong id="createVerificationEmail">your email address</strong>.</p>
+                <div id="verificationMessage" class="login-message status-message hidden"></div>
+                <button id="resendCreateVerification" class="submit-btn purple" type="button">Resend Verification Email</button>
+                <button id="cancelCreateVerification" class="auth-link-button" type="button">Start Over</button>
+                <button id="backFromCreateVerification" class="auth-link-button" type="button">Back to Admin Sign In</button>
               </div>
-              <div id="createMessage" class="login-message status-message hidden"></div>
-              <button class="submit-btn purple" type="submit">Create Game</button>
-            </form>
+            </div>
           </div>
 
           <footer class="panel-footer">
