@@ -30,8 +30,8 @@ const REPLACEMENTS = Object.freeze([
     replacement: "Authorization: [bearer-redacted]",
   },
   {
-    pattern: /(postgres(?:ql)?:\/\/)[^@\s]+@/gi,
-    replacement: "$1[credentials-redacted]@",
+    pattern: /postgres(?:ql)?:\/\/[^\s"']+/gi,
+    replacement: "[database-url-redacted]",
   },
   {
     pattern: new RegExp(escapeRegex(TEST_ADMIN_PASSWORD), "g"),
@@ -53,7 +53,7 @@ const FORBIDDEN = Object.freeze([
   { name: "game code", pattern: /\bECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}\b/ },
   { name: "Bearer credential", pattern: /authorization\s*:\s*bearer\s+[^\s"']+/i },
   { name: "private key", pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
-  { name: "database credentials", pattern: /postgres(?:ql)?:\/\/[^@\s]+@/i },
+  { name: "database URL", pattern: /postgres(?:ql)?:\/\/[^\s"']+/i },
   { name: "test Admin password", pattern: new RegExp(escapeRegex(TEST_ADMIN_PASSWORD)) },
   { name: "test license code", pattern: new RegExp(escapeRegex(TEST_LICENSE_CODE)) },
 ]);
