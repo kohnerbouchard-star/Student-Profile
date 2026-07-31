@@ -124,18 +124,31 @@ async function liveGridSnapshot(name, width, height, expectedColumns) {
   const initialState = await page.evaluate(() => {
     const main = document.querySelector(".admin-terminal-shell-main");
     const overlay = document.querySelector(".admin-qol-page-skeleton");
+    const gate = document.querySelector("#adminSessionGate");
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement) || element.hidden) return false;
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
+    };
     return {
       shapeRuntimePresent: Boolean(window.EconovariaAdminShapeSkeletons),
-      duplicateVisible: Boolean(overlay && !overlay.hidden),
+      duplicateVisible: Boolean(overlay && isVisible(overlay)),
       busy: main?.getAttribute("aria-busy") || "",
       cloneStageCount: document.querySelectorAll("[data-admin-shape-skeleton-stage]").length,
+      sessionGateVisible: isVisible(gate),
+      visibleStartupSkeletonCount: [...document.querySelectorAll(".admin-session-skeleton")]
+        .filter(isVisible).length,
+      visiblePageSkeletonCount: [...document.querySelectorAll(".admin-qol-page-skeleton")]
+        .filter(isVisible).length,
     };
   });
   if (
     initialState.shapeRuntimePresent ||
     initialState.duplicateVisible ||
-    initialState.busy ||
-    initialState.cloneStageCount
+    initialState.cloneStageCount ||
+    initialState.sessionGateVisible ||
+    initialState.visibleStartupSkeletonCount ||
+    initialState.visiblePageSkeletonCount
   ) {
     fail(`${name} mounted a second startup loader: ${JSON.stringify(initialState)}.`);
   }
