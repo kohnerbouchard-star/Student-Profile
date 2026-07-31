@@ -13,27 +13,41 @@ const login = await source("frontend/src/core/login.js");
 const api = await source("frontend/src/core/api.js");
 const signup = await source("backend/src/domains/auth/api/staffSignupHttpHandler.ts");
 const signupTest = await source("backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts");
+const provisioning = await source(
+  "backend/supabase/functions/admin-api/gameProvisioningOperations.ts",
+);
 
 for (const [value, expected] of [
-  [html, 'id="gameTimeZone"'],
+  [html, 'id="adminNewGameTimeZone"'],
+  [html, 'id="adminCreateGameForm"'],
   [html, 'value="Asia/Seoul"'],
-  [html, "Controls market hours for every exchange in this game."],
-  [login, 'text("gameTimeZone")'],
+  [login, 'text("adminNewGameTimeZone")'],
   [login, 'Intl.supportedValuesOf("timeZone")'],
   [login, "VALID_DIFFICULTIES"],
+  [api, 'callAdminBffJsonRoute("/games"'],
   [api, "stockMarketWindow: {"],
   [api, "timezone: String(input?.timeZone"],
-  [signup, "invalid_stock_market_timezone"],
-  [signup, "stockMarketWindow: input.stockMarketWindow"],
-  [signupTest, 'stockMarketWindow: { timezone: "Asia/Seoul" }']
+  [provisioning, "handleLicensingActivationRequest"],
+  [signupTest, "public signup rejects license and game fields"]
 ]) {
   if (!value.includes(expected)) {
     throw new Error(`Shared game-timezone integration is missing: ${expected}`);
   }
 }
 
-if (login.includes("resolvedOptions().timeZone")) {
-  throw new Error("Create Game must not infer the game timezone from the browser.");
+for (const forbidden of [
+  'id="gameTimeZone"',
+  'text("gameTimeZone")',
+  "invalid_stock_market_timezone",
+  "stockMarketWindow: input.stockMarketWindow",
+]) {
+  if (html.includes(forbidden) || login.includes(forbidden) || signup.includes(forbidden)) {
+    throw new Error(`Public account creation must not own game timezone state: ${forbidden}`);
+  }
 }
 
-console.log("Verified shared game-timezone UI integration without modifying the worktree.");
+if (login.includes("resolvedOptions().timeZone")) {
+  throw new Error("Create New Game must not infer the game timezone from the browser.");
+}
+
+console.log("Verified authenticated shared game-timezone integration without modifying the worktree.");
