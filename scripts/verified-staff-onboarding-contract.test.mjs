@@ -11,6 +11,7 @@ const [
   onboardingMigration,
   hardeningMigration,
   cleanupClaimMigration,
+  cleanupScheduleMigration,
   signup,
   signupCancel,
   login,
@@ -27,6 +28,7 @@ const [
   read("backend/supabase/migrations/20260731130000_add_verified_staff_onboarding_v1.sql"),
   read("backend/supabase/migrations/20260731131000_harden_onboarding_cleanup_and_license_replay_v1.sql"),
   read("backend/supabase/migrations/20260731132000_wire_expired_signup_cleanup_into_claim_v1.sql"),
+  read("backend/supabase/migrations/20260731133000_schedule_expired_staff_signup_cleanup_v1.sql"),
   read("backend/src/domains/auth/api/staffSignupHttpHandler.ts"),
   read("backend/src/domains/auth/api/staffSignupCancelHttpHandler.ts"),
   read("backend/src/domains/auth/api/staffLoginHttpHandler.ts"),
@@ -110,6 +112,14 @@ test("cancellation and expiry delete only unconfirmed identities atomically", ()
   assert.match(cleanupClaimMigration, /perform public\.cleanup_expired_staff_signup_identity_v1\(p_email_key\)/u);
   assert.doesNotMatch(signupCancel, /auth\.admin\.deleteUser|auth\.admin\.updateUserById/u);
   assert.match(signupCancel, /cancel_staff_signup_v1/u);
+});
+
+test("expired unconfirmed identities are swept without user traffic", () => {
+  assert.match(cleanupScheduleMigration, /create extension if not exists pg_cron/u);
+  assert.match(cleanupScheduleMigration, /econovaria-expired-staff-signup-cleanup-v1/u);
+  assert.match(cleanupScheduleMigration, /'\*\/15 \* \* \* \*'/u);
+  assert.match(cleanupScheduleMigration, /claim_expired_staff_signup_cleanup_v1\(100\)/u);
+  assert.match(cleanupScheduleMigration, /cron\.unschedule/u);
 });
 
 test("first and additional games use authenticated replay-safe license redemption", () => {
