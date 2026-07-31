@@ -13,6 +13,8 @@ export type StaffPasswordPolicyFailureCode =
 export type StaffPasswordPolicyResult =
   | {
       readonly ok: true;
+      readonly code?: undefined;
+      readonly message?: undefined;
     }
   | {
       readonly ok: false;
