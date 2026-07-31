@@ -31,7 +31,7 @@ test("Admin browser evidence sanitizer removes credentials and durable identifie
     assert.match(sanitized, /Authorization: \[bearer-redacted\]/);
     assert.match(sanitized, /\[uuid-redacted\]/);
     assert.match(sanitized, /\[game-code-redacted\]/);
-    assert.match(sanitized, /postgresql:\/\/\[credentials-redacted\]@/);
+    assert.match(sanitized, /\[database-url-redacted\]/);
     assert.match(sanitized, /\[test-password-redacted\]/);
     assert.match(sanitized, /\[test-license-redacted\]/);
   } finally {
