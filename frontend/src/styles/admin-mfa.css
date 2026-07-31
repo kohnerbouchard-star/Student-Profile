@@ -285,3 +285,37 @@
     scroll-behavior: auto;
   }
 }
+
+.econovaria-mfa-form.hidden,
+.econovaria-mfa-setup.hidden {
+  display: none;
+}
+
+.econovaria-mfa-setup-continue {
+  grid-column: 1 / -1;
+}
+
+.econovaria-mfa-verify-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.econovaria-mfa-inline-back {
+  width: auto;
+  border: 0;
+  padding: 0;
+  color: color-mix(in srgb, var(--login-input) 72%, white 8%);
+  background: transparent;
+  cursor: pointer;
+  font: 800 8px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.econovaria-mfa-verify-actions .submit-btn {
+  width: auto;
+  min-width: 160px;
+  padding: 0 14px;
+}
