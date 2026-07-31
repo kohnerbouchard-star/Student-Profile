@@ -34,21 +34,25 @@ const expectedScripts = [
   "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
   "./player-create-ux.js", "./game-code-wiring.js", "./logout-confirmation.js", "./game-session-controls.js", "./admin-stabilization.js",
   "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
-  "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js", "./admin-bootstrap.js",
+  "./dist/admin-overview-boot.js", "./admin-bootstrap.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);
+assert(!html.includes("shape-accurate-skeletons.js"), "Removed duplicate Admin skeleton runtime returned to the active bundle.");
 assert(html.includes('meta name="econovaria-admin-api-base" content=""'), "Admin API metadata is not reserved for validated runtime configuration.");
 assert(!/<style(?:\s|>)/i.test(html), "Admin entrypoint contains an inline style block.");
 
 const expectedStyles = [
   "./css/page-shell.css", "./css/admin-overview-terminal.css", "./css/admin-overview-integrity.css",
-  "./css/session-gate.css", "./css/player-runtime-integration.css", "./css/player-create-confirmation.css",
+  "./css/session-gate.css", "./css/session-skeleton.css", "./css/responsive-card-grid.css",
+  "./css/player-runtime-integration.css", "./css/player-create-confirmation.css",
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
-  "./css/overview-quick-actions.css", "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
-  "./css/loading-scope-overrides.css", "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
+  "./css/overview-quick-actions.css", "./css/interaction-quality.css",
+  "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
   "./css/game-lifecycle-controls.css", "./css/game-session-controls.css", "./css/admin-scroll-integrity.css", "./css/logout-confirmation.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
+assert(!html.includes("shape-accurate-skeletons.css"), "Removed shape-skeleton styles returned to the active bundle.");
+assert(!html.includes("loading-scope-overrides.css"), "Removed shape-loader scope styles returned to the active bundle.");
 const adminBootstrap = readText("admin/admin-bootstrap.js");
 assert(html.includes("./admin-bootstrap.js"), "External Admin bootstrap is not loaded through the accepted script order.");
 assert(adminBootstrap.includes("./keyboard-navigation.js"), "Keyboard navigation is not loaded through the accepted script order.");
@@ -68,7 +72,6 @@ const scopedRuntimeFiles = {
   "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
   "admin/data-state-contracts.js": ["CANONICAL_STATES", "loading", "loaded", "refreshing", "stale", "empty", "failed", "econovaria:admin-data-state-changed", "detail.pageRead !== true"],
   "admin/interaction-quality-control-reset.js": ["restoreCompletedControl", "setScannerReady", 'removeAttribute("aria-disabled")', "Scan a player code. The result appears here."],
-  "admin/shape-accurate-skeletons.js": ["ROUTE_ASSEMBLIES", "clonePage", "renderSurface", "beginRefresh", "endRefresh", "player-drawer", "contract-review", "scanner", "account-games"],
 };
 for (const [path, tokens] of Object.entries(scopedRuntimeFiles)) {
   const source = readText(path);
@@ -137,14 +140,6 @@ assert(!gameSessionControls.includes("document.body.innerHTML"), "Selected-game 
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Selected-game Player link omits the Game Code.");
 assert(gameSessionControls.includes("event.stopImmediatePropagation()"), "Selected-game logout does not isolate the broken delegated action.");
 
-const skeletonRuntime = readText("admin/shape-accurate-skeletons.js");
-assert(!skeletonRuntime.includes("window.fetch ="), "Shape skeleton controller adds a network wrapper.");
-assert(!skeletonRuntime.includes("MutationObserver"), "Shape skeleton controller adds a broad DOM observer.");
-assert(!skeletonRuntime.includes('createElement("style")'), "Shape skeleton controller injects runtime CSS.");
-assert(!skeletonRuntime.includes("style.cssText"), "Shape skeleton controller writes inline styles.");
-assert(skeletonRuntime.includes('setAttribute("aria-busy", "true")'), "Shape skeleton hosts do not expose busy state.");
-assert(skeletonRuntime.includes('setAttribute("aria-hidden", "true")') && skeletonRuntime.includes('setAttribute("inert", "")'), "Skeleton clones are not decorative and inert.");
-
 const dataStateRuntime = readText("admin/data-state-contracts.js");
 assert(!dataStateRuntime.includes("window.fetch ="), "Data-state controller adds a network wrapper.");
 assert(!dataStateRuntime.includes("MutationObserver"), "Data-state controller adds DOM observation.");
@@ -165,9 +160,10 @@ for (const [glyph, iconName] of [["↻", "history"], ["⇩", "download"], ["←"
 }
 
 for (const path of [
-  "admin/css/session-gate.css", "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
+  "admin/css/session-gate.css", "admin/css/session-skeleton.css", "admin/css/responsive-card-grid.css",
+  "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css", "admin/css/admin-stabilization-visual-finish.css", "admin/css/overview-quick-actions.css",
-  "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css", "admin/css/loading-scope-overrides.css", "admin/css/data-state-contracts.css", "admin/css/keyboard-navigation.css",
+  "admin/css/interaction-quality.css", "admin/css/data-state-contracts.css", "admin/css/keyboard-navigation.css",
   "admin/css/game-session-controls.css", "admin/css/logout-confirmation.css",
 ]) {
   const source = readText(path);
@@ -220,6 +216,8 @@ assert(requestOwner.includes("requestId"), "Request lifecycle events are not req
 const interactionQuality = readText("admin/interaction-quality.js");
 assert(!interactionQuality.includes("window.fetch ="), "Interaction quality still owns global transport interception.");
 assert(!interactionQuality.includes("MutationObserver"), "Interaction quality still observes the complete DOM subtree.");
+assert(!interactionQuality.includes("initialPageLoad"), "Interaction quality can still create a second startup loader.");
+assert(interactionQuality.includes("detail.pageRead && navigationLoad"), "Route skeletons are not limited to explicit in-console navigation.");
 assert(interactionQuality.includes("econovaria:admin-request-lifecycle") && interactionQuality.includes("requestContexts"), "Interaction quality does not consume request-scoped lifecycle events.");
 assert(interactionQuality.includes("aria-invalid") && interactionQuality.includes("admin-qol-field-error"), "Field-level validation feedback is incomplete.");
 assert(interactionQuality.includes('"Scanning"') && interactionQuality.includes('"Completed"') && interactionQuality.includes('"Scan failed"'), "Scanner processing, completion, or error copy is missing.");
@@ -227,22 +225,22 @@ const interactionControlReset = readText("admin/interaction-quality-control-rese
 assert(interactionControlReset.includes("restoreCompletedControl") && interactionControlReset.includes('removeAttribute("aria-disabled")') && interactionControlReset.includes("setScannerReady"), "Completed actions or scanner idle recovery are incomplete.");
 
 const interactionQualityCss = readText("admin/css/interaction-quality.css");
-assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton CSS is missing.");
-assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Page skeleton host CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Route-change skeleton host CSS is missing.");
 assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error CSS is missing.");
 assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing CSS is missing.");
 assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality contains a blanket page-shell reset.");
 
-const shapeCss = readText("admin/css/shape-accurate-skeletons.css");
-for (const token of ["admin-session-skeleton__shell", "admin-shape-skeleton-stage", "admin-shape-surface-overlay", "admin-shape-refresh-indicator", "prefers-reduced-motion"]) {
-  assert(shapeCss.includes(token), `Shape-accurate skeleton CSS is missing ${token}.`);
+const sessionSkeletonCss = readText("admin/css/session-skeleton.css");
+for (const token of ["admin-session-skeleton__shell", "admin-session-skeleton__metrics", "admin-session-skeleton__table-row", "prefers-reduced-motion"]) {
+  assert(sessionSkeletonCss.includes(token), `Session skeleton CSS is missing ${token}.`);
 }
-assert(!shapeCss.includes("#adminPreview *"), "Shape skeleton CSS applies a blanket page-shell selector.");
-const loadingScopeCss = readText("admin/css/loading-scope-overrides.css");
-assert(loadingScopeCss.includes('[data-admin-skeleton-component="metrics"]') && loadingScopeCss.includes('[data-admin-skeleton-component="table"]'), "Loading scope does not expose card/table data containers.");
-assert(loadingScopeCss.includes('[data-admin-skeleton-component="heading"]') && loadingScopeCss.includes('[data-admin-skeleton-component="toolbar"]'), "Loading scope does not suppress heading and toolbar clones.");
-assert(loadingScopeCss.includes("background: transparent !important"), "Loading scope still paints an opaque full-page overlay.");
-assert(!loadingScopeCss.includes("#adminPreview *"), "Loading scope CSS applies a blanket page-shell selector.");
+assert(sessionSkeletonCss.includes("single startup loader"), "Session skeleton ownership is not explicit.");
+assert(!sessionSkeletonCss.includes("admin-shape-skeleton-stage"), "The retained session loader still contains the removed page-clone system.");
+assert(!sessionSkeletonCss.includes("#adminPreview *"), "Session skeleton CSS applies a blanket page-shell selector.");
+const responsiveGridCss = readText("admin/css/responsive-card-grid.css");
+assert(responsiveGridCss.includes(".admin-session-skeleton__metrics") && responsiveGridCss.includes(".admin-terminal-action-grid"), "Skeleton and live overview cards do not share one grid contract.");
+assert(responsiveGridCss.includes("auto-fit") && responsiveGridCss.includes("220px"), "Shared card columns do not derive from available width.");
+assert(!responsiveGridCss.includes("#adminPreview *"), "Responsive card-grid CSS applies a blanket page-shell selector.");
 const dataStateCss = readText("admin/css/data-state-contracts.css");
 for (const token of ['[data-state="stale"]', '[data-state="empty"]', '[data-state="failed"]']) {
   assert(dataStateCss.includes(token), `Data-state CSS is missing ${token}.`);
@@ -254,4 +252,4 @@ assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a b
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, bounded viewport scroll ownership, selected multiplayer game controls, bounded logout confirmation, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, bounded viewport scroll ownership, selected multiplayer game controls, bounded logout confirmation, explicit six-state data lifecycles, a single startup skeleton, responsive shared card geometry, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
