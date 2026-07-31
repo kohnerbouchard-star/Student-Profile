@@ -26,6 +26,7 @@ interface StaffLoginDependencies {
   readonly checkThrottle?: typeof checkAuthenticationThrottle;
   readonly recordFailure?: typeof recordAuthenticationFailure;
   readonly recordSuccess?: typeof recordAuthenticationSuccess;
+  readonly refreshSession?: typeof refreshPasswordSession;
 }
 
 interface StaffLoginInput {
@@ -44,17 +45,30 @@ interface StaffSecurityRow {
   readonly mfa_required: boolean;
 }
 
+interface ActivatedStaffRow {
+  readonly staff_user_id?: unknown;
+  readonly staff_email?: unknown;
+  readonly staff_display_name?: unknown;
+  readonly staff_status?: unknown;
+  readonly staff_role?: unknown;
+  readonly permission_version?: unknown;
+  readonly security_version?: unknown;
+  readonly mfa_required?: unknown;
+}
+
+interface PasswordSession {
+  readonly access_token: string;
+  readonly refresh_token: string;
+  readonly expires_at?: number | null;
+}
+
 interface PasswordAuthClient {
   signInWithPassword(input: {
     readonly email: string;
     readonly password: string;
   }): PromiseLike<{
     readonly data: {
-      readonly session: {
-        readonly access_token: string;
-        readonly refresh_token: string;
-        readonly expires_at?: number | null;
-      } | null;
+      readonly session: PasswordSession | null;
       readonly user: {
         readonly id: string;
         readonly email?: string | null;
@@ -90,16 +104,12 @@ export async function handleStaffLoginRequest(
 
     const input = inputResult.value;
     const serviceClient = dependencies.createServiceClient(envResult.value);
-    const enforceVolumetric = dependencies.enforceVolumetric ??
-      enforcePreAuthRateLimit;
+    const enforceVolumetric = dependencies.enforceVolumetric ?? enforcePreAuthRateLimit;
     const buildThrottleBuckets = dependencies.buildThrottleBuckets ??
       buildAuthenticationThrottleBuckets;
-    const checkThrottle = dependencies.checkThrottle ??
-      checkAuthenticationThrottle;
-    const recordFailure = dependencies.recordFailure ??
-      recordAuthenticationFailure;
-    const recordSuccess = dependencies.recordSuccess ??
-      recordAuthenticationSuccess;
+    const checkThrottle = dependencies.checkThrottle ?? checkAuthenticationThrottle;
+    const recordFailure = dependencies.recordFailure ?? recordAuthenticationFailure;
+    const recordSuccess = dependencies.recordSuccess ?? recordAuthenticationSuccess;
 
     const volumetricDecision = await enforceVolumetric({
       action: "staff.login.attempt",
@@ -121,29 +131,79 @@ export async function handleStaffLoginRequest(
     const authClient = dependencies.createAuthClient(envResult.value);
     const authResult = await (authClient.auth as unknown as PasswordAuthClient)
       .signInWithPassword({ email: input.email, password: input.password });
-    const session = authResult.data.session;
+    let session = authResult.data.session;
     const authUser = authResult.data.user;
 
     if (authResult.error || !session?.access_token || !authUser?.id) {
+      if (isEmailNotConfirmed(authResult.error)) {
+        return emailVerificationRequiredResponse();
+      }
       const failure = await recordFailure(serviceClient, buckets);
       return failure.retryAfterSeconds > 0
         ? authenticationThrottledResponse(failure)
         : invalidCredentialsResponse();
     }
 
-    const staffResult = await serviceClient
+    const initialStaffResult = await serviceClient
       .from("staff_users")
       .select(
         "id,email,display_name,status,role,permission_version,security_version,mfa_required",
       )
       .eq("supabase_auth_user_id", authUser.id)
       .maybeSingle();
-    const staff = staffResult.data as StaffSecurityRow | null;
+    if (initialStaffResult.error) return loginUnavailableResponse();
+
+    let staff = initialStaffResult.data as StaffSecurityRow | null;
+    let authoritativeMetadata = authUser.app_metadata ?? {};
+
+    if (!staff?.id || staff.status === "onboarding") {
+      const activation = await serviceClient.rpc<ActivatedStaffRow[]>(
+        "activate_verified_staff_identity_v1",
+        { p_auth_user_id: authUser.id },
+      );
+      const activated = firstActivationRow(activation.data);
+      if (activation.error || !activated) {
+        await recordFailure(serviceClient, buckets);
+        return invalidCredentialsResponse();
+      }
+
+      staff = activatedStaff(activated);
+      const permissionVersion = Number(staff.permission_version);
+      const securityVersion = Number(staff.security_version);
+      authoritativeMetadata = {
+        econovaria_role: "game_admin",
+        permission_version: permissionVersion,
+        security_version: securityVersion,
+      };
+      const metadataUpdate = await serviceClient.auth.admin.updateUserById(
+        authUser.id,
+        { app_metadata: authoritativeMetadata },
+      );
+      if (metadataUpdate.error) {
+        return jsonError(503, {
+          code: "staff_authorization_activation_incomplete",
+          message: "Administrator authorization could not be finalized. Sign in again.",
+          retryable: true,
+        });
+      }
+
+      const refresh = await (dependencies.refreshSession ?? refreshPasswordSession)(
+        envResult.value,
+        session.refresh_token,
+      );
+      if (!refresh) {
+        return jsonError(503, {
+          code: "staff_session_refresh_failed",
+          message: "Administrator authorization was activated, but the session could not be refreshed. Sign in again.",
+          retryable: true,
+        });
+      }
+      session = refresh;
+    }
 
     if (
-      staffResult.error ||
       !staff?.id ||
-      staff.status !== "active" ||
+      !["active", "onboarding"].includes(staff.status) ||
       staff.role !== "game_admin"
     ) {
       await recordFailure(serviceClient, buckets);
@@ -152,15 +212,14 @@ export async function handleStaffLoginRequest(
 
     const permissionVersion = Number(staff.permission_version);
     const securityVersion = Number(staff.security_version);
-    const metadata = authUser.app_metadata ?? {};
     if (
       !Number.isSafeInteger(permissionVersion) ||
       permissionVersion < 1 ||
       !Number.isSafeInteger(securityVersion) ||
       securityVersion < 1 ||
-      metadata.econovaria_role !== staff.role ||
-      Number(metadata.permission_version) !== permissionVersion ||
-      Number(metadata.security_version) !== securityVersion
+      authoritativeMetadata.econovaria_role !== staff.role ||
+      Number(authoritativeMetadata.permission_version) !== permissionVersion ||
+      Number(authoritativeMetadata.security_version) !== securityVersion
     ) {
       await recordFailure(serviceClient, buckets);
       return jsonError(403, {
@@ -189,6 +248,7 @@ export async function handleStaffLoginRequest(
         email: staff.email,
         displayName: staff.display_name,
         role: staff.role,
+        status: staff.status,
         permissionVersion,
         securityVersion,
       },
@@ -200,6 +260,68 @@ export async function handleStaffLoginRequest(
   } catch {
     return loginUnavailableResponse();
   }
+}
+
+async function refreshPasswordSession(
+  env: SupabaseEnv,
+  refreshToken: string,
+): Promise<PasswordSession | null> {
+  const response = await fetch(
+    `${env.supabaseUrl.replace(/\/+$/u, "")}/auth/v1/token?grant_type=refresh_token`,
+    {
+      method: "POST",
+      headers: {
+        apikey: env.supabaseAnonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store",
+      redirect: "error",
+    },
+  ).catch(() => null);
+  if (!response?.ok) return null;
+  try {
+    const value = await response.json();
+    const accessToken = String(value?.access_token || "");
+    const nextRefreshToken = String(value?.refresh_token || "");
+    if (!accessToken || !nextRefreshToken) return null;
+    return {
+      access_token: accessToken,
+      refresh_token: nextRefreshToken,
+      expires_at: Number.isFinite(Number(value?.expires_at))
+        ? Number(value.expires_at)
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function firstActivationRow(value: ActivatedStaffRow[] | null): ActivatedStaffRow | null {
+  return Array.isArray(value) && value[0] && typeof value[0] === "object"
+    ? value[0]
+    : null;
+}
+
+function activatedStaff(row: ActivatedStaffRow): StaffSecurityRow {
+  return {
+    id: String(row.staff_user_id || ""),
+    email: String(row.staff_email || ""),
+    display_name: String(row.staff_display_name || "Staff"),
+    status: String(row.staff_status || "onboarding"),
+    role: String(row.staff_role || "game_admin"),
+    permission_version: Number(row.permission_version || 0),
+    security_version: Number(row.security_version || 0),
+    mfa_required: row.mfa_required !== false,
+  };
+}
+
+function isEmailNotConfirmed(
+  error: { readonly message?: string; readonly code?: string } | null,
+): boolean {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  return code === "email_not_confirmed" || message.includes("email not confirmed");
 }
 
 async function readStaffLoginInput(request: Request): Promise<
@@ -263,6 +385,14 @@ function inputFailure(status: number, code: string, message: string) {
     ok: false as const,
     response: jsonError(status, { code, message, retryable: false }),
   };
+}
+
+function emailVerificationRequiredResponse(): Response {
+  return jsonError(403, {
+    code: "staff_email_verification_required",
+    message: "Verify your email address before signing in.",
+    retryable: false,
+  });
 }
 
 function authenticationThrottledResponse(
