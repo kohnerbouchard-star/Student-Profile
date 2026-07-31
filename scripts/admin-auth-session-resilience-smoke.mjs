@@ -5,7 +5,6 @@ import vm from "node:vm";
 const managerSource = await readFile("admin/auth-session-manager.js", "utf8");
 const gateSource = await readFile("admin/session-gate.js", "utf8");
 const SESSION_KEY = "econovaria.admin.auth.v1";
-const GAME_KEY = "econovaria.admin.selected-game.v1";
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const CSRF = "C".repeat(43);
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -77,6 +76,17 @@ function statusPayload() {
 function createManagerRuntime(fetchImpl) {
   const sessionValues = new Map();
   const localValues = new Map();
+  let selectedGameId = "";
+  const gameSelection = Object.freeze({
+    read: () => selectedGameId,
+    write(value) {
+      selectedGameId = String(value || "").trim();
+      return selectedGameId;
+    },
+    clear() {
+      selectedGameId = "";
+    },
+  });
   const sessionStorage = {
     getItem: (key) => sessionValues.get(key) ?? null,
     setItem: (key, value) => sessionValues.set(key, String(value)),
@@ -91,6 +101,7 @@ function createManagerRuntime(fetchImpl) {
     fetch: fetchImpl,
     sessionStorage,
     localStorage,
+    EconovariaAdminGameSelection: gameSelection,
     crypto: { randomUUID: () => DEVICE_ID },
     EconovariaRuntimeConfig: Object.freeze({
       environment: "staging",
@@ -120,12 +131,12 @@ function createManagerRuntime(fetchImpl) {
     Set,
     String,
   });
-  return { manager: window.EconovariaAdminAuthSession, sessionStorage };
+  return { manager: window.EconovariaAdminAuthSession, sessionStorage, gameSelection };
 }
 
 {
   const requests = [];
-  const { manager, sessionStorage } = createManagerRuntime(async (url) => {
+  const { manager, sessionStorage, gameSelection } = createManagerRuntime(async (url) => {
     requests.push(url);
     if (/web-session-api\/status$/.test(url)) {
       return new Response(JSON.stringify(statusPayload()), {
@@ -145,7 +156,7 @@ function createManagerRuntime(fetchImpl) {
     throw new Error(`Unexpected request: ${url}`);
   });
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionRecord()));
-  sessionStorage.setItem(GAME_KEY, "game-1");
+  gameSelection.write("game-1");
 
   let failure;
   try {
@@ -163,11 +174,11 @@ function createManagerRuntime(fetchImpl) {
   assert.equal(failure?.retryable, true);
   assert.equal(failure?.terminal, false);
   assert.notEqual(sessionStorage.getItem(SESSION_KEY), null);
-  assert.equal(sessionStorage.getItem(GAME_KEY), "game-1");
+  assert.equal(gameSelection.read(), "game-1");
 }
 
 {
-  const { manager, sessionStorage } = createManagerRuntime(async () =>
+  const { manager, sessionStorage, gameSelection } = createManagerRuntime(async () =>
     new Response(JSON.stringify({
       error: {
         code: "staff_session_missing",
@@ -179,11 +190,11 @@ function createManagerRuntime(fetchImpl) {
     })
   );
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionRecord()));
-  sessionStorage.setItem(GAME_KEY, "game-1");
+  gameSelection.write("game-1");
 
   assert.equal(await manager.getUsableSession(), null);
   assert.equal(sessionStorage.getItem(SESSION_KEY), null);
-  assert.equal(sessionStorage.getItem(GAME_KEY), null);
+  assert.equal(gameSelection.read(), "");
 }
 
 {
