@@ -3,15 +3,56 @@ import { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
 
 export { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
 
+const NORMALIZED_RUNTIME_SUFFIXES = new Set([
+  "/players",
+  "/attendance/scans",
+  "/attendance/scan",
+]);
+
+export function runtimeMutationDispatch(
+  gameId: string,
+  suffix: string,
+  method: string,
+):
+  | { readonly kind: "direct"; readonly classroomPath: string }
+  | { readonly kind: "normalized" }
+  | null {
+  if (method !== "POST") return null;
+  if (suffix === "/join-code/reset") {
+    return {
+      kind: "direct",
+      classroomPath: `/games/${encodeURIComponent(gameId)}/join-code/reset`,
+    };
+  }
+  return NORMALIZED_RUNTIME_SUFFIXES.has(suffix)
+    ? { kind: "normalized" }
+    : null;
+}
+
 export async function handleRuntimeMutation(
   request: Request,
   context: any,
   gameId: string,
   suffix: string,
 ): Promise<Response | null> {
-  if (request.method !== "POST") return null;
+  const dispatch = runtimeMutationDispatch(
+    gameId,
+    suffix,
+    request.method,
+  );
+  if (!dispatch) return null;
 
   const value = await request.clone().json().catch(() => ({}));
+  if (dispatch.kind === "direct") {
+    return proxyClassroom(
+      request,
+      context,
+      dispatch.classroomPath,
+      "POST",
+      value,
+    );
+  }
+
   const normalized = normalizeRuntimeMutation(
     gameId,
     suffix,
