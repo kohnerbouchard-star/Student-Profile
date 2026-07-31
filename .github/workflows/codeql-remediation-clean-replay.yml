@@ -72,7 +72,7 @@ jobs:
           scripts/player-login-identity-smoke.mjs
           EOF
           sed -i 's/^          //' /tmp/expected-security-paths.txt
-          git diff --name-only | sort > /tmp/actual-security-paths.txt
+          git status --short | cut -c4- | sort > /tmp/actual-security-paths.txt
           diff -u /tmp/expected-security-paths.txt /tmp/actual-security-paths.txt
 
       - name: Apply compatibility and Deno type corrections
@@ -266,7 +266,7 @@ jobs:
           scripts/player-login-identity-smoke.mjs
           EOF
           sed -i 's/^          //' /tmp/expected-final-paths.txt
-          git diff --name-only | sort > /tmp/actual-final-paths.txt
+          git status --short | cut -c4- | sort > /tmp/actual-final-paths.txt
           diff -u /tmp/expected-final-paths.txt /tmp/actual-final-paths.txt
           git diff --check
 
