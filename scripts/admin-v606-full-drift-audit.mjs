@@ -70,8 +70,8 @@ const scopedRuntimeFiles = {
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
   "admin/interaction-quality.js": ["setButtonState", "aria-busy", "setFieldError", "aria-invalid", "setScannerProcessing", "setScannerCompleted", "setScannerError"],
   "admin/data-state-contracts.js": ["data-admin-data-state-panel", "adminDataState", "aria-live", "aria-busy", "econovaria:admin-data-state-changed", "onRequestLifecycle", "adoptMountedRoute"],
-  "admin/create-action-adapter.js": ["data-econovaria-action-source", "data-econovaria-action", "data-admin-terminal-action"],
-  "admin/player-access-code-bridge.js": ["data-admin-terminal-player-form", "data-admin-terminal-player-credentials", "data-admin-terminal-player-access-code"],
+  "admin/create-action-adapter.js": ["LOCAL_API_PREFIX", "delegatedFetch", "playerPayload", "contractPayload", "storePayload", "sendContractCreateOnce", "econovariaCreateActionFetch"],
+  "admin/player-access-code-bridge.js": ["createContext", "dispatchCredentialEvent", "econovaria:player-access-code-issued", "updatePlayerIdentity", 'credentials: "same-origin"', 'cache: "no-store"', "EconovariaPlayerAccessCodeBridge"],
 };
 const missingRuntimeTokens = [];
 for (const [path, tokens] of Object.entries(scopedRuntimeFiles)) {
