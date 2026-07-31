@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [mfaSource, mfaStyles, appStyles, loginSource, apiSource] = await Promise.all([
+const [mfaSource, mfaStyles, appStyles, loginSource, apiSource, html] = await Promise.all([
   read("frontend/src/core/admin-mfa.js"),
   read("frontend/src/styles/admin-mfa.css"),
   read("frontend/src/styles/app.css"),
   read("frontend/src/core/login.js"),
-  read("frontend/src/core/api.js")
+  read("frontend/src/core/api.js"),
+  read("index.html")
 ]);
 
 test("MFA is rendered as an internal login-card face", () => {
@@ -40,14 +41,39 @@ test("MFA controls remain wired to the existing API adapters", () => {
   assert.match(apiSource, /callSupabaseJsonRoute\("webSession", "\/logout"/);
 });
 
-test("Create Game navigation cannot invoke signup before the final step", () => {
-  assert.match(mfaSource, /button\.type = "button"/);
-  assert.match(mfaSource, /const submit = form\.querySelector\("button\[type='submit'\]"\)/);
-  assert.match(mfaSource, /stepThreeActions\.append\(stepThreeBack, submit\)/);
-  assert.match(mfaSource, /event\.stopImmediatePropagation\(\)/);
-  assert.match(loginSource, /addEventListener\(\s*"submit",\s*handleCreateGame/);
+test("public account creation and authenticated game creation remain separate", () => {
+  assert.match(html, /id="createForm"/);
+  assert.match(html, /id="adminCreateGameForm"/);
+  assert.match(html, /id="createNewAdminGame"/);
+
+  assert.match(
+    loginSource,
+    /getElementById\("createForm"\)\?\.addEventListener\("submit", handleCreateAccount\)/
+  );
+  assert.match(
+    loginSource,
+    /getElementById\("adminCreateGameForm"\)\?\.addEventListener\("submit", handleAdminCreateGame\)/
+  );
   assert.match(loginSource, /callStaffSignupApi\?\.\(input\)/);
-  assert.match(loginSource, /callSupabasePasswordSignIn\?\.\(/);
+  assert.match(loginSource, /callLicensingActivationApi\?\.\(null, \{/);
+  assert.match(loginSource, /newGameIdempotencyKey\(\)/);
+
+  const accountHandler = loginSource.slice(
+    loginSource.indexOf("async function handleCreateAccount"),
+    loginSource.indexOf("async function resendCreateVerification")
+  );
+  assert.doesNotMatch(accountHandler, /licenseCode|sessionName|difficulty|timeZone/);
+  assert.doesNotMatch(accountHandler, /callLicensingActivationApi|callSupabasePasswordSignIn/);
+
+  const gameHandler = loginSource.slice(
+    loginSource.indexOf("async function handleAdminCreateGame"),
+    loginSource.indexOf("async function resetAdminLogin")
+  );
+  assert.match(gameHandler, /licenseCode: text\("adminNewLicenseCode"\)/);
+  assert.match(gameHandler, /sessionName: text\("adminNewGameName"\)/);
+  assert.match(gameHandler, /timeZone: text\("adminNewGameTimeZone"\)/);
+  assert.match(gameHandler, /difficulty: text\("adminNewGameDifficulty"\)/);
+  assert.doesNotMatch(gameHandler, /callStaffSignupApi|createEmail|createAccessCode/);
 });
 
 test("Timezone list is complete, silent, and device-first", () => {
