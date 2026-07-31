@@ -1,41 +1,69 @@
+import { readTrustedClientIp } from "../../../src/security/rateLimitKeying.ts";
+import { normalizeAdminRateLimitRequest } from "./progressionRateLimit.ts";
+
 declare const Deno: {
-  test(options: {
-    readonly name: string;
-    readonly permissions?: { readonly read?: boolean | readonly string[] };
-    readonly fn: () => void | Promise<void>;
-  }): void;
-  readTextFile(path: URL): Promise<string>;
+  test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test({
-  name: "Admin rate limiting normalizes gateway IP before trusted-IP extraction",
-  permissions: { read: true },
-  fn: async () => {
-    const source = await Deno.readTextFile(
-      new URL("./progressionRateLimit.ts", import.meta.url),
-    );
+Deno.test("Admin rate limiting canonicalizes gateway forwarding chains", () => {
+  const incoming = new Request("https://example.test/admin-api/session/bootstrap", {
+    headers: {
+      "x-real-ip": "198.51.100.10, 203.0.113.8",
+      "x-forwarded-for": "198.51.100.10, 203.0.113.8",
+      "client-ip": "192.0.2.44",
+      "forwarded": "for=192.0.2.45",
+    },
+  });
 
-    const binding = source.indexOf("bindGatewayTrustedClientIp(");
-    const extraction = source.indexOf("readTrustedClientIp(");
-    const rpc = source.indexOf('"consume_request_rate_limits_v1"');
-
-    assert(binding >= 0, "Admin rate limiting must bind gateway client IP metadata");
-    assert(
-      extraction > binding,
-      "trusted-IP extraction must use the gateway-normalized request",
-    );
-    assert(rpc > extraction, "rate-limit RPC must run after trusted-IP extraction");
-    assert(
-      source.includes("configuredHeader === \"x-forwarded-for\""),
-      "x-forwarded-for must remain prohibited as the authoritative configured header",
-    );
-    assert(
-      source.includes("readTrustedClientIp(\n    normalizedRequest,"),
-      "the normalized request must be passed to trusted-IP extraction",
-    );
-  },
+  const normalized = normalizeAdminRateLimitRequest(incoming, "x-real-ip");
+  assertEquals(
+    readTrustedClientIp(normalized.request, normalized.trustedHeader),
+    "203.0.113.8",
+    "the rightmost validated gateway hop must become the canonical client IP",
+  );
+  assertEquals(normalized.request.headers.get("x-real-ip"), "203.0.113.8");
+  assertEquals(normalized.request.headers.get("x-forwarded-for"), null);
+  assertEquals(normalized.request.headers.get("client-ip"), null);
+  assertEquals(normalized.request.headers.get("forwarded"), null);
 });
 
-function assert(value: unknown, message: string): asserts value {
-  if (!value) throw new Error(message);
+Deno.test("Admin rate limiting preserves a valid proxy-overwritten direct IP", () => {
+  const incoming = new Request("https://example.test/admin-api/session/bootstrap", {
+    headers: {
+      "x-real-ip": "203.0.113.19",
+      "x-forwarded-for": "198.51.100.4, 192.0.2.7",
+      "true-client-ip": "192.0.2.55",
+    },
+  });
+
+  const normalized = normalizeAdminRateLimitRequest(incoming, "x-real-ip");
+  assertEquals(
+    readTrustedClientIp(normalized.request, normalized.trustedHeader),
+    "203.0.113.19",
+  );
+  assertEquals(normalized.request.headers.get("x-forwarded-for"), null);
+  assertEquals(normalized.request.headers.get("true-client-ip"), null);
+});
+
+Deno.test("Admin rate limiting rejects x-forwarded-for as the authoritative header", () => {
+  let rejected = false;
+  try {
+    normalizeAdminRateLimitRequest(
+      new Request("https://example.test/admin-api/session/bootstrap"),
+      "x-forwarded-for",
+    );
+  } catch {
+    rejected = true;
+  }
+  assertEquals(rejected, true);
+});
+
+function assertEquals(
+  actual: unknown,
+  expected: unknown,
+  message = "values differ",
+): void {
+  if (actual !== expected) {
+    throw new Error(`${message}: expected ${String(expected)}, received ${String(actual)}`);
+  }
 }
