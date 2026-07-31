@@ -42,7 +42,7 @@
     return text(
       model.gameId || model.activeGameId || model.selectedGameSessionId ||
       model.activeGame?.id || model.selectedGame?.id ||
-      window.sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+      window.EconovariaAdminGameSelection?.read?.(),
     );
   }
 

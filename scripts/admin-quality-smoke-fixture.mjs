@@ -356,7 +356,7 @@ export async function createQualityHarness(name) {
       "econovaria.admin.auth.v1",
       JSON.stringify(sessionValue),
     );
-    sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+    window.name = `econovaria:admin-game:v1:${gameId}`;
     window.currentSession = bridgeValue.currentSession;
     window.state = window.state || {};
     window.state.staffSession = bridgeValue.staffSession;

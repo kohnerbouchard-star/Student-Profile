@@ -520,10 +520,19 @@ function generateSessionToken(): string {
 
 function generateCompactCode(length: number): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return [...bytes]
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join("");
+  const maximumUnbiasedByte = 256 - (256 % alphabet.length);
+  let output = "";
+
+  while (output.length < length) {
+    const bytes = crypto.getRandomValues(new Uint8Array(length - output.length));
+    for (const byte of bytes) {
+      if (byte >= maximumUnbiasedByte) continue;
+      output += alphabet[byte % alphabet.length];
+      if (output.length === length) break;
+    }
+  }
+
+  return output;
 }
 
 function privatePlayerResponseHeaders(): HeadersInit {

@@ -112,7 +112,7 @@ function readAdminCsrf() {
 
 function readSelectedAdminGameId() {
   return String(
-    window.sessionStorage.getItem(ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY) || ""
+    window.EconovariaAdminGameSelection?.read?.() || ""
   ).trim();
 }
 

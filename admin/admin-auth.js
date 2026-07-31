@@ -54,7 +54,7 @@
   }
 
   function readSelectedGameId() {
-    return String(window.sessionStorage.getItem(SELECTED_GAME_KEY) || "").trim();
+    return String(window.EconovariaAdminGameSelection?.read?.() || "").trim();
   }
 
   function sessionIsExpired(session) {
@@ -129,7 +129,7 @@
   function clearTransferredSession() {
     try {
       sessionManager?.clear();
-      window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+      window.EconovariaAdminGameSelection?.clear?.();
       window.sessionStorage.removeItem(IDLE_SEED_FINGERPRINT_KEY);
     } catch (_) {}
     window.ECONOVARIA_CSRF_TOKEN = "";

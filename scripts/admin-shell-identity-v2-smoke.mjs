@@ -14,6 +14,7 @@ const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => 
 const expectedScripts = [
   "../runtime-config.env.js",
   "../frontend/src/core/runtime-config.js",
+  "../frontend/src/core/admin-game-selection.js",
   "./auth-session-manager.js",
   "./session-gate.js",
   "./admin-auth.js",

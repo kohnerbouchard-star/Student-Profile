@@ -47,7 +47,10 @@ Deno.serve(async (request: Request) => {
   if (bodyResult.ok === false) return bodyResult.response;
   const policy = validateStaffPassword(bodyResult.password);
   if (policy.ok === false) {
-    return json(request, 400, errorBody(policy.code, policy.message));
+    return json(request, 400, errorBody(
+      policy.code || "invalid_password",
+      policy.message || "Password does not meet the administrator security policy.",
+    ));
   }
 
   const env = readEdgeSupabaseEnv();

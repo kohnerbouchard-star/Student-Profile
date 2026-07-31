@@ -86,6 +86,7 @@ function authorizationPayload() {
 function createRuntime(fetchImpl) {
   const sessionValues = new Map();
   const localValues = new Map();
+  let selectedGameId = "";
   const sessionStorage = {
     getItem: (key) => sessionValues.get(key) ?? null,
     setItem: (key, value) => sessionValues.set(key, String(value)),
@@ -96,10 +97,21 @@ function createRuntime(fetchImpl) {
     setItem: (key, value) => localValues.set(key, String(value)),
     removeItem: (key) => localValues.delete(key),
   };
+  const gameSelection = Object.freeze({
+    read: () => selectedGameId,
+    write(value) {
+      selectedGameId = String(value || "").trim();
+      return selectedGameId;
+    },
+    clear() {
+      selectedGameId = "";
+    },
+  });
   const window = {
     fetch: fetchImpl,
     sessionStorage,
     localStorage,
+    EconovariaAdminGameSelection: gameSelection,
     crypto: { randomUUID: () => DEVICE_ID },
     EconovariaRuntimeConfig: Object.freeze({
       environment: "staging",
@@ -130,12 +142,12 @@ function createRuntime(fetchImpl) {
     Set,
     String,
   });
-  return { manager: window.EconovariaAdminAuthSession, sessionStorage };
+  return { manager: window.EconovariaAdminAuthSession, sessionStorage, gameSelection };
 }
 
 {
   let calls = 0;
-  const { manager, sessionStorage } = createRuntime(async () => {
+  const { manager, sessionStorage, gameSelection } = createRuntime(async () => {
     calls += 1;
     throw new Error("unexpected fetch");
   });
@@ -159,7 +171,7 @@ function createRuntime(fetchImpl) {
   const pendingStatus = new Promise((resolve) => {
     releaseStatus = resolve;
   });
-  const { manager, sessionStorage } = createRuntime(async (url, init) => {
+  const { manager, sessionStorage, gameSelection } = createRuntime(async (url, init) => {
     assert.equal(init.credentials, "include");
     assert.equal(init.headers.Authorization, undefined);
     assert.equal(init.headers.apikey, "sb_publishable_runtime_fixture");
@@ -192,7 +204,7 @@ function createRuntime(fetchImpl) {
       expiresAt: new Date(Date.now() - 5000).toISOString(),
     })),
   );
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+  gameSelection.write("game-1");
 
   const first = manager.getUsableSession();
   const second = manager.getUsableSession();
@@ -222,7 +234,7 @@ function createRuntime(fetchImpl) {
 
 {
   let calls = 0;
-  const { manager, sessionStorage } = createRuntime(async () => {
+  const { manager, sessionStorage, gameSelection } = createRuntime(async () => {
     calls += 1;
     return new Response(JSON.stringify({ ok: false }), { status: 401 });
   });
@@ -232,17 +244,17 @@ function createRuntime(fetchImpl) {
       expiresAt: new Date(Date.now() - 5000).toISOString(),
     })),
   );
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+  gameSelection.write("game-1");
 
   assert.equal(await manager.getUsableSession(), null);
   assert.equal(calls, 1, "authorization ran after rejected status");
   assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
-  assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
+  assert.equal(gameSelection.read(), "");
 }
 
 {
   let request = null;
-  const { manager, sessionStorage } = createRuntime(async (url, init) => {
+  const { manager, sessionStorage, gameSelection } = createRuntime(async (url, init) => {
     request = { url, init };
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   });
@@ -250,14 +262,14 @@ function createRuntime(fetchImpl) {
     "econovaria.admin.auth.v1",
     JSON.stringify(safeSession()),
   );
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+  gameSelection.write("game-1");
 
   await manager.signOut();
   assert.match(request.url, /web-session-api\/logout$/);
   assert.equal(request.init.credentials, "include");
   assert.equal(request.init.headers.Authorization, undefined);
   assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
-  assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
+  assert.equal(gameSelection.read(), "");
 }
 
 {

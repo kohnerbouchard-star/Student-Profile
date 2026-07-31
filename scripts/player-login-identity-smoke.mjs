@@ -11,6 +11,15 @@ const PLAYER_STORAGE_KEY = "econovaria.player.auth.v1";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 const SESSION_COOKIE = "econovaria_player_session=v1.AAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBB; Path=/; HttpOnly; SameSite=Strict";
 
+function isJsDelivrRequest(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "https:" && url.hostname === "cdn.jsdelivr.net";
+  } catch (_) {
+    return false;
+  }
+}
+
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
@@ -25,7 +34,7 @@ const proxyRequests = [];
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
 page.on("requestfailed", (request) => {
-  if (request.url().includes("cdn.jsdelivr.net")) return;
+  if (isJsDelivrRequest(request.url())) return;
   const failure = request.failure()?.errorText || "";
   if (request.resourceType() === "media" && failure.includes("ERR_ABORTED")) return;
   errors.push(`requestfailed: ${request.method()} ${request.url()} ${failure}`);

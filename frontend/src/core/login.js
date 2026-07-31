@@ -182,7 +182,7 @@ window.Econovaria.login = window.Econovaria.login || {};
 
   function clearAdminState() {
     runtime.sessionStorage.removeItem(adminStateKey());
-    runtime.sessionStorage.removeItem(selectedGameStorageKey());
+    runtime.EconovariaAdminGameSelection?.clear?.();
   }
 
   function openPlayerTerminal() {
@@ -307,7 +307,7 @@ window.Econovaria.login = window.Econovaria.login || {};
   function openAdminTerminal(gameSessionId) {
     const id = String(gameSessionId || "").trim();
     if (!id) return;
-    runtime.sessionStorage.setItem(selectedGameStorageKey(), id);
+    runtime.EconovariaAdminGameSelection?.write?.(id);
     runtime.location.assign(new URL("admin/", runtime.document.baseURI).href);
   }
 

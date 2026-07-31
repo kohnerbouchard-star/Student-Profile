@@ -171,7 +171,7 @@
       return;
     }
 
-    const selectedGameId = String(window.sessionStorage.getItem(SELECTED_GAME_KEY) || "").trim();
+    const selectedGameId = String(window.EconovariaAdminGameSelection?.read?.() || "").trim();
     if (!selectedGameId) {
       redirectToMainLogin("select-game");
       return;
