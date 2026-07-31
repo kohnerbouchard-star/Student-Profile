@@ -1,8 +1,8 @@
 /* Login-card MFA and Create Game internal navigation. The existing login visual system remains authoritative. */
 
 .login-panel-frame {
-  height: min(640px, calc(100vh - 124px));
-  min-height: 590px;
+  height: min(614px, calc(100vh - 124px));
+  min-height: 560px;
 }
 
 .login-panel {
@@ -252,7 +252,7 @@
 
 @media (max-width: 760px) {
   .login-panel-frame {
-    height: min(640px, calc(100vh - 56px));
+    height: min(614px, calc(100vh - 56px));
     min-height: 0;
   }
 }
