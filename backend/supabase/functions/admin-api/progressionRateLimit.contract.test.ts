@@ -45,6 +45,29 @@ Deno.test("Admin rate limiting preserves a valid proxy-overwritten direct IP", (
   assertEquals(normalized.request.headers.get("true-client-ip"), null);
 });
 
+Deno.test("Admin IP normalization does not disturb authenticated POST bodies", async () => {
+  const body = { source: "admin_share_panel" };
+  const incoming = new Request(
+    "https://example.test/admin-api/games/game-1/join-code/reset",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "203.0.113.19",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  const normalized = normalizeAdminRateLimitRequest(incoming, "x-real-ip");
+  assertEquals(normalized.request.body, null);
+  assertEquals(
+    JSON.stringify(await incoming.json()),
+    JSON.stringify(body),
+    "network metadata normalization must leave the application body readable",
+  );
+});
+
 Deno.test("Admin rate limiting rejects x-forwarded-for as the authoritative header", () => {
   let rejected = false;
   try {
