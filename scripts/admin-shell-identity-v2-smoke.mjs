@@ -35,7 +35,6 @@ const expectedScripts = [
   "./data-state-contracts.js",
   "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
-  "./shape-accurate-skeletons.js",
   "./admin-bootstrap.js",
 ];
 
@@ -43,6 +42,7 @@ assert(
   JSON.stringify(scripts) === JSON.stringify(expectedScripts),
   `Admin script order drifted. Expected ${expectedScripts.join(", ")}; received ${scripts.join(", ")}.`,
 );
+assert(!html.includes("shape-accurate-skeletons.js"), "The removed duplicate Admin skeleton runtime is loaded.");
 assert(!html.includes("game-code-modal-repair.js"), "A duplicate Game Code runtime controller is loaded.");
 assert(
   html.includes('meta name="econovaria-admin-api-base" content=""'),
