@@ -70,12 +70,42 @@ const CANONICAL_REPLAY = `async function replayThroughBrowser(page, original) {
     return { status: response.status, payload: await response.json().catch(() => null) };
   }, original);
 }`;
+const CONST_PAGE = `  const page = await context.newPage();`;
+const REASSIGNABLE_PAGE = `  let page = await context.newPage();`;
+const REPLAY_CALL = `  const replay = await replayThroughBrowser(page, original);`;
+const REPLAY_CALL_WITH_PAGE_STATE = `  const selectedGameId = await page.evaluate(() =>
+    sessionStorage.getItem("econovaria.admin.selected-game.v1") || ""
+  );
+  const replay = await replayThroughBrowser(page, original);`;
 const REPLAY_RELOAD = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdmin(page);
   evidence.replayBalance = await readBalance(page);`;
-const REPLAY_REFRESH_SAFE = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 }).catch((error) => {
-    if (!String(error?.message || error).includes("ERR_ABORTED")) throw error;
-  });
+const REPLAY_REFRESH_SAFE = `  try {
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (!message.includes("ERR_ABORTED") && !message.includes("Not attached to an active page")) {
+      throw error;
+    }
+
+    const activePage = context.pages().find((candidate) => !candidate.isClosed());
+    if (activePage) {
+      page = activePage;
+    } else {
+      page = await context.newPage();
+      instrument(page);
+      await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 120_000 });
+      if (selectedGameId) {
+        await page.evaluate((gameId) => {
+          sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+        }, selectedGameId);
+      }
+      await page.goto(\`${BASE_URL}/admin/\`, {
+        waitUntil: "domcontentloaded",
+        timeout: 120_000,
+      });
+    }
+  }
   await waitForAdmin(page);
   evidence.replayBalance = await readBalance(page);`;
 
@@ -105,6 +135,18 @@ source = replaceExactlyOnce(
   "Admin ledger canonical replay",
   INTERNAL_REPLAY,
   CANONICAL_REPLAY,
+);
+source = replaceExactlyOnce(
+  source,
+  "Admin ledger mutable page handle",
+  CONST_PAGE,
+  REASSIGNABLE_PAGE,
+);
+source = replaceExactlyOnce(
+  source,
+  "Admin ledger replay page state",
+  REPLAY_CALL,
+  REPLAY_CALL_WITH_PAGE_STATE,
 );
 source = replaceExactlyOnce(
   source,
