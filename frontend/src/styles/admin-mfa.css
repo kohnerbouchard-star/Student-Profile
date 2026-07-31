@@ -1,180 +1,321 @@
-.econovaria-mfa-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(2, 6, 23, 0.88);
-  backdrop-filter: blur(10px);
+/* Login-card MFA and Create Game internal navigation. The existing login visual system remains authoritative. */
+
+.login-panel-frame {
+  height: min(614px, calc(100vh - 124px));
+  min-height: 560px;
 }
 
-.econovaria-mfa-overlay[hidden] {
+.login-panel {
+  height: 100%;
+}
+
+.login-root .mode-pane {
+  height: 270px;
+  min-height: 270px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.login-root .panel-footer {
+  margin-top: auto;
+}
+
+.login-root .mode-tabs.is-auth-locked {
+  opacity: 0.64;
+}
+
+.login-root .mode-tab:disabled {
+  cursor: not-allowed;
+}
+
+.econovaria-mfa-card-host.hidden,
+.econovaria-create-step.hidden {
   display: none;
 }
 
-.econovaria-mfa-dialog {
-  width: min(520px, 100%);
-  max-height: min(760px, calc(100vh - 48px));
-  overflow: auto;
-  border: 1px solid rgba(56, 189, 248, 0.55);
-  border-radius: 18px;
-  padding: 24px;
-  background: linear-gradient(155deg, rgba(15, 23, 42, 0.99), rgba(17, 24, 39, 0.99));
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), 0 0 42px rgba(14, 165, 233, 0.16);
-  color: #e2e8f0;
+.econovaria-mfa-card-face {
+  display: grid;
+  gap: 8px;
+}
+
+.econovaria-mfa-breadcrumb,
+.econovaria-create-back {
+  width: max-content;
+  border: 0;
+  padding: 0;
+  color: color-mix(in srgb, var(--login-input) 72%, white 8%);
+  background: transparent;
+  cursor: pointer;
+  font: 800 9px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.econovaria-mfa-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+
+.econovaria-mfa-breadcrumb:hover,
+.econovaria-create-back:hover {
+  text-decoration: underline;
+}
+
+.econovaria-mfa-breadcrumb:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.econovaria-mfa-back-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .econovaria-mfa-eyebrow {
-  margin: 0 0 8px;
-  color: #67e8f9;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  margin: 0;
+  color: color-mix(in srgb, var(--login-input) 66%, transparent);
+  font: 900 8px/1.2 Rajdhani, "Arial Narrow", Impact, sans-serif;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 .econovaria-mfa-title {
   margin: 0;
-  font-size: clamp(1.45rem, 5vw, 2rem);
-  line-height: 1.15;
+  color: var(--login-text);
+  font: 800 18px/1.05 Rajdhani, "Arial Narrow", Impact, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .econovaria-mfa-description {
-  margin: 12px 0 20px;
-  color: #cbd5e1;
-  line-height: 1.6;
+  margin: 0 0 2px;
+  color: rgba(255, 255, 255, 0.46);
+  font: 500 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
 }
 
 .econovaria-mfa-setup {
   display: grid;
-  gap: 16px;
-  margin-bottom: 20px;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
 }
 
 .econovaria-mfa-qr-wrap {
   display: grid;
+  width: 116px;
+  height: 116px;
   place-items: center;
-  padding: 16px;
-  border-radius: 14px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--login-input) 30%, white 10%);
   background: #ffffff;
 }
 
 .econovaria-mfa-qr {
   display: block;
-  width: min(260px, 100%);
-  height: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.econovaria-mfa-secret-wrap {
+  min-width: 0;
 }
 
 .econovaria-mfa-secret-label {
   display: block;
-  margin-bottom: 7px;
-  color: #94a3b8;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  color: color-mix(in srgb, var(--login-input) 56%, transparent);
+  font: 900 8px/1.2 Rajdhani, "Arial Narrow", Impact, sans-serif;
+  letter-spacing: 0.17em;
   text-transform: uppercase;
 }
 
 .econovaria-mfa-secret {
   display: block;
+  max-height: 76px;
+  overflow: auto;
   overflow-wrap: anywhere;
-  border: 1px solid rgba(148, 163, 184, 0.38);
-  border-radius: 10px;
-  padding: 11px 12px;
-  background: rgba(2, 6, 23, 0.72);
-  color: #f8fafc;
-  font: 700 0.92rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border: 1px solid color-mix(in srgb, var(--login-input) 22%, var(--login-border));
+  padding: 8px;
+  color: var(--login-input-text);
+  background: rgba(0, 0, 0, 0.16);
+  font: 700 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
   user-select: all;
 }
 
 .econovaria-mfa-form {
   display: grid;
-  gap: 14px;
-}
-
-.econovaria-mfa-form label {
-  display: grid;
-  gap: 7px;
-  color: #cbd5e1;
-  font-weight: 700;
+  gap: 8px;
 }
 
 .econovaria-mfa-code {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid rgba(56, 189, 248, 0.5);
-  border-radius: 11px;
-  padding: 13px 14px;
-  background: rgba(2, 6, 23, 0.72);
-  color: #f8fafc;
-  font: 800 1.35rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.3em;
   text-align: center;
-}
-
-.econovaria-mfa-code:focus-visible {
-  outline: 3px solid rgba(34, 211, 238, 0.36);
-  outline-offset: 2px;
+  font-size: 16px !important;
+  font-weight: 800;
+  letter-spacing: 0.32em !important;
 }
 
 .econovaria-mfa-message {
-  min-height: 1.5em;
+  min-height: 14px;
   margin: 0;
-  color: #cbd5e1;
-  line-height: 1.45;
+  color: rgba(74, 222, 128, 0.9);
+  font: 600 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
 }
 
 .econovaria-mfa-message.is-error {
-  color: #fda4af;
-}
-
-.econovaria-mfa-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.econovaria-mfa-actions button {
-  min-height: 42px;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-weight: 800;
-  cursor: pointer;
+  color: rgba(255, 90, 95, 0.92);
 }
 
 .econovaria-mfa-submit {
-  flex: 1 1 220px;
-  border: 1px solid #22d3ee;
-  background: linear-gradient(135deg, #0891b2, #2563eb);
-  color: #ffffff;
+  margin-top: 0;
 }
 
-.econovaria-mfa-cancel {
-  flex: 0 1 auto;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: transparent;
-  color: #cbd5e1;
+.econovaria-create-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
-.econovaria-mfa-actions button:disabled {
-  cursor: wait;
-  opacity: 0.65;
+.econovaria-create-progress-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 0 6px;
+  color: rgba(255, 255, 255, 0.27);
+  font: 800 7px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-@media (max-width: 560px) {
-  .econovaria-mfa-overlay {
-    padding: 12px;
+.econovaria-create-progress-item b {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  place-items: center;
+  border: 1px solid currentColor;
+  font-size: 8px;
+}
+
+.econovaria-create-progress-item.is-active {
+  border-bottom-color: color-mix(in srgb, var(--login-input) 68%, transparent);
+  color: var(--login-input-text);
+}
+
+.econovaria-create-progress-item.is-complete {
+  color: color-mix(in srgb, var(--login-green) 70%, transparent);
+}
+
+.econovaria-create-step {
+  display: grid;
+  gap: 10px;
+}
+
+.econovaria-create-step .two-col {
+  grid-template-columns: 1fr;
+}
+
+.econovaria-create-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.econovaria-create-actions.split {
+  justify-content: space-between;
+}
+
+.econovaria-create-actions .submit-btn {
+  width: auto;
+  min-width: 132px;
+  padding: 0 16px;
+}
+
+.login-root #gameTimeZone,
+.login-root #difficultyLevel {
+  color: var(--login-input-text);
+}
+
+.login-root #gameTimeZoneHelp {
+  color: rgba(255, 255, 255, 0.3);
+  font: 500 8px/1.35 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 760px) {
+  .login-panel-frame {
+    height: min(614px, calc(100vh - 56px));
+    min-height: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-root .mode-pane {
+    height: 270px;
+    min-height: 270px;
   }
 
-  .econovaria-mfa-dialog {
-    max-height: calc(100vh - 24px);
-    padding: 19px;
+  .econovaria-mfa-setup {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .econovaria-mfa-qr-wrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  .econovaria-create-progress-item > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .econovaria-mfa-overlay {
-    backdrop-filter: none;
+  .econovaria-mfa-card-face,
+  .econovaria-create-step {
+    scroll-behavior: auto;
   }
+}
+
+.econovaria-mfa-form.hidden,
+.econovaria-mfa-setup.hidden {
+  display: none;
+}
+
+.econovaria-mfa-setup-continue {
+  grid-column: 1 / -1;
+}
+
+.econovaria-mfa-verify-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.econovaria-mfa-inline-back {
+  width: auto;
+  border: 0;
+  padding: 0;
+  color: color-mix(in srgb, var(--login-input) 72%, white 8%);
+  background: transparent;
+  cursor: pointer;
+  font: 800 8px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.econovaria-mfa-verify-actions .submit-btn {
+  width: auto;
+  min-width: 160px;
+  padding: 0 14px;
 }

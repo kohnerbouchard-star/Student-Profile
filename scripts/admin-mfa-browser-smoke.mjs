@@ -77,6 +77,17 @@ function assertPublicRequest(request, { csrf = "" } = {}) {
   if (csrf) assert.equal(headers["x-econovaria-csrf-token"], csrf);
 }
 
+function assertStableBox(before, after) {
+  assert.ok(before, "Login card did not have a measurable box before MFA.");
+  assert.ok(after, "Login card did not have a measurable box during MFA.");
+  for (const key of ["x", "y", "width", "height"]) {
+    assert.ok(
+      Math.abs(before[key] - after[key]) <= 1,
+      `Login card ${key} shifted from ${before[key]} to ${after[key]}.`,
+    );
+  }
+}
+
 let browser;
 try {
   await waitForServer();
@@ -232,13 +243,27 @@ try {
   await page.goto(`${origin}/?mode=admin&mfa-smoke=1`, {
     waitUntil: "domcontentloaded",
   });
+  const card = page.locator(".login-panel-frame");
+  const cardBeforeMfa = await card.boundingBox();
+
   await page.locator("#adminEmail").fill("admin@example.test");
   await page.locator("#adminAccessCode").fill("SecurePassword123!");
   await page.locator("#adminForm button[type='submit']").click();
 
-  const dialog = page.locator(".econovaria-mfa-dialog");
-  await dialog.waitFor({ state: "visible", timeout: 10_000 });
-  assert.equal(await dialog.getAttribute("aria-modal"), "true");
+  const mfaHost = page.locator("#econovariaAdminMfaStep:not(.hidden)");
+  await mfaHost.waitFor({ state: "visible", timeout: 10_000 });
+  assert.equal(await page.locator(".econovaria-mfa-overlay").count(), 0);
+  assert.equal(await page.locator(".econovaria-mfa-dialog").count(), 0);
+  assert.equal(
+    await mfaHost.evaluate((host) => host.parentElement?.id),
+    "adminPane",
+  );
+  assert.equal(
+    await page.locator(".econovaria-mfa-breadcrumb").getAttribute("aria-label"),
+    "Back to administrator sign in",
+  );
+  assertStableBox(cardBeforeMfa, await card.boundingBox());
+
   assert.equal(await page.locator(".econovaria-mfa-secret").textContent(), SECRET);
   const qrImage = page.locator(".econovaria-mfa-qr");
   assert.equal(await qrImage.getAttribute("src"), QR_CODE);
@@ -250,11 +275,15 @@ try {
     });
   });
 
+  await page.locator(".econovaria-mfa-setup-continue").click();
+  await page.locator(".econovaria-mfa-form:not(.hidden)").waitFor({ state: "visible" });
+  assertStableBox(cardBeforeMfa, await card.boundingBox());
   await page.locator(".econovaria-mfa-code").fill("123456");
   await page.locator(".econovaria-mfa-submit").click();
-  await dialog.waitFor({ state: "detached", timeout: 10_000 });
+  await mfaHost.waitFor({ state: "hidden", timeout: 10_000 });
   await page.locator("#adminGamesStep:not(.hidden)").waitFor({ state: "visible" });
   assert.match(await page.locator("#adminGameList").textContent(), /MFA Test Game/);
+  assertStableBox(cardBeforeMfa, await card.boundingBox());
 
   const storage = await page.evaluate(() => ({
     admin: sessionStorage.getItem("econovaria.admin.auth.v1"),
@@ -280,7 +309,7 @@ try {
     "/functions/v1/web-session-api/mfa/verify",
   ]);
   assert.deepEqual(browserErrors, []);
-  console.log("Admin password login, rendered TOTP QR enrollment, AAL2 elevation, and browser secrecy smoke passed.");
+  console.log("Admin password login, in-card TOTP enrollment, fixed-card AAL2 elevation, and browser secrecy smoke passed.");
 } finally {
   await browser?.close();
   server.kill("SIGTERM");
