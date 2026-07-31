@@ -1,0 +1,121 @@
+name: Repair Admin auth resilience fixture
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.head.ref == 'agent/codeql-auth-resilience-runner' && github.event.pull_request.base.ref == 'agent/codeql-remediation-clean'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out security remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/codeql-remediation-clean
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Migrate resilience fixture to selected-game adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/admin-auth-session-resilience-smoke.mjs")
+          source = path.read_text(encoding="utf-8")
+
+          def replace_once(old, new):
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one fixture anchor, found {count}: {old[:80]!r}")
+              source = source.replace(old, new, 1)
+
+          def replace_count(old, new, expected):
+              global source
+              count = source.count(old)
+              if count != expected:
+                  raise SystemExit(f"Expected {expected} fixture anchors, found {count}: {old[:80]!r}")
+              source = source.replace(old, new)
+
+          replace_once('const GAME_KEY = "econovaria.admin.selected-game.v1";\n', '')
+          replace_once(
+              '  const localValues = new Map();\n  const sessionStorage = {',
+              '  const localValues = new Map();\n'
+              '  let selectedGameId = "";\n'
+              '  const gameSelection = Object.freeze({\n'
+              '    read: () => selectedGameId,\n'
+              '    write(value) {\n'
+              '      selectedGameId = String(value || "").trim();\n'
+              '      return selectedGameId;\n'
+              '    },\n'
+              '    clear() {\n'
+              '      selectedGameId = "";\n'
+              '    },\n'
+              '  });\n'
+              '  const sessionStorage = {',
+          )
+          replace_once(
+              '    sessionStorage,\n    localStorage,',
+              '    sessionStorage,\n    localStorage,\n    EconovariaAdminGameSelection: gameSelection,',
+          )
+          replace_once(
+              '  return { manager: window.EconovariaAdminAuthSession, sessionStorage };',
+              '  return { manager: window.EconovariaAdminAuthSession, sessionStorage, gameSelection };',
+          )
+          replace_count(
+              'const { manager, sessionStorage } = createManagerRuntime(',
+              'const { manager, sessionStorage, gameSelection } = createManagerRuntime(',
+              2,
+          )
+          replace_count(
+              '  sessionStorage.setItem(GAME_KEY, "game-1");',
+              '  gameSelection.write("game-1");',
+              2,
+          )
+          replace_once(
+              '  assert.equal(sessionStorage.getItem(GAME_KEY), "game-1");',
+              '  assert.equal(gameSelection.read(), "game-1");',
+          )
+          replace_once(
+              '  assert.equal(sessionStorage.getItem(GAME_KEY), null);',
+              '  assert.equal(gameSelection.read(), "");',
+          )
+
+          path.write_text(source, encoding="utf-8")
+          PY
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate auth boundary and repository suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/admin-auth-session-resilience-smoke.mjs
+          node scripts/admin-session-manager-smoke.mjs
+          npm test
+
+      - name: Commit validated fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf scripts/__pycache__
+          git add -A
+          git diff --cached --check
+          git commit -m "test: migrate Admin auth resilience to selected-game adapter"
+          git push origin HEAD:agent/codeql-remediation-clean
