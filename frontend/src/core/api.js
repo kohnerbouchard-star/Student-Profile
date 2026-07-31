@@ -9,6 +9,7 @@ const ECONOVARIA_API_PLAYER_STATE_STORAGE_KEY = "econovaria.player.auth.v1";
 const ECONOVARIA_API_ADMIN_STATE_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ECONOVARIA_API_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 let inMemoryPlayerCsrfToken = "";
 let inMemoryAdminCsrfToken = "";
 
@@ -24,7 +25,6 @@ function getApiRouteUrl(surface, path) {
   if (!baseUrl) {
     throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
   }
-
   const routePath = String(path || "").startsWith("/")
     ? String(path || "")
     : `/${path || ""}`;
@@ -47,7 +47,6 @@ function getOrCreateDeviceId() {
       window.localStorage.getItem(ECONOVARIA_DEVICE_STORAGE_KEY) || ""
     ).trim().toLowerCase();
     if (DEVICE_ID_PATTERN.test(existing)) return existing;
-
     const generated = String(window.crypto?.randomUUID?.() || "").toLowerCase();
     if (!DEVICE_ID_PATTERN.test(generated)) {
       throw new Error("Secure device identifier generation is unavailable.");
@@ -159,7 +158,6 @@ function normalizeEdgeRouteError(
 async function callSupabaseJsonRoute(surface, path, options = {}) {
   const { publishableKey } = getSupabaseConfig();
   const method = String(options.method || "GET").toUpperCase();
-
   try {
     const headers = {
       apikey: publishableKey,
@@ -168,30 +166,17 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     if (options.requirePlayerCsrf === true) {
       const csrfToken = readPlayerCsrf();
       if (!CSRF_PATTERN.test(csrfToken)) {
-        return {
-          ok: false,
-          status: 401,
-          code: "player_session_invalid",
-          message: "Player sign-in is required.",
-          retryAfterSeconds: 0
-        };
+        return { ok: false, status: 401, code: "player_session_invalid", message: "Player sign-in is required.", retryAfterSeconds: 0 };
       }
       headers["x-econovaria-csrf-token"] = csrfToken;
     }
     if (options.requireCsrf === true) {
       const csrfToken = readAdminCsrf();
       if (!CSRF_PATTERN.test(csrfToken)) {
-        return {
-          ok: false,
-          status: 401,
-          code: "staff_session_invalid",
-          message: "Administrator sign-in is required.",
-          retryAfterSeconds: 0
-        };
+        return { ok: false, status: 401, code: "staff_session_invalid", message: "Administrator sign-in is required.", retryAfterSeconds: 0 };
       }
       headers["x-econovaria-csrf-token"] = csrfToken;
     }
-
     const requestOptions = {
       method,
       headers,
@@ -202,17 +187,13 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       headers["Content-Type"] = "application/json";
       requestOptions.body = JSON.stringify(options.body);
     }
-
     const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
     if (response.ok && result?.ok === true) {
-      if (surface === "player" || surface === "playerWebSession") {
-        rememberPlayerCsrf(result);
-      }
+      if (surface === "player" || surface === "playerWebSession") rememberPlayerCsrf(result);
       rememberAdminCsrf(result);
       return { status: response.status, ...result };
     }
-
     return normalizeEdgeRouteError(
       result,
       response.status,
@@ -233,18 +214,10 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
 
 async function callAdminBffJsonRoute(path, options = {}) {
   const constants = window.Econovaria?.core?.constants || {};
-  const baseUrl = String(constants.ADMIN_BFF_API_URL || "")
-    .trim()
-    .replace(/\/+$/, "");
+  const baseUrl = String(constants.ADMIN_BFF_API_URL || "").trim().replace(/\/+$/, "");
   const state = readSafeAdminState();
   if (!baseUrl || !state) {
-    return {
-      ok: false,
-      status: 401,
-      code: "staff_session_invalid",
-      message: "Administrator sign-in is required.",
-      retryAfterSeconds: 0
-    };
+    return { ok: false, status: 401, code: "staff_session_invalid", message: "Administrator sign-in is required.", retryAfterSeconds: 0 };
   }
 
   try {
@@ -258,29 +231,24 @@ async function callAdminBffJsonRoute(path, options = {}) {
     if (!["GET", "HEAD"].includes(method)) {
       headers["x-econovaria-csrf-token"] = state.csrfToken;
     }
-    const requestOptions = {
-      method,
-      headers,
-      credentials: "include",
-      cache: "no-store"
-    };
+    const idempotencyKey = String(options.idempotencyKey || "").trim();
+    if (idempotencyKey) {
+      if (!IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
+        return { ok: false, status: 400, code: "invalid_idempotency_key", message: "The request identifier is invalid.", retryAfterSeconds: 0 };
+      }
+      headers["x-idempotency-key"] = idempotencyKey;
+    }
+    const requestOptions = { method, headers, credentials: "include", cache: "no-store" };
     if (options.body !== undefined) {
       headers["Content-Type"] = "application/json";
       requestOptions.body = JSON.stringify(options.body);
     }
-
     const route = String(path || "").startsWith("/") ? path : `/${path}`;
     const response = await fetch(`${baseUrl}${route}`, requestOptions);
     const result = await readJsonResponse(response);
     return response.ok
       ? { status: response.status, ...result }
-      : normalizeEdgeRouteError(
-        result,
-        response.status,
-        options.fallbackCode,
-        options.fallbackMessage,
-        readRetryAfterSeconds(response)
-      );
+      : normalizeEdgeRouteError(result, response.status, options.fallbackCode, options.fallbackMessage, readRetryAfterSeconds(response));
   } catch (_) {
     return {
       ok: false,
@@ -302,8 +270,7 @@ function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
       accessCode: String(accessCode || "").trim()
     },
     fallbackCode: "player_login_failed",
-    fallbackMessage:
-      "Player login failed. Check the Game Code, Player ID, and Access Code."
+    fallbackMessage: "Player login failed. Check the Game Code, Player ID, and Access Code."
   });
 }
 
@@ -339,13 +306,7 @@ function callPlayerGameDashboardApi() {
 }
 
 async function ensureAdminAal2(status) {
-  if (
-    !status?.ok ||
-    status?.session?.mfaRequired === false ||
-    status?.session?.assuranceLevel === "aal2"
-  ) {
-    return status;
-  }
+  if (!status?.ok || status?.session?.mfaRequired === false || status?.session?.assuranceLevel === "aal2") return status;
   const mfa = await loadAdminMfaModule();
   const elevated = await mfa.ensureAal2(status);
   rememberAdminCsrf(elevated);
@@ -356,10 +317,7 @@ async function callSupabasePasswordSignIn(email, password) {
   const signIn = await callSupabaseJsonRoute("webSession", "/login", {
     method: "POST",
     credentials: "include",
-    body: {
-      email: String(email || "").trim(),
-      password: String(password || "")
-    },
+    body: { email: String(email || "").trim(), password: String(password || "") },
     fallbackCode: "admin_login_failed",
     fallbackMessage: "Admin email or password is invalid."
   });
@@ -385,13 +343,7 @@ async function callAdminWebSessionStatus(options = {}) {
     return await ensureAdminAal2(status);
   } catch (error) {
     clearAdminCsrf();
-    return {
-      ok: false,
-      status: 401,
-      code: "staff_mfa_required",
-      message: String(error?.message || "Administrator MFA verification is required."),
-      retryAfterSeconds: 0
-    };
+    return { ok: false, status: 401, code: "staff_mfa_required", message: String(error?.message || "Administrator MFA verification is required."), retryAfterSeconds: 0 };
   }
 }
 
@@ -421,9 +373,7 @@ function callAdminMfaEnroll(friendlyName) {
     method: "POST",
     credentials: "include",
     requireCsrf: true,
-    body: {
-      friendlyName: String(friendlyName || "Econovaria Admin").trim()
-    },
+    body: { friendlyName: String(friendlyName || "Econovaria Admin").trim() },
     fallbackCode: "staff_mfa_enrollment_failed",
     fallbackMessage: "Authenticator enrollment could not be started."
   });
@@ -451,29 +401,40 @@ function callStaffSignupApi(input) {
     body: {
       email: String(input?.email || "").trim(),
       password: String(input?.password || ""),
-      displayName: String(input?.displayName || "").trim(),
-      purchaseCode: String(input?.purchaseCode || "").trim(),
-      gameName: String(input?.gameName || "").trim(),
-      difficultyPreset: String(input?.difficultyPreset || "").trim(),
-      stockMarketWindow: {
-        timezone: String(input?.timeZone || "").trim()
-      }
+      displayName: String(input?.displayName || "").trim()
     },
     fallbackCode: "staff_signup_failed",
     fallbackMessage: "Staff account signup failed."
   });
 }
 
-function callLicensingActivationApi(_unusedCredential, input) {
-  return callAdminBffJsonRoute("/games/provision", {
+function callStaffSignupResendApi(continuationHandle) {
+  return callSupabaseJsonRoute("bootstrap", "/staff/signup/resend", {
     method: "POST",
+    body: { continuationHandle: String(continuationHandle || "").trim() },
+    fallbackCode: "staff_signup_verification_failed",
+    fallbackMessage: "The verification email could not be requested."
+  });
+}
+
+function callStaffSignupCancelApi(continuationHandle) {
+  return callSupabaseJsonRoute("bootstrap", "/staff/signup/cancel", {
+    method: "POST",
+    body: { continuationHandle: String(continuationHandle || "").trim() },
+    fallbackCode: "staff_signup_cancellation_failed",
+    fallbackMessage: "The pending account request could not be cleared."
+  });
+}
+
+function callLicensingActivationApi(_unusedCredential, input) {
+  return callAdminBffJsonRoute("/games", {
+    method: "POST",
+    idempotencyKey: String(input?.idempotencyKey || "").trim(),
     body: {
       purchaseCode: String(input?.licenseCode || "").trim(),
       gameName: String(input?.sessionName || "").trim(),
       difficultyPreset: String(input?.difficulty || "").trim(),
-      stockMarketWindow: {
-        timezone: String(input?.timeZone || "").trim()
-      }
+      stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
     },
     fallbackCode: "licensing_activation_failed",
     fallbackMessage: "The game could not be created."
@@ -496,6 +457,8 @@ Object.assign(window.Econovaria.core.api, {
   callAdminMfaEnroll,
   callAdminMfaVerify,
   callStaffSignupApi,
+  callStaffSignupResendApi,
+  callStaffSignupCancelApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
   getOrCreateDeviceId
@@ -513,6 +476,8 @@ Object.assign(window.Econovaria.core, {
   callAdminMfaEnroll,
   callAdminMfaVerify,
   callStaffSignupApi,
+  callStaffSignupResendApi,
+  callStaffSignupCancelApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
   getOrCreateDeviceId
