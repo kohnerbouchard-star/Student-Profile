@@ -15,6 +15,10 @@ function gridColumnCount(value) {
   return text.split(/\s+/u).filter(Boolean).length;
 }
 
+function gridAreaName(value) {
+  return String(value || "").split("/", 1)[0].trim();
+}
+
 async function waitForRouteLoaderCleanup(label) {
   try {
     await page.waitForFunction(() => {
@@ -55,6 +59,9 @@ async function sessionGateSnapshot(name, width, height) {
     const grid = document.querySelector(".admin-session-skeleton__metrics");
     const cards = [...document.querySelectorAll(".admin-session-skeleton__metric")];
     const rect = (element) => element?.getBoundingClientRect().toJSON() || null;
+    const shellStyle = shell ? getComputedStyle(shell) : null;
+    const navStyle = nav ? getComputedStyle(nav) : null;
+    const mainStyle = main ? getComputedStyle(main) : null;
     const gridStyle = grid ? getComputedStyle(grid) : null;
     const firstCardStyle = cards[0] ? getComputedStyle(cards[0], "::after") : null;
     return {
@@ -64,6 +71,12 @@ async function sessionGateSnapshot(name, width, height) {
       main: rect(main),
       metrics: rect(grid),
       cards: cards.map(rect),
+      shellDisplay: shellStyle?.display || "",
+      shellGridTemplateColumns: shellStyle?.gridTemplateColumns || "",
+      shellGridTemplateAreas: shellStyle?.gridTemplateAreas || "",
+      shellColumnGap: shellStyle?.columnGap || "",
+      navGridArea: navStyle?.gridArea || "",
+      mainGridArea: mainStyle?.gridArea || "",
       gridTemplateColumns: gridStyle?.gridTemplateColumns || "",
       columnGap: gridStyle?.columnGap || "",
       animationName: firstCardStyle?.animationName || "",
@@ -90,11 +103,37 @@ async function sessionGateSnapshot(name, width, height) {
   }
 
   const stacked = width <= 1100;
-  if (stacked && result.main.y < result.nav.bottom - 2) {
-    fail(`${name} session skeleton still uses a left rail below 1100px.`);
+  const shellColumns = gridColumnCount(result.shellGridTemplateColumns);
+  const expectedShellColumns = stacked ? 1 : 2;
+  const navArea = gridAreaName(result.navGridArea);
+  const mainArea = gridAreaName(result.mainGridArea);
+  if (
+    result.shellDisplay !== "grid" ||
+    shellColumns !== expectedShellColumns ||
+    navArea !== "nav" ||
+    mainArea !== "main"
+  ) {
+    fail(
+      `${name} session shell grid contract failed: ` +
+      JSON.stringify({
+        display: result.shellDisplay,
+        columns: result.shellGridTemplateColumns,
+        columnCount: shellColumns,
+        expectedColumnCount: expectedShellColumns,
+        areas: result.shellGridTemplateAreas,
+        navArea: result.navGridArea,
+        mainArea: result.mainGridArea,
+      }) + ".",
+    );
   }
-  if (!stacked && result.main.x < result.nav.right - 2) {
-    fail(`${name} session skeleton does not preserve the desktop left rail.`);
+  if (result.shellColumnGap !== (stacked ? "20px" : "20px")) {
+    fail(`${name} session shell gap drifted to ${result.shellColumnGap}.`);
+  }
+  if (stacked && result.main.y < result.nav.bottom - 2) {
+    fail(`${name} session skeleton still uses a left rail below 1100px: ${JSON.stringify(result)}.`);
+  }
+  if (!stacked && (result.main.width <= result.nav.width || result.nav.width < 180)) {
+    fail(`${name} session skeleton desktop tracks are malformed: ${JSON.stringify(result)}.`);
   }
 
   const columns = gridColumnCount(result.gridTemplateColumns);
@@ -107,7 +146,7 @@ async function sessionGateSnapshot(name, width, height) {
     }
   }
 
-  return { ...result, columns };
+  return { ...result, columns, shellColumns };
 }
 
 async function liveGridSnapshot(name, width, height, expectedColumns) {
