@@ -35,6 +35,7 @@ interface EdgeSupabaseQueryResponse<T = unknown> {
 export interface EdgeSupabaseAuthUser {
   readonly id: string;
   readonly email?: string | null;
+  readonly email_confirmed_at?: string | null;
   readonly app_metadata?: Record<string, unknown>;
   readonly user_metadata?: Record<string, unknown>;
 }
@@ -148,7 +149,7 @@ export interface EdgeStaffSessionStaff {
   readonly supabase_auth_user_id: string;
   readonly email: string;
   readonly display_name: string;
-  readonly status: string;
+  readonly status: "active" | "onboarding";
   readonly role: "game_admin" | "security_operator";
   readonly permission_version: number;
   readonly security_version: number;
@@ -187,6 +188,7 @@ interface ResolveStaffSessionOptions {
     | Promise<{ readonly ok: true } | EdgeStaffSessionFailure>;
   readonly requiredRole?: "game_admin" | "security_operator";
   readonly requiredAssuranceLevel?: "aal1" | "aal2";
+  readonly allowedStatuses?: readonly ("active" | "onboarding")[];
   readonly allowLegacyMetadata?: boolean;
   readonly skipUniversalRateLimit?: boolean;
 }
@@ -265,8 +267,15 @@ export async function resolveStaffSessionForRequest(
     : row.role === "game_admin"
     ? "game_admin"
     : null;
+  const staffStatus = row.status === "onboarding"
+    ? "onboarding"
+    : row.status === "active"
+    ? "active"
+    : null;
+  const allowedStatuses = options.allowedStatuses ?? ["active"];
   if (
-    row.status !== "active" ||
+    !staffStatus ||
+    !allowedStatuses.includes(staffStatus) ||
     !role ||
     !Number.isSafeInteger(permissionVersion) ||
     permissionVersion < 1 ||
@@ -276,7 +285,7 @@ export async function resolveStaffSessionForRequest(
     return authorizationFailure(
       403,
       "staff_account_inactive",
-      "The staff account is not active.",
+      "The staff account is not active for this operation.",
     );
   }
 
@@ -358,7 +367,7 @@ export async function resolveStaffSessionForRequest(
       supabase_auth_user_id: String(row.supabase_auth_user_id || authUser.id),
       email: String(row.email || authUser.email || ""),
       display_name: String(row.display_name || "Staff"),
-      status: "active",
+      status: staffStatus,
       role,
       permission_version: permissionVersion,
       security_version: securityVersion,
