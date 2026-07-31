@@ -1,0 +1,7 @@
+Purpose: retrigger the normal Vercel Git-integrated production deployment from the current main branch.
+
+Application source authority before marker: 3cb59d1d2cc335a3ad67f8b03d209063191d5d4c
+Target branch after review: main
+Target environment: Vercel production
+
+This marker changes no runtime behavior, application code, authorization, environment variables, Supabase resources, or project settings.
