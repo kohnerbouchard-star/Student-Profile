@@ -5,9 +5,6 @@ import type {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 
 declare const Deno: {
-  readonly env: {
-    get(name: string): string | undefined;
-  };
   test(name: string, run: () => void | Promise<void>): void;
 };
 
@@ -21,10 +18,10 @@ const THROTTLE_BUCKETS = [
 ];
 
 interface Calls {
-  readonly authCreateInputs: unknown[];
+  readonly generatedLinks: unknown[];
+  readonly sentEmails: unknown[];
   readonly authDeletes: string[];
   readonly authDisables: string[];
-  readonly resendInputs: unknown[];
   readonly rpcCalls: Array<{ readonly name: string; readonly args: unknown }>;
   successes: number;
   failures: number;
@@ -32,12 +29,11 @@ interface Calls {
 
 interface MockOptions {
   readonly decision?: "create_new" | "resume_pending" | "existing_verified_identity" | "security_hold";
-  readonly sendVerification?: boolean;
-  readonly authCreateError?: boolean;
+  readonly generateError?: boolean;
   readonly attachError?: boolean;
 }
 
-Deno.test("staff signup validates identity fields before creating Auth", async () => {
+Deno.test("staff signup validates identity fields before generating Auth links", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
     signupRequest({ password: "short" }),
@@ -45,7 +41,7 @@ Deno.test("staff signup validates identity fields before creating Auth", async (
   );
 
   await assertError(response, 400, "password_too_short");
-  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 0);
 });
 
@@ -62,11 +58,11 @@ Deno.test("public signup rejects license and game fields", async () => {
   );
 
   await assertError(response, 400, "unknown_request_field");
-  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 0);
 });
 
-Deno.test("new signup claims identity before creating one unconfirmed Auth user", async () => {
+Deno.test("new signup claims identity before generating one Supabase signup link", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
   const body = await response.json();
@@ -77,20 +73,29 @@ Deno.test("new signup claims identity before creating one unconfirmed Auth user"
   assertMatches(body.verification.continuationHandle, /^[A-Za-z0-9_-]{43}$/u);
   assertEquals(body.verification.maskedEmail, "t••••••@example.com");
   assertEquals(mock.calls.rpcCalls[0].name, "claim_staff_signup_identity_v1");
-  assertEquals(mock.calls.authCreateInputs.length, 1);
+  assertEquals(mock.calls.generatedLinks.length, 1);
   assertEquals(mock.calls.rpcCalls[1].name, "attach_staff_signup_auth_user_v1");
-  assertEquals(mock.calls.resendInputs.length, 1);
+  assertEquals(mock.calls.sentEmails.length, 1);
   assertEquals(mock.calls.successes, 1);
 
-  const authInput = mock.calls.authCreateInputs[0] as Record<string, unknown>;
-  assertEquals(authInput.email, "teacher@example.com");
-  assertEquals(authInput.password, SECURE_PASSWORD);
-  assertEquals(authInput.email_confirm, false);
-  assertEquals("app_metadata" in authInput, false);
+  assertEquals(mock.calls.generatedLinks[0], {
+    email: "teacher@example.com",
+    password: SECURE_PASSWORD,
+    displayName: "Teacher Name",
+  });
+  assertEquals(mock.calls.sentEmails[0], {
+    email: "teacher@example.com",
+    displayName: "Teacher Name",
+    tokenHash: "a".repeat(64),
+    verificationType: "signup",
+    signupRequestId: SIGNUP_REQUEST_ID,
+    deliveryVersion: 1,
+    expiresAt: "2026-08-01T00:00:00.000Z",
+  });
   assertEquals(JSON.stringify(mock.calls.rpcCalls).includes("redeem_purchase_code_for_game"), false);
 });
 
-Deno.test("existing verified identity creates no Auth user and sends no email", async () => {
+Deno.test("existing verified identity generates no Auth link and sends no email", async () => {
   const mock = createMock({ decision: "existing_verified_identity" });
   const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
   const body = await response.json();
@@ -98,23 +103,23 @@ Deno.test("existing verified identity creates no Auth user and sends no email", 
   assertEquals(response.status, 202);
   assertEquals(body.ok, true);
   assertMatches(body.verification.continuationHandle, /^[A-Za-z0-9_-]{43}$/u);
-  assertEquals(mock.calls.authCreateInputs.length, 0);
-  assertEquals(mock.calls.resendInputs.length, 0);
+  assertEquals(mock.calls.generatedLinks.length, 0);
+  assertEquals(mock.calls.sentEmails.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 1);
 });
 
-Deno.test("duplicate pending signup may resend but never creates another Auth user", async () => {
-  const mock = createMock({ decision: "resume_pending", sendVerification: true });
+Deno.test("duplicate pending signup never rotates or sends another link", async () => {
+  const mock = createMock({ decision: "resume_pending" });
   const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
 
   assertEquals(response.status, 202);
-  assertEquals(mock.calls.authCreateInputs.length, 0);
-  assertEquals(mock.calls.resendInputs.length, 1);
+  assertEquals(mock.calls.generatedLinks.length, 0);
+  assertEquals(mock.calls.sentEmails.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 1);
 });
 
-Deno.test("Auth creation failure cancels the claimed request without exposing account state", async () => {
-  const mock = createMock({ authCreateError: true });
+Deno.test("Supabase link generation failure cancels the claimed request generically", async () => {
+  const mock = createMock({ generateError: true });
   const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
   const body = await response.json();
 
@@ -127,12 +132,21 @@ Deno.test("Auth creation failure cancels the claimed request without exposing ac
   assertEquals(mock.calls.failures, 1);
 });
 
+Deno.test("attach failure deletes the generated Auth user and fails closed", async () => {
+  const mock = createMock({ attachError: true });
+  const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
+
+  await assertError(response, 503, "staff_signup_unavailable");
+  assertEquals(mock.calls.authDeletes, [AUTH_USER_ID]);
+  assertEquals(mock.calls.sentEmails.length, 0);
+});
+
 function createMock(options: MockOptions = {}) {
   const calls: Calls = {
-    authCreateInputs: [],
+    generatedLinks: [],
+    sentEmails: [],
     authDeletes: [],
     authDisables: [],
-    resendInputs: [],
     rpcCalls: [],
     successes: 0,
     failures: 0,
@@ -141,20 +155,6 @@ function createMock(options: MockOptions = {}) {
   const serviceClient = {
     auth: {
       admin: {
-        createUser: async (input: unknown) => {
-          calls.authCreateInputs.push(input);
-          return options.authCreateError
-            ? { data: { user: null }, error: { message: "duplicate" } }
-            : {
-              data: {
-                user: {
-                  id: AUTH_USER_ID,
-                  email: "teacher@example.com",
-                },
-              },
-              error: null,
-            };
-        },
         deleteUser: async (userId: string) => {
           calls.authDeletes.push(userId);
           return { data: null, error: null };
@@ -175,7 +175,7 @@ function createMock(options: MockOptions = {}) {
             decision,
             signup_request_id: decision === "create_new" ? SIGNUP_REQUEST_ID : null,
             verification_expires_at: "2026-08-01T00:00:00.000Z",
-            send_verification: options.sendVerification === true,
+            send_verification: decision === "create_new",
           }],
           error: null,
         };
@@ -189,23 +189,24 @@ function createMock(options: MockOptions = {}) {
     },
   } as unknown as EdgeSupabaseClient;
 
-  const authClient = {
-    auth: {
-      admin: serviceClient.auth.admin,
-      getUser: serviceClient.auth.getUser,
-      resend: async (input: unknown) => {
-        calls.resendInputs.push(input);
-        return { data: {}, error: null };
-      },
-    },
-    from: () => createEmptyQuery(),
-    rpc: async () => ({ data: null, error: null }),
-  } as unknown as EdgeSupabaseClient;
-
   return {
     dependencies: {
-      createAuthClient: (_env: SupabaseEnv) => authClient,
       createServiceClient: (_env: SupabaseEnv) => serviceClient,
+      generateSignupLink: async (_service: EdgeSupabaseClient, input: unknown) => {
+        calls.generatedLinks.push(input);
+        return options.generateError
+          ? null
+          : {
+            authUserId: AUTH_USER_ID,
+            email: "teacher@example.com",
+            tokenHash: "a".repeat(64),
+            verificationType: "signup" as const,
+          };
+      },
+      sendVerificationEmail: async (input: unknown) => {
+        calls.sentEmails.push(input);
+        return true;
+      },
       enforceVolumetric: async () => ({
         allowed: true,
         retryAfterSeconds: 0,
