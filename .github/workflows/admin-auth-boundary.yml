@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/admin-auth-boundary.yml"
+      - ".github/workflows/admin-browser-e2e.yml"
       - "admin/auth-session-manager.js"
       - "admin/session-gate.js"
       - "backend/src/security/edgeGatewayClientIp.ts"
@@ -12,12 +13,15 @@ on:
       - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
       - "backend/supabase/functions/admin-api/progressionRateLimit.ts"
       - "backend/supabase/functions/admin-api/progressionRateLimit.contract.test.ts"
+      - "backend/supabase/functions/admin-api/runtimeMutations.ts"
+      - "backend/supabase/functions/admin-api/runtimeMutations.contract.test.ts"
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-auth-session-resilience-smoke.mjs"
   push:
     branches: [main]
     paths:
       - ".github/workflows/admin-auth-boundary.yml"
+      - ".github/workflows/admin-browser-e2e.yml"
       - "admin/auth-session-manager.js"
       - "admin/session-gate.js"
       - "backend/src/security/edgeGatewayClientIp.ts"
@@ -25,6 +29,8 @@ on:
       - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
       - "backend/supabase/functions/admin-api/progressionRateLimit.ts"
       - "backend/supabase/functions/admin-api/progressionRateLimit.contract.test.ts"
+      - "backend/supabase/functions/admin-api/runtimeMutations.ts"
+      - "backend/supabase/functions/admin-api/runtimeMutations.contract.test.ts"
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-auth-session-resilience-smoke.mjs"
 
@@ -64,19 +70,21 @@ jobs:
         with:
           deno-version: v2.9.3
 
-      - name: Typecheck Admin trusted-IP rate limiting
+      - name: Typecheck Admin authentication and mutation boundaries
         working-directory: backend
         run: |
           deno check --config supabase/functions/admin-api/deno.json \
             --lock=supabase/functions/deno.lock --frozen \
-            supabase/functions/admin-api/progressionRateLimit.ts
+            supabase/functions/admin-api/progressionRateLimit.ts \
+            supabase/functions/admin-api/runtimeMutations.ts
 
-      - name: Verify Admin trusted-IP contract
+      - name: Verify Admin trusted-IP and mutation contracts
         working-directory: backend
         run: |
           deno test --config supabase/functions/admin-api/deno.json \
             --lock=supabase/functions/deno.lock --frozen \
-            supabase/functions/admin-api/progressionRateLimit.contract.test.ts
+            supabase/functions/admin-api/progressionRateLimit.contract.test.ts \
+            supabase/functions/admin-api/runtimeMutations.contract.test.ts
 
       - name: Reject malformed diffs
         run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
