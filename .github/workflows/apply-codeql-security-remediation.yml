@@ -1,4 +1,4 @@
-name: Apply CodeQL security remediation
+name: Validate CodeQL security remediation
 
 on:
   push:
@@ -13,15 +13,14 @@ on:
       - synchronize
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: codeql-security-remediation-v1
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  apply-and-verify:
-    if: github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,84 +39,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
 
-      - name: Repair codemod bootstrap and drift handling
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("scripts/apply-codeql-security-remediation.mjs")
-          source = path.read_text()
-
-          replacements = [
-              (r"\\`|~0-9A-Za-z", r"\\x60|~0-9A-Za-z"),
-              (
-                  '  if (first < 0) throw new Error(`Missing remediation anchor: ${label}`);',
-                  '  if (first < 0) { console.log(`Already remediated or moved: ${label}`); return source; }',
-              ),
-              (
-                  '  if (next === source) throw new Error(`Remediation produced no change: ${relativePath}`);',
-                  '  if (next === source) return;',
-              ),
-          ]
-          for before, after in replacements:
-              if before not in source:
-                  raise SystemExit(f"Expected codemod bootstrap anchor was not found: {before}")
-              source = source.replace(before, after, 1)
-          path.write_text(source)
-          PY
-
-      - name: Apply bounded remediation
-        run: node scripts/apply-codeql-security-remediation.mjs
-
-      - name: Patch reformatted live findings
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          auth_path = Path("backend/src/security/adminBffRequestAuth.ts")
-          auth = auth_path.read_text()
-          old_audience = "audience.includes(VERCEL_AUDIENCE)"
-          new_audience = 'audience.some((candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE)'
-          audience_count = auth.count(old_audience)
-          if audience_count == 1:
-              auth_path.write_text(auth.replace(old_audience, new_audience, 1))
-          elif audience_count > 1:
-              raise SystemExit("Multiple live audience checks require manual review")
-
-          player_path = Path("backend/src/domains/players/api/playerLoginHttpHandler.ts")
-          player = player_path.read_text()
-          player_pattern = re.compile(
-              r'function generateCompactCode\(length: number\): string \{\n'
-              r'  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";\n'
-              r'  const bytes = crypto\.getRandomValues\(new Uint8Array\(length\)\);\n'
-              r'  return \[\.\.\.bytes\]\n'
-              r'    \.map\(\(byte\) => alphabet\[byte % alphabet\.length\]\)\n'
-              r'    \.join\(""\);\n'
-              r'\}',
-          )
-          replacement = (
-              'function generateCompactCode(length: number): string {\n'
-              '  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";\n'
-              '  const maximumUnbiasedByte = 256 - (256 % alphabet.length);\n'
-              '  let output = "";\n\n'
-              '  while (output.length < length) {\n'
-              '    const bytes = crypto.getRandomValues(new Uint8Array(length - output.length));\n'
-              '    for (const byte of bytes) {\n'
-              '      if (byte >= maximumUnbiasedByte) continue;\n'
-              '      output += alphabet[byte % alphabet.length];\n'
-              '      if (output.length === length) break;\n'
-              '    }\n'
-              '  }\n\n'
-              '  return output;\n'
-              '}'
-          )
-          player, player_count = player_pattern.subn(replacement, player, count=1)
-          if player_count == 1:
-              player_path.write_text(player)
-          elif "byte % alphabet.length" in player and "maximumUnbiasedByte" not in player:
-              raise SystemExit("The live random-code generator requires manual review")
-          PY
-
       - name: Verify focused security contracts
         run: |
           node --test scripts/admin-game-selection-memory.test.mjs scripts/codeql-security-remediation.test.mjs
@@ -125,27 +46,5 @@ jobs:
           node --test scripts/local-staging-gateway-contract.test.mjs
           node --check scripts/player-login-identity-smoke.mjs
 
-      - name: Commit verified remediation
-        run: |
-          if git diff --quiet; then
-            echo "No remediation changes were produced." >&2
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            backend/supabase/functions/staff-mfa-api/mfaQrCode.ts \
-            backend/src/security/adminBffRequestAuth.ts \
-            backend/src/domains/players/api/playerLoginHttpHandler.ts \
-            scripts/player-login-identity-smoke.mjs \
-            scripts/local-staging-gateway.py \
-            frontend/src/core/admin-game-selection.js \
-            frontend/src/core/login.js \
-            frontend/src/core/api.js \
-            admin \
-            auth/reset-password.js \
-            index.html \
-            scripts/admin-game-selection-memory.test.mjs \
-            scripts/codeql-security-remediation.test.mjs
-          git commit -m "fix(security): remediate active CodeQL findings"
-          git push origin HEAD:agent/codeql-security-remediation-v1
+      - name: Verify remediation tree is clean
+        run: git diff --exit-code
