@@ -288,8 +288,7 @@ function createManagerRuntime(fetchImpl) {
     Object,
     String,
   });
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
 
   assert.equal(clearCount, 0, "retryable failures must not clear the session");
   sameJson(redirects, [], "retryable failures must not redirect to login");
