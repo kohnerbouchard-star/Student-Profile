@@ -19,6 +19,7 @@ test("MFA is rendered as an internal login-card face", () => {
   assert.match(mfaSource, /getElementById\("adminPane"\)/);
   assert.match(mfaSource, /econovariaAdminMfaStep/);
   assert.match(mfaSource, /econovaria-mfa-breadcrumb/);
+  assert.match(mfaSource, /runtime\.Econovaria\?\.login\?\.setMode\?\.\("admin"\)/);
   assert.doesNotMatch(mfaSource, /econovaria-mfa-overlay/);
   assert.doesNotMatch(mfaSource, /aria-modal/);
   assert.doesNotMatch(mfaSource, /document\.body\.append/);
