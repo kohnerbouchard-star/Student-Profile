@@ -94,6 +94,7 @@ window.Econovaria = window.Econovaria || {};
   }
 
   function showMfaSurface(host) {
+    runtime.Econovaria?.login?.setMode?.("admin");
     runtime.document.getElementById("adminLoginStep")?.classList.add("hidden");
     runtime.document.getElementById("adminGamesStep")?.classList.add("hidden");
     host.classList.remove("hidden");
