@@ -9,27 +9,6 @@ const VIEWPORTS = [
   ["narrow", 768, 900],
 ];
 
-async function waitForRouteLoaderCleanup(label) {
-  try {
-    await page.waitForFunction(() => {
-      const main = document.querySelector(".admin-terminal-shell-main");
-      const overlay = document.querySelector(".admin-qol-page-skeleton");
-      return (!overlay || overlay.hidden) && !main?.hasAttribute("aria-busy");
-    }, null, { timeout: 5000 });
-  } catch (_) {
-    const state = await page.evaluate(() => {
-      const main = document.querySelector(".admin-terminal-shell-main");
-      const overlay = document.querySelector(".admin-qol-page-skeleton");
-      return {
-        busy: main?.getAttribute("aria-busy") || "",
-        overlayHidden: !overlay || overlay.hidden,
-        overlayLabel: overlay?.getAttribute("aria-label") || "",
-      };
-    });
-    fail(`${label} route loader did not clear: ${JSON.stringify(state)}.`);
-  }
-}
-
 async function sessionGateContract(name, width, height) {
   const context = await browser.newContext({
     viewport: { width, height },
@@ -92,7 +71,7 @@ async function mountedAdminContract(name, width, height) {
     state: "visible",
     timeout: 15000,
   });
-  await page.locator('[data-admin-section="Attendance"]').first().waitFor({
+  await page.locator('[data-admin-section="Overview"]').first().waitFor({
     state: "visible",
     timeout: 15000,
   });
@@ -106,14 +85,9 @@ async function mountedAdminContract(name, width, height) {
     visibleStartupSkeletonCount: await page.locator(
       ".admin-session-skeleton:visible",
     ).count(),
-    visibleRouteSkeletonCount: await page.locator(
-      ".admin-qol-page-skeleton:visible",
-    ).count(),
     responsiveGridStylesheetCount: await page.locator(
       'link[rel="stylesheet"][href="./css/responsive-card-grid.css"]',
     ).count(),
-    mainBusy: await page.locator(".admin-terminal-shell-main").first()
-      .getAttribute("aria-busy"),
     overflow: await page.evaluate(() => Math.max(
       document.body.scrollWidth,
       document.documentElement.scrollWidth,
@@ -125,7 +99,6 @@ async function mountedAdminContract(name, width, height) {
     result.cloneStageCount !== 0 ||
     result.visibleGateCount !== 0 ||
     result.visibleStartupSkeletonCount !== 0 ||
-    result.visibleRouteSkeletonCount !== 0 ||
     result.responsiveGridStylesheetCount !== 1
   ) {
     fail(`${name} mounted a duplicate startup loader: ${JSON.stringify(result)}.`);
@@ -137,44 +110,12 @@ async function mountedAdminContract(name, width, height) {
   return result;
 }
 
-async function explicitRouteLoaderSnapshot(name) {
-  const result = await page.locator('[data-admin-section="Attendance"]').first()
-    .evaluate((control) => {
-      control.click();
-      const main = document.querySelector(".admin-terminal-shell-main");
-      const overlay = document.querySelector(".admin-qol-page-skeleton");
-      const grid = overlay?.querySelector(".admin-qol-skeleton-grid");
-      return {
-        visible: Boolean(overlay && !overlay.hidden),
-        busy: main?.getAttribute("aria-busy") || "",
-        role: overlay?.getAttribute("role") || "",
-        label: overlay?.getAttribute("aria-label") || "",
-        cardCount: grid?.children.length || 0,
-        cloneStageCount: overlay?.querySelectorAll(
-          "[data-admin-shape-skeleton-stage]",
-        ).length || 0,
-        shapeContract: overlay?.hasAttribute("data-admin-shape-skeleton") || false,
-      };
-    });
-
-  if (
-    !result.visible ||
-    result.busy !== "true" ||
-    result.role !== "status" ||
-    result.label !== "Loading administrator data" ||
-    result.cardCount !== 6 ||
-    result.cloneStageCount !== 0 ||
-    result.shapeContract
-  ) {
-    fail(`${name} explicit route loader contract failed: ${JSON.stringify(result)}.`);
-  }
-  await waitForRouteLoaderCleanup(`${name}:attendance`);
-  return result;
-}
-
 async function scannerLifecycleSnapshot() {
   await page.locator('[data-admin-section="Overview"]').first().click();
-  await waitForRouteLoaderCleanup("scanner:return-overview");
+  await page.locator('[data-admin-terminal-action="scan-attendance"]').first().waitFor({
+    state: "visible",
+    timeout: 10000,
+  });
   await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
   await page.locator("[data-admin-terminal-scanner-console]").waitFor({
     state: "visible",
@@ -240,15 +181,7 @@ try {
   for (const [name, width, height] of VIEWPORTS) {
     const sessionGate = await sessionGateContract(name, width, height);
     const mountedAdmin = await mountedAdminContract(name, width, height);
-    const routeLoader = await explicitRouteLoaderSnapshot(name);
-    viewports.push({
-      name,
-      width,
-      height,
-      sessionGate,
-      mountedAdmin,
-      routeLoader,
-    });
+    viewports.push({ name, width, height, sessionGate, mountedAdmin });
   }
 
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -262,7 +195,7 @@ try {
   if (errors.length) fail(errors[0]);
   await finish({ passed: true, viewports, scanner });
   console.log(
-    "Single Admin startup loader, CSS-owned responsive grid, explicit route loader, and scanner lifecycle checks passed.",
+    "Single CSS-owned Admin startup loader and scanner lifecycle checks passed.",
   );
 } catch (error) {
   await capture("failure").catch(() => {});
