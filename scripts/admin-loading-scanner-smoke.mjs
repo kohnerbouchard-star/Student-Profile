@@ -50,6 +50,12 @@ async function sessionGateSnapshot(name, width, height) {
     waitUntil: "domcontentloaded",
     timeout: 30000,
   });
+  await staticPage.waitForFunction(() => {
+    const shell = document.querySelector(".admin-session-skeleton__shell");
+    if (!(shell instanceof HTMLElement)) return false;
+    const style = getComputedStyle(shell);
+    return style.display === "grid" && style.gridTemplateColumns !== "none";
+  }, null, { timeout: 5000 });
 
   const result = await staticPage.evaluate(() => {
     const gate = document.querySelector("#adminSessionGate");
@@ -126,7 +132,7 @@ async function sessionGateSnapshot(name, width, height) {
       }) + ".",
     );
   }
-  if (result.shellColumnGap !== (stacked ? "20px" : "20px")) {
+  if (result.shellColumnGap !== "20px") {
     fail(`${name} session shell gap drifted to ${result.shellColumnGap}.`);
   }
   if (stacked && result.main.y < result.nav.bottom - 2) {
