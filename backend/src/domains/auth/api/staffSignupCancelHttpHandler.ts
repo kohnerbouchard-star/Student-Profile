@@ -14,7 +14,6 @@ interface Dependencies {
 
 const MAX_BODY_BYTES = 2_048;
 const HANDLE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export async function handleStaffSignupCancelRequest(
   request: Request,
@@ -47,13 +46,12 @@ export async function handleStaffSignupCancelRequest(
     const handleHash = await sha256Hex(
       `econovaria.staff-signup.handle.v1\n${handle}`,
     );
-    const result = await serviceClient.rpc<string>("cancel_staff_signup_v1", {
+    // The database authority locks both the signup request and Auth identity,
+    // deleting only an unconfirmed user. A concurrently confirmed identity is
+    // preserved, so no second out-of-transaction Auth deletion is permitted.
+    await serviceClient.rpc("cancel_staff_signup_v1", {
       p_continuation_handle_hash: handleHash,
     });
-    const authUserId = String(result.data || "").trim();
-    if (!result.error && UUID_PATTERN.test(authUserId)) {
-      await removeAuthUser(serviceClient, authUserId);
-    }
   }
 
   return jsonResponse(200, {
@@ -96,25 +94,6 @@ async function readBody(request: Request): Promise<
         retryable: false,
       }),
     };
-  }
-}
-
-async function removeAuthUser(
-  serviceClient: EdgeSupabaseClient,
-  authUserId: string,
-): Promise<void> {
-  try {
-    const deletion = await serviceClient.auth.admin.deleteUser(authUserId);
-    if (!deletion.error) return;
-  } catch {
-    // Fall through to disabling the unconfirmed identity.
-  }
-  try {
-    await serviceClient.auth.admin.updateUserById(authUserId, {
-      ban_duration: "876000h",
-    });
-  } catch {
-    // Cleanup remains fail-closed and no Auth detail is returned publicly.
   }
 }
 
