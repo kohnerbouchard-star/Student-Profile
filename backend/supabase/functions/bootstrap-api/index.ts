@@ -87,10 +87,7 @@ Deno.serve(async (incomingRequest: Request) => {
   }
 
   if (url.pathname.endsWith("/staff/signup/resend")) {
-    return handleStaffSignupResendRequest(request, {
-      createAuthClient,
-      createServiceClient,
-    });
+    return handleStaffSignupResendRequest(request, { createServiceClient });
   }
 
   if (url.pathname.endsWith("/staff/signup/cancel")) {
@@ -98,10 +95,7 @@ Deno.serve(async (incomingRequest: Request) => {
   }
 
   if (url.pathname.endsWith("/staff/signup")) {
-    return handleStaffSignupRequest(request, {
-      createAuthClient,
-      createServiceClient,
-    });
+    return handleStaffSignupRequest(request, { createServiceClient });
   }
 
   if (url.pathname.endsWith("/licensing/activate")) {
