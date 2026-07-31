@@ -25,6 +25,8 @@ on:
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-auth-readiness.mjs"
       - "scripts/local-staging-gateway.py"
+      - "scripts/sanitize-admin-browser-evidence.mjs"
+      - "scripts/sanitize-admin-browser-evidence.test.mjs"
       - "scripts/staff-service-role-access-contract.test.mjs"
       - "scripts/persisted-game-code-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -102,6 +104,8 @@ jobs:
           node --check scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
           node --check scripts/button-action-coverage-contract.mjs
           node --check scripts/local-auth-readiness.mjs
+          node --check scripts/sanitize-admin-browser-evidence.mjs
+          node --test scripts/sanitize-admin-browser-evidence.test.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
           node --test scripts/staff-service-role-access-contract.test.mjs
@@ -262,8 +266,21 @@ jobs:
           cat /tmp/admin-browser-server-diagnostics.log
           exit 0
 
-      - name: Upload sanitized browser evidence
+      - name: Sanitize browser evidence
+        id: evidence_sanitize
         if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/sanitize-admin-browser-evidence.mjs \
+            /tmp/econovaria-browser \
+            /tmp/admin-browser-supabase-startup.log \
+            /tmp/admin-browser-source-provisioning.log \
+            /tmp/admin-browser-gateway.log \
+            /tmp/admin-browser-server-diagnostics.log
+
+      - name: Upload sanitized browser evidence
+        if: always() && steps.evidence_sanitize.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: admin-browser-e2e-${{ github.event.pull_request.head.sha || github.sha }}
@@ -282,6 +299,7 @@ jobs:
         run: |
           test "${{ steps.browser.outcome }}" = "success"
           test "${{ steps.ledger_mutation.outcome }}" = "success"
+          test "${{ steps.evidence_sanitize.outcome }}" = "success"
 
       - name: Stop local browser stack
         if: always()
