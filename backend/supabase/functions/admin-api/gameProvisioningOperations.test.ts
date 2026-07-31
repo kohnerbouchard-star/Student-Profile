@@ -12,7 +12,7 @@ const IDEMPOTENCY_KEY = "game.create.test.001";
 
 Deno.test("authenticated game creation redeems the supplied license and completes onboarding", async () => {
   let activationBody: unknown = null;
-  let activationContext: Record<string, unknown> | null = null;
+  let activationContext: unknown = null;
   let completion: Record<string, string> | null = null;
 
   const result = await handleGameProvisioningOperation({}, {
