@@ -1,0 +1,9 @@
+/* Shared responsive geometry for the Admin overview cards and the session-gate skeleton. */
+
+.admin-session-skeleton__metrics,
+.admin-terminal-action-grid {
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 220px), 1fr)
+  );
+}
