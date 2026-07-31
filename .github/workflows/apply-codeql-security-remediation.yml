@@ -40,6 +40,19 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
 
+      - name: Repair codemod bootstrap escaping
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/apply-codeql-security-remediation.mjs")
+          source = path.read_text()
+          broken = r"\\`|~0-9A-Za-z"
+          repaired = r"\\x60|~0-9A-Za-z"
+          if broken not in source:
+              raise SystemExit("Expected codemod escape anchor was not found")
+          path.write_text(source.replace(broken, repaired, 1))
+          PY
+
       - name: Apply bounded remediation
         run: node scripts/apply-codeql-security-remediation.mjs
 
