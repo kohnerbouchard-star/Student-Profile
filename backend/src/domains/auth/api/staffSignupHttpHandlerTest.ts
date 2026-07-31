@@ -23,6 +23,7 @@ interface Calls {
   readonly authDeletes: string[];
   readonly authDisables: string[];
   readonly rpcCalls: Array<{ readonly name: string; readonly args: unknown }>;
+  readonly timingPads: number[];
   successes: number;
   failures: number;
 }
@@ -43,6 +44,7 @@ Deno.test("staff signup validates identity fields before generating Auth links",
   await assertError(response, 400, "password_too_short");
   assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 0);
+  assertEquals(mock.calls.timingPads.length, 0);
 });
 
 Deno.test("public signup rejects license and game fields", async () => {
@@ -60,6 +62,7 @@ Deno.test("public signup rejects license and game fields", async () => {
   await assertError(response, 400, "unknown_request_field");
   assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 0);
+  assertEquals(mock.calls.timingPads.length, 0);
 });
 
 Deno.test("new signup claims identity before generating one Supabase signup link", async () => {
@@ -77,6 +80,7 @@ Deno.test("new signup claims identity before generating one Supabase signup link
   assertEquals(mock.calls.rpcCalls[1].name, "attach_staff_signup_auth_user_v1");
   assertEquals(mock.calls.sentEmails.length, 1);
   assertEquals(mock.calls.successes, 1);
+  assertEquals(mock.calls.timingPads.length, 1);
 
   assertEquals(mock.calls.generatedLinks[0], {
     email: "teacher@example.com",
@@ -106,6 +110,7 @@ Deno.test("existing verified identity generates no Auth link and sends no email"
   assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.sentEmails.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 1);
+  assertEquals(mock.calls.timingPads.length, 1);
 });
 
 Deno.test("duplicate pending signup never rotates or sends another link", async () => {
@@ -116,6 +121,7 @@ Deno.test("duplicate pending signup never rotates or sends another link", async 
   assertEquals(mock.calls.generatedLinks.length, 0);
   assertEquals(mock.calls.sentEmails.length, 0);
   assertEquals(mock.calls.rpcCalls.length, 1);
+  assertEquals(mock.calls.timingPads.length, 1);
 });
 
 Deno.test("Supabase link generation failure cancels the claimed request generically", async () => {
@@ -130,6 +136,21 @@ Deno.test("Supabase link generation failure cancels the claimed request generica
     "cancel_staff_signup_v1",
   ]);
   assertEquals(mock.calls.failures, 1);
+  assertEquals(mock.calls.timingPads.length, 1);
+});
+
+Deno.test("all account-dependent generic outcomes pass through the same timing gate", async () => {
+  for (const decision of [
+    "create_new",
+    "resume_pending",
+    "existing_verified_identity",
+    "security_hold",
+  ] as const) {
+    const mock = createMock({ decision });
+    const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
+    assertEquals(response.status, 202);
+    assertEquals(mock.calls.timingPads.length, 1);
+  }
 });
 
 Deno.test("attach failure deletes the generated Auth user and fails closed", async () => {
@@ -148,6 +169,7 @@ function createMock(options: MockOptions = {}) {
     authDeletes: [],
     authDisables: [],
     rpcCalls: [],
+    timingPads: [],
     successes: 0,
     failures: 0,
   };
@@ -235,6 +257,9 @@ function createMock(options: MockOptions = {}) {
       },
       recordSuccess: async () => {
         calls.successes += 1;
+      },
+      padGenericResponse: async (startedAtMs: number) => {
+        calls.timingPads.push(startedAtMs);
       },
     },
     calls,
