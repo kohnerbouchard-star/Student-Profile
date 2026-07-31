@@ -69,14 +69,21 @@ const scopedRuntimeFiles = {
   "admin/game-session-controls.js": ["econovaria.admin.selected-game.v1", "share-current-game", "data-econovaria-admin-logout", "/api/admin/auth/sign-out", "createFallbackShareSurface"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
   "admin/interaction-quality.js": ["setButtonState", "aria-busy", "setFieldError", "aria-invalid", "setScannerProcessing", "setScannerCompleted", "setScannerError"],
-  "admin/data-state-contracts.js": ["data-econovaria-state", "data-econovaria-error-code", "aria-live", "aria-busy", "classifyErrorCode"],
+  "admin/data-state-contracts.js": ["data-admin-data-state-panel", "adminDataState", "aria-live", "aria-busy", "econovaria:admin-data-state-changed", "onRequestLifecycle", "adoptMountedRoute"],
   "admin/create-action-adapter.js": ["data-econovaria-action-source", "data-econovaria-action", "data-admin-terminal-action"],
   "admin/player-access-code-bridge.js": ["data-admin-terminal-player-form", "data-admin-terminal-player-credentials", "data-admin-terminal-player-access-code"],
 };
+const missingRuntimeTokens = [];
 for (const [path, tokens] of Object.entries(scopedRuntimeFiles)) {
   const content = readText(path);
-  for (const token of tokens) assert(content.includes(token), `${path} lost required token: ${token}`);
+  for (const token of tokens) {
+    if (!content.includes(token)) missingRuntimeTokens.push(`${path}: ${token}`);
+  }
 }
+assert(
+  missingRuntimeTokens.length === 0,
+  `Admin runtime token drift detected:\n${missingRuntimeTokens.map((entry) => `- ${entry}`).join("\n")}`,
+);
 
 const adminOverview = readText("admin/dist/admin-overview-terminal.js");
 assert(adminOverview.includes("data-admin-terminal-selected-game-code"), "Selected game code label is not source-owned by the accepted Admin shell.");
