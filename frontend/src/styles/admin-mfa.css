@@ -1,8 +1,8 @@
 /* Login-card MFA and Create Game internal navigation. The existing login visual system remains authoritative. */
 
 .login-panel-frame {
-  height: min(614px, calc(100vh - 124px));
-  min-height: 560px;
+  height: min(680px, calc(100vh - 72px));
+  min-height: 620px;
 }
 
 .login-panel {
@@ -10,11 +10,9 @@
 }
 
 .login-root .mode-pane {
-  height: 270px;
-  min-height: 270px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  height: 336px;
+  min-height: 336px;
+  overflow: visible;
 }
 
 .login-root .panel-footer {
@@ -135,8 +133,6 @@
 
 .econovaria-mfa-secret {
   display: block;
-  max-height: 76px;
-  overflow: auto;
   overflow-wrap: anywhere;
   border: 1px solid color-mix(in srgb, var(--login-input) 22%, var(--login-border));
   padding: 8px;
@@ -252,15 +248,15 @@
 
 @media (max-width: 760px) {
   .login-panel-frame {
-    height: min(614px, calc(100vh - 56px));
-    min-height: 0;
+    height: 680px;
+    min-height: 680px;
   }
 }
 
 @media (max-width: 520px) {
   .login-root .mode-pane {
-    height: 270px;
-    min-height: 270px;
+    height: 336px;
+    min-height: 336px;
   }
 
   .econovaria-mfa-setup {

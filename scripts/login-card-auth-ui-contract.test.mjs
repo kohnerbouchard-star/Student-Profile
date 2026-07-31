@@ -57,12 +57,14 @@ test("Timezone list is complete, silent, and device-first", () => {
   assert.doesNotMatch(mfaSource, /Detected timezone/i);
 });
 
-test("Every login state shares stable card geometry from first paint", () => {
+test("Every login state shares stable card geometry without an internal scrollbar", () => {
   assert.match(appStyles, /@import url\("\.\/admin-mfa\.css"\)/);
   assert.match(mfaStyles, /\.login-panel-frame\s*\{[\s\S]*height:/);
-  assert.match(mfaStyles, /height: min\(614px,/);
-  assert.match(mfaStyles, /\.login-root \.mode-pane\s*\{[\s\S]*height: 270px/);
-  assert.match(mfaStyles, /scrollbar-gutter: stable/);
+  assert.match(mfaStyles, /height: min\(680px,/);
+  assert.match(mfaStyles, /\.login-root \.mode-pane\s*\{[\s\S]*height: 336px/);
+  assert.match(mfaStyles, /\.login-root \.mode-pane\s*\{[\s\S]*overflow: visible/);
+  assert.doesNotMatch(mfaStyles, /scrollbar-gutter:/);
+  assert.doesNotMatch(mfaStyles, /\.login-root \.mode-pane\s*\{[\s\S]*overflow-y: auto/);
   assert.match(mfaStyles, /econovaria-mfa-form\.hidden/);
   assert.match(mfaStyles, /econovaria-create-step\.hidden/);
 });
