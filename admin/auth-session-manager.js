@@ -47,6 +47,17 @@
   let sessionGeneration = 0;
   let signingOut = false;
 
+  class AdminSessionRequestError extends Error {
+    constructor(code, message, options = {}) {
+      super(message);
+      this.name = "AdminSessionRequestError";
+      this.code = String(code || "admin_session_request_failed");
+      this.status = Number(options.status || 0);
+      this.retryable = options.retryable === true;
+      this.terminal = options.terminal === true;
+    }
+  }
+
   function deviceId() {
     const existing = String(window.localStorage.getItem(DEVICE_KEY) || "")
       .trim()
@@ -179,6 +190,58 @@
       : null;
   }
 
+  function failureCode(payload, fallbackCode) {
+    return String(
+      payload?.error?.code || payload?.code || fallbackCode ||
+        "admin_session_request_failed"
+    );
+  }
+
+  function failureMessage(payload, fallbackMessage) {
+    return String(
+      payload?.error?.message || payload?.message || fallbackMessage ||
+        "Administrator session verification failed."
+    );
+  }
+
+  function retryableStatus(status) {
+    const value = Number(status || 0);
+    return value === 0 || value === 408 || value === 425 || value === 429 ||
+      value >= 500;
+  }
+
+  function responseFailure(response, payload, fallbackCode, fallbackMessage) {
+    const status = Number(response?.status || 0);
+    return new AdminSessionRequestError(
+      failureCode(payload, fallbackCode),
+      failureMessage(payload, fallbackMessage),
+      {
+        status,
+        retryable: retryableStatus(status),
+        terminal: status === 401
+      }
+    );
+  }
+
+  function networkFailure(code, message) {
+    return new AdminSessionRequestError(code, message, {
+      status: 0,
+      retryable: true,
+      terminal: false
+    });
+  }
+
+  function describeFailure(error) {
+    if (!error || typeof error !== "object") return null;
+    return {
+      code: String(error.code || "admin_session_request_failed"),
+      message: String(error.message || "Administrator session verification failed."),
+      status: Number(error.status || 0),
+      retryable: error.retryable === true,
+      terminal: error.terminal === true
+    };
+  }
+
   async function requestAuthorizationSummary() {
     if (signingOut) return null;
     const headers = {
@@ -190,51 +253,113 @@
     ).trim();
     if (selectedGameId) headers[GAME_HEADER] = selectedGameId;
 
-    const response = await nativeFetch(`${ADMIN_BFF_API}/session/bootstrap`, {
-      method: "GET",
-      headers,
-      credentials: "include",
-      cache: "no-store",
-      redirect: "error",
-      referrerPolicy: "no-referrer"
-    });
-    if (!response.ok || signingOut) return null;
+    let response;
+    try {
+      response = await nativeFetch(`${ADMIN_BFF_API}/session/bootstrap`, {
+        method: "GET",
+        headers,
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+        referrerPolicy: "no-referrer"
+      });
+    } catch (_) {
+      throw networkFailure(
+        "admin_bootstrap_unavailable",
+        "The administrator authorization service is temporarily unavailable."
+      );
+    }
+    if (signingOut) return null;
+    if (!response.ok) {
+      const payload = await readResponseJson(response);
+      throw responseFailure(
+        response,
+        payload,
+        "admin_bootstrap_failed",
+        "Administrator authorization could not be verified."
+      );
+    }
+
     const payload = await readResponseJson(response);
-    return normalizeAuthorizationSummary(payload?.data);
+    const authorization = normalizeAuthorizationSummary(payload?.data);
+    if (!authorization) {
+      throw new AdminSessionRequestError(
+        "admin_bootstrap_contract_invalid",
+        "Administrator authorization returned an invalid response.",
+        { status: 502, retryable: true, terminal: false }
+      );
+    }
+    return authorization;
   }
 
   async function requestStatus() {
     if (signingOut) return null;
     const requestGeneration = sessionGeneration;
-    const response = await nativeFetch(`${WEB_SESSION_API}/status`, {
-      method: "GET",
-      headers: {
-        apikey: PUBLISHABLE_KEY,
-        [DEVICE_HEADER]: deviceId()
-      },
-      credentials: "include",
-      cache: "no-store",
-      redirect: "error",
-      referrerPolicy: "no-referrer"
-    });
+    let response;
+    try {
+      response = await nativeFetch(`${WEB_SESSION_API}/status`, {
+        method: "GET",
+        headers: {
+          apikey: PUBLISHABLE_KEY,
+          [DEVICE_HEADER]: deviceId()
+        },
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+        referrerPolicy: "no-referrer"
+      });
+    } catch (_) {
+      throw networkFailure(
+        "admin_session_status_unavailable",
+        "The administrator session service is temporarily unavailable."
+      );
+    }
+
     if (signingOut || requestGeneration !== sessionGeneration) return null;
     if (!response.ok) {
-      clear();
-      return null;
-    }
-    try {
-      const status = await readResponseJson(response);
-      if (signingOut || requestGeneration !== sessionGeneration) return null;
-      const authorization = await requestAuthorizationSummary();
-      if (signingOut || requestGeneration !== sessionGeneration) return null;
-      if (!status?.ok || !authorization) {
+      const payload = await readResponseJson(response);
+      const failure = responseFailure(
+        response,
+        payload,
+        "admin_session_status_failed",
+        "Administrator session status could not be verified."
+      );
+      if (failure.terminal) {
         clear();
         return null;
       }
+      throw failure;
+    }
+
+    const status = await readResponseJson(response);
+    if (signingOut || requestGeneration !== sessionGeneration) return null;
+    if (!status?.ok) {
+      clear();
+      return null;
+    }
+
+    let authorization;
+    try {
+      authorization = await requestAuthorizationSummary();
+    } catch (error) {
+      const failure = describeFailure(error);
+      if (failure?.terminal) {
+        clear();
+        return null;
+      }
+      throw error;
+    }
+    if (signingOut || requestGeneration !== sessionGeneration) return null;
+    if (!authorization) return null;
+
+    try {
       return store({ ...status, ...authorization });
     } catch (_) {
-      if (!signingOut && requestGeneration === sessionGeneration) clear();
-      return null;
+      throw new AdminSessionRequestError(
+        "admin_session_contract_invalid",
+        "Administrator session state could not be rebuilt safely.",
+        { status: 502, retryable: true, terminal: false }
+      );
     }
   }
 
@@ -305,6 +430,7 @@
     isExpired,
     refresh,
     getUsableSession,
+    describeFailure,
     signOut
   });
 })();
