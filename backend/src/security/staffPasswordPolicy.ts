@@ -1,18 +1,24 @@
 export const STAFF_PASSWORD_MIN_LENGTH = 15;
 export const STAFF_PASSWORD_MAX_LENGTH = 128;
 
-export interface StaffPasswordPolicyResult {
-  readonly ok: boolean;
-  readonly code?:
-    | "password_too_short"
-    | "password_too_long"
-    | "password_missing_uppercase"
-    | "password_missing_lowercase"
-    | "password_missing_number"
-    | "password_missing_symbol"
-    | "password_contains_control_character";
-  readonly message?: string;
-}
+export type StaffPasswordPolicyFailureCode =
+  | "password_too_short"
+  | "password_too_long"
+  | "password_missing_uppercase"
+  | "password_missing_lowercase"
+  | "password_missing_number"
+  | "password_missing_symbol"
+  | "password_contains_control_character";
+
+export type StaffPasswordPolicyResult =
+  | {
+      readonly ok: true;
+    }
+  | {
+      readonly ok: false;
+      readonly code: StaffPasswordPolicyFailureCode;
+      readonly message: string;
+    };
 
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/u;
 const UPPERCASE_PATTERN = /[A-Z]/u;
@@ -67,7 +73,7 @@ export function validateStaffPassword(password: string): StaffPasswordPolicyResu
 }
 
 function failure(
-  code: NonNullable<StaffPasswordPolicyResult["code"]>,
+  code: StaffPasswordPolicyFailureCode,
   message: string,
 ): StaffPasswordPolicyResult {
   return { ok: false, code, message };
