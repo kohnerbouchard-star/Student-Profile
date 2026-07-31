@@ -1,0 +1,7 @@
+Purpose: retry the normal Vercel Git-integrated production deployment after the prior build-rate-limit rejection.
+
+Application source authority before marker: 5e4027f78259180350970f6bea25035ae2982348
+Target branch after review: main
+Target environment: Vercel production
+
+This marker changes no runtime behavior, application code, authorization, environment variables, Supabase resources, or project settings.
