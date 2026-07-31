@@ -162,6 +162,12 @@ async function liveGridSnapshot(name, width, height, expectedColumns) {
     state: "visible",
     timeout: 15000,
   });
+  await page.waitForFunction(() => {
+    const grid = document.querySelector(".admin-terminal-action-grid");
+    if (!(grid instanceof HTMLElement) || grid.children.length < 4) return false;
+    const rect = grid.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }, null, { timeout: 10000 });
   await page.evaluate(() => new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   }));
