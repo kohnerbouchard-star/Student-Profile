@@ -27,7 +27,8 @@ const html = readText("admin/index.html");
 const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
 const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((match) => match[1]);
 const expectedScripts = [
-  "../runtime-config.env.js", "../frontend/src/core/runtime-config.js", "../frontend/src/core/admin-game-selection.js",
+  "../runtime-config.env.js", "../frontend/src/core/runtime-config.js",
+  "../frontend/src/core/admin-game-selection.js",
   "./auth-session-manager.js", "./session-gate.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
@@ -68,25 +69,188 @@ const scopedRuntimeFiles = {
   "admin/logout-confirmation.js": ["data-econovaria-admin-logout-confirmation", "event.stopImmediatePropagation()", "clearLocalStateAndRedirect", "EconovariaAdminGameSessionControls?.selectedGameContext?.()"],
   "admin/game-session-controls.js": ["econovaria.admin.selected-game.v1", "share-current-game", "data-econovaria-admin-logout", "/api/admin/auth/sign-out", "createFallbackShareSurface"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
-  "admin/interaction-quality.js": ["setButtonState", "aria-busy", "setFieldError", "aria-invalid", "setScannerProcessing", "setScannerCompleted", "setScannerError"],
-  "admin/data-state-contracts.js": ["data-admin-data-state-panel", "adminDataState", "aria-live", "aria-busy", "econovaria:admin-data-state-changed", "onRequestLifecycle", "adoptMountedRoute"],
-  "admin/create-action-adapter.js": ["LOCAL_API_PREFIX", "delegatedFetch", "playerPayload", "contractPayload", "storePayload", "sendContractCreateOnce", "econovariaCreateActionFetch"],
-  "admin/player-access-code-bridge.js": ["createContext", "dispatchCredentialEvent", "econovaria:player-access-code-issued", "updatePlayerIdentity", 'credentials: "same-origin"', 'cache: "no-store"', "EconovariaPlayerAccessCodeBridge"],
+  "admin/overview-quick-actions.js": ["OVERVIEW_ACTIONS", "scan-attendance", "add-contract", "add-player", "add-store-item", "admin-overview-quick-actions-card", "MAX_BOOT_FRAMES"],
+  "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
+  "admin/data-state-contracts.js": ["CANONICAL_STATES", "loading", "loaded", "refreshing", "stale", "empty", "failed", "econovaria:admin-data-state-changed", "detail.pageRead !== true"],
+  "admin/interaction-quality-control-reset.js": ["restoreCompletedControl", "setScannerReady", 'removeAttribute("aria-disabled")', "Scan a player code. The result appears here."],
 };
-const missingRuntimeTokens = [];
 for (const [path, tokens] of Object.entries(scopedRuntimeFiles)) {
-  const content = readText(path);
-  for (const token of tokens) {
-    if (!content.includes(token)) missingRuntimeTokens.push(`${path}: ${token}`);
+  const source = readText(path);
+  for (const token of tokens) assert(source.includes(token), `${path} is missing its expected scope token ${token}.`);
+  assert(!source.includes("document.body.innerHTML"), `${path} replaces the complete document body.`);
+  assert(!source.includes("document.documentElement.innerHTML"), `${path} replaces the complete document root.`);
+}
+
+const drawer = readText("admin/player-drawer-wiring.js");
+assert(!drawer.includes("Math.random"), "Player drawer wiring generates synthetic values.");
+assert(!drawer.includes("window.fetch ="), "Player drawer wiring adds a network wrapper.");
+assert(!drawer.includes("<style"), "Player drawer wiring injects an unreviewed global stylesheet.");
+
+const identity = readText("admin/player-identity-wiring.js");
+assert(!identity.includes('setAttribute("data-admin-player-identity-manager"'), "Removed standalone Player IDs manager is created again.");
+assert(!identity.includes("openIdentityManager"), "Removed standalone identity workflow returned.");
+assert(!identity.includes("window.fetch ="), "Player identity wiring adds a network wrapper.");
+assert(!identity.includes('createElement("style")'), "Player identity wiring injects runtime CSS.");
+
+const lifecycle = readText("admin/player-create-lifecycle.js");
+assert(!lifecycle.includes("markExpandedPlayerDetail"), "Add Player lifecycle still mutates expanded player drawers.");
+assert(!lifecycle.includes("mountExpandedPlayerSettings"), "Add Player lifecycle still mounts removed inline settings.");
+assert(lifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions bypass field validation.");
+
+const credentialBridge = readText("admin/player-access-code-bridge.js");
+assert(credentialBridge.includes("econovaria:player-access-code-issued"), "Credential event emission is missing.");
+assert(!credentialBridge.includes("renderAccessCodeDialog"), "Credential bridge recreates duplicate presentation.");
+assert(!credentialBridge.includes("data-admin-player-access-code-dialog"), "Credential bridge still owns dialog markup.");
+assert(!credentialBridge.includes("style.cssText"), "Credential bridge injects inline presentation styles.");
+
+const createUx = readText("admin/player-create-ux.js");
+assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network wrapper.");
+assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
+assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
+assert(createUx.includes("lastCreateOpener"), "Player creation confirmation cannot restore focus to its opener.");
+
+const modalAccessibility = readText("admin/modal-accessibility.js");
+assert(!modalAccessibility.includes("window.fetch ="), "Modal accessibility adds a network wrapper.");
+assert(!modalAccessibility.includes("MutationObserver"), "Modal accessibility adds unnecessary DOM observation.");
+assert(!modalAccessibility.includes('createElement("style")'), "Modal accessibility injects runtime CSS.");
+
+const keyboardNavigation = readText("admin/keyboard-navigation.js");
+assert(!keyboardNavigation.includes("window.fetch ="), "Keyboard navigation adds a network wrapper.");
+assert(!keyboardNavigation.includes("MutationObserver"), "Keyboard navigation adds DOM observation.");
+assert(!keyboardNavigation.includes('createElement("style")'), "Keyboard navigation injects runtime CSS.");
+assert(!keyboardNavigation.includes("style.cssText"), "Keyboard navigation writes inline styles.");
+
+const overviewQuickActions = readText("admin/overview-quick-actions.js");
+assert(!overviewQuickActions.includes("window.fetch ="), "Overview quick actions add a network wrapper.");
+assert(!overviewQuickActions.includes("MutationObserver"), "Overview quick actions add DOM observation.");
+assert(!overviewQuickActions.includes('createElement("style")'), "Overview quick actions injects runtime CSS.");
+assert(overviewQuickActions.includes('storeButton.hidden = true'), "Add Store Item is not removed from Overview.");
+assert(overviewQuickActions.includes('section !== "Store"'), "Add Store Item is not restricted to Store.");
+
+const logoutConfirmation = readText("admin/logout-confirmation.js");
+assert(!logoutConfirmation.includes("window.fetch ="), "Logout confirmation adds a network wrapper.");
+assert(!logoutConfirmation.includes('createElement("style")'), "Logout confirmation injects runtime CSS.");
+assert(!logoutConfirmation.includes("document.body.innerHTML"), "Logout confirmation replaces the document body.");
+assert(logoutConfirmation.includes("clearLocalStateAndRedirect"), "Logout confirmation lacks a local-session fallback.");
+assert(logoutConfirmation.includes("event.stopImmediatePropagation()"), "Logout confirmation does not isolate the legacy modal handler.");
+
+const gameSessionControls = readText("admin/game-session-controls.js");
+assert(!gameSessionControls.includes("window.fetch ="), "Selected-game controls replace the global fetch transport.");
+assert(!gameSessionControls.includes('createElement("style")'), "Selected-game controls inject runtime CSS.");
+assert(!gameSessionControls.includes("document.body.innerHTML"), "Selected-game controls replace the document body.");
+assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Selected-game Player link omits the Game Code.");
+assert(gameSessionControls.includes("event.stopImmediatePropagation()"), "Selected-game logout does not isolate the broken delegated action.");
+
+const dataStateRuntime = readText("admin/data-state-contracts.js");
+assert(!dataStateRuntime.includes("window.fetch ="), "Data-state controller adds a network wrapper.");
+assert(!dataStateRuntime.includes("MutationObserver"), "Data-state controller adds DOM observation.");
+assert(!dataStateRuntime.includes('createElement("style")') && !dataStateRuntime.includes("style.cssText"), "Data-state controller injects runtime CSS.");
+assert(dataStateRuntime.includes("econovaria:admin-request-lifecycle"), "Data-state controller does not consume explicit request lifecycle events.");
+assert(dataStateRuntime.includes("econovaria:admin-data-state-changed"), "Data-state controller does not publish state transitions.");
+for (const state of ["loading", "loaded", "refreshing", "stale", "empty", "failed"]) {
+  assert(dataStateRuntime.includes(`"${state}"`), `Data-state controller is missing ${state}.`);
+}
+
+const stabilization = readText("admin/admin-stabilization.js");
+assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a network wrapper.");
+assert(!stabilization.includes('createElement("style")'), "Admin stabilization injects runtime CSS.");
+assert(!stabilization.includes("document.body.innerHTML"), "Admin stabilization replaces the document body.");
+for (const [glyph, iconName] of [["↻", "history"], ["⇩", "download"], ["←", "arrow-left"], ["→", "arrow-right"]]) {
+  assert(stabilization.includes(`["${glyph}", "${iconName}"]`), `Admin stabilization does not replace the raw ${glyph} control glyph.`);
+  assert(stabilization.includes(`${iconName}:`) || stabilization.includes(`"${iconName}":`), `Admin stabilization is missing the ${iconName} SVG path.`);
+}
+
+for (const path of [
+  "admin/css/session-gate.css", "admin/css/session-skeleton.css", "admin/css/responsive-card-grid.css",
+  "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
+  "admin/css/admin-stabilization.css", "admin/css/admin-stabilization-visual-finish.css", "admin/css/overview-quick-actions.css",
+  "admin/css/interaction-quality.css", "admin/css/data-state-contracts.css", "admin/css/keyboard-navigation.css",
+  "admin/css/game-session-controls.css", "admin/css/logout-confirmation.css",
+]) {
+  const source = readText(path);
+  for (const forbidden of [/(^|[},\s])body\s*\{/m, /(^|[},\s])html\s*\{/m, /\.admin-terminal-shell\s*\{/m, /\[data-admin-section\]\s*\{/m]) {
+    assert(!forbidden.test(source), `${path} contains an unscoped global selector.`);
   }
 }
-assert(
-  missingRuntimeTokens.length === 0,
-  `Admin runtime token drift detected:\n${missingRuntimeTokens.map((entry) => `- ${entry}`).join("\n")}`,
-);
 
-const adminOverview = readText("admin/dist/admin-overview-terminal.js");
-assert(!adminOverview.includes('data-econovaria-action="admin-terminal-quick-attendance-scan"'), "Legacy quick attendance action returned to the active terminal bundle.");
-assert(!adminOverview.includes('data-econovaria-action="admin-terminal-quick-add-player"'), "Legacy quick add-player action returned to the active terminal bundle.");
+const scrollIntegrityCss = readText("admin/css/admin-scroll-integrity.css");
+const desktopScrollBoundary = scrollIntegrityCss.indexOf("@media (min-width: 1101px)");
+assert(desktopScrollBoundary >= 0, "Scroll integrity CSS has no desktop viewport boundary.");
+assert(scrollIntegrityCss.indexOf("html,") > desktopScrollBoundary, "Scroll integrity root selectors escape the desktop viewport boundary.");
+assert(!/(^|[},\s])(?:body|html)\s*\{/m.test(scrollIntegrityCss.slice(0, desktopScrollBoundary)), "Scroll integrity CSS contains an unbounded root selector.");
+for (const token of [
+  "box-sizing: border-box", "height: calc(100dvh - 48px)", ".admin-terminal-left-menu",
+  ".admin-terminal-shell-main", "overflow-y: auto", "overscroll-behavior-y: contain",
+  ".admin-terminal-player-tab-panels-v301", ".admin-terminal-modal.is-player-modal",
+]) {
+  assert(scrollIntegrityCss.includes(token), `Scroll integrity CSS is missing ${token}.`);
+}
+assert(!scrollIntegrityCss.includes("#adminPreview *"), "Scroll integrity CSS applies a blanket page-shell selector.");
 
-console.log("Admin v606 accepted-source, script-order, style-order, runtime-token, and retired-action drift audit passed.");
+const integrationCss = readText("admin/css/player-runtime-integration.css");
+assert(integrationCss.includes("[data-admin-player-profile-save-status]") && integrationCss.includes("[data-admin-player-created-confirmation]"), "External player integration stylesheet is incomplete.");
+const confirmationCss = readText("admin/css/player-create-confirmation.css");
+assert(confirmationCss.includes("[data-admin-player-created-confirmation]"), "Player-created confirmation CSS is not bounded to its modal.");
+const stabilizationCss = readText("admin/css/admin-stabilization.css");
+assert(stabilizationCss.includes(".admin-terminal-modal-backdrop"), "Admin modal stabilization is missing.");
+assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Contract modal stabilization is missing.");
+assert(!/#adminPreview\s*,[\s\S]{0,80}#adminPreview\s+\*/m.test(stabilizationCss) && !/#adminPreview\s+\*\s*\{/m.test(stabilizationCss), "Admin stabilization applies a blanket box-sizing reset to the accepted page shell.");
+assert(/\.admin-terminal-modal-backdrop\s*,\s*\.admin-terminal-modal-backdrop\s+\*\s*\{[\s\S]*?box-sizing:\s*border-box/m.test(stabilizationCss), "Modal-only border-box containment is missing.");
+const visualFinishCss = readText("admin/css/admin-stabilization-visual-finish.css");
+assert(visualFinishCss.includes("#adminPreview .admin-terminal-clickable-row::after"), "Clickable-row SVG affordance correction is missing.");
+assert(!visualFinishCss.includes("#adminPreview *"), "Final visual corrections contain a blanket page-shell selector.");
+const gameSessionControlsCss = readText("admin/css/game-session-controls.css");
+assert(gameSessionControlsCss.includes(".econovaria-admin-game-session-card"), "Selected-game card CSS is missing.");
+assert(gameSessionControlsCss.includes('pointer-events: auto !important'), "Selected-game controls do not restore pointer interaction.");
+assert(gameSessionControlsCss.includes('[data-modal-id="share-game-access"]'), "Share modal CSS is not scoped to its surface.");
+assert(!gameSessionControlsCss.includes("#adminPreview *"), "Selected-game CSS applies a blanket page-shell selector.");
+const logoutConfirmationCss = readText("admin/css/logout-confirmation.css");
+assert(logoutConfirmationCss.includes(".econovaria-admin-logout-confirmation__dialog"), "Logout confirmation CSS is missing its dialog boundary.");
+assert(logoutConfirmationCss.includes("width: min(680px, calc(100vw - 32px))"), "Logout confirmation is not width-bounded.");
+assert(logoutConfirmationCss.includes("max-height: 44px !important"), "Logout confirmation buttons can stretch vertically.");
+assert(!logoutConfirmationCss.includes("#adminPreview *"), "Logout confirmation CSS applies a blanket page-shell selector.");
+
+const requestOwner = readText("admin/classroom-write-fallback.js");
+assert(requestOwner.includes("econovaria:admin-request-lifecycle"), "Authenticated request owner does not publish explicit lifecycle events.");
+assert(requestOwner.includes('phase: "started"') && requestOwner.includes('phase: committed ? "committed" : "failed"'), "Request lifecycle phases are incomplete.");
+assert(requestOwner.includes("requestId"), "Request lifecycle events are not request-correlated.");
+const interactionQuality = readText("admin/interaction-quality.js");
+assert(!interactionQuality.includes("window.fetch ="), "Interaction quality still owns global transport interception.");
+assert(!interactionQuality.includes("MutationObserver"), "Interaction quality still observes the complete DOM subtree.");
+assert(!interactionQuality.includes("initialPageLoad"), "Interaction quality can still create a second startup loader.");
+assert(interactionQuality.includes("detail.pageRead && navigationLoad"), "Route skeletons are not limited to explicit in-console navigation.");
+assert(interactionQuality.includes("econovaria:admin-request-lifecycle") && interactionQuality.includes("requestContexts"), "Interaction quality does not consume request-scoped lifecycle events.");
+assert(interactionQuality.includes("aria-invalid") && interactionQuality.includes("admin-qol-field-error"), "Field-level validation feedback is incomplete.");
+assert(interactionQuality.includes('"Scanning"') && interactionQuality.includes('"Completed"') && interactionQuality.includes('"Scan failed"'), "Scanner processing, completion, or error copy is missing.");
+const interactionControlReset = readText("admin/interaction-quality-control-reset.js");
+assert(interactionControlReset.includes("restoreCompletedControl") && interactionControlReset.includes('removeAttribute("aria-disabled")') && interactionControlReset.includes("setScannerReady"), "Completed actions or scanner idle recovery are incomplete.");
+
+const interactionQualityCss = readText("admin/css/interaction-quality.css");
+assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Route-change skeleton host CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error CSS is missing.");
+assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing CSS is missing.");
+assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality contains a blanket page-shell reset.");
+
+const sessionSkeletonCss = readText("admin/css/session-skeleton.css");
+for (const token of ["admin-session-skeleton__shell", "admin-session-skeleton__metrics", "admin-session-skeleton__table-row", "prefers-reduced-motion"]) {
+  assert(sessionSkeletonCss.includes(token), `Session skeleton CSS is missing ${token}.`);
+}
+assert(sessionSkeletonCss.includes("single startup loader"), "Session skeleton ownership is not explicit.");
+assert(!sessionSkeletonCss.includes("admin-shape-skeleton-stage"), "The retained session loader still contains the removed page-clone system.");
+assert(!sessionSkeletonCss.includes("#adminPreview *"), "Session skeleton CSS applies a blanket page-shell selector.");
+const responsiveGridCss = readText("admin/css/responsive-card-grid.css");
+assert(responsiveGridCss.includes(".admin-session-skeleton__metrics") && responsiveGridCss.includes(".admin-terminal-action-grid"), "Skeleton and live overview cards do not share one grid contract.");
+assert(responsiveGridCss.includes("auto-fit") && responsiveGridCss.includes("220px"), "Shared card columns do not derive from available width.");
+assert(!responsiveGridCss.includes("#adminPreview *"), "Responsive card-grid CSS applies a blanket page-shell selector.");
+const dataStateCss = readText("admin/css/data-state-contracts.css");
+for (const token of ['[data-state="stale"]', '[data-state="empty"]', '[data-state="failed"]']) {
+  assert(dataStateCss.includes(token), `Data-state CSS is missing ${token}.`);
+}
+assert(!dataStateCss.includes("#adminPreview *"), "Data-state CSS applies a blanket page-shell selector.");
+const keyboardCss = readText("admin/css/keyboard-navigation.css");
+assert(keyboardCss.includes(":focus-visible") && keyboardCss.includes("forced-colors: active"), "Keyboard focus CSS is incomplete.");
+assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a blanket page-shell selector.");
+assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
+assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
+
+console.log("Accepted v606 core files, bounded viewport scroll ownership, selected multiplayer game controls, bounded logout confirmation, explicit six-state data lifecycles, a single startup skeleton, responsive shared card geometry, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
