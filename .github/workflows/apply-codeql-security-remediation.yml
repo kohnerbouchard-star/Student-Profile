@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - agent/codeql-security-remediation-v1
+  pull_request:
+    branches:
+      - agent/verified-admin-onboarding-and-game-selector
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
