@@ -84,6 +84,13 @@ verify_jwt = false
 [functions.web-session-api]
 verify_jwt = false
 
+# Public verification review surface. Supabase Auth owns and validates the signup
+# or magic-link token. GET only renders a no-store form; POST requires a same-origin
+# double-submit challenge, exchanges the token with the publishable key, and never
+# forwards the temporary AAL1 session to the browser.
+[functions.admin-email-verification]
+verify_jwt = false
+
 # Public recovery confirmation surface. GET only renders a no-store confirmation
 # form. The recovery TokenHash is exchanged only after a same-origin POST with an
 # HttpOnly double-submit challenge; no user JWT exists before that exchange.

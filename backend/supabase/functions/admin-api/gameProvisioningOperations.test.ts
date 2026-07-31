@@ -6,268 +6,216 @@ declare const Deno: {
 
 const STAFF_ID = "00000000-0000-4000-8000-000000000001";
 const GAME_ID = "00000000-0000-4000-8000-000000000002";
+const ENTITLEMENT_ID = "00000000-0000-4000-8000-000000000003";
+const PURCHASE_CODE_ID = "00000000-0000-4000-8000-000000000004";
+const IDEMPOTENCY_KEY = "game.create.test.001";
 
-Deno.test("POST games validates input and calls the full activation provisioning RPC", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const service = successfulService(calls, "created", "ECO-ABCD2345", false);
+Deno.test("authenticated game creation redeems the supplied license and completes onboarding", async () => {
+  let activationBody: unknown = null;
+  let activationContext: unknown = null;
+  let completion: Record<string, string> | null = null;
 
-  const result = await handleGameProvisioningOperation(service, {
-    request: gameRequest({
-      name: "Period 4 Economy",
-      difficultyPreset: "hard",
-      stockMarketWindow: { timezone: "Asia/Seoul" },
-    }),
+  const result = await handleGameProvisioningOperation({}, {
+    request: gameRequest(),
     path: "/games",
     staffUserId: STAFF_ID,
+  }, {
+    activate: async (_service, body, context) => {
+      activationBody = body;
+      activationContext = context;
+      return successActivation(201);
+    },
+    completeOnboarding: async (_service, staffUserId, gameSessionId) => {
+      completion = { staffUserId, gameSessionId };
+      return true;
+    },
+    readGame: async () => ({
+      id: GAME_ID,
+      name: "Period 4 Economy",
+      status: "active",
+      game_join_code: "ECO-ABCD2345",
+      game_join_code_status: "active",
+      created_at: "2026-07-31T00:00:00.000Z",
+      updated_at: "2026-07-31T00:00:00.000Z",
+    }),
   });
 
   assertEquals(result.handled, true);
   assertEquals(result.status, 201);
-  assertEquals(calls.length, 3);
-  assertEquals(calls[0].name, "game_provisioning_preflight_v1");
-  assertEquals(calls[1].name, "create_provisioned_game_v2");
-  assertEquals(calls[2].name, "verify_provisioned_game_v1");
-  assertEquals(calls[1].args.p_staff_user_id, STAFF_ID);
-  assertEquals(calls[1].args.p_game_name, "Period 4 Economy");
-  assertEquals(calls[1].args.p_idempotency_key, "game.create.test.001");
-  assertEquals(calls[1].args.p_pack_id, "econovaria.beta-seed-pack.v1");
-  assertEquals(calls[2].args.p_game_session_id, GAME_ID);
+  assertEquals(activationBody, {
+    purchaseCode: "LICENSE-ABCD-1234",
+    gameName: "Period 4 Economy",
+    difficultyPreset: "hard",
+    stockMarketWindow: { timezone: "Asia/Seoul" },
+  });
+  assertEquals(activationContext, {
+    staffUserId: STAFF_ID,
+    requestId: IDEMPOTENCY_KEY,
+    source: "admin_api_authenticated_game_selector_v1",
+  });
+  assertEquals(completion, {
+    staffUserId: STAFF_ID,
+    gameSessionId: GAME_ID,
+  });
 
   const body = result.body as Record<string, any>;
+  assertEquals(body.ok, true);
+  assertEquals("activation" in body, false);
   assertEquals(body.data.game.id, GAME_ID);
   assertEquals(body.data.game.provisioningStatus, "ready");
-  assertEquals(body.data.game.activationVersion, "full-game-feature-activation-v2");
   assertEquals(body.data.game.gameCode, "ECO-ABCD2345");
   assertEquals(body.data.joinCode, "ECO-ABCD2345");
-  assertEquals(body.data.counts.marketAssets, 240);
-  assertEquals(body.data.counts.storyEvents, 3);
-  assertEquals(body.data.contentGates.story, "active");
-  assertEquals(body.data.contentGates.arrivalGrantProcessor, "active");
+  const serialized = JSON.stringify(body);
+  assertEquals(serialized.includes("LICENSE-ABCD-1234"), false);
+  assertEquals(serialized.includes(ENTITLEMENT_ID), false);
+  assertEquals(serialized.includes(PURCHASE_CODE_ID), false);
 });
 
-Deno.test("replayed provisioning never returns the original plaintext Game Code", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const service = successfulService(calls, "replayed", null, true);
-
-  const result = await handleGameProvisioningOperation(service, {
-    request: gameRequest({
-      name: "Period 4 Economy",
-      difficulty: "moderate",
-      timezone: "America/New_York",
-    }),
+Deno.test("activation failure is returned safely and never completes onboarding", async () => {
+  let completionCalls = 0;
+  let readCalls = 0;
+  const result = await handleGameProvisioningOperation({}, {
+    request: gameRequest(),
     path: "/games",
     staffUserId: STAFF_ID,
-  });
-
-  assertEquals(result.status, 200);
-  assertEquals(calls.map((call) => call.name).join(","), [
-    "game_provisioning_preflight_v1",
-    "create_provisioned_game_v2",
-    "verify_provisioned_game_v1",
-  ].join(","));
-  const body = result.body as Record<string, any>;
-  assertEquals(body.data.replayed, true);
-  assertEquals(body.data.joinCode, "");
-  assertEquals(body.data.joinCodeReissueRequired, true);
-  assertEquals(body.data.activationVersion, "full-game-feature-activation-v2");
-});
-
-Deno.test("invalid requests fail before any provisioning RPC call", async () => {
-  let calls = 0;
-  const service = {
-    async rpc() {
-      calls += 1;
-      return { data: null, error: null };
+  }, {
+    activate: async () => ({
+      httpStatus: 409,
+      body: {
+        ok: false,
+        error: {
+          code: "purchase_code_unavailable",
+          message: "The purchase code is unavailable.",
+          retryable: false,
+        },
+      },
+    }),
+    completeOnboarding: async () => {
+      completionCalls += 1;
+      return true;
     },
-  };
-
-  const missingKey = await handleGameProvisioningOperation(service, {
-    request: new Request("https://example.test/admin-api/games", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "Missing key",
-        difficultyPreset: "easy",
-        stockMarketWindow: { timezone: "Asia/Seoul" },
-      }),
-    }),
-    path: "/games",
-    staffUserId: STAFF_ID,
+    readGame: async () => {
+      readCalls += 1;
+      return null;
+    },
   });
-  assertEquals(missingKey.status, 400);
 
-  const badTimezone = await handleGameProvisioningOperation(service, {
-    request: gameRequest({
-      name: "Bad timezone",
-      difficultyPreset: "easy",
-      stockMarketWindow: { timezone: "Moon/Base-One" },
-    }),
-    path: "/games",
-    staffUserId: STAFF_ID,
+  assertEquals(result.status, 409);
+  assertEquals(completionCalls, 0);
+  assertEquals(readCalls, 0);
+  assertEquals(result.body, {
+    ok: false,
+    error: {
+      code: "purchase_code_unavailable",
+      message: "The purchase code is unavailable.",
+      retryable: false,
+    },
   });
-  assertEquals(badTimezone.status, 400);
-  assertEquals(calls, 0);
 });
 
-Deno.test("preflight failure creates no game and remains sanitized", async () => {
-  const calls: string[] = [];
-  const service = {
-    async rpc(name: string) {
-      calls.push(name);
-      return { data: null, error: { message: "missing canonical source" } };
-    },
-  };
-
-  const result = await handleGameProvisioningOperation(service, {
-    request: gameRequest({
-      name: "Unavailable source",
-      difficultyPreset: "hard",
-      stockMarketWindow: { timezone: "Asia/Seoul" },
-    }),
+Deno.test("missing idempotency key fails before license activation", async () => {
+  let activationCalls = 0;
+  const request = new Request("https://example.test/admin-api/games", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(validBody()),
+  });
+  const result = await handleGameProvisioningOperation({}, {
+    request,
     path: "/games",
     staffUserId: STAFF_ID,
+  }, {
+    activate: async () => {
+      activationCalls += 1;
+      return successActivation(201);
+    },
+  });
+
+  assertEquals(result.status, 400);
+  assertEquals(activationCalls, 0);
+  assertEquals((result.body as Record<string, unknown>).code, "invalid_idempotency_key");
+});
+
+Deno.test("onboarding completion failure remains retryable with the same request", async () => {
+  let readCalls = 0;
+  const result = await handleGameProvisioningOperation({}, {
+    request: gameRequest(),
+    path: "/games",
+    staffUserId: STAFF_ID,
+  }, {
+    activate: async () => successActivation(200),
+    completeOnboarding: async () => false,
+    readGame: async () => {
+      readCalls += 1;
+      return null;
+    },
   });
 
   assertEquals(result.status, 503);
-  assertEquals(calls.join(","), "game_provisioning_preflight_v1");
-  const body = result.body as Record<string, any>;
-  assertEquals(body.code, "game_provisioning_unavailable");
-  assertEquals(JSON.stringify(body).includes("canonical source"), false);
+  assertEquals(readCalls, 0);
+  assertEquals(result.body, {
+    code: "staff_onboarding_completion_failed",
+    message: "The game was created, but administrator activation did not finish. Retry with the same request.",
+    retryable: true,
+  });
 });
 
-Deno.test("database failures remain sanitized and non-joinable", async () => {
-  const calls: string[] = [];
-  const service = {
-    async rpc(name: string) {
-      calls.push(name);
-      if (name === "game_provisioning_preflight_v1") {
-        return { data: { ready: true }, error: null };
-      }
-      return {
-        data: {
-          outcome: "failed",
-          provisioningStatus: "failed",
-          failureCode: "P0001",
-          transactionRolledBack: true,
-          joinCode: null,
-        },
-        error: null,
-      };
-    },
-  };
-
-  const result = await handleGameProvisioningOperation(service, {
-    request: gameRequest({
-      name: "Rollback game",
-      difficultyPreset: "insane",
-      stockMarketWindow: { timezone: "Europe/London" },
-    }),
+Deno.test("unrelated routes and methods remain unhandled", async () => {
+  const wrongPath = await handleGameProvisioningOperation({}, {
+    request: gameRequest(),
+    path: "/games/example",
+    staffUserId: STAFF_ID,
+  });
+  const wrongMethod = await handleGameProvisioningOperation({}, {
+    request: new Request("https://example.test/admin-api/games", { method: "GET" }),
     path: "/games",
     staffUserId: STAFF_ID,
   });
 
-  assertEquals(result.status, 503);
-  assertEquals(calls.join(","), [
-    "game_provisioning_preflight_v1",
-    "create_provisioned_game_v2",
-  ].join(","));
-  const body = result.body as Record<string, any>;
-  assertEquals(body.code, "game_provisioning_failed");
-  assertEquals(body.data.transactionRolledBack, true);
-  assertEquals("joinCode" in body, false);
-  assertEquals(JSON.stringify(body).includes(GAME_ID), false);
+  assertEquals(wrongPath, { handled: false });
+  assertEquals(wrongMethod, { handled: false });
 });
 
-function successfulService(
-  calls: Array<{ name: string; args: Record<string, unknown> }>,
-  outcome: "created" | "replayed",
-  joinCode: string | null,
-  joinCodeReissueRequired: boolean,
-) {
-  return {
-    async rpc(name: string, args: Record<string, unknown>) {
-      calls.push({ name, args });
-      if (name === "game_provisioning_preflight_v1") {
-        return {
-          data: {
-            ready: true,
-            packId: "econovaria.beta-seed-pack.v1",
-            packVersion: "1.0.0-beta",
-          },
-          error: null,
-        };
-      }
-      if (name === "verify_provisioned_game_v1") {
-        return {
-          data: {
-            ready: true,
-            gameSessionId: GAME_ID,
-            provisioningStatus: "ready",
-            packId: "econovaria.beta-seed-pack.v1",
-            packVersion: "1.0.0-beta",
-            counts: {
-              marketAssets: 240,
-              contracts: 30,
-              storeItems: 50,
-              worldLocations: 50,
-              worldRoutes: 13,
-              worldCountries: 10,
-              arrivalClassGrants: 8,
-              messagingPolicies: 1,
-              marketplacePolicies: 1,
-            },
-          },
-          error: null,
-        };
-      }
-      return {
-        data: {
-          outcome,
-          gameSessionId: GAME_ID,
-          gameName: "Period 4 Economy",
-          provisioningStatus: "ready",
-          packId: "econovaria.beta-seed-pack.v1",
-          packVersion: "1.0.0-beta",
-          activationVersion: "full-game-feature-activation-v2",
-          joinCode,
-          joinCodeReissueRequired,
-          counts: {
-            marketAssets: 240,
-            contracts: 30,
-            storeItems: 50,
-            worldLocations: 50,
-            worldRoutes: 13,
-            storylines: 1,
-            storyEvents: 3,
-            arrivalPackages: 10,
-            arrivalClassGrants: 8,
-          },
-          contentGates: {
-            crafting: "blocked",
-            story: "active",
-            arrivalGrantProcessor: "active",
-            progressionInitialization: "active",
-          },
-        },
-        error: null,
-      };
-    },
-  };
-}
-
-function gameRequest(body: Record<string, unknown>): Request {
+function gameRequest(): Request {
   return new Request("https://example.test/admin-api/games", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-idempotency-key": "game.create.test.001",
+      "x-idempotency-key": IDEMPOTENCY_KEY,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(validBody()),
   });
 }
 
+function validBody() {
+  return {
+    purchaseCode: "LICENSE-ABCD-1234",
+    gameName: "Period 4 Economy",
+    difficultyPreset: "hard",
+    stockMarketWindow: { timezone: "Asia/Seoul" },
+  };
+}
+
+function successActivation(httpStatus: number) {
+  return {
+    httpStatus,
+    body: {
+      ok: true as const,
+      activation: {
+        gameSessionId: GAME_ID,
+        entitlementId: ENTITLEMENT_ID,
+        purchaseCodeId: PURCHASE_CODE_ID,
+        purchaseCodeStatus: "redeemed",
+        redeemedCount: 1,
+        maxRedemptions: 1,
+        activatedAt: "2026-07-31T00:00:00.000Z",
+      },
+    },
+  };
+}
+
 function assertEquals(actual: unknown, expected: unknown): void {
-  if (!Object.is(actual, expected)) {
+  if (!Object.is(actual, expected) && JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
   }
 }

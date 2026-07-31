@@ -1,15 +1,16 @@
-const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
-const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
-const CANONICAL_PACK_ID = "econovaria.beta-seed-pack.v1";
+import {
+  handleLicensingActivationRequest,
+  type LicensingActivationRouteAdapterResult,
+} from "../../../src/domains/licensing/application/licensingActivationRouteAdapter.ts";
+import {
+  createLicensingActivationRouteAdapterDependencies,
+} from "../../../src/domains/licensing/infrastructure/licensingActivationFactory.ts";
+import {
+  createSupabaseLicensingActivationRepository,
+  type SupabaseLicensingActivationRepositoryClient,
+} from "../../../src/domains/licensing/infrastructure/licensingRepository.ts";
 
-interface GameProvisioningInput {
-  readonly name: string;
-  readonly difficultyPreset: string;
-  readonly stockMarketWindow: Record<string, unknown>;
-  readonly attendanceWindow: Record<string, unknown>;
-  readonly businessMarketWindow: Record<string, unknown>;
-  readonly newsSchedule: Record<string, unknown>;
-}
+const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u;
 
 interface GameProvisioningOperationInput {
   readonly request: Request;
@@ -23,82 +24,46 @@ interface OperationResult {
   readonly body?: Record<string, unknown>;
 }
 
+interface GameRow {
+  readonly id?: unknown;
+  readonly name?: unknown;
+  readonly status?: unknown;
+  readonly game_join_code?: unknown;
+  readonly game_join_code_status?: unknown;
+  readonly created_at?: unknown;
+  readonly updated_at?: unknown;
+}
+
+interface ProvisioningContext {
+  readonly staffUserId: string;
+  readonly requestId: string;
+  readonly source: string;
+}
+
+export interface GameProvisioningDependencies {
+  readonly activate?: (
+    service: any,
+    body: unknown,
+    context: ProvisioningContext,
+  ) => Promise<LicensingActivationRouteAdapterResult>;
+  readonly completeOnboarding?: (
+    service: any,
+    staffUserId: string,
+    gameSessionId: string,
+  ) => Promise<boolean>;
+  readonly readGame?: (
+    service: any,
+    staffUserId: string,
+    gameSessionId: string,
+  ) => Promise<GameRow | null>;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function objectOrEmpty(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
-}
-
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function validTimeZone(value: unknown): value is string {
-  if (typeof value !== "string" || !value.trim()) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value.trim() }).format(new Date());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function parseInput(value: unknown):
-  | { readonly ok: true; readonly input: GameProvisioningInput }
-  | { readonly ok: false; readonly code: string; readonly message: string } {
-  if (!isRecord(value)) {
-    return {
-      ok: false,
-      code: "invalid_game_request",
-      message: "Game creation requires a JSON object.",
-    };
-  }
-
-  const name = text(value.name ?? value.gameName);
-  if (name.length < 1 || name.length > 120) {
-    return {
-      ok: false,
-      code: "invalid_game_name",
-      message: "Game name must contain between 1 and 120 characters.",
-    };
-  }
-
-  const difficultyPreset = text(value.difficultyPreset ?? value.difficulty)
-    .toLowerCase();
-  if (!VALID_DIFFICULTIES.has(difficultyPreset)) {
-    return {
-      ok: false,
-      code: "invalid_game_difficulty",
-      message: "Difficulty must be easy, moderate, hard, or insane.",
-    };
-  }
-
-  const stockMarketWindow = objectOrEmpty(value.stockMarketWindow);
-  const timezone = stockMarketWindow.timezone ?? value.timezone;
-  if (!validTimeZone(timezone)) {
-    return {
-      ok: false,
-      code: "invalid_stock_market_timezone",
-      message: "A valid IANA stock-market timezone is required.",
-    };
-  }
-
-  return {
-    ok: true,
-    input: {
-      name,
-      difficultyPreset,
-      stockMarketWindow: {
-        ...stockMarketWindow,
-        timezone: timezone.trim(),
-      },
-      attendanceWindow: objectOrEmpty(value.attendanceWindow),
-      businessMarketWindow: objectOrEmpty(value.businessMarketWindow),
-      newsSchedule: objectOrEmpty(value.newsSchedule),
-    },
-  };
 }
 
 function idempotencyKey(request: Request): string {
@@ -108,26 +73,10 @@ function idempotencyKey(request: Request): string {
   );
 }
 
-function normalizeRpcResult(value: unknown): Record<string, unknown> {
-  if (Array.isArray(value)) return isRecord(value[0]) ? value[0] : {};
-  return isRecord(value) ? value : {};
-}
-
-function unavailableResult(): OperationResult {
-  return {
-    handled: true,
-    status: 503,
-    body: {
-      code: "game_provisioning_unavailable",
-      message: "Game creation is unavailable until the canonical content pack is ready.",
-      retryable: true,
-    },
-  };
-}
-
 export async function handleGameProvisioningOperation(
   service: any,
   operation: GameProvisioningOperationInput,
+  dependencies: GameProvisioningDependencies = {},
 ): Promise<OperationResult> {
   if (operation.path !== "/games" || operation.request.method !== "POST") {
     return { handled: false };
@@ -159,133 +108,108 @@ export async function handleGameProvisioningOperation(
     };
   }
 
-  const parsed = parseInput(body);
-  if (parsed.ok === false) {
-    return {
-      handled: true,
-      status: 400,
-      body: { code: parsed.code, message: parsed.message },
-    };
-  }
-
-  const preflight = await service.rpc("game_provisioning_preflight_v1", {
-    p_pack_id: CANONICAL_PACK_ID,
-  });
-  if (preflight.error) return unavailableResult();
-
-  const response = await service.rpc("create_provisioned_game_v2", {
-    p_staff_user_id: operation.staffUserId,
-    p_game_name: parsed.input.name,
-    p_game_settings: {
-      difficulty_preset: parsed.input.difficultyPreset,
-      stock_market_window: parsed.input.stockMarketWindow,
-      attendance_window: parsed.input.attendanceWindow,
-      business_market_window: parsed.input.businessMarketWindow,
-      news_schedule: parsed.input.newsSchedule,
-    },
-    p_idempotency_key: key,
-    p_pack_id: CANONICAL_PACK_ID,
-  });
-
-  if (response.error) return unavailableResult();
-
-  const result = normalizeRpcResult(response.data);
-  const outcome = text(result.outcome);
-  if (outcome === "failed" || outcome === "failed_replay") {
-    return {
-      handled: true,
-      status: 503,
-      body: {
-        code: "game_provisioning_failed",
-        message: "The multiplayer game was not created because provisioning did not complete.",
-        retryable: outcome === "failed",
-        data: {
-          provisioningStatus: "failed",
-          transactionRolledBack: result.transactionRolledBack === true,
-        },
-      },
-    };
-  }
-
-  const gameId = text(result.gameSessionId);
-  const gameName = text(result.gameName) || parsed.input.name;
-  const provisioningStatus = text(result.provisioningStatus) || "ready";
-  const joinCode = text(result.joinCode);
-  const replayed = outcome === "replayed";
-
-  if (!gameId || provisioningStatus !== "ready") {
-    return {
-      handled: true,
-      status: 503,
-      body: {
-        code: "game_provisioning_incomplete",
-        message: "The multiplayer game did not reach a ready state.",
-        retryable: false,
-      },
-    };
-  }
-
-  const verificationResponse = await service.rpc("verify_provisioned_game_v1", {
-    p_game_session_id: gameId,
-    p_staff_user_id: operation.staffUserId,
-  });
-  if (verificationResponse.error) {
-    return {
-      handled: true,
-      status: 503,
-      body: {
-        code: "game_provisioning_verification_failed",
-        message: "The multiplayer game failed its post-provisioning content verification.",
-        retryable: false,
-      },
-    };
-  }
-
-  const verification = normalizeRpcResult(verificationResponse.data);
-  if (verification.ready !== true) {
-    return {
-      handled: true,
-      status: 503,
-      body: {
-        code: "game_provisioning_verification_failed",
-        message: "The multiplayer game failed its post-provisioning content verification.",
-        retryable: false,
-      },
-    };
-  }
-
-  const counts = {
-    ...(isRecord(result.counts) ? result.counts : {}),
-    ...(isRecord(verification.counts) ? verification.counts : {}),
+  const context: ProvisioningContext = {
+    staffUserId: operation.staffUserId,
+    requestId: key,
+    source: "admin_api_authenticated_game_selector_v1",
   };
+  const activate = dependencies.activate ?? defaultActivate;
+  const activationResult = await activate(service, body, context);
+
+  if (!activationResult.body.ok) {
+    return {
+      handled: true,
+      status: activationResult.httpStatus,
+      body: activationResult.body as unknown as Record<string, unknown>,
+    };
+  }
+
+  // Internal entitlement and purchase-code identifiers terminate at the
+  // licensing service. The browser receives only its public game model.
+  const gameId = activationResult.body.activation.gameSessionId;
+  const completeOnboarding = dependencies.completeOnboarding ?? defaultCompleteOnboarding;
+  const completed = await completeOnboarding(service, operation.staffUserId, gameId);
+  if (!completed) {
+    return {
+      handled: true,
+      status: 503,
+      body: {
+        code: "staff_onboarding_completion_failed",
+        message: "The game was created, but administrator activation did not finish. Retry with the same request.",
+        retryable: true,
+      },
+    };
+  }
+
+  const readGame = dependencies.readGame ?? defaultReadGame;
+  const game = await readGame(service, operation.staffUserId, gameId) ?? {};
+  const requestBody = isRecord(body) ? body : {};
+  const joinCode = text(game.game_join_code);
+  const joinCodeStatus = text(game.game_join_code_status) || "active";
 
   return {
     handled: true,
-    status: replayed ? 200 : 201,
+    status: activationResult.httpStatus,
     body: {
+      ok: true,
       data: {
         game: {
           id: gameId,
           gameId,
-          name: gameName,
-          status: "active",
-          lifecycleState: "active",
-          provisioningStatus,
-          packId: text(result.packId) || text(verification.packId),
-          packVersion: text(result.packVersion) || text(verification.packVersion),
-          activationVersion: text(result.activationVersion),
-          joinCodeStatus: "active",
+          name: text(game.name) || text(requestBody.gameName) || "Game session",
+          status: text(game.status) || "active",
+          lifecycleState: text(game.status) || "active",
+          provisioningStatus: "ready",
+          joinCodeStatus,
           joinCode,
           gameCode: joinCode,
+          createdAt: text(game.created_at) || null,
+          updatedAt: text(game.updated_at) || null,
         },
         joinCode,
-        joinCodeStatus: "active",
-        joinCodeReissueRequired: result.joinCodeReissueRequired === true,
-        counts,
-        contentGates: isRecord(result.contentGates) ? result.contentGates : {},
-        activationVersion: text(result.activationVersion),
-        replayed,
+        joinCodeStatus,
       },
     },
   };
+}
+
+async function defaultActivate(
+  service: any,
+  body: unknown,
+  context: ProvisioningContext,
+): Promise<LicensingActivationRouteAdapterResult> {
+  const activationRepository = createSupabaseLicensingActivationRepository(
+    service as SupabaseLicensingActivationRepositoryClient,
+  );
+  return handleLicensingActivationRequest(
+    body,
+    context,
+    createLicensingActivationRouteAdapterDependencies({ activationRepository }),
+  );
+}
+
+async function defaultCompleteOnboarding(
+  service: any,
+  staffUserId: string,
+  gameSessionId: string,
+): Promise<boolean> {
+  const completion = await service.rpc("complete_staff_onboarding_v1", {
+    p_staff_user_id: staffUserId,
+    p_game_session_id: gameSessionId,
+  });
+  return !completion.error && completion.data === true;
+}
+
+async function defaultReadGame(
+  service: any,
+  staffUserId: string,
+  gameSessionId: string,
+): Promise<GameRow | null> {
+  const gameResponse = await service
+    .from("game_sessions")
+    .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
+    .eq("id", gameSessionId)
+    .eq("owner_staff_user_id", staffUserId)
+    .maybeSingle();
+  return gameResponse.error ? null : gameResponse.data as GameRow | null;
 }

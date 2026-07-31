@@ -25,6 +25,7 @@ interface StaffBootstrapBody {
     readonly supabaseAuthUserId: string;
     readonly email: string | null;
     readonly displayName: string;
+    readonly status: "active" | "onboarding";
   };
   readonly activeGameSessions: readonly {
     readonly id: string;
@@ -93,6 +94,7 @@ export async function handleStaffBootstrapRequest(
           message: "Staff bootstrap failed.",
           retryable: false,
         },
+        allowedStatuses: ["active", "onboarding"],
       },
     );
 
@@ -124,6 +126,7 @@ export async function handleStaffBootstrapRequest(
         supabaseAuthUserId: staff.supabase_auth_user_id,
         email: staff.email,
         displayName: staff.display_name,
+        status: staff.status,
       },
       activeGameSessions: ((sessionsResponse.data ?? []) as readonly StaffBootstrapSessionRow[]).map((session) => ({
         id: session.id,
@@ -149,11 +152,6 @@ function internalWebSessionRequest(request: Request): Request {
   const url = new URL(request.url);
   if (url.origin !== INTERNAL_WEB_SESSION_ORIGIN) return request;
 
-  // The web-session handler has already authenticated the browser request and
-  // is the only owner of this synthetic internal origin. Preserve universal
-  // Staff limiting without accepting a browser-supplied network header. The
-  // internal request must use the same trusted header selected by runtime
-  // configuration; otherwise the shared limiter fails before consuming.
   return new Request(request, {
     headers: overwriteTrustedClientIpHeaders(
       request.headers,

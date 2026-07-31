@@ -14,6 +14,7 @@ export type LicensingActivationSafeErrorCode =
   | "purchase_code_revoked"
   | "purchase_code_not_active"
   | "purchase_code_redemption_conflict"
+  | "idempotency_key_conflict"
   | "licensing_activation_failed";
 
 export interface LicensingActivationSafeError {
@@ -60,10 +61,20 @@ function mapSupabaseActivationError(
     case "STAFF_USER_REQUIRED":
     case "PURCHASE_CODE_HASH_REQUIRED":
     case "GAME_NAME_REQUIRED":
+    case "IDEMPOTENCY_KEY_REQUIRED":
+    case "INVALID_REQUEST_METADATA":
       return {
         code: "invalid_redemption_input",
-        message: "Activation request is missing required information.",
+        message: "Activation request is missing or contains invalid required information.",
         httpStatus: 400,
+        retryable: false,
+      };
+
+    case "IDEMPOTENCY_KEY_CONFLICT":
+      return {
+        code: "idempotency_key_conflict",
+        message: "This game-creation request key was already used for different information.",
+        httpStatus: 409,
         retryable: false,
       };
 

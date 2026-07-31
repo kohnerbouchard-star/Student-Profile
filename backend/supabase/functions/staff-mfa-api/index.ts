@@ -59,6 +59,7 @@ Deno.serve(async (incomingRequest) => {
       missingMessage: "A verified staff user is required for MFA management.",
       requiredRole: "game_admin",
       requiredAssuranceLevel: requiredAal,
+      allowedStatuses: ["active", "onboarding"],
     },
   );
   if (!staffResult.ok) {

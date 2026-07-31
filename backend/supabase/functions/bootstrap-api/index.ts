@@ -9,6 +9,12 @@ import {
   handleStaffSignupRequest,
 } from "../../../src/domains/auth/api/staffSignupHttpHandler.ts";
 import {
+  handleStaffSignupResendRequest,
+} from "../../../src/domains/auth/api/staffSignupResendHttpHandler.ts";
+import {
+  handleStaffSignupCancelRequest,
+} from "../../../src/domains/auth/api/staffSignupCancelHttpHandler.ts";
+import {
   handleLicensingActivationRequest,
 } from "../../../src/domains/licensing/api/licensingActivationHttpHandler.ts";
 import {
@@ -78,6 +84,14 @@ Deno.serve(async (incomingRequest: Request) => {
       createAuthClient,
       createServiceClient,
     });
+  }
+
+  if (url.pathname.endsWith("/staff/signup/resend")) {
+    return handleStaffSignupResendRequest(request, { createServiceClient });
+  }
+
+  if (url.pathname.endsWith("/staff/signup/cancel")) {
+    return handleStaffSignupCancelRequest(request, { createServiceClient });
   }
 
   if (url.pathname.endsWith("/staff/signup")) {

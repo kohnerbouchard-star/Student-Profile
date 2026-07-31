@@ -119,7 +119,15 @@ export async function guardAdminRequest(
       "Staff security state is unavailable.",
     );
   }
-  if (!staff || staff.status !== "active" || staff.role !== "game_admin") {
+  const onboardingGameCreation =
+    staff?.status === "onboarding" &&
+    request.method.toUpperCase() === "POST" &&
+    String(path).split("?", 1)[0] === "/games";
+  if (
+    !staff ||
+    (staff.status !== "active" && !onboardingGameCreation) ||
+    staff.role !== "game_admin"
+  ) {
     return failure(
       403,
       "staff_account_inactive",
