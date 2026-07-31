@@ -12,11 +12,14 @@ const [
   hardeningMigration,
   cleanupClaimMigration,
   cleanupScheduleMigration,
+  linkAuthorityMigration,
   signup,
+  signupResend,
   signupCancel,
+  linkAdapter,
+  emailDelivery,
   login,
   confirmation,
-  template,
   config,
   html,
   browserLogin,
@@ -29,11 +32,14 @@ const [
   read("backend/supabase/migrations/20260731131000_harden_onboarding_cleanup_and_license_replay_v1.sql"),
   read("backend/supabase/migrations/20260731132000_wire_expired_signup_cleanup_into_claim_v1.sql"),
   read("backend/supabase/migrations/20260731133000_schedule_expired_staff_signup_cleanup_v1.sql"),
+  read("backend/supabase/migrations/20260731134000_align_supabase_verification_link_authority_v1.sql"),
   read("backend/src/domains/auth/api/staffSignupHttpHandler.ts"),
+  read("backend/src/domains/auth/api/staffSignupResendHttpHandler.ts"),
   read("backend/src/domains/auth/api/staffSignupCancelHttpHandler.ts"),
+  read("backend/src/domains/auth/application/staffSignupSupabaseLink.ts"),
+  read("backend/src/domains/auth/application/staffSignupVerificationEmail.ts"),
   read("backend/src/domains/auth/api/staffLoginHttpHandler.ts"),
   read("backend/supabase/functions/admin-email-verification/index.ts"),
-  read("backend/supabase/templates/confirmation.html"),
   read("backend/supabase/config.toml"),
   read("index.html"),
   read("frontend/src/core/login.js"),
@@ -51,11 +57,17 @@ test("pending signup is private, one-per-email and contains no game entitlement 
   assert.match(onboardingMigration, /grant select, insert, update, delete[\s\S]*to service_role/u);
   assert.doesNotMatch(onboardingMigration, /staff_signup_requests[\s\S]{0,2500}\bpurchase_code_(?:id|hash)\b/u);
   assert.doesNotMatch(onboardingMigration, /staff_signup_requests[\s\S]{0,2500}\bgame_(?:name|settings|session_id)\b/u);
+  assert.doesNotMatch(
+    [onboardingMigration, hardeningMigration, cleanupClaimMigration, cleanupScheduleMigration, linkAuthorityMigration].join("\n"),
+    /verification_token_hash|verification_token_issued_at|verification_token_consumed_at/u,
+  );
 });
 
-test("public account creation creates only an unconfirmed Auth identity", () => {
+test("public account creation uses Supabase generateLink and creates no game authority", () => {
   assert.match(signup, /claim_staff_signup_identity_v1/u);
-  assert.match(signup, /email_confirm:\s*false/u);
+  assert.match(signup, /generateInitialStaffSignupLink/u);
+  assert.doesNotMatch(signup, /auth\.admin\.createUser/u);
+  assert.doesNotMatch(signup, /email_confirm:\s*true/u);
   assert.doesNotMatch(signup, /app_metadata\s*:/u);
   assert.doesNotMatch(signup, /redeem_purchase_code_for_game/u);
   assert.doesNotMatch(signup, /createSupabaseStaffRepository/u);
@@ -67,7 +79,30 @@ test("public account creation creates only an unconfirmed Auth identity", () => 
   assert.doesNotMatch(html, /id="gameTimeZone"/u);
 });
 
-test("email verification is prefetch-safe and grants no game authority", () => {
+test("Supabase remains the only verification-token authority", () => {
+  assert.match(linkAdapter, /generateLink\(input/u);
+  assert.match(linkAdapter, /type: "signup"/u);
+  assert.match(linkAdapter, /type: "magiclink"/u);
+  assert.match(linkAdapter, /properties\?\.hashed_token/u);
+  assert.match(linkAdapter, /properties\?\.verification_type/u);
+  assert.doesNotMatch(linkAdapter, /crypto\.subtle|randomBase64Url/u);
+  assert.match(emailDelivery, /searchParams\.set\("token_hash", input\.tokenHash\)/u);
+  assert.match(emailDelivery, /searchParams\.set\("type", input\.verificationType\)/u);
+  assert.doesNotMatch(emailDelivery, /verificationToken/u);
+  assert.match(linkAuthorityMigration, /Supabase remains the verification-token authority/u);
+});
+
+test("duplicate public signup never resends and handle-bound resend matches exact Auth user", () => {
+  assert.match(linkAuthorityMigration, /'resume_pending'::text[\s\S]*false/u);
+  assert.match(linkAuthorityMigration, /create function public\.claim_staff_signup_resend_v1/u);
+  assert.match(linkAuthorityMigration, /supabase_auth_user_id uuid/u);
+  assert.match(linkAuthorityMigration, /auth_user\.email_confirmed_at/u);
+  assert.match(signupResend, /generatePendingStaffSignupResendLink/u);
+  assert.match(signupResend, /expectedAuthUserId: authUserId/u);
+  assert.match(signupResend, /claim_staff_signup_resend_v1/u);
+});
+
+test("email verification is prefetch-safe, publishable-key-only and grants no game authority", () => {
   assert.match(confirmation, /if \(method === "GET"\) return renderConfirmation/u);
   assert.match(confirmation, /if \(method === "POST"\) return consumeConfirmation/u);
   const renderSection = confirmation.slice(
@@ -80,9 +115,11 @@ test("email verification is prefetch-safe and grants no game authority", () => {
   assert.match(confirmation, /String\(request\.headers\.get\("origin"\)/u);
   assert.match(confirmation, /\/auth\/v1\/verify/u);
   assert.match(confirmation, /\/auth\/v1\/logout\?scope=local/u);
+  assert.match(confirmation, /SUPABASE_PUBLISHABLE_KEY/u);
+  assert.doesNotMatch(confirmation, /SERVICE_ROLE|serviceRoleKey|\/rest\/v1\/rpc/u);
+  assert.match(confirmation, /VERIFICATION_TYPES = new Set\(\["signup", "magiclink"\]\)/u);
   assert.match(confirmation, /reason=email-verified/u);
   assert.doesNotMatch(confirmation, /redeem_purchase_code_for_game|complete_staff_onboarding_v1/u);
-  assert.match(template, /\{\{ \.RedirectTo \}\}\?token_hash=\{\{ \.TokenHash \}\}&type=email/u);
   assert.match(config, /\[functions\.admin-email-verification\][\s\S]*verify_jwt = false/u);
 });
 
