@@ -92,6 +92,10 @@ async function mountedAdminContract(name, width, height) {
     state: "visible",
     timeout: 15000,
   });
+  await page.locator('[data-admin-section="Attendance"]').first().waitFor({
+    state: "visible",
+    timeout: 15000,
+  });
 
   const result = {
     shapeRuntimePresent: await page.evaluate(
@@ -108,7 +112,6 @@ async function mountedAdminContract(name, width, height) {
     responsiveGridStylesheetCount: await page.locator(
       'link[rel="stylesheet"][href="./css/responsive-card-grid.css"]',
     ).count(),
-    overviewGridCount: await page.locator(".admin-terminal-action-grid").count(),
     mainBusy: await page.locator(".admin-terminal-shell-main").first()
       .getAttribute("aria-busy"),
     overflow: await page.evaluate(() => Math.max(
@@ -123,8 +126,7 @@ async function mountedAdminContract(name, width, height) {
     result.visibleGateCount !== 0 ||
     result.visibleStartupSkeletonCount !== 0 ||
     result.visibleRouteSkeletonCount !== 0 ||
-    result.responsiveGridStylesheetCount !== 1 ||
-    result.overviewGridCount < 1
+    result.responsiveGridStylesheetCount !== 1
   ) {
     fail(`${name} mounted a duplicate startup loader: ${JSON.stringify(result)}.`);
   }
