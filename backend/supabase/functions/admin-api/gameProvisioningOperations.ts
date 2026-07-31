@@ -1,5 +1,6 @@
 import {
   handleLicensingActivationRequest,
+  type LicensingActivationRouteAdapterResult,
 } from "../../../src/domains/licensing/application/licensingActivationRouteAdapter.ts";
 import {
   createLicensingActivationRouteAdapterDependencies,
@@ -33,6 +34,30 @@ interface GameRow {
   readonly updated_at?: unknown;
 }
 
+interface ProvisioningContext {
+  readonly staffUserId: string;
+  readonly requestId: string;
+  readonly source: string;
+}
+
+export interface GameProvisioningDependencies {
+  readonly activate?: (
+    service: any,
+    body: unknown,
+    context: ProvisioningContext,
+  ) => Promise<LicensingActivationRouteAdapterResult>;
+  readonly completeOnboarding?: (
+    service: any,
+    staffUserId: string,
+    gameSessionId: string,
+  ) => Promise<boolean>;
+  readonly readGame?: (
+    service: any,
+    staffUserId: string,
+    gameSessionId: string,
+  ) => Promise<GameRow | null>;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -51,6 +76,7 @@ function idempotencyKey(request: Request): string {
 export async function handleGameProvisioningOperation(
   service: any,
   operation: GameProvisioningOperationInput,
+  dependencies: GameProvisioningDependencies = {},
 ): Promise<OperationResult> {
   if (operation.path !== "/games" || operation.request.method !== "POST") {
     return { handled: false };
@@ -82,18 +108,13 @@ export async function handleGameProvisioningOperation(
     };
   }
 
-  const activationRepository = createSupabaseLicensingActivationRepository(
-    service as SupabaseLicensingActivationRepositoryClient,
-  );
-  const activationResult = await handleLicensingActivationRequest(
-    body,
-    {
-      staffUserId: operation.staffUserId,
-      requestId: key,
-      source: "admin_api_authenticated_game_selector_v1",
-    },
-    createLicensingActivationRouteAdapterDependencies({ activationRepository }),
-  );
+  const context: ProvisioningContext = {
+    staffUserId: operation.staffUserId,
+    requestId: key,
+    source: "admin_api_authenticated_game_selector_v1",
+  };
+  const activate = dependencies.activate ?? defaultActivate;
+  const activationResult = await activate(service, body, context);
 
   if (!activationResult.body.ok) {
     return {
@@ -104,11 +125,9 @@ export async function handleGameProvisioningOperation(
   }
 
   const gameId = activationResult.body.activation.gameSessionId;
-  const completion = await service.rpc("complete_staff_onboarding_v1", {
-    p_staff_user_id: operation.staffUserId,
-    p_game_session_id: gameId,
-  });
-  if (completion.error || completion.data !== true) {
+  const completeOnboarding = dependencies.completeOnboarding ?? defaultCompleteOnboarding;
+  const completed = await completeOnboarding(service, operation.staffUserId, gameId);
+  if (!completed) {
     return {
       handled: true,
       status: 503,
@@ -120,13 +139,8 @@ export async function handleGameProvisioningOperation(
     };
   }
 
-  const gameResponse = await service
-    .from("game_sessions")
-    .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
-    .eq("id", gameId)
-    .eq("owner_staff_user_id", operation.staffUserId)
-    .maybeSingle();
-  const game = (gameResponse.data ?? {}) as GameRow;
+  const readGame = dependencies.readGame ?? defaultReadGame;
+  const game = await readGame(service, operation.staffUserId, gameId) ?? {};
   const requestBody = isRecord(body) ? body : {};
   const joinCode = text(game.game_join_code);
 
@@ -152,8 +166,48 @@ export async function handleGameProvisioningOperation(
         },
         joinCode,
         joinCodeStatus: text(game.game_join_code_status) || "active",
-        replayed: activationResult.httpStatus === 200,
       },
     },
   };
+}
+
+async function defaultActivate(
+  service: any,
+  body: unknown,
+  context: ProvisioningContext,
+): Promise<LicensingActivationRouteAdapterResult> {
+  const activationRepository = createSupabaseLicensingActivationRepository(
+    service as SupabaseLicensingActivationRepositoryClient,
+  );
+  return handleLicensingActivationRequest(
+    body,
+    context,
+    createLicensingActivationRouteAdapterDependencies({ activationRepository }),
+  );
+}
+
+async function defaultCompleteOnboarding(
+  service: any,
+  staffUserId: string,
+  gameSessionId: string,
+): Promise<boolean> {
+  const completion = await service.rpc("complete_staff_onboarding_v1", {
+    p_staff_user_id: staffUserId,
+    p_game_session_id: gameSessionId,
+  });
+  return !completion.error && completion.data === true;
+}
+
+async function defaultReadGame(
+  service: any,
+  staffUserId: string,
+  gameSessionId: string,
+): Promise<GameRow | null> {
+  const gameResponse = await service
+    .from("game_sessions")
+    .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
+    .eq("id", gameSessionId)
+    .eq("owner_staff_user_id", staffUserId)
+    .maybeSingle();
+  return gameResponse.error ? null : gameResponse.data as GameRow | null;
 }
