@@ -4,7 +4,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("join-code rotation is dispatched before generic mutation parsing", () => {
+Deno.test("join-code rotation is dispatched without consuming a request body", () => {
   assertEquals(
     runtimeMutationDispatch(
       "11111111-1111-4111-8111-111111111111",
@@ -15,6 +15,7 @@ Deno.test("join-code rotation is dispatched before generic mutation parsing", ()
       kind: "direct",
       classroomPath:
         "/games/11111111-1111-4111-8111-111111111111/join-code/reset",
+      body: {},
     },
   );
 });
