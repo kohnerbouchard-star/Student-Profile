@@ -21,6 +21,9 @@ import { validateStaffPassword } from "../../../security/staffPasswordPolicy.ts"
 import {
   sendStaffSignupVerificationEmail,
 } from "../application/staffSignupVerificationEmail.ts";
+import {
+  generateInitialStaffSignupLink,
+} from "../application/staffSignupSupabaseLink.ts";
 
 interface StaffSignupDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -29,6 +32,7 @@ interface StaffSignupDependencies {
   readonly checkThrottle?: typeof checkAuthenticationThrottle;
   readonly recordFailure?: typeof recordAuthenticationFailure;
   readonly recordSuccess?: typeof recordAuthenticationSuccess;
+  readonly generateSignupLink?: typeof generateInitialStaffSignupLink;
   readonly sendVerificationEmail?: typeof sendStaffSignupVerificationEmail;
 }
 
@@ -42,11 +46,6 @@ interface SignupClaimRow {
   readonly decision?: unknown;
   readonly signup_request_id?: unknown;
   readonly verification_expires_at?: unknown;
-}
-
-interface VerificationDeliveryRow {
-  readonly normalized_email?: unknown;
-  readonly delivery_version?: unknown;
 }
 
 const MAX_EMAIL_LENGTH = 320;
@@ -78,6 +77,8 @@ export async function handleStaffSignupRequest(
     const checkThrottle = dependencies.checkThrottle ?? checkAuthenticationThrottle;
     const recordFailure = dependencies.recordFailure ?? recordAuthenticationFailure;
     const recordSuccess = dependencies.recordSuccess ?? recordAuthenticationSuccess;
+    const generateSignupLink = dependencies.generateSignupLink ??
+      generateInitialStaffSignupLink;
     const sendVerificationEmail = dependencies.sendVerificationEmail ??
       sendStaffSignupVerificationEmail;
 
@@ -131,17 +132,12 @@ export async function handleStaffSignupRequest(
     let returnHandle = randomBase64Url(32);
 
     if (decision === "create_new" && signupRequestId) {
-      const authResponse = await serviceClient.auth.admin.createUser({
+      const generated = await generateSignupLink(serviceClient, {
         email: input.email,
         password: input.password,
-        email_confirm: false,
-        user_metadata: {
-          display_name: input.displayName,
-          onboarding_source: "verified_staff_signup_v1",
-        },
+        displayName: input.displayName,
       });
-      const authUser = authResponse.data.user;
-      if (authResponse.error || !authUser?.id) {
+      if (!generated) {
         await serviceClient.rpc("cancel_staff_signup_v1", {
           p_continuation_handle_hash: handleHash,
         });
@@ -153,39 +149,11 @@ export async function handleStaffSignupRequest(
         "attach_staff_signup_auth_user_v1",
         {
           p_signup_request_id: signupRequestId,
-          p_auth_user_id: authUser.id,
+          p_auth_user_id: generated.authUserId,
         },
       );
       if (attachResponse.error || attachResponse.data !== true) {
-        await compensateAuthUser(serviceClient, authUser.id);
-        await serviceClient.rpc("cancel_staff_signup_v1", {
-          p_continuation_handle_hash: handleHash,
-        });
-        return signupUnavailableResponse();
-      }
-
-      const verificationToken = randomBase64Url(32);
-      const verificationTokenHash = await sha256Hex(
-        `econovaria.staff-signup.verification.v1\n${verificationToken}`,
-      );
-      const deliveryResponse = await serviceClient.rpc<VerificationDeliveryRow[]>(
-        "prepare_staff_signup_verification_delivery_v1",
-        {
-          p_signup_request_id: signupRequestId,
-          p_auth_user_id: authUser.id,
-          p_token_hash: verificationTokenHash,
-          p_token_expires_at: verificationExpiresAt,
-        },
-      );
-      const delivery = firstDeliveryRow(deliveryResponse.data);
-      const deliveryVersion = Number(delivery?.delivery_version);
-      if (
-        deliveryResponse.error ||
-        String(delivery?.normalized_email || "") !== input.email ||
-        !Number.isSafeInteger(deliveryVersion) ||
-        deliveryVersion < 1
-      ) {
-        await compensateAuthUser(serviceClient, authUser.id);
+        await compensateAuthUser(serviceClient, generated.authUserId);
         await serviceClient.rpc("cancel_staff_signup_v1", {
           p_continuation_handle_hash: handleHash,
         });
@@ -194,11 +162,12 @@ export async function handleStaffSignupRequest(
 
       returnHandle = continuationHandle;
       await sendVerificationEmail({
-        email: input.email,
+        email: generated.email,
         displayName: input.displayName,
-        verificationToken,
+        tokenHash: generated.tokenHash,
+        verificationType: generated.verificationType,
         signupRequestId,
-        deliveryVersion,
+        deliveryVersion: 1,
         expiresAt: verificationExpiresAt,
       });
       await recordSuccess(serviceClient, throttleBuckets);
@@ -318,14 +287,6 @@ function firstRow(value: SignupClaimRow[] | null): SignupClaimRow | null {
   return Array.isArray(value) && isRecord(value[0])
     ? value[0] as SignupClaimRow
     : isRecord(value) ? value as SignupClaimRow : null;
-}
-
-function firstDeliveryRow(
-  value: VerificationDeliveryRow[] | null,
-): VerificationDeliveryRow | null {
-  return Array.isArray(value) && isRecord(value[0])
-    ? value[0] as VerificationDeliveryRow
-    : isRecord(value) ? value as VerificationDeliveryRow : null;
 }
 
 async function compensateAuthUser(
