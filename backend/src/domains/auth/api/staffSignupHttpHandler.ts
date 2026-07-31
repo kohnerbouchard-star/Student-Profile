@@ -34,6 +34,7 @@ interface StaffSignupDependencies {
   readonly recordSuccess?: typeof recordAuthenticationSuccess;
   readonly generateSignupLink?: typeof generateInitialStaffSignupLink;
   readonly sendVerificationEmail?: typeof sendStaffSignupVerificationEmail;
+  readonly padGenericResponse?: (startedAtMs: number) => Promise<void>;
 }
 
 interface StaffSignupInput {
@@ -52,6 +53,8 @@ const MAX_EMAIL_LENGTH = 320;
 const MAX_DISPLAY_NAME_LENGTH = 120;
 const SIGNUP_TTL_HOURS = 24;
 const RESEND_AFTER_SECONDS = 60;
+const MINIMUM_GENERIC_RESPONSE_MS = 1_200;
+const MAXIMUM_GENERIC_RESPONSE_JITTER_MS = 200;
 
 export async function handleStaffSignupRequest(
   request: Request,
@@ -64,6 +67,8 @@ export async function handleStaffSignupRequest(
       retryable: false,
     });
   }
+
+  const responseTimingStartedAt = monotonicNow();
 
   try {
     const envResult = readSupabaseEnv();
@@ -81,6 +86,8 @@ export async function handleStaffSignupRequest(
       generateInitialStaffSignupLink;
     const sendVerificationEmail = dependencies.sendVerificationEmail ??
       sendStaffSignupVerificationEmail;
+    const padGenericResponse = dependencies.padGenericResponse ??
+      padGenericSignupResponse;
 
     const volumetricDecision = await enforceVolumetric({
       action: "staff.signup.attempt",
@@ -142,6 +149,7 @@ export async function handleStaffSignupRequest(
           p_continuation_handle_hash: handleHash,
         });
         await recordFailure(serviceClient, throttleBuckets);
+        await safelyPadGenericResponse(padGenericResponse, responseTimingStartedAt);
         return genericSignupResponse(returnHandle, input.email, verificationExpiresAt);
       }
 
@@ -177,6 +185,7 @@ export async function handleStaffSignupRequest(
       await recordSuccess(serviceClient, throttleBuckets);
     }
 
+    await safelyPadGenericResponse(padGenericResponse, responseTimingStartedAt);
     return genericSignupResponse(
       returnHandle,
       input.email,
@@ -357,6 +366,35 @@ function randomBase64Url(size: number): string {
     .replace(/\+/gu, "-")
     .replace(/\//gu, "_")
     .replace(/=+$/gu, "");
+}
+
+async function safelyPadGenericResponse(
+  pad: (startedAtMs: number) => Promise<void>,
+  startedAtMs: number,
+): Promise<void> {
+  try {
+    await pad(startedAtMs);
+  } catch {
+    // Timing defense failure must not expose account state through a different
+    // public response. Operational monitoring should detect runtime failures.
+  }
+}
+
+async function padGenericSignupResponse(startedAtMs: number): Promise<void> {
+  const jitterSource = crypto.getRandomValues(new Uint16Array(1))[0] ?? 0;
+  const jitterMs = jitterSource % (MAXIMUM_GENERIC_RESPONSE_JITTER_MS + 1);
+  const targetMs = MINIMUM_GENERIC_RESPONSE_MS + jitterMs;
+  const remainingMs = Math.ceil(targetMs - (monotonicNow() - startedAtMs));
+  if (remainingMs <= 0) return;
+  await new Promise<void>((resolve) => setTimeout(resolve, remainingMs));
+}
+
+function monotonicNow(): number {
+  try {
+    return performance.now();
+  } catch {
+    return Date.now();
+  }
 }
 
 function authenticationThrottledResponse(
