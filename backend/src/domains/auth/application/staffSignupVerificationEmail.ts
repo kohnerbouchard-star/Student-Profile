@@ -58,17 +58,20 @@ export async function sendStaffSignupVerificationEmail(
   const verificationBaseUrl = verificationUrl(environmentValue);
   if (!apiKey || !from || !verificationBaseUrl) return false;
 
+  // Authentication-link click tracking must be disabled on the provider sending
+  // domain. Tracking systems can rewrite single-use verification URLs. Delivery,
+  // bounce and complaint telemetry may remain enabled.
   const verificationUrlValue = new URL(verificationBaseUrl);
   verificationUrlValue.searchParams.set("token_hash", input.tokenHash);
   verificationUrlValue.searchParams.set("type", input.verificationType);
   const idempotencyKey =
     `staff-signup-verification/${input.signupRequestId}/${deliveryVersion}`;
-  const pendingExpiryLabel = expiresAt.toISOString();
+  const expiryLabel = expiresAt.toISOString();
   const subject = "Confirm your Econovaria administrator email";
   const html = verificationEmailHtml({
     displayName,
     verificationUrl: verificationUrlValue.href,
-    pendingSignupExpiresAt: pendingExpiryLabel,
+    expiresAt: expiryLabel,
   });
   const text = [
     `Hello ${displayName},`,
@@ -76,8 +79,7 @@ export async function sendStaffSignupVerificationEmail(
     "Confirm the email address for your Econovaria administrator account:",
     verificationUrlValue.href,
     "",
-    "This verification link is time-limited. If it expires, use Resend Email from the account-creation page.",
-    `Your pending account request remains available until ${pendingExpiryLabel}.`,
+    `The pending account remains available until ${expiryLabel}. Verification links are time-limited; request a new email if this link has expired.`,
     "If you did not create this account, ignore this message.",
   ].join("\n");
 
@@ -146,7 +148,7 @@ function readEnvironmentValue(name: string): string {
 function verificationEmailHtml(input: {
   readonly displayName: string;
   readonly verificationUrl: string;
-  readonly pendingSignupExpiresAt: string;
+  readonly expiresAt: string;
 }): string {
   return `<!doctype html>
 <html lang="en">
@@ -160,8 +162,7 @@ function verificationEmailHtml(input: {
         <p style="margin:0 0 20px;line-height:1.6">Hello ${escapeHtml(input.displayName)}. Confirm this mailbox to continue creating your Econovaria administrator account.</p>
         <p style="margin:0 0 24px"><a href="${escapeHtml(input.verificationUrl)}" style="display:inline-block;background:#f97316;color:#111827;text-decoration:none;font-weight:800;padding:14px 20px;border-radius:10px">Review and confirm email</a></p>
         <p style="margin:0 0 10px;color:#94a3b8;font-size:13px;line-height:1.5">The link opens a review page and does not confirm the account until you press the confirmation button.</p>
-        <p style="margin:0 0 10px;color:#94a3b8;font-size:13px;line-height:1.5">This verification link is time-limited. If it expires, use Resend Email from the account-creation page.</p>
-        <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.5">Your pending account request remains available until ${escapeHtml(input.pendingSignupExpiresAt)}. If you did not create this account, ignore this email.</p>
+        <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.5">The pending account remains available until ${escapeHtml(input.expiresAt)}. Verification links are time-limited; request a new email if this link has expired. If you did not create this account, ignore this email.</p>
       </td></tr>
     </table>
   </td></tr></table>
