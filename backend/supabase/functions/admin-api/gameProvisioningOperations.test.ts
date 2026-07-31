@@ -60,12 +60,15 @@ Deno.test("authenticated game creation redeems the supplied license and complete
 
   const body = result.body as Record<string, any>;
   assertEquals(body.ok, true);
-  assertEquals(body.activation.gameSessionId, GAME_ID);
+  assertEquals("activation" in body, false);
   assertEquals(body.data.game.id, GAME_ID);
   assertEquals(body.data.game.provisioningStatus, "ready");
   assertEquals(body.data.game.gameCode, "ECO-ABCD2345");
   assertEquals(body.data.joinCode, "ECO-ABCD2345");
-  assertEquals(JSON.stringify(body).includes("LICENSE-ABCD-1234"), false);
+  const serialized = JSON.stringify(body);
+  assertEquals(serialized.includes("LICENSE-ABCD-1234"), false);
+  assertEquals(serialized.includes(ENTITLEMENT_ID), false);
+  assertEquals(serialized.includes(PURCHASE_CODE_ID), false);
 });
 
 Deno.test("activation failure is returned safely and never completes onboarding", async () => {
