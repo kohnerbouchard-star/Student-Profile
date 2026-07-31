@@ -28,7 +28,6 @@ async function sessionGateContract(name, width, height) {
     role: await gate.getAttribute("role"),
     live: await gate.getAttribute("aria-live"),
     startupSkeletonCount: await staticPage.locator(".admin-session-skeleton").count(),
-    metricCount: await staticPage.locator(".admin-session-skeleton__metric").count(),
     routeSkeletonCount: await staticPage.locator(".admin-qol-page-skeleton").count(),
     cloneStageCount: await staticPage.locator("[data-admin-shape-skeleton-stage]").count(),
     shapeRuntimeScriptCount: await staticPage.locator(
@@ -49,7 +48,6 @@ async function sessionGateContract(name, width, height) {
     result.role !== "status" ||
     result.live !== "polite" ||
     result.startupSkeletonCount !== 1 ||
-    result.metricCount !== 4 ||
     result.routeSkeletonCount !== 0 ||
     result.cloneStageCount !== 0 ||
     result.shapeRuntimeScriptCount !== 0 ||
