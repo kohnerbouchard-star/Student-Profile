@@ -11,7 +11,6 @@
   let pendingPageReads = 0;
   let pageSkeletonShownAt = 0;
   let pageSkeletonTimer = null;
-  let initialPageLoad = true;
   let navigationLoad = false;
 
   const FORM_CONFIGS = [
@@ -400,7 +399,6 @@
       skeleton.hidden = true;
       skeleton.closest(".admin-terminal-shell-main")?.removeAttribute("aria-busy");
       navigationLoad = false;
-      initialPageLoad = false;
     }, remaining);
   }
 
@@ -425,7 +423,7 @@
   }
 
   function beginLifecycle(detail) {
-    if (detail.pageRead && (initialPageLoad || navigationLoad)) {
+    if (detail.pageRead && navigationLoad) {
       pendingPageReads += 1;
       showPageSkeleton();
     }
@@ -490,12 +488,6 @@
   function reconcile(root = document) {
     for (const config of FORM_CONFIGS) {
       root.querySelectorAll?.(config.selector).forEach(configureForm);
-    }
-    if (initialPageLoad && document.querySelector(".admin-terminal-shell-main")) {
-      showPageSkeleton();
-      window.setTimeout(() => {
-        if (pendingPageReads === 0) hidePageSkeleton();
-      }, 900);
     }
   }
 

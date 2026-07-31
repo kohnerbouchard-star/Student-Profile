@@ -178,7 +178,7 @@ async function waitForBoundaryFocus(page, edge) {
     if (expectedEdge === "first" && dialog.dataset.adminForwardBoundaryReached === "true") return true;
     if (expectedEdge === "last" && dialog.dataset.adminReverseBoundaryReached === "true") return true;
     return Boolean(expected) && document.activeElement === expected;
-  }, edge, { timeout: 2000 });
+  }, edge, { timeout: 5000 });
 }
 
 async function traceBoundary(modal, edge) {

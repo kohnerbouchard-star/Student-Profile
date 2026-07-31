@@ -10,6 +10,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
       "./admin-logout-controller.js",
       "./game-session-share-link-contract.js",
       "./game-session-compact-layering.js",
+      "./game-session-mount-lifecycle.js",
     ],
   },
   {
@@ -56,7 +57,6 @@ const BOOTSTRAP_PHASES = Object.freeze([
   {
     name: "operational-surfaces",
     modules: [
-      "./shape-accurate-skeleton-lifecycle.js",
       "./inventory-redemption-queue-loader.js",
       "./game-lifecycle-controls.js",
       "./world-runtime-console-loader.js",
