@@ -24,86 +24,80 @@ begin
     raise exception 'PLAYER_CONTRACT_ACCEPT_SCOPE_REQUIRED';
   end if;
 
-  select candidate.id
+  select contract.id
   into v_contract_id
-  from (
-    select
-      contract.id,
-      contract.updated_at,
-      case
-        when contract.contract_key = v_public_contract_key then 0
-        else 1
-      end as resolution_priority
-    from public.game_session_contracts contract
-    left join public.contract_templates template
-      on template.id = contract.contract_template_id
-     and template.is_active = true
-    join public.game_sessions game
-      on game.id = contract.game_session_id
-     and game.status = 'active'
-    join public.players player
-      on player.game_session_id = game.id
-     and player.id = p_player_id
-     and player.status = 'active'
-    where contract.game_session_id = p_game_session_id
-      and (
-        contract.contract_key = v_public_contract_key
-        or template.template_key = v_public_contract_key
+  from public.game_session_contracts contract
+  left join public.contract_templates template
+    on template.id = contract.contract_template_id
+   and template.is_active = true
+  join public.game_sessions game
+    on game.id = contract.game_session_id
+   and game.status = 'active'
+  join public.players player
+    on player.game_session_id = game.id
+   and player.id = p_player_id
+   and player.status = 'active'
+  where contract.game_session_id = p_game_session_id
+    and (
+      contract.contract_key = v_public_contract_key
+      or template.template_key = v_public_contract_key
+    )
+    and contract.status in ('active', 'scheduled')
+    and contract.visibility in ('public', 'targeted')
+    and contract.published_at is not null
+    and contract.published_at <= now()
+    and (contract.expires_at is null or contract.expires_at > now())
+    and (
+      contract.visibility = 'public'
+      or exists (
+        select 1
+        from jsonb_array_elements_text(
+          case
+            when jsonb_typeof(contract.targeting_payload -> 'playerIds') = 'array'
+              then contract.targeting_payload -> 'playerIds'
+            else '[]'::jsonb
+          end
+        ) target(value)
+        where upper(btrim(target.value)) = upper(p_player_id::text)
       )
-      and contract.status in ('active', 'scheduled')
-      and contract.visibility in ('public', 'targeted')
-      and contract.published_at is not null
-      and contract.published_at <= now()
-      and (contract.expires_at is null or contract.expires_at > now())
-      and (
-        contract.visibility = 'public'
-        or exists (
+      or exists (
+        select 1
+        from public.player_country_assignments assignment
+        join public.country_profiles country
+          on country.id = assignment.country_profile_id
+        cross join lateral jsonb_array_elements_text(
+          case
+            when jsonb_typeof(contract.targeting_payload -> 'countryCodes') = 'array'
+              then contract.targeting_payload -> 'countryCodes'
+            else '[]'::jsonb
+          end
+        ) target(value)
+        where assignment.game_session_id = p_game_session_id
+          and assignment.player_id = p_player_id
+          and assignment.status = 'active'
+          and upper(btrim(target.value)) = upper(btrim(country.country_code))
+      )
+      or (
+        player.roster_label is not null
+        and exists (
           select 1
           from jsonb_array_elements_text(
             case
-              when jsonb_typeof(contract.targeting_payload -> 'playerIds') = 'array'
-                then contract.targeting_payload -> 'playerIds'
+              when jsonb_typeof(contract.targeting_payload -> 'rosterLabels') = 'array'
+                then contract.targeting_payload -> 'rosterLabels'
               else '[]'::jsonb
             end
           ) target(value)
-          where upper(btrim(target.value)) = upper(p_player_id::text)
-        )
-        or exists (
-          select 1
-          from public.player_country_assignments assignment
-          join public.country_profiles country
-            on country.id = assignment.country_profile_id
-          cross join lateral jsonb_array_elements_text(
-            case
-              when jsonb_typeof(contract.targeting_payload -> 'countryCodes') = 'array'
-                then contract.targeting_payload -> 'countryCodes'
-              else '[]'::jsonb
-            end
-          ) target(value)
-          where assignment.game_session_id = p_game_session_id
-            and assignment.player_id = p_player_id
-            and assignment.status = 'active'
-            and upper(btrim(target.value)) = upper(btrim(country.country_code))
-        )
-        or (
-          player.roster_label is not null
-          and exists (
-            select 1
-            from jsonb_array_elements_text(
-              case
-                when jsonb_typeof(contract.targeting_payload -> 'rosterLabels') = 'array'
-                  then contract.targeting_payload -> 'rosterLabels'
-                else '[]'::jsonb
-              end
-            ) target(value)
-            where upper(btrim(target.value)) = upper(btrim(player.roster_label))
-          )
+          where upper(btrim(target.value)) = upper(btrim(player.roster_label))
         )
       )
-  ) candidate
-  order by candidate.resolution_priority, candidate.updated_at desc, candidate.id
+    )
+  order by
+    case when contract.contract_key = v_public_contract_key then 0 else 1 end,
+    contract.updated_at desc,
+    contract.id
   limit 1
-  for share;
+  for share of contract;
 
   if not found then
     accept_outcome := 'not_available';
