@@ -4,10 +4,15 @@ declare const Deno: {
   };
 };
 
+import type {
+  StaffSignupVerificationType,
+} from "./staffSignupSupabaseLink.ts";
+
 export interface StaffSignupVerificationEmailInput {
   readonly email: string;
   readonly displayName: string;
-  readonly verificationToken: string;
+  readonly tokenHash: string;
+  readonly verificationType: StaffSignupVerificationType;
   readonly signupRequestId: string;
   readonly deliveryVersion: number;
   readonly expiresAt: string;
@@ -19,7 +24,7 @@ export interface StaffSignupVerificationEmailDependencies {
 }
 
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
@@ -35,7 +40,8 @@ export async function sendStaffSignupVerificationEmail(
   const expiresAt = new Date(input.expiresAt);
   if (
     !EMAIL_PATTERN.test(email) ||
-    !TOKEN_PATTERN.test(input.verificationToken) ||
+    !TOKEN_HASH_PATTERN.test(input.tokenHash) ||
+    !["signup", "magiclink"].includes(input.verificationType) ||
     !UUID_PATTERN.test(input.signupRequestId) ||
     !Number.isSafeInteger(deliveryVersion) ||
     deliveryVersion < 1 ||
@@ -53,7 +59,8 @@ export async function sendStaffSignupVerificationEmail(
   if (!apiKey || !from || !verificationBaseUrl) return false;
 
   const verificationUrlValue = new URL(verificationBaseUrl);
-  verificationUrlValue.searchParams.set("token", input.verificationToken);
+  verificationUrlValue.searchParams.set("token_hash", input.tokenHash);
+  verificationUrlValue.searchParams.set("type", input.verificationType);
   const idempotencyKey =
     `staff-signup-verification/${input.signupRequestId}/${deliveryVersion}`;
   const expiryLabel = expiresAt.toISOString();
@@ -69,7 +76,7 @@ export async function sendStaffSignupVerificationEmail(
     "Confirm the email address for your Econovaria administrator account:",
     verificationUrlValue.href,
     "",
-    `This link expires at ${expiryLabel} and can be used only for this account request.`,
+    `Complete verification before ${expiryLabel}.`,
     "If you did not create this account, ignore this message.",
   ].join("\n");
 
@@ -152,7 +159,7 @@ function verificationEmailHtml(input: {
         <p style="margin:0 0 20px;line-height:1.6">Hello ${escapeHtml(input.displayName)}. Confirm this mailbox to continue creating your Econovaria administrator account.</p>
         <p style="margin:0 0 24px"><a href="${escapeHtml(input.verificationUrl)}" style="display:inline-block;background:#f97316;color:#111827;text-decoration:none;font-weight:800;padding:14px 20px;border-radius:10px">Review and confirm email</a></p>
         <p style="margin:0 0 10px;color:#94a3b8;font-size:13px;line-height:1.5">The link opens a review page and does not confirm the account until you press the confirmation button.</p>
-        <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.5">Expires: ${escapeHtml(input.expiresAt)}. If you did not create this account, ignore this email.</p>
+        <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.5">Complete verification before ${escapeHtml(input.expiresAt)}. If you did not create this account, ignore this email.</p>
       </td></tr>
     </table>
   </td></tr></table>
