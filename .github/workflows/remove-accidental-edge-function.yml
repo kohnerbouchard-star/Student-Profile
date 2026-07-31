@@ -18,7 +18,6 @@ jobs:
     name: Delete exact accidental function
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: production
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       EXPECTED_PROJECT_REF: cgiukdjwicykrmtkhudh
@@ -33,6 +32,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = "pull_request"
           test "$GITHUB_REPOSITORY" = "kohnerbouchard-star/Student-Profile"
+          test "$GITHUB_ACTOR" = "kohnerbouchard-star"
           test "${{ github.event.pull_request.head.repo.full_name }}" = "$GITHUB_REPOSITORY"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$EXPECTED_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
