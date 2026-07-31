@@ -28,7 +28,7 @@ test("Admin browser evidence sanitizer removes credentials and durable identifie
     const sanitized = await readFile(path, "utf8");
     assert.match(sanitized, /\[supabase-key-redacted\]/);
     assert.match(sanitized, /\[jwt-redacted\]/);
-    assert.match(sanitized, /Bearer \[bearer-redacted\]/);
+    assert.match(sanitized, /Authorization: \[bearer-redacted\]/);
     assert.match(sanitized, /\[uuid-redacted\]/);
     assert.match(sanitized, /\[game-code-redacted\]/);
     assert.match(sanitized, /postgresql:\/\/\[credentials-redacted\]@/);
