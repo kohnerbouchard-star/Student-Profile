@@ -1,0 +1,169 @@
+name: One-shot audited branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-shot-branch-cleanup.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-shot-audited-branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  delete-audited-branches:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete approved obsolete branch refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          delete_branches = [
+              "agent/admin-auth-root-fix-v2",
+              "agent/full-financial-markets-integration-v1",
+              "agent/meridian-campaign-runtime-v1",
+              "agent/player-backend-feature-parity",
+              "agent/pr377-validation-base",
+              "agent/publishable-key-browser-contract-v2",
+              "agent/runtime-stabilization-onboarding-v2",
+              "agent/runtime-stabilization-onboarding-v3",
+              "agent/runtime-stabilization-onboarding-v4",
+              "agent/runtime-stabilization-onboarding-v5",
+              "agent/security-convergence-v2-main-sync-marker",
+              "agent/security-convergence-v2-pr-base",
+              "agent/security-convergence-v2-pr-base-2",
+              "automation/player-banking-sync-trigger-v1",
+              "feat/contracts-end-to-end-wiring",
+              "fix/login-logo-asset-repair-2",
+              "fix/login-logo-favicon-assets",
+              "fix/login-new-uploaded-logo",
+              "ops/production-admin-staff-security-reconcile-v1",
+              "agent/full-game-feature-activation-v2-checks",
+              "agent/full-game-feature-activation-v2-ci",
+              "agent/full-game-feature-activation-v2-final",
+              "agent/full-game-feature-activation-v2-open",
+              "agent/full-game-feature-activation-v2-pr",
+              "agent/full-game-feature-activation-v2-review",
+              "agent/full-game-feature-activation-v2",
+              "archive/pr-356-arrival-repair-source",
+              "agent/trigger-vercel-production-2f402ac-final",
+              "agent/trigger-vercel-production-2f402ac-merge",
+              "agent/trigger-vercel-production-2f402ac-pr",
+              "agent/trigger-vercel-production-2f402ac-ready",
+              "agent/trigger-vercel-production-2f402ac-release",
+              "agent/admin-auth-e2e-root-fix",
+              "agent/admin-credential-renderer-cleanup-v1",
+              "agent/arrival-class-system-v1",
+              "agent/brand-asset-render-fix-v1",
+              "agent/brand-asset-render-fix-v2",
+              "agent/fix-eszip-deployed-source-verification",
+              "agent/fix-mfa-handle-key-fallback",
+              "agent/fix-vercel-admin-namespace-routing",
+              "agent/incident-readiness-rebase-v1",
+              "agent/inspect-production-canonical-source-runs",
+              "agent/local-dev-functions-runtime-v1",
+              "agent/platform-scope-integration-v1",
+              "agent/production-web-session-hotfix",
+              "agent/progression-main-sync-snapshot-temp",
+              "agent/replace-brand-assets-v1",
+              "agent/runtime-stabilization-onboarding-final",
+              "agent/runtime-stabilization-onboarding-review",
+              "agent/skeleton-loader-only-correction-v1",
+              "agent/trusted-script-url-runtime",
+              "audit/current-main-full-build-20260723",
+              "chore/program-control-stale-helper-cleanup-v1",
+              "docs/econovaria-controller-reconciliation-v2",
+              "docs/incident-readiness-final-v4",
+              "docs/program-control-phase0-seal-v1",
+              "ops/progression-convergence-trigger-20260723",
+              "ops/remove-accidental-do-not-deploy-function",
+              "agent/production-content-bootstrap-v1",
+              "dependabot/github_actions/routine-actions-ddd89a6e2d",
+          ]
+
+          protected = {
+              "main",
+              "agent/verified-admin-onboarding-and-game-selector",
+              "agent/player-login-production-audit",
+              "agent/market-minute-replay-v1",
+              "feat/player-recovery-states-v1",
+              "agent/production-integration-gate-v1",
+              "agent/full-development-roadmap-v1",
+              "frontend/admin-terminal-source-v1",
+              "agent/admin-modal-drawer-accessibility-v1",
+          }
+
+          overlap = protected.intersection(delete_branches)
+          if overlap:
+              raise SystemExit(f"Protected branches included in deletion set: {sorted(overlap)}")
+          if len(delete_branches) != 60 or len(set(delete_branches)) != 60:
+              raise SystemExit("Deletion manifest must contain exactly 60 unique branches")
+
+          repository = os.environ["GH_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "econovaria-one-shot-branch-cleanup",
+          }
+
+          deleted = []
+          missing = []
+          failed = []
+
+          for branch in delete_branches:
+              encoded = urllib.parse.quote(branch, safe="")
+              url = f"https://api.github.com/repos/{repository}/git/refs/heads/{encoded}"
+              request = urllib.request.Request(url, headers=headers, method="DELETE")
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      if response.status != 204:
+                          failed.append({"branch": branch, "status": response.status})
+                      else:
+                          deleted.append(branch)
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      missing.append(branch)
+                  else:
+                      body = exc.read().decode("utf-8", errors="replace")[:500]
+                      failed.append({"branch": branch, "status": exc.code, "body": body})
+              except Exception as exc:
+                  failed.append({"branch": branch, "error": str(exc)})
+
+          summary = {
+              "requested": len(delete_branches),
+              "deleted": len(deleted),
+              "already_missing": len(missing),
+              "failed": failed,
+              "protected": sorted(protected),
+          }
+          print(json.dumps(summary, indent=2))
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as handle:
+                  handle.write("## Audited branch cleanup\n\n")
+                  handle.write(f"- Requested: {len(delete_branches)}\n")
+                  handle.write(f"- Deleted: {len(deleted)}\n")
+                  handle.write(f"- Already absent: {len(missing)}\n")
+                  handle.write(f"- Failed: {len(failed)}\n")
+
+          if failed:
+              sys.exit(1)
+          PY
