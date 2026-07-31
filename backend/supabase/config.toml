@@ -84,10 +84,10 @@ verify_jwt = false
 [functions.web-session-api]
 verify_jwt = false
 
-# Public verification confirmation surface. GET renders a no-store review form.
-# POST validates the repository-owned token and double-submit challenge, then the
-# server marks only that linked Auth identity confirmed without minting a browser
-# session. License redemption and administrator activation remain separate.
+# Public verification review surface. Supabase Auth owns and validates the signup
+# or magic-link token. GET only renders a no-store form; POST requires a same-origin
+# double-submit challenge, exchanges the token with the publishable key, and never
+# forwards the temporary AAL1 session to the browser.
 [functions.admin-email-verification]
 verify_jwt = false
 
