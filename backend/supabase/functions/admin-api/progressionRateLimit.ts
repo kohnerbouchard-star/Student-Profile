@@ -48,8 +48,17 @@ export function normalizeAdminRateLimitRequest(
     throw new Error("rate limit configuration unavailable");
   }
 
+  // Rate limiting needs only method, URL, and trusted network metadata. Building
+  // the normalized request from the live POST Request would transfer/disturb its
+  // body in the Edge runtime and break later route parsing. Use an intentionally
+  // bodyless metadata request so the application request remains untouched.
+  const metadataRequest = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+  });
+
   return {
-    request: bindGatewayTrustedClientIp(request, trustedHeader),
+    request: bindGatewayTrustedClientIp(metadataRequest, trustedHeader),
     trustedHeader: trustedHeader as TrustedIpHeader,
   };
 }
