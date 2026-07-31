@@ -9,10 +9,14 @@ import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
 import {
   sendStaffSignupVerificationEmail,
 } from "../application/staffSignupVerificationEmail.ts";
+import {
+  generatePendingStaffSignupResendLink,
+} from "../application/staffSignupSupabaseLink.ts";
 
 interface Dependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
+  readonly generateResendLink?: typeof generatePendingStaffSignupResendLink;
   readonly sendVerificationEmail?: typeof sendStaffSignupVerificationEmail;
 }
 
@@ -20,15 +24,17 @@ interface ResendClaimRow {
   readonly normalized_email?: unknown;
   readonly display_name?: unknown;
   readonly signup_request_id?: unknown;
+  readonly supabase_auth_user_id?: unknown;
   readonly allowed?: unknown;
   readonly retry_after_seconds?: unknown;
   readonly delivery_version?: unknown;
-  readonly token_expires_at?: unknown;
+  readonly verification_expires_at?: unknown;
 }
 
 const MAX_BODY_BYTES = 2_048;
 const HANDLE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
-const RESEND_TOKEN_TTL_HOURS = 24;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export async function handleStaffSignupResendRequest(
   request: Request,
@@ -59,49 +65,49 @@ export async function handleStaffSignupResendRequest(
     : "";
   if (!HANDLE_PATTERN.test(handle)) return genericResponse(60);
 
-  const verificationToken = randomBase64Url(32);
-  const tokenHash = await sha256Hex(
-    `econovaria.staff-signup.verification.v1\n${verificationToken}`,
-  );
-  const requestedExpiresAt = new Date(
-    Date.now() + RESEND_TOKEN_TTL_HOURS * 60 * 60 * 1000,
-  ).toISOString();
   const handleHash = await sha256Hex(
     `econovaria.staff-signup.handle.v1\n${handle}`,
   );
   const claimResult = await serviceClient.rpc<ResendClaimRow[]>(
     "claim_staff_signup_resend_v1",
-    {
-      p_continuation_handle_hash: handleHash,
-      p_token_hash: tokenHash,
-      p_requested_token_expires_at: requestedExpiresAt,
-    },
+    { p_continuation_handle_hash: handleHash },
   );
   const claim = firstRow(claimResult.data);
   const retryAfterSeconds = boundedSeconds(claim?.retry_after_seconds, 60);
   const email = String(claim?.normalized_email || "").trim().toLowerCase();
   const displayName = String(claim?.display_name || "Administrator").trim();
   const signupRequestId = String(claim?.signup_request_id || "").trim();
+  const authUserId = String(claim?.supabase_auth_user_id || "").trim().toLowerCase();
   const deliveryVersion = Number(claim?.delivery_version);
-  const tokenExpiresAt = safeIsoDate(claim?.token_expires_at);
+  const verificationExpiresAt = safeIsoDate(claim?.verification_expires_at);
 
   if (
     !claimResult.error &&
     claim?.allowed === true &&
     email &&
-    signupRequestId &&
+    UUID_PATTERN.test(signupRequestId) &&
+    UUID_PATTERN.test(authUserId) &&
     Number.isSafeInteger(deliveryVersion) &&
-    deliveryVersion >= 1 &&
-    tokenExpiresAt
+    deliveryVersion >= 2 &&
+    verificationExpiresAt
   ) {
-    await (dependencies.sendVerificationEmail ?? sendStaffSignupVerificationEmail)({
+    const generated = await (
+      dependencies.generateResendLink ?? generatePendingStaffSignupResendLink
+    )(serviceClient, {
       email,
-      displayName,
-      verificationToken,
-      signupRequestId,
-      deliveryVersion,
-      expiresAt: tokenExpiresAt,
+      expectedAuthUserId: authUserId,
     });
+    if (generated) {
+      await (dependencies.sendVerificationEmail ?? sendStaffSignupVerificationEmail)({
+        email: generated.email,
+        displayName,
+        tokenHash: generated.tokenHash,
+        verificationType: generated.verificationType,
+        signupRequestId,
+        deliveryVersion,
+        expiresAt: verificationExpiresAt,
+      });
+    }
   }
 
   return genericResponse(retryAfterSeconds);
@@ -176,16 +182,6 @@ async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
-}
-
-function randomBase64Url(size: number): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(size));
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replace(/\+/gu, "-")
-    .replace(/\//gu, "_")
-    .replace(/=+$/gu, "");
 }
 
 function unavailable(): Response {
