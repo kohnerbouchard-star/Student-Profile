@@ -239,7 +239,7 @@ jobs:
 
       - name: Execute secure Admin ledger mutation journey
         id: ledger_mutation
-        if: steps.browser.outcome == 'success'
+        if: ${{ always() && steps.browser.outcome == 'success' }}
         continue-on-error: true
         run: node scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
 
