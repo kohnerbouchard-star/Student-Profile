@@ -20,6 +20,11 @@ assert.doesNotMatch(
 
 assert.match(index, /\.\/css\/session-skeleton\.css/, "The single Admin startup loader must use its dedicated stylesheet.");
 assert.match(index, /\.\/css\/responsive-card-grid\.css/, "The startup skeleton and live cards must load shared grid geometry.");
+assert.equal(
+  (index.match(/class="admin-session-skeleton__metric"/g) || []).length,
+  5,
+  "The fixed startup skeleton must mirror the five-card Overview grid without runtime measurement."
+);
 assert.doesNotMatch(index, /shape-accurate-skeletons\.js/, "The duplicate shape-skeleton runtime must not be loaded.");
 assert.doesNotMatch(index, /shape-accurate-skeletons\.css/, "The removed shape-skeleton stylesheet must not be loaded.");
 assert.doesNotMatch(index, /loading-scope-overrides\.css/, "The removed shape-loader scope overrides must not be loaded.");
