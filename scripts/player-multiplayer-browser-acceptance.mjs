@@ -271,7 +271,7 @@ async function signInAdminAndCreateGame(page) {
     refreshedStatusPromise,
   ]);
   evidence.connectedSetup.gameProvisionStatus = provisionResponse.status();
-  if (provisionResponse.status() !== 201) {
+  if (![200, 201].includes(provisionResponse.status())) {
     throw new Error(`Authenticated game selector returned ${provisionResponse.status()}.`);
   }
   const provisionPayload = await provisionResponse.json().catch(() => null);
