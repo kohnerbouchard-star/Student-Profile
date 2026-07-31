@@ -32,6 +32,10 @@ const PERMISSIONS = [
   "world.manage",
 ];
 
+function sameJson(actual, expected, message) {
+  assert.equal(JSON.stringify(actual), JSON.stringify(expected), message);
+}
+
 function sessionRecord(overrides = {}) {
   return {
     authenticated: true,
@@ -150,10 +154,10 @@ function createManagerRuntime(fetchImpl) {
     failure = manager.describeFailure(error);
   }
 
-  assert.deepEqual(requests.map((url) => new URL(url).pathname), [
+  sameJson(requests.map((url) => new URL(url).pathname), [
     "/functions/v1/web-session-api/status",
     "/functions/v1/web-session-api/proxy/session/bootstrap",
-  ]);
+  ], "Admin status/bootstrap request order changed");
   assert.equal(failure?.code, "admin_rate_limit_unavailable");
   assert.equal(failure?.status, 503);
   assert.equal(failure?.retryable, true);
@@ -288,16 +292,16 @@ function createManagerRuntime(fetchImpl) {
   await Promise.resolve();
 
   assert.equal(clearCount, 0, "retryable failures must not clear the session");
-  assert.deepEqual(redirects, [], "retryable failures must not redirect to login");
-  assert.deepEqual(gate.classList.values, ["is-error"]);
+  sameJson(redirects, [], "retryable failures must not redirect to login");
+  sameJson(gate.classList.values, ["is-error"], "retry UI state changed");
   const paragraphs = created.filter((element) => element.tagName === "p");
   assert.equal(paragraphs.length, 1);
   assert.match(paragraphs[0].textContent, /session has been preserved/i);
   const buttons = created.filter((element) => element.tagName === "button");
-  assert.deepEqual(buttons.map((button) => button.textContent), [
+  sameJson(buttons.map((button) => button.textContent), [
     "Reload",
     "Return to sign in",
-  ]);
+  ], "retry UI actions changed");
 }
 
 console.log(
