@@ -5,29 +5,14 @@ import type {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 
 declare const Deno: {
+  readonly env: {
+    get(name: string): string | undefined;
+  };
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-const testRuntime = globalThis as unknown as {
-  process?: { env?: Record<string, string | undefined> };
-};
-const processShadow = Object.create(testRuntime.process ?? null) as {
-  env?: Record<string, string | undefined>;
-};
-Object.defineProperty(processShadow, "env", {
-  configurable: true,
-  enumerable: true,
-  writable: false,
-  value: Object.freeze({
-    ECONOVARIA_PURCHASE_CODE_HMAC_SECRET:
-      "staff-signup-test-purchase-code-hmac-secret-0123456789",
-  }),
-});
-testRuntime.process = processShadow;
-
 const AUTH_USER_ID = "11111111-1111-4111-8111-111111111111";
-const STAFF_USER_ID = "22222222-2222-4222-8222-222222222222";
-const GAME_SESSION_ID = "33333333-3333-4333-8333-333333333333";
+const SIGNUP_REQUEST_ID = "22222222-2222-4222-8222-222222222222";
 const SECURE_PASSWORD = "SecurePassword123!";
 const THROTTLE_BUCKETS = [
   { dimension: "account" as const, keyHash: "a".repeat(64) },
@@ -35,21 +20,24 @@ const THROTTLE_BUCKETS = [
   { dimension: "ip" as const, keyHash: "c".repeat(64) },
 ];
 
-interface MockCalls {
-  authCreates: number;
-  authCreateInputs: unknown[];
-  authDeletes: string[];
-  authDisables: string[];
-  staffDeletes: string[];
-  rpcNames: string[];
+interface Calls {
+  readonly authCreateInputs: unknown[];
+  readonly authDeletes: string[];
+  readonly authDisables: string[];
+  readonly resendInputs: unknown[];
+  readonly rpcCalls: Array<{ readonly name: string; readonly args: unknown }>;
+  successes: number;
+  failures: number;
 }
 
 interface MockOptions {
-  readonly preflightError?: { readonly message: string } | null;
-  readonly redemptionError?: { readonly message: string } | null;
+  readonly decision?: "create_new" | "resume_pending" | "existing_verified_identity" | "security_hold";
+  readonly sendVerification?: boolean;
+  readonly authCreateError?: boolean;
+  readonly attachError?: boolean;
 }
 
-Deno.test("staff signup validates before creating an Auth user", async () => {
+Deno.test("staff signup validates identity fields before creating Auth", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
     signupRequest({ password: "short" }),
@@ -57,122 +45,115 @@ Deno.test("staff signup validates before creating an Auth user", async () => {
   );
 
   await assertError(response, 400, "password_too_short");
-  assertEquals(mock.calls.authCreates, 0);
-  assertEquals(mock.calls.rpcNames.length, 0);
+  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.rpcCalls.length, 0);
 });
 
-Deno.test("staff signup requires the complete mixed-character password policy", async () => {
+Deno.test("public signup rejects license and game fields", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
-    signupRequest({ password: "longlowercasepassword123!" }),
+    signupRequest({
+      purchaseCode: "LICENSE-CODE",
+      gameName: "Fall 2026",
+      difficultyPreset: "moderate",
+      stockMarketWindow: { timezone: "Asia/Seoul" },
+    }),
     mock.dependencies,
   );
 
-  await assertError(response, 400, "password_missing_uppercase");
-  assertEquals(mock.calls.authCreates, 0);
+  await assertError(response, 400, "unknown_request_field");
+  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.rpcCalls.length, 0);
 });
 
-Deno.test("staff signup requires an explicit game timezone before creating Auth", async () => {
+Deno.test("new signup claims identity before creating one unconfirmed Auth user", async () => {
   const mock = createMock();
-  const response = await handleStaffSignupRequest(
-    signupRequest({ stockMarketWindow: undefined }),
-    mock.dependencies,
-  );
-
-  await assertError(response, 400, "invalid_stock_market_timezone");
-  assertEquals(mock.calls.authCreates, 0);
-  assertEquals(mock.calls.rpcNames.length, 0);
-});
-
-Deno.test("staff signup fails before Auth creation when canonical provisioning is unavailable", async () => {
-  const mock = createMock({
-    preflightError: { message: "GAME_PROVISIONING_CANONICAL_SOURCE_NOT_FOUND" },
-  });
-  const response = await handleStaffSignupRequest(
-    signupRequest(),
-    mock.dependencies,
-  );
-
-  await assertError(response, 503, "game_provisioning_unavailable");
-  assertEquals(domainRpcNames(mock.calls), ["game_provisioning_preflight_v1"]);
-  assertEquals(mock.calls.authCreates, 0);
-  assertEquals(mock.calls.authDeletes.length, 0);
-});
-
-Deno.test("staff signup creates controlled role metadata and the first game", async () => {
-  const mock = createMock();
-  const response = await handleStaffSignupRequest(
-    signupRequest(),
-    mock.dependencies,
-  );
+  const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
   const body = await response.json();
 
-  assertEquals(response.status, 201);
+  assertEquals(response.status, 202);
   assertEquals(body.ok, true);
-  assertEquals(body.staff.email, "teacher@example.com");
-  assertEquals(body.staff.role, "game_admin");
-  assertEquals(body.activation.gameSessionId, GAME_SESSION_ID);
-  assertEquals(body.activation.provisioningStatus, "ready");
-  assertEquals(body.activation.packId, "econovaria.beta-seed-pack.v1");
-  assertEquals(mock.calls.authCreates, 1);
-  assertEquals(mock.calls.authDeletes.length, 0);
-  assertEquals(domainRpcNames(mock.calls), [
-    "game_provisioning_preflight_v1",
-    "redeem_purchase_code_for_game",
-  ]);
+  assertEquals(body.signupStatus, "check_email_or_sign_in");
+  assertMatches(body.verification.continuationHandle, /^[A-Za-z0-9_-]{43}$/u);
+  assertEquals(body.verification.maskedEmail, "t•••••••@example.com");
+  assertEquals(mock.calls.rpcCalls[0].name, "claim_staff_signup_identity_v1");
+  assertEquals(mock.calls.authCreateInputs.length, 1);
+  assertEquals(mock.calls.rpcCalls[1].name, "attach_staff_signup_auth_user_v1");
+  assertEquals(mock.calls.resendInputs.length, 1);
+  assertEquals(mock.calls.successes, 1);
+
   const authInput = mock.calls.authCreateInputs[0] as Record<string, unknown>;
   assertEquals(authInput.email, "teacher@example.com");
   assertEquals(authInput.password, SECURE_PASSWORD);
-  assertEquals(authInput.app_metadata, {
-    econovaria_role: "game_admin",
-    permission_version: 1,
-    security_version: 1,
-  });
+  assertEquals(authInput.email_confirm, false);
+  assertEquals("app_metadata" in authInput, false);
+  assertEquals(JSON.stringify(mock.calls.rpcCalls).includes("redeem_purchase_code_for_game"), false);
 });
 
-Deno.test("staff signup compensates after license redemption fails", async () => {
-  const mock = createMock({
-    redemptionError: { message: "PURCHASE_CODE_EXHAUSTED" },
-  });
-  const response = await handleStaffSignupRequest(
-    signupRequest(),
-    mock.dependencies,
-  );
+Deno.test("existing verified identity creates no Auth user and sends no email", async () => {
+  const mock = createMock({ decision: "existing_verified_identity" });
+  const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
+  const body = await response.json();
 
-  await assertError(response, 409, "purchase_code_exhausted");
-  assertEquals(domainRpcNames(mock.calls), [
-    "game_provisioning_preflight_v1",
-    "redeem_purchase_code_for_game",
+  assertEquals(response.status, 202);
+  assertEquals(body.ok, true);
+  assertMatches(body.verification.continuationHandle, /^[A-Za-z0-9_-]{43}$/u);
+  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.resendInputs.length, 0);
+  assertEquals(mock.calls.rpcCalls.length, 1);
+});
+
+Deno.test("duplicate pending signup may resend but never creates another Auth user", async () => {
+  const mock = createMock({ decision: "resume_pending", sendVerification: true });
+  const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
+
+  assertEquals(response.status, 202);
+  assertEquals(mock.calls.authCreateInputs.length, 0);
+  assertEquals(mock.calls.resendInputs.length, 1);
+  assertEquals(mock.calls.rpcCalls.length, 1);
+});
+
+Deno.test("Auth creation failure cancels the claimed request without exposing account state", async () => {
+  const mock = createMock({ authCreateError: true });
+  const response = await handleStaffSignupRequest(signupRequest(), mock.dependencies);
+  const body = await response.json();
+
+  assertEquals(response.status, 202);
+  assertEquals(body.ok, true);
+  assertEquals(mock.calls.rpcCalls.map((call) => call.name), [
+    "claim_staff_signup_identity_v1",
+    "cancel_staff_signup_v1",
   ]);
-  assertEquals(mock.calls.staffDeletes[0], AUTH_USER_ID);
-  assertEquals(mock.calls.authDeletes[0], AUTH_USER_ID);
-  assertEquals(mock.calls.authDisables.length, 0);
+  assertEquals(mock.calls.failures, 1);
 });
 
 function createMock(options: MockOptions = {}) {
-  const calls: MockCalls = {
-    authCreates: 0,
+  const calls: Calls = {
     authCreateInputs: [],
     authDeletes: [],
     authDisables: [],
-    staffDeletes: [],
-    rpcNames: [],
+    resendInputs: [],
+    rpcCalls: [],
+    successes: 0,
+    failures: 0,
   };
-  const client = {
+  const decision = options.decision ?? "create_new";
+  const serviceClient = {
     auth: {
       admin: {
         createUser: async (input: unknown) => {
-          calls.authCreates += 1;
           calls.authCreateInputs.push(input);
-          return {
-            data: {
-              user: {
-                id: AUTH_USER_ID,
-                email: "teacher@example.com",
+          return options.authCreateError
+            ? { data: { user: null }, error: { message: "duplicate" } }
+            : {
+              data: {
+                user: {
+                  id: AUTH_USER_ID,
+                  email: "teacher@example.com",
+                },
               },
-            },
-            error: null,
-          };
+              error: null,
+            };
         },
         deleteUser: async (userId: string) => {
           calls.authDeletes.push(userId);
@@ -185,39 +166,46 @@ function createMock(options: MockOptions = {}) {
       },
       getUser: async () => ({ data: { user: null }, error: null }),
     },
-    from: () => createStaffQuery(calls),
-    rpc: async (functionName: string) => {
-      calls.rpcNames.push(functionName);
-      if (functionName === "game_provisioning_preflight_v1") {
+    from: () => createEmptyQuery(),
+    rpc: async (name: string, args: unknown) => {
+      calls.rpcCalls.push({ name, args });
+      if (name === "claim_staff_signup_identity_v1") {
         return {
-          data: options.preflightError
-            ? null
-            : {
-              ready: true,
-              packId: "econovaria.beta-seed-pack.v1",
-              packVersion: "1.0.0-beta",
-            },
-          error: options.preflightError ?? null,
+          data: [{
+            decision,
+            signup_request_id: decision === "create_new" ? SIGNUP_REQUEST_ID : null,
+            verification_expires_at: "2026-08-01T00:00:00.000Z",
+            send_verification: options.sendVerification === true,
+          }],
+          error: null,
         };
       }
-      return {
-        data: options.redemptionError ? null : [{
-          game_session_id: GAME_SESSION_ID,
-          entitlement_id: "44444444-4444-4444-8444-444444444444",
-          purchase_code_id: "55555555-5555-4555-8555-555555555555",
-          purchase_code_status: "exhausted",
-          redeemed_count: 1,
-          max_redemptions: 1,
-          activated_at: "2026-06-22T00:00:00.000Z",
-        }],
-        error: options.redemptionError ?? null,
-      };
+      if (name === "attach_staff_signup_auth_user_v1") {
+        return options.attachError
+          ? { data: false, error: { message: "attach failed" } }
+          : { data: true, error: null };
+      }
+      return { data: null, error: null };
     },
+  } as unknown as EdgeSupabaseClient;
+
+  const authClient = {
+    auth: {
+      admin: serviceClient.auth.admin,
+      getUser: serviceClient.auth.getUser,
+      resend: async (input: unknown) => {
+        calls.resendInputs.push(input);
+        return { data: {}, error: null };
+      },
+    },
+    from: () => createEmptyQuery(),
+    rpc: async () => ({ data: null, error: null }),
   } as unknown as EdgeSupabaseClient;
 
   return {
     dependencies: {
-      createServiceClient: (_env: SupabaseEnv) => client,
+      createAuthClient: (_env: SupabaseEnv) => authClient,
+      createServiceClient: (_env: SupabaseEnv) => serviceClient,
       enforceVolumetric: async () => ({
         allowed: true,
         retryAfterSeconds: 0,
@@ -234,50 +222,39 @@ function createMock(options: MockOptions = {}) {
         failureCount: 0,
         lockedUntil: null,
       }),
-      recordFailure: async () => ({
-        allowed: false,
-        retryAfterSeconds: 0,
-        limitingDimension: null,
-        failureCount: 1,
-        lockedUntil: null,
-      }),
-      recordSuccess: async () => {},
+      recordFailure: async () => {
+        calls.failures += 1;
+        return {
+          allowed: false,
+          retryAfterSeconds: 0,
+          limitingDimension: null,
+          failureCount: 1,
+          lockedUntil: null,
+        };
+      },
+      recordSuccess: async () => {
+        calls.successes += 1;
+      },
     },
     calls,
   };
 }
 
-function createStaffQuery(calls: MockCalls) {
-  let operation = "select";
+function createEmptyQuery() {
   const query = {
-    insert: () => {
-      operation = "insert";
-      return query;
-    },
     select: () => query,
-    delete: () => {
-      operation = "delete";
-      return query;
-    },
-    eq: (_column: string, value: unknown) => {
-      if (operation === "delete") calls.staffDeletes.push(String(value));
-      return query;
-    },
-    single: async () => ({
-      data: {
-        id: STAFF_USER_ID,
-        supabase_auth_user_id: AUTH_USER_ID,
-        email: "teacher@example.com",
-        display_name: "Teacher Name",
-        created_at: "2026-06-22T00:00:00.000Z",
-        updated_at: "2026-06-22T00:00:00.000Z",
-      },
-      error: null,
-    }),
+    insert: () => query,
+    update: () => query,
+    upsert: () => query,
+    delete: () => query,
+    eq: () => query,
+    in: () => query,
+    limit: () => query,
+    order: () => query,
+    maybeSingle: async () => ({ data: null, error: null }),
+    single: async () => ({ data: null, error: null }),
     then: (
-      onfulfilled:
-        | ((value: { data: unknown[]; error: null }) => unknown)
-        | null,
+      onfulfilled: ((value: { data: unknown[]; error: null }) => unknown) | null,
       onrejected: ((reason: unknown) => unknown) | null,
     ) => Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
   };
@@ -292,20 +269,9 @@ function signupRequest(overrides: Record<string, unknown> = {}): Request {
       email: "teacher@example.com",
       password: SECURE_PASSWORD,
       displayName: "Teacher Name",
-      purchaseCode: "LICENSE-CODE",
-      gameName: "Fall 2026",
-      difficultyPreset: "moderate",
-      stockMarketWindow: { timezone: "Asia/Seoul" },
       ...overrides,
     }),
   });
-}
-
-function domainRpcNames(calls: MockCalls): string[] {
-  return calls.rpcNames.filter((name) =>
-    name === "game_provisioning_preflight_v1" ||
-    name === "redeem_purchase_code_for_game"
-  );
 }
 
 async function assertError(
@@ -319,10 +285,14 @@ async function assertError(
   assertEquals(body.error.code, code);
 }
 
+function assertMatches(value: unknown, pattern: RegExp): void {
+  if (!pattern.test(String(value || ""))) {
+    throw new Error(`Expected ${JSON.stringify(value)} to match ${pattern}.`);
+  }
+}
+
 function assertEquals(actual: unknown, expected: unknown): void {
   if (!Object.is(actual, expected) && JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
-    );
+    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`);
   }
 }
