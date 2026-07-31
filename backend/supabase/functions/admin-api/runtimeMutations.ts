@@ -14,7 +14,11 @@ export function runtimeMutationDispatch(
   suffix: string,
   method: string,
 ):
-  | { readonly kind: "direct"; readonly classroomPath: string }
+  | {
+      readonly kind: "direct";
+      readonly classroomPath: string;
+      readonly body: Record<string, never>;
+    }
   | { readonly kind: "normalized" }
   | null {
   if (method !== "POST") return null;
@@ -22,6 +26,7 @@ export function runtimeMutationDispatch(
     return {
       kind: "direct",
       classroomPath: `/games/${encodeURIComponent(gameId)}/join-code/reset`,
+      body: {},
     };
   }
   return NORMALIZED_RUNTIME_SUFFIXES.has(suffix)
@@ -48,7 +53,7 @@ export async function handleRuntimeMutation(
       context,
       dispatch.classroomPath,
       "POST",
-      {},
+      dispatch.body,
     );
   }
 
