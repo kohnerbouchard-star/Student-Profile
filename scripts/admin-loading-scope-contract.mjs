@@ -7,6 +7,7 @@ const interactionQuality = await readFile(new URL("../admin/interaction-quality.
 const interactionQualityCss = await readFile(new URL("../admin/css/interaction-quality.css", import.meta.url), "utf8");
 const responsiveGrid = await readFile(new URL("../admin/css/responsive-card-grid.css", import.meta.url), "utf8");
 const sessionSkeleton = await readFile(new URL("../admin/css/session-skeleton.css", import.meta.url), "utf8");
+const loadingScannerSmoke = await readFile(new URL("./admin-loading-scanner-smoke.mjs", import.meta.url), "utf8");
 const index = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
 
 assert.match(compatibility, /compatibility-noop/, "The former Quick Actions controller must remain an inert compatibility shim.");
@@ -52,5 +53,15 @@ assert.match(
   "The skeleton metrics and live overview cards must share one selector contract."
 );
 assert.match(responsiveGrid, /repeat\([\s\S]*auto-fit[\s\S]*220px[\s\S]*1fr/, "The shared grid must derive columns from available width.");
+assert.doesNotMatch(
+  loadingScannerSmoke,
+  /getBoundingClientRect|gridTemplateColumns|gridColumnCount|expectedColumns/,
+  "Browser loading tests must not sample or compare skeleton and live-card geometry."
+);
+assert.match(
+  loadingScannerSmoke,
+  /responsive-card-grid\.css/,
+  "Browser loading tests must verify that the repository-owned shared stylesheet is loaded."
+);
 
-console.log("Admin single-loader and responsive card-grid contract passed.");
+console.log("Admin single-loader and CSS-owned responsive card-grid contract passed.");
