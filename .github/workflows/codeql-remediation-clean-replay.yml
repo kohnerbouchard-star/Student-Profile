@@ -1,0 +1,331 @@
+name: Replay CodeQL remediation onto clean main
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: codeql-remediation-clean-replay-v1
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    if: github.event.pull_request.head.ref == 'agent/codeql-remediation-runner' && github.event.pull_request.base.ref == 'agent/codeql-remediation-clean'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out clean remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/codeql-remediation-clean
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Replay the exact permanent security patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors \
+            --proto '=https' --tlsv1.2 \
+            'https://github.com/kohnerbouchard-star/Student-Profile/pull/471.diff' \
+            --output /tmp/codeql-remediation.diff
+          test -s /tmp/codeql-remediation.diff
+          git apply --check /tmp/codeql-remediation.diff
+          git apply /tmp/codeql-remediation.diff
+
+          cat > /tmp/expected-security-paths.txt <<'EOF'
+          admin/admin-auth.js
+          admin/admin-logout-controller.js
+          admin/auth-session-manager.js
+          admin/game-code-wiring.js
+          admin/game-session-controls.js
+          admin/index.html
+          admin/logout-confirmation.js
+          admin/player-access-code-bridge.js
+          admin/player-identity-wiring.js
+          admin/session-gate.js
+          admin/settings-simplified.js
+          auth/reset-password.js
+          backend/src/domains/players/api/playerLoginHttpHandler.ts
+          backend/src/security/adminBffRequestAuth.ts
+          backend/supabase/functions/staff-mfa-api/mfaQrCode.ts
+          frontend/src/core/admin-game-selection.js
+          frontend/src/core/api.js
+          frontend/src/core/login.js
+          index.html
+          scripts/admin-game-selection-memory.test.mjs
+          scripts/codeql-security-remediation.test.mjs
+          scripts/local-staging-gateway.py
+          scripts/player-login-identity-smoke.mjs
+          EOF
+          sed -i 's/^          //' /tmp/expected-security-paths.txt
+          git diff --name-only | sort > /tmp/actual-security-paths.txt
+          diff -u /tmp/expected-security-paths.txt /tmp/actual-security-paths.txt
+
+      - name: Apply compatibility and Deno type corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              value = file.read_text(encoding="utf-8")
+              count = value.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one anchor, found {count}")
+              file.write_text(value.replace(old, new, 1), encoding="utf-8")
+
+          def replace_count(path, old, new, expected):
+              file = Path(path)
+              value = file.read_text(encoding="utf-8")
+              count = value.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} anchors, found {count}")
+              file.write_text(value.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "scripts/admin-shell-identity-v2-smoke.mjs",
+              '  "../frontend/src/core/runtime-config.js",\n  "./auth-session-manager.js",',
+              '  "../frontend/src/core/runtime-config.js",\n  "../frontend/src/core/admin-game-selection.js",\n  "./auth-session-manager.js",',
+          )
+          replace_once(
+              "scripts/admin-explicit-mounted-event-smoke.mjs",
+              '  const storage = new Map([\n    ["econovaria.admin.selected-game.v1", "game-1"],\n  ]);',
+              '  const storage = new Map();',
+          )
+          replace_once(
+              "scripts/admin-explicit-mounted-event-smoke.mjs",
+              '    EconovariaAdminAuthSession: sessionManager,\n    sessionStorage:',
+              '    EconovariaAdminAuthSession: sessionManager,\n    EconovariaAdminGameSelection: Object.freeze({\n      read: () => "game-1",\n      clear() {},\n    }),\n    sessionStorage:',
+          )
+          replace_once(
+              "scripts/admin-quality-smoke-fixture.mjs",
+              '    sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);',
+              '    window.name = `econovaria:admin-game:v1:${gameId}`;',
+          )
+
+          path = "scripts/admin-session-manager-smoke.mjs"
+          replace_once(
+              path,
+              '  const localValues = new Map();\n  const sessionStorage = {',
+              '  const localValues = new Map();\n  let selectedGameId = "";\n  const sessionStorage = {',
+          )
+          replace_once(
+              path,
+              '  const window = {\n    fetch: fetchImpl,',
+              '  const gameSelection = Object.freeze({\n    read: () => selectedGameId,\n    write(value) {\n      selectedGameId = String(value || "").trim();\n      return selectedGameId;\n    },\n    clear() {\n      selectedGameId = "";\n    },\n  });\n  const window = {\n    fetch: fetchImpl,',
+          )
+          replace_once(
+              path,
+              '    localStorage,\n    crypto:',
+              '    localStorage,\n    EconovariaAdminGameSelection: gameSelection,\n    crypto:',
+          )
+          replace_once(
+              path,
+              '  return { manager: window.EconovariaAdminAuthSession, sessionStorage };',
+              '  return { manager: window.EconovariaAdminAuthSession, sessionStorage, gameSelection };',
+          )
+          replace_count(
+              path,
+              'const { manager, sessionStorage } = createRuntime(',
+              'const { manager, sessionStorage, gameSelection } = createRuntime(',
+              4,
+          )
+          replace_count(
+              path,
+              '  sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");',
+              '  gameSelection.write("game-1");',
+              3,
+          )
+          file = Path(path)
+          value = file.read_text(encoding="utf-8")
+          old_assert = '  assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);'
+          if value.count(old_assert) != 3:
+              raise SystemExit(f"{path}: selected-game assertion count drifted")
+          file.write_text(
+              value.replace(old_assert, '  assert.equal(gameSelection.read(), "");', 2),
+              encoding="utf-8",
+          )
+
+          replace_once(
+              "backend/src/security/adminBffRequestAuth.ts",
+              'interface JsonWebKeySet {\n  readonly keys?: readonly JsonWebKey[];\n}',
+              'interface VercelJsonWebKey extends JsonWebKey {\n  readonly kid?: string;\n  readonly alg?: string;\n  readonly use?: string;\n}\n\ninterface JsonWebKeySet {\n  readonly keys?: readonly VercelJsonWebKey[];\n}',
+          )
+
+          path = "backend/supabase/functions/staff-mfa-api/index.ts"
+          replace_once(
+              path,
+              '      iv,\n      additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1"),',
+              '      iv: ownedArrayBuffer(iv),\n      additionalData: ownedArrayBuffer(new TextEncoder().encode("econovaria-mfa-factor-v1")),',
+          )
+          replace_once(
+              path,
+              '    key,\n    payload,\n  );',
+              '    key,\n    ownedArrayBuffer(payload),\n  );',
+          )
+          replace_once(
+              path,
+              '        iv: fromBase64Url(parts[1]),\n        additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1"),',
+              '        iv: ownedArrayBuffer(fromBase64Url(parts[1])),\n        additionalData: ownedArrayBuffer(new TextEncoder().encode("econovaria-mfa-factor-v1")),',
+          )
+          replace_once(
+              path,
+              '      key,\n      fromBase64Url(parts[2]),\n    );',
+              '      key,\n      ownedArrayBuffer(fromBase64Url(parts[2])),\n    );',
+          )
+          replace_once(
+              path,
+              'function base64Url(bytes: Uint8Array): string {',
+              'function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {\n  const copy = new Uint8Array(bytes.byteLength);\n  copy.set(bytes);\n  return copy.buffer;\n}\n\nfunction base64Url(bytes: Uint8Array): string {',
+          )
+
+          replace_once(
+              "backend/supabase/functions/password-reset-api/index.ts",
+              '    return json(request, 400, errorBody(policy.code, policy.message));',
+              '    return json(request, 400, errorBody(\n      policy.code || "invalid_password",\n      policy.message || "Password does not meet the administrator security policy.",\n    ));',
+          )
+
+          path = "backend/supabase/functions/web-session-api/index.ts"
+          replace_once(
+              path,
+              '      body: bodyResult.body && routeContract.mutation\n        ? bodyResult.body\n        : undefined,',
+              '      body: bodyResult.body && routeContract.mutation\n        ? ownedArrayBuffer(bodyResult.body)\n        : undefined,',
+          )
+          replace_once(
+              path,
+              '  return new Response(responseBody.body, {\n    status: upstream.status,\n    headers,\n  });',
+              '  return new Response(ownedArrayBuffer(responseBody.body), {\n    status: upstream.status,\n    headers,\n  });',
+          )
+          replace_once(
+              path,
+              '  return new Response(method === "HEAD" ? null : responseBody.body, {\n    status: upstream.status,\n    headers,\n  });',
+              '  return new Response(\n    method === "HEAD" ? null : ownedArrayBuffer(responseBody.body),\n    {\n      status: upstream.status,\n      headers,\n    },\n  );',
+          )
+          replace_once(
+              path,
+              'async function sendAdminRequest(',
+              'function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {\n  const copy = new Uint8Array(bytes.byteLength);\n  copy.set(bytes);\n  return copy.buffer;\n}\n\nasync function sendAdminRequest(',
+          )
+          replace_once(
+              path,
+              '    body: body && !["GET", "HEAD"].includes(source.method) ? body : undefined,',
+              '    body: body && !["GET", "HEAD"].includes(source.method)\n      ? ownedArrayBuffer(body)\n      : undefined,',
+          )
+          PY
+
+      - name: Verify final change scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/expected-final-paths.txt <<'EOF'
+          admin/admin-auth.js
+          admin/admin-logout-controller.js
+          admin/auth-session-manager.js
+          admin/game-code-wiring.js
+          admin/game-session-controls.js
+          admin/index.html
+          admin/logout-confirmation.js
+          admin/player-access-code-bridge.js
+          admin/player-identity-wiring.js
+          admin/session-gate.js
+          admin/settings-simplified.js
+          auth/reset-password.js
+          backend/src/domains/players/api/playerLoginHttpHandler.ts
+          backend/src/security/adminBffRequestAuth.ts
+          backend/supabase/functions/password-reset-api/index.ts
+          backend/supabase/functions/staff-mfa-api/index.ts
+          backend/supabase/functions/staff-mfa-api/mfaQrCode.ts
+          backend/supabase/functions/web-session-api/index.ts
+          frontend/src/core/admin-game-selection.js
+          frontend/src/core/api.js
+          frontend/src/core/login.js
+          index.html
+          scripts/admin-explicit-mounted-event-smoke.mjs
+          scripts/admin-game-selection-memory.test.mjs
+          scripts/admin-quality-smoke-fixture.mjs
+          scripts/admin-session-manager-smoke.mjs
+          scripts/admin-shell-identity-v2-smoke.mjs
+          scripts/codeql-security-remediation.test.mjs
+          scripts/local-staging-gateway.py
+          scripts/player-login-identity-smoke.mjs
+          EOF
+          sed -i 's/^          //' /tmp/expected-final-paths.txt
+          git diff --name-only | sort > /tmp/actual-final-paths.txt
+          diff -u /tmp/expected-final-paths.txt /tmp/actual-final-paths.txt
+          git diff --check
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+
+      - name: Run focused and full validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/admin-explicit-mounted-event-smoke.mjs
+          node scripts/admin-shell-identity-v2-smoke.mjs
+          node scripts/admin-session-manager-smoke.mjs
+          node --test scripts/admin-game-selection-memory.test.mjs scripts/codeql-security-remediation.test.mjs scripts/local-staging-gateway-contract.test.mjs
+          npm --prefix backend run typecheck:all
+          npm test 2>&1 | tee /tmp/codeql-remediation-repository-test.log
+
+      - name: Run Admin lifecycle browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/codeql-remediation-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/admin/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          ADMIN_SMOKE_BASE_URL=http://127.0.0.1:4173/admin/ ADMIN_SMOKE_ARTIFACT_DIR=/tmp/codeql-remediation-browser node scripts/admin-game-lifecycle-smoke.mjs
+
+      - name: Commit validated clean remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf admin-browser-smoke-artifacts
+          git clean -fd
+          git add -A
+          git diff --cached --check
+          git commit -m "security: remediate CodeQL findings on current main"
+          git push origin HEAD:agent/codeql-remediation-clean
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-remediation-clean-replay-diagnostics
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            /tmp/codeql-remediation-repository-test.log
+            /tmp/codeql-remediation-http.log
+            /tmp/codeql-remediation-browser
