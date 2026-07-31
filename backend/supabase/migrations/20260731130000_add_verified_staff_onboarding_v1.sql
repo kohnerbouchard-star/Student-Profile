@@ -519,8 +519,6 @@ language plpgsql
 security definer
 set search_path = pg_catalog, public, private
 as $$
-declare
-  v_completed boolean := false;
 begin
   if not exists (
     select 1
@@ -545,7 +543,6 @@ begin
   where staff_user_id = p_staff_user_id
     and status = 'staff_identity_activated';
 
-  get diagnostics v_completed = row_count;
   return exists (
     select 1 from public.staff_users
     where id = p_staff_user_id and status = 'active'
