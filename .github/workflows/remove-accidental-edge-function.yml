@@ -1,0 +1,91 @@
+name: Remove Accidental Edge Function
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/remove-accidental-edge-function.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remove-accidental-edge-function
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete exact accidental function
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      EXPECTED_PROJECT_REF: cgiukdjwicykrmtkhudh
+      TARGET_FUNCTION_SLUG: DO_NOT_DEPLOY
+      TARGET_FUNCTION_ID: 0983f48b-8a9b-4f83-a976-c8f6c5f7ee29
+      SUPABASE_CLI_VERSION: 2.109.1
+
+    steps:
+      - name: Enforce exact cleanup boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "pull_request"
+          test "$GITHUB_REPOSITORY" = "kohnerbouchard-star/Student-Profile"
+          test "${{ github.event.pull_request.head.repo.full_name }}" = "$GITHUB_REPOSITORY"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$EXPECTED_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$TARGET_FUNCTION_SLUG" = "DO_NOT_DEPLOY"
+          test "$TARGET_FUNCTION_ID" = "0983f48b-8a9b-4f83-a976-c8f6c5f7ee29"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Verify exact accidental function exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-before.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const matches = rows.filter((row) => row?.slug === process.env.TARGET_FUNCTION_SLUG);
+          if (matches.length !== 1) throw new Error(`Expected exactly one accidental function, found ${matches.length}.`);
+          const row = matches[0];
+          if (row.id !== process.env.TARGET_FUNCTION_ID) throw new Error('Accidental function ID mismatch.');
+          if (row.verify_jwt !== true) throw new Error('Accidental function JWT boundary mismatch.');
+          if (row.version !== 1) throw new Error('Accidental function version mismatch.');
+          NODE
+
+      - name: Delete exact accidental function
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --yes functions delete "$TARGET_FUNCTION_SLUG" \
+            --project-ref "$EXPECTED_PROJECT_REF"
+
+      - name: Verify cleanup completed
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-after.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          if (rows.some((row) => row?.slug === process.env.TARGET_FUNCTION_SLUG)) {
+            throw new Error('Accidental function still exists after cleanup.');
+          }
+          console.log('Verified accidental production function is absent.');
+          NODE
