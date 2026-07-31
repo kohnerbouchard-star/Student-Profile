@@ -68,7 +68,7 @@ const scopedRuntimeFiles = {
   "admin/logout-confirmation.js": ["data-econovaria-admin-logout-confirmation", "event.stopImmediatePropagation()", "clearLocalStateAndRedirect", "EconovariaAdminGameSessionControls?.selectedGameContext?.()"],
   "admin/game-session-controls.js": ["econovaria.admin.selected-game.v1", "share-current-game", "data-econovaria-admin-logout", "/api/admin/auth/sign-out", "createFallbackShareSurface"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
-  "admin/interaction-quality.js": ["setAriaCurrent", "aria-current", "focusPrimaryModalControl", "showStateConfirmModal", "createStateButton"],
+  "admin/interaction-quality.js": ["setButtonState", "aria-busy", "setFieldError", "aria-invalid", "setScannerProcessing", "setScannerCompleted", "setScannerError"],
   "admin/data-state-contracts.js": ["data-econovaria-state", "data-econovaria-error-code", "aria-live", "aria-busy", "classifyErrorCode"],
   "admin/create-action-adapter.js": ["data-econovaria-action-source", "data-econovaria-action", "data-admin-terminal-action"],
   "admin/player-access-code-bridge.js": ["data-admin-terminal-player-form", "data-admin-terminal-player-credentials", "data-admin-terminal-player-access-code"],
