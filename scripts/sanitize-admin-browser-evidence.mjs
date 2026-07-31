@@ -26,8 +26,8 @@ const REPLACEMENTS = Object.freeze([
     replacement: "[game-code-redacted]",
   },
   {
-    pattern: /(authorization\s*:\s*bearer\s+)[^\s"']+/gi,
-    replacement: "$1[bearer-redacted]",
+    pattern: /authorization\s*:\s*bearer\s+[^\s"']+/gi,
+    replacement: "Authorization: [bearer-redacted]",
   },
   {
     pattern: /(postgres(?:ql)?:\/\/)[^@\s]+@/gi,
