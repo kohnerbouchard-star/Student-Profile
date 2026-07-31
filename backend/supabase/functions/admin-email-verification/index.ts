@@ -147,17 +147,32 @@ async function consumeConfirmation(request: Request): Promise<Response> {
   }
 
   // Supabase may mint a temporary AAL1 session while confirming the mailbox.
-  // It never reaches the browser and is revoked immediately. The administrator
-  // must still enter the password and complete the existing TOTP flow.
-  await fetch(`${runtime.supabaseUrl}/auth/v1/logout?scope=local`, {
-    method: "POST",
-    headers: {
-      apikey: runtime.publishableKey,
-      Authorization: `Bearer ${accessToken}`,
+  // The token never reaches the browser. Cleanup is verified before redirecting;
+  // a 401 is safe because it proves the temporary token is already invalid.
+  const logoutResponse = await fetch(
+    `${runtime.supabaseUrl}/auth/v1/logout?scope=local`,
+    {
+      method: "POST",
+      headers: {
+        apikey: runtime.publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+      redirect: "error",
     },
-    cache: "no-store",
-    redirect: "error",
-  }).catch(() => null);
+  ).catch(() => null);
+  const logoutStatus = logoutResponse?.status ?? 0;
+  const logoutSucceeded = Boolean(
+    logoutResponse && (logoutResponse.ok || logoutStatus === 401),
+  );
+  await logoutResponse?.body?.cancel().catch(() => undefined);
+  if (!logoutSucceeded) {
+    console.error(
+      "staff_email_verification_session_revocation_failed",
+      { status: logoutStatus },
+    );
+    return cleanupFailure(runtime.returnUrl);
+  }
 
   return new Response(null, {
     status: 303,
@@ -252,6 +267,14 @@ function unavailable(returnUrl = DEFAULT_RETURN_URL): Response {
   return htmlResponse(503, errorPage(
     "Verification temporarily unavailable",
     "Email verification is temporarily unavailable. Try again shortly.",
+    returnUrl,
+  ), clearChallengeHeaders());
+}
+
+function cleanupFailure(returnUrl = DEFAULT_RETURN_URL): Response {
+  return htmlResponse(503, errorPage(
+    "Email confirmed; secure cleanup pending",
+    "Your email was confirmed, but temporary session cleanup could not be verified. No session token was exposed to this browser. Close this tab and return to administrator sign-in shortly.",
     returnUrl,
   ), clearChallengeHeaders());
 }
