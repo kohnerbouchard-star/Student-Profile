@@ -11,6 +11,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "bootstrap-api": false,
   "web-session-api": false,
   "admin-password-recovery": false,
+  "admin-email-verification": false,
   "admin-logout-api": false,
   "staff-api": true,
   "admin-api": true,
@@ -23,7 +24,10 @@ const FUNCTION_POLICIES = Object.freeze({
   "stock-market-player-read": false,
   "stock-market-trading": false,
 });
-const CUSTOM_AUTH_FUNCTIONS = new Set(["admin-password-recovery"]);
+const CUSTOM_AUTH_FUNCTIONS = new Set([
+  "admin-password-recovery",
+  "admin-email-verification",
+]);
 const WRAPPED_RUNTIME_FUNCTIONS = new Set([
   "player-api",
   "player-web-session-api",
@@ -98,6 +102,10 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["admin-password-recovery"], /constantTimeEqual\(challenge, cookieChallenge\)/);
   assert.match(functionSources["admin-password-recovery"], /\/auth\/v1\/verify/);
   assert.doesNotMatch(functionSources["admin-password-recovery"], /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(functionSources["admin-email-verification"], /TOKEN_HASH_PATTERN/);
+  assert.match(functionSources["admin-email-verification"], /constantTimeEqual\(challenge, cookieChallenge\)/);
+  assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
+  assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
   assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
   assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);
