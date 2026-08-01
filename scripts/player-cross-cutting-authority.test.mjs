@@ -21,6 +21,7 @@ function manifest() {
       DEFAULT_AUTHORITY_PATH,
       "scripts/verify-player-cross-cutting-authority.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "api/_player-bff-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -29,12 +30,14 @@ function manifest() {
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
       "scripts/player-api-read-resilience.test.mjs",
+      "scripts/player-bff-retry-classification.test.mjs",
       "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/player-production-secret-provision-contract.test.mjs",
       "scripts/player-runtime-load-profile.mjs",
       "scripts/security-audit-remediation-contract.test.mjs",
     ],
     requiredFiles: [
+      "api/_player-bff-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -43,6 +46,7 @@ function manifest() {
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
       "scripts/player-api-read-resilience.test.mjs",
+      "scripts/player-bff-retry-classification.test.mjs",
       "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/player-production-secret-provision-contract.test.mjs",
       "scripts/player-runtime-load-profile.mjs",
@@ -53,6 +57,7 @@ function manifest() {
       "player-edge-trusted-ip-entrypoint-contract",
       "player-production-secret-provision-contract",
       "player-api-read-resilience",
+      "player-bff-retry-classification",
     ],
   };
 }
