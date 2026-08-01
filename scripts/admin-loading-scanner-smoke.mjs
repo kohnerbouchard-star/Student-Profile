@@ -1,8 +1,14 @@
 import {
   BASE_URL,
-  adminUrlForGame,
   createQualityHarness,
+  GAME_ID,
 } from "./admin-quality-smoke-fixture.mjs";
+
+function adminUrlForGame(gameId = GAME_ID) {
+  const url = new URL(BASE_URL);
+  url.searchParams.set("game", gameId);
+  return url.toString();
+}
 
 const harness = await createQualityHarness("loading-scanner");
 const { page, browser, errors, capture, finish } = harness;
