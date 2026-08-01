@@ -190,8 +190,11 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
     const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
     if (response.ok && result?.ok === true) {
-      if (surface === "player" || surface === "playerWebSession") rememberPlayerCsrf(result);
-      rememberAdminCsrf(result);
+      if (surface === "player" || surface === "playerWebSession") {
+        rememberPlayerCsrf(result);
+      } else if (surface === "webSession") {
+        rememberAdminCsrf(result);
+      }
       return { status: response.status, ...result };
     }
     return normalizeEdgeRouteError(
