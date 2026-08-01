@@ -1,4 +1,8 @@
-import { BASE_URL, createQualityHarness } from "./admin-quality-smoke-fixture.mjs";
+import {
+  BASE_URL,
+  adminUrlForGame,
+  createQualityHarness,
+} from "./admin-quality-smoke-fixture.mjs";
 
 const harness = await createQualityHarness("loading-scanner");
 const { page, browser, errors, capture, finish } = harness;
@@ -64,7 +68,10 @@ async function sessionGateContract(name, width, height) {
 
 async function mountedAdminContract(name, width, height) {
   await page.setViewportSize({ width, height });
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(adminUrlForGame(), {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  });
   await page.locator("#adminPreview:not([hidden])").waitFor({
     state: "visible",
     timeout: 15000,
@@ -183,7 +190,10 @@ try {
   }
 
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(adminUrlForGame(), {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  });
   await page.locator("#adminPreview:not([hidden])").waitFor({
     state: "visible",
     timeout: 15000,
