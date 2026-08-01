@@ -14,6 +14,7 @@
     ".github/workflows/database-replay.yml",
     ".github/workflows/player-terminal-verify.yml",
     ".github/workflows/production-web-session-secrets.yml",
+    ".github/workflows/workflow-action-pinning.yml",
     ".gitignore",
     "admin/admin-auth.js",
     "admin/admin-logout-controller.js",
@@ -21,6 +22,7 @@
     "admin/game-code-wiring.js",
     "admin/game-session-controls.js",
     "admin/index.html",
+    "admin/inventory-redemption-queue-surface.js",
     "admin/logout-confirmation.js",
     "admin/player-access-code-bridge.js",
     "admin/player-identity-wiring.js",
@@ -65,7 +67,8 @@
     "scripts/player-multiplayer-browser-acceptance.mjs",
     "scripts/player-production-secret-provision-contract.test.mjs",
     "scripts/security-audit-remediation-contract.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/workflow-action-pinning.test.mjs"
   ],
   "requiredFiles": [
     "backend/supabase/functions/player-api/index.ts",
