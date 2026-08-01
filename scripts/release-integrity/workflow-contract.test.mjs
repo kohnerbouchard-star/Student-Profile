@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { validateDatabaseUrlProjectRef } from './database-binding.mjs';
+import { validateDatabaseUrlProjectRef } from './index.mjs';
 
 const releaseWorkflow = readFileSync('.github/workflows/release-integrity.yml', 'utf8');
 const retiredWorkflow = readFileSync('.github/workflows/production-runtime-promotion-v2.yml', 'utf8');
 const contractWorkflow = readFileSync('.github/workflows/production-runtime-promotion-contract.yml', 'utf8');
 const fingerprintSql = readFileSync('scripts/release-integrity/export-schema-fingerprint.sql', 'utf8');
+const indexSource = readFileSync('scripts/release-integrity/index.mjs', 'utf8');
+const bindingSource = readFileSync('scripts/release-integrity/database-binding.mjs', 'utf8');
 const design = readFileSync('docs/operations/release-integrity-gates-v1.md', 'utf8');
-const expectedDifferences = JSON.parse(
-  readFileSync('docs/operations/contracts/release-integrity-expected-differences-v1.json', 'utf8'),
+const hardeningAmendment = readFileSync(
+  'docs/operations/release-integrity-gates-v1-hardening-amendment.md',
+  'utf8',
 );
 
 function assertActionsPinned(workflow, name) {
@@ -20,14 +23,18 @@ function assertActionsPinned(workflow, name) {
   }
 }
 
-test('release workflow is read-only, exact-source bound, and action pinned', () => {
+test('release workflow is read-only, merge-candidate bound, TLS verified, and action pinned', () => {
   assertActionsPinned(releaseWorkflow, 'release-integrity.yml');
   for (const marker of [
     'permissions:\n  contents: read',
+    'merge_group:',
+    'EXPECTED_SOURCE_SHA: ${{ github.sha }}',
     'default_transaction_read_only=on',
     'statement_timeout=30000',
     'lock_timeout=5000',
-    'PGSSLMODE: require',
+    'PGSSLMODE: verify-full',
+    'SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}',
+    'PGSSLROOTCERT=$cert_path',
     'environment: production',
     "github.ref == 'refs/heads/main'",
     'test "$GITHUB_REF" = "refs/heads/main"',
@@ -35,13 +42,16 @@ test('release workflow is read-only, exact-source bound, and action pinned', () 
     'verify-source',
     'validate-db-url',
     'enforce-attestation',
+    'docs/operations/release-integrity-gates-v1*.md',
   ]) {
     assert.ok(releaseWorkflow.includes(marker), `missing release workflow marker: ${marker}`);
   }
 
-  assert.ok(!releaseWorkflow.includes('ref: ${{ inputs.source_sha }}'), 'workflow must not execute code from a user-supplied SHA');
-
   for (const forbidden of [
+    'github.event.pull_request.head.sha',
+    'ref: ${{ inputs.source_sha }}',
+    '--allowlist',
+    'release-integrity-expected-differences-v1.json',
     'supabase db push',
     'supabase db pull',
     'supabase migration repair',
@@ -52,7 +62,7 @@ test('release workflow is read-only, exact-source bound, and action pinned', () 
     'truncate ',
     'drop database',
   ]) {
-    assert.ok(!releaseWorkflow.toLowerCase().includes(forbidden), `release workflow contains forbidden mutation: ${forbidden}`);
+    assert.ok(!releaseWorkflow.toLowerCase().includes(forbidden.toLowerCase()), `release workflow contains forbidden behavior: ${forbidden}`);
   }
 });
 
@@ -64,9 +74,13 @@ test('legacy production workflow is an unconditional fail-closed retirement stub
   assertActionsPinned(retiredWorkflow, 'production-runtime-promotion-v2.yml');
 });
 
-test('contract workflow is pinned and exercises all release integrity tests', () => {
+test('contract workflow validates merge candidates and all release integrity tests', () => {
   assertActionsPinned(contractWorkflow, 'production-runtime-promotion-contract.yml');
   for (const marker of [
+    'merge_group:',
+    'ref: ${{ github.sha }}',
+    'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
+    'docs/operations/release-integrity-gates-v1*.md',
     'scripts/release-integrity/index.test.mjs',
     'scripts/release-integrity/workflow-contract.test.mjs',
     'scripts/production-runtime-promotion-contract.test.mjs',
@@ -74,11 +88,29 @@ test('contract workflow is pinned and exercises all release integrity tests', ()
   ]) {
     assert.ok(contractWorkflow.includes(marker), `missing contract workflow marker: ${marker}`);
   }
+  assert.ok(!contractWorkflow.includes('github.event.pull_request.head.sha'));
 });
 
-test('schema authorization evidence uses stable routine signatures', () => {
-  assert.ok(fingerprintSql.includes("'arguments', pg_get_function_identity_arguments(p.oid)"));
-  assert.ok(fingerprintSql.includes("aclexplode(coalesce(p.proacl, acldefault('f', p.proowner)))"));
+test('database binding has one canonical implementation', () => {
+  assert.ok(bindingSource.includes('export function validateDatabaseUrlProjectRef'));
+  assert.ok(indexSource.includes("export { validateDatabaseUrlProjectRef } from './database-binding.mjs';"));
+  assert.ok(!indexSource.includes('export function validateDatabaseUrlProjectRef'));
+});
+
+test('schema evidence uses SHA-256, stable ownership, and relevant role authority', () => {
+  for (const marker of [
+    "'definitionSha256', encode(sha256(convert_to(pg_get_functiondef(p.oid), 'UTF8')), 'hex')",
+    "'schemaOwners'",
+    "'relationOwners'",
+    "'routineOwners'",
+    "'roleAttributes'",
+    "'roleMemberships'",
+    "'arguments', pg_get_function_identity_arguments(p.oid)",
+    "aclexplode(coalesce(p.proacl, acldefault('f', p.proowner)))",
+  ]) {
+    assert.ok(fingerprintSql.includes(marker), `missing fingerprint marker: ${marker}`);
+  }
+  assert.ok(!fingerprintSql.toLowerCase().includes('md5('));
   assert.ok(!fingerprintSql.includes('specificName'));
   assert.ok(!fingerprintSql.includes('specific_name'));
 });
@@ -97,10 +129,12 @@ test('database bindings reject non-Supabase hosts even with a matching username'
   }), /expected Supabase project and host/);
 });
 
-test('design authority and expected-difference contract remain fail closed', () => {
+test('design authority and hardening amendment remain fail closed', () => {
   for (const invariant of ['I1.', 'I2.', 'I3.', 'I4.', 'I5.', 'I6.', 'I7.', 'I8.', 'I9.', 'I10.']) {
     assert.ok(design.includes(invariant), `missing design invariant: ${invariant}`);
   }
-  assert.equal(expectedDifferences.schemaVersion, 'econovaria.release-integrity.expected-differences.v1');
-  assert.deepEqual(expectedDifferences.allowedDifferences, []);
+  for (const decision of ['A1.', 'A2.', 'A3.', 'A4.', 'A5.', 'A6.', 'A7.', 'A8.']) {
+    assert.ok(hardeningAmendment.includes(decision), `missing hardening decision: ${decision}`);
+  }
+  assert.ok(hardeningAmendment.includes('Any structural or authorization fingerprint difference is `UNAPPROVED_DRIFT`'));
 });
