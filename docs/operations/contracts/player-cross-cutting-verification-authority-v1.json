@@ -32,6 +32,7 @@
     "backend/src/domains/players/api/playerLoginHttpHandler.ts",
     "backend/src/security/adminBffRequestAuth.ts",
     "backend/src/security/staffPasswordPolicy.ts",
+    "backend/supabase/functions/_shared/playerApiReadResilience.ts",
     "backend/supabase/functions/password-reset-api/index.ts",
     "backend/supabase/functions/player-api/index.ts",
     "backend/supabase/functions/player-api/runtime.ts",
