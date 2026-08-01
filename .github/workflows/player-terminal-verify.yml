@@ -6,7 +6,6 @@ on:
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
-      - "backend/supabase/functions/_shared/playerApiReadResilience.ts"
       - "backend/supabase/functions/player-api/**"
       - "backend/supabase/functions/player-web-session-api/**"
       - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
@@ -28,7 +27,6 @@ on:
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
-      - "backend/supabase/functions/_shared/playerApiReadResilience.ts"
       - "backend/supabase/functions/player-api/**"
       - "backend/supabase/functions/player-web-session-api/**"
       - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
@@ -104,8 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --experimental-strip-types --test \
-            scripts/player-api-read-resilience.test.mjs
+          node --test scripts/player-api-read-resilience.test.mjs
 
       - name: Install package dependencies
         working-directory: player-terminal
