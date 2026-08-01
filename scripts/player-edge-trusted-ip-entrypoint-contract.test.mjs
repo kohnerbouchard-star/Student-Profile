@@ -3,6 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const functions = ["player-api", "player-web-session-api"];
+const isolatedBffAcceptances = [
+  "scripts/business-banking-player-commerce-browser-acceptance.mjs",
+  "scripts/business-banking-player-inventory-browser-acceptance.mjs",
+  "scripts/player-contracts-browser-acceptance.mjs",
+  "scripts/business-banking-player-market-browser-acceptance.mjs",
+  "scripts/business-banking-player-business-browser-acceptance.mjs",
+];
 
 for (const functionName of functions) {
   test(`${functionName} binds gateway client IP before loading its runtime`, async () => {
@@ -81,6 +88,15 @@ test("connected functional journeys and load handoff use isolated Edge runtimes"
     orchestrator,
     /fresh-warmed-edge-runtime-per-functional-journey-and-load-handoff/u,
   );
+
+  for (const path of isolatedBffAcceptances) {
+    const entrypoint = await readFile(path, "utf8");
+    assert.match(entrypoint, /import \{ restartLocalEdgeRuntime \}/u, `${path} must import isolation`);
+    const isolationCall = entrypoint.indexOf("await restartLocalEdgeRuntime()");
+    const acceptanceCall = entrypoint.indexOf("await runConnectedPlayerBffAcceptance(import.meta.url)");
+    assert.ok(isolationCall >= 0, `${path} must isolate the runtime`);
+    assert.ok(acceptanceCall > isolationCall, `${path} must isolate before acceptance execution`);
+  }
 
   assert.match(isolation, /docker", \["restart", containerName\]/u);
   assert.match(isolation, /\/functions\/v1\/player-api/u);
