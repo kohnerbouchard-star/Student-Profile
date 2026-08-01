@@ -4,14 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - ".npmrc"
-      - ".github/workflows/release-integrity.yml"
-      - ".github/workflows/production-runtime-promotion-v2.yml"
-      - ".github/workflows/production-runtime-promotion-contract.yml"
-      - "docs/operations/release-integrity-gates-v1*.md"
-      - "scripts/release-integrity/**"
-      - "scripts/production-runtime-promotion-contract.test.mjs"
   merge_group:
     types:
       - checks_requested
