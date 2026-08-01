@@ -4,8 +4,16 @@ const { isIP } = require("node:net");
 
 const MAX_BODY_BYTES = 1_048_576;
 const MAX_PATH_BYTES = 2_048;
+const MAX_RETRY_MARKER_BYTES = 8_192;
 const SAFE_VALUE_PATTERN = /^[^\r\n\u0000]{0,8192}$/u;
 const COOKIE_ENVELOPE_PATTERN = /^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{24,3000}$/u;
+const TRANSIENT_WORKER_PATTERNS = Object.freeze([
+  /WorkerAlreadyRetired/iu,
+  /worker has already retired/iu,
+  /WORKER_RESOURCE_LIMIT/iu,
+  /\bCPUTime\b/iu,
+  /CPU time soft limit reached/iu
+]);
 const FORWARDED_HEADERS = Object.freeze({
   "content-type": "content-type",
   "x-econovaria-csrf-token": "x-econovaria-csrf-token",
@@ -76,6 +84,8 @@ async function proxyPlayerBff(request, response, options) {
     );
     const retryAfter = normalizedRetryAfter(upstream.headers.get("retry-after"));
     if (retryAfter) response.setHeader("Retry-After", retryAfter);
+    const retryable = transientWorkerFailureReason(upstream.status, bytes);
+    if (retryable) response.setHeader("X-Econovaria-Retryable", retryable);
     const cookies = readUpstreamCookies(upstream.headers)
       .map(normalizedSessionCookie)
       .filter(Boolean);
@@ -208,9 +218,23 @@ function normalizedContentType(value) {
 
 function normalizedRetryAfter(value) {
   const candidate = String(value || "").trim();
-  if (!/^\d{1,5}$/u.test(candidate)) return "";
-  const seconds = Number(candidate);
-  return seconds <= 86400 ? String(seconds) : "";
+  if (/^\d{1,10}$/u.test(candidate)) {
+    const seconds = Number(candidate);
+    return Number.isSafeInteger(seconds) && seconds >= 0 ? String(seconds) : "";
+  }
+  const timestamp = Date.parse(candidate);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toUTCString() : "";
+}
+
+function transientWorkerFailureReason(status, bytes) {
+  if (status === 546) return "worker-resource-limit";
+  if (status !== 500) return "";
+  const text = Buffer.from(bytes)
+    .subarray(0, MAX_RETRY_MARKER_BYTES)
+    .toString("utf8");
+  return TRANSIENT_WORKER_PATTERNS.some((pattern) => pattern.test(text))
+    ? "worker-retired"
+    : "";
 }
 
 function readUpstreamCookies(headers) {
@@ -257,4 +281,10 @@ function errorBody(code, message) {
   return { ok: false, error: { code, message, retryable: false } };
 }
 
-module.exports = { proxyPlayerBff };
+module.exports = {
+  proxyPlayerBff,
+  __test: Object.freeze({
+    normalizedRetryAfter,
+    transientWorkerFailureReason
+  })
+};
