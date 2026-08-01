@@ -21,6 +21,8 @@ const [
   passwordResetFunction,
   passwordResetProxy,
   verificationEmailSender,
+  authStagingWorkflow,
+  authProductionWorkflow,
 ] = await Promise.all([
   text("backend/package.json"),
   text("admin/index.html"),
@@ -34,6 +36,8 @@ const [
   text("backend/supabase/functions/password-reset-api/index.ts"),
   text("api/password-reset.js"),
   text("backend/src/domains/auth/application/staffSignupVerificationEmail.ts"),
+  text(".github/workflows/admin-auth-surface-staging-candidate.yml"),
+  text(".github/workflows/admin-auth-surface-production-promote.yml"),
 ]);
 
 const backendPackage = JSON.parse(backendPackageText);
@@ -146,6 +150,21 @@ requireCondition(
   "Admin auth manifest must record the logout replacement",
 );
 requireCondition(
+  adminAuthManifest.verificationEmailDelivery?.runtimeFunction === "bootstrap-api" &&
+    adminAuthManifest.verificationEmailDelivery?.trackingLinkRewritesAllowed === false,
+  "Verification email delivery must remain bound to bootstrap-api without link rewriting",
+);
+for (const requiredName of [
+  "RESEND_API_KEY",
+  "ECONOVARIA_AUTH_EMAIL_FROM",
+  "ECONOVARIA_EMAIL_VERIFICATION_URL",
+]) {
+  requireCondition(
+    adminAuthManifest.verificationEmailDelivery.requiredEnvironmentNames.includes(requiredName),
+    `Verification email delivery must require ${requiredName}`,
+  );
+}
+requireCondition(
   verificationFunction.includes("double-submit challenge") ||
     verificationFunction.includes("CHALLENGE_COOKIE"),
   "Admin email verification must retain its double-submit challenge",
@@ -170,9 +189,60 @@ requireCondition(
   "Verification email delivery must target the canonical review surface",
 );
 
+for (const [workflowName, workflow, expectedEnvironment, expectedProjectRef] of [
+  ["staging", authStagingWorkflow, "staging", "eecvbssdvarfcykcfrny"],
+  ["production", authProductionWorkflow, "production", "cgiukdjwicykrmtkhudh"],
+]) {
+  requireCondition(
+    workflow.includes(`environment: ${expectedEnvironment}`),
+    `Admin auth ${workflowName} workflow must use its protected environment`,
+  );
+  requireCondition(
+    workflow.includes(expectedProjectRef),
+    `Admin auth ${workflowName} workflow must bind the exact project ref`,
+  );
+  requireCondition(
+    workflow.includes("supabase functions deploy") &&
+      workflow.includes("--workdir backend") &&
+      workflow.includes("--no-verify-jwt"),
+    `Admin auth ${workflowName} workflow must deploy mixed JWT settings from tracked source`,
+  );
+  requireCondition(
+    workflow.includes("node scripts/high-priority-boundary-ratchet.mjs") &&
+      workflow.includes("scripts/verified-staff-onboarding-contract.test.mjs") &&
+      workflow.includes("scripts/password-recovery-frontend-contract.test.mjs"),
+    `Admin auth ${workflowName} workflow must rerun onboarding and recovery contracts`,
+  );
+  for (const secretName of [
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "ECONOVARIA_WEB_ALLOWED_ORIGINS",
+    "ECONOVARIA_EMAIL_VERIFICATION_RETURN_URL",
+    "ECONOVARIA_PASSWORD_RECOVERY_RETURN_URL",
+  ]) {
+    requireCondition(
+      workflow.includes(secretName),
+      `Admin auth ${workflowName} workflow must verify ${secretName}`,
+    );
+  }
+}
+requireCondition(
+  authStagingWorkflow.includes('test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"') &&
+    authStagingWorkflow.includes("admin-auth-staging-candidate.json"),
+  "Admin auth staging deployment must bind current main and emit digest evidence",
+);
+requireCondition(
+  authProductionWorkflow.includes("candidate_run_id") &&
+    authProductionWorkflow.includes("staging_inventory_digest") &&
+    authProductionWorkflow.includes("actions/download-artifact@v5") &&
+    authProductionWorkflow.includes("Production auth source differs from staging"),
+  "Admin auth production deployment must consume exact staging evidence",
+);
+
 console.log(JSON.stringify({
   status: "pass",
-  checks: 30,
+  checks: 55,
   boundaries: [
     "backend-crafting-smoke",
     "world-runtime-retention",
@@ -184,6 +254,10 @@ console.log(JSON.stringify({
     "admin-email-verification",
     "admin-password-recovery",
     "admin-password-reset",
+    "admin-verification-email-delivery",
     "retired-admin-logout",
+    "admin-auth-staging-project-binding",
+    "admin-auth-production-project-binding",
+    "admin-auth-staging-digest-promotion",
   ],
 }, null, 2));
