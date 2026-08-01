@@ -57,6 +57,7 @@
     "scripts/admin-explicit-mounted-event-smoke.mjs",
     "scripts/admin-game-selection-memory.test.mjs",
     "scripts/admin-inventory-redemption-queue-ui-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
     "scripts/admin-quality-smoke-fixture.mjs",
     "scripts/admin-session-manager-smoke.mjs",
     "scripts/admin-shell-identity-v2-smoke.mjs",
