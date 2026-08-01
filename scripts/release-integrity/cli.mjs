@@ -2,7 +2,6 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateDatabaseUrlProjectRef } from './database-binding.mjs';
 import {
   buildMigrationManifest,
   compareMigrationLedger,
@@ -10,6 +9,7 @@ import {
   createReleaseAttestation,
   normalizeSchemaFingerprint,
   readJson,
+  validateDatabaseUrlProjectRef,
   validateExactSourceSha,
   verifyRuntimeContract,
   writeJson,
@@ -94,10 +94,7 @@ async function main() {
   if (command === 'compare-schema') {
     const staging = await readJson(path.resolve(required(options, 'staging')));
     const production = await readJson(path.resolve(required(options, 'production')));
-    const allowlist = options.allowlist
-      ? await readJson(path.resolve(String(options.allowlist)))
-      : null;
-    const comparison = compareSchemaFingerprints({ staging, production, allowlist });
+    const comparison = compareSchemaFingerprints({ staging, production });
     await output(options, comparison);
     if (comparison.status !== 'PASS' && !options.allowFailure) process.exitCode = 2;
     return;
