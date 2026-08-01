@@ -9,12 +9,22 @@ export type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+export interface PlayerApiReadRetryEvent {
+  readonly attempt: number;
+  readonly nextAttempt: number;
+  readonly delayMs: number;
+  readonly path: string;
+  readonly status: number | null;
+  readonly reason: "network" | "response" | "response_body";
+}
+
 export interface PlayerApiReadResilienceOptions {
   readonly maxAttempts?: number;
   readonly baseDelayMs?: number;
   readonly maxJitterMs?: number;
   readonly sleep?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   readonly randomUint32?: () => number;
+  readonly onRetry?: (event: PlayerApiReadRetryEvent) => void;
 }
 
 export function createPlayerApiReadResilientFetch(
@@ -41,6 +51,7 @@ export function createPlayerApiReadResilientFetch(
   );
   const sleep = options.sleep ?? abortableSleep;
   const randomUint32 = options.randomUint32 ?? secureRandomUint32;
+  const onRetry = options.onRetry ?? (() => {});
 
   return async (input, init) => {
     const request = new Request(input, init);
@@ -48,56 +59,81 @@ export function createPlayerApiReadResilientFetch(
       return upstreamFetch(input, init);
     }
 
-    let lastError: unknown = new Error("Player API read failed.");
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       if (request.signal.aborted) throw abortReason(request.signal);
+
+      let retry: Pick<PlayerApiReadRetryEvent, "status" | "reason"> | null = null;
       try {
         const response = await upstreamFetch(request.clone());
         let body: ArrayBuffer;
         try {
           body = await response.arrayBuffer();
         } catch (error) {
-          lastError = error;
-          if (attempt < maxAttempts) {
-            await retryDelay(
-              attempt,
-              baseDelayMs,
-              maxJitterMs,
-              randomUint32,
-              sleep,
-              request.signal,
-            );
-            continue;
-          }
-          throw error;
+          if (attempt >= maxAttempts) throw error;
+          retry = { status: response.status, reason: "response_body" };
+          body = new ArrayBuffer(0);
         }
 
-        const replayable = new Response(body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        });
-        if (!TRANSIENT_STATUSES.has(response.status) || attempt >= maxAttempts) {
-          return replayable;
+        if (!retry) {
+          const replayable = new Response(body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+          });
+          if (!TRANSIENT_STATUSES.has(response.status) || attempt >= maxAttempts) {
+            return replayable;
+          }
+          retry = { status: response.status, reason: "response" };
         }
-        lastError = new Error(`Transient Player API response: ${response.status}`);
       } catch (error) {
-        lastError = error;
         if (attempt >= maxAttempts || request.signal.aborted) throw error;
+        retry = { status: null, reason: "network" };
       }
 
-      await retryDelay(
+      await waitBeforeRetry({
+        request,
         attempt,
+        status: retry.status,
+        reason: retry.reason,
         baseDelayMs,
         maxJitterMs,
         randomUint32,
         sleep,
-        request.signal,
-      );
+        onRetry,
+      });
     }
 
-    throw lastError;
+    throw new Error("Player API read retry state was exhausted.");
   };
+}
+
+interface RetryWaitInput {
+  readonly request: Request;
+  readonly attempt: number;
+  readonly status: number | null;
+  readonly reason: PlayerApiReadRetryEvent["reason"];
+  readonly baseDelayMs: number;
+  readonly maxJitterMs: number;
+  readonly randomUint32: () => number;
+  readonly sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>;
+  readonly onRetry: (event: PlayerApiReadRetryEvent) => void;
+}
+
+async function waitBeforeRetry(input: RetryWaitInput): Promise<void> {
+  const exponential = input.baseDelayMs * (2 ** Math.max(0, input.attempt - 1));
+  const jitter = input.maxJitterMs === 0
+    ? 0
+    : input.randomUint32() % (input.maxJitterMs + 1);
+  const delayMs = exponential + jitter;
+  input.onRetry(Object.freeze({
+    attempt: input.attempt,
+    nextAttempt: input.attempt + 1,
+    delayMs,
+    path: new URL(input.request.url).pathname,
+    status: input.status,
+    reason: input.reason,
+  }));
+  await input.sleep(delayMs, input.request.signal);
 }
 
 function isRetryablePlayerApiRead(request: Request): boolean {
@@ -107,19 +143,6 @@ function isRetryablePlayerApiRead(request: Request): boolean {
   } catch {
     return false;
   }
-}
-
-async function retryDelay(
-  attempt: number,
-  baseDelayMs: number,
-  maxJitterMs: number,
-  randomUint32: () => number,
-  sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>,
-  signal: AbortSignal,
-): Promise<void> {
-  const exponential = baseDelayMs * (2 ** Math.max(0, attempt - 1));
-  const jitter = maxJitterMs === 0 ? 0 : randomUint32() % (maxJitterMs + 1);
-  await sleep(exponential + jitter, signal);
 }
 
 function secureRandomUint32(): number {
