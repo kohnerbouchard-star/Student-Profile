@@ -14,15 +14,30 @@ const [
   adminBootstrap,
   edgeResponse,
   adminCors,
+  supabaseConfig,
+  adminAuthManifestText,
+  verificationFunction,
+  recoveryFunction,
+  passwordResetFunction,
+  passwordResetProxy,
+  verificationEmailSender,
 ] = await Promise.all([
   text("backend/package.json"),
   text("admin/index.html"),
   text("admin/admin-bootstrap.js"),
   text("backend/src/platform/supabase/edgeResponse.ts"),
   text("backend/supabase/functions/admin-api/cors.ts"),
+  text("backend/supabase/config.toml"),
+  text("backend/supabase/admin-auth-edge-function-manifest.json"),
+  text("backend/supabase/functions/admin-email-verification/index.ts"),
+  text("backend/supabase/functions/admin-password-recovery/index.ts"),
+  text("backend/supabase/functions/password-reset-api/index.ts"),
+  text("api/password-reset.js"),
+  text("backend/src/domains/auth/application/staffSignupVerificationEmail.ts"),
 ]);
 
 const backendPackage = JSON.parse(backendPackageText);
+const adminAuthManifest = JSON.parse(adminAuthManifestText);
 const backendSmoke = String(backendPackage.scripts?.["test:smoke"] || "");
 const worldRuntime = String(backendPackage.scripts?.["test:world-runtime"] || "");
 
@@ -92,9 +107,72 @@ requireCondition(
   "Admin API must return an origin only after allowlist validation",
 );
 
+requireCondition(
+  adminAuthManifest.schemaVersion === 1 &&
+    adminAuthManifest.manifestId === "econovaria.admin-auth-surfaces.v1",
+  "Admin auth function manifest identity must remain canonical",
+);
+const functionBySlug = new Map(
+  adminAuthManifest.functions.map((entry) => [entry.slug, entry]),
+);
+for (const [slug, verifyJwt] of [
+  ["admin-email-verification", false],
+  ["admin-password-recovery", false],
+  ["password-reset-api", true],
+]) {
+  const entry = functionBySlug.get(slug);
+  requireCondition(Boolean(entry), `Admin auth function manifest must include ${slug}`);
+  requireCondition(entry.verifyJwt === verifyJwt, `${slug} verify_jwt contract drifted`);
+  requireCondition(
+    Array.isArray(entry.requiredEnvironments) &&
+      entry.requiredEnvironments.includes("staging") &&
+      entry.requiredEnvironments.includes("production"),
+    `${slug} must be required in staging and production`,
+  );
+  requireCondition(
+    supabaseConfig.includes(`[functions.${slug}]`) &&
+      supabaseConfig.includes(`[functions.${slug}]\nverify_jwt = ${verifyJwt}`),
+    `${slug} Supabase configuration must match the manifest`,
+  );
+}
+requireCondition(
+  !supabaseConfig.includes("[functions.admin-logout-api]"),
+  "retired admin-logout-api must not remain in the canonical Supabase config",
+);
+requireCondition(
+  adminAuthManifest.retiredFunctions.some((entry) =>
+    entry.slug === "admin-logout-api" && entry.replacement === "web-session-api/logout"
+  ),
+  "Admin auth manifest must record the logout replacement",
+);
+requireCondition(
+  verificationFunction.includes("double-submit challenge") ||
+    verificationFunction.includes("CHALLENGE_COOKIE"),
+  "Admin email verification must retain its double-submit challenge",
+);
+requireCondition(
+  recoveryFunction.includes("CHALLENGE_COOKIE") &&
+    recoveryFunction.includes("token_hash"),
+  "Admin password recovery must retain token and challenge validation",
+);
+requireCondition(
+  passwordResetFunction.includes("resolveStaffForRequest") &&
+    passwordResetFunction.includes("revokeAllSessions") &&
+    passwordResetFunction.includes("complete_staff_password_reset_security_v2"),
+  "Password reset API must retain Staff resolution, session revocation, and security transition",
+);
+requireCondition(
+  passwordResetProxy.includes("/functions/v1/password-reset-api"),
+  "Vercel password-reset proxy must target the canonical function",
+);
+requireCondition(
+  verificationEmailSender.includes("/functions/v1/admin-email-verification"),
+  "Verification email delivery must target the canonical review surface",
+);
+
 console.log(JSON.stringify({
   status: "pass",
-  checks: 16,
+  checks: 30,
   boundaries: [
     "backend-crafting-smoke",
     "world-runtime-retention",
@@ -102,5 +180,10 @@ console.log(JSON.stringify({
     "admin-realtime-csp",
     "player-api-cors",
     "admin-api-cors",
+    "admin-auth-function-inventory",
+    "admin-email-verification",
+    "admin-password-recovery",
+    "admin-password-reset",
+    "retired-admin-logout",
   ],
 }, null, 2));
