@@ -1,0 +1,285 @@
+name: Release Integrity
+
+on:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
+  push:
+    branches:
+      - main
+    paths:
+      - ".nvmrc"
+      - ".npmrc"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/supabase/migrations/**"
+      - "scripts/release-integrity/**"
+      - "scripts/production-runtime-promotion-contract.test.mjs"
+      - "docs/operations/release-integrity-gates-v1*.md"
+      - ".github/workflows/release-integrity.yml"
+      - ".github/workflows/production-runtime-promotion-v2.yml"
+      - ".github/workflows/production-runtime-promotion-contract.yml"
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact lowercase 40-character commit SHA to inspect
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-integrity-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+
+jobs:
+  static-integrity:
+    name: Verify static release integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.sha }}
+      REQUESTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || '' }}
+    steps:
+      - name: Check out exact merge candidate or source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up exact CI Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Verify exact source binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if test "$GITHUB_EVENT_NAME" = "workflow_dispatch"; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            node scripts/release-integrity/cli.mjs verify-source \
+              --expected-sha "$REQUESTED_SOURCE_SHA" \
+              --actual-sha "$EXPECTED_SOURCE_SHA"
+          fi
+          node scripts/release-integrity/cli.mjs verify-source \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --actual-sha "$actual_sha" \
+            --output "$RUNNER_TEMP/source-binding.json"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify exact CI runtime contract
+        run: |
+          mkdir -p release-integrity-artifacts
+          node scripts/release-integrity/cli.mjs runtime \
+            --mode exact \
+            --output release-integrity-artifacts/runtime-contract.json
+
+      - name: Run release-integrity contract tests
+        run: |
+          node --test \
+            scripts/release-integrity/index.test.mjs \
+            scripts/release-integrity/workflow-contract.test.mjs \
+            scripts/production-runtime-promotion-contract.test.mjs
+
+      - name: Build deterministic migration manifest
+        run: |
+          node scripts/release-integrity/cli.mjs manifest \
+            --source-sha "$EXPECTED_SOURCE_SHA" \
+            --output release-integrity-artifacts/migration-manifest.json
+
+      - name: Verify repository diff hygiene
+        run: git diff --check
+
+      - name: Upload sanitized static evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-integrity-static-${{ env.EXPECTED_SOURCE_SHA }}
+          path: release-integrity-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  live-parity:
+    name: Inspect staging and production parity read-only
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: static-integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    concurrency:
+      group: release-integrity-live-parity
+      cancel-in-progress: false
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.sha }}
+      REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+      PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+      PGSSLMODE: verify-full
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+    steps:
+      - name: Check out exact inspected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up exact evidence runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Configure certificate-verified database TLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_CA_CERT"
+          cert_path="$RUNNER_TEMP/supabase-db-ca.crt"
+          umask 077
+          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
+          test -s "$cert_path"
+          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
+
+      - name: Verify source and database project bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_SUPABASE_DB_URL"
+          test -n "$PRODUCTION_SUPABASE_DB_URL"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$GITHUB_REF" = "refs/heads/main"
+          actual_sha="$(git rev-parse HEAD)"
+          node scripts/release-integrity/cli.mjs verify-source \
+            --expected-sha "$REQUESTED_SOURCE_SHA" \
+            --actual-sha "$EXPECTED_SOURCE_SHA"
+          node scripts/release-integrity/cli.mjs verify-source \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --actual-sha "$actual_sha"
+          node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env STAGING_SUPABASE_DB_URL \
+            --expected-project-ref "$EXPECTED_STAGING_PROJECT_REF"
+          node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env PRODUCTION_SUPABASE_DB_URL \
+            --expected-project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+      - name: Prepare sanitized evidence directory
+        run: mkdir -p release-integrity-artifacts
+
+      - name: Verify compatible live evidence runtime
+        run: node scripts/release-integrity/cli.mjs runtime --mode compatible --output release-integrity-artifacts/runtime-contract.json
+
+      - name: Build repository migration manifest
+        run: |
+          node scripts/release-integrity/cli.mjs manifest \
+            --source-sha "$EXPECTED_SOURCE_SHA" \
+            --output release-integrity-artifacts/migration-manifest.json
+
+      - name: Export live migration ledgers read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ledger_sql="select coalesce(jsonb_agg(jsonb_build_object('version', version, 'name', coalesce(name, '')) order by version), '[]'::jsonb)::text from supabase_migrations.schema_migrations"
+          psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" \
+            > release-integrity-artifacts/staging-ledger.json
+          psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" \
+            > release-integrity-artifacts/production-ledger.json
+
+      - name: Compare complete migration identities
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release-integrity/cli.mjs ledger \
+            --manifest release-integrity-artifacts/migration-manifest.json \
+            --live-ledger release-integrity-artifacts/staging-ledger.json \
+            --environment staging \
+            --allow-failure \
+            --output release-integrity-artifacts/staging-ledger-report.json
+          node scripts/release-integrity/cli.mjs ledger \
+            --manifest release-integrity-artifacts/migration-manifest.json \
+            --live-ledger release-integrity-artifacts/production-ledger.json \
+            --environment production \
+            --allow-failure \
+            --output release-integrity-artifacts/production-ledger-report.json
+
+      - name: Export normalized schema evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -f scripts/release-integrity/export-schema-fingerprint.sql \
+            > release-integrity-artifacts/staging-schema-raw.json
+          psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -f scripts/release-integrity/export-schema-fingerprint.sql \
+            > release-integrity-artifacts/production-schema-raw.json
+          node scripts/release-integrity/cli.mjs normalize-schema \
+            --input release-integrity-artifacts/staging-schema-raw.json \
+            --output release-integrity-artifacts/staging-schema-fingerprint.json
+          node scripts/release-integrity/cli.mjs normalize-schema \
+            --input release-integrity-artifacts/production-schema-raw.json \
+            --output release-integrity-artifacts/production-schema-fingerprint.json
+          rm -f \
+            release-integrity-artifacts/staging-schema-raw.json \
+            release-integrity-artifacts/production-schema-raw.json
+
+      - name: Compare staging and production schema fingerprints
+        continue-on-error: true
+        run: |
+          node scripts/release-integrity/cli.mjs compare-schema \
+            --staging release-integrity-artifacts/staging-schema-fingerprint.json \
+            --production release-integrity-artifacts/production-schema-fingerprint.json \
+            --allow-failure \
+            --output release-integrity-artifacts/schema-comparison.json
+
+      - name: Create fail-closed release attestation
+        run: |
+          node scripts/release-integrity/cli.mjs attestation \
+            --source-sha "$EXPECTED_SOURCE_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --runtime release-integrity-artifacts/runtime-contract.json \
+            --manifest release-integrity-artifacts/migration-manifest.json \
+            --staging-ledger release-integrity-artifacts/staging-ledger-report.json \
+            --production-ledger release-integrity-artifacts/production-ledger-report.json \
+            --schema-comparison release-integrity-artifacts/schema-comparison.json \
+            --allow-failure \
+            --output release-integrity-artifacts/release-attestation.json
+
+      - name: Remove raw live evidence and TLS material
+        if: always()
+        run: |
+          rm -f \
+            release-integrity-artifacts/staging-ledger.json \
+            release-integrity-artifacts/production-ledger.json \
+            "$RUNNER_TEMP/supabase-db-ca.crt"
+
+      - name: Upload sanitized live parity evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-integrity-live-${{ env.EXPECTED_SOURCE_SHA }}
+          path: release-integrity-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce release attestation
+        run: node scripts/release-integrity/cli.mjs enforce-attestation --input release-integrity-artifacts/release-attestation.json

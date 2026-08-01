@@ -4,49 +4,56 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const workflow = readFileSync('.github/workflows/production-runtime-promotion-v2.yml', 'utf8');
-const authorization = JSON.parse(
-  readFileSync('docs/operations/evidence/production-runtime-promotion-v1.json', 'utf8'),
-);
-
-assert.equal(authorization.schemaVersion, 'econovaria.production-runtime-promotion.v1');
-assert.equal(authorization.action, 'PROMOTE_STAGING_RUNTIME_TO_PRODUCTION');
-assert.equal(authorization.targetProjectRef, 'cgiukdjwicykrmtkhudh');
-assert.equal(authorization.deniedProjectRef, 'eecvbssdvarfcykcfrny');
-assert.equal(authorization.mergedMainOnly, true);
-assert.equal(authorization.productionDataPreservationRequired, true);
-assert.equal(authorization.stagingUserDataImportAllowed, false);
-assert.equal(authorization.seedContentActivationAllowed, false);
-assert.equal(authorization.destructiveTableOperationsAllowed, false);
+const releaseIntegrity = readFileSync('.github/workflows/release-integrity.yml', 'utf8');
 
 for (const marker of [
-  'environment: production',
-  'refs/heads/main',
-  'EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh',
-  'DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny',
-  'Preview complete canonical migration promotion',
-  'Apply complete canonical migration promotion',
-  'supabase db push',
-  '--include-all',
-  '--dry-run',
-  'Materialize production-only migration placeholders',
-  'Deploy canonical Edge Functions',
-  'Restore readable Game Codes where permitted',
-  'productionDataPreservationRequired',
-  'stagingUserDataImportAllowed',
-  'seedContentActivationAllowed',
+  'Production Runtime Promotion V2 (Retired)',
+  'workflow_dispatch',
+  'Block unsafe legacy production promotion',
+  'Release Integrity live-parity workflow',
+  'exit 1',
 ]) {
-  assert.ok(workflow.includes(marker), `missing workflow marker: ${marker}`);
+  assert.ok(workflow.includes(marker), `missing retired workflow marker: ${marker}`);
 }
 
 for (const forbidden of [
-  'supabase db reset',
-  'drop database',
-  'truncate public.',
-  'delete from public.players',
-  'delete from auth.users',
-  'SEED_TARGET_ENVIRONMENT: production',
+  'supabase db push',
+  'supabase migration repair',
+  'supabase_migrations.schema_migrations',
+  'Materialize production-only migration placeholders',
+  'functions deploy',
+  'psql ',
+  'SUPABASE_DB_URL',
+  'SUPABASE_ACCESS_TOKEN',
+  'SUPABASE_SERVICE_ROLE_KEY',
 ]) {
-  assert.ok(!workflow.toLowerCase().includes(forbidden.toLowerCase()), `forbidden workflow behavior: ${forbidden}`);
+  assert.ok(!workflow.toLowerCase().includes(forbidden.toLowerCase()), `retired workflow contains forbidden behavior: ${forbidden}`);
+}
+
+for (const marker of [
+  'merge_group:',
+  'EXPECTED_SOURCE_SHA: ${{ github.sha }}',
+  'default_transaction_read_only=on',
+  'PGSSLMODE: verify-full',
+  'SUPABASE_DB_CA_CERT',
+  'PGSSLROOTCERT',
+  'environment: production',
+  'verify-source',
+  'validate-db-url',
+  'migration-manifest.json',
+  'schema-comparison.json',
+  'release-attestation.json',
+  'enforce-attestation',
+]) {
+  assert.ok(releaseIntegrity.includes(marker), `missing release-integrity marker: ${marker}`);
+}
+
+for (const forbidden of [
+  'github.event.pull_request.head.sha',
+  '--allowlist',
+  'release-integrity-expected-differences-v1.json',
+]) {
+  assert.ok(!releaseIntegrity.includes(forbidden), `release integrity contains retired behavior: ${forbidden}`);
 }
 
 console.log('production runtime promotion contract: ok');
