@@ -15,68 +15,123 @@ function response(status, body = { status }, headers = {}) {
   });
 }
 
-test("retries transient Player BFF reads including worker-retirement 500s", async () => {
-  const statuses = [500, 503, 200];
+test("retries only explicitly classified worker-retirement 500s", async () => {
+  const statuses = [
+    response(500, { message: "WorkerAlreadyRetired: worker has already retired" }),
+    response(503),
+    response(200),
+  ];
   const delays = [];
   const events = [];
   let calls = 0;
   const resilientFetch = createStudentProfileReadResilientFetch(
-    async () => response(statuses[calls++]),
+    async () => statuses[calls++],
     {
       maxAttempts: 3,
-      baseDelayMs: 40,
-      maxJitterMs: 60,
+      baseDelayMs: 200,
+      maxJitterMs: 300,
       randomUint32: () => 5,
       sleep: async (milliseconds) => delays.push(milliseconds),
-      onRetry: (event) => events.push(event),
+      onEvent: (event) => events.push(event),
     },
   );
 
   const result = await resilientFetch(PLAYER_URL);
   assert.equal(result.status, 200);
-  assert.deepEqual(await result.json(), { status: 200 });
   assert.equal(calls, 3);
-  assert.deepEqual(delays, [45, 85]);
+  assert.deepEqual(delays, [205, 405]);
   assert.deepEqual(
-    events.map(({ attempt, nextAttempt, status, reason, path }) => ({
-      attempt,
-      nextAttempt,
-      status,
-      reason,
-      path,
-    })),
+    events.map(({ type, status, classification }) => ({ type, status, classification })),
     [
-      {
-        attempt: 1,
-        nextAttempt: 2,
-        status: 500,
-        reason: "response",
-        path: "/api/player/players/me/world-runtime",
-      },
-      {
-        attempt: 2,
-        nextAttempt: 3,
-        status: 503,
-        reason: "response",
-        path: "/api/player/players/me/world-runtime",
-      },
+      { type: "retry_scheduled", status: 500, classification: "worker_retired" },
+      { type: "retry_scheduled", status: 503, classification: "service_unavailable" },
+      { type: "retry_recovered", status: 200, classification: "recovered" },
     ],
   );
 });
 
+test("accepts the reviewed BFF worker-retirement response marker", async () => {
+  let calls = 0;
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return calls === 1
+        ? response(500, { message: "Internal Server Error" }, {
+          "x-econovaria-retryable": "worker-retired",
+        })
+        : response(200);
+    },
+    { sleep: async () => {}, randomUint32: () => 0 },
+  );
+
+  assert.equal((await resilientFetch(PLAYER_URL)).status, 200);
+  assert.equal(calls, 2);
+});
+
+test("does not retry an ordinary application 500", async () => {
+  let calls = 0;
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return response(500, { code: "APPLICATION_BUG", message: "deterministic failure" });
+    },
+    { sleep: async () => {} },
+  );
+
+  assert.equal((await resilientFetch(PLAYER_URL)).status, 500);
+  assert.equal(calls, 1);
+});
+
+test("does not retry a deterministic Supabase boot failure", async () => {
+  let calls = 0;
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return response(503, {
+        code: "BOOT_ERROR",
+        message: "Function failed to start (please check logs)",
+      });
+    },
+    { sleep: async () => {} },
+  );
+
+  assert.equal((await resilientFetch(PLAYER_URL)).status, 503);
+  assert.equal(calls, 1);
+});
+
 test("returns the final transient response after three attempts", async () => {
   let calls = 0;
+  const events = [];
   const resilientFetch = createStudentProfileReadResilientFetch(
     async () => {
       calls += 1;
       return response(504);
     },
-    { sleep: async () => {}, randomUint32: () => 0 },
+    {
+      sleep: async () => {},
+      randomUint32: () => 0,
+      onEvent: (event) => events.push(event),
+    },
   );
 
   const result = await resilientFetch(PLAYER_URL);
   assert.equal(result.status, 504);
   assert.equal(calls, 3);
+  assert.equal(events.at(-1).type, "retry_exhausted");
+});
+
+test("retries Supabase worker resource-limit responses", async () => {
+  let calls = 0;
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return calls === 1 ? response(546) : response(200);
+    },
+    { sleep: async () => {}, randomUint32: () => 0 },
+  );
+
+  assert.equal((await resilientFetch(PLAYER_URL)).status, 200);
+  assert.equal(calls, 2);
 });
 
 test("never retries mutations or unrelated services", async () => {
@@ -84,7 +139,7 @@ test("never retries mutations or unrelated services", async () => {
   const resilientFetch = createStudentProfileReadResilientFetch(
     async () => {
       calls += 1;
-      return response(500);
+      return response(503);
     },
     { sleep: async () => {} },
   );
@@ -97,8 +152,8 @@ test("never retries mutations or unrelated services", async () => {
     "https://econovaria.example/api/admin/status",
   );
 
-  assert.equal(mutation.status, 500);
-  assert.equal(unrelated.status, 500);
+  assert.equal(mutation.status, 503);
+  assert.equal(unrelated.status, 503);
   assert.equal(calls, 2);
 });
 
@@ -114,7 +169,7 @@ test("retries a transient network failure for an idempotent Player read", async 
     {
       sleep: async () => {},
       randomUint32: () => 0,
-      onRetry: (event) => events.push(event),
+      onEvent: (event) => events.push(event),
     },
   );
 
@@ -122,6 +177,7 @@ test("retries a transient network failure for an idempotent Player read", async 
   assert.equal(calls, 2);
   assert.equal(events[0].reason, "network");
   assert.equal(events[0].status, null);
+  assert.equal(events[1].type, "retry_recovered");
 });
 
 test("honors request cancellation during retry backoff", async () => {
@@ -148,22 +204,76 @@ test("honors request cancellation during retry backoff", async () => {
   assert.equal(calls, 1);
 });
 
-test("caps Retry-After so server hints cannot create unbounded stalls", async () => {
+test("respects numeric and HTTP-date Retry-After values within the retry budget", async () => {
+  const epoch = 1_800_000_000_000;
   const delays = [];
   let calls = 0;
   const resilientFetch = createStudentProfileReadResilientFetch(
     async () => {
       calls += 1;
-      return calls === 1
-        ? response(503, { status: 503 }, { "retry-after": "90" })
-        : response(200);
+      if (calls === 1) return response(503, {}, { "retry-after": "1" });
+      if (calls === 2) {
+        return response(503, {}, {
+          "retry-after": new Date(epoch + 2_000).toUTCString(),
+        });
+      }
+      return response(200);
     },
     {
+      maxRetryElapsedMs: 5_000,
+      wallClockNow: () => epoch,
+      monotonicNow: () => 0,
       sleep: async (milliseconds) => delays.push(milliseconds),
       randomUint32: () => 0,
     },
   );
 
   assert.equal((await resilientFetch(PLAYER_URL)).status, 200);
-  assert.deepEqual(delays, [1_000]);
+  assert.deepEqual(delays, [1_000, 2_000]);
+});
+
+test("fails fast when Retry-After exceeds the remaining interactive budget", async () => {
+  const delays = [];
+  const events = [];
+  let calls = 0;
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return response(503, {}, { "retry-after": "90" });
+    },
+    {
+      maxRetryElapsedMs: 3_000,
+      monotonicNow: () => 0,
+      sleep: async (milliseconds) => delays.push(milliseconds),
+      onEvent: (event) => events.push(event),
+    },
+  );
+
+  assert.equal((await resilientFetch(PLAYER_URL)).status, 503);
+  assert.equal(calls, 1);
+  assert.deepEqual(delays, []);
+  assert.equal(events[0].type, "retry_budget_exhausted");
+  assert.equal(events[0].retryAfterMs, 90_000);
+});
+
+test("sanitizes retry telemetry paths", async () => {
+  const events = [];
+  let calls = 0;
+  const url = "https://econovaria.example/api/player/contracts/11111111-1111-4111-8111-111111111111?secret=never-log";
+  const resilientFetch = createStudentProfileReadResilientFetch(
+    async () => {
+      calls += 1;
+      return calls === 1 ? response(502) : response(200);
+    },
+    {
+      sleep: async () => {},
+      randomUint32: () => 0,
+      onEvent: (event) => events.push(event),
+    },
+  );
+
+  assert.equal((await resilientFetch(url)).status, 200);
+  assert.equal(events[0].path.includes("secret"), false);
+  assert.equal(events[0].path.includes("11111111-1111-4111-8111-111111111111"), false);
+  assert.match(events[0].path, /:dynamic/u);
 });
