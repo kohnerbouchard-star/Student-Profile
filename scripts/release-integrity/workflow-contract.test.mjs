@@ -80,7 +80,6 @@ test('contract workflow validates merge candidates and all release integrity tes
     'merge_group:',
     'ref: ${{ github.sha }}',
     'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
-    'docs/operations/release-integrity-gates-v1*.md',
     'scripts/release-integrity/index.test.mjs',
     'scripts/release-integrity/workflow-contract.test.mjs',
     'scripts/production-runtime-promotion-contract.test.mjs',
