@@ -8,18 +8,23 @@ function requireCondition(condition, message) {
   if (!condition) throw new Error(`High-priority boundary ratchet failed: ${message}`);
 }
 
+const browserRoleAclMigrationPath =
+  "backend/supabase/migrations/20260801084000_harden_browser_role_default_privileges_v1.sql";
+
 const [
   backendPackageText,
   adminHtml,
   adminBootstrap,
   edgeResponse,
   adminCors,
+  browserRoleAclMigration,
 ] = await Promise.all([
   text("backend/package.json"),
   text("admin/index.html"),
   text("admin/admin-bootstrap.js"),
   text("backend/src/platform/supabase/edgeResponse.ts"),
   text("backend/supabase/functions/admin-api/cors.ts"),
+  text(browserRoleAclMigrationPath),
 ]);
 
 const backendPackage = JSON.parse(backendPackageText);
@@ -92,9 +97,46 @@ requireCondition(
   "Admin API must return an origin only after allowlist validation",
 );
 
+requireCondition(
+  browserRoleAclMigration.includes(
+    "alter default privileges for role postgres in schema public",
+  ),
+  "browser-role ACL migration must correct the application migration owner's defaults",
+);
+requireCondition(
+  !browserRoleAclMigration.includes(
+    "alter default privileges for role supabase_admin in schema public",
+  ),
+  "browser-role ACL migration must not require unavailable supabase_admin membership",
+);
+for (const statement of [
+  "revoke all privileges on all tables in schema public from anon, authenticated;",
+  "revoke all privileges on all sequences in schema public from anon, authenticated;",
+  "revoke execute on all functions in schema public from public, anon, authenticated;",
+  "revoke create on schema public from public, anon, authenticated;",
+  "grant all privileges on all tables in schema public to service_role;",
+  "grant all privileges on all sequences in schema public to service_role;",
+  "grant execute on all functions in schema public to service_role;",
+]) {
+  requireCondition(
+    browserRoleAclMigration.includes(statement),
+    `browser-role ACL migration must retain: ${statement}`,
+  );
+}
+requireCondition(
+  browserRoleAclMigration.includes("has_table_privilege") &&
+    browserRoleAclMigration.includes("browser role retains direct privilege"),
+  "browser-role ACL migration must fail closed on residual table privileges",
+);
+requireCondition(
+  !/grant\s+(?:all(?:\s+privileges)?|select|insert|update|delete|truncate|references|trigger|maintain|execute)\b[\s\S]{0,160}\bto\s+(?:anon|authenticated)\b/iu
+    .test(browserRoleAclMigration),
+  "browser-role ACL migration must not re-grant data or RPC privileges",
+);
+
 console.log(JSON.stringify({
   status: "pass",
-  checks: 16,
+  checks: 28,
   boundaries: [
     "backend-crafting-smoke",
     "world-runtime-retention",
@@ -102,5 +144,8 @@ console.log(JSON.stringify({
     "admin-realtime-csp",
     "player-api-cors",
     "admin-api-cors",
+    "browser-role-existing-acls",
+    "browser-role-postgres-default-acls",
+    "service-role-runtime-authority",
   ],
 }, null, 2));
