@@ -1,29 +1,23 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.player-local-edge-network-pr-489.v1",
+  "authorityId": "econovaria.player-web-session-ingress-pr-488.v1",
   "purpose": "authorize-cross-cutting-player-verification",
-  "pullRequestNumber": 489,
+  "pullRequestNumber": 488,
   "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/supabase/functions/player-web-session-api/index.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
-    "scripts/business-banking-player-world-browser-acceptance.mjs",
-    "scripts/local-edge-runtime-isolation.mjs",
-    "scripts/local-edge-runtime-isolation.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/supabase/functions/player-web-session-api/index.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
-    "scripts/business-banking-player-world-browser-acceptance.mjs",
-    "scripts/local-edge-runtime-isolation.mjs",
-    "scripts/local-edge-runtime-isolation.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [
