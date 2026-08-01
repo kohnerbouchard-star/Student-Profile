@@ -18,6 +18,7 @@
     "backend/supabase/functions/player-web-session-api/index.ts",
     "backend/supabase/functions/player-web-session-api/runtime.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "frontend/src/core/api.js",
     "scripts/build-vercel-runtime-config.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
@@ -32,6 +33,7 @@
     "backend/supabase/functions/player-api/runtime.ts",
     "backend/supabase/functions/player-web-session-api/index.ts",
     "backend/supabase/functions/player-web-session-api/runtime.ts",
+    "frontend/src/core/api.js",
     "scripts/build-vercel-runtime-config.mjs",
     "scripts/vercel-deployment-contract.test.mjs"
   ],
