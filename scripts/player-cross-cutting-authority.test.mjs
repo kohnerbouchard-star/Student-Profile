@@ -3,15 +3,16 @@ import test from "node:test";
 
 import {
   DEFAULT_AUTHORITY_PATH,
+  EXPECTED_AUTHORITY_ID,
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
 function manifest() {
   return {
     schemaVersion: 1,
-    authorityId: "econovaria.admin-player-convergence-pr-476.v1",
+    authorityId: EXPECTED_AUTHORITY_ID,
     purpose: "authorize-cross-cutting-player-verification",
-    pullRequestNumber: 476,
+    pullRequestNumber: 480,
     baseRef: "main",
     scopeLock: "exact-path-allowlist",
     productionDeploymentAllowed: false,
@@ -21,8 +22,12 @@ function manifest() {
       DEFAULT_AUTHORITY_PATH,
       "scripts/verify-player-cross-cutting-authority.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
-      "admin/css/game-session-compact-layering.css",
+      "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
+      "api/player-session/[...path].js",
+      "api/player/[...path].js",
+      "scripts/build-vercel-runtime-config.mjs",
+      "scripts/vercel-deployment-contract.test.mjs",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -30,7 +35,6 @@ function manifest() {
       "docs/operations/evidence/player-login-production-secret-trigger-v1.json",
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
-      "scripts/admin-loading-scanner-smoke.mjs",
       "scripts/business-banking-player-business-browser-acceptance.mjs",
       "scripts/business-banking-player-commerce-browser-acceptance.mjs",
       "scripts/business-banking-player-inventory-browser-acceptance.mjs",
@@ -47,7 +51,12 @@ function manifest() {
       "scripts/security-audit-remediation-contract.test.mjs",
     ],
     requiredFiles: [
+      "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
+      "api/player-session/[...path].js",
+      "api/player/[...path].js",
+      "scripts/build-vercel-runtime-config.mjs",
+      "scripts/vercel-deployment-contract.test.mjs",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -86,7 +95,7 @@ test("cross-cutting Player authority accepts only its PR-bound exact scope", () 
   const result = verifyAuthority({
     manifest: value,
     changedPaths: [...value.allowedPaths],
-    pullRequestNumber: 476,
+    pullRequestNumber: 480,
     baseRef: "main",
   });
   assert.equal(result.changedPathCount, value.allowedPaths.length);
@@ -98,7 +107,7 @@ test("cross-cutting Player authority rejects an unreviewed path", () => {
     () => verifyAuthority({
       manifest: value,
       changedPaths: [...value.allowedPaths, "scripts/unreviewed-production-step.mjs"],
-      pullRequestNumber: 476,
+      pullRequestNumber: 480,
       baseRef: "main",
     }),
     /does not allow changed path/u,
@@ -111,7 +120,7 @@ test("cross-cutting Player authority rejects identity and production drift", () 
     () => verifyAuthority({
       manifest: wrongPr,
       changedPaths: wrongPr.allowedPaths,
-      pullRequestNumber: 477,
+      pullRequestNumber: 481,
       baseRef: "main",
     }),
     /not bound to this pull request/u,
@@ -123,7 +132,7 @@ test("cross-cutting Player authority rejects identity and production drift", () 
     () => verifyAuthority({
       manifest: productionEnabled,
       changedPaths: productionEnabled.allowedPaths,
-      pullRequestNumber: 476,
+      pullRequestNumber: 480,
       baseRef: "main",
     }),
     /deny production mutation/u,
