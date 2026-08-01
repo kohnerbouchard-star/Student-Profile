@@ -12,7 +12,6 @@ const FUNCTION_POLICIES = Object.freeze({
   "web-session-api": false,
   "admin-password-recovery": false,
   "admin-email-verification": false,
-  "admin-logout-api": false,
   "staff-api": true,
   "admin-api": true,
   "staff-mfa-api": true,
@@ -63,6 +62,8 @@ test("local Supabase starts every declared split Edge security boundary", async 
 
   const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
     .map((match) => match[1]);
+  assert.deepEqual(declaredNames.sort(), Object.keys(FUNCTION_POLICIES).sort());
+
   const falseSections = declaredNames
     .filter((name) => /verify_jwt\s*=\s*false/.test(section(config, `functions.${name}`)))
     .sort();
@@ -106,10 +107,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["admin-email-verification"], /constantTimeEqual\(challenge, cookieChallenge\)/);
   assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
   assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
-  assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
-  assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);
-  assert.match(functionSources["admin-logout-api"], /staff_logout_revocation_failed/);
+  assert.doesNotMatch(config, /\[functions\.admin-logout-api\]/);
   assert.match(functionSources["player-web-session-api"], /WEB_PLAYER_SESSION_COOKIE/);
   assert.match(functionSources["player-web-session-api"], /constantTimePlayerTextEqual/);
   assert.match(functionSources["player-web-session-api"], /\/functions\/v1\/player-api/);
