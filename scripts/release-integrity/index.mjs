@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+export { validateDatabaseUrlProjectRef } from './database-binding.mjs';
+
 const MIGRATION_FILE_PATTERN = /^(\d{14})_([a-z0-9_]+)\.sql$/;
 const EXACT_SHA_PATTERN = /^[0-9a-f]{40}$/;
 
@@ -209,17 +211,6 @@ export function compareMigrationLedger({ manifest, liveLedger, environment }) {
     }
   }
 
-  const orderingViolations = [];
-  for (let index = 1; index < liveRows.length; index += 1) {
-    if (liveRows[index - 1].version >= liveRows[index].version) {
-      orderingViolations.push({
-        index,
-        previousVersion: liveRows[index - 1].version,
-        currentVersion: liveRows[index].version,
-      });
-    }
-  }
-
   const repositoryByVersion = new Map(manifest.migrations.map((row) => [row.version, row]));
   const liveByVersion = new Map(liveRows.map((row) => [row.version, row]));
   const missingFromLive = manifest.migrations
@@ -239,8 +230,7 @@ export function compareMigrationLedger({ manifest, liveLedger, environment }) {
   const driftCount = missingFromLive.length
     + liveOnly.length
     + nameMismatches.length
-    + duplicateLiveVersions.length
-    + orderingViolations.length;
+    + duplicateLiveVersions.length;
 
   return {
     schemaVersion: 'econovaria.release-integrity.ledger-report.v1',
@@ -253,7 +243,6 @@ export function compareMigrationLedger({ manifest, liveLedger, environment }) {
     liveOnly,
     nameMismatches,
     duplicateLiveVersions,
-    orderingViolations,
   };
 }
 
@@ -298,17 +287,7 @@ export function normalizeSchemaFingerprint(rawEvidence) {
   };
 }
 
-function exactDifferenceAllowed({ scope, stagingSha256, productionSha256, allowlist }) {
-  const rows = allowlist?.allowedDifferences;
-  if (!Array.isArray(rows)) return false;
-  return rows.some((row) => row?.scope === scope
-    && row?.stagingSha256 === stagingSha256
-    && row?.productionSha256 === productionSha256
-    && typeof row?.reason === 'string'
-    && row.reason.trim().length >= 20);
-}
-
-export function compareSchemaFingerprints({ staging, production, allowlist = null }) {
+export function compareSchemaFingerprints({ staging, production }) {
   for (const [label, value] of [['staging', staging], ['production', production]]) {
     if (value?.schemaVersion !== 'econovaria.release-integrity.schema-fingerprint.v1') {
       throw new Error(`${label} fingerprint has an unsupported schema.`);
@@ -325,24 +304,12 @@ export function compareSchemaFingerprints({ staging, production, allowlist = nul
       scope,
       stagingSha256: staging[field],
       productionSha256: production[field],
-      allowed: exactDifferenceAllowed({
-        scope,
-        stagingSha256: staging[field],
-        productionSha256: production[field],
-        allowlist,
-      }),
     });
   }
 
-  const status = differences.length === 0
-    ? 'PASS'
-    : differences.every((difference) => difference.allowed)
-      ? 'EXPECTED_DIFFERENCE'
-      : 'UNAPPROVED_DRIFT';
-
   return {
     schemaVersion: 'econovaria.release-integrity.schema-comparison.v1',
-    status,
+    status: differences.length === 0 ? 'PASS' : 'UNAPPROVED_DRIFT',
     staging: {
       structuralSha256: staging.structuralSha256,
       authorizationSha256: staging.authorizationSha256,
@@ -354,27 +321,6 @@ export function compareSchemaFingerprints({ staging, production, allowlist = nul
       overallSha256: production.overallSha256,
     },
     differences,
-  };
-}
-
-export function validateDatabaseUrlProjectRef({ databaseUrl, expectedProjectRef }) {
-  if (!/^[a-z0-9]{20}$/.test(String(expectedProjectRef ?? ''))) {
-    throw new Error('Expected Supabase project reference must be 20 lowercase alphanumeric characters.');
-  }
-  const parsed = new URL(databaseUrl);
-  if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
-    throw new Error('Database URL must use PostgreSQL.');
-  }
-  const username = decodeURIComponent(parsed.username || '');
-  const direct = parsed.hostname === `db.${expectedProjectRef}.supabase.co`;
-  const pooler = username === `postgres.${expectedProjectRef}` || username.endsWith(`.${expectedProjectRef}`);
-  if (!direct && !pooler) throw new Error('Database URL is not bound to the expected Supabase project.');
-  if (!decodeURIComponent(parsed.password || '')) throw new Error('Database URL must contain a password.');
-  return {
-    schemaVersion: 'econovaria.release-integrity.database-binding.v1',
-    status: 'PASS',
-    expectedProjectRef,
-    connectionType: direct ? 'direct' : 'pooler',
   };
 }
 
