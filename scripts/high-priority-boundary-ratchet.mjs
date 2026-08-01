@@ -97,14 +97,18 @@ requireCondition(
   "Admin API must return an origin only after allowlist validation",
 );
 
-for (const owner of ["postgres", "supabase_admin"]) {
-  requireCondition(
-    browserRoleAclMigration.includes(
-      `alter default privileges for role ${owner} in schema public`,
-    ),
-    `browser-role ACL migration must correct ${owner} default privileges`,
-  );
-}
+requireCondition(
+  browserRoleAclMigration.includes(
+    "alter default privileges for role postgres in schema public",
+  ),
+  "browser-role ACL migration must correct the application migration owner's defaults",
+);
+requireCondition(
+  !browserRoleAclMigration.includes(
+    "alter default privileges for role supabase_admin in schema public",
+  ),
+  "browser-role ACL migration must not require unavailable supabase_admin membership",
+);
 for (const statement of [
   "revoke all privileges on all tables in schema public from anon, authenticated;",
   "revoke all privileges on all sequences in schema public from anon, authenticated;",
@@ -141,7 +145,7 @@ console.log(JSON.stringify({
     "player-api-cors",
     "admin-api-cors",
     "browser-role-existing-acls",
-    "browser-role-default-acls",
+    "browser-role-postgres-default-acls",
     "service-role-runtime-authority",
   ],
 }, null, 2));
