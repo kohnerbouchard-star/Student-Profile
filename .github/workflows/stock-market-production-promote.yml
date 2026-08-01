@@ -1,0 +1,263 @@
+name: Stock Market Production Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: "Successful Stock Market Staging Candidate run ID"
+        required: true
+        type: string
+      source_commit:
+        description: "Exact current main commit"
+        required: true
+        type: string
+      staging_inventory_digest:
+        description: "Verified staging inventory digest"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type PROMOTE STOCK MARKET PRODUCTION"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: stock-market-production-promote
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SUPABASE_CLI_VERSION: 2.109.1
+  FUNCTION_MANIFEST: backend/supabase/stock-market-edge-function-manifest.json
+
+jobs:
+  promote:
+    name: Promote staging-verified stock runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce explicit production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "PROMOTE STOCK MARKET PRODUCTION"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
+          [[ "${{ inputs.candidate_run_id }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          [[ "${{ inputs.staging_inventory_digest }}" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Check out exact source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source is exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          test -f "$FUNCTION_MANIFEST"
+
+      - name: Download exact staging evidence
+        uses: actions/download-artifact@v5
+        with:
+          name: stock-market-staging-${{ inputs.source_commit }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/stock-market-staging
+
+      - name: Verify staging evidence and current staging identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="dist/stock-market-staging/stock-market-staging-candidate.json"
+          test -f "$evidence"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions-current.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const evidence = require(`./${process.env.EVIDENCE_PATH}`);
+          const current = require(process.env.CURRENT_PATH);
+          if (evidence.environment !== 'staging') throw new Error('Candidate is not staging evidence.');
+          if (evidence.projectRef !== process.env.STAGING_PROJECT_REF) throw new Error('Staging project mismatch.');
+          if (evidence.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Candidate source mismatch.');
+          if (evidence.inventoryDigest !== process.env.EXPECTED_DIGEST) throw new Error('Candidate inventory digest mismatch.');
+          for (const expected of evidence.deployed) {
+            const row = current.find((value) => value.slug === expected.slug);
+            if (!row) throw new Error(`Staging function disappeared: ${expected.slug}`);
+            if (row.verify_jwt !== false) throw new Error(`Staging JWT drift: ${expected.slug}`);
+            if (row.ezbr_sha256 !== expected.digest) throw new Error(`Staging source drift: ${expected.slug}`);
+          }
+          fs.writeFileSync(process.env.NORMALIZED_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
+          NODE
+        env:
+          EVIDENCE_PATH: dist/stock-market-staging/stock-market-staging-candidate.json
+          CURRENT_PATH: ${{ runner.temp }}/staging-functions-current.json
+          NORMALIZED_PATH: ${{ runner.temp }}/verified-stock-market-candidate.json
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          EXPECTED_DIGEST: ${{ inputs.staging_inventory_digest }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Revalidate signed stock runtime contracts
+        run: |
+          set -euo pipefail
+          node scripts/high-priority-boundary-ratchet.mjs
+          node --test \
+            scripts/internal-runner-auth-contract.test.mjs \
+            scripts/trigger-stock-market-tick.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Verify production secret names without revealing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          names="$RUNNER_TEMP/production-secret-names.txt"
+          supabase secrets list \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+            > "$names"
+          grep -q 'STOCK_MARKET_RUNNER_SECRET' "$names"
+          rm -f "$names"
+
+      - name: Capture production rollback identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions-before.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = require(`./${process.env.FUNCTION_MANIFEST}`);
+          const rows = require(process.env.FUNCTIONS_PATH);
+          const bounded = manifest.functions.map(({ slug }) => {
+            const row = rows.find((value) => value.slug === slug);
+            return row ? {
+              slug,
+              version: row.version,
+              digest: row.ezbr_sha256,
+              verifyJwt: row.verify_jwt,
+            } : { slug, missing: true };
+          });
+          fs.writeFileSync(process.env.ROLLBACK_PATH, `${JSON.stringify(bounded, null, 2)}\n`);
+          NODE
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/production-functions-before.json
+          ROLLBACK_PATH: ${{ runner.temp }}/stock-market-production-before.json
+
+      - name: Deploy only staging-verified stock functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > "$RUNNER_TEMP/stock-functions.txt"
+          const manifest = require(`./${process.env.FUNCTION_MANIFEST}`);
+          for (const entry of manifest.functions) {
+            if (entry.verifyJwt !== false) throw new Error(`${entry.slug} must disable platform JWT verification.`);
+            if (entry.authorizationModel !== 'publishable-key-plus-hmac-sha256-plus-nonce') {
+              throw new Error(`${entry.slug} authorization model mismatch.`);
+            }
+            process.stdout.write(`${entry.slug}\n`);
+          }
+          NODE
+          while IFS= read -r function_name; do
+            test -n "$function_name"
+            supabase functions deploy "$function_name" \
+              --workdir backend \
+              --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF" \
+              --no-verify-jwt
+          done < "$RUNNER_TEMP/stock-functions.txt"
+
+      - name: Verify production matches staging function digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions-after.json"
+          node - <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const candidate = require(process.env.CANDIDATE_PATH);
+          const rows = require(process.env.FUNCTIONS_PATH);
+          const deployed = candidate.deployed.map((expected) => {
+            const row = rows.find((value) => value.slug === expected.slug);
+            if (!row) throw new Error(`Missing production function: ${expected.slug}`);
+            if (row.verify_jwt !== false) throw new Error(`Production JWT drift: ${expected.slug}`);
+            if (row.ezbr_sha256 !== expected.digest) throw new Error(`Production source differs from staging: ${expected.slug}`);
+            return {
+              slug: row.slug,
+              version: row.version,
+              digest: row.ezbr_sha256,
+              verifyJwt: row.verify_jwt,
+            };
+          });
+          const inventoryDigest = crypto
+            .createHash('sha256')
+            .update(JSON.stringify(deployed.map((row, index) => ({
+              slug: row.slug,
+              runnerName: candidate.deployed[index].runnerName,
+              version: row.version,
+              digest: row.digest,
+              verifyJwt: row.verifyJwt,
+            }))))
+            .digest('hex');
+          const result = {
+            schemaVersion: 1,
+            environment: 'production',
+            projectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            stagingInventoryDigest: candidate.inventoryDigest,
+            productionInventoryDigest: inventoryDigest,
+            deployed,
+          };
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify(result, null, 2)}\n`);
+          NODE
+        env:
+          CANDIDATE_PATH: ${{ runner.temp }}/verified-stock-market-candidate.json
+          FUNCTIONS_PATH: ${{ runner.temp }}/production-functions-after.json
+          EVIDENCE_PATH: ${{ runner.temp }}/stock-market-production-promotion.json
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+
+      - name: Upload production promotion evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: stock-market-production-${{ inputs.source_commit }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/stock-market-production-promotion.json
+            ${{ runner.temp }}/stock-market-production-before.json
