@@ -8,6 +8,14 @@ export function validateDatabaseUrlProjectRef({ databaseUrl, expectedProjectRef 
     throw new Error('Database URL must use PostgreSQL.');
   }
 
+  const urlSslMode = parsed.searchParams.get('sslmode');
+  if (urlSslMode && urlSslMode !== 'verify-full') {
+    throw new Error('Database URL must not override TLS below verify-full.');
+  }
+  if (parsed.searchParams.has('sslrootcert')) {
+    throw new Error('Database URL must not override the protected TLS root certificate.');
+  }
+
   const username = decodeURIComponent(parsed.username || '');
   const hostname = parsed.hostname.toLowerCase();
   const direct = hostname === `db.${expectedProjectRef}.supabase.co`;
