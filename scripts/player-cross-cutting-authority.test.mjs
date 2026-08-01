@@ -21,6 +21,7 @@ function manifest() {
       DEFAULT_AUTHORITY_PATH,
       "scripts/verify-player-cross-cutting-authority.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "admin/css/game-session-compact-layering.css",
       "api/_player-bff-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
