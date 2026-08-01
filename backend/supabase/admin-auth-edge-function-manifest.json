@@ -40,6 +40,15 @@
       ]
     }
   ],
+  "verificationEmailDelivery": {
+    "runtimeFunction": "bootstrap-api",
+    "requiredEnvironmentNames": [
+      "RESEND_API_KEY",
+      "ECONOVARIA_AUTH_EMAIL_FROM",
+      "ECONOVARIA_EMAIL_VERIFICATION_URL"
+    ],
+    "trackingLinkRewritesAllowed": false
+  },
   "retiredFunctions": [
     {
       "slug": "admin-logout-api",
