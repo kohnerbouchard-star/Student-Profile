@@ -9,10 +9,12 @@ on:
       - ".github/workflows/release-integrity.yml"
       - ".github/workflows/production-runtime-promotion-v2.yml"
       - ".github/workflows/production-runtime-promotion-contract.yml"
-      - "docs/operations/release-integrity-gates-v1.md"
-      - "docs/operations/contracts/release-integrity-expected-differences-v1.json"
+      - "docs/operations/release-integrity-gates-v1*.md"
       - "scripts/release-integrity/**"
       - "scripts/production-runtime-promotion-contract.test.mjs"
+  merge_group:
+    types:
+      - checks_requested
 
 permissions:
   contents: read
@@ -23,11 +25,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Check out exact pull-request head
+      - name: Check out exact merge candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify checked-out merge candidate
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Set up exact contract runtime
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
