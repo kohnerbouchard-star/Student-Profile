@@ -7,6 +7,7 @@ const MAX_PATH_BYTES = 2_048;
 const MAX_RETRY_MARKER_BYTES = 8_192;
 const SAFE_VALUE_PATTERN = /^[^\r\n\u0000]{0,8192}$/u;
 const COOKIE_ENVELOPE_PATTERN = /^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{24,3000}$/u;
+const IMF_FIXDATE_PATTERN = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
 const TRANSIENT_WORKER_PATTERNS = Object.freeze([
   /WorkerAlreadyRetired/iu,
   /worker has already retired/iu,
@@ -222,6 +223,7 @@ function normalizedRetryAfter(value) {
     const seconds = Number(candidate);
     return Number.isSafeInteger(seconds) && seconds >= 0 ? String(seconds) : "";
   }
+  if (!IMF_FIXDATE_PATTERN.test(candidate)) return "";
   const timestamp = Date.parse(candidate);
   return Number.isFinite(timestamp) ? new Date(timestamp).toUTCString() : "";
 }
