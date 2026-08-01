@@ -2,6 +2,7 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateDatabaseUrlProjectRef } from './database-binding.mjs';
 import {
   buildMigrationManifest,
   compareMigrationLedger,
@@ -9,7 +10,6 @@ import {
   createReleaseAttestation,
   normalizeSchemaFingerprint,
   readJson,
-  validateDatabaseUrlProjectRef,
   validateExactSourceSha,
   verifyRuntimeContract,
   writeJson,
