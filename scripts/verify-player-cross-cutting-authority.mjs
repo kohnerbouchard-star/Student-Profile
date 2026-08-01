@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 export const DEFAULT_AUTHORITY_PATH =
   "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json";
 export const EXPECTED_AUTHORITY_ID =
-  "econovaria.player-local-edge-network-pr-489.v1";
+  "econovaria.player-web-session-ingress-pr-488.v1";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
