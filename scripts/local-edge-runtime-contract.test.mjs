@@ -5,6 +5,9 @@ import test from "node:test";
 const CONFIG = new URL("../backend/supabase/config.toml", import.meta.url);
 const PACKAGE = new URL("../package.json", import.meta.url);
 const FUNCTION_ROOT = new URL("../backend/supabase/functions/", import.meta.url);
+const AUTH_MANIFEST = new URL("../backend/supabase/admin-auth-edge-function-manifest.json", import.meta.url);
+const AUTH_STAGING_WORKFLOW = new URL("../.github/workflows/admin-auth-surface-staging-candidate.yml", import.meta.url);
+const AUTH_PRODUCTION_WORKFLOW = new URL("../.github/workflows/admin-auth-surface-production-promote.yml", import.meta.url);
 const FUNCTION_POLICIES = Object.freeze({
   "player-api": false,
   "player-web-session-api": false,
@@ -12,7 +15,6 @@ const FUNCTION_POLICIES = Object.freeze({
   "web-session-api": false,
   "admin-password-recovery": false,
   "admin-email-verification": false,
-  "admin-logout-api": false,
   "staff-api": true,
   "admin-api": true,
   "staff-mfa-api": true,
@@ -63,6 +65,8 @@ test("local Supabase starts every declared split Edge security boundary", async 
 
   const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
     .map((match) => match[1]);
+  assert.deepEqual(declaredNames.sort(), Object.keys(FUNCTION_POLICIES).sort());
+
   const falseSections = declaredNames
     .filter((name) => /verify_jwt\s*=\s*false/.test(section(config, `functions.${name}`)))
     .sort();
@@ -106,10 +110,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["admin-email-verification"], /constantTimeEqual\(challenge, cookieChallenge\)/);
   assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
   assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
-  assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
-  assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);
-  assert.match(functionSources["admin-logout-api"], /staff_logout_revocation_failed/);
+  assert.doesNotMatch(config, /\[functions\.admin-logout-api\]/);
   assert.match(functionSources["player-web-session-api"], /WEB_PLAYER_SESSION_COOKIE/);
   assert.match(functionSources["player-web-session-api"], /constantTimePlayerTextEqual/);
   assert.match(functionSources["player-web-session-api"], /\/functions\/v1\/player-api/);
@@ -127,4 +128,48 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(localCommand, /supabase start --workdir backend/);
   assert.match(localCommand, /local-auth-readiness\.mjs/);
   assert.match(localCommand, /econovaria-local-gateway\.py --local-supabase/);
+});
+
+test("Admin auth deployment surfaces remain manifest-bound and staging-promoted", async () => {
+  const [manifestSource, stagingWorkflow, productionWorkflow] = await Promise.all([
+    readFile(AUTH_MANIFEST, "utf8"),
+    readFile(AUTH_STAGING_WORKFLOW, "utf8"),
+    readFile(AUTH_PRODUCTION_WORKFLOW, "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestSource);
+
+  assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.manifestId, "econovaria.admin-auth-surfaces.v1");
+  assert.deepEqual(
+    manifest.functions.map(({ slug, verifyJwt }) => [slug, verifyJwt]),
+    [
+      ["admin-email-verification", false],
+      ["admin-password-recovery", false],
+      ["password-reset-api", true],
+    ],
+  );
+  assert.ok(manifest.retiredFunctions.some(({ slug, replacement }) =>
+    slug === "admin-logout-api" && replacement === "web-session-api/logout"));
+  assert.equal(manifest.verificationEmailDelivery.runtimeFunction, "bootstrap-api");
+  assert.equal(manifest.verificationEmailDelivery.trackingLinkRewritesAllowed, false);
+
+  for (const [workflow, environment, projectRef] of [
+    [stagingWorkflow, "staging", "eecvbssdvarfcykcfrny"],
+    [productionWorkflow, "production", "cgiukdjwicykrmtkhudh"],
+  ]) {
+    assert.match(workflow, new RegExp(`environment:\\s*${environment}`));
+    assert.match(workflow, new RegExp(projectRef));
+    assert.match(workflow, /supabase functions deploy/);
+    assert.match(workflow, /--workdir backend/);
+    assert.match(workflow, /--no-verify-jwt/);
+    assert.match(workflow, /scripts\/verified-staff-onboarding-contract\.test\.mjs/);
+    assert.match(workflow, /scripts\/password-recovery-frontend-contract\.test\.mjs/);
+  }
+
+  assert.match(stagingWorkflow, /git rev-parse origin\/main/);
+  assert.match(stagingWorkflow, /admin-auth-staging-candidate\.json/);
+  assert.match(productionWorkflow, /candidate_run_id/);
+  assert.match(productionWorkflow, /staging_inventory_digest/);
+  assert.match(productionWorkflow, /actions\/download-artifact@v5/);
+  assert.match(productionWorkflow, /Production auth source differs from staging/);
 });
