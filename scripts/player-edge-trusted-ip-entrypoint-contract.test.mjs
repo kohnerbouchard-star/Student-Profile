@@ -44,4 +44,4 @@ test("Player web-session installs bounded read resilience before loading runtime
   assert.match(helper, /DEFAULT_MAX_ATTEMPTS = 3/u);
   assert.match(helper, /crypto\.getRandomValues/u);
   assert.doesNotMatch(helper, /Math\.random/u);
-}
+});
