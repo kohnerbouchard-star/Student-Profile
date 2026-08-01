@@ -63,3 +63,29 @@ test("Player read resilience is installed once at the outer client boundary", as
   assert.match(loadAdapter, /createStudentProfileReadResilientFetch/u);
   assert.match(loadAdapter, /readRetries: playerReadRetryEvents/u);
 });
+
+test("connected functional journeys and load handoff use isolated Edge runtimes", async () => {
+  const orchestrator = await readFile(
+    "scripts/business-banking-player-world-browser-acceptance.mjs",
+    "utf8",
+  );
+  const isolation = await readFile(
+    "scripts/local-edge-runtime-isolation.mjs",
+    "utf8",
+  );
+
+  assert.match(orchestrator, /import \{ restartLocalEdgeRuntime \}/u);
+  assert.match(orchestrator, /record\.edgeRuntime = await restartLocalEdgeRuntime\(\)/u);
+  assert.match(orchestrator, /evidence\.loadHandoff = await restartLocalEdgeRuntime\(\)/u);
+  assert.match(
+    orchestrator,
+    /fresh-warmed-edge-runtime-per-functional-journey-and-load-handoff/u,
+  );
+
+  assert.match(isolation, /docker", \["restart", containerName\]/u);
+  assert.match(isolation, /\/functions\/v1\/player-api/u);
+  assert.match(isolation, /\/functions\/v1\/player-web-session-api/u);
+  assert.match(isolation, /status === 204/u);
+  assert.match(isolation, /restricted to the local acceptance gateway/u);
+  assert.doesNotMatch(isolation, /sb_publishable_[A-Za-z0-9_-]{20,}/u);
+});
