@@ -73,11 +73,25 @@ const CANONICAL_REPLAY = `async function replayThroughBrowser(page, original) {
 const REPLAY_RELOAD = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdmin(page);
   evidence.replayBalance = await readBalance(page);`;
-const REPLAY_REFRESH_SAFE = `  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 }).catch((error) => {
-    if (!String(error?.message || error).includes("ERR_ABORTED")) throw error;
-  });
-  await waitForAdmin(page);
-  evidence.replayBalance = await readBalance(page);`;
+const REPLAY_REFRESH_SAFE = `  const replayTargetUrl = page.url();
+  let replayPage = page;
+  try {
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  } catch (error) {
+    const message = String(error?.message || error);
+    const recoverable = message.includes("ERR_ABORTED") ||
+      message.includes("Not attached to an active page") ||
+      message.includes("Target page, context or browser has been closed");
+    if (!recoverable) throw error;
+    replayPage = await context.newPage();
+    instrument(replayPage);
+    await replayPage.goto(replayTargetUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 120_000,
+    });
+  }
+  await waitForAdmin(replayPage);
+  evidence.replayBalance = await readBalance(replayPage);`;
 
 function replaceExactlyOnce(source, label, before, after) {
   const count = source.split(before).length - 1;
