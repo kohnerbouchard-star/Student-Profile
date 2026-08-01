@@ -27,6 +27,8 @@ test('release workflow is read-only, exact-source bound, and action pinned', () 
     'lock_timeout=5000',
     'PGSSLMODE: require',
     'environment: production',
+    "github.ref == 'refs/heads/main'",
+    'test "$GITHUB_REF" = "refs/heads/main"',
     'persist-credentials: false',
     'verify-source',
     'validate-db-url',
@@ -34,6 +36,8 @@ test('release workflow is read-only, exact-source bound, and action pinned', () 
   ]) {
     assert.ok(releaseWorkflow.includes(marker), `missing release workflow marker: ${marker}`);
   }
+
+  assert.ok(!releaseWorkflow.includes('ref: ${{ inputs.source_sha }}'), 'workflow must not execute code from a user-supplied SHA');
 
   for (const forbidden of [
     'supabase db push',
