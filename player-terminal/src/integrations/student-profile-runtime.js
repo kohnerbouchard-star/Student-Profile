@@ -2,6 +2,7 @@ import {
   createStudentProfileApiCall,
   createStudentProfileFetchRequest
 } from "./student-profile-api-call.js";
+import { createStudentProfileReadResilientFetch } from "./student-profile-read-resilience.js";
 
 const DEFAULT_PLAYER_API_BASE = "/api/player";
 const LOCAL_PLAYER_BFF_SUFFIX = "/functions/v1/player-web-session-api/proxy";
@@ -32,7 +33,8 @@ export function installStudentProfileRuntime(config, { fetchImpl = globalThis.fe
     throw new TypeError("Student-Profile connected mode must use the Player HttpOnly BFF.");
   }
 
-  const request = createStudentProfileFetchRequest({ apiBaseUrl, fetchImpl });
+  const resilientFetch = createStudentProfileReadResilientFetch(fetchImpl);
+  const request = createStudentProfileFetchRequest({ apiBaseUrl, fetchImpl: resilientFetch });
   return {
     ...config,
     apiBaseUrl,
