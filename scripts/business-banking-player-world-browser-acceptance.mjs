@@ -9,6 +9,7 @@ import { resetLocalAcceptanceRateLimits } from "./local-acceptance-rate-limit-re
 
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const EDGE_ISOLATION_OPTIONS = Object.freeze({ stableWaves: 3, settleMs: 1_000 });
 const ADAPTED_JOURNEY_CLI = fileURLToPath(
   new URL("./connected-player-bff-adapted-journey.mjs", import.meta.url),
 );
@@ -78,7 +79,8 @@ function runJourney(journey) {
 await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
-  isolationPolicy: "fresh-warmed-edge-runtime-per-functional-journey-and-load-handoff",
+  isolationPolicy: "fresh-stable-edge-runtime-per-functional-journey-and-load-handoff",
+  isolationRequirements: EDGE_ISOLATION_OPTIONS,
   journeys: [],
 };
 let failure;
@@ -94,7 +96,7 @@ try {
     evidence.journeys.push(record);
     try {
       resetLocalAcceptanceRateLimits();
-      record.edgeRuntime = await restartLocalEdgeRuntime();
+      record.edgeRuntime = await restartLocalEdgeRuntime(EDGE_ISOLATION_OPTIONS);
       record.isolated = true;
       runJourney(journey);
       record.completed = true;
@@ -105,7 +107,7 @@ try {
   }
 
   resetLocalAcceptanceRateLimits();
-  evidence.loadHandoff = await restartLocalEdgeRuntime();
+  evidence.loadHandoff = await restartLocalEdgeRuntime(EDGE_ISOLATION_OPTIONS);
 } catch (error) {
   failure = error;
 } finally {

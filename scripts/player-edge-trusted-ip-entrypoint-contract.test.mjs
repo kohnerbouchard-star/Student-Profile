@@ -71,7 +71,7 @@ test("Player read resilience is installed once at the outer client boundary", as
   assert.match(loadAdapter, /readRetries: playerReadRetryEvents/u);
 });
 
-test("connected functional journeys and load handoff use isolated Edge runtimes", async () => {
+test("connected functional journeys and load handoff use stable isolated Edge runtimes", async () => {
   const orchestrator = await readFile(
     "scripts/business-banking-player-world-browser-acceptance.mjs",
     "utf8",
@@ -82,11 +82,21 @@ test("connected functional journeys and load handoff use isolated Edge runtimes"
   );
 
   assert.match(orchestrator, /import \{ restartLocalEdgeRuntime \}/u);
-  assert.match(orchestrator, /record\.edgeRuntime = await restartLocalEdgeRuntime\(\)/u);
-  assert.match(orchestrator, /evidence\.loadHandoff = await restartLocalEdgeRuntime\(\)/u);
   assert.match(
     orchestrator,
-    /fresh-warmed-edge-runtime-per-functional-journey-and-load-handoff/u,
+    /EDGE_ISOLATION_OPTIONS = Object\.freeze\(\{ stableWaves: 3, settleMs: 1_000 \}\)/u,
+  );
+  assert.match(
+    orchestrator,
+    /record\.edgeRuntime = await restartLocalEdgeRuntime\(EDGE_ISOLATION_OPTIONS\)/u,
+  );
+  assert.match(
+    orchestrator,
+    /evidence\.loadHandoff = await restartLocalEdgeRuntime\(EDGE_ISOLATION_OPTIONS\)/u,
+  );
+  assert.match(
+    orchestrator,
+    /fresh-stable-edge-runtime-per-functional-journey-and-load-handoff/u,
   );
 
   for (const path of isolatedBffAcceptances) {
@@ -99,6 +109,9 @@ test("connected functional journeys and load handoff use isolated Edge runtimes"
   }
 
   assert.match(isolation, /docker", \["restart", containerName\]/u);
+  assert.match(isolation, /DEFAULT_STABLE_WAVES = 3/u);
+  assert.match(isolation, /DEFAULT_SETTLE_MS = 1_000/u);
+  assert.match(isolation, /consecutiveReadyWaves/u);
   assert.match(isolation, /\/functions\/v1\/player-api/u);
   assert.match(isolation, /\/functions\/v1\/player-web-session-api/u);
   assert.match(isolation, /status === 204/u);
