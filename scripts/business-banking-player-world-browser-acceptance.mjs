@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import { restartLocalEdgeRuntime } from "./local-edge-runtime-isolation.mjs";
 import { resetLocalAcceptanceRateLimits } from "./local-acceptance-rate-limit-reset.mjs";
 
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
@@ -77,16 +78,24 @@ function runJourney(journey) {
 await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
+  isolationPolicy: "fresh-warmed-edge-runtime-per-functional-journey",
   journeys: [],
 };
 let failure;
 
 try {
   for (const journey of CONNECTED_JOURNEYS) {
-    const record = { label: journey.label, started: true, completed: false };
+    const record = {
+      label: journey.label,
+      started: true,
+      isolated: false,
+      completed: false,
+    };
     evidence.journeys.push(record);
     try {
       resetLocalAcceptanceRateLimits();
+      record.edgeRuntime = await restartLocalEdgeRuntime();
+      record.isolated = true;
       runJourney(journey);
       record.completed = true;
     } catch (error) {
