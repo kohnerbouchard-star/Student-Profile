@@ -29,6 +29,7 @@ function manifest() {
       "docs/operations/evidence/player-login-production-secret-trigger-v1.json",
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
+      "scripts/admin-loading-scanner-smoke.mjs",
       "scripts/player-api-read-resilience.test.mjs",
       "scripts/player-bff-retry-classification.test.mjs",
       "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
