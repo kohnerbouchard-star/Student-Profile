@@ -78,7 +78,7 @@ function runJourney(journey) {
 await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
-  isolationPolicy: "fresh-warmed-edge-runtime-per-functional-journey",
+  isolationPolicy: "fresh-warmed-edge-runtime-per-functional-journey-and-load-handoff",
   journeys: [],
 };
 let failure;
@@ -103,6 +103,9 @@ try {
       throw error;
     }
   }
+
+  resetLocalAcceptanceRateLimits();
+  evidence.loadHandoff = await restartLocalEdgeRuntime();
 } catch (error) {
   failure = error;
 } finally {
