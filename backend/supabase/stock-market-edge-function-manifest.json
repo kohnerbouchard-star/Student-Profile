@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "econovaria.stock-market-runtime.v1",
+  "sharedSecretName": "STOCK_MARKET_RUNNER_SECRET",
+  "nonceClaimRoutine": "claim_internal_runner_nonce_v2",
+  "functions": [
+    {
+      "slug": "stock-market-runner",
+      "entrypoint": "backend/supabase/functions/stock-market-runner/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce",
+      "runnerName": "stock-market-runner"
+    },
+    {
+      "slug": "stock-market-read",
+      "entrypoint": "backend/supabase/functions/stock-market-read/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce",
+      "runnerName": "stock-market-read"
+    },
+    {
+      "slug": "stock-market-seed-copy",
+      "entrypoint": "backend/supabase/functions/stock-market-seed-copy/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce",
+      "runnerName": "stock-market-seed-copy"
+    },
+    {
+      "slug": "stock-market-player-read",
+      "entrypoint": "backend/supabase/functions/stock-market-player-read/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce",
+      "runnerName": "stock-market-player-read"
+    },
+    {
+      "slug": "stock-market-trading",
+      "entrypoint": "backend/supabase/functions/stock-market-trading/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce",
+      "runnerName": "stock-market-trading"
+    }
+  ],
+  "requiredEnvironments": ["staging", "production"],
+  "productionDeploymentRequiresStagingDigest": true,
+  "directLegacySecretRequestsAllowed": false
+}
