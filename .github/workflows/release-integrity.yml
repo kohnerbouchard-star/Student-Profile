@@ -4,18 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - ".nvmrc"
-      - ".npmrc"
-      - "package.json"
-      - "package-lock.json"
-      - "backend/supabase/migrations/**"
-      - "scripts/release-integrity/**"
-      - "scripts/production-runtime-promotion-contract.test.mjs"
-      - "docs/operations/release-integrity-gates-v1*.md"
-      - ".github/workflows/release-integrity.yml"
-      - ".github/workflows/production-runtime-promotion-v2.yml"
-      - ".github/workflows/production-runtime-promotion-contract.yml"
   merge_group:
     types:
       - checks_requested
