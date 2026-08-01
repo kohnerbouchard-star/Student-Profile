@@ -20,9 +20,10 @@ function executable(names = "supabase_edge_runtime_backend\n") {
   return { execFile, calls };
 }
 
-test("restarts the only local Edge runtime and warms both Player functions", async () => {
+test("restarts the only local Edge runtime and requires stable Player readiness", async () => {
   const { execFile, calls } = executable();
   const requests = [];
+  const sleeps = [];
   const logs = [];
   const result = await restartLocalEdgeRuntime({
     execFile,
@@ -31,25 +32,56 @@ test("restarts the only local Edge runtime and warms both Player functions", asy
       requests.push({ url, method: init.method, apikey: init.headers.apikey });
       return new Response(null, { status: 204 });
     },
-    sleep: async () => {},
+    sleep: async (milliseconds) => sleeps.push(milliseconds),
     log: (value) => logs.push(value),
   });
 
   assert.equal(result.ready, true);
   assert.equal(result.pathsChecked, 2);
+  assert.equal(result.stableWaves, 3);
+  assert.equal(result.settleMs, 1_000);
   assert.deepEqual(calls, [
     ["docker", "ps", "--format", "{{.Names}}"],
     ["docker", "restart", "supabase_edge_runtime_backend"],
   ]);
+  assert.equal(requests.length, 6);
   assert.deepEqual(
-    requests.map(({ url, method }) => ({ url, method })),
+    requests.slice(0, 2).map(({ url, method }) => ({ url, method })),
     [
       { url: "http://127.0.0.1:4173/functions/v1/player-api", method: "OPTIONS" },
       { url: "http://127.0.0.1:4173/functions/v1/player-web-session-api", method: "OPTIONS" },
     ],
   );
+  assert.deepEqual(sleeps, [500, 500, 1_000]);
   assert.ok(requests.every(({ apikey }) => apikey.startsWith("sb_publishable_")));
   assert.equal(logs.some((value) => value.includes("sb_publishable_")), false);
+});
+
+test("resets the readiness streak after an unhealthy wave", async () => {
+  const { execFile } = executable();
+  const statuses = [
+    204, 204,
+    503, 204,
+    204, 204,
+    204, 204,
+  ];
+  const sleeps = [];
+  const result = await restartLocalEdgeRuntime({
+    execFile,
+    timeoutMs: 5_000,
+    pollMs: 25,
+    stableWaves: 2,
+    settleMs: 40,
+    readFileImpl: async () => CONFIG,
+    fetchImpl: async () => new Response(null, { status: statuses.shift() ?? 204 }),
+    sleep: async (milliseconds) => sleeps.push(milliseconds),
+    log: () => {},
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.attempts, 4);
+  assert.equal(result.stableWaves, 2);
+  assert.deepEqual(sleeps, [25, 25, 25, 40]);
 });
 
 test("waits for both Player functions after the container restart", async () => {
@@ -60,6 +92,8 @@ test("waits for both Player functions after the container restart", async () => 
     execFile,
     timeoutMs: 5_000,
     pollMs: 25,
+    stableWaves: 2,
+    settleMs: 40,
     readFileImpl: async () => CONFIG,
     fetchImpl: async () => {
       const status = wave < 2 ? 503 : 204;
@@ -71,8 +105,8 @@ test("waits for both Player functions after the container restart", async () => 
   });
 
   assert.equal(result.ready, true);
-  assert.equal(result.attempts, 2);
-  assert.deepEqual(sleeps, [25]);
+  assert.equal(result.attempts, 3);
+  assert.deepEqual(sleeps, [25, 25, 40]);
 });
 
 test("fails closed when the runtime container identity is ambiguous", async () => {
@@ -101,6 +135,21 @@ test("refuses to restart infrastructure through a non-local gateway", async () =
       log: () => {},
     }),
     /restricted to the local acceptance gateway/u,
+  );
+  assert.deepEqual(calls, []);
+});
+
+test("rejects invalid stability configuration before restarting Docker", async () => {
+  const { execFile, calls } = executable();
+  await assert.rejects(
+    () => restartLocalEdgeRuntime({
+      stableWaves: 0,
+      execFile,
+      readFileImpl: async () => CONFIG,
+      fetchImpl: async () => new Response(null, { status: 204 }),
+      log: () => {},
+    }),
+    /stableWaves must be a positive integer/u,
   );
   assert.deepEqual(calls, []);
 });
