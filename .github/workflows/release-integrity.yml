@@ -57,7 +57,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      EXPECTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || '' }}
     steps:
       - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -77,6 +78,12 @@ jobs:
         run: |
           set -euo pipefail
           actual_sha="$(git rev-parse HEAD)"
+          if test "$GITHUB_EVENT_NAME" = "workflow_dispatch"; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            node scripts/release-integrity/cli.mjs verify-source \
+              --expected-sha "$REQUESTED_SOURCE_SHA" \
+              --actual-sha "$EXPECTED_SOURCE_SHA"
+          fi
           node scripts/release-integrity/cli.mjs verify-source \
             --expected-sha "$EXPECTED_SOURCE_SHA" \
             --actual-sha "$actual_sha" \
@@ -119,7 +126,7 @@ jobs:
 
   live-parity:
     name: Inspect staging and production parity read-only
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: static-integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -128,7 +135,8 @@ jobs:
       group: release-integrity-live-parity
       cancel-in-progress: false
     env:
-      EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      EXPECTED_SOURCE_SHA: ${{ github.sha }}
+      REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
       STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
       PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGSSLMODE: require
@@ -157,7 +165,11 @@ jobs:
           test -n "$STAGING_SUPABASE_DB_URL"
           test -n "$PRODUCTION_SUPABASE_DB_URL"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$GITHUB_REF" = "refs/heads/main"
           actual_sha="$(git rev-parse HEAD)"
+          node scripts/release-integrity/cli.mjs verify-source \
+            --expected-sha "$REQUESTED_SOURCE_SHA" \
+            --actual-sha "$EXPECTED_SOURCE_SHA"
           node scripts/release-integrity/cli.mjs verify-source \
             --expected-sha "$EXPECTED_SOURCE_SHA" \
             --actual-sha "$actual_sha"
