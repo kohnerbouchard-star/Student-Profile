@@ -358,7 +358,7 @@ async function handleMfa(
         Boolean(bodyResult.body),
       ),
       body: bodyResult.body && routeContract.mutation
-        ? bodyResult.body
+        ? ownedArrayBuffer(bodyResult.body)
         : undefined,
       cache: "no-store",
       redirect: "manual",
@@ -425,7 +425,7 @@ async function handleMfa(
   if (current.refreshed) {
     await appendSessionCookie(headers, current.payload, key, request);
   }
-  return new Response(responseBody.body, {
+  return new Response(ownedArrayBuffer(responseBody.body), {
     status: upstream.status,
     headers,
   });
@@ -518,10 +518,13 @@ async function handleProxy(
   if (current.refreshed) {
     await appendSessionCookie(headers, current.payload, key, request);
   }
-  return new Response(method === "HEAD" ? null : responseBody.body, {
-    status: upstream.status,
-    headers,
-  });
+  return new Response(
+    method === "HEAD" ? null : ownedArrayBuffer(responseBody.body),
+    {
+      status: upstream.status,
+      headers,
+    },
+  );
 }
 
 async function resolveCurrentSession(
@@ -534,6 +537,12 @@ async function resolveCurrentSession(
   const resolved = await resolveSession(request, key);
   if (resolved.ok === false) return resolved;
   return refreshIfNeeded(resolved.payload);
+}
+
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 async function sendAdminRequest(
@@ -562,7 +571,9 @@ async function sendAdminRequest(
   return fetch(target, {
     method: source.method,
     headers,
-    body: body && !["GET", "HEAD"].includes(source.method) ? body : undefined,
+    body: body && !["GET", "HEAD"].includes(source.method)
+      ? ownedArrayBuffer(body)
+      : undefined,
     cache: "no-store",
     redirect: "manual",
   });

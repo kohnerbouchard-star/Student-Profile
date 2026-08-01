@@ -197,7 +197,7 @@ async function createConnectedStaffFixture() {
   );
   await metadataResponse.body?.cancel().catch(() => undefined);
   if (!metadataResponse.ok) {
-    throw new Error(`Disposable local Auth metadata returned ${metadataResponse.status}.`);
+    throw new Error(`Disposable local Auth metadata returned ${metadataResponse.status()}.`);
   }
 
   evidence.connectedSetup.localMfaExemptionApplied = true;
@@ -289,13 +289,15 @@ async function signInAdminAndCreateGame(page) {
     throw new Error("Refreshed Admin status did not contain the selector-provisioned game.");
   }
 
-  const gameRow = page.locator("#adminGameList .game-row", { hasText: GAME_NAME }).first();
+  const gameRow = page.locator(
+    `#adminGameList .game-row[data-game-id="${gameId}"]`,
+  ).first();
   await gameRow.waitFor({ state: "visible", timeout: 30_000 });
   await gameRow.click();
   await waitForAdminConsole(page);
 
   const selectedGameId = await page.evaluate(() =>
-    sessionStorage.getItem("econovaria.admin.selected-game.v1") || ""
+    new URL(location.href).searchParams.get("game") || ""
   );
   if (selectedGameId !== gameId) {
     throw new Error("Connected Admin selected the wrong game scope.");
@@ -354,7 +356,9 @@ if (
   materialized.includes("createConnectedGame()") ||
   !materialized.includes("createConnectedStaffFixture()") ||
   !materialized.includes("signInAdminAndCreateGame(adminPage)") ||
-  !materialized.includes("#adminCreateGameForm button[type='submit']")
+  !materialized.includes("#adminCreateGameForm button[type='submit']") ||
+  !materialized.includes('searchParams.get("game")') ||
+  materialized.includes('sessionStorage.getItem("econovaria.admin.selected-game.v1")')
 ) {
   throw new Error(
     "Player multiplayer authenticated game-selector adaptation did not materialize exactly.",

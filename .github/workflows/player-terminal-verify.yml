@@ -3,24 +3,64 @@ name: Player Terminal Verify
 on:
   pull_request:
     paths:
+      - "api/_player-bff-proxy.js"
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
+      - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/player-web-session-api/**"
+      - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+      - "docs/operations/evidence/player-login-production-secret-trigger-v1.json"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/environment-neutral-browser-integration.test.mjs"
       - "scripts/security-audit-remediation-contract.test.mjs"
+      - "scripts/player-api-read-resilience.test.mjs"
+      - "scripts/player-bff-retry-classification.test.mjs"
+      - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
+      - "scripts/player-production-secret-provision-contract.test.mjs"
+      - "scripts/player-cross-cutting-authority.test.mjs"
+      - "scripts/verify-player-cross-cutting-authority.mjs"
+      - "scripts/local-edge-runtime-isolation.mjs"
+      - "scripts/local-edge-runtime-isolation.test.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
+      - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
+      - "scripts/player-contracts-browser-acceptance.mjs"
+      - "scripts/business-banking-player-market-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
+      - ".github/workflows/production-web-session-secrets.yml"
   push:
     branches:
       - main
     paths:
+      - "api/_player-bff-proxy.js"
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
+      - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/player-web-session-api/**"
+      - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+      - "docs/operations/evidence/player-login-production-secret-trigger-v1.json"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/environment-neutral-browser-integration.test.mjs"
       - "scripts/security-audit-remediation-contract.test.mjs"
+      - "scripts/player-api-read-resilience.test.mjs"
+      - "scripts/player-bff-retry-classification.test.mjs"
+      - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
+      - "scripts/player-production-secret-provision-contract.test.mjs"
+      - "scripts/player-cross-cutting-authority.test.mjs"
+      - "scripts/verify-player-cross-cutting-authority.mjs"
+      - "scripts/local-edge-runtime-isolation.mjs"
+      - "scripts/local-edge-runtime-isolation.test.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
+      - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
+      - "scripts/player-contracts-browser-acceptance.mjs"
+      - "scripts/business-banking-player-market-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
+      - ".github/workflows/production-web-session-secrets.yml"
 
 permissions:
   contents: read
@@ -35,56 +75,41 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out repository
+      - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Enforce isolated pull-request scope
-        if: >-
-          github.event_name == 'pull_request' &&
-          github.head_ref != 'agent/security-convergence-v2' &&
-          github.head_ref != 'agent/security-audit-remediation-v1' &&
-          github.head_ref != 'agent/runtime-stability-button-integrity-v1'
+      - name: Authorize pull-request scope
+        if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
-          node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
 
-      - name: Record cross-cutting security scope
-        if: >-
-          github.event_name == 'pull_request' &&
-          (github.head_ref == 'agent/security-convergence-v2' ||
-           github.head_ref == 'agent/security-audit-remediation-v1')
+          if node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt; then
+            echo "Player verification is operating under the isolated Player scope contract."
+          else
+            node --test scripts/player-cross-cutting-authority.test.mjs
+            node scripts/verify-player-cross-cutting-authority.mjs \
+              --changed-files /tmp/player-terminal-changed-files.txt \
+              --pr-number "$PR_NUMBER" \
+              --base-ref "$BASE_REF"
+          fi
+
+      - name: Validate Player boundary contracts
         shell: bash
         run: |
           set -euo pipefail
-          test -f docs/security/security-convergence-v2.md
-          test -f docs/security/security-fix-ledger-v2.json
-          test -f scripts/auth-boundary-contract.test.mjs
-          test -f scripts/security-audit-remediation-contract.test.mjs
-          echo "Player verification is running under a repository-owned cross-cutting security authority."
-
-      - name: Record cross-cutting runtime scope
-        if: >-
-          github.event_name == 'pull_request' &&
-          github.head_ref == 'agent/runtime-stability-button-integrity-v1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f docs/operations/contracts/button-action-coverage-v1.json
-          test -f backend/src/security/playerBrowserResponsePrivacy.ts
-          test -f backend/src/security/playerBrowserResponsePrivacy.test.ts
-          test -f scripts/button-action-coverage-contract.mjs
-          test -f scripts/player-connected-mutation-browser-acceptance.mjs
-          test -f scripts/admin-connected-ledger-mutation-browser-acceptance.mjs
-          test -f player-terminal/tools/verify-pr-scope.mjs
-          echo "Player verification is running under the repository-owned runtime stability and button-integrity authority."
+          node --test \
+            scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs \
+            scripts/player-production-secret-provision-contract.test.mjs
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -92,6 +117,15 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: player-terminal/package-lock.json
+
+      - name: Validate bounded Player read resilience
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test \
+            scripts/player-api-read-resilience.test.mjs \
+            scripts/player-bff-retry-classification.test.mjs \
+            scripts/local-edge-runtime-isolation.test.mjs
 
       - name: Install package dependencies
         working-directory: player-terminal
@@ -102,11 +136,8 @@ jobs:
         working-directory: player-terminal
         shell: bash
         run: |
-          set +e
+          set -o pipefail
           npm run verify 2>&1 | tee "$RUNNER_TEMP/player-terminal-verify.log"
-          status=${PIPESTATUS[0]}
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          test "$status" -eq 0
 
       - name: Install Chromium
         if: success()
@@ -135,23 +166,20 @@ jobs:
         working-directory: player-terminal
         shell: bash
         run: |
-          set +e
+          set -o pipefail
           npm run browser 2>&1 | tee "$RUNNER_TEMP/player-terminal-browser.log"
-          status=${PIPESTATUS[0]}
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          test "$status" -eq 0
 
       - name: Upload failed verification log
-        if: failure() && steps.player-terminal-verify.outputs.status != '0'
+        if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: player-terminal-verify-log
           path: ${{ runner.temp }}/player-terminal-verify.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Upload failed browser artifacts
-        if: failure() && steps.player-terminal-browser.outputs.status != '0'
+        if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: player-terminal-browser-failure

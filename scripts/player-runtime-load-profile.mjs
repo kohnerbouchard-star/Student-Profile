@@ -8,6 +8,38 @@ let source = await readFile(coreUrl, "utf8");
 
 const replacements = [
   {
+    label: "Player read resilience import",
+    old: `import { performance } from "node:perf_hooks";`,
+    next: `import { performance } from "node:perf_hooks";
+import { createStudentProfileReadResilientFetch } from "../player-terminal/src/integrations/student-profile-read-resilience.js";`,
+  },
+  {
+    label: "Player read resilience client",
+    old: `const READ_SCHEDULING = "sequential-per-player";`,
+    next: `const READ_SCHEDULING = "sequential-per-player";
+const playerReadRetryEvents = [];
+const resilientPlayerFetch = createStudentProfileReadResilientFetch(globalThis.fetch, {
+  onEvent: (event) => playerReadRetryEvents.push({
+    type: event.type,
+    attempt: event.attempt,
+    nextAttempt: event.nextAttempt,
+    delayMs: event.delayMs,
+    path: event.path,
+    status: event.status,
+    reason: event.reason,
+    classification: event.classification,
+    retryAfterMs: event.retryAfterMs,
+    remainingBudgetMs: event.remainingBudgetMs,
+    elapsedMs: event.elapsedMs,
+  }),
+});`,
+  },
+  {
+    label: "Player request fetch",
+    old: `    const response = await fetch(\`${"${BASE_URL}${path}"}\`, {`,
+    next: `    const response = await resilientPlayerFetch(\`${"${BASE_URL}${path}"}\`, {`,
+  },
+  {
     label: "Player login transport",
     old: `async function loginPlayer(player, gameCode, publishableKey) {
   const deviceId = crypto.randomUUID();
@@ -133,7 +165,8 @@ const replacements = [
   {
     label: "evidence transport label",
     old: `playerTransport: "player-api",`,
-    next: `playerTransport: "http-only-player-bff",`,
+    next: `playerTransport: "http-only-player-bff",
+    readRetries: playerReadRetryEvents,`,
   },
 ];
 

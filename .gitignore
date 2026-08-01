@@ -9,6 +9,10 @@
 node_modules/
 backend/node_modules/
 
+# Generated Python bytecode
+__pycache__/
+*.py[cod]
+
 # Supabase CLI local state
 backend/supabase/.temp/
 backend/supabase/.branches/

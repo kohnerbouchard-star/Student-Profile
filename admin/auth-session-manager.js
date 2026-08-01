@@ -157,7 +157,7 @@
     sessionGeneration += 1;
     try {
       window.sessionStorage.removeItem(SESSION_KEY);
-      if (includeSelectedGame) window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+      if (includeSelectedGame) window.EconovariaAdminGameSelection?.clear?.();
     } catch (_) {}
   }
 
@@ -249,7 +249,7 @@
       [DEVICE_HEADER]: deviceId()
     };
     const selectedGameId = String(
-      window.sessionStorage.getItem(SELECTED_GAME_KEY) || ""
+      window.EconovariaAdminGameSelection?.read?.() || ""
     ).trim();
     if (selectedGameId) headers[GAME_HEADER] = selectedGameId;
 

@@ -20,6 +20,7 @@ import errno
 import http.client
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -58,6 +59,9 @@ STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
 )
 LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
+HEADER_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[!#$%&'*+\-.^_\x60|~0-9A-Za-z]+$"
+)
 
 
 def clean_path(path: str) -> str:
@@ -130,16 +134,31 @@ def filtered_request_headers(
     return result
 
 
+def is_safe_response_header(name: object, value: object) -> bool:
+    """Reject malformed names and CR/LF-bearing values before send_header()."""
+    normalized_name = str(name)
+    normalized_value = str(value)
+    return (
+        bool(HEADER_NAME_PATTERN.fullmatch(normalized_name))
+        and "\r" not in normalized_name
+        and "\n" not in normalized_name
+        and "\r" not in normalized_value
+        and "\n" not in normalized_value
+    )
+
+
 def filtered_response_headers(headers) -> list[tuple[str, str]]:
-    """Return end-to-end response headers, excluding upstream CORS metadata."""
+    """Return validated end-to-end response headers without upstream CORS metadata."""
     result: list[tuple[str, str]] = []
     for name, value in headers:
-        lower_name = name.lower()
+        lower_name = str(name).lower()
         if lower_name in HOP_BY_HOP_HEADERS:
             continue
         if lower_name.startswith("access-control-"):
             continue
-        result.append((name, value))
+        if not is_safe_response_header(name, value):
+            continue
+        result.append((str(name), str(value)))
     return result
 
 

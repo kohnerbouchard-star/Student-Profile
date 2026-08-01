@@ -138,7 +138,7 @@
   }
 
   function selectedGameMatches(gameId) {
-    const selected = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    const selected = text(window.EconovariaAdminGameSelection?.read?.());
     return !selected || selected === gameId;
   }
 

@@ -17,6 +17,8 @@ const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
 const CODE_PATTERN = /ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g;
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+const EXPECTED_ANONYMOUS_STATUS_CONSOLE_ERROR =
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -47,6 +49,7 @@ const context = await browser.newContext({
   reducedMotion: "reduce",
 });
 const page = await context.newPage();
+let anonymousStatusProbeOpen = true;
 
 function sanitize(value) {
   return String(value || "")
@@ -57,21 +60,43 @@ function sanitize(value) {
 
 page.on("dialog", (dialog) => void dialog.accept());
 page.on("console", (message) => {
-  if (message.type() === "error") evidence.consoleErrors.push(sanitize(message.text()));
+  if (message.type() !== "error") return;
+  const value = sanitize(message.text());
+  if (anonymousStatusProbeOpen && value === EXPECTED_ANONYMOUS_STATUS_CONSOLE_ERROR) {
+    return;
+  }
+  evidence.consoleErrors.push(value);
 });
 page.on("pageerror", (error) => evidence.pageErrors.push(sanitize(error?.message || error)));
 page.on("response", (response) => {
   const url = response.url();
   if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
+  const method = response.request().method();
+  const status = response.status();
+  const pathname = new URL(url).pathname;
+  const expectedAnonymousStatus = anonymousStatusProbeOpen &&
+    method === "GET" &&
+    status === 401 &&
+    pathname.endsWith("/functions/v1/web-session-api/status");
   evidence.requests.push({
-    method: response.request().method(),
+    method,
     url: sanitize(url),
-    status: response.status(),
+    status,
+    expectedAnonymousStatus,
   });
+  if (
+    method === "POST" &&
+    pathname.endsWith("/functions/v1/web-session-api/login") &&
+    status < 400
+  ) {
+    anonymousStatusProbeOpen = false;
+  }
 });
 
 function failedRequests(startIndex = 0) {
-  return evidence.requests.slice(startIndex).filter((request) => request.status >= 400);
+  return evidence.requests
+    .slice(startIndex)
+    .filter((request) => request.status >= 400 && !request.expectedAnonymousStatus);
 }
 
 function assertNoFailedRequests(label, startIndex = 0) {
@@ -384,7 +409,8 @@ try {
   await safeScreenshot("browser-failure.png");
 } finally {
   evidence.finalUrl = sanitize(page.url());
-  await writeFile(`${OUTPUT_DIR}/admin-browser-reconnaissance.json`, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  await writeFile(`${OUTPUT_DIR}/admin-browser-reconnaissance.json`, `${JSON.stringify(evidence, null, 2)}\
+`, "utf8");
   await context.close();
   await browser.close();
 }

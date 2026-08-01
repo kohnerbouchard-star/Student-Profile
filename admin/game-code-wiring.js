@@ -13,7 +13,7 @@
   function selectedGameId() {
     return String(
       window.EconovariaAdminAuth?.getSelectedGameId?.() ||
-        window.sessionStorage.getItem("econovaria.admin.selected-game.v1") ||
+        window.EconovariaAdminGameSelection?.read?.() ||
         "",
     ).trim();
   }

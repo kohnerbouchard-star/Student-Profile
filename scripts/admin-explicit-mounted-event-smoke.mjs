@@ -31,9 +31,7 @@ class FakeCustomEvent {
 function createRuntime({ mounted = false } = {}) {
   const listeners = new Map();
   const timeouts = new Map();
-  const storage = new Map([
-    ["econovaria.admin.selected-game.v1", "game-1"],
-  ]);
+  const storage = new Map();
   const emitted = [];
   let timeoutSequence = 0;
   let gateRemoved = 0;
@@ -95,6 +93,10 @@ function createRuntime({ mounted = false } = {}) {
   const window = {
     document,
     EconovariaAdminAuthSession: sessionManager,
+    EconovariaAdminGameSelection: Object.freeze({
+      read: () => "game-1",
+      clear() {},
+    }),
     sessionStorage: {
       getItem(key) { return storage.get(key) ?? null; },
       removeItem(key) { storage.delete(key); },

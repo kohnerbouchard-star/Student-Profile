@@ -339,11 +339,11 @@ async function createFactorHandleWithKey(
   const encrypted = await crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv,
-      additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1"),
+      iv: ownedArrayBuffer(iv),
+      additionalData: ownedArrayBuffer(new TextEncoder().encode("econovaria-mfa-factor-v1")),
     },
     key,
-    payload,
+    ownedArrayBuffer(payload),
   );
   return `mfa1.${base64Url(iv)}.${base64Url(new Uint8Array(encrypted))}`;
 }
@@ -360,11 +360,11 @@ async function readFactorHandle(value: unknown, userId: string): Promise<string>
     const decrypted = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
-        iv: fromBase64Url(parts[1]),
-        additionalData: new TextEncoder().encode("econovaria-mfa-factor-v1"),
+        iv: ownedArrayBuffer(fromBase64Url(parts[1])),
+        additionalData: ownedArrayBuffer(new TextEncoder().encode("econovaria-mfa-factor-v1")),
       },
       key,
-      fromBase64Url(parts[2]),
+      ownedArrayBuffer(fromBase64Url(parts[2])),
     );
     const payload = JSON.parse(new TextDecoder().decode(decrypted));
     if (
@@ -448,6 +448,12 @@ function invalidHandle(): MfaRequestError {
     "The authenticator reference is invalid or expired.",
     400,
   );
+}
+
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 function base64Url(bytes: Uint8Array): string {

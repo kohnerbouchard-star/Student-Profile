@@ -274,7 +274,7 @@
   function requestModalPlayer(modal, playerId) {
     if (!playerId || loadingPlayers.has(playerId)) return;
     loadingPlayers.add(playerId);
-    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    const gameId = text(window.EconovariaAdminGameSelection?.read?.());
     void loadPlayers(gameId).then(() => {
       loadingPlayers.delete(playerId);
       if (modal?.isConnected) decorateProfileModal(modal);
@@ -397,7 +397,7 @@
   }
 
   async function saveProfileSettings(modal, player) {
-    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    const gameId = text(window.EconovariaAdminGameSelection?.read?.());
     const playerId = playerUuid(player);
     const displayName = text(fieldControl(fieldByCaption(modal, "Player name"))?.value) || playerName(player);
     const identifierInput = fieldControl(fieldByCaption(modal, "Player ID / RFID card"));
@@ -580,7 +580,7 @@
     const settings = target.closest('[data-admin-terminal-action="player-settings"]');
     if (settings) {
       selectedPlayerId = text(settings.getAttribute("data-player-id"));
-      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+      const gameId = text(window.EconovariaAdminGameSelection?.read?.());
       void loadPlayers(gameId).then(scheduleDecorate);
       scheduleDecorate();
       return;
@@ -590,7 +590,7 @@
     if (nav) {
       if (nav.getAttribute("data-admin-section") !== "Players") selectedPlayerId = "";
       else {
-        const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+        const gameId = text(window.EconovariaAdminGameSelection?.read?.());
         void loadPlayers(gameId).then(scheduleDecorate);
       }
     }
@@ -623,7 +623,7 @@
     },
     selectPlayerById(playerId) {
       selectedPlayerId = text(playerId);
-      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+      const gameId = text(window.EconovariaAdminGameSelection?.read?.());
       return loadPlayers(gameId).then(scheduleDecorate);
     },
   };

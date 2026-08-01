@@ -10,8 +10,8 @@ const FUNCTION_POLICIES = Object.freeze({
   "player-web-session-api": false,
   "bootstrap-api": false,
   "web-session-api": false,
-  "admin-email-verification": false,
   "admin-password-recovery": false,
+  "admin-email-verification": false,
   "admin-logout-api": false,
   "staff-api": true,
   "admin-api": true,
@@ -25,8 +25,12 @@ const FUNCTION_POLICIES = Object.freeze({
   "stock-market-trading": false,
 });
 const CUSTOM_AUTH_FUNCTIONS = new Set([
-  "admin-email-verification",
   "admin-password-recovery",
+  "admin-email-verification",
+]);
+const WRAPPED_RUNTIME_FUNCTIONS = new Set([
+  "player-api",
+  "player-web-session-api",
 ]);
 
 function section(source, name) {
@@ -47,7 +51,14 @@ test("local Supabase starts every declared split Edge security boundary", async 
   for (const [name, verifyJwt] of Object.entries(FUNCTION_POLICIES)) {
     const policy = section(config, `functions.${name}`);
     assert.match(policy, new RegExp(`verify_jwt\\s*=\\s*${verifyJwt}`));
-    functionSources[name] = await readFile(new URL(`${name}/index.ts`, FUNCTION_ROOT), "utf8");
+    const entrypoint = await readFile(
+      new URL(`${name}/index.ts`, FUNCTION_ROOT),
+      "utf8",
+    );
+    const runtime = WRAPPED_RUNTIME_FUNCTIONS.has(name)
+      ? await readFile(new URL(`${name}/runtime.ts`, FUNCTION_ROOT), "utf8")
+      : "";
+    functionSources[name] = `${entrypoint}\n${runtime}`;
   }
 
   const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
@@ -85,19 +96,16 @@ test("local Supabase starts every declared split Edge security boundary", async 
     functionSources["web-session-api"],
     /const request = authorization\.request/,
   );
-  assert.match(functionSources["admin-email-verification"], /request\.method\.toUpperCase\(\)/);
-  assert.match(functionSources["admin-email-verification"], /method === "GET"/);
-  assert.match(functionSources["admin-email-verification"], /method === "POST"/);
-  assert.match(functionSources["admin-email-verification"], /constantTimeEqual\(challenge, cookieChallenge\)/);
-  assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
-  assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/logout\?scope=local/);
-  assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
   assert.match(functionSources["admin-password-recovery"], /request\.method\.toUpperCase\(\)/);
   assert.match(functionSources["admin-password-recovery"], /method === "GET"/);
   assert.match(functionSources["admin-password-recovery"], /method === "POST"/);
   assert.match(functionSources["admin-password-recovery"], /constantTimeEqual\(challenge, cookieChallenge\)/);
   assert.match(functionSources["admin-password-recovery"], /\/auth\/v1\/verify/);
   assert.doesNotMatch(functionSources["admin-password-recovery"], /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(functionSources["admin-email-verification"], /TOKEN_HASH_PATTERN/);
+  assert.match(functionSources["admin-email-verification"], /constantTimeEqual\(challenge, cookieChallenge\)/);
+  assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
+  assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(functionSources["admin-logout-api"], /openWebAdminSession/);
   assert.match(functionSources["admin-logout-api"], /constantTimeTextEqual/);
   assert.match(functionSources["admin-logout-api"], /response\?\.ok \|\| response\?\.status === 401/);

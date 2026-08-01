@@ -28,6 +28,7 @@ const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((matc
 const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((match) => match[1]);
 const expectedScripts = [
   "../runtime-config.env.js", "../frontend/src/core/runtime-config.js",
+  "../frontend/src/core/admin-game-selection.js",
   "./auth-session-manager.js", "./session-gate.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
