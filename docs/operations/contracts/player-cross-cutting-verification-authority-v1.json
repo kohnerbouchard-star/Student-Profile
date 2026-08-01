@@ -10,6 +10,7 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "scripts/business-banking-player-world-browser-acceptance.mjs",
     "scripts/local-edge-runtime-isolation.mjs",
     "scripts/local-edge-runtime-isolation.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
@@ -17,6 +18,7 @@
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "scripts/business-banking-player-world-browser-acceptance.mjs",
     "scripts/local-edge-runtime-isolation.mjs",
     "scripts/local-edge-runtime-isolation.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
