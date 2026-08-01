@@ -31,6 +31,9 @@ function manifest() {
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
       "scripts/admin-loading-scanner-smoke.mjs",
+      "scripts/business-banking-player-world-browser-acceptance.mjs",
+      "scripts/local-edge-runtime-isolation.mjs",
+      "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-api-read-resilience.test.mjs",
       "scripts/player-bff-retry-classification.test.mjs",
       "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
@@ -47,6 +50,9 @@ function manifest() {
       "docs/operations/evidence/player-login-production-secret-trigger-v1.json",
       "player-terminal/src/integrations/student-profile-read-resilience.js",
       "player-terminal/src/integrations/student-profile-runtime.js",
+      "scripts/business-banking-player-world-browser-acceptance.mjs",
+      "scripts/local-edge-runtime-isolation.mjs",
+      "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-api-read-resilience.test.mjs",
       "scripts/player-bff-retry-classification.test.mjs",
       "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
@@ -60,6 +66,7 @@ function manifest() {
       "player-production-secret-provision-contract",
       "player-api-read-resilience",
       "player-bff-retry-classification",
+      "local-edge-runtime-isolation",
     ],
   };
 }
