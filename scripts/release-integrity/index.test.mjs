@@ -98,7 +98,7 @@ test('migration manifest is deterministic and content-addressed', async () => {
   );
 });
 
-test('ledger comparison classifies every ordered identity failure', () => {
+test('ledger comparison classifies canonical identity failures', () => {
   const manifest = {
     schemaVersion: 'econovaria.release-integrity.migration-manifest.v1',
     manifestSha256: 'a'.repeat(64),
@@ -112,8 +112,8 @@ test('ledger comparison classifies every ordered identity failure', () => {
     manifest,
     environment: 'staging',
     liveLedger: [
-      { version: '20260102000000', name: 'wrong_beta' },
       { version: '20260101000000', name: 'alpha' },
+      { version: '20260102000000', name: 'wrong_beta' },
       { version: '20260102000000', name: 'wrong_beta' },
       { version: '20260104000000', name: 'live_only' },
     ],
@@ -123,7 +123,7 @@ test('ledger comparison classifies every ordered identity failure', () => {
   assert.deepEqual(report.liveOnly.map((row) => row.version), ['20260104000000']);
   assert.equal(report.nameMismatches.length, 1);
   assert.equal(report.duplicateLiveVersions.length, 1);
-  assert.ok(report.orderingViolations.length >= 1);
+  assert.ok(!Object.hasOwn(report, 'orderingViolations'));
 });
 
 test('schema normalization is stable across key and array order', () => {
@@ -141,7 +141,7 @@ test('schema normalization is stable across key and array order', () => {
   assert.equal(left.overallSha256, right.overallSha256);
 });
 
-test('authorization-only drift is isolated and requires an exact allowlist pair', () => {
+test('every structural or authorization difference is unapproved drift', () => {
   const staging = normalizeSchemaFingerprint({
     structural: { tables: ['a'] },
     authorization: { grants: ['service_role'] },
@@ -150,26 +150,13 @@ test('authorization-only drift is isolated and requires an exact allowlist pair'
     structural: { tables: ['a'] },
     authorization: { grants: ['service_role', 'anon'] },
   });
-  const blocked = compareSchemaFingerprints({ staging, production });
-  assert.equal(blocked.status, 'UNAPPROVED_DRIFT');
-  assert.equal(blocked.differences[0].scope, 'authorization');
-
-  const allowed = compareSchemaFingerprints({
-    staging,
-    production,
-    allowlist: {
-      allowedDifferences: [{
-        scope: 'authorization',
-        stagingSha256: staging.authorizationSha256,
-        productionSha256: production.authorizationSha256,
-        reason: 'Temporary exact authorization fingerprint exception under reviewed incident control.',
-      }],
-    },
-  });
-  assert.equal(allowed.status, 'EXPECTED_DIFFERENCE');
+  const comparison = compareSchemaFingerprints({ staging, production });
+  assert.equal(comparison.status, 'UNAPPROVED_DRIFT');
+  assert.equal(comparison.differences[0].scope, 'authorization');
+  assert.ok(!Object.hasOwn(comparison.differences[0], 'allowed'));
 });
 
-test('database URL binding validates direct and pooler identities without returning credentials', () => {
+test('canonical database URL binding validates Supabase direct and pooler hosts', () => {
   const projectRef = 'abcdefghijklmnopqrst';
   const direct = validateDatabaseUrlProjectRef({
     databaseUrl: `postgresql://postgres:secret@db.${projectRef}.supabase.co:5432/postgres`,
@@ -185,9 +172,9 @@ test('database URL binding validates direct and pooler identities without return
   assert.equal(pooler.connectionType, 'pooler');
 
   assert.throws(() => validateDatabaseUrlProjectRef({
-    databaseUrl: 'postgresql://postgres:secret@db.wrongprojectrefxxxxx.supabase.co:5432/postgres',
+    databaseUrl: `postgresql://postgres.${projectRef}:secret@attacker.example:5432/postgres`,
     expectedProjectRef: projectRef,
-  }), /not bound/);
+  }), /expected Supabase project and host/);
 });
 
 test('attestation passes only when every required component passes', () => {
@@ -208,6 +195,9 @@ test('attestation passes only when every required component passes', () => {
   assert.equal(createReleaseAttestation(base).status, 'PASS');
   assert.equal(createReleaseAttestation({
     ...base,
-    productionLedger: { status: 'UNAPPROVED_DRIFT' },
+    schemaComparison: {
+      ...base.schemaComparison,
+      status: 'UNAPPROVED_DRIFT',
+    },
   }).status, 'BLOCKED');
 });
