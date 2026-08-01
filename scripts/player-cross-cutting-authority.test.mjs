@@ -27,6 +27,7 @@ function manifest() {
       "scripts/local-edge-runtime-isolation.mjs",
       "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
     ],
     requiredFiles: [
@@ -35,6 +36,7 @@ function manifest() {
       "scripts/local-edge-runtime-isolation.mjs",
       "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
     ],
     requiredChecks: [
