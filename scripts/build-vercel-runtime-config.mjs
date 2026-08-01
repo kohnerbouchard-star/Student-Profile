@@ -54,6 +54,18 @@ export const VERCEL_CRITICAL_ROUTE_CONTRACTS = Object.freeze([
     /canonicalCatchAllPath\(request\.url,\s*"\/api\/admin"\)/u,
     /proxyAdmin:\s*true/u,
   ]),
+  handlerContract("api/player-session/[...path].js", [
+    /proxyPlayerBff/u,
+    /canonicalCatchAllPath/u,
+    /canonicalCatchAllPath\(request\.url,\s*"\/api\/player-session"\)/u,
+    /proxyPlayer:\s*false/u,
+  ]),
+  handlerContract("api/player/[...path].js", [
+    /proxyPlayerBff/u,
+    /canonicalCatchAllPath/u,
+    /canonicalCatchAllPath\(request\.url,\s*"\/api\/player"\)/u,
+    /proxyPlayer:\s*true/u,
+  ]),
   handlerContract("api/admin-session/mfa/enroll.js", [
     /proxyAdminBff/u,
     /path:\s*\["mfa",\s*"enroll"\]/u,
