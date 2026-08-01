@@ -20,3 +20,28 @@ for (const functionName of functions) {
     assert.doesNotMatch(runtime, /raw\.githubusercontent\.com/u);
   });
 }
+
+test("Player web-session installs bounded read resilience before loading runtime", async () => {
+  const entrypoint = await readFile(
+    "backend/supabase/functions/player-web-session-api/index.ts",
+    "utf8",
+  );
+  const helper = await readFile(
+    "backend/supabase/functions/_shared/playerApiReadResilience.ts",
+    "utf8",
+  );
+
+  const importIndex = entrypoint.indexOf("createPlayerApiReadResilientFetch");
+  const installIndex = entrypoint.indexOf("resilientPlayerApiFetch as typeof globalThis.fetch");
+  const runtimeImport = entrypoint.indexOf('await import("./runtime.ts")');
+
+  assert.ok(importIndex >= 0, "Player BFF must import the reviewed retry helper");
+  assert.ok(installIndex > importIndex, "Player BFF must install the reviewed retry helper");
+  assert.ok(runtimeImport > installIndex, "Player runtime must load after resilient fetch installation");
+  assert.match(entrypoint, /player_api_read_retry/u);
+  assert.match(helper, /\["GET", "HEAD"\]/u);
+  assert.match(helper, /new Set\(\[502, 503, 504\]\)/u);
+  assert.match(helper, /DEFAULT_MAX_ATTEMPTS = 3/u);
+  assert.match(helper, /crypto\.getRandomValues/u);
+  assert.doesNotMatch(helper, /Math\.random/u);
+}
