@@ -34,6 +34,7 @@ test("Player read resilience is installed once at the outer client boundary", as
     "player-terminal/src/integrations/student-profile-read-resilience.js",
     "utf8",
   );
+  const bffProxy = await readFile("api/_player-bff-proxy.js", "utf8");
   const loadAdapter = await readFile(
     "scripts/player-runtime-load-profile.mjs",
     "utf8",
@@ -42,11 +43,23 @@ test("Player read resilience is installed once at the outer client boundary", as
   assert.doesNotMatch(entrypoint, /ResilientFetch|globalThis\.fetch\s*=/u);
   assert.match(runtimeIntegration, /createStudentProfileReadResilientFetch/u);
   assert.match(runtimeIntegration, /fetchImpl: resilientFetch/u);
-  assert.match(helper, /new Set\(\[500, 502, 503, 504\]\)/u);
+  assert.match(runtimeIntegration, /econovaria:player-read-resilience/u);
+  assert.match(runtimeIntegration, /retriesScheduled/u);
+
+  assert.match(helper, /new Set\(\[502, 503, 504, 546\]\)/u);
+  assert.match(helper, /WorkerAlreadyRetired/u);
+  assert.match(helper, /NON_RETRYABLE_503_PATTERNS/u);
   assert.match(helper, /\["GET", "HEAD"\]/u);
   assert.match(helper, /DEFAULT_MAX_ATTEMPTS = 3/u);
+  assert.match(helper, /DEFAULT_MAX_RETRY_ELAPSED_MS = 3_000/u);
+  assert.match(helper, /Date\.parse\(value\)/u);
   assert.match(helper, /globalThis\.crypto\.getRandomValues/u);
   assert.doesNotMatch(helper, /Math\.random/u);
+
+  assert.match(bffProxy, /X-Econovaria-Retryable/u);
+  assert.match(bffProxy, /transientWorkerFailureReason/u);
+  assert.match(bffProxy, /new Date\(timestamp\)\.toUTCString\(\)/u);
+
   assert.match(loadAdapter, /createStudentProfileReadResilientFetch/u);
   assert.match(loadAdapter, /readRetries: playerReadRetryEvents/u);
 });
