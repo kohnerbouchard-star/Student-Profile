@@ -134,16 +134,29 @@ select jsonb_build_object(
     ),
     'routineGrants', (
       select coalesce(jsonb_agg(jsonb_build_object(
-        'grantor', grantor,
-        'grantee', grantee,
-        'schema', routine_schema,
-        'routine', routine_name,
-        'specificName', specific_name,
-        'privilege', privilege_type,
-        'grantable', is_grantable
-      ) order by grantee, routine_schema, routine_name, specific_name, privilege_type, grantor), '[]'::jsonb)
-      from information_schema.routine_privileges
-      where routine_schema in ('public', 'private')
+        'grantor', pg_get_userbyid(grant_acl.grantor),
+        'grantee', case
+          when grant_acl.grantee = 0 then 'PUBLIC'
+          else pg_get_userbyid(grant_acl.grantee)
+        end,
+        'schema', n.nspname,
+        'routine', p.proname,
+        'arguments', pg_get_function_identity_arguments(p.oid),
+        'privilege', grant_acl.privilege_type,
+        'grantable', grant_acl.is_grantable
+      ) order by
+        case when grant_acl.grantee = 0 then 'PUBLIC' else pg_get_userbyid(grant_acl.grantee) end,
+        n.nspname,
+        p.proname,
+        pg_get_function_identity_arguments(p.oid),
+        grant_acl.privilege_type,
+        pg_get_userbyid(grant_acl.grantor)
+      ), '[]'::jsonb)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) as grant_acl
+      where n.nspname in ('public', 'private')
+        and p.prokind in ('f', 'p')
     ),
     'defaultPrivileges', (
       select coalesce(jsonb_agg(jsonb_build_object(
