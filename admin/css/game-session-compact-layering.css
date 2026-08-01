@@ -1,11 +1,24 @@
 /* Compact Admin session controls must remain below main-content actions. */
 @media (max-width: 1180px) {
+  .admin-terminal-left-menu,
   .econovaria-admin-game-session-controls-host {
-    z-index: auto !important;
+    position: relative;
+    z-index: 0 !important;
   }
 
   .econovaria-admin-game-session-controls-host .econovaria-admin-logout-button,
   .econovaria-admin-game-session-controls-host [data-econovaria-admin-logout="true"] {
     z-index: auto !important;
+  }
+
+  /*
+   * Compact layouts stack the navigation rail and main workspace closely.
+   * Give the workspace an explicit higher stacking context so a visually
+   * displaced session control can never capture a main-content action.
+   */
+  .admin-terminal-shell-main {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
   }
 }
