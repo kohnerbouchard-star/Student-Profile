@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { validateDatabaseUrlProjectRef } from './database-binding.mjs';
 
 const releaseWorkflow = readFileSync('.github/workflows/release-integrity.yml', 'utf8');
 const retiredWorkflow = readFileSync('.github/workflows/production-runtime-promotion-v2.yml', 'utf8');
 const contractWorkflow = readFileSync('.github/workflows/production-runtime-promotion-contract.yml', 'utf8');
+const fingerprintSql = readFileSync('scripts/release-integrity/export-schema-fingerprint.sql', 'utf8');
 const design = readFileSync('docs/operations/release-integrity-gates-v1.md', 'utf8');
 const expectedDifferences = JSON.parse(
   readFileSync('docs/operations/contracts/release-integrity-expected-differences-v1.json', 'utf8'),
@@ -72,6 +74,27 @@ test('contract workflow is pinned and exercises all release integrity tests', ()
   ]) {
     assert.ok(contractWorkflow.includes(marker), `missing contract workflow marker: ${marker}`);
   }
+});
+
+test('schema authorization evidence uses stable routine signatures', () => {
+  assert.ok(fingerprintSql.includes("'arguments', pg_get_function_identity_arguments(p.oid)"));
+  assert.ok(fingerprintSql.includes("aclexplode(coalesce(p.proacl, acldefault('f', p.proowner)))"));
+  assert.ok(!fingerprintSql.includes('specificName'));
+  assert.ok(!fingerprintSql.includes('specific_name'));
+});
+
+test('database bindings reject non-Supabase hosts even with a matching username', () => {
+  const projectRef = 'abcdefghijklmnopqrst';
+  const accepted = validateDatabaseUrlProjectRef({
+    databaseUrl: `postgresql://postgres.${projectRef}:secret@aws-0-region.pooler.supabase.com:5432/postgres`,
+    expectedProjectRef: projectRef,
+  });
+  assert.equal(accepted.connectionType, 'pooler');
+
+  assert.throws(() => validateDatabaseUrlProjectRef({
+    databaseUrl: `postgresql://postgres.${projectRef}:secret@attacker.example:5432/postgres`,
+    expectedProjectRef: projectRef,
+  }), /expected Supabase project and host/);
 });
 
 test('design authority and expected-difference contract remain fail closed', () => {
