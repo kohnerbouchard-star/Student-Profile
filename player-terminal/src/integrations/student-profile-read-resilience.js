@@ -21,6 +21,7 @@ const DEFAULT_MAX_JITTER_MS = 300;
 const DEFAULT_MAX_RETRY_ELAPSED_MS = 3_000;
 const MAX_INSPECTED_RESPONSE_BYTES = 8_192;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const IMF_FIXDATE_PATTERN = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
 
 export function createStudentProfileReadResilientFetch(
   fetchImpl,
@@ -280,6 +281,7 @@ function parsedRetryAfterMs(response, nowMs) {
     const seconds = Number(value);
     return Number.isSafeInteger(seconds) ? seconds * 1_000 : 0;
   }
+  if (!IMF_FIXDATE_PATTERN.test(value)) return 0;
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? Math.max(0, timestamp - nowMs) : 0;
 }
