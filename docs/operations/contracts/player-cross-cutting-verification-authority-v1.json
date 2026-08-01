@@ -48,6 +48,7 @@
     "frontend/src/core/api.js",
     "frontend/src/core/login.js",
     "index.html",
+    "player-terminal/tools/connected-admin-ledger-runner.mjs",
     "scripts/admin-auth-session-resilience-smoke.mjs",
     "scripts/admin-browser-reconnaissance-core.mjs",
     "scripts/admin-explicit-mounted-event-smoke.mjs",
