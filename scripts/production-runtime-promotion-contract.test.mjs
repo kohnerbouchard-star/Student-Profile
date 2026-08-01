@@ -31,7 +31,12 @@ for (const forbidden of [
 }
 
 for (const marker of [
+  'merge_group:',
+  'EXPECTED_SOURCE_SHA: ${{ github.sha }}',
   'default_transaction_read_only=on',
+  'PGSSLMODE: verify-full',
+  'SUPABASE_DB_CA_CERT',
+  'PGSSLROOTCERT',
   'environment: production',
   'verify-source',
   'validate-db-url',
@@ -41,6 +46,14 @@ for (const marker of [
   'enforce-attestation',
 ]) {
   assert.ok(releaseIntegrity.includes(marker), `missing release-integrity marker: ${marker}`);
+}
+
+for (const forbidden of [
+  'github.event.pull_request.head.sha',
+  '--allowlist',
+  'release-integrity-expected-differences-v1.json',
+]) {
+  assert.ok(!releaseIntegrity.includes(forbidden), `release integrity contains retired behavior: ${forbidden}`);
 }
 
 console.log('production runtime promotion contract: ok');
