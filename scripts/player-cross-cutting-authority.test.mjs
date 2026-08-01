@@ -24,7 +24,9 @@ function manifest() {
       "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
       "api/player-session/[...path].js",
+      "api/player-session-proxy.js",
       "api/player/[...path].js",
+      "api/player-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -34,12 +36,15 @@ function manifest() {
       "scripts/player-cross-cutting-authority.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
       "scripts/vercel-deployment-contract.test.mjs",
+      "vercel.json",
     ],
     requiredFiles: [
       "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
       "api/player-session/[...path].js",
+      "api/player-session-proxy.js",
       "api/player/[...path].js",
+      "api/player-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
@@ -47,6 +52,7 @@ function manifest() {
       "frontend/src/core/api.js",
       "scripts/build-vercel-runtime-config.mjs",
       "scripts/vercel-deployment-contract.test.mjs",
+      "vercel.json",
     ],
     requiredChecks: [
       "player-terminal-verify",
@@ -120,5 +126,24 @@ test("Player and Admin CSRF response state remains surface-isolated", async () =
   assert.doesNotMatch(
     source,
     /if \(surface === "player" \|\| surface === "playerWebSession"\) rememberPlayerCsrf\(result\);\s*rememberAdminCsrf\(result\);/u,
+  );
+});
+
+test("Player namespaces retain explicit Vercel rewrites", async () => {
+  const configuration = JSON.parse(
+    await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  );
+  assert.deepEqual(
+    configuration.rewrites.filter((entry) => entry.source.startsWith("/api/player")),
+    [
+      {
+        source: "/api/player-session/:path*",
+        destination: "/api/player-session-proxy?path=:path*",
+      },
+      {
+        source: "/api/player/:path*",
+        destination: "/api/player-proxy?path=:path*",
+      },
+    ],
   );
 });
