@@ -1,7 +1,6 @@
 (function initEconovariaAdminInventoryRedemptionQueue() {
   "use strict";
 
-  const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const DRAWER_ID = "adminInventoryRedemptionDrawer";
   const REVIEW_MODAL_ID = "inventory-redemption-review";
   const FILTERS = Object.freeze({ pending: "Pending", all: "History" });
@@ -32,7 +31,8 @@
 
   function selectedGameId() {
     try {
-      return text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+      const selection = window.EconovariaAdminGameSelection;
+      return typeof selection?.read === "function" ? text(selection.read()) : "";
     } catch (_) {
       return "";
     }
@@ -401,12 +401,21 @@
     });
   }
 
-  function idempotencyKey(action, requestId) {
+  function randomIdempotencySuffix() {
     const runtimeCrypto = window.crypto || null;
-    const suffix = typeof runtimeCrypto?.randomUUID === "function"
-      ? runtimeCrypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    return `admin-redemption:${action}:${requestId}:${suffix}`.slice(0, 128);
+    if (typeof runtimeCrypto?.randomUUID === "function") {
+      return runtimeCrypto.randomUUID();
+    }
+    if (typeof runtimeCrypto?.getRandomValues !== "function") {
+      throw new Error("Cryptographic request identity is unavailable.");
+    }
+    const bytes = new Uint8Array(16);
+    runtimeCrypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  }
+
+  function idempotencyKey(action, requestId) {
+    return `admin-redemption:${action}:${requestId}:${randomIdempotencySuffix()}`.slice(0, 128);
   }
 
   function closeReviewDialog(reason = "closed") {
