@@ -3,7 +3,9 @@
 const MAX_PATH_BYTES = 2_048;
 const ALLOWED_PREFIXES = new Set([
   "/api/admin-session",
-  "/api/admin"
+  "/api/admin",
+  "/api/player-session",
+  "/api/player"
 ]);
 
 function canonicalCatchAllPath(rawUrl, prefix) {
