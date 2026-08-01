@@ -20,6 +20,9 @@ on:
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
       - "scripts/verify-player-cross-cutting-authority.mjs"
+      - "scripts/local-edge-runtime-isolation.mjs"
+      - "scripts/local-edge-runtime-isolation.test.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
       - ".github/workflows/production-web-session-secrets.yml"
   push:
@@ -43,6 +46,9 @@ on:
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
       - "scripts/verify-player-cross-cutting-authority.mjs"
+      - "scripts/local-edge-runtime-isolation.mjs"
+      - "scripts/local-edge-runtime-isolation.test.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
       - ".github/workflows/production-web-session-secrets.yml"
 
@@ -108,7 +114,8 @@ jobs:
           set -euo pipefail
           node --test \
             scripts/player-api-read-resilience.test.mjs \
-            scripts/player-bff-retry-classification.test.mjs
+            scripts/player-bff-retry-classification.test.mjs \
+            scripts/local-edge-runtime-isolation.test.mjs
 
       - name: Install package dependencies
         working-directory: player-terminal
