@@ -59,7 +59,8 @@ export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, bas
   assert(
     requiredChecks.includes("player-terminal-verify") &&
       requiredChecks.includes("player-edge-trusted-ip-entrypoint-contract") &&
-      requiredChecks.includes("player-production-secret-provision-contract"),
+      requiredChecks.includes("player-production-secret-provision-contract") &&
+      requiredChecks.includes("player-api-read-resilience"),
     "Player authority omits a required verification contract.",
   );
 
