@@ -6,6 +6,8 @@ import {
 
 const REQUEST_ID = `red_${"b".repeat(32)}`;
 const CSRF_TOKEN = "C".repeat(43);
+const ADMIN_URL = new URL(BASE_URL);
+ADMIN_URL.searchParams.set("game", GAME_ID);
 
 function redemption(status = "pending") {
   return {
@@ -138,7 +140,7 @@ async function runViewport(viewport, fullFlow) {
   });
 
   try {
-    await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(ADMIN_URL.toString(), { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
     await page.waitForSelector('[data-admin-section="Store"]', { timeout: 15_000 });
     await page.locator('[data-admin-section="Store"]').click();
