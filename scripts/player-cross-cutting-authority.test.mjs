@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -104,5 +105,20 @@ test("cross-cutting Player authority rejects identity and production drift", () 
       baseRef: "main",
     }),
     /deny production mutation/u,
+  );
+});
+
+test("Player and Admin CSRF response state remains surface-isolated", async () => {
+  const source = await readFile(
+    new URL("../frontend/src/core/api.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /if \(surface === "player" \|\| surface === "playerWebSession"\) \{\s*rememberPlayerCsrf\(result\);\s*\} else if \(surface === "webSession"\) \{\s*rememberAdminCsrf\(result\);\s*\}/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /if \(surface === "player" \|\| surface === "playerWebSession"\) rememberPlayerCsrf\(result\);\s*rememberAdminCsrf\(result\);/u,
   );
 });
