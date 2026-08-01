@@ -1,0 +1,49 @@
+name: Workflow Action Pinning
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/admin-scroll-integrity.yml"
+      - ".github/workflows/beta-security-contract.yml"
+      - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-terminal-verify.yml"
+      - ".github/workflows/production-web-session-secrets.yml"
+      - ".github/workflows/workflow-action-pinning.yml"
+      - "scripts/workflow-action-pinning.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-scroll-integrity.yml"
+      - ".github/workflows/beta-security-contract.yml"
+      - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-terminal-verify.yml"
+      - ".github/workflows/production-web-session-secrets.yml"
+      - ".github/workflows/workflow-action-pinning.yml"
+      - "scripts/workflow-action-pinning.test.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-action-pinning-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify immutable third-party actions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Reject movable action references
+        run: node --test scripts/workflow-action-pinning.test.mjs
