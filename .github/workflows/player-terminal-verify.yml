@@ -3,6 +3,7 @@ name: Player Terminal Verify
 on:
   pull_request:
     paths:
+      - "api/_player-bff-proxy.js"
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
@@ -14,6 +15,7 @@ on:
       - "scripts/environment-neutral-browser-integration.test.mjs"
       - "scripts/security-audit-remediation-contract.test.mjs"
       - "scripts/player-api-read-resilience.test.mjs"
+      - "scripts/player-bff-retry-classification.test.mjs"
       - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -24,6 +26,7 @@ on:
     branches:
       - main
     paths:
+      - "api/_player-bff-proxy.js"
       - "player-terminal/**"
       - "frontend/src/core/runtime-config.js"
       - "docs/operations/environments/runtime-config.env.template.js"
@@ -35,6 +38,7 @@ on:
       - "scripts/environment-neutral-browser-integration.test.mjs"
       - "scripts/security-audit-remediation-contract.test.mjs"
       - "scripts/player-api-read-resilience.test.mjs"
+      - "scripts/player-bff-retry-classification.test.mjs"
       - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -102,7 +106,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/player-api-read-resilience.test.mjs
+          node --test \
+            scripts/player-api-read-resilience.test.mjs \
+            scripts/player-bff-retry-classification.test.mjs
 
       - name: Install package dependencies
         working-directory: player-terminal
