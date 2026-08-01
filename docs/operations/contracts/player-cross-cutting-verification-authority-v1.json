@@ -19,6 +19,7 @@
     "admin/admin-auth.js",
     "admin/admin-logout-controller.js",
     "admin/auth-session-manager.js",
+    "admin/css/game-session-compact-layering.css",
     "admin/game-code-wiring.js",
     "admin/game-session-controls.js",
     "admin/index.html",
