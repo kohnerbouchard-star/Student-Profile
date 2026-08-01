@@ -8,7 +8,7 @@ import {
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 489;
+const AUTHORIZED_PR = 488;
 
 function manifest() {
   return {
@@ -22,21 +22,15 @@ function manifest() {
     productionMutationAllowed: false,
     secretValuesAllowed: false,
     allowedPaths: [
+      "backend/supabase/functions/player-web-session-api/index.ts",
       DEFAULT_AUTHORITY_PATH,
-      "scripts/business-banking-player-world-browser-acceptance.mjs",
-      "scripts/local-edge-runtime-isolation.mjs",
-      "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
-      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
     ],
     requiredFiles: [
+      "backend/supabase/functions/player-web-session-api/index.ts",
       DEFAULT_AUTHORITY_PATH,
-      "scripts/business-banking-player-world-browser-acceptance.mjs",
-      "scripts/local-edge-runtime-isolation.mjs",
-      "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
-      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
     ],
     requiredChecks: [
