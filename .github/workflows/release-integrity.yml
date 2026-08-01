@@ -12,11 +12,13 @@ on:
       - "backend/supabase/migrations/**"
       - "scripts/release-integrity/**"
       - "scripts/production-runtime-promotion-contract.test.mjs"
-      - "docs/operations/release-integrity-gates-v1.md"
-      - "docs/operations/contracts/release-integrity-expected-differences-v1.json"
+      - "docs/operations/release-integrity-gates-v1*.md"
       - ".github/workflows/release-integrity.yml"
       - ".github/workflows/production-runtime-promotion-v2.yml"
       - ".github/workflows/production-runtime-promotion-contract.yml"
+  merge_group:
+    types:
+      - checks_requested
   push:
     branches:
       - main
@@ -28,8 +30,7 @@ on:
       - "backend/supabase/migrations/**"
       - "scripts/release-integrity/**"
       - "scripts/production-runtime-promotion-contract.test.mjs"
-      - "docs/operations/release-integrity-gates-v1.md"
-      - "docs/operations/contracts/release-integrity-expected-differences-v1.json"
+      - "docs/operations/release-integrity-gates-v1*.md"
       - ".github/workflows/release-integrity.yml"
       - ".github/workflows/production-runtime-promotion-v2.yml"
       - ".github/workflows/production-runtime-promotion-contract.yml"
@@ -57,10 +58,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      EXPECTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_SOURCE_SHA: ${{ github.sha }}
       REQUESTED_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || '' }}
     steps:
-      - name: Check out exact source
+      - name: Check out exact merge candidate or source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
@@ -139,7 +140,8 @@ jobs:
       REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
       STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
       PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      PGSSLMODE: require
+      SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+      PGSSLMODE: verify-full
       PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
     steps:
       - name: Check out exact inspected source
@@ -157,6 +159,17 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Configure certificate-verified database TLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_CA_CERT"
+          cert_path="$RUNNER_TEMP/supabase-db-ca.crt"
+          umask 077
+          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
+          test -s "$cert_path"
+          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
 
       - name: Verify source and database project bindings
         shell: bash
@@ -202,7 +215,7 @@ jobs:
           psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" \
             > release-integrity-artifacts/production-ledger.json
 
-      - name: Compare complete migration ledgers
+      - name: Compare complete migration identities
         continue-on-error: true
         shell: bash
         run: |
@@ -246,7 +259,6 @@ jobs:
           node scripts/release-integrity/cli.mjs compare-schema \
             --staging release-integrity-artifacts/staging-schema-fingerprint.json \
             --production release-integrity-artifacts/production-schema-fingerprint.json \
-            --allowlist docs/operations/contracts/release-integrity-expected-differences-v1.json \
             --allow-failure \
             --output release-integrity-artifacts/schema-comparison.json
 
@@ -264,9 +276,13 @@ jobs:
             --allow-failure \
             --output release-integrity-artifacts/release-attestation.json
 
-      - name: Remove raw live ledger exports
+      - name: Remove raw live evidence and TLS material
         if: always()
-        run: rm -f release-integrity-artifacts/staging-ledger.json release-integrity-artifacts/production-ledger.json
+        run: |
+          rm -f \
+            release-integrity-artifacts/staging-ledger.json \
+            release-integrity-artifacts/production-ledger.json \
+            "$RUNNER_TEMP/supabase-db-ca.crt"
 
       - name: Upload sanitized live parity evidence
         if: always()
