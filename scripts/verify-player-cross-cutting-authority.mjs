@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 
 export const DEFAULT_AUTHORITY_PATH =
   "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json";
+export const EXPECTED_AUTHORITY_ID = "econovaria.player-bff-routing-pr-480.v1";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -21,7 +22,7 @@ function uniqueStrings(value, label) {
 export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, baseRef }) {
   assert(manifest?.schemaVersion === 1, "Unsupported Player authority schema version.");
   assert(
-    manifest.authorityId === "econovaria.admin-player-convergence-pr-476.v1",
+    manifest.authorityId === EXPECTED_AUTHORITY_ID,
     "Unexpected Player authority identifier.",
   );
   assert(

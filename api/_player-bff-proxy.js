@@ -146,6 +146,7 @@ function normalizedPath(value) {
 function filteredSearch(rawUrl) {
   const parsed = new URL(String(rawUrl || "/"), "https://proxy.invalid");
   parsed.searchParams.delete("path");
+  parsed.searchParams.delete("...path");
   const search = parsed.search;
   return Buffer.byteLength(search, "utf8") <= MAX_PATH_BYTES ? search : "";
 }
@@ -286,6 +287,8 @@ function errorBody(code, message) {
 module.exports = {
   proxyPlayerBff,
   __test: Object.freeze({
+    filteredSearch,
+    normalizedPath,
     normalizedRetryAfter,
     transientWorkerFailureReason
   })

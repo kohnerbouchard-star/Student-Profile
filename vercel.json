@@ -12,6 +12,14 @@
     {
       "source": "/api/admin/:path*",
       "destination": "/api/admin-proxy?path=:path*"
+    },
+    {
+      "source": "/api/player-session/:path*",
+      "destination": "/api/player-session-proxy?path=:path*"
+    },
+    {
+      "source": "/api/player/:path*",
+      "destination": "/api/player-proxy?path=:path*"
     }
   ],
   "headers": [

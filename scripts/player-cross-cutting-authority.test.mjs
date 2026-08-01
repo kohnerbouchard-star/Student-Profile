@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
   DEFAULT_AUTHORITY_PATH,
+  EXPECTED_AUTHORITY_ID,
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
 function manifest() {
   return {
     schemaVersion: 1,
-    authorityId: "econovaria.admin-player-convergence-pr-476.v1",
+    authorityId: EXPECTED_AUTHORITY_ID,
     purpose: "authorize-cross-cutting-player-verification",
-    pullRequestNumber: 476,
+    pullRequestNumber: 480,
     baseRef: "main",
     scopeLock: "exact-path-allowlist",
     productionDeploymentAllowed: false,
@@ -19,56 +21,38 @@ function manifest() {
     secretValuesAllowed: false,
     allowedPaths: [
       DEFAULT_AUTHORITY_PATH,
-      "scripts/verify-player-cross-cutting-authority.mjs",
-      "scripts/player-cross-cutting-authority.test.mjs",
-      "admin/css/game-session-compact-layering.css",
+      "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
+      "api/player-session/[...path].js",
+      "api/player-session-proxy.js",
+      "api/player/[...path].js",
+      "api/player-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
       "backend/supabase/functions/player-web-session-api/runtime.ts",
-      "docs/operations/evidence/player-login-production-secret-trigger-v1.json",
-      "player-terminal/src/integrations/student-profile-read-resilience.js",
-      "player-terminal/src/integrations/student-profile-runtime.js",
-      "scripts/admin-loading-scanner-smoke.mjs",
-      "scripts/business-banking-player-business-browser-acceptance.mjs",
-      "scripts/business-banking-player-commerce-browser-acceptance.mjs",
-      "scripts/business-banking-player-inventory-browser-acceptance.mjs",
-      "scripts/business-banking-player-market-browser-acceptance.mjs",
-      "scripts/business-banking-player-world-browser-acceptance.mjs",
-      "scripts/local-edge-runtime-isolation.mjs",
-      "scripts/local-edge-runtime-isolation.test.mjs",
-      "scripts/player-api-read-resilience.test.mjs",
-      "scripts/player-bff-retry-classification.test.mjs",
-      "scripts/player-contracts-browser-acceptance.mjs",
-      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
-      "scripts/player-production-secret-provision-contract.test.mjs",
-      "scripts/player-runtime-load-profile.mjs",
-      "scripts/security-audit-remediation-contract.test.mjs",
+      "frontend/src/core/api.js",
+      "scripts/build-vercel-runtime-config.mjs",
+      "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/verify-player-cross-cutting-authority.mjs",
+      "scripts/vercel-deployment-contract.test.mjs",
+      "vercel.json",
     ],
     requiredFiles: [
+      "api/_canonical-bff-path.js",
       "api/_player-bff-proxy.js",
+      "api/player-session/[...path].js",
+      "api/player-session-proxy.js",
+      "api/player/[...path].js",
+      "api/player-proxy.js",
       "backend/supabase/functions/player-api/index.ts",
       "backend/supabase/functions/player-api/runtime.ts",
       "backend/supabase/functions/player-web-session-api/index.ts",
       "backend/supabase/functions/player-web-session-api/runtime.ts",
-      "docs/operations/evidence/player-login-production-secret-trigger-v1.json",
-      "player-terminal/src/integrations/student-profile-read-resilience.js",
-      "player-terminal/src/integrations/student-profile-runtime.js",
-      "scripts/business-banking-player-business-browser-acceptance.mjs",
-      "scripts/business-banking-player-commerce-browser-acceptance.mjs",
-      "scripts/business-banking-player-inventory-browser-acceptance.mjs",
-      "scripts/business-banking-player-market-browser-acceptance.mjs",
-      "scripts/business-banking-player-world-browser-acceptance.mjs",
-      "scripts/local-edge-runtime-isolation.mjs",
-      "scripts/local-edge-runtime-isolation.test.mjs",
-      "scripts/player-api-read-resilience.test.mjs",
-      "scripts/player-bff-retry-classification.test.mjs",
-      "scripts/player-contracts-browser-acceptance.mjs",
-      "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
-      "scripts/player-production-secret-provision-contract.test.mjs",
-      "scripts/player-runtime-load-profile.mjs",
-      "scripts/security-audit-remediation-contract.test.mjs",
+      "frontend/src/core/api.js",
+      "scripts/build-vercel-runtime-config.mjs",
+      "scripts/vercel-deployment-contract.test.mjs",
+      "vercel.json",
     ],
     requiredChecks: [
       "player-terminal-verify",
@@ -86,7 +70,7 @@ test("cross-cutting Player authority accepts only its PR-bound exact scope", () 
   const result = verifyAuthority({
     manifest: value,
     changedPaths: [...value.allowedPaths],
-    pullRequestNumber: 476,
+    pullRequestNumber: 480,
     baseRef: "main",
   });
   assert.equal(result.changedPathCount, value.allowedPaths.length);
@@ -98,7 +82,7 @@ test("cross-cutting Player authority rejects an unreviewed path", () => {
     () => verifyAuthority({
       manifest: value,
       changedPaths: [...value.allowedPaths, "scripts/unreviewed-production-step.mjs"],
-      pullRequestNumber: 476,
+      pullRequestNumber: 480,
       baseRef: "main",
     }),
     /does not allow changed path/u,
@@ -111,7 +95,7 @@ test("cross-cutting Player authority rejects identity and production drift", () 
     () => verifyAuthority({
       manifest: wrongPr,
       changedPaths: wrongPr.allowedPaths,
-      pullRequestNumber: 477,
+      pullRequestNumber: 481,
       baseRef: "main",
     }),
     /not bound to this pull request/u,
@@ -123,9 +107,43 @@ test("cross-cutting Player authority rejects identity and production drift", () 
     () => verifyAuthority({
       manifest: productionEnabled,
       changedPaths: productionEnabled.allowedPaths,
-      pullRequestNumber: 476,
+      pullRequestNumber: 480,
       baseRef: "main",
     }),
     /deny production mutation/u,
+  );
+});
+
+test("Player and Admin CSRF response state remains surface-isolated", async () => {
+  const source = await readFile(
+    new URL("../frontend/src/core/api.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /if \(surface === "player" \|\| surface === "playerWebSession"\) \{\s*rememberPlayerCsrf\(result\);\s*\} else if \(surface === "webSession"\) \{\s*rememberAdminCsrf\(result\);\s*\}/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /if \(surface === "player" \|\| surface === "playerWebSession"\) rememberPlayerCsrf\(result\);\s*rememberAdminCsrf\(result\);/u,
+  );
+});
+
+test("Player namespaces retain explicit Vercel rewrites", async () => {
+  const configuration = JSON.parse(
+    await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  );
+  assert.deepEqual(
+    configuration.rewrites.filter((entry) => entry.source.startsWith("/api/player")),
+    [
+      {
+        source: "/api/player-session/:path*",
+        destination: "/api/player-session-proxy?path=:path*",
+      },
+      {
+        source: "/api/player/:path*",
+        destination: "/api/player-proxy?path=:path*",
+      },
+    ],
   );
 });
