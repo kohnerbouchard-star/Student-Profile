@@ -23,6 +23,11 @@ on:
       - "scripts/local-edge-runtime-isolation.mjs"
       - "scripts/local-edge-runtime-isolation.test.mjs"
       - "scripts/business-banking-player-world-browser-acceptance.mjs"
+      - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
+      - "scripts/player-contracts-browser-acceptance.mjs"
+      - "scripts/business-banking-player-market-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
       - ".github/workflows/production-web-session-secrets.yml"
   push:
@@ -49,6 +54,11 @@ on:
       - "scripts/local-edge-runtime-isolation.mjs"
       - "scripts/local-edge-runtime-isolation.test.mjs"
       - "scripts/business-banking-player-world-browser-acceptance.mjs"
+      - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
+      - "scripts/player-contracts-browser-acceptance.mjs"
+      - "scripts/business-banking-player-market-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
       - ".github/workflows/player-terminal-verify.yml"
       - ".github/workflows/production-web-session-secrets.yml"
 
