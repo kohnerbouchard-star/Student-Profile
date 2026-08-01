@@ -19,13 +19,18 @@ import { createStudentProfileReadResilientFetch } from "../player-terminal/src/i
     next: `const READ_SCHEDULING = "sequential-per-player";
 const playerReadRetryEvents = [];
 const resilientPlayerFetch = createStudentProfileReadResilientFetch(globalThis.fetch, {
-  onRetry: (event) => playerReadRetryEvents.push({
+  onEvent: (event) => playerReadRetryEvents.push({
+    type: event.type,
     attempt: event.attempt,
     nextAttempt: event.nextAttempt,
     delayMs: event.delayMs,
     path: event.path,
     status: event.status,
     reason: event.reason,
+    classification: event.classification,
+    retryAfterMs: event.retryAfterMs,
+    remainingBudgetMs: event.remainingBudgetMs,
+    elapsedMs: event.elapsedMs,
   }),
 });`,
   },
