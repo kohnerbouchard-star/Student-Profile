@@ -18,7 +18,7 @@ const SOURCE_SHA = '0123456789abcdef0123456789abcdef01234567';
 async function createRuntimeFixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'econovaria-runtime-'));
   await writeFile(path.join(root, 'package.json'), JSON.stringify({
-    engines: { node: '>=22.23.1 <23', npm: '>=10.9.8 <11' },
+    engines: { node: '>=22.22.2 <23', npm: '>=10.9.7 <11' },
     packageManager: 'npm@10.9.8',
   }));
   await writeFile(path.join(root, '.nvmrc'), '22.23.1\n');
@@ -36,23 +36,33 @@ test('runtime contract distinguishes exact CI from compatible deploy runtimes', 
   });
   assert.equal(exact.status, 'PASS');
 
-  const compatible = await verifyRuntimeContract({
+  const verifiedVercelFloor = await verifyRuntimeContract({
+    repoRoot,
+    mode: 'compatible',
+    currentNode: '22.22.2',
+    currentNpm: '10.9.7',
+  });
+  assert.equal(verifiedVercelFloor.status, 'PASS');
+
+  const newerCompatiblePatch = await verifyRuntimeContract({
     repoRoot,
     mode: 'compatible',
     currentNode: '22.24.0',
     currentNpm: '10.10.0',
   });
-  assert.equal(compatible.status, 'PASS');
+  assert.equal(newerCompatiblePatch.status, 'PASS');
 
-  await assert.rejects(
-    verifyRuntimeContract({
-      repoRoot,
-      mode: 'compatible',
-      currentNode: '22.22.2',
-      currentNpm: '10.9.7',
-    }),
-    /Runtime contract failed/,
-  );
+  for (const [currentNode, currentNpm] of [
+    ['22.22.1', '10.9.7'],
+    ['22.22.2', '10.9.6'],
+    ['23.0.0', '10.9.8'],
+    ['22.23.1', '11.0.0'],
+  ]) {
+    await assert.rejects(
+      verifyRuntimeContract({ repoRoot, mode: 'compatible', currentNode, currentNpm }),
+      /Runtime contract failed/,
+    );
+  }
 });
 
 test('runtime contract requires engine-strict', async () => {
