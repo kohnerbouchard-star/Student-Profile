@@ -115,7 +115,7 @@ test('schema evidence uses SHA-256, stable ownership, and relevant role authorit
   assert.ok(!fingerprintSql.includes('specific_name'));
 });
 
-test('database bindings reject non-Supabase hosts even with a matching username', () => {
+test('database bindings reject non-Supabase hosts and TLS downgrade parameters', () => {
   const projectRef = 'abcdefghijklmnopqrst';
   const accepted = validateDatabaseUrlProjectRef({
     databaseUrl: `postgresql://postgres.${projectRef}:secret@aws-0-region.pooler.supabase.com:5432/postgres`,
@@ -127,6 +127,16 @@ test('database bindings reject non-Supabase hosts even with a matching username'
     databaseUrl: `postgresql://postgres.${projectRef}:secret@attacker.example:5432/postgres`,
     expectedProjectRef: projectRef,
   }), /expected Supabase project and host/);
+
+  assert.throws(() => validateDatabaseUrlProjectRef({
+    databaseUrl: `postgresql://postgres.${projectRef}:secret@aws-0-region.pooler.supabase.com:5432/postgres?sslmode=require`,
+    expectedProjectRef: projectRef,
+  }), /below verify-full/);
+
+  assert.throws(() => validateDatabaseUrlProjectRef({
+    databaseUrl: `postgresql://postgres.${projectRef}:secret@aws-0-region.pooler.supabase.com:5432/postgres?sslrootcert=%2Ftmp%2Funtrusted.crt`,
+    expectedProjectRef: projectRef,
+  }), /protected TLS root certificate/);
 });
 
 test('design authority and hardening amendment remain fail closed', () => {
