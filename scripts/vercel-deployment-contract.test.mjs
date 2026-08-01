@@ -49,8 +49,16 @@ const criticalRouteFixtures = new Map([
     `"use strict";\nconst { proxyPlayerBff } = require("../_player-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/player-session") };\n  return proxyPlayerBff(normalizedRequest, response, { proxyPlayer: false });\n};\n`,
   ],
   [
+    "api/player-session-proxy.js",
+    `"use strict";\nconst { proxyPlayerBff } = require("./_player-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const path = request.query?.path;\n  if (typeof path !== "string") return response.end(JSON.stringify({ error: { code: "invalid_proxy_path" } }));\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path };\n  return proxyPlayerBff(normalizedRequest, response, { proxyPlayer: false });\n};\n`,
+  ],
+  [
     "api/player/[...path].js",
     `"use strict";\nconst { proxyPlayerBff } = require("../_player-bff-proxy.js");\nconst { canonicalCatchAllPath } = require("../_canonical-bff-path.js");\nmodule.exports = function route(request, response) {\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path: canonicalCatchAllPath(request.url, "/api/player") };\n  return proxyPlayerBff(normalizedRequest, response, { proxyPlayer: true });\n};\n`,
+  ],
+  [
+    "api/player-proxy.js",
+    `"use strict";\nconst { proxyPlayerBff } = require("./_player-bff-proxy.js");\nmodule.exports = function route(request, response) {\n  const path = request.query?.path;\n  if (typeof path !== "string") return response.end(JSON.stringify({ error: { code: "invalid_proxy_path" } }));\n  const normalizedRequest = Object.create(request);\n  normalizedRequest.query = { path };\n  return proxyPlayerBff(normalizedRequest, response, { proxyPlayer: true });\n};\n`,
   ],
   [
     "api/admin-session/mfa/enroll.js",
@@ -199,12 +207,12 @@ test("rejects missing recovery routes and retired or unsafe proxy targets", asyn
       criticalRouteFixtures.get("api/admin-logout.js"),
     );
     await writeFile(
-      path.join(fixtureRoot, "api", "admin-proxy.js"),
-      `${criticalRouteFixtures.get("api/admin-proxy.js")}\nfetch("https://unsafe.supabase.co/functions/v1/admin-api");\n`,
+      path.join(fixtureRoot, "api", "player-proxy.js"),
+      `${criticalRouteFixtures.get("api/player-proxy.js")}\nfetch("https://unsafe.supabase.co/functions/v1/player-api");\n`,
     );
     await assert.rejects(
       validateCriticalVercelRoutes({ repoRoot: fixtureRoot }),
-      /retired or unsafe target: api\/admin-proxy\.js/u,
+      /retired or unsafe target: api\/player-proxy\.js/u,
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
@@ -246,7 +254,7 @@ test("Player route normalization preserves route identity and strips Vercel meta
   );
 });
 
-test("Vercel config preserves API function discovery", async () => {
+test("Vercel config preserves and explicitly rewrites Player API functions", async () => {
   const configuration = JSON.parse(
     await readFile(path.join(repositoryRoot, "vercel.json"), "utf8"),
   );
@@ -258,11 +266,26 @@ test("Vercel config preserves API function discovery", async () => {
     "node scripts/build-vercel-runtime-config.mjs",
   );
   assert.equal(configuration.functions?.["api/**/*.js"]?.maxDuration, 30);
+  assert.deepEqual(
+    configuration.rewrites.filter((entry) => entry.source.startsWith("/api/player")),
+    [
+      {
+        source: "/api/player-session/:path*",
+        destination: "/api/player-session-proxy?path=:path*",
+      },
+      {
+        source: "/api/player/:path*",
+        destination: "/api/player-proxy?path=:path*",
+      },
+    ],
+  );
 
   for (const relativePath of [
     "api/admin-session/[...path].js",
     "api/player-session/[...path].js",
+    "api/player-session-proxy.js",
     "api/player/[...path].js",
+    "api/player-proxy.js",
   ]) {
     const route = await stat(path.join(repositoryRoot, relativePath));
     assert.equal(route.isFile(), true);
