@@ -1,6 +1,36 @@
 \set ON_ERROR_STOP on
 begin transaction read only;
 
+with relevant_role_oids as (
+  select oid
+  from pg_roles
+  where rolname in (
+    'anon',
+    'authenticated',
+    'service_role',
+    'authenticator',
+    'postgres',
+    'supabase_admin'
+  )
+  union
+  select n.nspowner
+  from pg_namespace n
+  where n.nspname in ('public', 'private')
+  union
+  select c.relowner
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname in ('public', 'private')
+  union
+  select p.proowner
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname in ('public', 'private')
+),
+relevant_roles as (
+  select distinct oid
+  from relevant_role_oids
+)
 select jsonb_build_object(
   'schemaVersion', 'econovaria.release-integrity.raw-schema-evidence.v1',
   'structural', jsonb_build_object(
@@ -71,7 +101,7 @@ select jsonb_build_object(
         'language', l.lanname,
         'securityDefiner', p.prosecdef,
         'configuration', p.proconfig,
-        'definitionMd5', md5(pg_get_functiondef(p.oid))
+        'definitionSha256', encode(sha256(convert_to(pg_get_functiondef(p.oid), 'UTF8')), 'hex')
       ) order by n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)), '[]'::jsonb)
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
@@ -94,6 +124,66 @@ select jsonb_build_object(
     )
   ),
   'authorization', jsonb_build_object(
+    'schemaOwners', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'schema', n.nspname,
+        'owner', pg_get_userbyid(n.nspowner)
+      ) order by n.nspname), '[]'::jsonb)
+      from pg_namespace n
+      where n.nspname in ('public', 'private')
+    ),
+    'relationOwners', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'schema', n.nspname,
+        'relation', c.relname,
+        'kind', c.relkind,
+        'owner', pg_get_userbyid(c.relowner)
+      ) order by n.nspname, c.relname), '[]'::jsonb)
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname in ('public', 'private')
+        and c.relkind in ('r', 'p', 'v', 'm', 'S')
+    ),
+    'routineOwners', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'schema', n.nspname,
+        'routine', p.proname,
+        'arguments', pg_get_function_identity_arguments(p.oid),
+        'owner', pg_get_userbyid(p.proowner)
+      ) order by n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)), '[]'::jsonb)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname in ('public', 'private')
+        and p.prokind in ('f', 'p')
+    ),
+    'roleAttributes', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'role', r.rolname,
+        'superuser', r.rolsuper,
+        'inherit', r.rolinherit,
+        'createRole', r.rolcreaterole,
+        'createDatabase', r.rolcreatedb,
+        'canLogin', r.rolcanlogin,
+        'replication', r.rolreplication,
+        'bypassRls', r.rolbypassrls
+      ) order by r.rolname), '[]'::jsonb)
+      from pg_roles r
+      join relevant_roles rr on rr.oid = r.oid
+    ),
+    'roleMemberships', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'role', role_role.rolname,
+        'member', member_role.rolname,
+        'grantor', grantor_role.rolname,
+        'adminOption', membership.admin_option
+      ) order by role_role.rolname, member_role.rolname, grantor_role.rolname), '[]'::jsonb)
+      from pg_auth_members membership
+      join pg_roles role_role on role_role.oid = membership.roleid
+      join pg_roles member_role on member_role.oid = membership.member
+      join pg_roles grantor_role on grantor_role.oid = membership.grantor
+      where membership.roleid in (select oid from relevant_roles)
+         or membership.member in (select oid from relevant_roles)
+    ),
     'rowSecurity', (
       select coalesce(jsonb_agg(jsonb_build_object(
         'schema', n.nspname,
