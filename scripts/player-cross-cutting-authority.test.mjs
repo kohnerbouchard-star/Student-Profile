@@ -23,6 +23,7 @@ function manifest() {
     secretValuesAllowed: false,
     allowedPaths: [
       DEFAULT_AUTHORITY_PATH,
+      "scripts/business-banking-player-world-browser-acceptance.mjs",
       "scripts/local-edge-runtime-isolation.mjs",
       "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
@@ -30,6 +31,7 @@ function manifest() {
     ],
     requiredFiles: [
       DEFAULT_AUTHORITY_PATH,
+      "scripts/business-banking-player-world-browser-acceptance.mjs",
       "scripts/local-edge-runtime-isolation.mjs",
       "scripts/local-edge-runtime-isolation.test.mjs",
       "scripts/player-cross-cutting-authority.test.mjs",
