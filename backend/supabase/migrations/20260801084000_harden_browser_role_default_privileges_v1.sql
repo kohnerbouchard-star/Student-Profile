@@ -2,21 +2,15 @@ begin;
 
 -- Canonical runtime traffic reaches public data only through trusted Edge/BFF
 -- services. Browser roles therefore receive schema usage, but no direct table,
--- sequence, or RPC authority. Correct both existing ACLs and future defaults so
--- later migrations cannot silently reopen the database boundary.
+-- sequence, or RPC authority. Application migrations execute as postgres, so
+-- correct that creator's defaults and revoke browser ACLs from every existing
+-- public object regardless of owner.
 
 alter default privileges for role postgres in schema public
   revoke all privileges on tables from anon, authenticated;
 alter default privileges for role postgres in schema public
   revoke all privileges on sequences from anon, authenticated;
 alter default privileges for role postgres in schema public
-  revoke execute on functions from public, anon, authenticated;
-
-alter default privileges for role supabase_admin in schema public
-  revoke all privileges on tables from anon, authenticated;
-alter default privileges for role supabase_admin in schema public
-  revoke all privileges on sequences from anon, authenticated;
-alter default privileges for role supabase_admin in schema public
   revoke execute on functions from public, anon, authenticated;
 
 revoke all privileges on all tables in schema public from anon, authenticated;
@@ -34,13 +28,6 @@ alter default privileges for role postgres in schema public
 alter default privileges for role postgres in schema public
   grant all privileges on sequences to service_role;
 alter default privileges for role postgres in schema public
-  grant execute on functions to service_role;
-
-alter default privileges for role supabase_admin in schema public
-  grant all privileges on tables to service_role;
-alter default privileges for role supabase_admin in schema public
-  grant all privileges on sequences to service_role;
-alter default privileges for role supabase_admin in schema public
   grant execute on functions to service_role;
 
 -- Fail the migration if a browser role retains any direct public-table power.
