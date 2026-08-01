@@ -83,6 +83,8 @@ jobs:
 
       - name: Exercise viewport and nested scroll ownership
         shell: bash
+        env:
+          ADMIN_SCROLL_BASE_URL: http://127.0.0.1:4173/admin/?game=10000000-0000-4000-8000-000000000001
         run: |
           set -o pipefail
           mkdir -p admin-scroll-integrity-artifacts
