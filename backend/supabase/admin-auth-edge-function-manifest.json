@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "econovaria.admin-auth-surfaces.v1",
+  "functions": [
+    {
+      "slug": "admin-email-verification",
+      "entrypoint": "backend/supabase/functions/admin-email-verification/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "single-use-auth-token-plus-double-submit-challenge",
+      "requiredEnvironments": ["staging", "production"],
+      "requiredEnvironmentNames": [
+        "SUPABASE_URL",
+        "SUPABASE_PUBLISHABLE_KEY",
+        "ECONOVARIA_EMAIL_VERIFICATION_RETURN_URL"
+      ]
+    },
+    {
+      "slug": "admin-password-recovery",
+      "entrypoint": "backend/supabase/functions/admin-password-recovery/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "single-use-recovery-token-plus-double-submit-challenge",
+      "requiredEnvironments": ["staging", "production"],
+      "requiredEnvironmentNames": [
+        "SUPABASE_URL",
+        "SUPABASE_PUBLISHABLE_KEY",
+        "ECONOVARIA_PASSWORD_RECOVERY_RETURN_URL"
+      ]
+    },
+    {
+      "slug": "password-reset-api",
+      "entrypoint": "backend/supabase/functions/password-reset-api/index.ts",
+      "verifyJwt": true,
+      "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-resolution",
+      "requiredEnvironments": ["staging", "production"],
+      "requiredEnvironmentNames": [
+        "SUPABASE_URL",
+        "SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_SECRET_KEY",
+        "ECONOVARIA_WEB_ALLOWED_ORIGINS"
+      ]
+    }
+  ],
+  "verificationEmailDelivery": {
+    "runtimeFunction": "bootstrap-api",
+    "requiredEnvironmentNames": [
+      "RESEND_API_KEY",
+      "ECONOVARIA_AUTH_EMAIL_FROM",
+      "ECONOVARIA_EMAIL_VERIFICATION_URL"
+    ],
+    "trackingLinkRewritesAllowed": false
+  },
+  "retiredFunctions": [
+    {
+      "slug": "admin-logout-api",
+      "replacement": "web-session-api/logout"
+    }
+  ]
+}
