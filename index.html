@@ -197,17 +197,7 @@
   </section>
 
   <script src="frontend/src/core/admin-game-selection.js"></script>
-  <script>
-    (function clearSignedOutAdminState() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("reason") !== "signed-out") return;
-        window.sessionStorage.removeItem("econovaria.admin.auth.v1");
-        window.EconovariaAdminGameSelection?.clear?.();
-        window.sessionStorage.removeItem("econovaria.admin.csrf.v1");
-      } catch (_) {}
-    })();
-  </script>
+  <script src="frontend/src/core/login-signed-out-cleanup.js"></script>
   <script src="runtime-config.env.js"></script>
   <script src="frontend/src/core/runtime-config.js"></script>
   <script src="frontend/src/core/constants.js"></script>
@@ -215,16 +205,6 @@
   <script src="frontend/src/core/admin-mfa.js"></script>
   <script src="frontend/src/core/login.js"></script>
   <script src="frontend/src/core/login-retry-countdown.js"></script>
-  <script>
-    (function installLoginSurfaceGuard() {
-      document.documentElement.classList.remove("preload");
-      const image = document.querySelector("[data-econovaria-brand-image]");
-      const mark = image?.closest(".logo-mark");
-      const fail = function () { mark?.classList.add("has-brand-error"); };
-      image?.addEventListener("load", function () { mark?.classList.remove("has-brand-error"); });
-      image?.addEventListener("error", fail, { once: true });
-      if (image?.complete && image.naturalWidth === 0) fail();
-    })();
-  </script>
+  <script src="frontend/src/core/login-surface-guard.js"></script>
 </body>
 </html>

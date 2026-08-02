@@ -365,12 +365,18 @@ source = replaceExactlyOnce(
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
     throw new Error(\`Browser emitted errors: \${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}\`);
   }`,
-  `  const logoutRequests = evidence.requests.slice(logoutRequestIndex);
-  const expectedRevocationProbe = logoutRequests.find((request) =>
-    request.method === "GET" &&
-    request.status === 401 &&
-    request.url.endsWith("/functions/v1/web-session-api/status")
-  );
+  `  let expectedRevocationProbe;
+  const revocationProbeDeadline = Date.now() + 10_000;
+  while (!expectedRevocationProbe && Date.now() < revocationProbeDeadline) {
+    expectedRevocationProbe = evidence.requests.slice(logoutRequestIndex).find((request) =>
+      request.method === "GET" &&
+      request.status === 401 &&
+      request.url.endsWith("/functions/v1/web-session-api/status")
+    );
+    if (!expectedRevocationProbe) await page.waitForTimeout(50);
+  }
+
+  const logoutRequests = evidence.requests.slice(logoutRequestIndex);
   if (!expectedRevocationProbe) {
     throw new Error("Logout did not prove the revoked Admin session was rejected by the status boundary.");
   }
