@@ -3,9 +3,10 @@ name: Production Admin Bootstrap 503 Hotfix
 on:
   push:
     branches:
-      - fix/admin-bootstrap-503-20260802
+      - main
     paths:
       - .github/workflows/production-admin-bootstrap-503-hotfix.yml
+      - docs/operations/evidence/production-admin-bootstrap-503-hotfix-v1.json
   workflow_dispatch:
 
 permissions:
@@ -41,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "kohnerbouchard-star/Student-Profile"
-          test "$GITHUB_REF" = "refs/heads/fix/admin-bootstrap-503-20260802"
+          test "$GITHUB_REF" = "refs/heads/main"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
           test "$FUNCTION_NAME" = "admin-api"
           test -n "$SUPABASE_ACCESS_TOKEN"
