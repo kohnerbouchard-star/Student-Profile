@@ -1,24 +1,32 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.player-web-session-ingress-pr-488.v1",
+  "authorityId": "econovaria.login-csp-inline-signout-pr-490.v1",
   "purpose": "authorize-cross-cutting-player-verification",
-  "pullRequestNumber": 488,
+  "pullRequestNumber": 490,
   "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    "backend/supabase/functions/player-web-session-api/index.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "frontend/src/core/login-signed-out-cleanup.js",
+    "frontend/src/core/login-surface-guard.js",
+    "index.html",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/security-audit-remediation-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "vercel.json"
   ],
   "requiredFiles": [
-    "backend/supabase/functions/player-web-session-api/index.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "frontend/src/core/login-signed-out-cleanup.js",
+    "frontend/src/core/login-surface-guard.js",
+    "index.html",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/security-audit-remediation-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "vercel.json"
   ],
   "requiredChecks": [
     "player-terminal-verify",
