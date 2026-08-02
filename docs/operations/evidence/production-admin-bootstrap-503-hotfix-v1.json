@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "econovaria.production-admin-bootstrap-503-hotfix.v1",
+  "authorizedAt": "2026-08-03T00:57:00+09:00",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "functionName": "admin-api",
+  "expectedBeforeVersion": 27,
+  "expectedBeforeDigest": "bbb0fb15e46ffce134bccd9439136bc9a14ce721476eaf4f48621a6835d5a0da",
+  "sourceBaselineCommit": "09269bd2c47293e7290e791c63ba082165fc4c1b",
+  "expectedProgressionRateLimitBlob": "6d20e3fa85a8aed2e8c4444896f73443c6fde4de",
+  "requiredSourceMarkers": [
+    "bindGatewayTrustedClientIp",
+    "consume_request_rate_limits_v1",
+    "p_buckets"
+  ],
+  "verifyJwtRequired": true,
+  "databaseMigrationsAllowed": false,
+  "otherFunctionsAllowed": false,
+  "scope": [
+    "reconcile production admin-api with reviewed main source",
+    "restore administrator session bootstrap after MFA",
+    "preserve fail-closed request rate limiting"
+  ]
+}
