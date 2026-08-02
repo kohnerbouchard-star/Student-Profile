@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/u;
+const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -219,10 +220,12 @@ async function main() {
   const manifestPath = args.get("--manifest");
   const stagingPath = args.get("--staging");
   const productionPath = args.get("--production");
+  const sourceCommit = String(args.get("--source-commit") || "").trim();
   assert(
     manifestPath && stagingPath && productionPath,
     "--manifest, --staging, and --production are required.",
   );
+  assert(COMMIT_PATTERN.test(sourceCommit), "--source-commit must be an exact commit SHA.");
   const [manifest, stagingInventory, productionInventory] = await Promise.all([
     readFile(manifestPath, "utf8").then(JSON.parse),
     readFile(stagingPath, "utf8").then(JSON.parse),
@@ -230,9 +233,17 @@ async function main() {
   ]);
   const result = compareCanonicalDigests({ manifest, stagingInventory, productionInventory });
   process.stdout.write(`${JSON.stringify({
+    schemaVersion: 1,
+    manifestId: manifest.manifestId,
+    sourceCommit,
+    generatedAt: new Date().toISOString(),
     ok: result.ok,
     staging: {
+      projectRef: result.staging.projectRef,
       ok: result.staging.ok,
+      canonicalCount: result.staging.canonicalCount,
+      temporaryCount: result.staging.temporaryCount,
+      actualCount: result.staging.actualCount,
       missing: result.staging.missing,
       unexpected: result.staging.unexpected,
       jwtMismatches: result.staging.jwtMismatches,
@@ -241,7 +252,11 @@ async function main() {
       retiredPresent: result.staging.retiredPresent,
     },
     production: {
+      projectRef: result.production.projectRef,
       ok: result.production.ok,
+      canonicalCount: result.production.canonicalCount,
+      temporaryCount: result.production.temporaryCount,
+      actualCount: result.production.actualCount,
       missing: result.production.missing,
       unexpected: result.production.unexpected,
       jwtMismatches: result.production.jwtMismatches,
