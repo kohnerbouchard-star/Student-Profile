@@ -8,9 +8,21 @@ import {
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 490;
+const AUTHORIZED_PR = 483;
 
 function manifest() {
+  const paths = [
+    ".github/workflows/stock-market-production-promote.yml",
+    ".github/workflows/stock-market-staging-candidate.yml",
+    "backend/supabase/functions/stock-market-player-read/index.ts",
+    "backend/supabase/functions/stock-market-read/index.ts",
+    "backend/supabase/stock-market-edge-function-manifest.json",
+    DEFAULT_AUTHORITY_PATH,
+    "scripts/auth-boundary-contract.test.mjs",
+    "scripts/high-priority-boundary-ratchet.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+  ];
   return {
     schemaVersion: 1,
     authorityId: EXPECTED_AUTHORITY_ID,
@@ -21,28 +33,8 @@ function manifest() {
     productionDeploymentAllowed: false,
     productionMutationAllowed: false,
     secretValuesAllowed: false,
-    allowedPaths: [
-      DEFAULT_AUTHORITY_PATH,
-      "frontend/src/core/login-signed-out-cleanup.js",
-      "frontend/src/core/login-surface-guard.js",
-      "index.html",
-      "scripts/admin-browser-reconnaissance.mjs",
-      "scripts/player-cross-cutting-authority.test.mjs",
-      "scripts/security-audit-remediation-contract.test.mjs",
-      "scripts/verify-player-cross-cutting-authority.mjs",
-      "vercel.json",
-    ],
-    requiredFiles: [
-      DEFAULT_AUTHORITY_PATH,
-      "frontend/src/core/login-signed-out-cleanup.js",
-      "frontend/src/core/login-surface-guard.js",
-      "index.html",
-      "scripts/admin-browser-reconnaissance.mjs",
-      "scripts/player-cross-cutting-authority.test.mjs",
-      "scripts/security-audit-remediation-contract.test.mjs",
-      "scripts/verify-player-cross-cutting-authority.mjs",
-      "vercel.json",
-    ],
+    allowedPaths: paths,
+    requiredFiles: [...paths],
     requiredChecks: [
       "player-terminal-verify",
       "player-edge-trusted-ip-entrypoint-contract",
