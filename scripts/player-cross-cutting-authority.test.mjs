@@ -8,7 +8,7 @@ import {
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 488;
+const AUTHORIZED_PR = 490;
 
 function manifest() {
   return {
@@ -22,16 +22,24 @@ function manifest() {
     productionMutationAllowed: false,
     secretValuesAllowed: false,
     allowedPaths: [
-      "backend/supabase/functions/player-web-session-api/index.ts",
       DEFAULT_AUTHORITY_PATH,
+      "frontend/src/core/login-signed-out-cleanup.js",
+      "frontend/src/core/login-surface-guard.js",
+      "index.html",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/security-audit-remediation-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
+      "vercel.json",
     ],
     requiredFiles: [
-      "backend/supabase/functions/player-web-session-api/index.ts",
       DEFAULT_AUTHORITY_PATH,
+      "frontend/src/core/login-signed-out-cleanup.js",
+      "frontend/src/core/login-surface-guard.js",
+      "index.html",
       "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/security-audit-remediation-contract.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
+      "vercel.json",
     ],
     requiredChecks: [
       "player-terminal-verify",
