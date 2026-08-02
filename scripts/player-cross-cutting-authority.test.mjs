@@ -8,18 +8,16 @@ import {
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 483;
+const AUTHORIZED_PR = 484;
 
 function manifest() {
   const paths = [
-    ".github/workflows/stock-market-production-promote.yml",
-    ".github/workflows/stock-market-staging-candidate.yml",
-    "backend/supabase/functions/stock-market-player-read/index.ts",
-    "backend/supabase/functions/stock-market-read/index.ts",
-    "backend/supabase/stock-market-edge-function-manifest.json",
+    ".github/workflows/edge-function-inventory.yml",
+    "backend/supabase/config.toml",
+    "backend/supabase/edge-function-manifest.json",
     DEFAULT_AUTHORITY_PATH,
-    "scripts/auth-boundary-contract.test.mjs",
-    "scripts/high-priority-boundary-ratchet.mjs",
+    "scripts/edge-function-inventory/validate.mjs",
+    "scripts/edge-function-inventory/validate.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
   ];
