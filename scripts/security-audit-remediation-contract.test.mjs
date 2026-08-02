@@ -94,12 +94,41 @@ test("deployment policy is delivered as HTTP security headers", async () => {
   const csp = headers.get("Content-Security-Policy") || "";
   const reportOnly = headers.get("Content-Security-Policy-Report-Only") || "";
   assert.match(csp, /default-src 'self'/);
-  assert.match(csp, /script-src 'self'/);
+  assert.match(csp, /script-src 'self';/);
+  assert.doesNotMatch(csp, /script-src[^;]*(?:sha256-|nonce-|unsafe-inline)/iu);
+  assert.doesNotMatch(reportOnly, /script-src[^;]*(?:sha256-|nonce-|unsafe-inline)/iu);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.match(reportOnly, /require-trusted-types-for 'script'/);
   assert.equal(headers.get("X-Frame-Options"), "DENY");
   assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
+});
+
+test("login shell uses external scripts for sign-out cleanup and surface guard", async () => {
+  const [html, cleanup, guard] = await Promise.all([
+    read("index.html"),
+    read("frontend/src/core/login-signed-out-cleanup.js"),
+    read("frontend/src/core/login-surface-guard.js"),
+  ]);
+  assert.doesNotMatch(
+    html,
+    /<script(?![^>]*\bsrc=)[^>]*>/iu,
+    "login HTML must not contain executable inline scripts",
+  );
+  assert.match(
+    html,
+    /<script src="frontend\/src\/core\/admin-game-selection\.js"><\/script>\s*<script src="frontend\/src\/core\/login-signed-out-cleanup\.js"><\/script>/u,
+  );
+  assert.match(
+    html,
+    /<script src="frontend\/src\/core\/login-retry-countdown\.js"><\/script>\s*<script src="frontend\/src\/core\/login-surface-guard\.js"><\/script>/u,
+  );
+  assert.match(cleanup, /params\.get\("reason"\) !== "signed-out"/u);
+  assert.match(cleanup, /EconovariaAdminGameSelection\?\.clear\?\.\(\)/u);
+  assert.match(cleanup, /econovaria\.admin\.auth\.v1/u);
+  assert.match(cleanup, /econovaria\.admin\.csrf\.v1/u);
+  assert.match(guard, /document\.documentElement\.classList\.remove\("preload"\)/u);
+  assert.match(guard, /data-econovaria-brand-image/u);
 });
 
 test("internal stock runners remain signed and replay resistant", async () => {
