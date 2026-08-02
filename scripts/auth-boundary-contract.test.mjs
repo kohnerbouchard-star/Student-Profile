@@ -267,21 +267,12 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
 
   for (const source of [runner, stockRead, seed, playerRead, trading]) {
     assert.match(source, /requirePublishableRequest\(request\)/);
+    assert.match(source, /authorizeInternalRunnerRequest/);
+    assert.match(source, /claim_internal_runner_nonce_v2/);
     assert.doesNotMatch(
       source,
       /request\.headers\.get\(["']x-stock-market-runner-secret["']\)/,
       "entrypoints must not authorize external callers with the legacy raw-secret header",
-    );
-  }
-  for (const source of [runner, seed, trading]) {
-    assert.match(source, /authorizeInternalRunnerRequest/);
-    assert.match(source, /claim_internal_runner_nonce_v2/);
-  }
-  for (const source of [stockRead, playerRead]) {
-    assert.doesNotMatch(
-      source,
-      /authorizeInternalRunnerRequest/,
-      "read-only market endpoints must not require internal scheduler authority",
     );
   }
 
