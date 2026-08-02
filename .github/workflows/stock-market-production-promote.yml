@@ -35,6 +35,7 @@ concurrency:
 env:
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  STAGING_WORKFLOW_PATH: .github/workflows/stock-market-staging-candidate.yml
   SUPABASE_CLI_VERSION: 2.109.1
   FUNCTION_MANIFEST: backend/supabase/stock-market-edge-function-manifest.json
 
@@ -76,8 +77,39 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           test -f "$FUNCTION_MANIFEST"
 
+      - name: Verify exact successful staging workflow run
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          run_json="$RUNNER_TEMP/stock-market-staging-run.json"
+          curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" \
+            > "$run_json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const run = JSON.parse(fs.readFileSync(process.env.RUN_PATH, 'utf8'));
+          const workflowPath = String(run.path || '').split('@')[0];
+          if (String(run.id) !== process.env.CANDIDATE_RUN_ID) throw new Error('Staging run ID mismatch.');
+          if (run.name !== 'Stock Market Staging Candidate') throw new Error('Unexpected staging workflow name.');
+          if (workflowPath !== process.env.STAGING_WORKFLOW_PATH) throw new Error('Unexpected staging workflow path.');
+          if (run.event !== 'workflow_dispatch') throw new Error('Staging candidate was not manually authorized.');
+          if (run.status !== 'completed' || run.conclusion !== 'success') throw new Error('Staging candidate did not complete successfully.');
+          if (run.head_branch !== 'main') throw new Error('Staging candidate did not run from main.');
+          if (run.head_sha !== process.env.SOURCE_COMMIT) throw new Error('Staging candidate head SHA mismatch.');
+          if (run.repository?.full_name !== process.env.GITHUB_REPOSITORY) throw new Error('Staging candidate repository mismatch.');
+          NODE
+        env:
+          RUN_PATH: ${{ runner.temp }}/stock-market-staging-run.json
+
       - name: Download exact staging evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: stock-market-staging-${{ inputs.source_commit }}
           run-id: ${{ inputs.candidate_run_id }}
@@ -95,13 +127,39 @@ jobs:
             "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
             > "$RUNNER_TEMP/staging-functions-current.json"
           node - <<'NODE'
+          const crypto = require('node:crypto');
+          const { execFileSync } = require('node:child_process');
           const fs = require('node:fs');
+          const path = require('node:path');
           const evidence = require(`./${process.env.EVIDENCE_PATH}`);
           const current = require(process.env.CURRENT_PATH);
+          const manifest = require(`./${process.env.FUNCTION_MANIFEST}`);
+          const sourcePaths = [
+            process.env.FUNCTION_MANIFEST,
+            'backend/src',
+            'backend/supabase/functions/_shared',
+            ...manifest.functions.map((entry) => path.dirname(entry.entrypoint)),
+          ];
+          const files = execFileSync('git', ['ls-files', '-z', '--', ...sourcePaths])
+            .toString('utf8')
+            .split('\0')
+            .filter(Boolean)
+            .sort();
+          if (!files.length) throw new Error('No tracked stock runtime source files were found.');
+          const sourceHash = crypto.createHash('sha256');
+          for (const file of files) {
+            sourceHash.update(file);
+            sourceHash.update('\0');
+            sourceHash.update(fs.readFileSync(file));
+            sourceHash.update('\0');
+          }
+          const sourceDigest = sourceHash.digest('hex');
           if (evidence.environment !== 'staging') throw new Error('Candidate is not staging evidence.');
           if (evidence.projectRef !== process.env.STAGING_PROJECT_REF) throw new Error('Staging project mismatch.');
           if (evidence.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Candidate source mismatch.');
           if (evidence.inventoryDigest !== process.env.EXPECTED_DIGEST) throw new Error('Candidate inventory digest mismatch.');
+          if (!/^[a-f0-9]{64}$/.test(String(evidence.sourceDigest || ''))) throw new Error('Candidate source digest is invalid.');
+          if (evidence.sourceDigest !== sourceDigest) throw new Error('Candidate source digest differs from production checkout.');
           for (const expected of evidence.deployed) {
             const row = current.find((value) => value.slug === expected.slug);
             if (!row) throw new Error(`Staging function disappeared: ${expected.slug}`);
@@ -240,6 +298,7 @@ jobs:
             environment: 'production',
             projectRef: process.env.EXPECTED_PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
+            sourceDigest: candidate.sourceDigest,
             stagingInventoryDigest: candidate.inventoryDigest,
             productionInventoryDigest: inventoryDigest,
             deployed,
