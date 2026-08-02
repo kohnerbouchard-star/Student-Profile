@@ -1,9 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   type EdgeSupabaseClient,
+  readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
-import { jsonResponse } from "../../../src/platform/supabase/edgeResponse.ts";
+import {
+  jsonError,
+  jsonResponse,
+} from "../../../src/platform/supabase/edgeResponse.ts";
+import {
+  authorizeInternalRunnerRequest,
+} from "../../../src/security/internalRunnerAuth.ts";
 import {
   handleStockMarketPlayerReadRequest,
 } from "../../../src/domains/stocks/api/stockMarketPlayerReadHttpHandler.ts";
@@ -20,7 +27,42 @@ Deno.serve(async (request) => {
 
   const publishableFailure = await requirePublishableRequest(request);
   if (publishableFailure) return publishableFailure;
-  return handleStockMarketPlayerReadRequest(request, { createServiceClient });
+
+  const envResult = readSupabaseEnv();
+  if (!envResult.ok) {
+    return jsonError(500, {
+      code: "missing_edge_runtime_config",
+      message: "Supabase Edge runtime configuration is missing.",
+      retryable: false,
+    });
+  }
+
+  const replayClient = createServiceClient(envResult.value);
+  const authorization = await authorizeInternalRunnerRequest(request, {
+    runnerName: "stock-market-player-read",
+    internalSecretHeader: "x-stock-market-runner-secret",
+    dependencies: {
+      readSecret: () => Deno.env.get("STOCK_MARKET_RUNNER_SECRET"),
+      claimNonce: async (claim) => {
+        const { data, error } = await replayClient.rpc<boolean>(
+          "claim_internal_runner_nonce_v2",
+          {
+            p_runner_name: claim.runnerName,
+            p_nonce_hash: claim.nonceHash,
+            p_timestamp_seconds: claim.timestampSeconds,
+            p_expires_at: claim.expiresAt,
+          },
+        );
+        if (error) throw new Error("INTERNAL_RUNNER_NONCE_CLAIM_FAILED");
+        return data === true;
+      },
+    },
+  });
+  if (!authorization.ok) return authorization.response;
+
+  return handleStockMarketPlayerReadRequest(authorization.request, {
+    createServiceClient,
+  });
 });
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
@@ -31,7 +73,7 @@ function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
     },
     global: {
       headers: {
-        "x-client-info": "econovaria-stock-market-player-read-v1",
+        "x-client-info": "econovaria-stock-market-player-read-v2",
       },
     },
   }) as EdgeSupabaseClient;
