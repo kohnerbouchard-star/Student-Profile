@@ -160,9 +160,31 @@ jobs:
             > "$RUNNER_TEMP/functions-after.json"
           node - <<'NODE'
           const crypto = require('node:crypto');
+          const { execFileSync } = require('node:child_process');
           const fs = require('node:fs');
+          const path = require('node:path');
           const manifest = require(`./${process.env.FUNCTION_MANIFEST}`);
           const rows = require(process.env.FUNCTIONS_PATH);
+          const sourcePaths = [
+            process.env.FUNCTION_MANIFEST,
+            'backend/src',
+            'backend/supabase/functions/_shared',
+            ...manifest.functions.map((entry) => path.dirname(entry.entrypoint)),
+          ];
+          const files = execFileSync('git', ['ls-files', '-z', '--', ...sourcePaths])
+            .toString('utf8')
+            .split('\0')
+            .filter(Boolean)
+            .sort();
+          if (!files.length) throw new Error('No tracked stock runtime source files were found.');
+          const sourceHash = crypto.createHash('sha256');
+          for (const file of files) {
+            sourceHash.update(file);
+            sourceHash.update('\0');
+            sourceHash.update(fs.readFileSync(file));
+            sourceHash.update('\0');
+          }
+          const sourceDigest = sourceHash.digest('hex');
           const deployed = manifest.functions.map(({ slug, runnerName }) => {
             const row = rows.find((value) => value.slug === slug);
             if (!row) throw new Error(`Missing deployed function: ${slug}`);
@@ -187,10 +209,12 @@ jobs:
             environment: 'staging',
             projectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
+            sourceDigest,
             inventoryDigest,
             deployed,
           };
           fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `source_digest=${sourceDigest}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `inventory_digest=${inventoryDigest}\n`);
           NODE
         env:
