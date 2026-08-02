@@ -104,7 +104,7 @@ test("deployment policy is delivered as HTTP security headers", async () => {
   assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
 });
 
-test("login shell uses external scripts for sign-out cleanup and surface guard", async () => {
+test("deployment policy keeps login shell on external scripts", async () => {
   const [html, cleanup, guard] = await Promise.all([
     read("index.html"),
     read("frontend/src/core/login-signed-out-cleanup.js"),
