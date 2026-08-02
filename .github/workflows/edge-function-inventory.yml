@@ -1,0 +1,144 @@
+name: Edge Function Inventory
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/edge-function-inventory.yml"
+      - "backend/supabase/edge-function-manifest.json"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/functions/**"
+      - "scripts/edge-function-inventory/**"
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact current main commit"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type ATTEST EDGE INVENTORY"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-function-inventory-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MANIFEST_PATH: backend/supabase/edge-function-manifest.json
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+
+jobs:
+  static-contract:
+    name: Validate canonical inventory contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Validate manifest, config parity, and inventory behavior
+        run: node --test scripts/edge-function-inventory/validate.test.mjs
+
+      - name: Verify every tracked runtime entrypoint exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = require(`./${process.env.MANIFEST_PATH}`);
+          for (const entry of [
+            ...manifest.canonicalFunctions,
+            ...manifest.compatibilityFunctions,
+          ]) {
+            if (!fs.existsSync(entry.entrypoint)) {
+              throw new Error(`Missing canonical Edge Function source: ${entry.entrypoint}`);
+            }
+          }
+          NODE
+
+  live-attestation:
+    name: Attest staging and production inventory
+    if: github.event_name == 'workflow_dispatch'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce exact main authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_action }}" = "ATTEST EDGE INVENTORY"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+
+      - name: Check out exact current main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify current main binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Fetch bounded management metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions.json"
+
+      - name: Fail closed on inventory, JWT, version, or source drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/edge-function-inventory/validate.mjs \
+            --manifest "$MANIFEST_PATH" \
+            --staging "$RUNNER_TEMP/staging-functions.json" \
+            --production "$RUNNER_TEMP/production-functions.json" \
+            --source-commit "${{ inputs.source_commit }}" \
+            | tee "$RUNNER_TEMP/edge-function-attestation.json"
+
+      - name: Upload inventory evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: edge-function-inventory-${{ inputs.source_commit }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/edge-function-attestation.json
