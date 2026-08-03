@@ -3,8 +3,8 @@ import { createRequire } from "node:module";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const healthRoute = require("../api/health.js");
-const { checkRuntimeHealth, readConfiguration } = healthRoute.__test;
+const adminProxy = require("../api/admin-proxy.js");
+const { checkRuntimeHealth, readHealthConfiguration } = adminProxy.__healthTest;
 
 const PRODUCTION_REF = "cgiukdjwicykrmtkhudh";
 const PRODUCTION_URL = `https://${PRODUCTION_REF}.supabase.co`;
@@ -31,18 +31,18 @@ function response(status, body) {
 }
 
 test("runtime health requires exact environment and Supabase project binding", () => {
-  const parsed = readConfiguration(environment());
+  const parsed = readHealthConfiguration(environment());
   assert.equal(parsed.environment, "production");
   assert.equal(parsed.projectRef, PRODUCTION_REF);
   assert.equal(parsed.supabaseUrl, PRODUCTION_URL);
   assert.equal(parsed.sourceCommit, SOURCE_SHA);
 
   assert.throws(
-    () => readConfiguration(environment({ ECONOVARIA_SUPABASE_URL: "https://example.com" })),
+    () => readHealthConfiguration(environment({ ECONOVARIA_SUPABASE_URL: "https://example.com" })),
     /does not match/u,
   );
   assert.throws(
-    () => readConfiguration(environment({ ECONOVARIA_PROJECT_REF: "wrong" })),
+    () => readHealthConfiguration(environment({ ECONOVARIA_PROJECT_REF: "wrong" })),
     /project ref is invalid/u,
   );
 });
