@@ -22,6 +22,7 @@ function manifest() {
     DEFAULT_AUTHORITY_PATH,
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/edge-function-inventory/validate.test.mjs",
+    "scripts/local-edge-runtime-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/runtime-health-contract.test.mjs",
     "scripts/runtime-security-headers-contract.test.mjs",
