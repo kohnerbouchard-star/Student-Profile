@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "econovaria.production-admin-join-code-read-503-hotfix.v2",
+  "targetProjectRef": "cgiukdjwicykrmtkhudh",
+  "deniedProjectRef": "eecvbssdvarfcykcfrny",
+  "functionName": "admin-api",
+  "sourceCommit": "a1ffbf6167e0f8707c03ee0f7ef9dd39c8b7ac4b",
+  "expectedBeforeVersion": 29,
+  "expectedBeforeDigest": "d1d067173aeaf2f95b3bf9613dc5d0e4ec215434444be3e81ad0b77ef561afe7",
+  "verifyJwtRequired": true,
+  "databaseMigrationsAllowed": false,
+  "secretChangesAllowed": false,
+  "otherFunctionsAllowed": false,
+  "scope": [
+    "replace GET join-code classroom-api proxy with owner-scoped game_sessions read"
+  ],
+  "rollback": "redeploy the pre-hotfix admin-api source only after verifying the recorded production version and digest"
+}
