@@ -15,7 +15,7 @@ function manifest() {
     ".github/workflows/edge-function-inventory.yml",
     ".github/workflows/production-admin-bootstrap-503-hotfix.yml",
     ".github/workflows/vercel-deployment-contract.yml",
-    "api/health.js",
+    "api/admin-proxy.js",
     "backend/supabase/config.toml",
     "backend/supabase/edge-function-manifest.json",
     DEFAULT_AUTHORITY_PATH,
@@ -130,7 +130,7 @@ test("Player and Admin CSRF response state remains surface-isolated", async () =
   );
 });
 
-test("Player namespaces retain explicit Vercel rewrites", async () => {
+test("Player namespaces and runtime health retain explicit Vercel rewrites", async () => {
   const configuration = JSON.parse(
     await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   );
@@ -146,5 +146,12 @@ test("Player namespaces retain explicit Vercel rewrites", async () => {
         destination: "/api/player-proxy?path=:path*",
       },
     ],
+  );
+  assert.deepEqual(
+    configuration.rewrites.find((entry) => entry.source === "/api/health"),
+    {
+      source: "/api/health",
+      destination: "/api/admin-proxy?path=__health",
+    },
   );
 });
