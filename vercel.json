@@ -10,6 +10,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "/api/admin-proxy?path=__health"
+    },
+    {
       "source": "/api/admin/:path*",
       "destination": "/api/admin-proxy?path=:path*"
     },
@@ -32,7 +36,7 @@
         },
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cgiukdjwicykrmtkhudh.supabase.co wss://cgiukdjwicykrmtkhudh.supabase.co https://eecvbssdvarfcykrmtkhudh.supabase.co wss://eecvbssdvarfcykrmtkhudh.supabase.co; img-src 'self' data: blob: https:; media-src 'self'; font-src 'self' data:; form-action 'self' https://cgiukdjwicykrmtkhudh.supabase.co https://eecvbssdvarfcykcfrny.supabase.co; manifest-src 'self'; worker-src 'self' blob:; require-trusted-types-for 'script'; trusted-types econovaria"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cgiukdjwicykrmtkhudh.supabase.co wss://cgiukdjwicykrmtkhudh.supabase.co https://eecvbssdvarfcykcfrny.supabase.co wss://eecvbssdvarfcykcfrny.supabase.co; img-src 'self' data: blob: https:; media-src 'self'; font-src 'self' data:; form-action 'self' https://cgiukdjwicykrmtkhudh.supabase.co https://eecvbssdvarfcykcfrny.supabase.co; manifest-src 'self'; worker-src 'self' blob:; require-trusted-types-for 'script'; trusted-types econovaria"
         },
         {
           "key": "X-Content-Type-Options",
