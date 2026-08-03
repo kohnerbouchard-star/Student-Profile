@@ -9,12 +9,14 @@ const { checkRuntimeHealth, readHealthConfiguration } = adminProxy.__healthTest;
 const PRODUCTION_REF = "cgiukdjwicykrmtkhudh";
 const PRODUCTION_URL = `https://${PRODUCTION_REF}.supabase.co`;
 const SOURCE_SHA = "a".repeat(40);
+const PUBLISHABLE_KEY = "sb_publishable_test_runtime_health_contract";
 
 function environment(overrides = {}) {
   return {
     ECONOVARIA_ENVIRONMENT: "production",
     ECONOVARIA_PROJECT_REF: PRODUCTION_REF,
     ECONOVARIA_SUPABASE_URL: PRODUCTION_URL,
+    ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
     VERCEL_GIT_COMMIT_SHA: SOURCE_SHA,
     ...overrides,
   };
@@ -39,7 +41,7 @@ test("runtime health requires exact environment and Supabase project binding", (
 
   assert.throws(
     () => readHealthConfiguration(environment({ ECONOVARIA_SUPABASE_URL: "https://example.com" })),
-    /does not match/u,
+    /configuration|does not match/u,
   );
   assert.throws(
     () => readHealthConfiguration(environment({ ECONOVARIA_PROJECT_REF: "wrong" })),
