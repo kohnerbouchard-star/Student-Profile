@@ -9,6 +9,7 @@ test("Vercel security headers preserve routing and exact Supabase origins", asyn
   const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
   const rewrites = new Map(config.rewrites.map((entry) => [entry.source, entry.destination]));
 
+  assert.equal(rewrites.get("/api/health"), "/api/admin-proxy?path=__health");
   assert.equal(rewrites.get("/api/admin/:path*"), "/api/admin-proxy?path=:path*");
   assert.equal(rewrites.get("/api/player-session/:path*"), "/api/player-session-proxy?path=:path*");
   assert.equal(rewrites.get("/api/player/:path*"), "/api/player-proxy?path=:path*");
