@@ -8,6 +8,8 @@ on:
       - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
       - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-health-contract.test.mjs"
+      - "scripts/runtime-security-headers-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
       - "scripts/vercel-deployment-contract.test.mjs"
       - "vercel.json"
@@ -21,6 +23,8 @@ on:
       - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
       - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-health-contract.test.mjs"
+      - "scripts/runtime-security-headers-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
       - "scripts/vercel-deployment-contract.test.mjs"
       - "vercel.json"
@@ -50,6 +54,7 @@ jobs:
 
       - name: Validate deployment source syntax
         run: |
+          node --check api/health.js
           node --check scripts/build-vercel-runtime-config.mjs
           node --check frontend/src/core/runtime-config.js
           node -e 'JSON.parse(require("node:fs").readFileSync("vercel.json", "utf8"))'
@@ -59,5 +64,7 @@ jobs:
           node --test \
             scripts/admin-vercel-namespace-routing-contract.test.mjs \
             scripts/runtime-config-contract.test.mjs \
+            scripts/runtime-health-contract.test.mjs \
+            scripts/runtime-security-headers-contract.test.mjs \
             scripts/runtime-trusted-types-contract.test.mjs \
             scripts/vercel-deployment-contract.test.mjs
