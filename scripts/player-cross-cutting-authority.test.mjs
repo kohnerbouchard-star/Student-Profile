@@ -15,6 +15,7 @@ function manifest() {
     ".github/workflows/edge-function-inventory.yml",
     ".github/workflows/production-admin-bootstrap-503-hotfix.yml",
     ".github/workflows/vercel-deployment-contract.yml",
+    "api/_admin-bff-proxy.js",
     "api/admin-proxy.js",
     "backend/supabase/config.toml",
     "backend/supabase/edge-function-manifest.json",
