@@ -46,12 +46,9 @@ verify_enabled = true
 [edge_runtime]
 enabled = true
 
-# Authenticated Staff and Admin requests carry a real Supabase Auth user JWT. The
-# platform gate rejects missing or invalid JWTs before each function performs
-# auth.getUser, Staff lookup, role checks, security-version checks and ownership checks.
-[functions.staff-api]
-verify_jwt = true
-
+# Authenticated Admin requests carry a real Supabase Auth user JWT. The platform
+# gate rejects missing or invalid JWTs before each function performs auth.getUser,
+# Staff lookup, role checks, security-version checks and game ownership checks.
 [functions.admin-api]
 verify_jwt = true
 
@@ -126,9 +123,8 @@ verify_jwt = false
 [functions.classroom-api]
 verify_jwt = true
 
-# staff-api browser access is retired. Canonical Staff traffic is routed through
-# the same-origin web-session boundary to admin-api and staff-mfa-api. The function
-# remains platform-JWT protected while compatibility callers are still present.
+# staff-api browser access and deployment are retired. Canonical Staff traffic is
+# routed through the same-origin web-session boundary to admin-api and staff-mfa-api.
 
 [analytics]
 enabled = false
