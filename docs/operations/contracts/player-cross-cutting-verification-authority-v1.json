@@ -10,23 +10,34 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     ".github/workflows/edge-function-inventory.yml",
+    ".github/workflows/production-admin-bootstrap-503-hotfix.yml",
+    ".github/workflows/vercel-deployment-contract.yml",
+    "api/health.js",
     "backend/supabase/config.toml",
     "backend/supabase/edge-function-manifest.json",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/edge-function-inventory/validate.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/runtime-health-contract.test.mjs",
+    "scripts/runtime-security-headers-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "vercel.json"
   ],
   "requiredFiles": [
     ".github/workflows/edge-function-inventory.yml",
+    ".github/workflows/vercel-deployment-contract.yml",
+    "api/health.js",
     "backend/supabase/config.toml",
     "backend/supabase/edge-function-manifest.json",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/edge-function-inventory/validate.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/runtime-health-contract.test.mjs",
+    "scripts/runtime-security-headers-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "vercel.json"
   ],
   "requiredChecks": [
     "player-terminal-verify",
