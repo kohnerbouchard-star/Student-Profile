@@ -54,7 +54,7 @@ jobs:
 
       - name: Validate deployment source syntax
         run: |
-          node --check api/health.js
+          node --check api/admin-proxy.js
           node --check scripts/build-vercel-runtime-config.mjs
           node --check frontend/src/core/runtime-config.js
           node -e 'JSON.parse(require("node:fs").readFileSync("vercel.json", "utf8"))'
