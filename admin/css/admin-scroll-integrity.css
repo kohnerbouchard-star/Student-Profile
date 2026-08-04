@@ -6,11 +6,79 @@
  * Game Code card occupies its final grid row. Drawers and specialized modals
  * own bounded inner scrollers without chaining wheel or trackpad motion back
  * into the page.
+ *
+ * Tablet and mobile use normal document flow: the navigation stacks above the
+ * content, the shell fills at least one viewport, and longer pages grow rather
+ * than being clipped inside a fixed 820px desktop frame.
  */
 
 :root {
   --admin-scrollbar-thumb: rgba(0, 212, 255, 0.34);
   --admin-scrollbar-track: rgba(2, 10, 20, 0.42);
+}
+
+#adminPreview,
+#adminPreview > .admin-terminal-shell,
+.admin-terminal-shell,
+.admin-terminal-shell-main {
+  min-width: 0;
+}
+
+#adminPreview > .admin-terminal-shell,
+.admin-terminal-shell {
+  width: 100%;
+  min-height: var(--admin-viewport-block-size);
+}
+
+@media (max-width: 1100px) {
+  html,
+  body {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  #adminPreview {
+    width: 100%;
+    height: auto;
+    min-height: var(--admin-viewport-block-size);
+    max-height: none;
+  }
+
+  #adminPreview > .admin-terminal-shell,
+  .admin-terminal-shell {
+    height: auto;
+    min-height: var(--admin-viewport-block-size);
+    max-height: none;
+    align-items: start;
+  }
+
+  .admin-terminal-left-menu {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .admin-terminal-shell-main,
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .admin-terminal-overview {
+    min-height: 0;
+  }
 }
 
 @media (min-width: 1101px) {
@@ -24,14 +92,15 @@
 
   body {
     box-sizing: border-box;
+    height: 100vh;
     height: 100dvh;
   }
 
   #adminPreview {
-    width: min(1440px, 100%);
-    height: calc(100dvh - 48px);
+    width: 100%;
+    height: var(--admin-viewport-block-size);
     min-height: 0;
-    max-height: calc(100dvh - 48px);
+    max-height: var(--admin-viewport-block-size);
   }
 
   #adminPreview > .admin-terminal-shell,
