@@ -4,7 +4,8 @@
   z-index: 10000;
   display: grid;
   place-items: center;
-  padding: 24px;
+  box-sizing: border-box;
+  padding: var(--admin-page-gutter, 24px);
   color: rgba(210, 247, 255, 0.72);
   background: #020914;
   font: 700 11px/1.5 "JetBrains Mono", ui-monospace, monospace;
