@@ -141,7 +141,15 @@ Release workflows must not contain or invoke any of the following:
 - production-only placeholder migration generation;
 - `supabase db pull` against production as part of promotion;
 - `supabase db push` before parity succeeds;
-- an allow-all or generic drift bypass.
+- an allow-all or generic drift bypass;
+- writes, patches, copies, moves, or in-place edits to tracked application or
+  Edge Function source after checkout and before a production deployment.
+
+Production deployment input must be byte-identical to reviewed tracked source
+or to a verified immutable artifact built from that source. Workflows may write
+sanitized evidence under runner-temporary or dedicated artifact directories,
+but they may not manufacture a different application artifact by rewriting the
+checked-out source tree.
 
 ### I7. Sanitized evidence
 

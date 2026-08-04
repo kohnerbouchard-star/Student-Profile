@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import base64
 import errno
+import hashlib
+import hmac
 import http.client
 import json
 import os
@@ -21,12 +23,14 @@ import signal
 import subprocess
 import sys
 import threading
+import time
+import uuid
 import webbrowser
 from dataclasses import dataclass
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Final
-from urllib.parse import urlsplit
+from urllib.parse import quote, unquote_to_bytes, urlsplit
 
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 180.0
 MINIMUM_REQUEST_TIMEOUT_SECONDS = 30.0
@@ -35,14 +39,44 @@ MAX_PROXY_BODY_BYTES = 1_048_576
 MAX_HEADER_VALUE_BYTES = 8_192
 MAX_REQUEST_TARGET_BYTES = 8_192
 MAX_SESSION_ENVELOPE_BYTES = 3_964
+MAX_HOSTED_BFF_PATH_BYTES = 2_048
 LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 PROXY_PREFIXES: Final[tuple[str, ...]] = ("/functions/v1/", "/auth/v1/")
 WEB_SESSION_PREFIX: Final[str] = "/functions/v1/web-session-api"
+PLAYER_WEB_SESSION_PREFIX: Final[str] = "/functions/v1/player-web-session-api"
+HOSTED_ADMIN_BFF_PREFIX: Final[str] = "/api/admin"
 LOCAL_SESSION_COOKIE: Final[str] = "econovaria_admin_session"
 REMOTE_SESSION_COOKIE: Final[str] = "__Host-econovaria_admin_session"
+PLAYER_LOCAL_SESSION_COOKIE: Final[str] = "econovaria_player_session"
+PLAYER_REMOTE_SESSION_COOKIE: Final[str] = "__Host-econovaria_player_session"
+ADMIN_BFF_TIMESTAMP_HEADER: Final[str] = "x-econovaria-bff-timestamp"
+ADMIN_BFF_NONCE_HEADER: Final[str] = "x-econovaria-bff-nonce"
+ADMIN_BFF_CLIENT_IP_HEADER: Final[str] = "x-econovaria-bff-client-ip"
+ADMIN_BFF_SIGNATURE_HEADER: Final[str] = "x-econovaria-bff-signature"
+ADMIN_BFF_MODE_HEADER: Final[str] = "x-econovaria-bff-mode"
+ADMIN_BFF_SIGNATURE_VERSION: Final[str] = "econovaria-admin-bff-request-v1"
+ADMIN_BFF_SIGNING_KEY_CONTEXT: Final[bytes] = (
+    b"econovaria-admin-bff-signing-key-v1"
+)
+ADMIN_BFF_LOCAL_SIGNING_MATERIAL: Final[bytes] = (
+    b"econovaria-local-admin-bff-public-development-material-v1"
+)
+ADMIN_BFF_LOCAL_TARGET_ORIGIN: Final[str] = "http://kong:8000"
+ADMIN_BFF_SIGNED_CONTEXT_HEADERS: Final[tuple[str, ...]] = (
+    "content-type",
+    "cookie",
+    "x-econovaria-csrf-token",
+    "x-econovaria-device-id",
+    "x-econovaria-game-id",
+    "x-idempotency-key",
+    "x-request-id",
+)
 HEADER_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$"
+)
+INVALID_PERCENT_ESCAPE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"%(?![0-9A-Fa-f]{2})"
 )
 SAFE_REQUEST_ID_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[A-Za-z0-9._:-]{1,128}$"
@@ -83,7 +117,6 @@ REQUEST_HEADER_ALLOWLIST: Final[dict[str, str]] = {
     "x-econovaria-device-id": "x-econovaria-device-id",
     "x-econovaria-game-id": "x-econovaria-game-id",
     "x-idempotency-key": "x-idempotency-key",
-    "x-player-session-token": "x-player-session-token",
     "x-request-id": "x-request-id",
     "x-stock-market-runner-secret": "x-stock-market-runner-secret",
 }
@@ -121,15 +154,105 @@ def clean_path(path: str) -> str:
     return urlsplit(path).path
 
 
+def is_hosted_admin_bff_path(path: str) -> bool:
+    path_only = clean_path(path)
+    return path_only == HOSTED_ADMIN_BFF_PREFIX or path_only.startswith(
+        f"{HOSTED_ADMIN_BFF_PREFIX}/"
+    )
+
+
 def is_proxy_path(path: str) -> bool:
     if len(path.encode("utf-8", errors="strict")) > MAX_REQUEST_TARGET_BYTES:
         return False
     path_only = clean_path(path)
-    return any(path_only.startswith(prefix) for prefix in PROXY_PREFIXES)
+    return is_hosted_admin_bff_path(path) or any(
+        path_only.startswith(prefix) for prefix in PROXY_PREFIXES
+    )
+
+
+def is_admin_web_session_path(path: str) -> bool:
+    path_only = clean_path(path)
+    return path_only == WEB_SESSION_PREFIX or path_only.startswith(
+        f"{WEB_SESSION_PREFIX}/"
+    )
+
+
+def is_player_web_session_path(path: str) -> bool:
+    path_only = clean_path(path)
+    return path_only == PLAYER_WEB_SESSION_PREFIX or path_only.startswith(
+        f"{PLAYER_WEB_SESSION_PREFIX}/"
+    )
 
 
 def is_web_session_path(path: str) -> bool:
-    return clean_path(path).startswith(WEB_SESSION_PREFIX)
+    return is_admin_web_session_path(path) or is_player_web_session_path(path)
+
+
+def _strict_percent_decode(value: str) -> str:
+    if INVALID_PERCENT_ESCAPE_PATTERN.search(value):
+        raise ValueError("invalid percent escape")
+    return unquote_to_bytes(value).decode("utf-8", errors="strict")
+
+
+def _filtered_hosted_admin_query(query: str) -> str:
+    if not query:
+        return ""
+    if len(query.encode("utf-8", errors="strict")) > MAX_HOSTED_BFF_PATH_BYTES:
+        raise ValueError("Admin BFF query is too long")
+    kept: list[str] = []
+    components = query.split("&")
+    if len(components) > 100:
+        raise ValueError("Admin BFF query has too many fields")
+    for component in components:
+        decoded_component = _strict_percent_decode(component.replace("+", " "))
+        if any(character in decoded_component for character in ("\r", "\n", "\x00")):
+            raise ValueError("Admin BFF query contains a control character")
+        raw_name = component.partition("=")[0]
+        decoded_name = _strict_percent_decode(raw_name.replace("+", " "))
+        if decoded_name == "path":
+            continue
+        kept.append(component)
+    return "&".join(kept)
+
+
+def local_admin_bff_upstream_path(path: str, *, local_supabase: bool) -> str | None:
+    """Map the hosted Admin route only for an explicitly local Supabase runtime."""
+    if not is_hosted_admin_bff_path(path):
+        return None
+    if not local_supabase:
+        raise PermissionError("hosted-style Admin BFF routes require --local-supabase")
+
+    parsed = urlsplit(path)
+    if parsed.fragment:
+        raise ValueError("Admin BFF request targets must not include fragments")
+    raw_suffix = parsed.path[len(HOSTED_ADMIN_BFF_PREFIX):]
+    if not raw_suffix.startswith("/") or raw_suffix == "/":
+        raise ValueError("Admin BFF path must include a route suffix")
+
+    decoded_suffix = _strict_percent_decode(raw_suffix)
+    # Match the hosted catch-all plus proxy's two decode boundaries while still
+    # failing closed on double-encoded traversal and backslash aliases.
+    if "%" in decoded_suffix:
+        decoded_suffix = _strict_percent_decode(decoded_suffix)
+    if "\\" in decoded_suffix or any(
+        character in decoded_suffix for character in ("\r", "\n", "\x00")
+    ):
+        raise ValueError("Admin BFF path contains an unsafe character")
+    segments = decoded_suffix.split("/")[1:]
+    if not segments or any(segment in {"", ".", ".."} for segment in segments):
+        raise ValueError("Admin BFF path contains an unsafe segment")
+    if len(decoded_suffix.encode("utf-8", errors="strict")) > MAX_HOSTED_BFF_PATH_BYTES:
+        raise ValueError("Admin BFF path is too long")
+
+    encoded_suffix = quote(
+        decoded_suffix,
+        safe="/:@!$&'()*+,;=-._~",
+        encoding="utf-8",
+        errors="strict",
+    )
+    query = _filtered_hosted_admin_query(parsed.query)
+    upstream = f"{WEB_SESSION_PREFIX}/proxy{encoded_suffix}"
+    return f"{upstream}?{query}" if query else upstream
 
 
 def remove_static_conditionals(headers) -> None:
@@ -277,29 +400,48 @@ def normalized_session_envelope(value: object) -> str | None:
     return f"v1.{encode_base64url(iv)}.{encode_base64url(encrypted)}"
 
 
-def normalized_session_request_cookie(value: object) -> str | None:
+def normalized_session_request_cookie(
+    value: object,
+    request_path: str,
+) -> str | None:
+    if is_player_web_session_path(request_path):
+        accepted_names = {PLAYER_LOCAL_SESSION_COOKIE, PLAYER_REMOTE_SESSION_COOKIE}
+        local_name = PLAYER_LOCAL_SESSION_COOKIE
+    elif is_admin_web_session_path(request_path):
+        accepted_names = {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}
+        local_name = LOCAL_SESSION_COOKIE
+    else:
+        return None
     for segment in str(value).split(";"):
         name, separator, raw_value = segment.strip().partition("=")
-        if not separator or name not in {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}:
+        if not separator or name not in accepted_names:
             continue
         envelope = normalized_session_envelope(raw_value)
         if envelope:
-            return f"{LOCAL_SESSION_COOKIE}={envelope}"
+            return f"{local_name}={envelope}"
     return None
 
 
 def normalized_session_response_cookie(value: object) -> str | None:
     first, *_attributes = str(value).split(";")
     name, separator, raw_value = first.strip().partition("=")
-    if not separator or name not in {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}:
+    if not separator:
+        return None
+    if name in {PLAYER_LOCAL_SESSION_COOKIE, PLAYER_REMOTE_SESSION_COOKIE}:
+        local_name = PLAYER_LOCAL_SESSION_COOKIE
+        maximum_age = 14_400
+    elif name in {LOCAL_SESSION_COOKIE, REMOTE_SESSION_COOKIE}:
+        local_name = LOCAL_SESSION_COOKIE
+        maximum_age = 28_800
+    else:
         return None
     if raw_value == "":
-        return f"{LOCAL_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
+        return f"{local_name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
     envelope = normalized_session_envelope(raw_value)
     if not envelope:
         return None
     return (
-        f"{LOCAL_SESSION_COOKIE}={envelope}; Path=/; Max-Age=28800; "
+        f"{local_name}={envelope}; Path=/; Max-Age={maximum_age}; "
         "HttpOnly; SameSite=Strict"
     )
 
@@ -315,6 +457,7 @@ def filtered_request_headers(
     result: dict[str, str] = {}
     prohibited_bearer = f"Bearer {browser_publishable_key}"
     web_session_request = is_web_session_path(request_path)
+    admin_web_session_request = is_admin_web_session_path(request_path)
     for name, value in headers.items():
         pair = safe_header_pair(name, value)
         if pair is None:
@@ -325,21 +468,105 @@ def filtered_request_headers(
             continue
         if lower_name == "cookie":
             if web_session_request:
-                session_cookie = normalized_session_request_cookie(safe_value)
+                session_cookie = normalized_session_request_cookie(
+                    safe_value,
+                    request_path,
+                )
                 if session_cookie:
                     result["Cookie"] = session_cookie
             continue
         canonical_name = REQUEST_HEADER_ALLOWLIST.get(lower_name)
         if canonical_name is None:
             continue
-        if lower_name == "authorization" and safe_value.strip() == prohibited_bearer:
-            continue
+        if lower_name == "authorization":
+            if admin_web_session_request or safe_value.strip() == prohibited_bearer:
+                continue
         result[canonical_name] = safe_value
     if web_session_request and "Origin" not in result:
         result["Origin"] = browser_origin
     result["Host"] = upstream_host
     result["x-real-ip"] = "127.0.0.1"
     return result
+
+
+def _sha256_hex(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def signed_local_admin_bff_headers(
+    headers: dict[str, str],
+    *,
+    method: str,
+    target_url: str,
+    body: bytes | None,
+) -> dict[str, str]:
+    """Add the public local-development envelope accepted only by loopback Edge."""
+    parsed = urlsplit(target_url)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "kong"
+        or parsed.port != 8000
+        or not is_admin_web_session_path(parsed.path)
+        or parsed.fragment
+    ):
+        raise ValueError("local Admin BFF signatures require the local Kong target")
+
+    result = dict(headers)
+    result.pop("Authorization", None)
+    timestamp = int(time.time())
+    nonce = str(uuid.uuid4())
+    client_ip = "127.0.0.1"
+    result[ADMIN_BFF_TIMESTAMP_HEADER] = str(timestamp)
+    result[ADMIN_BFF_NONCE_HEADER] = nonce
+    result[ADMIN_BFF_CLIENT_IP_HEADER] = client_ip
+    result[ADMIN_BFF_MODE_HEADER] = "local"
+    normalized = {str(name).lower(): str(value) for name, value in result.items()}
+    context = "\n".join(
+        f"{name}:{normalized.get(name, '')}"
+        for name in ADMIN_BFF_SIGNED_CONTEXT_HEADERS
+    )
+    canonical = "\n".join((
+        ADMIN_BFF_SIGNATURE_VERSION,
+        f"timestamp:{timestamp}",
+        f"nonce:{nonce}",
+        f"method:{method.upper()}",
+        f"target-origin:{parsed.scheme}://{parsed.netloc}",
+        f"path:{parsed.path}{('?' + parsed.query) if parsed.query else ''}",
+        f"browser-origin:{normalized.get('origin', '')}",
+        f"client-ip:{client_ip}",
+        f"context-sha256:{_sha256_hex(context.encode('utf-8'))}",
+        f"body-sha256:{_sha256_hex(body or b'')}",
+    ))
+    signing_key = hmac.new(
+        ADMIN_BFF_LOCAL_SIGNING_MATERIAL,
+        ADMIN_BFF_SIGNING_KEY_CONTEXT,
+        hashlib.sha256,
+    ).digest()
+    signature = hmac.new(
+        signing_key,
+        canonical.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    result[ADMIN_BFF_SIGNATURE_HEADER] = f"v1={encode_base64url(signature)}"
+    return result
+
+
+def maybe_signed_local_admin_bff_headers(
+    headers: dict[str, str],
+    *,
+    local_supabase: bool,
+    method: str,
+    upstream_path: str,
+    body: bytes | None,
+) -> dict[str, str]:
+    if not local_supabase or not is_admin_web_session_path(upstream_path):
+        return dict(headers)
+    return signed_local_admin_bff_headers(
+        headers,
+        method=method,
+        target_url=f"{ADMIN_BFF_LOCAL_TARGET_ORIGIN}{upstream_path}",
+        body=body,
+    )
 
 
 def normalize_content_type(value: object) -> str:
@@ -469,6 +696,27 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
                 )
                 return
 
+        try:
+            mapped_admin_path = local_admin_bff_upstream_path(
+                self.path,
+                local_supabase=server.local_supabase,  # type: ignore[attr-defined]
+            )
+        except PermissionError:
+            self._send_json_error(
+                403,
+                "local_admin_bff_disabled",
+                "Hosted-style Administrator routes are available only with local Supabase.",
+            )
+            return
+        except (UnicodeError, ValueError):
+            self._send_json_error(
+                400,
+                "invalid_admin_bff_path",
+                "The Administrator request path is invalid.",
+            )
+            return
+        upstream_path = mapped_admin_path or self.path
+
         raw_content_length = str(self.headers.get("Content-Length") or "0").strip()
         try:
             content_length = int(raw_content_length)
@@ -497,17 +745,25 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
         )
 
         try:
+            upstream_headers = filtered_request_headers(
+                self.headers,
+                upstream.netloc,
+                browser_publishable_key=publishable_key,
+                request_path=upstream_path,
+                browser_origin=server.browser_origin,  # type: ignore[attr-defined]
+            )
+            upstream_headers = maybe_signed_local_admin_bff_headers(
+                upstream_headers,
+                local_supabase=server.local_supabase,  # type: ignore[attr-defined]
+                method=self.command,
+                upstream_path=upstream_path,
+                body=body,
+            )
             connection.request(
                 self.command,
-                self.path,
+                upstream_path,
                 body=body,
-                headers=filtered_request_headers(
-                    self.headers,
-                    upstream.netloc,
-                    browser_publishable_key=publishable_key,
-                    request_path=self.path,
-                    browser_origin=server.browser_origin,  # type: ignore[attr-defined]
-                ),
+                headers=upstream_headers,
             )
             upstream_response = connection.getresponse()
             payload = upstream_response.read(MAX_PROXY_BODY_BYTES + 1)
@@ -558,17 +814,26 @@ class EconovariaGatewayServer(ThreadingHTTPServer):
         upstream_url: str,
         publishable_key: str,
         request_timeout: float,
+        local_supabase: bool = False,
     ):
-        super().__init__(server_address, handler_class)
         parsed = urlsplit(upstream_url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("upstream_url must be an absolute HTTP(S) URL")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("upstream_url must not contain credentials, query, or fragment")
+        if local_supabase and (
+            parsed.hostname not in LOCAL_HOSTS
+            or parsed.path not in {"", "/"}
+        ):
+            raise ValueError(
+                "local Admin BFF mode requires an exact loopback Supabase upstream"
+            )
+        super().__init__(server_address, handler_class)
         self.upstream = parsed
         self.publishable_key = publishable_key
         self.request_timeout = request_timeout
-        self.browser_origin = f"http://127.0.0.1:{server_address[1]}"
+        self.local_supabase = local_supabase
+        self.browser_origin = f"http://127.0.0.1:{self.server_address[1]}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -640,6 +905,7 @@ def main() -> int:
             upstream_url=supabase_url,
             publishable_key=publishable_key,
             request_timeout=configured_timeout(),
+            local_supabase=args.local_supabase,
         )
     except OSError as error:
         if error.errno == errno.EADDRINUSE:

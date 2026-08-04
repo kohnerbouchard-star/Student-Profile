@@ -2,18 +2,26 @@
 
 import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { chromium } from "playwright";
 
+import {
+  assertDisposableLocalRuntime,
+  parseSupabaseStatusEnv,
+} from "./lib/disposable-local-runtime.mjs";
+
 const execFileAsync = promisify(execFile);
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
-const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
+const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR ||
+  join(tmpdir(), "econovaria-player-browser");
 const DATABASE_URL = process.env.DATABASE_URL || "";
+const NPX_COMMAND = process.platform === "win32" ? "npx.cmd" : "npx";
 const LICENSE_CODE = process.env.ECONOVARIA_BROWSER_LICENSE_CODE || "PLAYER-E2E-LICENSE-001";
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
-const REQUEST_TIMEOUT_MS = 180_000;
 const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 const PLAYER_ROUTES = Object.freeze([
@@ -55,13 +63,18 @@ const evidence = {
     signupStatus: 0,
     signInStatus: 0,
     bootstrapStatus: 0,
+    gameProvisionStatus: 0,
     localMfaExemptionApplied: false,
+    identityFixtureCreated: false,
+    disposableRuntime: null,
   },
   adminConsoleRendered: false,
   adminUsesHttpOnlyBff: false,
   gameCode: {
     formatValid: false,
     prefilledWithoutTruncation: false,
+    ownerScopedRead: false,
+    rotationUnchanged: false,
   },
   playersCreatedThroughRenderedUi: 0,
   concurrentLogin: false,
@@ -81,57 +94,100 @@ function redact(value) {
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]");
 }
 
-async function request(path, { method = "GET", headers = {}, body, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json")
-      ? await response.json().catch(() => null)
-      : await response.text().catch(() => "");
-    return { status: response.status, ok: response.ok, payload };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function browserRuntimeConfig() {
-  const response = await fetch(`${BASE_URL}/runtime-config.env.js`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Runtime configuration returned ${response.status}.`);
-  const source = await response.text();
-  const match = source.match(/Object\.freeze\((\{[\s\S]*\})\);?/);
-  if (!match) throw new Error("Runtime configuration could not be parsed.");
-  const config = JSON.parse(match[1]);
-  const publishableKey = String(config.supabasePublishableKey || "").trim();
-  if (!publishableKey || publishableKey.startsWith("sb_secret_")) {
-    throw new Error("A browser-safe Supabase publishable key is required.");
-  }
-  return { publishableKey };
-}
-
-function publicHeaders(publishableKey) {
-  return {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-    apikey: publishableKey,
-    "x-econovaria-device-id": crypto.randomUUID(),
-  };
-}
-
 function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-async function disableMfaForDisposableLocalStaff() {
-  if (!DATABASE_URL) throw new Error("DATABASE_URL is required for disposable local Staff setup.");
-  const query = `update public.staff_users set mfa_required = false where lower(email) = lower(${sqlLiteral(ADMIN_EMAIL)}); select coalesce((select mfa_required::text from public.staff_users where lower(email) = lower(${sqlLiteral(ADMIN_EMAIL)}) limit 1), 'missing');`;
+async function localSupabaseAdminRuntime() {
+  const { stdout } = await execFileAsync(
+    NPX_COMMAND,
+    ["supabase", "status", "--workdir", "backend", "-o", "env"],
+    { timeout: 30_000, maxBuffer: 2_097_152 },
+  );
+  const values = parseSupabaseStatusEnv(stdout);
+  const disposableRuntime = assertDisposableLocalRuntime({
+    statusOutput: stdout,
+    inheritedDatabaseUrl: DATABASE_URL,
+    gatewayUrl: BASE_URL,
+  });
+  const apiUrl = String(values.API_URL || values.SUPABASE_URL || "")
+    .trim()
+    .replace(/\/+$/u, "");
+  const serviceRoleKey = String(
+    values.SERVICE_ROLE_KEY || values.SECRET_KEY || "",
+  ).trim();
+  const publishableKey = String(values.PUBLISHABLE_KEY || "").trim();
+  if (!serviceRoleKey) {
+    throw new Error("Disposable local Supabase service credential is unavailable.");
+  }
+  if (!publishableKey.startsWith("sb_publishable_")) {
+    throw new Error("Disposable local Supabase publishable credential is unavailable.");
+  }
+  return { apiUrl, serviceRoleKey, publishableKey, disposableRuntime };
+}
+
+async function createConnectedStaffFixture() {
+  if (!DATABASE_URL) {
+    throw new Error("DATABASE_URL is required for disposable local Staff setup.");
+  }
+  const {
+    apiUrl,
+    serviceRoleKey,
+    publishableKey,
+    disposableRuntime,
+  } = await localSupabaseAdminRuntime();
+  evidence.connectedSetup.disposableRuntime = disposableRuntime;
+  const adminHeaders = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    "Content-Type": "application/json",
+  };
+  const authResponse = await fetch(`${apiUrl}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: adminHeaders,
+    body: JSON.stringify({
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      email_confirm: true,
+      user_metadata: { display_name: "Multiplayer Browser Teacher" },
+    }),
+    cache: "no-store",
+    redirect: "error",
+  });
+  evidence.connectedSetup.signupStatus = authResponse.status;
+  const authPayload = await authResponse.json().catch(() => null);
+  const authUserId = String(authPayload?.id || authPayload?.user?.id || "").trim();
+  if (
+    !authResponse.ok ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(authUserId)
+  ) {
+    throw new Error(`Disposable local Auth identity returned ${authResponse.status}.`);
+  }
+
+  await execFileAsync("psql", [
+    DATABASE_URL,
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-c",
+    `insert into public.staff_users (
+       supabase_auth_user_id,
+       email,
+       display_name,
+       status,
+       role,
+       mfa_required
+     ) values (
+       ${sqlLiteral(authUserId)}::uuid,
+       lower(${sqlLiteral(ADMIN_EMAIL)}),
+       'Multiplayer Browser Teacher',
+       'active',
+       'game_admin',
+       false
+     );`,
+  ], { timeout: 30_000, maxBuffer: 1_048_576 });
+
   const { stdout } = await execFileAsync("psql", [
     DATABASE_URL,
     "-X",
@@ -139,37 +195,48 @@ async function disableMfaForDisposableLocalStaff() {
     "-v",
     "ON_ERROR_STOP=1",
     "-c",
-    query,
+    `select jsonb_build_object(
+       'permissionVersion', permission_version,
+       'securityVersion', security_version
+     )::text
+     from public.staff_users
+     where supabase_auth_user_id = ${sqlLiteral(authUserId)}::uuid;`,
   ], { timeout: 30_000, maxBuffer: 1_048_576 });
-  const status = String(stdout || "").trim().split(/\s+/).at(-1);
-  if (status !== "false") throw new Error("Disposable local Staff MFA exemption could not be verified.");
-  evidence.connectedSetup.localMfaExemptionApplied = true;
-}
-
-async function createConnectedGame() {
-  const { publishableKey } = await browserRuntimeConfig();
-  const signup = await request("/functions/v1/bootstrap-api/staff/signup", {
-    method: "POST",
-    headers: publicHeaders(publishableKey),
-    body: {
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-      displayName: "Multiplayer Browser Teacher",
-      purchaseCode: LICENSE_CODE,
-      gameName: GAME_NAME,
-      difficultyPreset: "moderate",
-      stockMarketWindow: { timezone: "Asia/Seoul" },
-    },
-  });
-  evidence.connectedSetup.signupStatus = signup.status;
-  if (signup.status !== 201 || signup.payload?.ok !== true) {
-    throw new Error(`Connected staff signup returned ${signup.status}.`);
+  const security = JSON.parse(String(stdout || "").trim());
+  const permissionVersion = Number(security.permissionVersion);
+  const securityVersion = Number(security.securityVersion);
+  if (
+    !Number.isSafeInteger(permissionVersion) || permissionVersion < 1 ||
+    !Number.isSafeInteger(securityVersion) || securityVersion < 1
+  ) {
+    throw new Error("Disposable local Staff security state is invalid.");
   }
 
-  const gameId = String(signup.payload?.activation?.gameSessionId || "").trim();
-  if (!gameId) throw new Error("Connected staff signup did not return the provisioned game scope.");
-  await disableMfaForDisposableLocalStaff();
-  return { gameId, publishableKey };
+  const metadataResponse = await fetch(
+    `${apiUrl}/auth/v1/admin/users/${encodeURIComponent(authUserId)}`,
+    {
+      method: "PUT",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        app_metadata: {
+          econovaria_role: "game_admin",
+          permission_version: permissionVersion,
+          security_version: securityVersion,
+        },
+        user_metadata: { display_name: "Multiplayer Browser Teacher" },
+      }),
+      cache: "no-store",
+      redirect: "error",
+    },
+  );
+  await metadataResponse.body?.cancel().catch(() => undefined);
+  if (!metadataResponse.ok) {
+    throw new Error(`Disposable local Auth metadata returned ${metadataResponse.status}.`);
+  }
+
+  evidence.connectedSetup.localMfaExemptionApplied = true;
+  evidence.connectedSetup.identityFixtureCreated = true;
+  return { publishableKey };
 }
 
 function instrumentPage(page, target) {
@@ -179,7 +246,11 @@ function instrumentPage(page, target) {
   page.on("pageerror", (error) => target.pageErrors.push(redact(error?.message || error)));
   page.on("request", (request) => {
     const url = request.url();
-    if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
+    if (
+      !url.includes("/functions/v1/") &&
+      !url.includes("/auth/v1/") &&
+      !url.includes("/api/")
+    ) return;
     const headers = request.headers();
     if (headers.authorization !== undefined) {
       target.pageErrors.push(redact(`Browser exposed Authorization on ${request.method()} ${url}`));
@@ -187,7 +258,11 @@ function instrumentPage(page, target) {
   });
   page.on("response", (response) => {
     const url = response.url();
-    if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
+    if (
+      !url.includes("/functions/v1/") &&
+      !url.includes("/auth/v1/") &&
+      !url.includes("/api/")
+    ) return;
     target.requests.push({
       method: response.request().method(),
       url: redact(url.replace(BASE_URL, "[local-gateway]")),
@@ -197,7 +272,15 @@ function instrumentPage(page, target) {
 }
 
 function assertNoFailedRequests(label, requests, startIndex = 0) {
-  const failed = requests.slice(startIndex).filter((entry) => entry.status >= 400);
+  const failed = requests.slice(startIndex).filter((entry) => {
+    if (entry.status < 400) return false;
+    return !(
+      label === "Admin bootstrap" &&
+      entry.method === "GET" &&
+      entry.status === 401 &&
+      entry.url.endsWith("/functions/v1/web-session-api/status")
+    );
+  });
   if (failed.length) throw new Error(`${label} observed failed requests: ${JSON.stringify(failed)}`);
 }
 
@@ -210,9 +293,12 @@ async function waitForAdminConsole(page) {
   await page.waitForTimeout(1200);
 }
 
-async function signInAdmin(page, expectedGameId) {
+async function signInAdminAndCreateGame(page) {
   const consoleErrorStart = evidence.adminConsoleErrors.length;
-  await page.goto(`${BASE_URL}/?mode=admin`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.goto(`${BASE_URL}/?mode=admin`, {
+    waitUntil: "domcontentloaded",
+    timeout: 120_000,
+  });
   await page.locator("#adminEmail").fill(ADMIN_EMAIL);
   await page.locator("#adminAccessCode").fill(ADMIN_PASSWORD);
   const requestAuditStart = evidence.adminRequests.length;
@@ -234,27 +320,89 @@ async function signInAdmin(page, expectedGameId) {
   evidence.connectedSetup.signInStatus = loginResponse.status();
   evidence.connectedSetup.bootstrapStatus = statusResponse.status();
   if (loginResponse.status() !== 200 || statusResponse.status() !== 200) {
-    throw new Error(`Connected Admin web session returned ${loginResponse.status()}/${statusResponse.status()}.`);
+    throw new Error(
+      `Connected Admin web session returned ${loginResponse.status()}/${statusResponse.status()}.`,
+    );
   }
-  const status = await statusResponse.json().catch(() => null);
-  const activeGames = Array.isArray(status?.activeGameSessions) ? status.activeGameSessions : [];
-  const expectedGameIndex = activeGames.findIndex((game) => String(game?.id || "") === expectedGameId);
-  if (expectedGameIndex < 0) {
-    throw new Error("Connected Admin web session did not contain the provisioned game scope.");
+  const initialStatus = await statusResponse.json().catch(() => null);
+  const initialGames = Array.isArray(initialStatus?.activeGameSessions)
+    ? initialStatus.activeGameSessions
+    : [];
+  if (initialGames.length !== 0) {
+    throw new Error(
+      "Disposable local Staff unexpectedly owned a game before selector provisioning.",
+    );
   }
 
-  const gameRows = page.locator("#adminGameList .game-row");
-  await gameRows.nth(expectedGameIndex).waitFor({ state: "visible", timeout: 30_000 });
-  await gameRows.nth(expectedGameIndex).click();
+  await page.locator("#createNewAdminGame").waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
+  await page.locator("#createNewAdminGame").click();
+  await page.locator("#adminNewLicenseCode").fill(LICENSE_CODE);
+  await page.locator("#adminNewGameName").fill(GAME_NAME);
+  await page.locator("#adminNewGameTimeZone").selectOption("Asia/Seoul");
+  await page.locator("#adminNewGameDifficulty").selectOption("moderate");
+
+  const provisionResponsePromise = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith(
+        "/functions/v1/web-session-api/proxy/games",
+      ) && response.request().method() === "POST",
+    { timeout: 180_000 },
+  );
+  const refreshedStatusPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("/functions/v1/web-session-api/status") &&
+      response.request().method() === "GET" && response.status() === 200,
+    { timeout: 180_000 },
+  );
+  await page.locator("#adminCreateGameForm button[type='submit']").click();
+  const [provisionResponse, refreshedStatusResponse] = await Promise.all([
+    provisionResponsePromise,
+    refreshedStatusPromise,
+  ]);
+  evidence.connectedSetup.gameProvisionStatus = provisionResponse.status();
+  if (![200, 201].includes(provisionResponse.status())) {
+    throw new Error(
+      `Authenticated game selector returned ${provisionResponse.status()}.`,
+    );
+  }
+  const provisionPayload = await provisionResponse.json().catch(() => null);
+  const gameId = String(
+    provisionPayload?.data?.game?.id ||
+      provisionPayload?.data?.game?.gameId ||
+      "",
+  ).trim();
+  if (!gameId) {
+    throw new Error("Authenticated game selector did not return a game scope.");
+  }
+  const refreshedStatus = await refreshedStatusResponse.json().catch(() => null);
+  const activeGames = Array.isArray(refreshedStatus?.activeGameSessions)
+    ? refreshedStatus.activeGameSessions
+    : [];
+  if (!activeGames.some((game) => String(game?.id || "") === gameId)) {
+    throw new Error(
+      "Refreshed Admin status did not contain the selector-provisioned game.",
+    );
+  }
+
+  const gameRow = page.locator(
+    `#adminGameList .game-row[data-game-id="${gameId}"]`,
+  ).first();
+  await gameRow.waitFor({ state: "visible", timeout: 30_000 });
+  await gameRow.click();
   await waitForAdminConsole(page);
 
   const selectedGameId = await page.evaluate(() =>
-    sessionStorage.getItem("econovaria.admin.selected-game.v1") || ""
+    new URL(location.href).searchParams.get("game") || ""
   );
-  if (selectedGameId !== expectedGameId) {
+  if (selectedGameId !== gameId) {
     throw new Error("Connected Admin selected the wrong game scope.");
   }
-  const storage = await page.evaluate(() => sessionStorage.getItem("econovaria.admin.auth.v1") || "");
+  const storage = await page.evaluate(() =>
+    sessionStorage.getItem("econovaria.admin.auth.v1") || ""
+  );
   if (/accessToken|refreshToken|eyJ[A-Za-z0-9_-]+\./.test(storage)) {
     throw new Error("Admin browser storage exposed Staff credentials.");
   }
@@ -264,9 +412,13 @@ async function signInAdmin(page, expectedGameId) {
       !/Failed to load resource: the server responded with a status of 401/i.test(entry)
     ),
   );
-  evidence.adminConsoleErrors.splice(0, evidence.adminConsoleErrors.length, ...retainedErrors);
+  evidence.adminConsoleErrors.splice(
+    0,
+    evidence.adminConsoleErrors.length,
+    ...retainedErrors,
+  );
   evidence.adminUsesHttpOnlyBff = true;
-  return requestAuditStart;
+  return { gameId, requestAuditStart };
 }
 
 async function navigateAdminSection(page, name) {
@@ -293,6 +445,57 @@ async function openShareModal(page) {
     throw new Error("Game Code was not rendered in the canonical memorable format.");
   }
   return { modal, code };
+}
+
+async function readPersistedGameCodeThroughAdminBff(page, gameId, publishableKey) {
+  const expectedPath = `/api/admin/games/${encodeURIComponent(gameId)}/join-code/reset`;
+  const response = await page.context().request.get(`${BASE_URL}${expectedPath}`, {
+    headers: {
+      Accept: "application/json",
+      apikey: publishableKey,
+      "x-econovaria-device-id": crypto.randomUUID(),
+      "x-econovaria-game-id": gameId,
+    },
+    failOnStatusCode: false,
+    timeout: 60_000,
+  });
+  const status = response.status();
+  const payload = await response.json().catch(() => null);
+  evidence.adminRequests.push({
+    method: "GET",
+    url: `[local-gateway]${expectedPath}`,
+    status,
+  });
+  if (status !== 200) {
+    throw new Error(
+      `Owner-scoped Admin Game Code read returned ${status}.`,
+    );
+  }
+  const code = String(
+    payload?.data?.joinCode?.gameJoinCode ||
+      payload?.joinCode?.gameJoinCode ||
+      payload?.data?.gameJoinCode ||
+      payload?.gameJoinCode ||
+      "",
+  ).trim();
+  if (!MEMORABLE_CODE_PATTERN.test(code)) {
+    throw new Error("Owner-scoped Admin Game Code read returned an invalid code.");
+  }
+  evidence.gameCode.ownerScopedRead = true;
+  return code;
+}
+
+function assertJoinCodeWasReadWithoutRotation() {
+  const requests = evidence.adminRequests.filter((entry) =>
+    entry.url.endsWith("/join-code/reset")
+  );
+  if (!requests.some((entry) => entry.method === "GET" && entry.status === 200)) {
+    throw new Error("Admin journey did not record a successful Game Code read.");
+  }
+  if (requests.some((entry) => entry.method !== "GET")) {
+    throw new Error("Admin journey unexpectedly rotated the Game Code.");
+  }
+  evidence.gameCode.rotationUnchanged = true;
 }
 
 async function createPlayer(page, player) {
@@ -353,7 +556,7 @@ async function loginPlayer(browser, gameCode, player, index) {
   await page.locator("#playerAccessCode").fill(player.accessCode);
   const requestStart = journey.requests.length;
   const loginResponsePromise = page.waitForResponse(
-    (response) => response.url().includes("/functions/v1/player-api/players/login") &&
+    (response) => response.url().includes("/functions/v1/player-web-session-api/login") &&
       response.request().method() === "POST",
     { timeout: 60_000 },
   );
@@ -416,7 +619,7 @@ let adminContext;
 const playerSessions = [];
 let failure;
 try {
-  const setup = await createConnectedGame();
+  const { publishableKey } = await createConnectedStaffFixture();
 
   browser = await chromium.launch({ headless: true });
   adminContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
@@ -426,12 +629,24 @@ try {
     consoleErrors: evidence.adminConsoleErrors,
     pageErrors: evidence.adminPageErrors,
   });
-  const authenticatedRequestStart = await signInAdmin(adminPage, setup.gameId);
+  const {
+    gameId,
+    requestAuditStart: authenticatedRequestStart,
+  } = await signInAdminAndCreateGame(adminPage);
   evidence.adminConsoleRendered = true;
   assertNoFailedRequests("Admin bootstrap", evidence.adminRequests, authenticatedRequestStart);
 
+  const persistedGameCode = await readPersistedGameCodeThroughAdminBff(
+    adminPage,
+    gameId,
+    publishableKey,
+  );
   const share = await openShareModal(adminPage);
   const gameCode = share.code;
+  if (gameCode !== persistedGameCode) {
+    throw new Error("Rendered Game Code did not match the owner-scoped persisted read.");
+  }
+  assertJoinCodeWasReadWithoutRotation();
   evidence.gameCode.formatValid = true;
   await adminPage.keyboard.press("Escape");
   if (await share.modal.isVisible().catch(() => false)) {

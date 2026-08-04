@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/beta-security-contract.yml"
+      - ".github/workflows/production-*.yml"
       - "api/**"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"
@@ -35,6 +36,8 @@ on:
       - "backend/supabase/functions/password-reset-api/**"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts"
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/src/domains/game-sessions/**"
       - "backend/supabase/migrations/*authentication_throttle*.sql"
       - "backend/supabase/migrations/*staff_security_state*.sql"
       - "backend/supabase/migrations/*staff_permission_grants*.sql"
@@ -44,9 +47,15 @@ on:
       - "backend/package.json"
       - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
       - "docs/security/**"
+      - "docs/architecture/api-route-ownership.*"
       - "docs/operations/beta-security-rate-limit-staging-runbook.md"
       - "docs/operations/staff-access-security-policy.md"
+      - "docs/operations/evidence/production-admin*join-code*.json"
+      - "docs/operations/release-integrity-gates-v1*.md"
       - "scripts/admin-session-manager-smoke.mjs"
+      - "scripts/api-boundary-*.mjs"
+      - "scripts/api-route-ownership-contract*.mjs"
+      - "scripts/lib/api-boundary-inventory.mjs"
       - "scripts/admin-mfa-bff-contract.test.mjs"
       - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/beta-security-typecheck-workflow.test.mjs"
@@ -104,6 +113,9 @@ jobs:
       - name: Run existing security contracts
         working-directory: backend
         run: npm run test:player-security
+
+      - name: Verify owner-scoped game-session wiring
+        run: npm --prefix backend run test:game-sessions
 
       - name: Run authentication convergence contracts
         env:
@@ -175,6 +187,9 @@ jobs:
 
       - name: Validate authentication boundary ratchet
         run: node --test scripts/auth-boundary-contract.test.mjs
+
+      - name: Validate persisted join-code and retired hotfix contracts
+        run: node --test scripts/persisted-game-code-contract.test.mjs
 
       - name: Validate fail-closed password reset remediation
         run: node --test --test-name-pattern="password reset fails closed" scripts/security-audit-remediation-contract.test.mjs

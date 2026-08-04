@@ -9,6 +9,15 @@ import {
   readOwnedGameSession,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import {
+  GameJoinCodeReadError,
+  readGameJoinCode,
+  type ReadGameJoinCodeInput,
+  type ReadGameJoinCodeResult,
+} from "../application/readGameJoinCode.ts";
+import {
+  createSupabaseGameJoinCodeReadRepository,
+} from "../infrastructure/supabaseGameJoinCodeReadRepository.ts";
 
 interface GameJoinCodeResetDependencies {
   readonly resolveStaffForRequest: (
@@ -18,6 +27,13 @@ interface GameJoinCodeResetDependencies {
       readonly missingMessage: string;
     },
   ) => Promise<StaffRequestResolution>;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly readOwnedSession?: typeof readOwnedGameSession;
+  readonly readJoinCode?: (
+    input: ReadGameJoinCodeInput,
+    serviceClient: EdgeSupabaseClient,
+  ) => Promise<ReadGameJoinCodeResult>;
+  readonly issueJoinCode?: typeof issueGameJoinCode;
 }
 
 type StaffRequestResolution =
@@ -69,7 +85,7 @@ export async function handleResetGameJoinCodeRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
@@ -85,25 +101,48 @@ export async function handleResetGameJoinCodeRequest(
         : "A verified Supabase Auth user is required to reset a game join code.",
     });
 
-    if (!staffResult.ok) {
+    if (staffResult.ok === false) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
-    const ownershipResult = await readOwnedGameSession(
+    const ownershipResult = await (
+      dependencies.readOwnedSession ?? readOwnedGameSession
+    )(
       staffResult.serviceClient,
       gameSessionId,
       staffResult.staff.id,
     );
 
-    if (!ownershipResult.ok) {
+    if (ownershipResult.ok === false) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
-    const joinCodeResult = request.method === "GET"
-      ? await readGameJoinCode(staffResult.serviceClient, gameSessionId, staffResult.staff.id)
-      : await issueGameJoinCode(staffResult.serviceClient, gameSessionId, staffResult.staff.id);
+    if (request.method === "GET") {
+      const input = {
+        gameSessionId,
+        staffUserId: staffResult.staff.id,
+        gameSession: ownershipResult.gameSession,
+      };
+      const result = await (dependencies.readJoinCode ?? readPersistedJoinCode)(
+        input,
+        staffResult.serviceClient,
+      );
 
-    if (!joinCodeResult.ok) {
+      return jsonResponse<GameJoinCodeSuccessBody>(200, {
+        ok: true,
+        gameSession: result.gameSession,
+        joinCode: result.joinCode,
+      });
+    }
+
+    const joinCodeResult =
+      await (dependencies.issueJoinCode ?? issueGameJoinCode)(
+        staffResult.serviceClient,
+        gameSessionId,
+        staffResult.staff.id,
+      );
+
+    if (joinCodeResult.ok === false) {
       return jsonError(joinCodeResult.status, joinCodeResult.error);
     }
 
@@ -120,7 +159,15 @@ export async function handleResetGameJoinCodeRequest(
         updatedAt: joinCodeResult.updatedAt,
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof GameJoinCodeReadError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
     return jsonError(500, {
       code: request.method === "GET" ? "join_code_read_failed" : "join_code_reset_failed",
       message: request.method === "GET"
@@ -131,37 +178,14 @@ export async function handleResetGameJoinCodeRequest(
   }
 }
 
-async function readGameJoinCode(
+function readPersistedJoinCode(
+  input: ReadGameJoinCodeInput,
   serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  staffUserId: string,
-): Promise<JoinCodeResult> {
-  const response = await serviceClient
-    .from("game_sessions")
-    .select("game_join_code,game_join_code_status,updated_at")
-    .eq("id", gameSessionId)
-    .eq("owner_staff_user_id", staffUserId)
-    .maybeSingle();
-
-  if (response.error) {
-    return failure("join_code_read_failed", "Game join code could not be loaded.", 500, false);
-  }
-
-  const row = response.data as IssuedJoinCodeRow | null;
-  if (!row?.game_join_code || row.game_join_code_status !== "active" || !row.updated_at) {
-    return failure(
-      "join_code_not_available",
-      "This legacy game does not have a persisted readable code yet. Rotate it once to create one.",
-      409,
-      false,
-    );
-  }
-
-  return {
-    ok: true,
-    gameJoinCode: row.game_join_code,
-    updatedAt: row.updated_at,
-  };
+): Promise<ReadGameJoinCodeResult> {
+  return readGameJoinCode(
+    input,
+    createSupabaseGameJoinCodeReadRepository(serviceClient),
+  );
 }
 
 async function issueGameJoinCode(

@@ -1,0 +1,565 @@
+{
+  "schemaVersion": "econovaria.api-route-ownership.v1",
+  "title": "Econovaria API Route Ownership Ledger",
+  "status": "inventory_seed",
+  "knownLimitations": [
+    "route-owned authorization, operation, idempotency, rate-limit, test, and retirement fields still inherit surface-level placeholders",
+    "direct Classroom callers under scripts, staging compatibility entrypoints, and test fixtures are not fully classified",
+    "per-file occurrence counts do not yet preserve individual callsite identity",
+    "suffix-matched route alias breadth is not fully represented by exact publicPath values",
+    "lexical dispatch discovery is not a substitute for a declarative route registry"
+  ],
+  "auditedSourceSha": "22c2d396f29dc34ba486e25eeb38e70daebb03f1",
+  "auditedAt": "2026-08-04",
+  "authority": "Econovaria Structured Refactor Roadmap v1, Phase 1 Workstreams 1A and 1B",
+  "authBoundaryLedger": "docs/security/auth-boundary-ledger-v1.json",
+  "pathSemantics": {
+    "playerCompatibilityAliases": [
+      "/players/*",
+      "/player-api/players/*",
+      "/classroom-api/players/*",
+      "/functions/v1/player-api/players/*",
+      "/functions/v1/classroom-api/players/*"
+    ],
+    "staffParserNote": "Game parsers find the final games or staff segment and therefore accept raw and function-prefixed forms. Canonical targets must not preserve this alias breadth.",
+    "healthNote": "The compatibility health check currently suffix-matches /health for any non-OPTIONS method. Restricting it to GET is a later behavior change, not part of this ledger slice.",
+    "optionsNote": "classroom-api returns 204 for every OPTIONS request before route dispatch."
+  },
+  "surfaceDefaults": {
+    "player-compatibility": {
+      "current": {
+        "browserCallers": [],
+        "bff": { "name": "none", "path": null, "symbol": null },
+        "applicationApi": {
+          "name": "classroom-api",
+          "path": "backend/supabase/functions/classroom-api/index.ts",
+          "symbol": "Deno.serve"
+        },
+        "handler": { "path": "route-specific", "symbol": "route-specific" }
+      },
+      "authBoundaryId": "classroom-api-compatibility",
+      "authorization": {
+        "principal": "opaque Player session after route-specific resolution",
+        "gameScope": "server-derived from the active Player session",
+        "ownership": "server-derived Player identity; browser ownership UUIDs rejected",
+        "outerGateDifference": "player-api requires a publishable apikey in application code and classroom-api does not"
+      },
+      "operation": "route-specific",
+      "idempotency": {
+        "requirement": "required for replay-sensitive mutations; not required for reads",
+        "mechanism": "route-specific service or transactional RPC",
+        "enforcement": "handler and domain tests"
+      },
+      "rateLimitKey": "player endpoint profile plus server-derived game/player scope",
+      "compatibility": {
+        "service": "classroom-api",
+        "kind": "duplicate Player dispatch",
+        "path": "/functions/v1/classroom-api"
+      },
+      "canonicalTarget": {
+        "applicationApi": "player-api",
+        "handler": "same domain handler through backend/supabase/functions/player-api/runtime.ts"
+      },
+      "migrationState": "compatibility",
+      "removalGates": [
+        "zero player-api imports from classroom-api",
+        "zero browser and BFF Classroom traffic",
+        "Player security, privacy, browser, and domain acceptance green"
+      ],
+      "tests": ["backend package Player domain suites"],
+      "discoveryMatchers": ["classroom-api parser or suffix dispatch"]
+    },
+    "staff-compatibility": {
+      "current": {
+        "browserCallers": ["Admin browser through same-origin Admin BFF for residual proxy routes"],
+        "bff": {
+          "name": "web-session-api/admin-api",
+          "path": "backend/supabase/functions/web-session-api/index.ts",
+          "symbol": "Admin downstream dispatch"
+        },
+        "applicationApi": {
+          "name": "classroom-api",
+          "path": "backend/supabase/functions/classroom-api/index.ts",
+          "symbol": "Deno.serve"
+        },
+        "handler": { "path": "route-specific", "symbol": "route-specific" }
+      },
+      "authBoundaryId": "classroom-api-compatibility",
+      "authorization": {
+        "principal": "verified Staff Supabase Auth user",
+        "gameScope": "owner_staff_user_id",
+        "ownership": "server-validated Staff role and game ownership",
+        "outerGateDifference": "staff-api additionally requires a publishable apikey before Staff resolution"
+      },
+      "operation": "route-specific",
+      "idempotency": {
+        "requirement": "required for replay-sensitive mutations; not required for reads",
+        "mechanism": "route-specific header, service, or transactional RPC",
+        "enforcement": "handler and domain tests"
+      },
+      "rateLimitKey": "Staff action plus server-derived game/staff scope",
+      "compatibility": {
+        "service": "classroom-api",
+        "kind": "residual Staff compatibility dispatch",
+        "path": "/functions/v1/classroom-api"
+      },
+      "canonicalTarget": {
+        "applicationApi": "staff-api or admin-api as declared by the route",
+        "handler": "owned application service/domain handler"
+      },
+      "migrationState": "transitional",
+      "removalGates": [
+        "Admin route migrated without an HTTP compatibility hop",
+        "focused owner, role, rate-limit, response-parity, and mutation tests green",
+        "zero observed Classroom calls for this route"
+      ],
+      "tests": ["backend Staff/Admin route and domain suites"],
+      "discoveryMatchers": ["classroom-api parser or suffix dispatch"]
+    },
+    "classroom-meta": {
+      "current": {
+        "browserCallers": [],
+        "bff": { "name": "none", "path": null, "symbol": null },
+        "applicationApi": {
+          "name": "classroom-api",
+          "path": "backend/supabase/functions/classroom-api/index.ts",
+          "symbol": "Deno.serve"
+        },
+        "handler": {
+          "path": "backend/supabase/functions/classroom-api/index.ts",
+          "symbol": "Deno.serve"
+        }
+      },
+      "domainOwner": "platform-health",
+      "authBoundaryId": "classroom-api-compatibility",
+      "authorization": {
+        "principal": "route-specific",
+        "gameScope": "not applicable",
+        "ownership": "not applicable"
+      },
+      "operation": "platform",
+      "idempotency": { "requirement": "none", "mechanism": "none", "enforcement": "none" },
+      "rateLimitKey": "platform gateway",
+      "compatibility": {
+        "service": "classroom-api",
+        "kind": "compatibility function metadata route",
+        "path": "/functions/v1/classroom-api"
+      },
+      "canonicalTarget": { "applicationApi": "none after retirement", "handler": "none" },
+      "migrationState": "compatibility",
+      "removalGates": ["Classroom deployment retirement authorized"],
+      "tests": ["Classroom smoke and runtime inventory contracts"],
+      "discoveryMatchers": ["classroom-api top-level dispatch"]
+    }
+  },
+  "routeFamilies": [
+    { "routeKey": "classroom.options", "surface": "classroom-meta", "methods": ["OPTIONS"], "publicPath": "/*" },
+    { "routeKey": "classroom.health", "surface": "classroom-meta", "methods": ["ANY_NON_OPTIONS"], "publicPath": "*/health" },
+
+    { "routeKey": "player.capabilities", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/capabilities", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts", "symbol": "handlePlayerCapabilityManifestRequest" } } },
+    { "routeKey": "player.world-runtime", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/world-runtime", "domainOwner": "world", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.arrival-class", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/arrival-class", "domainOwner": "arrival", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.travel-quotes", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/travel/quotes", "domainOwner": "world", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.travel", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/travel", "domainOwner": "world", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.travel-complete", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/travel/{travelKey}/complete", "domainOwner": "world", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.residency", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/residency", "domainOwner": "world", "current": { "handler": { "path": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts", "symbol": "handlePlayerWorldRuntimeEdgeRequest" } } },
+    { "routeKey": "player.world-countries", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/world/countries", "domainOwner": "countries", "current": { "handler": { "path": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts", "symbol": "handlePlayerWorldReadRequest" } } },
+    { "routeKey": "player.world-country", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/world/countries/{countryIdentifier}", "domainOwner": "countries", "current": { "handler": { "path": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts", "symbol": "handlePlayerWorldReadRequest" } } },
+    { "routeKey": "player.world-news", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/world/news", "domainOwner": "countries", "current": { "handler": { "path": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts", "symbol": "handlePlayerWorldReadRequest" } } },
+
+    { "routeKey": "player.inventory", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/inventory", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.redemptions", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/inventory/redemptions", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts", "symbol": "handlePlayerInventoryRedemptionRequest" } } },
+    { "routeKey": "player.redemption", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/inventory/redemptions/{redemptionKey}", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts", "symbol": "handlePlayerInventoryRedemptionRequest" } } },
+    { "routeKey": "player.redemption-create", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/inventory/{publicItemKey}/redemptions", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts", "symbol": "handlePlayerInventoryRedemptionRequest" } } },
+    { "routeKey": "player.crafting", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/crafting", "domainOwner": "crafting", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.crafting-job-create", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/crafting/jobs", "domainOwner": "crafting", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.crafting-job-cancel", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/crafting/jobs/{craftingKey}/cancel", "domainOwner": "crafting", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.crafting-job-claim", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/crafting/jobs/{craftingKey}/claim", "domainOwner": "crafting", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.item-use", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/items/{publicItemKey}/use", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.equipment-equip", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/equipment/{equipmentKey}/equip", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+    { "routeKey": "player.equipment-salvage", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/equipment/{equipmentKey}/salvage", "domainOwner": "inventory", "current": { "handler": { "path": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts", "symbol": "handlePlayerInventoryReadRequest" } } },
+
+    { "routeKey": "player.marketplace", "surface": "player-compatibility", "methods": ["GET", "POST"], "publicPath": "/players/me/marketplace", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+    { "routeKey": "player.marketplace-listings", "surface": "player-compatibility", "methods": ["GET", "POST"], "publicPath": "/players/me/marketplace/listings", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+    { "routeKey": "player.marketplace-listing-activate", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/marketplace/listings/{listingKey}/activate", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+    { "routeKey": "player.marketplace-listing-purchase", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/marketplace/listings/{listingKey}/purchase", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+    { "routeKey": "player.marketplace-listing-cancel", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/marketplace/listings/{listingKey}/cancel", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+    { "routeKey": "player.marketplace-dispute", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/marketplace/orders/{orderKey}/disputes", "domainOwner": "marketplace", "current": { "handler": { "path": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts", "symbol": "handlePlayerMarketplaceRequest" } } },
+
+    { "routeKey": "player.messages", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/messages", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-search", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/messages/search", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-thread", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/messages/threads/{threadKey}", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-policy", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/messages/policy", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-thread-create", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/messages/threads", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-send", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/messages/threads/{threadKey}/messages", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-read", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/messages/read", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+    { "routeKey": "player.message-thread-read", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/messages/threads/{threadKey}/read", "domainOwner": "messaging", "current": { "handler": { "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "symbol": "dispatchClassroomMessagingRequest" } } },
+
+    { "routeKey": "player.progression", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/progression", "domainOwner": "progression", "current": { "handler": { "path": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts", "symbol": "handlePlayerProgressionRequest" } } },
+    { "routeKey": "player.skill-unlock", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/progression/skills/{skillId}/unlock", "domainOwner": "progression", "current": { "handler": { "path": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts", "symbol": "handlePlayerProgressionRequest" } } },
+    { "routeKey": "player.reward-claim", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/progression/rewards/{rewardId}/claim", "domainOwner": "progression", "current": { "handler": { "path": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts", "symbol": "handlePlayerProgressionRequest" } } },
+    { "routeKey": "player.story-deliveries", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/story-deliveries", "domainOwner": "notifications", "current": { "handler": { "path": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts", "symbol": "handlePlayerStoryDeliveryRequest" } } },
+    { "routeKey": "player.story-delivery-state", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/story-deliveries/{deliveryKey}/state", "domainOwner": "notifications", "current": { "handler": { "path": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts", "symbol": "handlePlayerStoryDeliveryRequest" } } },
+    { "routeKey": "player.notifications", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/notifications", "domainOwner": "notifications", "current": { "handler": { "path": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts", "symbol": "handlePlayerNotificationRequest" } } },
+    { "routeKey": "player.notifications-read", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/notifications/read", "domainOwner": "notifications", "current": { "handler": { "path": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts", "symbol": "handlePlayerNotificationRequest" } } },
+    { "routeKey": "player.logout", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/session/logout", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerSessionLogoutHttpHandler.ts", "symbol": "handlePlayerSessionLogoutRequest" } } },
+
+    { "routeKey": "player.stock-assets", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/assets", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts", "symbol": "handlePlayerStockAssetListRequest" } } },
+    { "routeKey": "player.stock-asset", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/assets/{ticker}", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts", "symbol": "handlePlayerStockAssetListRequest" } } },
+    { "routeKey": "player.stock-watchlist", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/watchlist", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts", "symbol": "handlePlayerStockAssetListRequest" } } },
+    { "routeKey": "player.stock-watchlist-item", "surface": "player-compatibility", "methods": ["PUT", "DELETE"], "publicPath": "/players/me/stocks/watchlist/{ticker}", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts", "symbol": "handlePlayerStockAssetListRequest" } } },
+    { "routeKey": "player.stock-portfolio", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/portfolio", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts", "symbol": "handlePlayerStockMarketReadRequest" } } },
+    { "routeKey": "player.stock-holdings", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/holdings", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts", "symbol": "handlePlayerStockMarketReadRequest" } } },
+    { "routeKey": "player.stock-orders", "surface": "player-compatibility", "methods": ["GET", "POST"], "publicPath": "/players/me/stocks/orders", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts", "symbol": "read or trading handler by method" } } },
+    { "routeKey": "player.stock-trades", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/stocks/trades", "domainOwner": "stocks", "current": { "handler": { "path": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts", "symbol": "handlePlayerStockMarketReadRequest" } } },
+
+    { "routeKey": "player.store-items", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/store/items", "domainOwner": "store", "current": { "handler": { "path": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts", "symbol": "handlePlayerStorePublicRequest" } } },
+    { "routeKey": "player.store-quotes", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/store/quotes", "domainOwner": "store", "current": { "handler": { "path": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts", "symbol": "handlePlayerStorePublicRequest" } } },
+    { "routeKey": "player.store-purchases", "surface": "player-compatibility", "methods": ["GET", "POST"], "publicPath": "/players/me/store/purchases", "domainOwner": "store", "current": { "handler": { "path": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts", "symbol": "handlePlayerStorePublicRequest" } } },
+    { "routeKey": "player.dashboard", "surface": "player-compatibility", "methods": ["GET", "POST"], "publicPath": "/players/me/game/dashboard", "domainOwner": "game-dashboard", "current": { "handler": { "path": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts", "symbol": "handlePlayerGameDashboardRequest" } } },
+    { "routeKey": "player.contracts", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/contracts", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts", "symbol": "handlePlayerContractPublicListRequest" } } },
+    { "routeKey": "player.contract-accept", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/contracts/{publicContractKey}/accept", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts", "symbol": "handlePlayerContractAcceptanceRequest" } } },
+    { "routeKey": "player.contract-submit", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/contracts/{publicContractKey}/submit", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts", "symbol": "handlePlayerContractPublicSubmitRequest" } } },
+
+    { "routeKey": "player.business", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/business", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.businesses", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/businesses", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-products", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/products", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-input-purchase", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/inputs/purchases", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-production", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/production-runs", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-pricing", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/products/{businessProductKey}/pricing", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-hire", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/employees/hire", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-terminate", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/employees/{employeeKey}/terminate", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.business-status", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/business/status", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.bank-transfer", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/banking/transfers", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.savings-transfer", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/banking/savings/transfers", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.loans", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/banking/loans", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.loan-apply", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/banking/loans/applications/{loanProductKey}", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.loan-payment", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/me/banking/loans/{loanKey}/payments", "domainOwner": "business-banking", "current": { "handler": { "path": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts", "symbol": "handlePlayerBusinessBankingRequest" } } },
+    { "routeKey": "player.ledger", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me/ledger", "domainOwner": "economy", "current": { "handler": { "path": "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts", "symbol": "handlePlayerBankingPublicRequest" } } },
+    { "routeKey": "player.bootstrap", "surface": "player-compatibility", "methods": ["GET"], "publicPath": "/players/me", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts", "symbol": "handlePlayerSessionBootstrapRequest" } } },
+    { "routeKey": "player.login", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/login", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerLoginHttpHandler.ts", "symbol": "handlePlayerLoginRequest" } } },
+    { "routeKey": "player.attendance-clock-in", "surface": "player-compatibility", "methods": ["POST"], "publicPath": "/players/attendance/clock-in", "domainOwner": "attendance", "current": { "handler": { "path": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts", "symbol": "handlePlayerAttendanceClockInRequest" } } },
+
+    { "routeKey": "staff.join-code-read", "surface": "staff-compatibility", "methods": ["GET"], "publicPath": "/games/{gameUuid}/join-code/reset", "domainOwner": "game-sessions", "current": { "browserCallers": ["Admin browser through Admin BFF and direct Admin application service"], "handler": { "path": "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts", "symbol": "handleResetGameJoinCodeRequest" } }, "canonicalTarget": { "applicationApi": "admin-api", "handler": "readGameJoinCode application service" }, "compatibility": { "service": "classroom-api", "kind": "duplicate Staff route with no remaining Admin GET proxy", "path": "/functions/v1/classroom-api/games/{gameUuid}/join-code/reset" }, "migrationState": "transitional", "tests": ["readGameJoinCode.test.ts", "gameJoinCodeOperations.test.ts", "persisted-game-code-contract.test.mjs"] },
+    { "routeKey": "staff.join-code-reset", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/games/{gameUuid}/join-code/reset", "domainOwner": "game-sessions", "current": { "handler": { "path": "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts", "symbol": "handleResetGameJoinCodeRequest" } }, "canonicalTarget": { "applicationApi": "admin-api", "handler": "future mutation application service using issue_game_join_code_v1" } },
+    { "routeKey": "staff.settings", "surface": "staff-compatibility", "methods": ["GET", "PATCH"], "publicPath": "/games/{gameUuid}/settings", "domainOwner": "game-sessions", "current": { "handler": { "path": "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts", "symbol": "handleGameSettingsRequest" } } },
+    { "routeKey": "staff.store-items", "surface": "staff-compatibility", "methods": ["GET", "POST"], "publicPath": "/games/{gameId}/store/items", "domainOwner": "store", "current": { "handler": { "path": "backend/src/domains/store/api/storeCatalogHttpHandler.ts", "symbol": "handleStaffStoreCatalogRequest" } } },
+    { "routeKey": "staff.store-item", "surface": "staff-compatibility", "methods": ["PATCH"], "publicPath": "/games/{gameId}/store/items/{itemId}", "domainOwner": "store", "current": { "handler": { "path": "backend/src/domains/store/api/storeCatalogHttpHandler.ts", "symbol": "handleStaffStoreCatalogRequest" } } },
+    { "routeKey": "staff.contracts", "surface": "staff-compatibility", "methods": ["GET", "POST"], "publicPath": "/staff/game-sessions/{gameUuid}/contracts", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/staffContractHttpHandler.ts", "symbol": "handleStaffContractRequest" } } },
+    { "routeKey": "staff.contract-publish", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/staff/game-sessions/{gameUuid}/contracts/{contractUuid}/publish", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/staffContractHttpHandler.ts", "symbol": "handleStaffContractRequest" } } },
+    { "routeKey": "staff.contract-progress", "surface": "staff-compatibility", "methods": ["GET"], "publicPath": "/staff/game-sessions/{gameUuid}/contracts/{contractUuid}/progress", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/staffContractHttpHandler.ts", "symbol": "handleStaffContractRequest" } } },
+    { "routeKey": "staff.contract-review", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/staff/game-sessions/{gameUuid}/contracts/{contractUuid}/progress/{progressUuid}/review", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/staffContractHttpHandler.ts", "symbol": "handleStaffContractRequest" } } },
+    { "routeKey": "staff.contract-reward", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/staff/game-sessions/{gameUuid}/contracts/{contractUuid}/progress/{progressUuid}/rewards/issue", "domainOwner": "contracts", "current": { "handler": { "path": "backend/src/domains/contracts/api/staffContractHttpHandler.ts", "symbol": "handleStaffContractRequest" } } },
+    { "routeKey": "staff.storyline-demo", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/staff/game-sessions/{gameUuid}/storylines/demo/initialize", "domainOwner": "storylines", "current": { "handler": { "path": "backend/src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts", "symbol": "handleStaffDemoStorylineInitializationRequest" } } },
+    { "routeKey": "staff.players", "surface": "staff-compatibility", "methods": ["GET", "POST"], "publicPath": "/games/{gameUuid}/players", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerRosterHttpHandler.ts", "symbol": "handlePlayerRosterRequest" } } },
+    { "routeKey": "staff.player-access-reset", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/games/{gameUuid}/players/{playerUuid}/access-code/reset", "domainOwner": "players", "current": { "handler": { "path": "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts", "symbol": "handleResetPlayerAccessCodeRequest" } } },
+    { "routeKey": "staff.attendance", "surface": "staff-compatibility", "methods": ["GET"], "publicPath": "/games/{gameUuid}/attendance", "domainOwner": "attendance", "current": { "handler": { "path": "backend/src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts", "symbol": "handleStaffAttendanceDailyRequest" } } },
+    { "routeKey": "staff.attendance-scan", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/games/{gameUuid}/attendance/scan", "domainOwner": "attendance", "current": { "handler": { "path": "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts", "symbol": "handleStaffAttendanceScanRequest" } } },
+    { "routeKey": "staff.balance-seed", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/games/{gameUuid}/players/seed-balances", "domainOwner": "economy", "current": { "handler": { "path": "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts", "symbol": "handleInitialBalanceSeedRequest" } } },
+    { "routeKey": "staff.player-ledger", "surface": "staff-compatibility", "methods": ["GET"], "publicPath": "/games/{gameUuid}/players/{playerUuid}/ledger", "domainOwner": "economy", "current": { "handler": { "path": "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts", "symbol": "handleStaffPlayerLedgerHistoryRequest" } } },
+    { "routeKey": "staff.ledger-adjustment", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/games/{gameUuid}/players/{playerUuid}/ledger-adjustments", "domainOwner": "economy", "current": { "handler": { "path": "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts", "symbol": "handleStaffLedgerAdjustmentRequest" } } },
+    { "routeKey": "staff.bootstrap", "surface": "staff-compatibility", "methods": ["GET"], "publicPath": "/staff/bootstrap", "domainOwner": "auth", "current": { "handler": { "path": "backend/src/domains/auth/api/staffBootstrapHttpHandler.ts", "symbol": "handleStaffBootstrapRequest" } } },
+    { "routeKey": "staff.signup-classroom-only", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/staff/signup", "domainOwner": "auth", "current": { "browserCallers": [], "handler": { "path": "backend/src/domains/auth/api/staffSignupHttpHandler.ts", "symbol": "handleStaffSignupRequest" } }, "canonicalTarget": { "applicationApi": "bootstrap-api", "handler": "handleStaffSignupRequest after purchase-code and pre-auth controls" }, "migrationState": "compatibility", "removalGates": ["prove zero caller traffic", "bootstrap-api provisioning acceptance green", "remove classroom-only dispatch"] },
+    { "routeKey": "staff.licensing-activate", "surface": "staff-compatibility", "methods": ["POST"], "publicPath": "/licensing/activate", "domainOwner": "licensing", "current": { "handler": { "path": "backend/src/domains/licensing/api/licensingActivationHttpHandler.ts", "symbol": "handleLicensingActivationRequest" } } }
+  ],
+  "classroomDispatch": {
+    "sourcePaths": [
+      "backend/supabase/functions/classroom-api/index.ts",
+      "backend/supabase/functions/classroom-api/messagingDispatch.ts"
+    ]
+  },
+  "routeSourceFingerprints": [
+    { "path": "backend/src/domains/players/api/playerApiRouteSegments.ts", "sha256": "c62128e63940ae47ff7ea51245693215c21a79f55341c420673054f1c3928ae3", "dispatchKeys": ["*"] },
+    { "path": "backend/src/domains/attendance/api/attendanceRoutePaths.ts", "sha256": "4e9155793d82539faf5fa2f6cbec365521c9893ebed8b62dafab8a6b6c625f5a", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffAttendanceDailyRoutePath", "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffAttendanceScanRoutePath"] },
+    { "path": "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts", "sha256": "44f1972b9731a3432086feb15489cc23eac7522b4b66ecf229f9107710a8fbf1", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerBusinessBankingRoutePath"] },
+    { "path": "backend/src/domains/contracts/api/contractRoutePaths.ts", "sha256": "2a856aa0c9384b4ade038f0cd9d7e6257a9649d0225bed99a4091159eb2dc3bc", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffContractRoutePath"] },
+    { "path": "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts", "sha256": "3445a8499ae30b8a11169cec8b2bf24ad9867fa332837ac5f24ece98480e6dea", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractAcceptanceRoutePath"] },
+    { "path": "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts", "sha256": "1e51d130149889b75f92e4f438a3bf922c36a1f71bfff9f9e0b8c0629973ba0c", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractPublicListRoutePath"] },
+    { "path": "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts", "sha256": "d001aa3483503d6fd2ef430f057b9ce91d3dd6f97dd333e7538b9b5357fe3831", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractPublicSubmitRoutePath"] },
+    { "path": "backend/src/domains/contracts/api/playerContractRoutePaths.ts", "sha256": "a9acf2e7faa4990c3a2ef5880d1f68ae48f8cfe33f3bde9cd3c253c1dc2b2d08", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractRoutePath"] },
+    { "path": "backend/src/domains/countries/api/playerWorldRoutePaths.ts", "sha256": "30904e108c80cc4543086bddb3cc567aaf20a3687aabc703cd751b873d7c28c4", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerWorldRoutePath"] },
+    { "path": "backend/src/domains/crafting/api/playerCraftingRoutePaths.ts", "sha256": "ec5b8239924ebacdf20f4d525789a66cc2ef774f96f022646f3d5433c5300cd9", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerInventoryRoutePath"] },
+    { "path": "backend/src/domains/economy/api/economyRoutePaths.ts", "sha256": "d6d3d1abb713c24691ad873f5f87770ee756b18eb08c27459841b8907b9c8d26", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readInitialBalanceSeedRoutePath", "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffLedgerAdjustmentRoutePath", "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffPlayerLedgerHistoryRoutePath"] },
+    { "path": "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts", "sha256": "c76f9fd9103bea47ac83feb43b7c2540a8aa1057de418fd53e6aec241aee78d3", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerBankingPublicRoutePath"] },
+    { "path": "backend/src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts", "sha256": "7fcfa6c33928996adeb35e7404eb9ead246875c18efe7b0744ec81771839a031", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readGameJoinCodeRoutePath"] },
+    { "path": "backend/src/domains/game-sessions/api/gameSettingsRoutePaths.ts", "sha256": "1592746623b84c6f5105bb395bf6acc8f594e887e5961bafcb963ac0b0307ea2", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readGameSettingsRoutePath"] },
+    { "path": "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts", "sha256": "896cc6c52688bdc802a81a77a0402dd790a770c0c5c0d2a4032ff296784834fa", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerInventoryRedemptionRoutePath"] },
+    { "path": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts", "sha256": "2973275a7d72dd298fa162dc23b8a0a4a4ffb99abd5c26815ca32971b5dc8a6e", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerInventoryRoutePath"] },
+    { "path": "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts", "sha256": "107eed27a2dc773db1ae574f9d61ab3065fdcb2de132ce2b67748c8f4c50756f", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerMarketplaceRoutePath"] },
+    { "path": "backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts", "sha256": "333b4d8769f7f4faf62a5882ec3fda8f00f72244c63380802a5050732eb6f499", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/messagingDispatch.ts|parser:readPlayerMessageThreadLifecycleRoutePath"] },
+    { "path": "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts", "sha256": "adbbb14c4ed004daaf86c7b466fd662991bcc550cc3c9259c4977ebbdaa1d2a3", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/messagingDispatch.ts|parser:readPlayerMessagingRoutePath"] },
+    { "path": "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts", "sha256": "a2e9becbd250762086842c203e9fdbcbc1c25c7e9a9543ac4697405adcfa4d8f", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerNotificationRoutePath"] },
+    { "path": "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts", "sha256": "b568ee3ee7f8ff9684fa6c3b676193486f28073fa8c78b6e52ee5b0590417d93", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStoryDeliveryRoutePath"] },
+    { "path": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts", "sha256": "4f02b425d1b092607c6c7733a268937138f266ecca488604facc4c9c67e4592b", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerCapabilityManifestRoutePath"] },
+    { "path": "backend/src/domains/players/api/playerRosterRoutePaths.ts", "sha256": "530ceea0b862c68023bc9a73cac8abaa15054624f9f19686ef6236ca540acbe8", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerRosterRoutePath"] },
+    { "path": "backend/src/domains/players/api/playerSessionLogoutRoutePaths.ts", "sha256": "e224b9d051782c6b81642cabb44819ee9a6ba8522dccda5e4901dee1294eb6ae", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerSessionLogoutRoutePath"] },
+    { "path": "backend/src/domains/progression/api/playerProgressionRoutePaths.ts", "sha256": "d1286c9ad7cc7a232d3b9e89d26bddd01e53a43eb3b0c03fc450d34fdd3fc0a0", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerProgressionRoutePath"] },
+    { "path": "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts", "sha256": "98f6138e743a77eb14bb5d488b3f156706d6a2951a9e7d87a93994b29dd4d30c", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStockAssetListRoutePath"] },
+    { "path": "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts", "sha256": "ffa3c37803ca707f4e82ba67aa08b614c085e0491b304795dc6487bfcc9acd04", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStockAssetListRoutePath"] },
+    { "path": "backend/src/domains/store/api/playerStorePublicRoutePaths.ts", "sha256": "be07c1c2e525507bbad2f4f25c0dc47b49aef404555197726b60f5ccba7cc056", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStorePublicRoutePath"] },
+    { "path": "backend/src/domains/store/api/storeCatalogRoutePaths.ts", "sha256": "11c15ce496b6fa220a0fcca6ceef7b6ea635c3a9780f4db9ddca054d4ff9b120", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffStoreCatalogRoutePath"] },
+    { "path": "backend/src/domains/storylines/api/demoStorylineRoutePaths.ts", "sha256": "6b0964a6909b57d0225675a73c684666ee51fb74ad4e3d3fd4da81619ee24e4b", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffDemoStorylineInitializeRoutePath"] },
+    { "path": "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts", "sha256": "18ee10120a30585ac2840bc55d0d12447ac1614395c4ebdfdf12cb4f6a617882", "dispatchKeys": ["classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:parsePlayerWorldRuntimeRoute"] }
+  ],
+  "dependencyMatchers": [
+    {
+      "id": "browser-classroom-url",
+      "category": "classroom-http-call",
+      "kind": "regex",
+      "pattern": "/functions/v1/classroom-api\\b",
+      "flags": "gu",
+      "zeroTolerance": true,
+      "scan": {
+        "roots": ["index.html", "frontend", "admin", "player-terminal", "auth"],
+        "extensions": [".html", ".js", ".mjs", ".json"],
+        "excludes": ["(?:^|/)tools/"]
+      }
+    },
+    {
+      "id": "browser-classroom-alias",
+      "category": "frontend-alias",
+      "kind": "regex",
+      "pattern": "\\b(?:classroomApiUrl|CLASSROOM_API_URL)\\b",
+      "flags": "gu",
+      "scan": {
+        "roots": ["index.html", "frontend", "admin", "player-terminal", "auth"],
+        "extensions": [".html", ".js", ".mjs", ".json"]
+      }
+    },
+    {
+      "id": "connected-tool-classroom-url",
+      "category": "connected-tooling-http-call",
+      "kind": "regex",
+      "pattern": "/functions/v1/classroom-api\\b",
+      "flags": "gu",
+      "scan": {
+        "roots": ["player-terminal/tools"],
+        "extensions": [".mjs"]
+      }
+    },
+    {
+      "id": "player-classroom-service-label",
+      "category": "runtime-service-label",
+      "kind": "regex",
+      "pattern": "service\\s*:\\s*[\"']classroom-api[\"']",
+      "flags": "gu",
+      "scan": { "roots": ["backend/src/domains/players", "backend/supabase/functions/player-api"], "extensions": [".ts"] }
+    },
+    {
+      "id": "admin-classroom-url",
+      "category": "classroom-http-call",
+      "kind": "literal",
+      "pattern": "CLASSROOM_API_URL",
+      "scan": { "roots": ["backend/supabase/functions/admin-api"], "extensions": [".ts"], "excludes": ["\\.test\\.ts$"] }
+    },
+    {
+      "id": "admin-proxy-call",
+      "category": "classroom-http-call",
+      "kind": "regex",
+      "pattern": "\\bproxyClassroom\\s*\\(",
+      "flags": "gu",
+      "scan": { "roots": ["backend/supabase/functions/admin-api"], "extensions": [".ts"], "excludes": ["\\.test\\.ts$"] }
+    },
+    {
+      "id": "player-classroom-import",
+      "category": "classroom-source-import",
+      "kind": "regex",
+      "pattern": "from\\s+[\"'][^\"']*classroom-api/",
+      "flags": "gu",
+      "scan": { "roots": ["backend/supabase/functions/player-api"], "extensions": [".ts"], "excludes": ["\\.test\\.ts$"] }
+    },
+    {
+      "id": "classroom-deno-config",
+      "category": "classroom-test-configuration",
+      "kind": "literal",
+      "pattern": "classroom-api/deno.json",
+      "scan": { "roots": ["backend/package.json", "package.json", ".github/workflows", "scripts"], "extensions": [".json", ".mjs", ".yml", ".yaml"] }
+    },
+    {
+      "id": "deployment-classroom-reference",
+      "category": "deployment-release-reference",
+      "kind": "regex",
+      "pattern": "\\bclassroom-api\\b",
+      "flags": "gu",
+      "scan": { "roots": [".github/workflows", "backend/supabase/config.toml", "ops"], "extensions": [".json", ".toml", ".yml", ".yaml"] }
+    }
+  ],
+  "dependencyDefaults": {
+    "browser-classroom-alias": {
+      "category": "frontend-alias",
+      "justification": "Legacy Classroom URL aliases remain while browser traffic converges on canonical BFF routes.",
+      "removalWorkstream": "Phase 1G compatibility-router retirement",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    },
+    "connected-tool-classroom-url": {
+      "category": "connected-tooling-http-call",
+      "justification": "Connected QA runners still exercise the Classroom compatibility endpoint directly.",
+      "removalWorkstream": "Phase 1F tooling convergence and Phase 1G compatibility-router retirement",
+      "retirementBlocking": true,
+      "referenceClass": "connected-tooling"
+    },
+    "player-classroom-service-label": {
+      "category": "runtime-service-label",
+      "justification": "The Player capability manifest still names the compatibility service.",
+      "removalWorkstream": "Phase 1F Player runtime convergence",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    },
+    "admin-classroom-url": {
+      "category": "classroom-http-call",
+      "justification": "Admin compatibility proxy infrastructure still declares the Classroom endpoint.",
+      "removalWorkstream": "Phase 1E Admin route migration",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    },
+    "admin-proxy-call": {
+      "category": "classroom-http-call",
+      "justification": "Residual Admin routes still cross the Classroom compatibility boundary.",
+      "removalWorkstream": "Phase 1E Admin route migration",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    },
+    "player-classroom-import": {
+      "category": "classroom-source-import",
+      "justification": "Player messaging runtime still imports a dispatcher from the Classroom source tree.",
+      "removalWorkstream": "Phase 1F Player source convergence",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    },
+    "classroom-deno-config": {
+      "category": "classroom-test-configuration",
+      "justification": "Validation commands still compile or test the compatibility function.",
+      "removalWorkstream": "Phase 1G compatibility-router retirement",
+      "retirementBlocking": true,
+      "referenceClass": "current-configuration"
+    },
+    "deployment-classroom-reference": {
+      "category": "deployment-release-reference",
+      "justification": "Release and runtime inventory controls still reference the deployed compatibility function.",
+      "removalWorkstream": "Phase 1G compatibility-router retirement",
+      "retirementBlocking": true,
+      "referenceClass": "current-release"
+    },
+    "classroom-dispatch": {
+      "category": "classroom-route-dispatch",
+      "justification": "The compatibility function still contains this top-level route dispatch site.",
+      "removalWorkstream": "Phase 1C through 1F route migration, then Phase 1G retirement",
+      "retirementBlocking": true,
+      "referenceClass": "current-runtime"
+    }
+  },
+  "dependencies": [
+    { "key": "admin-classroom-url|backend/supabase/functions/admin-api/common.ts", "matcherId": "admin-classroom-url", "path": "backend/supabase/functions/admin-api/common.ts", "maxOccurrences": 2 },
+    { "key": "admin-proxy-call|backend/supabase/functions/admin-api/common.ts", "matcherId": "admin-proxy-call", "path": "backend/supabase/functions/admin-api/common.ts", "maxOccurrences": 2 },
+    { "key": "admin-proxy-call|backend/supabase/functions/admin-api/gameRoutes.ts", "matcherId": "admin-proxy-call", "path": "backend/supabase/functions/admin-api/gameRoutes.ts", "maxOccurrences": 20 },
+    { "key": "admin-proxy-call|backend/supabase/functions/admin-api/runtimeMutations.ts", "matcherId": "admin-proxy-call", "path": "backend/supabase/functions/admin-api/runtimeMutations.ts", "maxOccurrences": 1 },
+    { "key": "browser-classroom-alias|frontend/src/core/constants.js", "matcherId": "browser-classroom-alias", "path": "frontend/src/core/constants.js", "maxOccurrences": 3 },
+    { "key": "browser-classroom-alias|frontend/src/core/runtime-config.js", "matcherId": "browser-classroom-alias", "path": "frontend/src/core/runtime-config.js", "maxOccurrences": 1 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-admin-ledger-runner-v3.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-admin-ledger-runner-v3.mjs", "maxOccurrences": 1 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-banking-loans-bff-adapter.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-banking-loans-bff-adapter.mjs", "maxOccurrences": 4 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-banking-loans-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-banking-loans-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-crafting-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-crafting-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-marketplace-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-marketplace-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-player-bff-runner-adapter.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-player-bff-runner-adapter.mjs", "maxOccurrences": 4 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-player-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-player-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-progression-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-progression-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-story-delivery-bff-adapter.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-story-delivery-bff-adapter.mjs", "maxOccurrences": 4 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-story-delivery-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-story-delivery-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-world-mutation-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-world-mutation-runner.mjs", "maxOccurrences": 3 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-world-questionnaire-bff-adapter.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-world-questionnaire-bff-adapter.mjs", "maxOccurrences": 4 },
+    { "key": "connected-tool-classroom-url|player-terminal/tools/connected-world-questionnaire-runner.mjs", "matcherId": "connected-tool-classroom-url", "path": "player-terminal/tools/connected-world-questionnaire-runner.mjs", "maxOccurrences": 3 },
+    { "key": "classroom-deno-config|.github/workflows/backend-typecheck.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/backend-typecheck.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/beta-security-contract.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/beta-security-contract.yml", "maxOccurrences": 2 },
+    { "key": "classroom-deno-config|.github/workflows/business-banking-runtime.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/business-banking-runtime.yml", "maxOccurrences": 2 },
+    { "key": "classroom-deno-config|.github/workflows/configurable-stock-market-timezone-v1.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/configurable-stock-market-timezone-v1.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/crafting-item-runtime.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/crafting-item-runtime.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/exchange-calendar-runtime-v1.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/exchange-calendar-runtime-v1.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/marketplace-preconvergence.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/marketplace-preconvergence.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/player-response-privacy.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/player-response-privacy.yml", "maxOccurrences": 2 },
+    { "key": "classroom-deno-config|.github/workflows/progression-runtime-v1.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/progression-runtime-v1.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|.github/workflows/sync-exchange-calendar-config-v1.yml", "matcherId": "classroom-deno-config", "path": ".github/workflows/sync-exchange-calendar-config-v1.yml", "maxOccurrences": 1 },
+    { "key": "classroom-deno-config|backend/package.json", "matcherId": "classroom-deno-config", "path": "backend/package.json", "maxOccurrences": 19 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|dispatcher:dispatchClassroomMessagingRequest", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:parsePlayerWorldRuntimeRoute", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readGameJoinCodeRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readGameSettingsRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readInitialBalanceSeedRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerBankingPublicRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerBusinessBankingRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerCapabilityManifestRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractAcceptanceRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractPublicListRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractPublicSubmitRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerContractRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerInventoryRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerInventoryRedemptionRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerMarketplaceRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerNotificationRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerProgressionRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerRosterRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerSessionLogoutRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStorePublicRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStoryDeliveryRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerStockAssetListRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readPlayerWorldRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffAttendanceDailyRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffAttendanceScanRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffContractRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffDemoStorylineInitializeRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffLedgerAdjustmentRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffPlayerLedgerHistoryRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|parser:readStaffStoreCatalogRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/health", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/licensing/activate", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/attendance/clock-in", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/login", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me/game/dashboard", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me/stocks/holdings", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me/stocks/orders", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me/stocks/portfolio", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/players/me/stocks/trades", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/staff/bootstrap", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/index.ts|suffix:/staff/signup", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/index.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/messagingDispatch.ts|parser:readPlayerMessageThreadLifecycleRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "maxOccurrences": 1 },
+    { "key": "classroom-dispatch|backend/supabase/functions/classroom-api/messagingDispatch.ts|parser:readPlayerMessagingRoutePath", "matcherId": "classroom-dispatch", "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/backend-typecheck.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/backend-typecheck.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/beta-security-contract.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/beta-security-contract.yml", "maxOccurrences": 2 },
+    { "key": "deployment-classroom-reference|.github/workflows/business-banking-runtime.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/business-banking-runtime.yml", "maxOccurrences": 4 },
+    { "key": "deployment-classroom-reference|.github/workflows/configurable-stock-market-timezone-v1.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/configurable-stock-market-timezone-v1.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/crafting-item-runtime.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/crafting-item-runtime.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/exchange-calendar-runtime-v1.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/exchange-calendar-runtime-v1.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/full-financial-markets-expansion.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/full-financial-markets-expansion.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/marketplace-preconvergence.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/marketplace-preconvergence.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/messaging-isolated-staging.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/messaging-isolated-staging.yml", "maxOccurrences": 2 },
+    { "key": "deployment-classroom-reference|.github/workflows/player-response-privacy.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/player-response-privacy.yml", "maxOccurrences": 3 },
+    { "key": "deployment-classroom-reference|.github/workflows/pr361-staging-game-provisioning-repair.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/pr361-staging-game-provisioning-repair.yml", "maxOccurrences": 4 },
+    { "key": "deployment-classroom-reference|.github/workflows/progression-isolated-staging.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/progression-isolated-staging.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/progression-runtime-v1.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/progression-runtime-v1.yml", "maxOccurrences": 2 },
+    { "key": "deployment-classroom-reference|.github/workflows/sync-exchange-calendar-config-v1.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/sync-exchange-calendar-config-v1.yml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|.github/workflows/world-runtime.yml", "matcherId": "deployment-classroom-reference", "path": ".github/workflows/world-runtime.yml", "maxOccurrences": 2 },
+    { "key": "deployment-classroom-reference|backend/supabase/config.toml", "matcherId": "deployment-classroom-reference", "path": "backend/supabase/config.toml", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|ops/legacy-runtime/route-allowlist.json", "matcherId": "deployment-classroom-reference", "path": "ops/legacy-runtime/route-allowlist.json", "maxOccurrences": 1 },
+    { "key": "deployment-classroom-reference|ops/legacy-runtime/runtime-records/canonical-runtimes.json", "matcherId": "deployment-classroom-reference", "path": "ops/legacy-runtime/runtime-records/canonical-runtimes.json", "maxOccurrences": 1 },
+    { "key": "player-classroom-import|backend/supabase/functions/player-api/runtime.ts", "matcherId": "player-classroom-import", "path": "backend/supabase/functions/player-api/runtime.ts", "maxOccurrences": 1 },
+    { "key": "player-classroom-service-label|backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts", "matcherId": "player-classroom-service-label", "path": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts", "maxOccurrences": 2 }
+  ],
+  "documentationReferences": [
+    {
+      "path": "docs/roadmaps/econovaria-structured-refactor-roadmap-v1.md",
+      "referenceClass": "current-normative",
+      "retirementBlocking": true
+    },
+    {
+      "path": "docs/security/auth-boundary-ledger-v1.json",
+      "referenceClass": "current-security-authority",
+      "retirementBlocking": true
+    },
+    {
+      "path": "docs/archive",
+      "referenceClass": "historical",
+      "retirementBlocking": false
+    }
+  ]
+}

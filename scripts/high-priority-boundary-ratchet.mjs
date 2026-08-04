@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 async function text(path) {
-  return readFile(new URL(`../${path}`, import.meta.url), "utf8");
+  return (await readFile(new URL(`../${path}`, import.meta.url), "utf8"))
+    .replaceAll("\r\n", "\n");
 }
 
 function requireCondition(condition, message) {

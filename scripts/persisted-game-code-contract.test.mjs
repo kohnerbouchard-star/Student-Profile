@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const MIGRATION = new URL(
@@ -23,6 +24,22 @@ const ADMIN_COMMON = new URL(
 );
 const ADMIN_ROUTES = new URL(
   "../backend/supabase/functions/admin-api/gameRoutes.ts",
+  import.meta.url,
+);
+const ADMIN_JOIN_CODE_OPERATION = new URL(
+  "../backend/supabase/functions/admin-api/gameJoinCodeOperations.ts",
+  import.meta.url,
+);
+const JOIN_CODE_READ_SERVICE = new URL(
+  "../backend/src/domains/game-sessions/application/readGameJoinCode.ts",
+  import.meta.url,
+);
+const JOIN_CODE_READ_REPOSITORY = new URL(
+  "../backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.ts",
+  import.meta.url,
+);
+const HOTFIX_RETIREMENT = new URL(
+  "../docs/operations/evidence/production-admin-join-code-read-hotfix-retirement-v1.json",
   import.meta.url,
 );
 
@@ -53,6 +70,9 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     bootstrap,
     adminCommon,
     adminRoutes,
+    adminJoinCodeOperation,
+    joinCodeReadService,
+    joinCodeReadRepository,
   ] = await Promise.all([
     readFile(WIRING, "utf8"),
     readFile(SESSION_CONTROLS, "utf8"),
@@ -61,6 +81,9 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     readFile(STAFF_BOOTSTRAP, "utf8"),
     readFile(ADMIN_COMMON, "utf8"),
     readFile(ADMIN_ROUTES, "utf8"),
+    readFile(ADMIN_JOIN_CODE_OPERATION, "utf8"),
+    readFile(JOIN_CODE_READ_SERVICE, "utf8"),
+    readFile(JOIN_CODE_READ_REPOSITORY, "utf8"),
   ]);
 
   for (const source of [wiring, sessionControls, creationControls]) {
@@ -78,7 +101,8 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
   assert.match(wiring, /remains available after reloads/);
   assert.match(wiring, /Rotate Code/);
   assert.match(resetHandler, /new Set\(\["GET", "POST"\]\)/);
-  assert.match(resetHandler, /\.select\("game_join_code,game_join_code_status,updated_at"\)/);
+  assert.match(resetHandler, /createSupabaseGameJoinCodeReadRepository/);
+  assert.match(resetHandler, /readGameJoinCode/);
   assert.match(resetHandler, /\.rpc\("issue_game_join_code_v1"/);
   assert.match(bootstrap, /game_join_code,game_join_code_status/);
   assert.match(bootstrap, /joinCode:\s*session\.game_join_code/);
@@ -87,5 +111,61 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
   assert.match(adminCommon, /joinCode:\s*gameCode/);
   assert.match(adminCommon, /gameCode,/);
   assert.match(adminRoutes, /suffix === "\/join-code\/reset"/);
-  assert.match(adminRoutes, /classroomGamePath\(gameId, "\/join-code\/reset"\)/);
+  assert.match(adminRoutes, /handleGameJoinCodeReadOperation/);
+  assert.match(adminJoinCodeOperation, /createSupabaseGameJoinCodeReadRepository/);
+  assert.match(adminJoinCodeOperation, /readGameJoinCode/);
+  assert.match(joinCodeReadRepository, /\.eq\("id", input\.gameSessionId\)/);
+  assert.match(
+    joinCodeReadRepository,
+    /\.eq\("owner_staff_user_id", input\.staffUserId\)/,
+  );
+  assert.match(joinCodeReadService, /join_code_read_failed/);
+  assert.doesNotMatch(joinCodeReadService, /join_code_scope_violation/);
+  assert.doesNotMatch(
+    adminRoutes.match(
+      /if \(suffix === "\/join-code\/reset"\) \{[\s\S]*?\n  \}/,
+    )?.[0] || "",
+    /proxyClassroom|classroomGamePath/,
+  );
+});
+
+test("retired join-code deploy workflows retain immutable authorization and outcome evidence", async () => {
+  const retirement = JSON.parse(await readFile(HOTFIX_RETIREMENT, "utf8"));
+  assert.equal(
+    retirement.schemaVersion,
+    "econovaria.production-admin-join-code-read-hotfix-retirement.v1",
+  );
+  assert.equal(retirement.status, "proposed");
+  assert.equal(retirement.workflows.length, 2);
+
+  for (const workflow of retirement.workflows) {
+    assert.match(workflow.blobSha1, /^[0-9a-f]{40}$/);
+    assert.match(workflow.sha256, /^[0-9a-f]{64}$/);
+    const authorization = await readFile(
+      new URL(`../${workflow.authorization.path}`, import.meta.url),
+    );
+    assert.equal(
+      createHash("sha256").update(authorization).digest("hex"),
+      workflow.authorization.sha256,
+    );
+    await assert.rejects(
+      access(new URL(`../${workflow.path}`, import.meta.url)),
+      { code: "ENOENT" },
+    );
+  }
+
+  const [first, second] = retirement.workflows;
+  assert.equal(first.outcome.status, "not_captured");
+  assert.equal(first.outcome.deploymentClaim, "none");
+  assert.equal(second.outcome.status, "captured");
+  assert.equal(second.outcome.deploymentOccurredFromRecordedRun, false);
+
+  const result = JSON.parse(
+    await readFile(new URL(`../${second.outcome.path}`, import.meta.url), "utf8"),
+  );
+  assert.equal(result.conclusion, "failure");
+  assert.equal(result.deploymentOccurredFromThisRun, false);
+  assert.equal(result.workflow.runHeadSha, retirement.auditedSourceSha);
+  assert.equal(result.workflow.blobSha1, second.blobSha1);
+  assert.equal(result.workflow.sha256, second.sha256);
 });

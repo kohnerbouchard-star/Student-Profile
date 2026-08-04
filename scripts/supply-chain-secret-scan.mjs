@@ -2,10 +2,11 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
-import { extname, relative, resolve } from "node:path";
+import { dirname, extname, relative, resolve } from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
-const repositoryRoot = resolve(new URL("..", import.meta.url).pathname);
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const allowMarker = "secret-scan: allow";
 
 const ignoredExtensions = new Set([
@@ -54,11 +55,15 @@ const rules = Object.freeze([
 ]);
 
 function repositoryFiles() {
-  const output = execFileSync("git", ["ls-files", "-z"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
+  const output = execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    },
+  );
   return output.split("\0").filter(Boolean).map((file) => resolve(repositoryRoot, file));
 }
 

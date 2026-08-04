@@ -2,6 +2,15 @@ name: Player Multiplayer and Load E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      profile:
+        description: "Run the bounded golden journey or the complete mutation/load suite"
+        required: true
+        default: golden
+        type: choice
+        options:
+          - golden
+          - full
   pull_request:
     branches: [main, agent/pr377-validation-base]
     paths:
@@ -23,6 +32,12 @@ on:
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/player-multiplayer-browser-acceptance.mjs"
+      - "scripts/player-multiplayer-browser-acceptance-core.mjs"
+      - "scripts/golden-playable-journey-contract.test.mjs"
+      - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/game-creation-provisioning-local-contract.test.mjs"
+      - "scripts/lib/disposable-local-runtime.mjs"
+      - "scripts/lib/disposable-local-runtime.test.mjs"
       - "scripts/player-connected-mutation-browser-acceptance.mjs"
       - "scripts/business-banking-player-state-controls-browser-acceptance.mjs"
       - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
@@ -63,16 +78,17 @@ jobs:
       ECONOVARIA_BROWSER_ADMIN_PASSWORD: Player-E2E-Admin-2026!
       ECONOVARIA_BROWSER_GAME_NAME: Player Multiplayer E2E
       ECONOVARIA_GATEWAY_REQUEST_TIMEOUT_SECONDS: "180"
+      ECONOVARIA_E2E_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     steps:
       - name: Check out exact workflow head
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -83,6 +99,12 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/player-multiplayer-browser-acceptance.mjs
+          node --check scripts/player-multiplayer-browser-acceptance-core.mjs
+          node --check scripts/game-creation-provisioning-local-acceptance.mjs
+          node --test \
+            scripts/golden-playable-journey-contract.test.mjs \
+            scripts/game-creation-provisioning-local-contract.test.mjs \
+            scripts/lib/disposable-local-runtime.test.mjs
           node --check scripts/player-connected-mutation-browser-acceptance.mjs
           node --check scripts/business-banking-player-state-controls-browser-acceptance.mjs
           node --check scripts/business-banking-player-commerce-browser-acceptance.mjs
@@ -283,55 +305,55 @@ jobs:
 
       - name: Execute connected Messaging mutation journey
         id: player_mutations
-        if: steps.player_browser.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_browser.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-connected-mutation-browser-acceptance.mjs
 
       - name: Execute notification and watchlist mutation journey
         id: player_state_controls
-        if: steps.player_mutations.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_mutations.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-state-controls-browser-acceptance.mjs
 
       - name: Execute connected transfer and Store mutation journey
         id: player_commerce
-        if: steps.player_state_controls.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_state_controls.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-commerce-browser-acceptance.mjs
 
       - name: Execute connected Inventory redemption journey
         id: player_inventory
-        if: steps.player_commerce.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_commerce.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-inventory-browser-acceptance.mjs
 
       - name: Execute connected Contract lifecycle
         id: player_contracts
-        if: steps.player_inventory.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_inventory.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-contracts-browser-acceptance.mjs
 
       - name: Execute connected immediate market-order lifecycle
         id: player_market
-        if: steps.player_contracts.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_contracts.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-market-browser-acceptance.mjs
 
       - name: Execute connected Business lifecycle
         id: player_business
-        if: steps.player_market.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_market.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-business-browser-acceptance.mjs
 
       - name: Execute connected World lifecycle
         id: player_world
-        if: steps.player_business.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_business.outcome == 'success'
         continue-on-error: true
         run: node scripts/business-banking-player-world-browser-acceptance.mjs
 
       - name: Execute 30 and 40 Player connected load profile
         id: player_load
-        if: steps.player_world.outcome == 'success'
+        if: env.ECONOVARIA_E2E_PROFILE == 'full' && steps.player_world.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
@@ -354,15 +376,27 @@ jobs:
           cat /tmp/player-runtime-server-diagnostics.log
           exit 0
 
+      - name: Sanitize local Supabase startup diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -f /tmp/player-runtime-supabase-startup.log ]; then
+            sed -E \
+              's#postgres(ql)?://[^[:space:]]+#[database-url-redacted]#gi; s/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/(SECRET_KEY|SERVICE_ROLE_KEY|ANON_KEY|PUBLISHABLE_KEY)=[^[:space:]]+/\1=[credential-redacted]/g' \
+              /tmp/player-runtime-supabase-startup.log \
+              > /tmp/player-runtime-supabase-startup-sanitized.log
+          fi
+
       - name: Upload sanitized Player evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: player-multiplayer-load-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /tmp/econovaria-player-browser/
             /tmp/econovaria-player-load/
-            /tmp/player-runtime-supabase-startup.log
+            /tmp/player-runtime-supabase-startup-sanitized.log
             /tmp/player-runtime-source-provisioning.log
             /tmp/player-runtime-gateway.log
             /tmp/player-runtime-server-diagnostics.log
@@ -373,16 +407,19 @@ jobs:
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
           test "${{ steps.player_browser.outcome }}" = "success"
-          test "${{ steps.player_mutations.outcome }}" = "success"
-          test "${{ steps.player_state_controls.outcome }}" = "success"
-          test "${{ steps.player_commerce.outcome }}" = "success"
-          test "${{ steps.player_inventory.outcome }}" = "success"
-          test "${{ steps.player_contracts.outcome }}" = "success"
-          test "${{ steps.player_market.outcome }}" = "success"
-          test "${{ steps.player_business.outcome }}" = "success"
-          test "${{ steps.player_world.outcome }}" = "success"
-          test "${{ steps.player_load.outcome }}" = "success"
+          if [ "$ECONOVARIA_E2E_PROFILE" = "full" ]; then
+            test "${{ steps.player_mutations.outcome }}" = "success"
+            test "${{ steps.player_state_controls.outcome }}" = "success"
+            test "${{ steps.player_commerce.outcome }}" = "success"
+            test "${{ steps.player_inventory.outcome }}" = "success"
+            test "${{ steps.player_contracts.outcome }}" = "success"
+            test "${{ steps.player_market.outcome }}" = "success"
+            test "${{ steps.player_business.outcome }}" = "success"
+            test "${{ steps.player_world.outcome }}" = "success"
+            test "${{ steps.player_load.outcome }}" = "success"
+          fi
 
       - name: Stop local Player stack
         if: always()

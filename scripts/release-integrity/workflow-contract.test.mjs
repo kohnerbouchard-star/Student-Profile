@@ -3,17 +3,20 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { validateDatabaseUrlProjectRef } from './index.mjs';
 
-const releaseWorkflow = readFileSync('.github/workflows/release-integrity.yml', 'utf8');
-const retiredWorkflow = readFileSync('.github/workflows/production-runtime-promotion-v2.yml', 'utf8');
-const contractWorkflow = readFileSync('.github/workflows/production-runtime-promotion-contract.yml', 'utf8');
-const fingerprintSql = readFileSync('scripts/release-integrity/export-schema-fingerprint.sql', 'utf8');
-const indexSource = readFileSync('scripts/release-integrity/index.mjs', 'utf8');
-const bindingSource = readFileSync('scripts/release-integrity/database-binding.mjs', 'utf8');
-const design = readFileSync('docs/operations/release-integrity-gates-v1.md', 'utf8');
-const hardeningAmendment = readFileSync(
+const releaseWorkflow = readText('.github/workflows/release-integrity.yml');
+const retiredWorkflow = readText('.github/workflows/production-runtime-promotion-v2.yml');
+const contractWorkflow = readText('.github/workflows/production-runtime-promotion-contract.yml');
+const fingerprintSql = readText('scripts/release-integrity/export-schema-fingerprint.sql');
+const indexSource = readText('scripts/release-integrity/index.mjs');
+const bindingSource = readText('scripts/release-integrity/database-binding.mjs');
+const design = readText('docs/operations/release-integrity-gates-v1.md');
+const hardeningAmendment = readText(
   'docs/operations/release-integrity-gates-v1-hardening-amendment.md',
-  'utf8',
 );
+
+function readText(filePath) {
+  return readFileSync(filePath, 'utf8').replaceAll('\r\n', '\n');
+}
 
 function assertActionsPinned(workflow, name) {
   for (const match of workflow.matchAll(/^\s*uses:\s*([^\s#]+)(?:\s+#.*)?$/gm)) {
@@ -142,6 +145,8 @@ test('design authority and hardening amendment remain fail closed', () => {
   for (const invariant of ['I1.', 'I2.', 'I3.', 'I4.', 'I5.', 'I6.', 'I7.', 'I8.', 'I9.', 'I10.']) {
     assert.ok(design.includes(invariant), `missing design invariant: ${invariant}`);
   }
+  assert.ok(design.includes('tracked application or'));
+  assert.ok(design.includes('verified immutable artifact'));
   for (const decision of ['A1.', 'A2.', 'A3.', 'A4.', 'A5.', 'A6.', 'A7.', 'A8.']) {
     assert.ok(hardeningAmendment.includes(decision), `missing hardening decision: ${decision}`);
   }

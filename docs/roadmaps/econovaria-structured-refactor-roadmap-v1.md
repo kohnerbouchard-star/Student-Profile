@@ -183,7 +183,7 @@ rolled_back
 
 | Phase | State | Branch | PR | Exact head | Merge SHA | Validation | Blockers |
 |---|---|---|---|---|---|---|---|
-| 1 API boundary consolidation | not_started | — | — | — | — | — | Documentation lifecycle clarification should be merged or incorporated first |
+| 1 API boundary consolidation | active | `fix/admin-join-code-service-v1` | not opened | `22c2d396f29dc34ba486e25eeb38e70daebb03f1` plus uncommitted slice | — | 18 focused join-code tests and affected Edge checks green; route inventory seed remains non-normative | reconcile PR #484 runtime inventory and PR #492 package-file changes before merge |
 | 2 Repository census and ownership ledger | not_started | — | — | — | — | — | Phase 1 active implementation must be bounded |
 | 3 Documentation authority normalization | not_started | — | — | — | — | — | — |
 | 4 Structural ratchets | not_started | — | — | — | — | — | — |
@@ -194,6 +194,17 @@ rolled_back
 | 9 Assets, content, and evidence normalization | not_started | — | — | — | — | — | — |
 | 10 Workflow and CI normalization | not_started | — | — | — | — | — | — |
 | 11 Compatibility path removal and final acceptance | not_started | — | — | — | — | — | — |
+
+## Phase 1 tranche ledger
+
+| Tranche | State | Branch | PR | Scope | Validation | Next gate |
+|---|---|---|---|---|---|---|
+| 1A route and dependency ledger | active | `fix/admin-join-code-service-v1` | not opened | non-normative seed of 99 route families, 94 compatibility findings, and 31 source fingerprints | schema/census prototype green | classify omitted callers and replace inherited placeholders route group by route group |
+| 1B compatibility growth freeze | active | `fix/admin-join-code-service-v1` | not opened | opt-in candidate/base comparison prototype; not a required CI gate | bypass review completed | add callsite identity and complete scan scope before CI promotion |
+| 1D.1 Admin join-code read | active | `fix/admin-join-code-service-v1` | not opened | replace only the Admin GET Classroom proxy with the typed owner-scoped game-session read service; preserve POST rotation | 18 focused Deno tests, 127 Admin tests, Admin/Classroom entrypoint checks, and independent reviews green | split the runtime change into its own PR, then connected staging acceptance after merge authorization |
+
+No tranche is merged or production-authorized. Phase 1 remains active until the
+full completion definition below is satisfied on merged `main`.
 
 # Phase 1 — API Boundary Consolidation and Classroom API Retirement
 

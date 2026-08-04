@@ -51,15 +51,16 @@ test("accepts an isolated staging publishable configuration", () => {
   assert.equal(runtime.environment, "staging");
   assert.equal(runtime.projectRef, "eecvbssdvarfcykcfrny");
   assert.equal(runtime.apiProxyUrl, "");
-  assert.equal(runtime.playerWebSessionApiUrl, `${functions}/player-web-session-api`);
-  assert.equal(runtime.playerApiUrl, `${functions}/player-web-session-api/proxy`);
+  assert.equal(runtime.browserApiTransport, "hosted-bff");
+  assert.equal(runtime.playerWebSessionApiUrl, "/api/player-session");
+  assert.equal(runtime.playerApiUrl, "/api/player");
   assert.equal(runtime.staffApiUrl, `${functions}/staff-api`);
   assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
   assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
-  assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
-  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
-  assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
-  assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
+  assert.equal(runtime.webSessionApiUrl, "/api/admin-session");
+  assert.equal(runtime.adminLogoutApiUrl, "/api/admin-logout");
+  assert.equal(runtime.adminBffApiUrl, "/api/admin");
+  assert.equal(runtime.passwordResetApiUrl, "/api/password-reset");
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
   assert.equal(meta.content, runtime.adminBffApiUrl);
   assert.equal(Object.isFrozen(runtime), true);
@@ -78,6 +79,7 @@ test("routes reviewed browser APIs through an approved loopback proxy", () => {
     "Supabase Auth and Realtime must retain the real staging project URL.",
   );
   assert.equal(runtime.apiProxyUrl, "http://127.0.0.1:4173");
+  assert.equal(runtime.browserApiTransport, "direct-functions");
   assert.equal(runtime.playerWebSessionApiUrl, `${functions}/player-web-session-api`);
   assert.equal(runtime.playerApiUrl, `${functions}/player-web-session-api/proxy`);
   assert.equal(runtime.staffApiUrl, `${functions}/staff-api`);
@@ -103,6 +105,7 @@ test("routes staging APIs through the exact hosted HTTPS origin", () => {
   const functions = `${origin}/functions/v1`;
 
   assert.equal(runtime.apiProxyUrl, origin);
+  assert.equal(runtime.browserApiTransport, "direct-functions");
   assert.equal(runtime.playerWebSessionApiUrl, `${functions}/player-web-session-api`);
   assert.equal(runtime.playerApiUrl, `${functions}/player-web-session-api/proxy`);
   assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
@@ -115,6 +118,7 @@ test("uses same-origin BFF routes in production", () => {
     ...stagingConfig,
     environment: "production",
   });
+  assert.equal(runtime.browserApiTransport, "hosted-bff");
   assert.equal(runtime.playerWebSessionApiUrl, "/api/player-session");
   assert.equal(runtime.playerApiUrl, "/api/player");
   assert.equal(runtime.webSessionApiUrl, "/api/admin-session");

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile, unlink } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +11,7 @@ import {
   buildWorldPublication,
   sha256,
 } from "./world-staging-provision-lib.mjs";
+import { assertDisposableLocalRuntime } from "./lib/disposable-local-runtime.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
@@ -22,8 +23,13 @@ const DOWNSTREAM_CONTRACT_PATH = path.join(
   "contracts",
   "beta-seed-downstream-consumer-contract-v1.json",
 );
+const SUPABASE_CONFIG_PATH = path.join(REPO_ROOT, "backend", "supabase", "config.toml");
 const DATABASE_URL = process.env.DATABASE_URL ||
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const BROWSER_GATEWAY_URL = process.env.ECONOVARIA_BROWSER_BASE_URL ||
+  "http://127.0.0.1:4173";
+const NPX_COMMAND = process.platform === "win32" ? "npx.cmd" : "npx";
+const BOOTSTRAP_ONLY = process.argv.slice(2).includes("--bootstrap-only");
 const STAFF_ID = "10000000-0000-4000-8000-000000000001";
 const AUTH_ID = "10000000-0000-4000-8000-000000000002";
 const SOURCE_GAME_ID = "10000000-0000-4000-8000-000000000003";
@@ -38,6 +44,31 @@ function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function assertSupportedArguments() {
+  const unsupported = process.argv.slice(2).filter((value) => value !== "--bootstrap-only");
+  requireCondition(
+    unsupported.length === 0,
+    `Unsupported argument: ${unsupported[0]}`,
+  );
+}
+
+function inspectDisposableLocalRuntime() {
+  const result = spawnSync(
+    NPX_COMMAND,
+    ["supabase", "status", "-o", "env", "--workdir", "backend"],
+    { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
+  );
+  requireCondition(
+    result.status === 0,
+    "Local Supabase is not running or could not be inspected.",
+  );
+  return assertDisposableLocalRuntime({
+    statusOutput: result.stdout,
+    inheritedDatabaseUrl: DATABASE_URL,
+    gatewayUrl: BROWSER_GATEWAY_URL,
+  });
+}
+
 function sqlLiteral(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
@@ -49,24 +80,45 @@ function jsonSql(value, tag = "json") {
 }
 
 async function runSql(sql, { label = "database operation" } = {}) {
-  const file = path.join("/tmp", `econovaria-game-provision-${randomUUID()}.sql`);
-  await writeFile(file, `${sql.trim()}\n`, "utf8");
-  try {
-    const result = spawnSync(
-      "psql",
-      [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-f", file],
-      { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+  const input = `${sql.trim()}\n`;
+  let result = spawnSync(
+    "psql",
+    [DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+    { input, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+  );
+  if (result.error?.code === "ENOENT") {
+    const config = await readFile(SUPABASE_CONFIG_PATH, "utf8");
+    const projectId = config.match(/^project_id\s*=\s*"([a-z0-9_-]+)"\s*$/mu)?.[1] || "";
+    requireCondition(projectId.length > 0, "Local Supabase project_id is invalid.");
+    result = spawnSync(
+      "docker",
+      [
+        "exec",
+        "-i",
+        `supabase_db_${projectId}`,
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-f",
+        "-",
+      ],
+      { input, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
     );
-    if (result.status !== 0) {
-      const stderr = String(result.stderr || "")
-        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "[uuid-redacted]")
-        .slice(0, 3000);
-      throw new Error(`${label} failed: ${stderr || `psql exited ${result.status}`}`);
-    }
-    return String(result.stdout || "").trim();
-  } finally {
-    await unlink(file).catch(() => {});
   }
+  if (result.status !== 0) {
+    const stderr = String(result.stderr || result.error?.message || "")
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "[uuid-redacted]")
+      .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[database-url-redacted]")
+      .slice(0, 3000);
+    throw new Error(`${label} failed: ${stderr || `psql exited ${result.status}`}`);
+  }
+  return String(result.stdout || "").trim();
 }
 
 async function readJson(filePath) {
@@ -92,7 +144,7 @@ async function prepareSourceGame() {
       ${sqlLiteral(AUTH_ID)}::uuid,
       'provisioning-acceptance@example.test',
       'Provisioning Acceptance Admin'
-    );
+    ) on conflict (id) do nothing;
 
     insert into public.game_sessions (
       id, owner_staff_user_id, name, status, lifecycle_state,
@@ -105,7 +157,7 @@ async function prepareSourceGame() {
       'active',
       'pending',
       'pending'
-    );
+    ) on conflict (id) do nothing;
 
     insert into public.game_settings (
       game_session_id, difficulty_preset, stock_market_window
@@ -113,8 +165,54 @@ async function prepareSourceGame() {
       ${sqlLiteral(SOURCE_GAME_ID)}::uuid,
       'moderate',
       '{"timezone":"Asia/Seoul"}'::jsonb
-    );
+    ) on conflict (game_session_id) do nothing;
+
+    do $source_contract$
+    begin
+      if not exists (
+        select 1
+        from public.staff_users
+        where id = ${sqlLiteral(STAFF_ID)}::uuid
+          and supabase_auth_user_id = ${sqlLiteral(AUTH_ID)}::uuid
+          and lower(email) = 'provisioning-acceptance@example.test'
+      ) then
+        raise exception 'LOCAL_CANONICAL_STAFF_CONTRACT_MISMATCH';
+      end if;
+      if not exists (
+        select 1
+        from public.game_sessions
+        where id = ${sqlLiteral(SOURCE_GAME_ID)}::uuid
+          and owner_staff_user_id = ${sqlLiteral(STAFF_ID)}::uuid
+          and name = ${sqlLiteral(SOURCE_GAME_NAME)}
+      ) then
+        raise exception 'LOCAL_CANONICAL_GAME_CONTRACT_MISMATCH';
+      end if;
+    end;
+    $source_contract$;
   `, { label: "source game setup" });
+}
+
+async function readProvisioningPreflight({ allowMissing = false } = {}) {
+  try {
+    const output = await runSql(`
+      select public.game_provisioning_preflight_v1(
+        'econovaria.beta-seed-pack.v1'
+      )::text;
+    `, { label: "canonical provisioning preflight" });
+    const preflight = parseJsonLine(output, "canonical provisioning preflight");
+    requireCondition(preflight.ready === true, "Canonical provisioning preflight is not ready");
+    return preflight;
+  } catch (error) {
+    if (
+      allowMissing &&
+      /GAME_PROVISIONING_CANONICAL_SOURCE_(?:NOT_FOUND|INCOMPLETE)/u.test(
+        String(error?.message || error),
+      )
+    ) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 async function applyCanonicalSeed() {
@@ -341,9 +439,33 @@ async function verifyFailureRollback() {
 }
 
 async function main() {
+  assertSupportedArguments();
+  const disposableRuntime = inspectDisposableLocalRuntime();
+  if (BOOTSTRAP_ONLY) {
+    const existing = await readProvisioningPreflight({ allowMissing: true });
+    if (existing?.ready === true) {
+      console.log(JSON.stringify({
+        canonicalSeedReady: true,
+        canonicalSeedChanged: false,
+        disposableRuntime,
+      }, null, 2));
+      return;
+    }
+  }
+
   await prepareSourceGame();
   const { pack, integrity } = await applyCanonicalSeed();
   await publishCanonicalWorld();
+  await readProvisioningPreflight();
+  if (BOOTSTRAP_ONLY) {
+    console.log(JSON.stringify({
+      canonicalSeedReady: true,
+      canonicalSeedChanged: true,
+      disposableRuntime,
+    }, null, 2));
+    return;
+  }
+
   const created = await createTargetGame();
   const state = await verifyTargetGame(created);
   await verifyReplay(created);
@@ -365,6 +487,7 @@ async function main() {
       failureRolledBack: true,
     },
     safety: {
+      disposableRuntime,
       disposableDatabase: true,
       productionTouched: false,
       playerHistoryFabricated: false,
@@ -375,7 +498,11 @@ async function main() {
   const serialized = JSON.stringify(report);
   requireCondition(!serialized.includes(created.joinCode), "Report contains the plaintext Game Code");
   requireCondition(!/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized), "Report contains a raw UUID");
-  await writeFile("/tmp/game-creation-provisioning-local-acceptance.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(
+    path.join(tmpdir(), "game-creation-provisioning-local-acceptance.json"),
+    `${JSON.stringify(report, null, 2)}\n`,
+    "utf8",
+  );
   console.log(JSON.stringify({
     canonicalSeedActivated: true,
     canonicalWorldPublished: true,

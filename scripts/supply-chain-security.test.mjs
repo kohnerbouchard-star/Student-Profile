@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -23,7 +23,7 @@ function digest(content) {
   return createHash("sha256").update(content).digest("hex");
 }
 
-test("repository secret scan passes for committed source", () => {
+test("repository secret scan passes for tracked and untracked source", () => {
   const result = runNode(scanner);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Secret scan passed/);
@@ -39,6 +39,24 @@ test("secret scan rejects a generated GitHub token", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /github-token/);
   assert.doesNotMatch(result.stderr, new RegExp(token));
+});
+
+test("repository scan includes untracked non-ignored files", () => {
+  const directory = mkdtempSync(
+    join(repositoryRoot, ".secret-scan-untracked-"),
+  );
+  const fixture = join(directory, "leaked-token.txt");
+  const token = ["ghp", "_", "U".repeat(36)].join("");
+
+  try {
+    writeFileSync(fixture, `TOKEN=${token}\n`, "utf8");
+    const result = runNode(scanner);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /github-token/);
+    assert.doesNotMatch(result.stderr, new RegExp(token));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("secret scan rejects private key material", () => {

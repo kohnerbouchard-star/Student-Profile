@@ -2,9 +2,9 @@
 
 **Document ID:** `ECON-BETA-ROADMAP-V1`  
 **Roadmap authority:** Chat 1  
-**Audited main:** `ebe62a64d6cd4234f7b2792020b519a6a15ff39e`
-**Audit date:** 2026-07-29
-**Current decision:** `BLOCKED`  
+**Audited main:** `22c2d396f29dc34ba486e25eeb38e70daebb03f1`
+**Audit date:** 2026-08-04
+**Current decision:** `IN_PROGRESS`
 **Production deployment authorized:** No
 
 The detailed stable capability definitions and acceptance criteria in the prior roadmap revision remain authoritative unless changed by the live controller records below. Current status, ownership, merge order, migration collision decisions, and exact next actions are governed by:
@@ -15,11 +15,30 @@ The detailed stable capability definitions and acceptance criteria in the prior 
 
 Use only `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_MERGED`, `IN_PROGRESS`, `PLANNED`, `BLOCKED`, and `RE_AUDIT_REQUIRED`.
 
-PR #296 is closed without merge. PR #298 is the preceding merged controller authority. PRs #248, #249, and #261 are explicitly reactivated. PRs #299 and #300 are active authorities.
-
-The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared convergence, #295, continuous pilot, and final go/no-go. Production promotion requires a separate explicit product-owner instruction.
+The 2026-08-04 source and pull-request audit found open PR #484 (runtime
+inventory), PR #485 (release attestation), and PR #492 (dependency updates).
+No open pull request owns the Admin join-code compatibility migration. Reconcile
+#484 before compatibility-runtime claims, #492 before final package-file merge,
+and retain #485 for the later release-attestation sequence. Production promotion
+still requires a separate explicit product-owner instruction.
 
 ## Scope Intake
+
+- **`BETA-PROD-ADMIN-WIRING-006` — Systemic Admin API wiring cleanup**
+  - Status: `IN_PROGRESS`
+  - Owner branch: `fix/admin-join-code-service-v1`; no commit, push, or pull request is authorized or recorded yet.
+  - Exact base: `22c2d396f29dc34ba486e25eeb38e70daebb03f1`; implementation remains an uncommitted working tree until the slice audit is complete.
+  - First slice: seed the Classroom compatibility inventory and move only Admin `GET /games/{gameUuid}/join-code/reset` from the Admin-to-Classroom HTTP proxy to an owner-scoped game-session application service and repository. The inventory/ratchet remains non-normative until its caller coverage and callsite identity gaps are closed.
+  - Security boundary: the existing Admin session and `ensureOwnedGame` check remain first; the service-role database read is additionally constrained by both `game_sessions.id` and `owner_staff_user_id`; unexpected persistence details are replaced by a stable non-retryable error envelope.
+  - Behavior boundary: successful and legacy-code response contracts are preserved; POST rotation continues to use the existing Classroom path and `issue_game_join_code_v1` RPC; unrelated game and Player routes are unchanged.
+  - Production-source boundary: retire the two dynamic join-code hotfix workflows that rewrote tracked TypeScript before deployment and preserve their authorization evidence. The immutable-source rule is recorded as release policy; a complete reusable promotion/artifact enforcement path is a later release slice.
+  - Dependencies: reconcile open PR #484 before runtime-inventory claims, open PR #492 before merging root/backend package changes, and leave PR #485 for the later release-attestation sequence.
+  - Migrations, public routes, and RPCs: no migration; no new or removed public route; no RPC definition or grant change.
+  - Validation completed: 18 focused Deno tests and the 127-test Admin suite; `deno check` for Admin, Classroom, and Staff Edge entrypoints; the inventory prototype currently reports 99 route families, 94 findings, and 31 normalized route-source fingerprints; independent backend, ratchet, and release reviews completed.
+  - Validation remaining: record the known unrelated backend TypeScript and root-suite baselines in the PR, reconcile overlapping open PRs, and perform connected staging acceptance only after merge authorization.
+  - Deployment authorization: none. No staging or production deployment is part of this working slice.
+  - Unresolved blocker: production playability still depends on subsequent connected Staff/Admin, Player, runtime, and release tranches; the route inventory is not yet complete enough to enforce in required CI.
+  - Next exact roadmap item: split the reviewed local changes into bounded runtime, workflow-retirement, and inventory-seed PRs, then run the Admin-create-game-to-Player-join connected journey before selecting the second route group.
 
 - **`BETA-PROD-ADMIN-LOGIN-004` — Production Admin login trusted-header reconciliation**
   - Status: `VERIFIED_COMPLETE`

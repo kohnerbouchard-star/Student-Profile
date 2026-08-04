@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "econovaria.production-admin-join-code-read-hotfix-retirement.v1",
+  "status": "proposed",
+  "auditedSourceSha": "22c2d396f29dc34ba486e25eeb38e70daebb03f1",
+  "workflows": [
+    {
+      "path": ".github/workflows/production-admin-api-join-code-read-hotfix.yml",
+      "blobSha1": "17068b5778417e11ee56b7a6ae2cdf40d9c3b86a",
+      "sha256": "c71c36caa8a9dfe21d201dfd58990b8bacfff67568b4a47c395264ce610fbccc",
+      "authorization": {
+        "path": "docs/operations/evidence/production-admin-api-join-code-read-hotfix-v1.json",
+        "sha256": "26aeccd8476e1d876cd5b1b50c758bcfb372553ad0c7880f413630aac648582f"
+      },
+      "outcome": {
+        "status": "not_captured",
+        "deploymentClaim": "none",
+        "note": "No durable workflow-run outcome record was found in the audited repository. Retirement does not assert whether this authorization produced a deployment."
+      }
+    },
+    {
+      "path": ".github/workflows/production-admin-join-code-read-503-hotfix-v2.yml",
+      "blobSha1": "ae979d68ff857c5ab49bfdcad7bf19a0fd04f034",
+      "sha256": "95a87a3cf801c0bfe24e2efa7eb651da3cb1ab9fa82e2971a1b8fda12c33f0b3",
+      "authorization": {
+        "path": "docs/operations/evidence/production-admin-join-code-read-503-hotfix-v2.json",
+        "sha256": "13da8b371cd06d24581cb2fadc61859c2553118b4b2257a6e346d0dce1a61bcd"
+      },
+      "outcome": {
+        "status": "captured",
+        "path": "docs/operations/evidence/production-admin-join-code-read-503-hotfix-v2-result.json",
+        "conclusion": "failure",
+        "deploymentOccurredFromRecordedRun": false
+      }
+    }
+  ]
+}

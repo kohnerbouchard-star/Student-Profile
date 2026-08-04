@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "econovaria.production-admin-join-code-read-503-hotfix-result.v1",
+  "authorization": {
+    "path": "docs/operations/evidence/production-admin-join-code-read-503-hotfix-v2.json",
+    "sha256": "13da8b371cd06d24581cb2fadc61859c2553118b4b2257a6e346d0dce1a61bcd"
+  },
+  "workflow": {
+    "path": ".github/workflows/production-admin-join-code-read-503-hotfix-v2.yml",
+    "runHeadSha": "22c2d396f29dc34ba486e25eeb38e70daebb03f1",
+    "blobSha1": "ae979d68ff857c5ab49bfdcad7bf19a0fd04f034",
+    "sha256": "95a87a3cf801c0bfe24e2efa7eb651da3cb1ab9fa82e2971a1b8fda12c33f0b3",
+    "runId": 30861844352,
+    "runUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/30861844352",
+    "jobId": 91845296714,
+    "jobUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/30861844352/job/91845296714"
+  },
+  "sourceCommit": "a1ffbf6167e0f8707c03ee0f7ef9dd39c8b7ac4b",
+  "verifiedBeforeDeployment": {
+    "functionName": "admin-api",
+    "version": 29,
+    "digest": "d1d067173aeaf2f95b3bf9613dc5d0e4ec215434444be3e81ad0b77ef561afe7",
+    "verifyJwt": true,
+    "status": "ACTIVE"
+  },
+  "conclusion": "failure",
+  "failedStep": "Replace only the failing GET proxy",
+  "failedAt": "2026-08-03T23:19:28.597Z",
+  "failureMessage": "Expected join-code GET proxy was not found exactly once.",
+  "skippedSteps": [
+    "Install pinned Supabase CLI",
+    "Deploy only production admin-api",
+    "Verify deployment advanced safely"
+  ],
+  "deploymentAttempted": false,
+  "deploymentOccurredFromThisRun": false,
+  "scopeNote": "This record establishes only that run 30861844352 did not execute its deploy command; it does not assert that no other actor changed production.",
+  "retirement": {
+    "status": "proposed",
+    "branch": "fix/admin-join-code-service-v1",
+    "workflows": [
+      ".github/workflows/production-admin-api-join-code-read-hotfix.yml",
+      ".github/workflows/production-admin-join-code-read-503-hotfix-v2.yml"
+    ],
+    "authorizationEvidencePreserved": true
+  },
+  "capturedAt": "2026-08-04T02:49:51.4817152Z"
+}

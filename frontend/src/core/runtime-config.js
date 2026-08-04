@@ -131,25 +131,29 @@
       }
     }
 
-    const playerWebSessionApiUrl = environment === "production"
+    const browserApiTransport = apiProxyUrl
+      ? "direct-functions"
+      : "hosted-bff";
+    const usesHostedBff = browserApiTransport === "hosted-bff";
+    const playerWebSessionApiUrl = usesHostedBff
       ? "/api/player-session"
       : `${apiBaseUrl}/functions/v1/player-web-session-api`;
-    const playerApiUrl = environment === "production"
+    const playerApiUrl = usesHostedBff
       ? "/api/player"
       : `${apiBaseUrl}/functions/v1/player-web-session-api/proxy`;
     const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
     const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
     const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
-    const webSessionApiUrl = environment === "production"
+    const webSessionApiUrl = usesHostedBff
       ? "/api/admin-session"
       : `${apiBaseUrl}/functions/v1/web-session-api`;
-    const adminLogoutApiUrl = environment === "production"
+    const adminLogoutApiUrl = usesHostedBff
       ? "/api/admin-logout"
       : `${apiBaseUrl}/functions/v1/admin-logout-api`;
-    const adminBffApiUrl = environment === "production"
+    const adminBffApiUrl = usesHostedBff
       ? "/api/admin"
       : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
-    const passwordResetApiUrl = environment === "production"
+    const passwordResetApiUrl = usesHostedBff
       ? "/api/password-reset"
       : `${apiBaseUrl}/functions/v1/password-reset-api`;
 
@@ -158,6 +162,7 @@
       projectRef,
       supabaseUrl,
       apiProxyUrl,
+      browserApiTransport,
       supabasePublishableKey,
       playerApiUrl,
       playerWebSessionApiUrl,
