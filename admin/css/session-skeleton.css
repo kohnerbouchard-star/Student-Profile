@@ -1,8 +1,9 @@
 /* Admin session-gate skeleton. This is the single startup loader. */
 
 .admin-session-skeleton {
-  width: min(1400px, calc(100vw - 48px));
-  max-height: calc(100vh - 48px);
+  width: 100%;
+  height: var(--admin-viewport-block-size);
+  max-height: var(--admin-viewport-block-size);
   overflow: hidden;
   padding: 0;
   border: 0;
@@ -15,12 +16,14 @@
   grid-template-columns: 220px minmax(0, 1fr);
   grid-template-areas: "nav main";
   gap: 20px;
-  min-height: min(820px, calc(100vh - 48px));
+  height: 100%;
+  min-height: 0;
 }
 
 .admin-session-skeleton__nav,
 .admin-session-skeleton__main {
   min-width: 0;
+  min-height: 0;
   border: 1px solid rgba(0, 212, 255, 0.25);
   background: rgba(6, 16, 33, 0.78);
   clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
@@ -52,6 +55,10 @@
   height: 46px;
 }
 
+.admin-session-skeleton__game-code {
+  min-height: 62px;
+}
+
 .admin-session-skeleton__nav-list {
   display: grid;
   align-content: start;
@@ -62,17 +69,13 @@
   min-height: 40px;
 }
 
-.admin-session-skeleton__game-code {
-  min-height: 62px;
-}
-
 .admin-session-skeleton__main {
   grid-area: main;
   display: grid;
   align-content: start;
   gap: 18px;
-  min-height: 820px;
   padding: 22px;
+  overflow: hidden;
 }
 
 .admin-session-skeleton__topbar {
@@ -92,6 +95,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
   gap: 16px;
+  min-height: 0;
 }
 
 .admin-session-skeleton__panel {
@@ -137,11 +141,19 @@
 }
 
 @media (max-width: 1100px) {
+  .admin-session-skeleton {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .admin-session-skeleton__shell {
     grid-template-columns: 1fr;
     grid-template-areas:
       "nav"
       "main";
+    height: auto;
+    min-height: 100%;
   }
 
   .admin-session-skeleton__nav {
@@ -153,29 +165,22 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .admin-session-skeleton__main {
+    overflow: visible;
+  }
+
   .admin-session-skeleton__content {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .admin-session-skeleton {
-    width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
-  }
-
   .admin-session-skeleton__shell {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "nav"
-      "main";
     gap: 10px;
-    min-height: calc(100vh - 24px);
   }
 
   .admin-session-skeleton__main {
     gap: 12px;
-    min-height: calc(100vh - 24px);
     padding: 14px;
   }
 
