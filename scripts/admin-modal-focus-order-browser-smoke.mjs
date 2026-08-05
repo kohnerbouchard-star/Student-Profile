@@ -55,7 +55,7 @@ try {
   assert.equal(opened.inertPatched, true);
   assert.equal(opened.activeId, "modalClose");
   assert.equal(opened.previewInert, true);
-  assert.equal(opened.previewAriaHidden, null);
+  assert.equal(opened.previewAriaHidden, "true");
   assert.deepEqual(accessibilityWarnings, []);
 
   const closed = await page.evaluate(() => {
