@@ -349,14 +349,17 @@ function dependencies(options: {
   readonly staffAuth?: "ok" | "missing";
 } = {}) {
   const repository = options.repository ?? new MockContractRepository();
-  const serviceClient = options.serviceClient ?? new FakeServiceClient([
-    {
-      id: GAME_SESSION_ID,
-      name: "Period 1",
-      status: "active",
-      owner_staff_user_id: STAFF_ID,
-    },
-  ]);
+  const serviceClient = options.serviceClient ?? new FakeServiceClient(
+    [
+      {
+        id: GAME_SESSION_ID,
+        name: "Period 1",
+        status: "active",
+        owner_staff_user_id: STAFF_ID,
+      },
+    ],
+    repository,
+  );
 
   return {
     readSupabaseEnv: () => ({
@@ -410,6 +413,7 @@ function request(
     headers: {
       "content-type": "application/json",
       authorization: "Bearer staff-token",
+      "idempotency-key": "contract-handler-test-key",
     },
   };
 
@@ -628,6 +632,7 @@ class MockContractRepository implements ContractRepository {
 class FakeServiceClient {
   constructor(
     private readonly gameSessions: readonly Record<string, unknown>[],
+    private readonly repository?: MockContractRepository,
   ) {}
 
   from(tableName: string): FakeGameSessionQuery {
@@ -636,6 +641,79 @@ class FakeServiceClient {
     }
 
     return new FakeGameSessionQuery(this.gameSessions);
+  }
+
+  async rpc<T>(
+    functionName: string,
+    rawArgs: unknown,
+  ): Promise<{
+    readonly data: T | null;
+    readonly error: { readonly message: string } | null;
+  }> {
+    if (functionName !== "admin_mutate_contract_v1" || !this.repository) {
+      throw new Error(`Unexpected RPC ${functionName}`);
+    }
+
+    const args = rawArgs as Record<string, unknown>;
+    const operation = args.p_operation;
+    const payload = args.p_contract_payload as Record<string, unknown>;
+    let contract: GameSessionContractRecord;
+    let status: number;
+
+    if (operation === "create") {
+      contract = await this.repository.createGameSessionContract({
+        ...payload,
+        gameSessionId: String(args.p_game_session_id),
+        createdByStaffId: String(args.p_staff_user_id),
+      } as unknown as CreateGameSessionContractInput);
+      status = 201;
+    } else if (operation === "publish") {
+      const gameSessionId = String(args.p_game_session_id);
+      const contractId = String(args.p_contract_id);
+      const existing = await this.repository.getGameSessionContractById({
+        gameSessionId,
+        contractId,
+      });
+
+      if (!existing) {
+        return {
+          data: null,
+          error: { message: "ADMIN_CONTRACT_NOT_FOUND" },
+        };
+      }
+      if (existing.status !== "draft" && existing.status !== "scheduled") {
+        return {
+          data: null,
+          error: { message: "ADMIN_CONTRACT_NOT_PUBLISHABLE" },
+        };
+      }
+
+      const updated = await this.repository.updateGameSessionContractStatus({
+        gameSessionId,
+        contractId,
+        status: "active",
+        publishedAt: String(payload.publishedAt),
+      });
+      if (!updated) {
+        return {
+          data: null,
+          error: { message: "ADMIN_CONTRACT_NOT_FOUND" },
+        };
+      }
+      contract = updated;
+      status = 200;
+    } else {
+      throw new Error(`Unexpected contract operation ${String(operation)}`);
+    }
+
+    return {
+      data: [{
+        response_status: status,
+        response_body: { contract: contractRow(contract) },
+        was_replayed: false,
+      }] as unknown as T,
+      error: null,
+    };
   }
 }
 
@@ -699,6 +777,36 @@ function contractRecord(
     createdAt: "2026-06-25T12:00:00.000Z",
     updatedAt: "2026-06-25T12:00:00.000Z",
     ...overrides,
+  };
+}
+
+function contractRow(
+  contract: GameSessionContractRecord,
+): Record<string, unknown> {
+  return {
+    id: contract.id,
+    game_session_id: contract.gameSessionId,
+    contract_template_id: contract.contractTemplateId,
+    contract_key: contract.contractKey,
+    source_type: contract.sourceType,
+    source_id: contract.sourceId,
+    created_by_staff_id: contract.createdByStaffId,
+    title: contract.title,
+    description: contract.description,
+    instructions: contract.instructions,
+    category: contract.category,
+    status: contract.status,
+    visibility: contract.visibility,
+    targeting_payload: contract.targetingPayload,
+    requirements_payload: contract.requirementsPayload,
+    reward_payload: contract.rewardPayload,
+    completion_mode: contract.completionMode,
+    published_at: contract.publishedAt,
+    deadline_at: contract.deadlineAt,
+    expires_at: contract.expiresAt,
+    metadata: contract.metadata,
+    created_at: contract.createdAt,
+    updated_at: contract.updatedAt,
   };
 }
 

@@ -246,7 +246,6 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
   const ADMIN_TERMINAL_EXPORT_HISTORY_LIMIT = 20;
   const ADMIN_TERMINAL_EXPORT_HISTORY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   const ADMIN_TERMINAL_UI_ONLY_ID_PREFIX = "ui-only:";
-  const ADMIN_TERMINAL_IDEMPOTENCY_TTL_MS = 15 * 60 * 1000;
   const ADMIN_TERMINAL_INVALID_ENDPOINT_TOKENS = new Set(["", "selected", "current", "undefined", "null"]);
   const ADMIN_TERMINAL_SAFE_DATASET_KEYS = new Set([
     "gameId", "playerId", "contractId", "submissionId", "materialId", "storeItemId", "itemId", "eventId", "assetId",
@@ -262,7 +261,7 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
     "restock", "reviewnote", "reviewtype", "rosterlabel", "startinglocation", "status", "stockmode", "stockquantity", "title",
     "usage", "visibility", "reason", "reasoncategory", "adminnote", "ledgernote", "reviewnote", "message", "amount", "subject", "value",
     "replacementcode", "effectivetiming", "notifyplayer", "effectivedate", "adjustmenttype", "valueunit", "updatedby", "flaglevel",
-    "reviewdate", "restriction", "reviewedby", "playerfollowup", "playername", "playerid", "accesscode", "countryassignment", "messagetype",
+    "reviewdate", "restriction", "reviewedby", "playerfollowup", "playername", "playerid", "playeridentifier", "accesscode", "countryassignment", "messagetype",
     "timezone", "locale", "density", "emailalerts", "lowprioritymuted", "digestfrequency", "quiethours", "verificationcode",
     "exportscope", "exportplayerid", "exportperiod",
     "supportcategory", "supportpriority", "supportpage", "reauthmethod", "currentpassword", "currentcode", "recorddate", "currency"
@@ -784,49 +783,77 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
       try { feature.apiIdempotencyKeys = JSON.parse(window.sessionStorage?.getItem(getAdminTerminalIdempotencyStorageKey()) || "{}"); }
       catch (_) { feature.apiIdempotencyKeys = {}; }
     }
-    const now = Date.now();
-    Object.keys(feature.apiIdempotencyKeys).forEach((key) => {
-      if (now - Number(feature.apiIdempotencyKeys[key]?.createdAt || 0) > ADMIN_TERMINAL_IDEMPOTENCY_TTL_MS) delete feature.apiIdempotencyKeys[key];
-    });
-    persistAdminTerminalIdempotencyStore(feature.apiIdempotencyKeys);
     return feature.apiIdempotencyKeys;
   }
-  function getAdminTerminalIdempotencyIdentity(actionName = "", method = "POST", endpoint = null, body = {}) {
+  function getAdminTerminalEffectiveIdempotencyPayload(actionName = "", body = {}, action = null) {
+    const payload = (body?.payload && typeof body.payload === "object" && !Array.isArray(body.payload))
+      ? { ...body.payload }
+      : {};
+    if (actionName === "submit-attendance-scan") {
+      return {
+        payload: {
+          code: payload.code || payload.playerId || payload.scannedCode || "",
+          deviceTimezone: payload.deviceTimezone || payload.timezone || null
+        },
+        form: {}
+      };
+    }
+    if (actionName === "save-settings") {
+      const attendanceWindow = window.EconovariaAttendanceRewardSettingsRouteBridge?.getCurrentAttendanceWindow?.(body?.gameId) ||
+        window.EconovariaAttendanceRewardSettings?.getDraftWindow?.();
+      if (attendanceWindow && typeof attendanceWindow === "object" && !Array.isArray(attendanceWindow)) {
+        payload.attendanceWindow = attendanceWindow;
+      }
+    }
+    return { payload, form: getAdminTerminalNearestFormData(action) };
+  }
+  function getAdminTerminalIdempotencyIdentity(actionName = "", method = "POST", endpoint = null, body = {}, action = null) {
+    const effective = getAdminTerminalEffectiveIdempotencyPayload(actionName, body, action);
     const identityPayload = {
       action: actionName,
       method: String(method || "POST").toUpperCase(),
       path: endpoint?.path || "",
       gameId: body?.gameId || "",
-      payload: body?.payload || {}
+      payload: effective.payload,
+      form: effective.form
     };
     return `${actionName}::${hashAdminTerminalRequestIdentity(stableStringifyAdminTerminalValue(identityPayload))}`;
   }
   function clearAdminTerminalIdempotencyIdentity(identity = "") {
     if (identity) { const store = getAdminTerminalIdempotencyStore(); delete store[identity]; persistAdminTerminalIdempotencyStore(store); }
   }
-  function isAdminTerminalAmbiguousWriteResponse(response = null) {
-    const status = Number(response?.status || 0);
-    return status === 0 || [408, 425, 429].includes(status) || status >= 500;
+  function isAdminTerminalRetryableIdempotencyResponse(response = null, data = null) {
+    const code = String(data?.error?.code || data?.code || "").trim();
+    const retryable = data?.error?.retryable === true || data?.retryable === true;
+    return Number(response?.status || 0) === 409 && code === "idempotency_request_in_progress" && retryable;
   }
-  function shouldClearAdminTerminalIdempotencyAfterResponse(response = null) {
+  function isAdminTerminalAmbiguousWriteResponse(response = null, data = null) {
+    const status = Number(response?.status || 0);
+    return status === 0 || [408, 425, 429].includes(status) || status >= 500 || isAdminTerminalRetryableIdempotencyResponse(response, data);
+  }
+  function shouldClearAdminTerminalIdempotencyAfterResponse(response = null, data = null) {
     if (response?.ok) return true;
     const status = Number(response?.status || 0);
-    return status >= 400 && status < 500 && !isAdminTerminalAmbiguousWriteResponse(response);
+    return status >= 400 && status < 500 && !isAdminTerminalAmbiguousWriteResponse(response, data);
   }
-  function appendAdminTerminalIdempotency(body = {}, actionName = "", method = "POST", endpoint = null) {
+  function appendAdminTerminalIdempotency(body = {}, actionName = "", method = "POST", endpoint = null, action = null) {
     if (String(method || "POST").toUpperCase() === "GET") return { body, idempotencyKey: "", idempotencyIdentity: "" };
-    const idempotencyIdentity = getAdminTerminalIdempotencyIdentity(actionName, method, endpoint, body);
+    const effective = getAdminTerminalEffectiveIdempotencyPayload(actionName, body, action);
+    const effectiveBody = actionName === "save-settings"
+      ? { ...(body || {}), payload: effective.payload }
+      : body;
+    const idempotencyIdentity = getAdminTerminalIdempotencyIdentity(actionName, method, endpoint, effectiveBody, action);
     const store = getAdminTerminalIdempotencyStore();
     const existing = store[idempotencyIdentity];
     const idempotencyKey = existing?.key || createAdminTerminalIdempotencyKey(actionName);
     if (!existing) { store[idempotencyIdentity] = { key: idempotencyKey, createdAt: Date.now(), state: "pending" }; persistAdminTerminalIdempotencyStore(store); }
     return {
       body: {
-        ...(body || {}),
+        ...(effectiveBody || {}),
         idempotencyKey,
         requestId: idempotencyKey,
         meta: {
-          ...((body && typeof body.meta === "object" && !Array.isArray(body.meta)) ? body.meta : {}),
+          ...((effectiveBody && typeof effectiveBody.meta === "object" && !Array.isArray(effectiveBody.meta)) ? effectiveBody.meta : {}),
           idempotencyKey,
           duplicateClickGuard: "action-record-lock"
         }
@@ -1626,7 +1653,7 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
       return { ok: false, endpoint, skipped: true, reason: payloadValidation.reason };
     }
     const baseBody = getAdminTerminalApiPayload(actionName, action, actionPayload);
-    const { body, idempotencyKey, idempotencyIdentity } = appendAdminTerminalIdempotency(baseBody, actionName, method, endpoint);
+    const { body, idempotencyKey, idempotencyIdentity } = appendAdminTerminalIdempotency(baseBody, actionName, method, endpoint, action);
     const url = `${getAdminTerminalApiBaseUrl()}${endpoint.path}`;
     const fetcher = window.fetch || (typeof fetch === "function" ? fetch : null);
     const lockKey = getAdminTerminalActionLockKey(actionName, endpoint, action);
@@ -1647,7 +1674,7 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
         "X-Requested-With": "XMLHttpRequest",
         "X-Econovaria-Admin-Action": actionName
       };
-      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+      if (csrfToken) headers["X-Econovaria-CSRF-Token"] = csrfToken;
       if (idempotencyKey) headers["X-Idempotency-Key"] = idempotencyKey;
       const expectedVersion = actionPayload?.version || actionPayload?.revision || actionPayload?.updatedAt || action?.dataset?.recordVersion || action?.dataset?.recordUpdatedAt || "";
       if (expectedVersion && isAdminTerminalUnsafeMethod(method)) headers["If-Match"] = String(expectedVersion);
@@ -1674,10 +1701,16 @@ window.Econovaria.features.adminOverviewTerminal = window.Econovaria.features.ad
       });
       const data = await readAdminTerminalResponseData(response);
       const result = { ok: response.ok, status: response.status, endpoint, url, body, data, idempotencyKey, idempotencyIdentity, lockKey };
-      if (shouldClearAdminTerminalIdempotencyAfterResponse(response)) clearAdminTerminalIdempotencyIdentity(idempotencyIdentity);
+      const retryableIdempotencyResponse = isAdminTerminalRetryableIdempotencyResponse(response, data);
+      if (shouldClearAdminTerminalIdempotencyAfterResponse(response, data)) clearAdminTerminalIdempotencyIdentity(idempotencyIdentity);
       if (handleAdminTerminalAuthenticationFailure(response, data)) {
         setAdminTerminalApiActionLockState(lockKey, actionName, endpoint, "error", action);
         return { ...result, ok: false, reason: "reauth-required" };
+      }
+      if (retryableIdempotencyResponse) {
+        setAdminTerminalApiActionLockState(lockKey, actionName, endpoint, "pending", action);
+        showAdminTerminalStatus("warn", "This request is still processing. Retry the same action with its existing request key.");
+        return { ...result, ok: false, retryable: true, reason: "idempotency-in-progress" };
       }
       if ([409, 412].includes(response.status)) {
         setAdminTerminalApiActionLockState(lockKey, actionName, endpoint, "error", action);
@@ -3456,6 +3489,9 @@ function renderPlayerDirectMessageModal(player = {}) {
       currencyMode: "location_based",
       currencySource: "item_location_and_purchase_location",
       pricingMode: readSelectedOptionText(root.querySelector("[data-admin-terminal-store-pricing-mode]"), pricingMode),
+      stockQuantity: stockMode === "Limited"
+        ? Math.max(0, Math.trunc(Number(stockQuantity) || 0))
+        : stockMode === "Country" ? Math.max(0, Math.trunc(countryStockTotal)) : undefined,
       stockText: stockMode === "Country" ? countryStockText : stockMode === "Limited" ? `${stockQuantity || "Quantity required"} available` : "Unlimited stock",
       status: readSelectedOptionText(root.querySelector("[data-admin-terminal-store-status]"), "Active"),
       visibility: readSelectedOptionText(root.querySelector("[data-admin-terminal-store-visibility]"), "All players"),
@@ -4304,6 +4340,8 @@ async function handleAttendanceScanCapture(source = "confirm") {
     if (!result?.ok) { if (state) state.textContent = "Scan failed — try again"; showAdminTerminalStatus("warn", "Attendance was not recorded. The backend did not confirm the scan."); input?.focus?.(); return; }
     const payload = unwrapAdminTerminalResponsePayload(result.data || {});
     const record = payload.attendance || payload.scan || payload.record || payload;
+    const player = payload.player || record.player || {};
+    const reward = payload.reward || record.reward || {};
     const empty = document.querySelector("[data-admin-terminal-last-scan-empty]");
     const panel = document.querySelector("[data-admin-terminal-last-scan-result]");
     const playerNode = panel?.querySelector("[data-admin-terminal-last-scan-player]");
@@ -4311,14 +4349,18 @@ async function handleAttendanceScanCapture(source = "confirm") {
     const timeNode = document.querySelector("[data-admin-terminal-last-scan-time]");
     const statusNode = document.querySelector("[data-admin-terminal-last-scan-status]");
     const rewardNode = document.querySelector("[data-admin-terminal-last-scan-reward]");
-    const playerLabel = record.playerName || record.studentName || record.displayName || code;
+    const playerLabel = player.displayName || player.playerName || player.studentName || record.playerName || record.studentName || record.displayName || code;
     const statusLabel = record.status || record.attendanceStatus || "Recorded";
     if (state) { state.textContent = "Scan confirmed"; state.classList.add("is-captured"); }
     if (empty) empty.hidden = true; if (panel) panel.hidden = false;
     if (playerNode) playerNode.textContent = playerLabel; if (targetLabel) targetLabel.textContent = playerLabel;
     if (timeNode) timeNode.textContent = record.scannedAt || record.checkedInAt || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     if (statusNode) { statusNode.textContent = statusLabel; statusNode.className = `is-status ${String(statusLabel).toLowerCase().includes("late") ? "is-late" : String(statusLabel).toLowerCase().includes("present") ? "is-present" : ""}`; }
-    if (rewardNode) rewardNode.textContent = record.reward ?? record.rewardAmount ?? "—";
+    if (rewardNode) {
+      const rewardAmount = reward.amount ?? record.rewardAmount ?? (typeof record.reward === "number" ? record.reward : null);
+      const rewardCurrency = reward.currencyCode || record.rewardCurrencyCode || "";
+      rewardNode.textContent = rewardAmount == null ? "—" : `${rewardAmount}${rewardCurrency ? ` ${rewardCurrency}` : ""}`;
+    }
     if (input) input.value = "";
     await refreshAdminTerminalAfterWrite("submit-attendance-scan", submitAction, { awaitRefresh: false });
     window.setTimeout(() => { if (state) { state.classList.remove("is-captured"); state.textContent = consoleRoot?.dataset?.scanMode === "manual" ? "Manual input ready" : "Awaiting scan"; } focusActiveScannerInput(); }, 1100);

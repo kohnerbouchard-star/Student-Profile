@@ -42,7 +42,7 @@ const SIGNED_CONTEXT_HEADERS = [
   "x-econovaria-csrf-token",
   "x-econovaria-device-id",
   "x-econovaria-game-id",
-  "x-idempotency-key",
+  "idempotency-key",
   "x-request-id",
 ] as const;
 
@@ -279,6 +279,7 @@ try {
   headers.delete(BFF_CLIENT_IP_HEADER);
   headers.delete(BFF_SIGNATURE_HEADER);
   headers.delete(BFF_MODE_HEADER);
+  headers.delete("x-idempotency-key");
   for (const header of FORWARDED_IP_HEADERS) {
     if (header !== INTERNAL_CLIENT_IP_HEADER) headers.delete(header);
   }

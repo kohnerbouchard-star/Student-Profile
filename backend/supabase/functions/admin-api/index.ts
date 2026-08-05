@@ -12,7 +12,7 @@ import {
 import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameProvisioningOperation } from "./gameProvisioningOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
-import { handleRuntimeMutation } from "./runtimeMutations.ts";
+import { handleLocalAdminGameMutation } from "./localGameMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleProgressionOperation } from "./progressionOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
@@ -26,8 +26,8 @@ import {
   handleGameLifecycleOperation,
 } from "./gameLifecycleOperations.ts";
 import {
-  guardAdminRequest,
   type AdminSecurityGuardResult,
+  guardAdminRequest,
 } from "./adminSecurityGuard.ts";
 
 type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
@@ -62,13 +62,16 @@ function adminSecurityFailureResponse(
   }
   if (failure.resetAt) headers["X-RateLimit-Reset"] = failure.resetAt;
 
-  return new Response(JSON.stringify({
-    code: failure.code,
-    message: failure.message,
-  }), {
-    status: failure.status,
-    headers,
-  });
+  return new Response(
+    JSON.stringify({
+      code: failure.code,
+      message: failure.message,
+    }),
+    {
+      status: failure.status,
+      headers,
+    },
+  );
 }
 
 async function handleGlobalRoute(
@@ -149,8 +152,7 @@ async function handleGlobalRoute(
           marketplaceAdminTrading: false,
           progressionReview: true,
           progressionCorrection: true,
-          multiFactorAuthentication:
-            context.security.assuranceLevel === "aal2",
+          multiFactorAuthentication: context.security.assuranceLevel === "aal2",
         },
       },
     });
@@ -446,6 +448,30 @@ Deno.serve(async (request: Request) => {
       );
     }
 
+    const localGameMutation = await handleLocalAdminGameMutation(
+      securedContext.service as unknown as Parameters<
+        typeof handleLocalAdminGameMutation
+      >[0],
+      {
+        request,
+        gameSessionId: gameId,
+        staffUserId: securedContext.staff.id,
+        suffix,
+        gameSession: {
+          id: game.id,
+          name: game.name,
+          status: game.status,
+        },
+      },
+    );
+    if (localGameMutation.handled) {
+      return json(
+        request,
+        localGameMutation.status,
+        localGameMutation.body,
+      );
+    }
+
     const readResponse = await handleGameRead(
       request,
       securedContext,
@@ -455,14 +481,6 @@ Deno.serve(async (request: Request) => {
       suffix,
     );
     if (readResponse) return readResponse;
-
-    const runtimeMutationResponse = await handleRuntimeMutation(
-      request,
-      securedContext,
-      gameId,
-      suffix,
-    );
-    if (runtimeMutationResponse) return runtimeMutationResponse;
 
     const writeResponse = await handleGameWrite(
       request,

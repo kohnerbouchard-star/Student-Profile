@@ -121,12 +121,21 @@ Deno.test("Classroom join-code POST keeps the existing rotation branch", async (
       readJoinCode: () => {
         throw new Error("POST must not use the read operation");
       },
-      issueJoinCode: (_client, gameSessionId, staffUserId) => {
-        calls.push(["issue-join-code", gameSessionId, staffUserId]);
+      rotateJoinCode: (_client, input) => {
+        calls.push([
+          "rotate-join-code",
+          input.gameSessionId,
+          input.staffUserId,
+          input.mutation.idempotencyKey,
+        ]);
         return Promise.resolve({
-          ok: true as const,
-          gameJoinCode: "ECO-ROTATED-043",
-          updatedAt: UPDATED_AT,
+          status: 200,
+          replayed: false,
+          joinCode: {
+            gameJoinCode: "ECO-ROTATED-043",
+            status: "active" as const,
+            updatedAt: UPDATED_AT,
+          },
         });
       },
     },
@@ -138,10 +147,13 @@ Deno.test("Classroom join-code POST keeps the existing rotation branch", async (
       "A verified Supabase Auth user is required to reset a game join code.",
     ],
     ["read-owned-session", GAME_ID, STAFF_ID],
-    ["issue-join-code", GAME_ID, STAFF_ID],
+    ["rotate-join-code", GAME_ID, STAFF_ID, "join-code-rotation-001"],
   ]);
   assertEquals(response.status, 200);
-  assertEquals(await response.json(), successBody("ECO-ROTATED-043"));
+  assertEquals(await response.json(), {
+    ...successBody("ECO-ROTATED-043"),
+    replayed: false,
+  });
 });
 
 function dependencies(calls: unknown[]) {
@@ -184,7 +196,21 @@ function dependencies(calls: unknown[]) {
 function request(method: string): Request {
   return new Request(
     `https://example.supabase.co/functions/v1/classroom-api/games/${GAME_ID}/join-code/reset`,
-    { method, headers: { authorization: "Bearer test-token" } },
+    {
+      method,
+      headers: {
+        authorization: "Bearer test-token",
+        ...(method === "POST"
+          ? {
+            "content-type": "application/json",
+            "idempotency-key": "join-code-rotation-001",
+          }
+          : {}),
+      },
+      body: method === "POST"
+        ? JSON.stringify({ source: "admin_share_panel" })
+        : undefined,
+    },
   );
 }
 

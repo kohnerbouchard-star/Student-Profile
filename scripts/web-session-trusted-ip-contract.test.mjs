@@ -30,4 +30,10 @@ test("admin and MFA forwarding preserve only the verified internal header", () =
   assert.equal(forwardedUses.length, 2);
   assert.match(source, /clientIp: TrustedClientIp/g);
   assert.doesNotMatch(source, /cf-connecting-ip/u);
+  assert.match(source, /\["idempotency-key", "Idempotency-Key"\]/u);
+  assert.doesNotMatch(source, /\["x-idempotency-key", "X-Idempotency-Key"\]/u);
+  assert.match(source, /\$\{DEVICE_HEADER\},idempotency-key,x-request-id/u);
+  assert.doesNotMatch(source, /\$\{DEVICE_HEADER\},x-idempotency-key,x-request-id/u);
+  assert.match(authSource, /"idempotency-key"/u);
+  assert.doesNotMatch(authSource, /SIGNED_CONTEXT_HEADERS[\s\S]{0,300}"x-idempotency-key"/u);
 });

@@ -1,8 +1,14 @@
 import { corsHeaders } from "./cors.ts";
 
-function assertEqual(actual: unknown, expected: unknown, message: string): void {
+function assertEqual(
+  actual: unknown,
+  expected: unknown,
+  message: string,
+): void {
   if (actual !== expected) {
-    throw new Error(`${message}: expected ${String(expected)}, received ${String(actual)}`);
+    throw new Error(
+      `${message}: expected ${String(expected)}, received ${String(actual)}`,
+    );
   }
 }
 
@@ -40,5 +46,17 @@ Deno.test("omits CORS authorization for arbitrary external origins", () => {
     ],
     undefined,
     "untrusted origin should not receive an allow-origin header",
+  );
+});
+
+Deno.test("advertises the canonical Admin idempotency header", () => {
+  const allowHeaders = corsHeaders(requestFrom("http://localhost:4173"))[
+    "Access-Control-Allow-Headers"
+  ].split(",").map((value) => value.trim());
+
+  assertEqual(
+    allowHeaders.includes("idempotency-key"),
+    true,
+    "canonical Idempotency-Key should be allowed",
   );
 });

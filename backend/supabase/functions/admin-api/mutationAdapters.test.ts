@@ -29,12 +29,24 @@ Deno.test("normalizes v606 store create and update payloads", async () => {
   );
 
   assert(create.method === "POST", "create method should remain POST");
-  assert(create.body.name === "Workshop Pass", "title alias should become name");
-  assert(create.body.itemKey === "workshop-pass-01", "item key should be normalized");
-  assert(create.body.stockQuantity === 7, "stock alias should become an integer");
+  assert(
+    create.body.name === "Workshop Pass",
+    "title alias should become name",
+  );
+  assert(
+    create.body.itemKey === "workshop-pass-01",
+    "item key should be normalized",
+  );
+  assert(
+    create.body.stockQuantity === 7,
+    "stock alias should become an integer",
+  );
   assert(create.body.price === 125, "cost alias should become price");
   assert(create.body.currencyCode === "ECO", "currency should be uppercase");
-  assert(create.body.visibility === "hidden", "private visibility should become hidden");
+  assert(
+    create.body.visibility === "hidden",
+    "private visibility should become hidden",
+  );
 
   const update = await normalizeStoreMutation(
     new Request("https://example.test", {
@@ -46,7 +58,113 @@ Deno.test("normalizes v606 store create and update payloads", async () => {
 
   assert(update.method === "PATCH", "PUT should be translated to PATCH");
   assert(update.body.name === "Updated", "itemName alias should become name");
-  assert(update.body.stockQuantity === 2, "quantity alias should become stockQuantity");
+  assert(
+    update.body.stockQuantity === 2,
+    "quantity alias should become stockQuantity",
+  );
+
+  const terminalUpdate = await normalizeStoreMutation(
+    new Request("https://example.test", {
+      method: "PATCH",
+      body: JSON.stringify({
+        payload: {
+          mode: "update",
+          itemId: "00000000-0000-4000-8000-000000000301",
+          item: {
+            name: "Terminal Item",
+            price: "19.5",
+            currencyCode: "nrc",
+            stockQuantity: "4",
+          },
+        },
+      }),
+    }),
+    "PATCH",
+  );
+  assert(
+    terminalUpdate.body.name === "Terminal Item",
+    "nested v606 payload.item should become the update body",
+  );
+  assert(
+    terminalUpdate.body.price === 19.5,
+    "nested price should be normalized",
+  );
+  assert(
+    terminalUpdate.body.currencyCode === "NRC",
+    "nested currency should be normalized",
+  );
+
+  const liveTerminalCreate = await normalizeStoreMutation(
+    new Request("https://example.test", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "save-store-item",
+        payload: {
+          mode: "create",
+          itemKey: "workshop_pass",
+          name: "Workshop Pass",
+          category: "special_access",
+          status: "active",
+          currencyCode: "nrc",
+          stockQuantity: 12,
+          visibility: "visible",
+          item: {
+            itemName: "Workshop Pass",
+            category: "Special Access",
+            status: "Active",
+            visibility: "All players",
+            stockText: "12 available",
+          },
+        },
+      }),
+    }),
+    "POST",
+  );
+  assert(
+    liveTerminalCreate.body.currencyCode === "NRC",
+    "canonical payload-root currency must survive the nested display envelope",
+  );
+  assert(
+    liveTerminalCreate.body.stockQuantity === 12,
+    "canonical payload-root stock must survive the nested display envelope",
+  );
+  assert(
+    liveTerminalCreate.body.status === "active" &&
+      liveTerminalCreate.body.visibility === "visible",
+    "canonical Store enums must win over nested display labels",
+  );
+
+  const liveTerminalUpdate = await normalizeStoreMutation(
+    new Request("https://example.test", {
+      method: "PATCH",
+      body: JSON.stringify({
+        payload: {
+          mode: "update",
+          item: {
+            itemName: "Updated Workshop Pass",
+            category: "Special Access",
+            status: "Active",
+            visibility: "All players",
+            stockQuantity: "6",
+          },
+        },
+      }),
+    }),
+    "PATCH",
+  );
+  assert(
+    liveTerminalUpdate.body.category === "special-access",
+    "Store category display labels should become domain-safe keys",
+  );
+  assert(
+    liveTerminalUpdate.body.stockQuantity === 6,
+    "the update form's stock quantity must reach the domain handler",
+  );
+  assert(
+    liveTerminalUpdate.body.status === "active" &&
+      liveTerminalUpdate.body.visibility === "visible",
+    "update display labels should become canonical Store enums",
+  );
 });
 
 Deno.test("translates store delete into a reversible archive", async () => {
@@ -55,9 +173,15 @@ Deno.test("translates store delete into a reversible archive", async () => {
     "DELETE",
   );
 
-  assert(result.method === "PATCH", "delete should use the supported PATCH contract");
+  assert(
+    result.method === "PATCH",
+    "delete should use the supported PATCH contract",
+  );
   assert(result.body.status === "archived", "delete should archive the item");
-  assert(result.body.visibility === "hidden", "archived items should be hidden");
+  assert(
+    result.body.visibility === "hidden",
+    "archived items should be hidden",
+  );
 });
 
 Deno.test("normalizes the v606 contract composer payload", async () => {
@@ -71,7 +195,10 @@ Deno.test("normalizes the v606 contract composer payload", async () => {
           locations: ["Asteron", "Northreach"],
           cashRewardAmount: "250",
           rewardCurrencyCode: "eco",
-          itemRewards: [{ itemUuid: "11111111-1111-4111-8111-111111111111", qty: 2 }],
+          itemRewards: [{
+            itemUuid: "11111111-1111-4111-8111-111111111111",
+            qty: 2,
+          }],
           materials: [{ type: "link", url: "https://example.test/material" }],
           submissionRequirements: [{ type: "file", label: "Analysis" }],
           scheduledAt: "2026-07-14T09:00:00.000Z",
@@ -81,17 +208,51 @@ Deno.test("normalizes the v606 contract composer payload", async () => {
     }),
   );
 
-  assert(result.title === "Market analysis", "contract title should be preserved");
-  assert(result.description === "Submit the completed analysis.", "instructions should provide the required description fallback");
-  assert(result.status === "scheduled", "scheduled contracts should use scheduled status");
-  assert(result.visibility === "targeted", "country targeting should select targeted visibility");
-  assert(result.targetingPayload.countryCodes.length === 2, "locations should become country codes");
-  assert(result.rewardPayload.cash.amount === 250, "cash reward should be canonicalized");
-  assert(result.rewardPayload.cash.currencyCode === "ECO", "cash currency should be uppercase");
-  assert(result.rewardPayload.items[0].storeItemId === "11111111-1111-4111-8111-111111111111", "item UUID should become storeItemId");
-  assert(result.rewardPayload.items[0].quantity === 2, "item quantity should be preserved");
-  assert(result.metadata.materials.length === 1, "materials should be placed in metadata");
-  assert(result.metadata.submissionRequirements.length === 1, "student work requirements should be placed in metadata");
+  assert(
+    result.title === "Market analysis",
+    "contract title should be preserved",
+  );
+  assert(
+    result.description === "Submit the completed analysis.",
+    "instructions should provide the required description fallback",
+  );
+  assert(
+    result.status === "scheduled",
+    "scheduled contracts should use scheduled status",
+  );
+  assert(
+    result.visibility === "targeted",
+    "country targeting should select targeted visibility",
+  );
+  assert(
+    result.targetingPayload.countryCodes.length === 2,
+    "locations should become country codes",
+  );
+  assert(
+    result.rewardPayload.cash.amount === 250,
+    "cash reward should be canonicalized",
+  );
+  assert(
+    result.rewardPayload.cash.currencyCode === "ECO",
+    "cash currency should be uppercase",
+  );
+  assert(
+    result.rewardPayload.items[0].storeItemId ===
+      "11111111-1111-4111-8111-111111111111",
+    "item UUID should become storeItemId",
+  );
+  assert(
+    result.rewardPayload.items[0].quantity === 2,
+    "item quantity should be preserved",
+  );
+  assert(
+    result.metadata.materials.length === 1,
+    "materials should be placed in metadata",
+  );
+  assert(
+    result.metadata.submissionRequirements.length === 1,
+    "student work requirements should be placed in metadata",
+  );
 });
 
 Deno.test("normalizes contract review decisions", async () => {
@@ -102,8 +263,14 @@ Deno.test("normalizes contract review decisions", async () => {
     }),
   );
 
-  assert(result.action === "approve", "approved should map to the backend approve action");
-  assert(result.resultPayload.feedback === "Complete.", "review feedback should be retained");
+  assert(
+    result.action === "approve",
+    "approved should map to the backend approve action",
+  );
+  assert(
+    result.resultPayload.feedback === "Complete.",
+    "review feedback should be retained",
+  );
 });
 
 Deno.test("separates standard settings from custom difficulty policy values", async () => {
@@ -121,11 +288,26 @@ Deno.test("separates standard settings from custom difficulty policy values", as
     }),
   );
 
-  assert(result.gameSettings.difficultyPreset === "hard", "difficulty alias should be normalized");
-  assert(result.gameSettings.attendanceWindow.start === "08:00", "attendance window should remain intact");
-  assert(result.policySettings.difficulty_preset === "custom", "slider edits should select custom mode");
-  assert(result.policySettings.price_modifier === 1.25, "price multiplier should map to price modifier");
-  assert(result.policySettings.credit_modifier === 2, "policy modifiers should be clamped to database limits");
+  assert(
+    result.gameSettings.difficultyPreset === "hard",
+    "difficulty alias should be normalized",
+  );
+  assert(
+    result.gameSettings.attendanceWindow.start === "08:00",
+    "attendance window should remain intact",
+  );
+  assert(
+    result.policySettings.difficulty_preset === "custom",
+    "slider edits should select custom mode",
+  );
+  assert(
+    result.policySettings.price_modifier === 1.25,
+    "price multiplier should map to price modifier",
+  );
+  assert(
+    result.policySettings.credit_modifier === 2,
+    "policy modifiers should be clamped to database limits",
+  );
 });
 
 Deno.test("applies a named difficulty preset from the authoritative profile", async () => {
@@ -165,8 +347,10 @@ Deno.test("applies a named difficulty preset from the authoritative profile", as
           appliedPatch = value;
           return query;
         },
-        async maybeSingle() {
-          if (table === "game_difficulty_policy_settings" && mode === "select") {
+        maybeSingle() {
+          if (
+            table === "game_difficulty_policy_settings" && mode === "select"
+          ) {
             return { data: existing, error: null };
           }
           if (table === "difficulty_policy_profiles") {
@@ -184,10 +368,22 @@ Deno.test("applies a named difficulty preset from the authoritative profile", as
     source: "preset",
   });
 
-  assert(appliedPatch?.source === "preset", "preset source should be persisted");
-  assert(appliedPatch?.difficulty_policy_profile_id === "profile-id", "preset profile should be linked");
-  assert(appliedPatch?.price_modifier === 1.18, "preset modifiers should come from the profile");
-  assert(appliedPatch?.custom_label === null, "preset mode should clear the custom label");
+  assert(
+    appliedPatch?.source === "preset",
+    "preset source should be persisted",
+  );
+  assert(
+    appliedPatch?.difficulty_policy_profile_id === "profile-id",
+    "preset profile should be linked",
+  );
+  assert(
+    appliedPatch?.price_modifier === 1.18,
+    "preset modifiers should come from the profile",
+  );
+  assert(
+    appliedPatch?.custom_label === null,
+    "preset mode should clear the custom label",
+  );
 });
 
 Deno.test("initializes a missing custom difficulty policy from the saved preset", async () => {
@@ -222,8 +418,10 @@ Deno.test("initializes a missing custom difficulty policy from the saved preset"
           inserted = value;
           return query;
         },
-        async maybeSingle() {
-          if (table === "game_difficulty_policy_settings" && mode === "select") {
+        maybeSingle() {
+          if (
+            table === "game_difficulty_policy_settings" && mode === "select"
+          ) {
             return { data: null, error: null };
           }
           if (table === "game_settings") {
@@ -232,7 +430,10 @@ Deno.test("initializes a missing custom difficulty policy from the saved preset"
           if (table === "difficulty_policy_profiles") {
             return { data: profile, error: null };
           }
-          return { data: { id: "new-policy", ...(payload || {}) }, error: null };
+          return {
+            data: { id: "new-policy", ...(payload || {}) },
+            error: null,
+          };
         },
       };
       return query;
@@ -245,11 +446,30 @@ Deno.test("initializes a missing custom difficulty policy from the saved preset"
     income_modifier: 0.75,
   });
 
-  assert(inserted?.game_session_id === "game-id", "missing policy should be inserted for the game");
-  assert(inserted?.difficulty_preset === "custom", "custom changes should create custom policy mode");
-  assert(inserted?.income_modifier === 0.75, "edited modifier should be preserved");
-  assert(inserted?.price_modifier === 1.08, "unedited price modifier should come from the saved preset");
-  assert(inserted?.event_volatility_modifier === 1.1, "unedited volatility should come from the saved preset");
-  assert(inserted?.metadata && Object.keys(inserted.metadata as Record<string, unknown>).length === 0, "new policy metadata should be initialized");
+  assert(
+    inserted?.game_session_id === "game-id",
+    "missing policy should be inserted for the game",
+  );
+  assert(
+    inserted?.difficulty_preset === "custom",
+    "custom changes should create custom policy mode",
+  );
+  assert(
+    inserted?.income_modifier === 0.75,
+    "edited modifier should be preserved",
+  );
+  assert(
+    inserted?.price_modifier === 1.08,
+    "unedited price modifier should come from the saved preset",
+  );
+  assert(
+    inserted?.event_volatility_modifier === 1.1,
+    "unedited volatility should come from the saved preset",
+  );
+  assert(
+    inserted?.metadata &&
+      Object.keys(inserted.metadata as Record<string, unknown>).length === 0,
+    "new policy metadata should be initialized",
+  );
   assert(result.id === "new-policy", "inserted policy should be returned");
 });

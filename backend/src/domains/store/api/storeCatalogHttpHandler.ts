@@ -8,15 +8,18 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readOwnedGameSession,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
-  handleCreateStoreCatalogItemRoute,
-  handleListStoreCatalogRoute,
-  handleUpdateStoreCatalogItemRoute,
-} from "./storeCatalogRouteHandler.ts";
+  AdminMutationError,
+  readAdminMutationIdentity,
+} from "../../../platform/supabase/adminMutation.ts";
+import { mutateAdminStoreItem } from "../application/adminStoreItemMutation.ts";
+import { StoreCatalogValidationError } from "../domain/storeCatalogRules.ts";
+import { handleListStoreCatalogRoute } from "./storeCatalogRouteHandler.ts";
 import { type StaffStoreCatalogRoute } from "./storeCatalogRoutePaths.ts";
 import type {
   StoreCatalogRouteResult,
@@ -32,20 +35,20 @@ export interface StaffStoreCatalogHttpHandlerDependencies {
     options: { readonly missingMessage: string },
   ) => Promise<
     | {
-        readonly ok: true;
-        readonly staff: {
-          readonly id: string;
-          readonly supabase_auth_user_id: string;
-          readonly email: string;
-          readonly display_name: string;
-        };
-        readonly serviceClient: EdgeSupabaseClient;
-      }
+      readonly ok: true;
+      readonly staff: {
+        readonly id: string;
+        readonly supabase_auth_user_id: string;
+        readonly email: string;
+        readonly display_name: string;
+      };
+      readonly serviceClient: EdgeSupabaseClient;
+    }
     | {
-        readonly ok: false;
-        readonly status: number;
-        readonly error: EdgeErrorBody["error"];
-      }
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
   >;
 }
 
@@ -54,7 +57,10 @@ export async function handleStaffStoreCatalogRequest(
   route: StaffStoreCatalogRoute,
   dependencies: StaffStoreCatalogHttpHandlerDependencies,
 ): Promise<Response> {
-  if (route.kind === "items" && request.method !== "GET" && request.method !== "POST") {
+  if (
+    route.kind === "items" && request.method !== "GET" &&
+    request.method !== "POST"
+  ) {
     return jsonError(405, {
       code: "method_not_allowed",
       message: "Use GET or POST for store catalog items.",
@@ -62,10 +68,15 @@ export async function handleStaffStoreCatalogRequest(
     });
   }
 
-  if (route.kind === "item" && request.method !== "PATCH") {
+  if (
+    route.kind === "item" &&
+    request.method !== "PATCH" &&
+    request.method !== "PUT" &&
+    request.method !== "DELETE"
+  ) {
     return jsonError(405, {
       code: "method_not_allowed",
-      message: "Use PATCH to update a store catalog item.",
+      message: "Use PATCH, PUT, or DELETE for a store catalog item.",
       retryable: false,
     });
   }
@@ -81,9 +92,14 @@ export async function handleStaffStoreCatalogRequest(
       });
     }
 
-    const staffResult = await dependencies.resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to manage store items.",
-    });
+    const staffResult = await dependencies.resolveStaffForRequest(
+      request,
+      envResult.value,
+      {
+        missingMessage:
+          "A verified Supabase Auth user is required to manage store items.",
+      },
+    );
 
     if (!staffResult.ok) {
       return jsonError(staffResult.status, staffResult.error);
@@ -116,30 +132,56 @@ export async function handleStaffStoreCatalogRequest(
     }
 
     if (route.kind === "items" && request.method === "POST") {
-      return storeCatalogRouteResultToResponse(
-        await handleCreateStoreCatalogItemRoute(
-          {
-            gameSessionId: route.gameSessionId,
-            audience: "staff",
-            body: await readStoreCatalogJsonBody(request),
-          },
-          { storeCatalogRepository },
-        ),
-      );
+      const body = await readStoreCatalogJsonBody(request);
+      const result = await mutateAdminStoreItem(staffResult.serviceClient, {
+        gameSessionId: route.gameSessionId,
+        staffUserId: staffResult.staff.id,
+        operation: "create",
+        body,
+        identity: readAdminMutationIdentity(request, body),
+      });
+
+      return jsonResponse(result.status, {
+        ok: true,
+        item: result.item,
+      });
     }
 
-    if (route.kind === "item" && request.method === "PATCH") {
-      return storeCatalogRouteResultToResponse(
-        await handleUpdateStoreCatalogItemRoute(
-          {
-            gameSessionId: route.gameSessionId,
-            itemId: route.itemId,
-            audience: "staff",
-            body: await readStoreCatalogJsonBody(request),
-          },
-          { storeCatalogRepository },
-        ),
-      );
+    if (
+      route.kind === "item" &&
+      (request.method === "PATCH" || request.method === "PUT")
+    ) {
+      const body = await readStoreCatalogJsonBody(request);
+      const result = await mutateAdminStoreItem(staffResult.serviceClient, {
+        gameSessionId: route.gameSessionId,
+        staffUserId: staffResult.staff.id,
+        operation: "update",
+        itemId: route.itemId,
+        body,
+        identity: readAdminMutationIdentity(request, body),
+      });
+
+      return jsonResponse(result.status, {
+        ok: true,
+        item: result.item,
+      });
+    }
+
+    if (route.kind === "item" && request.method === "DELETE") {
+      const body = await readStoreCatalogJsonBody(request, true);
+      const result = await mutateAdminStoreItem(staffResult.serviceClient, {
+        gameSessionId: route.gameSessionId,
+        staffUserId: staffResult.staff.id,
+        operation: "archive",
+        itemId: route.itemId,
+        body,
+        identity: readAdminMutationIdentity(request, body),
+      });
+
+      return jsonResponse(result.status, {
+        ok: true,
+        item: result.item,
+      });
     }
 
     return jsonError(405, {
@@ -148,6 +190,22 @@ export async function handleStaffStoreCatalogRequest(
       retryable: false,
     });
   } catch (error) {
+    if (error instanceof AdminMutationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    if (error instanceof StoreCatalogValidationError) {
+      return jsonError(400, {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+      });
+    }
+
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
         code: error.code,
@@ -164,13 +222,25 @@ export async function handleStaffStoreCatalogRequest(
   }
 }
 
-async function readStoreCatalogJsonBody(request: Request): Promise<unknown> {
+async function readStoreCatalogJsonBody(
+  request: Request,
+  optional = false,
+): Promise<Record<string, unknown>> {
+  const text = await request.text();
+  if (!text.trim() && optional) {
+    return {};
+  }
+
   try {
-    return await request.json();
+    const body: unknown = JSON.parse(text);
+    if (!isRecord(body)) {
+      throw new Error("not an object");
+    }
+    return body;
   } catch {
     throw new EdgeActivationError(
       "invalid_store_request_body",
-      "Request body must be valid JSON.",
+      "Request body must be a JSON object.",
       400,
       false,
     );

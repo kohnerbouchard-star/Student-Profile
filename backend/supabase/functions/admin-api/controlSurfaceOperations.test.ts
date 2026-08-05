@@ -6,7 +6,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-Deno.test("rejects invalid manual attendance corrections before database access", async () => {
+Deno.test("leaves manual corrections to the atomic local mutation dispatcher", async () => {
   const result = await handleAttendancePlayerOperation(null, {
     gameSessionId: "game-id",
     staffUserId: "staff-id",
@@ -16,16 +16,8 @@ Deno.test("rejects invalid manual attendance corrections before database access"
   });
 
   assert(
-    result.handled === true,
-    "attendance correction route should be handled",
-  );
-  assert(
-    result.status === 400,
-    "invalid attendance correction should return 400",
-  );
-  assert(
-    result.body.code === "invalid_attendance_correction",
-    "correction error code should be stable",
+    result.handled === false,
+    "legacy attendance code must not own corrections",
   );
 });
 

@@ -19,6 +19,7 @@ async function signedRequest({
   local = false,
   invalidSignature = false,
   strippedRuntimePath = false,
+  tamperedIdempotencyKey = false,
 } = {}) {
   const url = local
     ? strippedRuntimePath
@@ -36,6 +37,7 @@ async function signedRequest({
     [ADMIN_BFF_AUTH_HEADERS.timestamp]: String(TIMESTAMP_SECONDS),
     [ADMIN_BFF_AUTH_HEADERS.nonce]: NONCE,
     [ADMIN_BFF_AUTH_HEADERS.clientIp]: "203.0.113.25",
+    "idempotency-key": "admin-command-001",
   });
   if (local) headers.set(ADMIN_BFF_AUTH_HEADERS.mode, "local");
   else headers.set("authorization", `Bearer ${TOKEN}`);
@@ -64,6 +66,10 @@ async function signedRequest({
     ADMIN_BFF_AUTH_HEADERS.signature,
     `v1=${invalidSignature ? "A".repeat(43) : signature}`,
   );
+  if (tamperedIdempotencyKey) {
+    headers.set("idempotency-key", "admin-command-tampered");
+  }
+  headers.set("x-real-ip", "198.51.100.99");
   headers.set("x-forwarded-for", "198.51.100.1");
   return new Request(url, { method: "POST", headers, body: BODY });
 }
@@ -87,6 +93,8 @@ test("accepts an exact hosted Vercel request and rewrites trusted IP", async () 
   assert.equal(result.request.headers.get("x-real-ip"), "203.0.113.25");
   assert.equal(result.request.headers.has("authorization"), false);
   assert.equal(result.request.headers.has("x-forwarded-for"), false);
+  assert.equal(result.request.headers.get("idempotency-key"), "admin-command-001");
+  assert.equal(result.request.headers.has("x-idempotency-key"), false);
   assert.equal(result.request.headers.has(ADMIN_BFF_AUTH_HEADERS.signature), false);
   assert.equal(nonceClaim.runnerName, "admin-bff-vercel");
 });
@@ -124,6 +132,28 @@ test("rejects a modified request before claiming its nonce", async () => {
   let claimed = false;
   const result = await authorizeAdminBffRequest(
     await signedRequest({ invalidSignature: true }),
+    {
+      supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
+      dependencies: {
+        now: () => NOW,
+        verifyOidc: async () => true,
+        claimNonce: async () => {
+          claimed = true;
+          return true;
+        },
+      },
+    },
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.response.status, 401);
+  assert.equal(claimed, false);
+});
+
+test("rejects a canonical Idempotency-Key changed after signing", async () => {
+  let claimed = false;
+  const result = await authorizeAdminBffRequest(
+    await signedRequest({ tamperedIdempotencyKey: true }),
     {
       supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co",
       dependencies: {

@@ -33,7 +33,7 @@ const DEVICE_HEADER = "x-econovaria-device-id";
 const INTERNAL_TRUSTED_IP_HEADER = "x-real-ip" as const;
 const FORWARDED_REQUEST_HEADERS = new Map([
   ["content-type", "Content-Type"],
-  ["x-idempotency-key", "X-Idempotency-Key"],
+  ["idempotency-key", "Idempotency-Key"],
   ["x-request-id", "X-Request-Id"],
 ]);
 
@@ -935,7 +935,7 @@ function preflightResponse(request: Request): Response {
   headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS");
   headers.set(
     "Access-Control-Allow-Headers",
-    `apikey,content-type,${CSRF_HEADER},${GAME_HEADER},${DEVICE_HEADER},x-idempotency-key,x-request-id`,
+    `apikey,content-type,${CSRF_HEADER},${GAME_HEADER},${DEVICE_HEADER},idempotency-key,x-request-id`,
   );
   headers.set("Access-Control-Max-Age", "600");
   return new Response(null, { status: 204, headers });

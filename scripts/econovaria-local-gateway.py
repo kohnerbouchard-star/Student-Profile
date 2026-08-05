@@ -38,7 +38,7 @@ replacements = (
         '    "x-econovaria-csrf-token",\n'
         '    "x-econovaria-device-id",\n'
         '    "x-econovaria-game-id",\n'
-        '    "x-idempotency-key",\n'
+        '    "idempotency-key",\n'
         '    "x-request-id",\n'
         ')',
         "session and local BFF constants",

@@ -65,12 +65,23 @@ web_headers = Message()
 web_headers["apikey"] = publishable_key
 web_headers["Cookie"] = f"analytics=secret; econovaria_admin_session={envelope}; unrelated=value"
 web_headers["x-econovaria-csrf-token"] = "C" * 43
+web_headers["x-idempotency-key"] = "admin-command-001"
 web_forwarded = module.filtered_request_headers(
     web_headers,
     "127.0.0.1:54321",
     browser_publishable_key=publishable_key,
     request_path="/functions/v1/web-session-api/proxy/games",
     browser_origin="http://127.0.0.1:4173",
+)
+
+conflicting_idempotency_headers = Message()
+conflicting_idempotency_headers["Idempotency-Key"] = "admin-command-canonical"
+conflicting_idempotency_headers["X-Idempotency-Key"] = "admin-command-compatibility"
+conflicting_idempotency_forwarded = module.filtered_request_headers(
+    conflicting_idempotency_headers,
+    "127.0.0.1:54321",
+    browser_publishable_key=publishable_key,
+    request_path="/functions/v1/web-session-api/proxy/games",
 )
 
 response_metadata = module.filtered_response_headers([
@@ -111,6 +122,8 @@ print(json.dumps({
     "publicForwarded": public_forwarded,
     "staffForwarded": staff_forwarded,
     "webForwarded": web_forwarded,
+    "conflictingIdempotencyForwarded": conflicting_idempotency_forwarded,
+    "adminSignedContextHeaders": module.ADMIN_BFF_SIGNED_CONTEXT_HEADERS,
     "responseMetadata": {
         "contentType": response_metadata.content_type,
         "retryAfter": response_metadata.retry_after,
@@ -207,6 +220,11 @@ test("gateway carries only the encrypted Admin session and CSRF", () => {
   );
   assert.equal(result.webForwarded.Origin, "http://127.0.0.1:4173");
   assert.equal(result.webForwarded["x-econovaria-csrf-token"], "C".repeat(43));
+  assert.equal(result.webForwarded["Idempotency-Key"], "admin-command-001");
+  assert.equal(result.webForwarded["x-idempotency-key"], undefined);
+  assert.equal(result.conflictingIdempotencyForwarded["Idempotency-Key"], undefined);
+  assert.ok(result.adminSignedContextHeaders.includes("idempotency-key"));
+  assert.equal(result.adminSignedContextHeaders.includes("x-idempotency-key"), false);
   assert.equal(result.webForwarded.Cookie.includes("analytics"), false);
   assert.equal(result.webForwarded.Cookie.includes("unrelated"), false);
 });

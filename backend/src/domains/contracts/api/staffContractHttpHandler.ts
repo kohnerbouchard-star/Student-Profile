@@ -12,22 +12,24 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import {
+  AdminMutationError,
+  readAdminMutationIdentity,
+} from "../../../platform/supabase/adminMutation.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import { isUuid } from "../../../platform/supabase/uuid.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import {
-  CONTRACT_COMPLETION_MODES,
   CONTRACT_SOURCE_TYPES,
   CONTRACT_STATUSES,
   CONTRACT_VISIBILITIES,
-  type ContractCompletionMode,
   type ContractSourceType,
   type ContractStatus,
   type ContractVisibility,
-  parseGameSessionContractConfig,
   PLAYER_CONTRACT_STATUSES,
   type PlayerContractStatus,
 } from "../contracts/contractContracts.ts";
+import { mutateAdminContract } from "../application/adminContractMutation.ts";
 import { ContractContractError } from "../contracts/contractContractErrors.ts";
 import {
   type StaffContractListResponseBody,
@@ -41,7 +43,6 @@ import {
 } from "../contracts/contractHttpContracts.ts";
 import type {
   ContractRepository,
-  CreateGameSessionContractInput,
   GameSessionContractRecord,
   PlayerContractProgressRecord,
 } from "../contracts/contractRepositoryContracts.ts";
@@ -85,8 +86,6 @@ export interface StaffContractHttpHandlerDependencies {
   readonly now?: () => string;
 }
 
-const CREATE_CONTRACT_STATUSES = ["draft", "scheduled", "active"] as const;
-const PUBLISHABLE_CONTRACT_STATUSES = ["draft", "scheduled"] as const;
 const REVIEW_ACTIONS = ["approve", "reject", "request_revision"] as const;
 
 type ReviewAction = typeof REVIEW_ACTIONS[number];
@@ -196,65 +195,36 @@ export async function handleStaffContractRequest(
 
     if (route.kind === "contracts" && request.method === "POST") {
       const body = await readRequiredJsonObjectBody(request);
-      const contract = await repository.createGameSessionContract(
-        readCreateContractInput(
-          route.gameSessionId,
-          staffResult.staff.id,
-          body,
-        ),
-      );
+      const result = await mutateAdminContract(staffResult.serviceClient, {
+        gameSessionId: route.gameSessionId,
+        staffUserId: staffResult.staff.id,
+        operation: "create",
+        body,
+        identity: readAdminMutationIdentity(request, body),
+      });
 
-      return jsonResponse<StaffContractWriteResponseBody>(201, {
+      return jsonResponse<StaffContractWriteResponseBody>(result.status, {
         ok: true,
-        contract: toStaffContractDto(contract),
+        contract: result.contract,
       });
     }
 
     if (route.kind === "publish" && request.method === "POST") {
       const body = await readOptionalJsonObjectBody(request);
-      const existing = await repository.getGameSessionContractById({
+      const result = await mutateAdminContract(staffResult.serviceClient, {
         gameSessionId: route.gameSessionId,
+        staffUserId: staffResult.staff.id,
+        operation: "publish",
         contractId: route.contractId,
+        body,
+        identity: readAdminMutationIdentity(request, body),
+      }, {
+        now,
       });
 
-      if (!existing) {
-        return jsonError(404, {
-          code: "contract_not_found",
-          message: "Contract was not found for this game session.",
-          retryable: false,
-        });
-      }
-
-      if (!isAllowedText(existing.status, PUBLISHABLE_CONTRACT_STATUSES)) {
-        return jsonError(409, {
-          code: "contract_not_publishable",
-          message: "Only draft or scheduled contracts can be published.",
-          retryable: false,
-        });
-      }
-
-      const publishedAt = readOptionalIsoDateTimeText(
-        body.publishedAt,
-        "publishedAt",
-      ) ?? now();
-      const updated = await repository.updateGameSessionContractStatus({
-        gameSessionId: route.gameSessionId,
-        contractId: route.contractId,
-        status: "active",
-        publishedAt,
-      });
-
-      if (!updated) {
-        return jsonError(404, {
-          code: "contract_not_found",
-          message: "Contract was not found for this game session.",
-          retryable: false,
-        });
-      }
-
-      return jsonResponse<StaffContractWriteResponseBody>(200, {
+      return jsonResponse<StaffContractWriteResponseBody>(result.status, {
         ok: true,
-        contract: toStaffContractDto(updated),
+        contract: result.contract,
       });
     }
 
@@ -329,84 +299,6 @@ function readListFilters(url: URL): {
       CONTRACT_VISIBILITIES,
       "invalid_contract_visibility_filter",
     ),
-  };
-}
-
-function readCreateContractInput(
-  gameSessionId: string,
-  staffUserId: string,
-  body: Record<string, unknown>,
-): CreateGameSessionContractInput {
-  if (hasOwn(body, "createdByStaffId")) {
-    throw new EdgeActivationError(
-      "created_by_staff_id_not_allowed",
-      "createdByStaffId is derived from the staff session.",
-      400,
-    );
-  }
-
-  if (body.sourceType !== undefined && body.sourceType !== "teacher") {
-    throw new EdgeActivationError(
-      "source_type_not_allowed",
-      "Teacher contract routes can only create teacher contracts.",
-      400,
-    );
-  }
-
-  const status = readOptionalCreateStatus(body.status);
-  const parsed = parseGameSessionContractConfig({
-    gameSessionId,
-    contractTemplateId: null,
-    contractKey: body.contractKey as string,
-    sourceType: "teacher",
-    sourceId: null,
-    createdByStaffId: staffUserId,
-    title: body.title as string,
-    description: body.description as string,
-    instructions: body.instructions as string,
-    category: body.category as string | null | undefined,
-    status,
-    visibility: body.visibility as ContractVisibility | null | undefined,
-    targetingPayload: body.targetingPayload as
-      | CreateGameSessionContractInput["targetingPayload"]
-      | undefined,
-    requirementsPayload: body.requirementsPayload as
-      | CreateGameSessionContractInput["requirementsPayload"]
-      | undefined,
-    rewardPayload: body.rewardPayload as
-      | CreateGameSessionContractInput["rewardPayload"]
-      | undefined,
-    completionMode: body.completionMode as
-      | ContractCompletionMode
-      | null
-      | undefined,
-    publishedAt: body.publishedAt as string | null | undefined,
-    deadlineAt: body.deadlineAt as string | null | undefined,
-    expiresAt: body.expiresAt as string | null | undefined,
-    metadata: body.metadata as CreateGameSessionContractInput["metadata"],
-  });
-
-  return {
-    gameSessionId: parsed.gameSessionId,
-    contractTemplateId: parsed.contractTemplateId,
-    contractKey: parsed.contractKey,
-    sourceType: parsed.sourceType,
-    sourceId: parsed.sourceId,
-    createdByStaffId: parsed.createdByStaffId,
-    title: parsed.title,
-    description: parsed.description,
-    instructions: parsed.instructions,
-    category: parsed.category,
-    status: parsed.status,
-    visibility: parsed.visibility,
-    targetingPayload: parsed.targetingPayload,
-    requirementsPayload: parsed.requirementsPayload,
-    rewardPayload: parsed.rewardPayload,
-    completionMode: parsed.completionMode,
-    publishedAt: parsed.publishedAt,
-    deadlineAt: parsed.deadlineAt,
-    expiresAt: parsed.expiresAt,
-    metadata: parsed.metadata,
   };
 }
 
@@ -898,50 +790,6 @@ function readOptionalSingleEnumQueryValue<TAllowed extends readonly string[]>(
   return values[0] ?? null;
 }
 
-function readOptionalCreateStatus(value: unknown): ContractStatus {
-  if (value === undefined || value === null) {
-    return "draft";
-  }
-
-  if (!isAllowedText(value, CREATE_CONTRACT_STATUSES)) {
-    throw new EdgeActivationError(
-      "invalid_contract_status",
-      "status must be draft, scheduled, or active.",
-      400,
-    );
-  }
-
-  return value;
-}
-
-function readOptionalIsoDateTimeText(
-  value: unknown,
-  fieldName: string,
-): string | null {
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  const text = typeof value === "string" ? value.trim() : "";
-
-  if (!text || Number.isNaN(Date.parse(text))) {
-    throw new EdgeActivationError(
-      "invalid_contract_request",
-      `${fieldName} must be an ISO date string.`,
-      400,
-    );
-  }
-
-  return text;
-}
-
-function hasOwn(
-  record: Record<string, unknown>,
-  key: string,
-): boolean {
-  return Object.prototype.hasOwnProperty.call(record, key);
-}
-
 function isAllowedText<TAllowed extends readonly string[]>(
   value: unknown,
   allowed: TAllowed,
@@ -971,6 +819,14 @@ function isJsonValue(value: unknown): value is JsonValue {
 }
 
 function contractErrorToResponse(error: unknown): Response {
+  if (error instanceof AdminMutationError) {
+    return jsonError(error.status, {
+      code: error.code,
+      message: error.message,
+      retryable: error.retryable,
+    });
+  }
+
   if (error instanceof EdgeActivationError) {
     return jsonError(error.status, {
       code: error.code,
