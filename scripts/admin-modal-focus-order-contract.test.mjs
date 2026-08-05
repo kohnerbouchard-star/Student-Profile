@@ -5,29 +5,34 @@ import test from "node:test";
 const indexPath = "admin/index.html";
 const guardPath = "admin/modal-focus-order-guard.js";
 
-test("modal accessibility and focus ordering load before the preserved terminal bundle", async () => {
+test("focus ordering loads before the preserved terminal bundle without moving shared modal ownership", async () => {
   const html = await readFile(indexPath, "utf8");
-  const accessibilityIndex = html.indexOf('./modal-accessibility.js');
+  const authIndex = html.indexOf('./admin-auth.js');
   const guardIndex = html.indexOf('./modal-focus-order-guard.js');
   const bundleIndex = html.indexOf('./dist/admin-overview-terminal.js');
+  const credentialBridgeIndex = html.indexOf('./player-access-code-bridge.js');
+  const accessibilityIndex = html.indexOf('./modal-accessibility.js');
 
-  assert.ok(accessibilityIndex >= 0, "Modal accessibility script is missing.");
-  assert.ok(guardIndex > accessibilityIndex, "Focus-order guard must load after the shared modal controller.");
+  assert.ok(authIndex >= 0, "Admin authentication script is missing.");
+  assert.ok(guardIndex > authIndex, "Focus-order guard must load after Admin authentication.");
   assert.ok(bundleIndex > guardIndex, "Focus-order guard must load before the preserved terminal bundle.");
+  assert.ok(
+    accessibilityIndex > credentialBridgeIndex,
+    "Shared modal accessibility must retain its canonical shell position.",
+  );
   assert.equal(html.match(/\.\/modal-accessibility\.js/gu)?.length, 1);
   assert.equal(html.match(/\.\/modal-focus-order-guard\.js/gu)?.length, 1);
 });
 
-test("focus guard is narrowly scoped to bundle-owned inert background transitions", async () => {
+test("focus guard changes only the inert transition and leaves the global attribute API intact", async () => {
   const source = await readFile(guardPath, "utf8");
 
-  assert.match(source, /data-admin-terminal-was-inert/u);
   assert.match(source, /focusDialogBeforeBackgroundInert\(this\)/u);
   assert.match(source, /descriptor\.set\.call\(this, value\)/u);
-  assert.match(source, /normalizedName === "aria-hidden"/u);
-  assert.match(source, /this\.hasAttribute\(BUNDLE_INERT_MARKER\)/u);
-  assert.match(source, /this\.inert === true/u);
+  assert.match(source, /descriptorOwner\(HTMLElement\.prototype, "inert"\)/u);
   assert.match(source, /!background\.contains\(element\)/u);
-  assert.doesNotMatch(source, /querySelectorAll\("\[aria-hidden='true'\]"\)/u);
+  assert.match(source, /dialog\.contains\(document\.activeElement\)/u);
+  assert.doesNotMatch(source, /Element\.prototype\.setAttribute\s*=/u);
   assert.doesNotMatch(source, /removeAttribute\("aria-hidden"\)/u);
+  assert.doesNotMatch(source, /data-admin-terminal-was-inert/u);
 });
