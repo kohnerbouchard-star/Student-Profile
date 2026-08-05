@@ -82,7 +82,8 @@ REQUEST_HEADER_ALLOWLIST: Final[dict[str, str]] = {
     "x-econovaria-csrf-token": "x-econovaria-csrf-token",
     "x-econovaria-device-id": "x-econovaria-device-id",
     "x-econovaria-game-id": "x-econovaria-game-id",
-    "x-idempotency-key": "x-idempotency-key",
+    "idempotency-key": "Idempotency-Key",
+    "x-idempotency-key": "Idempotency-Key",
     "x-player-session-token": "x-player-session-token",
     "x-request-id": "x-request-id",
     "x-stock-market-runner-secret": "x-stock-market-runner-secret",
@@ -313,6 +314,7 @@ def filtered_request_headers(
     browser_origin: str = "http://127.0.0.1:4173",
 ) -> dict[str, str]:
     result: dict[str, str] = {}
+    idempotency_key_conflict = False
     prohibited_bearer = f"Bearer {browser_publishable_key}"
     web_session_request = is_web_session_path(request_path)
     for name, value in headers.items():
@@ -334,6 +336,14 @@ def filtered_request_headers(
             continue
         if lower_name == "authorization" and safe_value.strip() == prohibited_bearer:
             continue
+        if canonical_name == "Idempotency-Key":
+            existing = result.get(canonical_name)
+            if idempotency_key_conflict:
+                continue
+            if existing is not None and existing != safe_value:
+                result.pop(canonical_name, None)
+                idempotency_key_conflict = True
+                continue
         result[canonical_name] = safe_value
     if web_session_request and "Origin" not in result:
         result["Origin"] = browser_origin

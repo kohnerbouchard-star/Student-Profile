@@ -1,13 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2/denonext/supabase-js.mjs";
-import {
-  applyDifficultyPolicy,
-  normalizeContractCreate,
-  normalizeContractReview,
-  normalizeSettingsMutation,
-  normalizeStoreMutation,
-} from "./mutationAdapters.ts";
+import { normalizeContractReview } from "./mutationAdapters.ts";
 import { issueContractRewardsAtomically } from "./contractRewards.ts";
-import { handleCompatibilityOperation } from "./compatibilityOperations.ts";
 import { handleAttendancePlayerOperation } from "./attendancePlayerOperations.ts";
 import { corsHeaders } from "./cors.ts";
 
@@ -160,7 +153,9 @@ export async function resolveContext(request) {
 
   const gamesQuery = service
     .from("game_sessions")
-    .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
+    .select(
+      "id,name,status,game_join_code,game_join_code_status,created_at,updated_at",
+    )
     .eq("owner_staff_user_id", staffResult.data.id)
     .order("created_at", { ascending: false });
   const gamesResult = await (
@@ -221,23 +216,54 @@ function gameSessionIdFromPath(path) {
   return staffMatch ? decodeURIComponent(staffMatch[1]) : "";
 }
 
-function gameIdFromClassroomPath(path) {
-  return gameSessionIdFromPath(path);
-}
+export function isAdminLocalMutationProxyPath(path, method) {
+  const normalizedMethod = String(method).toUpperCase();
+  const normalizedPath = String(path).replace(/\/+$/, "");
+  const scopedPath = normalizedPath.match(
+    /^\/(?:games\/[^/]+|staff\/game-sessions\/[^/]+)(\/.*)$/,
+  )?.[1] || "";
+  if (!scopedPath) return false;
+  if (["GET", "HEAD"].includes(normalizedMethod)) {
+    return normalizedMethod === "GET" && scopedPath === "/join-code/reset";
+  }
 
-function isStoreMutationPath(path, method) {
-  return !["GET", "HEAD"].includes(method) &&
-    /^\/games\/[^/]+\/store\/items(?:\/[^/]+)?$/.test(String(path));
-}
+  if (normalizedMethod === "POST") {
+    if (
+      [
+        "/players",
+        "/attendance/scan",
+        "/attendance/scans",
+        "/attendance/corrections",
+        "/store/items",
+        "/contracts",
+        "/join-code/reset",
+      ].includes(scopedPath)
+    ) return true;
+    if (/^\/players\/[^/]+\/archive$/.test(scopedPath)) return true;
+    if (
+      /^\/store\/items\/[^/]+\/(?:status|restock|rebalance-price)$/.test(
+        scopedPath,
+      )
+    ) return true;
+    if (
+      /^\/contracts\/[^/]+\/(?:publish|archive|duplicate)$/.test(scopedPath)
+    ) return true;
+    if (/^\/settings\/[^/]+\/reset$/.test(scopedPath)) return true;
+  }
 
-function isSettingsMutationPath(path, method) {
-  return !["GET", "HEAD"].includes(method) &&
-    /^\/games\/[^/]+\/settings$/.test(String(path));
-}
-
-function isContractCreatePath(path, method) {
-  return method === "POST" &&
-    /^\/staff\/game-sessions\/[^/]+\/contracts$/.test(String(path));
+  if (
+    normalizedMethod === "DELETE" && /^\/players\/[^/]+$/.test(scopedPath)
+  ) return true;
+  if (
+    ["PATCH", "PUT", "DELETE"].includes(normalizedMethod) &&
+    /^\/store\/items\/[^/]+$/.test(scopedPath)
+  ) return true;
+  if (
+    ["PATCH", "PUT"].includes(normalizedMethod) &&
+    /^\/store\/items\/[^/]+\/status$/.test(scopedPath)
+  ) return true;
+  return ["POST", "PATCH", "PUT"].includes(normalizedMethod) &&
+    (/^\/settings$/.test(scopedPath) || /^\/settings\/[^/]+$/.test(scopedPath));
 }
 
 function isContractReviewPath(path, method) {
@@ -261,7 +287,9 @@ function contractRewardPathFromReview(path) {
     /^\/staff\/game-sessions\/([^/]+)\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/,
   );
   if (!match) return "";
-  return `/staff/game-sessions/${match[1]}/contracts/${match[2]}/progress/${match[3]}/rewards/issue`;
+  return `/staff/game-sessions/${match[1]}/contracts/${match[2]}/progress/${
+    match[3]
+  }/rewards/issue`;
 }
 
 function atomicContractRewardPath(path, method) {
@@ -315,6 +343,10 @@ export async function proxyClassroom(
   method = request.method,
   overrideBody = undefined,
 ) {
+  if (isAdminLocalMutationProxyPath(path, method)) {
+    throw new Error("ADMIN_LOCAL_MUTATION_PROXY_FORBIDDEN");
+  }
+
   if (!["GET", "HEAD"].includes(method) && overrideBody === undefined) {
     const operationBody = object(
       await request.clone().json().catch(() => ({})),
@@ -333,13 +365,6 @@ export async function proxyClassroom(
     if (attendancePlayer.handled) {
       return json(request, attendancePlayer.status, attendancePlayer.body);
     }
-    const compatibility = await handleCompatibilityOperation(
-      context.service,
-      operationInput,
-    );
-    if (compatibility.handled) {
-      return json(request, compatibility.status, compatibility.body);
-    }
   }
 
   const rewardRoute = atomicContractRewardPath(path, method);
@@ -355,11 +380,6 @@ export async function proxyClassroom(
       return json(request, result.status, { error: result.error });
     }
     return json(request, result.status, result.body);
-  }
-
-  if (isContractCreatePath(path, method) && overrideBody === undefined) {
-    const body = await normalizeContractCreate(request);
-    return fetchClassroom(request, context, path, "POST", body);
   }
 
   if (isContractReviewPath(path, method) && overrideBody === undefined) {
@@ -409,48 +429,6 @@ export async function proxyClassroom(
       },
       review: reviewBody,
       reward: rewardBody,
-    });
-  }
-
-  if (isStoreMutationPath(path, method) && overrideBody === undefined) {
-    const normalized = await normalizeStoreMutation(request, method);
-    return fetchClassroom(
-      request,
-      context,
-      path,
-      normalized.method,
-      normalized.body,
-    );
-  }
-
-  if (isSettingsMutationPath(path, method) && overrideBody === undefined) {
-    const gameId = gameIdFromClassroomPath(path);
-    const normalized = await normalizeSettingsMutation(request);
-
-    let settingsResponse = null;
-    if (Object.keys(normalized.gameSettings).length > 0) {
-      settingsResponse = await fetchClassroom(
-        request,
-        context,
-        path,
-        "PATCH",
-        normalized.gameSettings,
-      );
-      if (!settingsResponse.ok) return settingsResponse;
-    }
-
-    const difficultyPolicy = await applyDifficultyPolicy(
-      context.service,
-      gameId,
-      normalized.policySettings,
-    );
-
-    if (settingsResponse) return settingsResponse;
-    return json(request, 200, {
-      data: {
-        saved: true,
-        difficultyPolicy,
-      },
     });
   }
 

@@ -1,5 +1,6 @@
 import {
   createPlayerCredentialMaterial,
+  derivePlayerCredentialLookupDigest,
   isLegacyPlayerCredential,
   PLAYER_CREDENTIAL_VERSION,
   verifyPlayerCredential,
@@ -11,9 +12,42 @@ declare const Deno: {
 
 const PEPPER = "0123456789abcdef0123456789abcdef";
 const SALT = Uint8Array.from([
-  0, 1, 2, 3, 4, 5, 6, 7,
-  8, 9, 10, 11, 12, 13, 14, 15,
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
 ]);
+
+Deno.test("derives the same peppered lookup digest without PBKDF2 material", async () => {
+  const lookupDigest = await derivePlayerCredentialLookupDigest("938204", {
+    pepper: PEPPER,
+  });
+  const material = await createPlayerCredentialMaterial("938204", {
+    pepper: PEPPER,
+    saltBytes: SALT,
+    iterations: 100_000,
+  });
+  const differentDigest = await derivePlayerCredentialLookupDigest("938205", {
+    pepper: PEPPER,
+  });
+
+  assertEquals(lookupDigest, material.lookupDigest);
+  assertEquals(lookupDigest.length, 64);
+  assertEquals(lookupDigest === differentDigest, false);
+  assertEquals(lookupDigest.includes("938204"), false);
+});
 
 Deno.test("creates deterministic versioned material without plaintext", async () => {
   const material = await createPlayerCredentialMaterial("938204", {
@@ -55,20 +89,26 @@ Deno.test("verifies the right Access Code and rejects the wrong one", async () =
 });
 
 Deno.test("recognizes only the bounded legacy SHA-256 shape", () => {
-  assertEquals(isLegacyPlayerCredential({
-    credential_version: "sha256-v1",
-    normalized_student_code_hash: "a".repeat(64),
-    credential_salt: null,
-    credential_verifier: null,
-    credential_iterations: null,
-  }), true);
-  assertEquals(isLegacyPlayerCredential({
-    credential_version: PLAYER_CREDENTIAL_VERSION,
-    normalized_student_code_hash: "a".repeat(64),
-    credential_salt: "salt",
-    credential_verifier: "verifier",
-    credential_iterations: 600_000,
-  }), false);
+  assertEquals(
+    isLegacyPlayerCredential({
+      credential_version: "sha256-v1",
+      normalized_student_code_hash: "a".repeat(64),
+      credential_salt: null,
+      credential_verifier: null,
+      credential_iterations: null,
+    }),
+    true,
+  );
+  assertEquals(
+    isLegacyPlayerCredential({
+      credential_version: PLAYER_CREDENTIAL_VERSION,
+      normalized_student_code_hash: "a".repeat(64),
+      credential_salt: "salt",
+      credential_verifier: "verifier",
+      credential_iterations: 600_000,
+    }),
+    false,
+  );
 });
 
 Deno.test("rejects an undersized pepper", async () => {
@@ -88,7 +128,9 @@ Deno.test("rejects an undersized pepper", async () => {
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+      `Expected ${JSON.stringify(expected)}, received ${
+        JSON.stringify(actual)
+      }.`,
     );
   }
 }

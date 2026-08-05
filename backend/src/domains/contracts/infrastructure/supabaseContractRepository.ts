@@ -108,7 +108,7 @@ interface ContractTemplateRow {
   readonly updated_at: string;
 }
 
-interface GameSessionContractRow {
+export interface GameSessionContractRow {
   readonly id: string;
   readonly game_session_id: string;
   readonly contract_template_id?: string | null;
@@ -648,7 +648,7 @@ function toContractTemplateRecord(
   };
 }
 
-function toGameSessionContractRecord(
+export function toGameSessionContractRecord(
   row: GameSessionContractRow,
 ): GameSessionContractRecord {
   const parsed = parseGameSessionContractConfig({

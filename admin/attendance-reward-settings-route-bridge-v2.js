@@ -103,7 +103,14 @@
 
   async function augmentedFetchArguments(input, init, gameId) {
     const source = await requestJson(input, init);
-    const attendanceWindow = currentAttendanceWindow(gameId);
+    const suppliedAttendanceWindow = object(
+      object(source.settings).attendanceWindow ||
+      object(source.payload).attendanceWindow ||
+      source.attendanceWindow,
+    );
+    const attendanceWindow = Object.keys(suppliedAttendanceWindow).length
+      ? suppliedAttendanceWindow
+      : currentAttendanceWindow(gameId);
     let body;
 
     if (source.settings && typeof source.settings === "object" && !Array.isArray(source.settings)) {
@@ -142,6 +149,13 @@
       detail: { gameId, attendanceWindow, combined: true },
     }));
   }
+
+  window.EconovariaAttendanceRewardSettingsRouteBridge = Object.freeze({
+    getCurrentAttendanceWindow(gameId) {
+      const resolvedGameId = text(gameId) || activeSettingsGameId();
+      return resolvedGameId ? { ...currentAttendanceWindow(resolvedGameId) } : null;
+    },
+  });
 
   window.fetch = async function econovariaAttendanceRewardSettingsRouteFetch(input, init) {
     const gameId = settingsGameId(input);

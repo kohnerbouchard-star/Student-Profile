@@ -70,7 +70,11 @@ export async function resolveAttendanceRewardPolicy(
     });
   }
 
-  const country = await readPlayerCountry(serviceClient, input.gameSessionId, input.playerId);
+  const country = await readPlayerCountry(
+    serviceClient,
+    input.gameSessionId,
+    input.playerId,
+  );
   if (!country) {
     return buildResolution({
       configuredBaseAmount: input.configuredBaseAmount,
@@ -132,7 +136,9 @@ function buildResolution(input: {
   readonly exchangeRateIndex: number;
 }): AttendanceRewardPolicyResolution {
   return {
-    configuredBaseAmount: roundCurrency(nonNegative(input.configuredBaseAmount, 0)),
+    configuredBaseAmount: roundCurrency(
+      nonNegative(input.configuredBaseAmount, 0),
+    ),
     effectiveAmount: calculateAttendanceRewardAmount(
       input.configuredBaseAmount,
       input.incomeModifier,
@@ -160,9 +166,11 @@ async function readIncomeModifier(
     .maybeSingle();
 
   if (response.error) throw policyReadFailed();
-  const row = response.data as DifficultyPolicyRow | null;
+  const row = response.data as unknown as DifficultyPolicyRow | null;
   const activeValue = optionalNumber(row?.income_modifier);
-  if (activeValue !== null) return selectAttendanceIncomeModifier(activeValue, null);
+  if (activeValue !== null) {
+    return selectAttendanceIncomeModifier(activeValue, null);
+  }
 
   let presetKey = String(difficultyPreset ?? "").trim().toLowerCase();
   if (!presetKey) {
@@ -172,7 +180,9 @@ async function readIncomeModifier(
       .eq("game_session_id", gameSessionId)
       .maybeSingle();
     if (settingsResponse.error) throw policyReadFailed();
-    const settings = settingsResponse.data as GameSettingsDifficultyRow | null;
+    const settings = settingsResponse.data as unknown as
+      | GameSettingsDifficultyRow
+      | null;
     presetKey = String(settings?.difficulty_preset ?? "").trim().toLowerCase();
   }
 
@@ -186,7 +196,9 @@ async function readIncomeModifier(
     .maybeSingle();
 
   if (profileResponse.error) throw policyReadFailed();
-  const profile = profileResponse.data as DifficultyProfileRow | null;
+  const profile = profileResponse.data as unknown as
+    | DifficultyProfileRow
+    | null;
   return selectAttendanceIncomeModifier(null, profile?.income_modifier);
 }
 
@@ -194,11 +206,13 @@ async function readPlayerCountry(
   serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   playerId: string,
-): Promise<{
-  readonly countryProfileId: string;
-  readonly countryCode: string;
-  readonly currencyCode: string;
-} | null> {
+): Promise<
+  {
+    readonly countryProfileId: string;
+    readonly countryCode: string;
+    readonly currencyCode: string;
+  } | null
+> {
   const assignmentResponse = await serviceClient
     .from("player_country_assignments")
     .select("country_profile_id,assigned_at")
@@ -210,7 +224,9 @@ async function readPlayerCountry(
     .maybeSingle();
 
   if (assignmentResponse.error) throw policyReadFailed();
-  const assignment = assignmentResponse.data as PlayerCountryAssignmentRow | null;
+  const assignment = assignmentResponse.data as unknown as
+    | PlayerCountryAssignmentRow
+    | null;
   if (!assignment?.country_profile_id) return null;
 
   const countryResponse = await serviceClient
@@ -221,7 +237,7 @@ async function readPlayerCountry(
     .maybeSingle();
 
   if (countryResponse.error) throw policyReadFailed();
-  const country = countryResponse.data as CountryProfileRow | null;
+  const country = countryResponse.data as unknown as CountryProfileRow | null;
   if (!country?.country_code || !country.currency_code) return null;
 
   return {
@@ -246,7 +262,7 @@ async function readExchangeRateIndex(
     .maybeSingle();
 
   if (response.error) throw policyReadFailed();
-  const row = response.data as CountryEconomicSnapshotRow | null;
+  const row = response.data as unknown as CountryEconomicSnapshotRow | null;
   return boundedMultiplier(number(row?.exchange_rate_index, 1));
 }
 

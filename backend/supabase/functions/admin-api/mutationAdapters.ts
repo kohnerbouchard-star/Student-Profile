@@ -1,3 +1,5 @@
+import { sha256Hex } from "../../../src/platform/supabase/edgeCrypto.ts";
+
 function number(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -9,7 +11,9 @@ function text(value: unknown, fallback = ""): string {
 }
 
 function object(value: unknown): Record<string, any> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 function array(value: unknown): any[] {
@@ -24,28 +28,40 @@ async function readJson(request: Request): Promise<Record<string, any>> {
   }
 }
 
-function firstDefined(record: Record<string, any>, keys: readonly string[]): any {
+function firstDefined(
+  record: Record<string, any>,
+  keys: readonly string[],
+): any {
   for (const key of keys) {
     if (record[key] !== undefined) return record[key];
   }
   return undefined;
 }
 
-function optionalText(record: Record<string, any>, keys: readonly string[]): string | undefined {
+function optionalText(
+  record: Record<string, any>,
+  keys: readonly string[],
+): string | undefined {
   const value = firstDefined(record, keys);
   if (value === undefined || value === null) return undefined;
   const normalized = text(value);
   return normalized || undefined;
 }
 
-function optionalNumber(record: Record<string, any>, keys: readonly string[]): number | undefined {
+function optionalNumber(
+  record: Record<string, any>,
+  keys: readonly string[],
+): number | undefined {
   const value = firstDefined(record, keys);
   if (value === undefined || value === null || value === "") return undefined;
   const normalized = number(value, Number.NaN);
   return Number.isFinite(normalized) ? normalized : undefined;
 }
 
-function optionalInteger(record: Record<string, any>, keys: readonly string[]): number | undefined {
+function optionalInteger(
+  record: Record<string, any>,
+  keys: readonly string[],
+): number | undefined {
   const value = optionalNumber(record, keys);
   return value === undefined ? undefined : Math.max(0, Math.trunc(value));
 }
@@ -64,78 +80,161 @@ function slug(value: unknown): string {
     .slice(0, 48);
 }
 
-export async function normalizeStoreMutation(request: Request, method: string): Promise<any> {
+export async function normalizeStoreMutation(
+  request: Request,
+  method: string,
+): Promise<any> {
   const source = object(await readJson(request));
-  const body = object(source.item || source.storeItem || source.payload || source);
+  const payload = object(source.payload);
+  const nestedItem = object(
+    source.item || source.storeItem || payload.item || payload.storeItem,
+  );
+  // The v606 terminal keeps presentation fields under payload.item while its
+  // create adapter adds authoritative, canonical values at payload root. Merge
+  // both envelopes and let the canonical outer fields win.
+  const body = { ...nestedItem, ...payload, ...source };
   const normalized: Record<string, any> = {};
 
   const name = optionalText(body, ["name", "title", "itemName"]);
   const description = firstDefined(body, ["description", "details"]);
   const category = optionalText(body, ["category", "type"]);
   const price = optionalNumber(body, ["price", "unitPrice", "cost"]);
-  const currencyCode = optionalText(body, ["currencyCode", "currency", "currency_code"]);
-  const stockQuantity = optionalInteger(body, ["stockQuantity", "stock", "quantity", "inventory"]);
+  const currencyCode = optionalText(body, [
+    "currencyCode",
+    "currency",
+    "currency_code",
+  ]);
+  const stockQuantity = optionalInteger(body, [
+    "stockQuantity",
+    "stock",
+    "quantity",
+    "inventory",
+  ]);
   const status = optionalText(body, ["status", "itemStatus"]);
   const visibility = optionalText(body, ["visibility"]);
   const sortOrder = optionalInteger(body, ["sortOrder", "order", "sort_order"]);
   const itemKey = optionalText(body, ["itemKey", "key", "slug", "sku"]);
 
   if (name !== undefined) normalized.name = name;
-  if (description !== undefined) normalized.description = description === null ? null : text(description) || null;
-  if (category !== undefined) normalized.category = category;
+  if (description !== undefined) {
+    normalized.description = description === null
+      ? null
+      : text(description) || null;
+  }
+  if (category !== undefined) normalized.category = slug(category).slice(0, 32);
   if (price !== undefined) normalized.price = Math.max(0, price);
-  if (currencyCode !== undefined) normalized.currencyCode = currencyCode.toUpperCase();
+  if (currencyCode !== undefined) {
+    normalized.currencyCode = currencyCode.toUpperCase();
+  }
   if (stockQuantity !== undefined) normalized.stockQuantity = stockQuantity;
-  if (status !== undefined) normalized.status = status === "inactive" ? "disabled" : status;
-  if (visibility !== undefined) normalized.visibility = visibility === "private" ? "hidden" : visibility;
+  if (status !== undefined) {
+    normalized.status = normalizeStoreStatus(status);
+  }
+  if (visibility !== undefined) {
+    normalized.visibility = normalizeStoreVisibility(visibility);
+  }
   if (sortOrder !== undefined) normalized.sortOrder = sortOrder;
   if (itemKey !== undefined && method === "POST") {
     normalized.itemKey = slug(itemKey).slice(0, 64);
   }
 
   if (method === "DELETE") {
-    return { method: "PATCH", body: { status: "archived", visibility: "hidden" } };
+    return {
+      method: "PATCH",
+      body: { status: "archived", visibility: "hidden" },
+    };
   }
 
   return { method: method === "PUT" ? "PATCH" : method, body: normalized };
 }
 
+function normalizeStoreStatus(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "active") return "active";
+  if (normalized === "archived") return "archived";
+  if (["disabled", "inactive", "paused"].includes(normalized)) {
+    return "disabled";
+  }
+  return normalized;
+}
+
+function normalizeStoreVisibility(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (["all players", "public", "visible"].includes(normalized)) {
+    return "visible";
+  }
+  if (["admin only", "private", "hidden"].includes(normalized)) {
+    return "hidden";
+  }
+  return normalized;
+}
+
 function normalizeTargeting(body: Record<string, any>): Record<string, any> {
   const explicit = object(body.targetingPayload || body.targeting);
   const locations = array(
-    firstDefined(body, ["locations", "countries", "countryCodes", "targetLocations"]),
-  ).map((value) => text(object(value).code || object(value).countryCode || value))
+    firstDefined(body, [
+      "locations",
+      "countries",
+      "countryCodes",
+      "targetLocations",
+    ]),
+  ).map((value) =>
+    text(object(value).code || object(value).countryCode || value)
+  )
     .filter(Boolean);
   const allPlayers = explicit.allPlayers === true ||
-    locations.some((value) => ["all", "all locations", "all countries"].includes(value.toLowerCase()));
+    locations.some((value) =>
+      ["all", "all locations", "all countries"].includes(value.toLowerCase())
+    );
   const countryCodes = locations
-    .filter((value) => !["all", "all locations", "all countries"].includes(value.toLowerCase()))
+    .filter((value) =>
+      !["all", "all locations", "all countries"].includes(value.toLowerCase())
+    )
     .map((value) => value.toUpperCase());
 
   return compactObject({
     ...explicit,
     allPlayers: allPlayers || explicit.allPlayers === true ? true : undefined,
-    countryCodes: countryCodes.length ? [...new Set(countryCodes)] : explicit.countryCodes,
-    playerIds: array(body.playerIds).length ? array(body.playerIds) : explicit.playerIds,
-    rosterLabels: array(body.rosterLabels).length ? array(body.rosterLabels) : explicit.rosterLabels,
+    countryCodes: countryCodes.length
+      ? [...new Set(countryCodes)]
+      : explicit.countryCodes,
+    playerIds: array(body.playerIds).length
+      ? array(body.playerIds)
+      : explicit.playerIds,
+    rosterLabels: array(body.rosterLabels).length
+      ? array(body.rosterLabels)
+      : explicit.rosterLabels,
   });
 }
 
-function normalizeContractRewards(body: Record<string, any>): Record<string, any> {
+function normalizeContractRewards(
+  body: Record<string, any>,
+): Record<string, any> {
   const explicit = object(body.rewardPayload || body.rewards);
   const explicitCash = object(explicit.cash || body.cashReward);
   const cashAmount = optionalNumber(explicitCash, ["amount", "value"]) ??
-    optionalNumber(body, ["cashRewardAmount", "rewardCash", "cashAmount", "rewardAmount"]);
-  const currencyCode = optionalText(explicitCash, ["currencyCode", "currency"]) ||
+    optionalNumber(body, [
+      "cashRewardAmount",
+      "rewardCash",
+      "cashAmount",
+      "rewardAmount",
+    ]);
+  const currencyCode =
+    optionalText(explicitCash, ["currencyCode", "currency"]) ||
     optionalText(body, ["rewardCurrencyCode", "currencyCode", "currency"]) ||
     "ECO";
 
-  const rawItems = array(explicit.items).length
-    ? array(explicit.items)
-    : array(firstDefined(body, ["itemRewards", "rewardItems", "attachedItemRewards"]));
+  const rawItems = array(explicit.items).length ? array(explicit.items) : array(
+    firstDefined(body, ["itemRewards", "rewardItems", "attachedItemRewards"]),
+  );
   const items = rawItems.map((value) => {
     const item = object(value);
-    const storeItemId = optionalText(item, ["storeItemId", "itemUuid", "id", "value"]);
+    const storeItemId = optionalText(item, [
+      "storeItemId",
+      "itemUuid",
+      "id",
+      "value",
+    ]);
     const quantity = optionalInteger(item, ["quantity", "qty", "amount"]);
     if (!storeItemId || !quantity || quantity < 1) return null;
     return { storeItemId, quantity };
@@ -144,46 +243,76 @@ function normalizeContractRewards(body: Record<string, any>): Record<string, any
   return compactObject({
     cash: cashAmount !== undefined && cashAmount > 0
       ? {
-          amount: Math.round(cashAmount * 100) / 100,
-          accountType: optionalText(explicitCash, ["accountType"]) || "cash",
-          currencyCode: currencyCode.toUpperCase(),
-        }
-      : explicit.cash === null ? null : undefined,
+        amount: Math.round(cashAmount * 100) / 100,
+        accountType: optionalText(explicitCash, ["accountType"]) || "cash",
+        currencyCode: currencyCode.toUpperCase(),
+      }
+      : explicit.cash === null
+      ? null
+      : undefined,
     items: items.length ? items : undefined,
   });
 }
 
-export async function normalizeContractCreate(request: Request): Promise<Record<string, any>> {
+export async function normalizeContractCreate(
+  request: Request,
+  deterministicKeySeed?: string,
+): Promise<Record<string, any>> {
   const source = object(await readJson(request));
-  const body = object(source.contract || source.assignment || source.payload || source);
+  const body = object(
+    source.contract || source.assignment || source.payload || source,
+  );
   const title = optionalText(body, ["title", "name"]) || "";
-  const instructions = optionalText(body, ["instructions", "details", "taskInstructions"]) || "";
-  const description = optionalText(body, ["description", "summary"]) || instructions;
-  const scheduledAt = optionalText(body, ["scheduledAt", "scheduleAt", "postAt", "publishAt"]);
-  const requestedStatus = (optionalText(body, ["status", "publishStatus"]) || "").toLowerCase();
-  const status = scheduledAt
-    ? "scheduled"
-    : ["draft", "scheduled", "active"].includes(requestedStatus)
+  const instructions =
+    optionalText(body, ["instructions", "details", "taskInstructions"]) || "";
+  const description = optionalText(body, ["description", "summary"]) ||
+    instructions;
+  const scheduledAt = optionalText(body, [
+    "scheduledAt",
+    "scheduleAt",
+    "postAt",
+    "publishAt",
+  ]);
+  const requestedStatus =
+    (optionalText(body, ["status", "publishStatus"]) || "").toLowerCase();
+  const postSetting = (optionalText(body, ["postSetting"]) || "").toLowerCase();
+  const status =
+    scheduledAt || postSetting === "scheduled" || body.isScheduled === true
+      ? "scheduled"
+      : postSetting === "draft" || body.isDraft === true
+      ? "draft"
+      : ["draft", "scheduled", "active"].includes(requestedStatus)
       ? requestedStatus
-      : body.publishNow === true
-        ? "active"
-        : "draft";
+      : body.publishNow === true || postSetting === "now"
+      ? "active"
+      : "draft";
   const targetingPayload = normalizeTargeting(body);
   const metadata = {
     ...object(body.metadata),
-    materials: array(firstDefined(body, ["materials", "attachments", "resources"])),
+    materials: array(
+      firstDefined(body, ["materials", "attachments", "resources"]),
+    ),
     submissionRequirements: array(
-      firstDefined(body, ["submissionRequirements", "studentWork", "requiredSubmissions"]),
+      firstDefined(body, [
+        "submissionRequirements",
+        "studentWork",
+        "requiredSubmissions",
+      ]),
     ),
   };
   const rewardPayload = normalizeContractRewards(body);
-  const explicitRequirements = object(body.requirementsPayload || body.requirements);
+  const explicitRequirements = object(
+    body.requirementsPayload || body.requirements,
+  );
   const requirementsPayload = compactObject({
     ...explicitRequirements,
     manualText: explicitRequirements.manualText || instructions || undefined,
   });
   const suppliedKey = optionalText(body, ["contractKey", "key", "slug"]);
-  const generatedKey = `${slug(title) || "contract"}-${crypto.randomUUID().slice(0, 8)}`;
+  const generatedSuffix = deterministicKeySeed
+    ? (await sha256Hex(deterministicKeySeed)).slice(0, 12)
+    : crypto.randomUUID().slice(0, 8);
+  const generatedKey = `${slug(title) || "contract"}-${generatedSuffix}`;
   const visibility = optionalText(body, ["visibility"]) ||
     (targetingPayload.allPlayers === true ? "public" : "targeted");
 
@@ -200,16 +329,24 @@ export async function normalizeContractCreate(request: Request): Promise<Record<
     rewardPayload,
     completionMode: optionalText(body, ["completionMode"]) || "manual_review",
     publishedAt: scheduledAt || optionalText(body, ["publishedAt"]),
-    deadlineAt: optionalText(body, ["deadlineAt", "deadline", "dueAt", "dueDate"]),
+    deadlineAt: optionalText(body, [
+      "deadlineAt",
+      "deadline",
+      "dueAt",
+      "dueDate",
+    ]),
     expiresAt: optionalText(body, ["expiresAt", "expirationAt"]),
     metadata,
   });
 }
 
-export async function normalizeContractReview(request: Request): Promise<Record<string, any>> {
+export async function normalizeContractReview(
+  request: Request,
+): Promise<Record<string, any>> {
   const source = object(await readJson(request));
   const body = object(source.review || source.payload || source);
-  const rawAction = (optionalText(body, ["action", "decision", "status"]) || "").toLowerCase();
+  const rawAction = (optionalText(body, ["action", "decision", "status"]) || "")
+    .toLowerCase();
   const actionMap: Record<string, string> = {
     approve: "approve",
     approved: "approve",
@@ -226,7 +363,12 @@ export async function normalizeContractReview(request: Request): Promise<Record<
     revise: "request_revision",
     changes_requested: "request_revision",
   };
-  const feedback = optionalText(body, ["feedback", "comment", "note", "message"]);
+  const feedback = optionalText(body, [
+    "feedback",
+    "comment",
+    "note",
+    "message",
+  ]);
   return {
     action: actionMap[rawAction] || rawAction,
     resultPayload: {
@@ -236,7 +378,9 @@ export async function normalizeContractReview(request: Request): Promise<Record<
   };
 }
 
-export async function normalizeSettingsMutation(request: Request): Promise<any> {
+export async function normalizeSettingsMutation(
+  request: Request,
+): Promise<any> {
   const source = object(await readJson(request));
   const body = object(source.settings || source.payload || source);
   const gameSettings: Record<string, any> = {};
@@ -248,16 +392,35 @@ export async function normalizeSettingsMutation(request: Request): Promise<any> 
     "preset",
     "difficultyBasePreset",
   ]);
-  const attendanceWindow = firstDefined(body, ["attendanceWindow", "attendance"]);
-  const businessMarketWindow = firstDefined(body, ["businessMarketWindow", "businessMarket"]);
-  const stockMarketWindow = firstDefined(body, ["stockMarketWindow", "stockMarket"]);
+  const attendanceWindow = firstDefined(body, [
+    "attendanceWindow",
+    "attendance",
+  ]);
+  const businessMarketWindow = firstDefined(body, [
+    "businessMarketWindow",
+    "businessMarket",
+  ]);
+  const stockMarketWindow = firstDefined(body, [
+    "stockMarketWindow",
+    "stockMarket",
+  ]);
   const newsSchedule = firstDefined(body, ["newsSchedule", "news"]);
 
-  if (difficultyPreset !== undefined) gameSettings.difficultyPreset = difficultyPreset;
-  if (attendanceWindow !== undefined) gameSettings.attendanceWindow = object(attendanceWindow);
-  if (businessMarketWindow !== undefined) gameSettings.businessMarketWindow = object(businessMarketWindow);
-  if (stockMarketWindow !== undefined) gameSettings.stockMarketWindow = object(stockMarketWindow);
-  if (newsSchedule !== undefined) gameSettings.newsSchedule = object(newsSchedule);
+  if (difficultyPreset !== undefined) {
+    gameSettings.difficultyPreset = difficultyPreset;
+  }
+  if (attendanceWindow !== undefined) {
+    gameSettings.attendanceWindow = object(attendanceWindow);
+  }
+  if (businessMarketWindow !== undefined) {
+    gameSettings.businessMarketWindow = object(businessMarketWindow);
+  }
+  if (stockMarketWindow !== undefined) {
+    gameSettings.stockMarketWindow = object(stockMarketWindow);
+  }
+  if (newsSchedule !== undefined) {
+    gameSettings.newsSchedule = object(newsSchedule);
+  }
 
   const policyAliases = [
     ["priceMultiplier", "priceModifier", "price_modifier"],
@@ -265,7 +428,12 @@ export async function normalizeSettingsMutation(request: Request): Promise<any> 
     ["shockFrequency", "eventVolatilityModifier", "event_volatility_modifier"],
     ["shockSeverity", "scarcityModifier", "scarcity_modifier"],
     ["tradeMultiplier", "tradeModifier", "trade_modifier"],
-    ["recoverySupport", "bankruptcyProtection", "creditModifier", "credit_modifier"],
+    [
+      "recoverySupport",
+      "bankruptcyProtection",
+      "creditModifier",
+      "credit_modifier",
+    ],
   ];
   const policyColumns = [
     "price_modifier",
@@ -286,7 +454,8 @@ export async function normalizeSettingsMutation(request: Request): Promise<any> 
   if (Object.keys(policySettings).length > 0) {
     policySettings.difficulty_preset = "custom";
     policySettings.source = "custom";
-    policySettings.custom_label = optionalText(body, ["customLabel"]) || "Custom";
+    policySettings.custom_label = optionalText(body, ["customLabel"]) ||
+      "Custom";
     policySettings.difficulty_policy_profile_id = null;
   } else if (difficultyPreset !== undefined) {
     policySettings.difficulty_preset = difficultyPreset.toLowerCase();
@@ -296,7 +465,10 @@ export async function normalizeSettingsMutation(request: Request): Promise<any> 
   return { gameSettings, policySettings };
 }
 
-async function readDifficultyProfile(service: any, presetKey: string): Promise<Record<string, any>> {
+async function readDifficultyProfile(
+  service: any,
+  presetKey: string,
+): Promise<Record<string, any>> {
   const profile = await service
     .from("difficulty_policy_profiles")
     .select(
@@ -310,15 +482,21 @@ async function readDifficultyProfile(service: any, presetKey: string): Promise<R
   return profile.data;
 }
 
-async function readDifficultyBaseline(service: any, gameId: string): Promise<Record<string, any>> {
+async function readDifficultyBaseline(
+  service: any,
+  gameId: string,
+): Promise<Record<string, any>> {
   const settings = await service
     .from("game_settings")
     .select("difficulty_preset")
     .eq("game_session_id", gameId)
     .maybeSingle();
   if (settings.error) throw settings.error;
-  const requestedPreset = text(settings.data?.difficulty_preset, "standard").toLowerCase();
-  const presetKey = !requestedPreset || requestedPreset === "custom" ? "standard" : requestedPreset;
+  const requestedPreset = text(settings.data?.difficulty_preset, "standard")
+    .toLowerCase();
+  const presetKey = !requestedPreset || requestedPreset === "custom"
+    ? "standard"
+    : requestedPreset;
   const profile = await readDifficultyProfile(service, presetKey);
   return {
     difficulty_policy_profile_id: profile.id,
@@ -336,7 +514,11 @@ async function readDifficultyBaseline(service: any, gameId: string): Promise<Rec
   };
 }
 
-export async function applyDifficultyPolicy(service: any, gameId: string, policySettings: Record<string, any>): Promise<any> {
+export async function applyDifficultyPolicy(
+  service: any,
+  gameId: string,
+  policySettings: Record<string, any>,
+): Promise<any> {
   if (!policySettings || Object.keys(policySettings).length === 0) return null;
 
   const existing = await service
@@ -348,7 +530,8 @@ export async function applyDifficultyPolicy(service: any, gameId: string, policy
     .maybeSingle();
   if (existing.error) throw existing.error;
 
-  const baseline = existing.data || await readDifficultyBaseline(service, gameId);
+  const baseline = existing.data ||
+    await readDifficultyBaseline(service, gameId);
   let patch: Record<string, any>;
   if (policySettings.source === "preset") {
     const presetKey = text(policySettings.difficulty_preset).toLowerCase();
@@ -369,11 +552,15 @@ export async function applyDifficultyPolicy(service: any, gameId: string, policy
   } else {
     patch = {
       price_modifier: policySettings.price_modifier ?? baseline.price_modifier,
-      event_volatility_modifier: policySettings.event_volatility_modifier ?? baseline.event_volatility_modifier,
-      scarcity_modifier: policySettings.scarcity_modifier ?? baseline.scarcity_modifier,
-      income_modifier: policySettings.income_modifier ?? baseline.income_modifier,
+      event_volatility_modifier: policySettings.event_volatility_modifier ??
+        baseline.event_volatility_modifier,
+      scarcity_modifier: policySettings.scarcity_modifier ??
+        baseline.scarcity_modifier,
+      income_modifier: policySettings.income_modifier ??
+        baseline.income_modifier,
       trade_modifier: policySettings.trade_modifier ?? baseline.trade_modifier,
-      credit_modifier: policySettings.credit_modifier ?? baseline.credit_modifier,
+      credit_modifier: policySettings.credit_modifier ??
+        baseline.credit_modifier,
       difficulty_policy_profile_id: null,
       difficulty_preset: "custom",
       custom_label: text(policySettings.custom_label, "Custom"),

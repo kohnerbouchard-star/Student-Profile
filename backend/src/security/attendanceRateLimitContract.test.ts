@@ -39,8 +39,10 @@ Deno.test("staff scanner verifies staff and game ownership before limiting and b
     "dependencies.enforceRateLimit ?? enforceScopedRateLimit",
     'action: "staff.attendance.scan"',
     'profile: "scanner"',
-    "readStaffAttendanceScanRequestBody(request)",
-    '"record_player_attendance_clock_in"',
+    "readJsonRequestBody(request)",
+    "parseStaffAttendanceScanRequestBody(rawBody)",
+    "readAdminMutationIdentity(request, rawBody)",
+    "recordAttendanceScanForAuthorizedStaff({",
   ]);
   assertIncludes(source, "rateLimitUnavailableResponse()");
   assertIncludes(source, "rateLimitExceededResponse(rateLimitDecision)");
@@ -61,5 +63,7 @@ function assertOrdered(source: string, fragments: readonly string[]): void {
 }
 
 function assertIncludes(source: string, fragment: string): void {
-  if (!source.includes(fragment)) throw new Error(`Missing source fragment: ${fragment}`);
+  if (!source.includes(fragment)) {
+    throw new Error(`Missing source fragment: ${fragment}`);
+  }
 }

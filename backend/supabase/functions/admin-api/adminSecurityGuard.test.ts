@@ -161,6 +161,39 @@ Deno.test("returns Retry-After metadata after authorization succeeds", async () 
   }
 });
 
+Deno.test("affected Admin mutations consume the authorized user-action limit exactly once", async () => {
+  const affectedRoutes = [
+    ["POST", `/games/${GAME_ID}/players`],
+    ["POST", `/games/${GAME_ID}/attendance/scans`],
+    ["POST", `/games/${GAME_ID}/attendance/corrections`],
+    ["POST", `/games/${GAME_ID}/store/items`],
+    ["PATCH", `/games/${GAME_ID}/store/items/item-1`],
+    ["DELETE", `/games/${GAME_ID}/store/items/item-1`],
+    ["POST", `/games/${GAME_ID}/contracts`],
+    ["POST", `/games/${GAME_ID}/contracts/contract-1/publish`],
+    ["PATCH", `/games/${GAME_ID}/settings`],
+    ["POST", `/games/${GAME_ID}/join-code/reset`],
+  ] as const;
+
+  for (const [method, path] of affectedRoutes) {
+    let rateLimitCalls = 0;
+    const result = await guardAdminRequest(
+      new Request(`https://example.test/admin-api${path}`, { method }),
+      contextWith({ aal: "aal2", permissions: ADMIN_PERMISSIONS }),
+      path,
+      {
+        consumeRateLimit: async () => {
+          rateLimitCalls += 1;
+          return allowedDecision();
+        },
+      },
+    );
+
+    assertEquals(result.ok, true);
+    assertEquals(rateLimitCalls, 1);
+  }
+});
+
 Deno.test("maps reviewed Admin resources to explicit grants", () => {
   assertEquals(requiredAdminPermission("GET", "/games"), "game.read");
   assertEquals(requiredAdminPermission("POST", "/games"), "game.create");

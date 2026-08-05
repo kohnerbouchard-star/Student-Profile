@@ -2,8 +2,10 @@
   "use strict";
 
   const SAVE_SELECTOR = '[data-admin-terminal-action="save-settings"]';
+  const MUTATION_KEY_PREFIX = "econovaria.admin.attendance-settings-mutation.v1";
   const delegatedFetch = window.fetch.bind(window);
   const coreDirtyKeys = new Set();
+  const mutationMemory = new Map();
   let dirtyGameId = "";
   let contextGeneration = 0;
   let saveFlight = null;
@@ -19,6 +21,44 @@
   function number(value, fallback) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function settingsMutation(gameId, body) {
+    const storageKey = `${MUTATION_KEY_PREFIX}.${gameId}`;
+    const payload = JSON.stringify(body);
+    const memoryEntry = object(mutationMemory.get(storageKey));
+    if (
+      memoryEntry.payload === payload &&
+      /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/.test(text(memoryEntry.key))
+    ) return { key: text(memoryEntry.key), storageKey };
+
+    let existing = {};
+    try {
+      existing = object(JSON.parse(window.sessionStorage.getItem(storageKey) || "{}"));
+    } catch (_) {}
+    if (
+      existing.payload === payload &&
+      /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/.test(text(existing.key))
+    ) {
+      mutationMemory.set(storageKey, existing);
+      return { key: text(existing.key), storageKey };
+    }
+
+    const key = `admin.settings.attendance.${window.crypto.randomUUID()}`;
+    const entry = { key, payload };
+    mutationMemory.set(storageKey, entry);
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ key, payload }));
+    } catch (_) {}
+    return { key, storageKey };
+  }
+
+  function completeSettingsMutation(storageKey) {
+    if (!storageKey) return;
+    mutationMemory.delete(storageKey);
+    try {
+      window.sessionStorage.removeItem(storageKey);
+    } catch (_) {}
   }
 
   function selectedGameId() {
@@ -189,18 +229,25 @@
       }
       const attendanceWindow = draftAttendanceWindow(existingAttendance);
       const body = { attendanceWindow };
+      const mutation = settingsMutation(gameId, body);
       const response = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify(body),
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-Idempotency-Key": mutation.key,
+            "X-Request-Id": mutation.key,
+          },
+          body: JSON.stringify({ ...body, idempotencyKey: mutation.key }),
         },
       );
       if (!response.ok) {
         const payload = await response.clone().json().catch(() => ({}));
         throw new Error(text(payload.message || payload.error?.message) || "Game settings could not be saved.");
       }
+      completeSettingsMutation(mutation.storageKey);
       return { response, attendanceWindow, body, gameId };
     })();
     saveFlight = flight;

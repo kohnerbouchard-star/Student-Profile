@@ -6,17 +6,15 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readOwnedGameSession,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
-import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
-  readLocalDateForTimeZone,
-  readLocalMinutesForTimeZone,
-  readValidTimeZone,
-} from "../../../platform/supabase/edgeTime.ts";
+  AdminMutationError,
+  readAdminMutationIdentity,
+} from "../../../platform/supabase/adminMutation.ts";
 import {
   rateLimitExceededResponse,
   rateLimitUnavailableResponse,
@@ -26,17 +24,12 @@ import {
   type EnforceScopedRateLimitInput,
 } from "../../../security/playerRateLimitService.ts";
 import type { RateLimitDecision } from "../../../security/rateLimitContracts.ts";
-import { normalizeStudentCode } from "../../players/domain/playerAccessCodes.ts";
-import { normalizePlayerIdentifier } from "../../players/domain/playerIdentifiers.ts";
 import {
-  mapAttendanceClockInRpcError,
-  readPlayerAttendanceClockInRpcRow,
-  readPlayerAttendanceWindowConfig,
-  readStaffAttendanceScanRequestBody,
+  parseStaffAttendanceScanRequestBody,
 } from "./attendanceHttpHelpers.ts";
 import {
-  resolveAttendanceRewardPolicy,
-} from "./attendanceRewardPolicy.ts";
+  recordAttendanceScanForAuthorizedStaff,
+} from "../application/recordAttendanceForAuthorizedStaff.ts";
 
 export interface StaffAttendanceScanHttpHandlerDependencies {
   readonly resolveStaffForRequest: (
@@ -45,28 +38,20 @@ export interface StaffAttendanceScanHttpHandlerDependencies {
     options: { readonly missingMessage: string },
   ) => Promise<
     | {
-        readonly ok: true;
-        readonly staff: { readonly id: string };
-        readonly serviceClient: EdgeSupabaseClient;
-      }
+      readonly ok: true;
+      readonly staff: { readonly id: string };
+      readonly serviceClient: EdgeSupabaseClient;
+    }
     | {
-        readonly ok: false;
-        readonly status: number;
-        readonly error: EdgeErrorBody["error"];
-      }
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
   >;
   readonly enforceRateLimit?: (
     input: EnforceScopedRateLimitInput,
     client: EdgeSupabaseClient,
   ) => Promise<RateLimitDecision>;
-}
-
-interface AttendancePlayerRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label: string | null;
-  readonly player_identifier: string | null;
-  readonly status: string;
 }
 
 export interface StaffAttendanceScanSuccessBody {
@@ -170,148 +155,56 @@ export async function handleStaffAttendanceScanRequest(
       return rateLimitExceededResponse(rateLimitDecision);
     }
 
-    const body = await readStaffAttendanceScanRequestBody(request);
-    const scannedValue = body.playerId;
-    const normalizedIdentifier = normalizePlayerIdentifier(scannedValue);
-
-    let player = await readPlayerByIdentifier(
-      staffResult.serviceClient,
+    const rawBody = await readJsonRequestBody(request);
+    const body = parseStaffAttendanceScanRequestBody(rawBody);
+    const identity = readAdminMutationIdentity(request, rawBody);
+    const attendanceResult = await recordAttendanceScanForAuthorizedStaff({
       gameSessionId,
-      normalizedIdentifier,
-    );
+      staffUserId: staffResult.staff.id,
+      body,
+      identity,
+    }, staffResult.serviceClient);
 
-    if (!player) {
-      player = await readPlayerByLegacyAccessCode(
-        staffResult.serviceClient,
-        gameSessionId,
-        scannedValue,
-      );
-    }
-
-    if (!player?.id || player.status !== "active") {
-      return jsonError(404, {
-        code: "player_not_found",
-        message: "Player ID was not found for this game.",
-        retryable: false,
-      });
-    }
-
-    const settingsResponse = await staffResult.serviceClient
-      .from("game_settings")
-      .select("attendance_window")
-      .eq("game_session_id", gameSessionId)
-      .maybeSingle();
-
-    if (settingsResponse.error) {
-      return jsonError(500, {
-        code: "attendance_scan_failed",
-        message: "Attendance scan failed.",
-        retryable: false,
-      });
-    }
-
-    const attendanceWindow = (settingsResponse.data as {
-      readonly attendance_window?: unknown;
-    } | null)?.attendance_window;
-
-    const attendanceConfig = readPlayerAttendanceWindowConfig(attendanceWindow);
-    const timezone = readValidTimeZone(
-      body.deviceTimezone,
-      attendanceConfig.timezone,
-    );
-    const attendanceDate = readLocalDateForTimeZone(timezone);
-    const currentMinutes = readLocalMinutesForTimeZone(timezone);
-    const attendanceStatus =
-      attendanceConfig.lateCutoffMinutes !== null &&
-        currentMinutes > attendanceConfig.lateCutoffMinutes
-        ? "late"
-        : "present";
-    const configuredBaseAmount = attendanceStatus === "late"
-      ? attendanceConfig.lateRewardAmount
-      : attendanceConfig.presentRewardAmount;
-    const rewardPolicy = await resolveAttendanceRewardPolicy(
-      staffResult.serviceClient,
+    return jsonResponse<StaffAttendanceScanSuccessBody>(
+      attendanceResult.status,
       {
-        gameSessionId,
-        playerId: player.id,
-        configuredBaseAmount,
-        attendanceConfig,
+        ok: true,
+        gameSession: {
+          id: ownershipResult.gameSession.id,
+          name: ownershipResult.gameSession.name,
+          status: ownershipResult.gameSession.status,
+        },
+        player: attendanceResult.player,
+        attendance: {
+          id: attendanceResult.attendance.attendance_id,
+          status: attendanceResult.attendance.attendance_status,
+          attendanceDate: attendanceResult.attendance.attendance_date,
+          clockedInAt: attendanceResult.attendance.clocked_in_at,
+          wasCreated: attendanceResult.attendance.was_created,
+          timezone: attendanceResult.attendance.timezone,
+        },
+        reward: {
+          amount: readBalanceNumber(attendanceResult.attendance.reward_amount),
+          currencyCode: attendanceResult.attendance.currency_code,
+          ledgerEntryId: attendanceResult.attendance.ledger_entry_id,
+          configuredBaseAmount: attendanceResult.reward.configuredBaseAmount,
+          baseCurrencyCode: attendanceResult.reward.baseCurrencyCode,
+          currencyMode: attendanceResult.reward.currencyMode,
+          countryCode: attendanceResult.reward.countryCode,
+          incomeModifier: attendanceResult.reward.incomeModifier,
+          exchangeRateIndex: attendanceResult.reward.exchangeRateIndex,
+        },
       },
     );
-    const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
-
-    const attendanceResponse = await staffResult.serviceClient.rpc(
-      "record_player_attendance_clock_in",
-      {
-        p_game_session_id: gameSessionId,
-        p_player_id: player.id,
-        p_attendance_date: attendanceDate,
-        p_status: attendanceStatus,
-        p_reward_amount: rewardPolicy.effectiveAmount,
-        p_currency_code: rewardPolicy.currencyCode,
-        p_request_id: requestId,
-      },
-    );
-
-    if (attendanceResponse.error) {
-      const safeError = mapAttendanceClockInRpcError(
-        attendanceResponse.error.message,
-      );
-
-      return jsonError(safeError.status, {
-        code: safeError.code,
-        message: safeError.message,
-        retryable: safeError.retryable,
-      });
-    }
-
-    const attendanceRow = readPlayerAttendanceClockInRpcRow(
-      attendanceResponse.data,
-    );
-
-    if (!attendanceRow) {
-      return jsonError(500, {
-        code: "attendance_scan_failed",
-        message: "Attendance scan failed.",
-        retryable: false,
-      });
-    }
-
-    return jsonResponse<StaffAttendanceScanSuccessBody>(200, {
-      ok: true,
-      gameSession: {
-        id: ownershipResult.gameSession.id,
-        name: ownershipResult.gameSession.name,
-        status: ownershipResult.gameSession.status,
-      },
-      player: {
-        id: player.id,
-        displayName: player.display_name,
-        rosterLabel: player.roster_label ?? null,
-        playerIdentifier: player.player_identifier ?? null,
-        status: player.status,
-      },
-      attendance: {
-        id: attendanceRow.attendance_id,
-        status: attendanceRow.attendance_status,
-        attendanceDate: attendanceRow.attendance_date,
-        clockedInAt: attendanceRow.clocked_in_at,
-        wasCreated: attendanceRow.was_created,
-        timezone,
-      },
-      reward: {
-        amount: readBalanceNumber(attendanceRow.reward_amount),
-        currencyCode: attendanceRow.currency_code,
-        ledgerEntryId: attendanceRow.ledger_entry_id,
-        configuredBaseAmount: rewardPolicy.configuredBaseAmount,
-        baseCurrencyCode: rewardPolicy.baseCurrencyCode,
-        currencyMode: rewardPolicy.currencyMode,
-        countryCode: rewardPolicy.countryCode,
-        incomeModifier: rewardPolicy.incomeModifier,
-        exchangeRateIndex: rewardPolicy.exchangeRateIndex,
-      },
-    });
   } catch (error) {
+    if (error instanceof AdminMutationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
         code: error.code,
@@ -328,71 +221,14 @@ export async function handleStaffAttendanceScanRequest(
   }
 }
 
-async function readPlayerByIdentifier(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  normalizedIdentifier: string,
-): Promise<AttendancePlayerRow | null> {
-  const response = await serviceClient
-    .from("players")
-    .select("id,display_name,roster_label,player_identifier,status")
-    .eq("game_session_id", gameSessionId)
-    .eq("player_identifier_normalized", normalizedIdentifier)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (response.error) {
+async function readJsonRequestBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
     throw new EdgeActivationError(
-      "attendance_scan_failed",
-      "Attendance scan failed.",
-      500,
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
     );
   }
-
-  return (response.data as AttendancePlayerRow | null) ?? null;
-}
-
-async function readPlayerByLegacyAccessCode(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  scannedValue: string,
-): Promise<AttendancePlayerRow | null> {
-  const accessCodeHash = await sha256Hex(normalizeStudentCode(scannedValue));
-  const credentialResponse = await serviceClient
-    .from("player_access_credentials")
-    .select("player_id,status")
-    .eq("game_session_id", gameSessionId)
-    .eq("normalized_student_code_hash", accessCodeHash)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (credentialResponse.error) {
-    throw new EdgeActivationError(
-      "attendance_scan_failed",
-      "Attendance scan failed.",
-      500,
-    );
-  }
-
-  const playerId = (credentialResponse.data as {
-    readonly player_id?: unknown;
-  } | null)?.player_id;
-  if (typeof playerId !== "string" || !playerId) return null;
-
-  const playerResponse = await serviceClient
-    .from("players")
-    .select("id,display_name,roster_label,player_identifier,status")
-    .eq("game_session_id", gameSessionId)
-    .eq("id", playerId)
-    .maybeSingle();
-
-  if (playerResponse.error) {
-    throw new EdgeActivationError(
-      "attendance_scan_failed",
-      "Attendance scan failed.",
-      500,
-    );
-  }
-
-  return (playerResponse.data as AttendancePlayerRow | null) ?? null;
 }

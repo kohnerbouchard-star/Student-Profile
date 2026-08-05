@@ -643,10 +643,32 @@ await patch(
   },
 );
 
+const sharedGameSettingsApplication = await read(
+  "backend/src/domains/game-sessions/application/updateGameSettings.ts",
+).catch(() => "");
+
 await patch(
   "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
   (source) => {
     let expected = source;
+
+    const delegatesToSharedSettingsApplication =
+      expected.includes('from "../application/updateGameSettings.ts"') &&
+      expected.includes("dependencies.updateSettings ?? updateGameSettings");
+    if (delegatesToSharedSettingsApplication) {
+      if (
+        !sharedGameSettingsApplication.includes(
+          "normalizeRequiredStockMarketWindowSetting",
+        ) ||
+        !sharedGameSettingsApplication.includes("StockMarketWindowConfigError") ||
+        !sharedGameSettingsApplication.includes("invalid_stock_market_timezone")
+      ) {
+        throw new Error(
+          "Shared settings application is missing required market-timezone validation.",
+        );
+      }
+      return expected;
+    }
 
     if (!expected.includes("StockMarketWindowConfigError")) {
       expected = replaceRequired(

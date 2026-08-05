@@ -108,95 +108,6 @@ function lockedResponse(lock: any): any {
   };
 }
 
-async function correctAttendance(service: any, input: any): Promise<any> {
-  const body = object(input.body);
-  const playerId = text(body.playerId || body.studentId || body.id);
-  const attendanceDate =
-    isoDate(body.attendanceDate || body.date || body.recordDate) ||
-    todaySeoul();
-  const rawStatus = text(
-    body.status || body.attendanceStatus || body.value || body.action,
-  ).toLowerCase();
-  const statusAliases: Record<string, string> = {
-    present: "present",
-    late: "late",
-    absent: "absent",
-    excused: "excused",
-    "mark-present": "present",
-    "mark-late": "late",
-    "mark-absent": "absent",
-    "mark-excused": "excused",
-  };
-  const status = statusAliases[rawStatus] || rawStatus;
-  if (!playerId || !["present", "late", "absent", "excused"].includes(status)) {
-    return {
-      handled: true,
-      status: 400,
-      body: {
-        code: "invalid_attendance_correction",
-        message: "A player and a valid attendance status are required.",
-      },
-    };
-  }
-
-  const player = await findPlayer(service, input.gameSessionId, playerId);
-  if (!player) {
-    return {
-      handled: true,
-      status: 404,
-      body: {
-        code: "player_not_found",
-        message: "Player was not found for this game.",
-      },
-    };
-  }
-
-  const lock = await ensureAttendanceOpen(
-    service,
-    input.gameSessionId,
-    attendanceDate,
-  );
-  if (lock) return lockedResponse(lock);
-
-  const now = new Date().toISOString();
-  const note = text(body.note || body.adminNote || body.reason) || null;
-  const clockedInAt = ["present", "late"].includes(status)
-    ? text(body.clockedInAt || body.scannedAt) || now
-    : null;
-  const result = await service
-    .from("player_attendance_records")
-    .upsert({
-      game_session_id: input.gameSessionId,
-      player_id: playerId,
-      attendance_date: attendanceDate,
-      status,
-      clocked_in_at: clockedInAt,
-      source: "staff_correction",
-      note,
-      corrected_by_staff_user_id: input.staffUserId,
-      corrected_at: now,
-      updated_at: now,
-    }, { onConflict: "game_session_id,player_id,attendance_date" })
-    .select("*")
-    .maybeSingle();
-  if (result.error) throw result.error;
-
-  await audit(service, {
-    gameSessionId: input.gameSessionId,
-    staffUserId: input.staffUserId,
-    action: "attendance.manual_correction",
-    targetType: "player_attendance_record",
-    targetId: result.data?.id,
-    metadata: { playerId, attendanceDate, status, note },
-  });
-
-  return {
-    handled: true,
-    status: 200,
-    body: { data: { corrected: true, attendance: result.data } },
-  };
-}
-
 async function addAttendanceNote(service: any, input: any): Promise<any> {
   const body = object(input.body);
   const playerId = text(body.playerId || body.studentId || body.id);
@@ -428,12 +339,6 @@ export async function handleAttendanceOperation(
     body: Record<string, any>;
   },
 ): Promise<any> {
-  if (
-    input.method === "POST" &&
-    /^\/games\/[^/]+\/attendance\/corrections$/.test(input.path)
-  ) {
-    return correctAttendance(service, input);
-  }
   if (
     input.method === "POST" &&
     /^\/games\/[^/]+\/attendance\/notes$/.test(input.path)

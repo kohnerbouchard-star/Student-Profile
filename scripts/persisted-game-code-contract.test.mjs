@@ -13,6 +13,10 @@ const RESET_HANDLER = new URL(
   "../backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts",
   import.meta.url,
 );
+const JOIN_CODE_READ_REPOSITORY = new URL(
+  "../backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.ts",
+  import.meta.url,
+);
 const STAFF_BOOTSTRAP = new URL(
   "../backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
   import.meta.url,
@@ -23,6 +27,10 @@ const ADMIN_COMMON = new URL(
 );
 const ADMIN_ROUTES = new URL(
   "../backend/supabase/functions/admin-api/gameRoutes.ts",
+  import.meta.url,
+);
+const ADMIN_LOCAL_MUTATIONS = new URL(
+  "../backend/supabase/functions/admin-api/localGameMutations.ts",
   import.meta.url,
 );
 
@@ -50,17 +58,21 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     sessionControls,
     creationControls,
     resetHandler,
+    joinCodeReadRepository,
     bootstrap,
     adminCommon,
     adminRoutes,
+    adminLocalMutations,
   ] = await Promise.all([
     readFile(WIRING, "utf8"),
     readFile(SESSION_CONTROLS, "utf8"),
     readFile(CREATION_CONTROLS, "utf8"),
     readFile(RESET_HANDLER, "utf8"),
+    readFile(JOIN_CODE_READ_REPOSITORY, "utf8"),
     readFile(STAFF_BOOTSTRAP, "utf8"),
     readFile(ADMIN_COMMON, "utf8"),
     readFile(ADMIN_ROUTES, "utf8"),
+    readFile(ADMIN_LOCAL_MUTATIONS, "utf8"),
   ]);
 
   for (const source of [wiring, sessionControls, creationControls]) {
@@ -77,15 +89,29 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
   assert.match(wiring, /readPersistedGameCode/);
   assert.match(wiring, /remains available after reloads/);
   assert.match(wiring, /Rotate Code/);
+  assert.match(wiring, /X-Idempotency-Key/);
+  assert.match(wiring, /idempotencyKey:\s*mutation\.key/);
+  assert.match(wiring, /completeResetMutation\(mutation\.storageKey\)/);
   assert.match(resetHandler, /new Set\(\["GET", "POST"\]\)/);
-  assert.match(resetHandler, /\.select\("game_join_code,game_join_code_status,updated_at"\)/);
-  assert.match(resetHandler, /\.rpc\("issue_game_join_code_v1"/);
+  assert.match(resetHandler, /createSupabaseGameJoinCodeReadRepository/);
+  assert.match(resetHandler, /readGameJoinCode/);
+  assert.match(joinCodeReadRepository, /\.from\("game_sessions"\)/);
+  assert.match(joinCodeReadRepository, /"game_join_code"/);
+  assert.match(joinCodeReadRepository, /"game_join_code_status"/);
+  assert.match(joinCodeReadRepository, /\.eq\("id", input\.gameSessionId\)/);
+  assert.match(
+    joinCodeReadRepository,
+    /\.eq\("owner_staff_user_id", input\.staffUserId\)/,
+  );
+  assert.match(resetHandler, /rotateGameJoinCode/);
   assert.match(bootstrap, /game_join_code,game_join_code_status/);
   assert.match(bootstrap, /joinCode:\s*session\.game_join_code/);
   assert.match(bootstrap, /gameCode:\s*session\.game_join_code/);
   assert.match(adminCommon, /game_join_code,game_join_code_status/);
   assert.match(adminCommon, /joinCode:\s*gameCode/);
   assert.match(adminCommon, /gameCode,/);
-  assert.match(adminRoutes, /suffix === "\/join-code\/reset"/);
-  assert.match(adminRoutes, /classroomGamePath\(gameId, "\/join-code\/reset"\)/);
+  assert.doesNotMatch(adminRoutes, /classroomGamePath\(gameId, "\/join-code\/reset"\)/);
+  assert.match(adminCommon, /ADMIN_LOCAL_MUTATION_PROXY_FORBIDDEN/);
+  assert.match(adminLocalMutations, /rotateGameJoinCode/);
+  assert.match(adminLocalMutations, /suffix === "\/join-code\/reset"/);
 });

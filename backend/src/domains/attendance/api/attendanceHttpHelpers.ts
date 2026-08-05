@@ -47,10 +47,8 @@ export function readPlayerAttendanceClockInRpcRow(
     return null;
   }
 
-  if (
-    row.ledger_entry_id !== null &&
-    typeof row.ledger_entry_id !== "string"
-  ) {
+  const ledgerEntryId = row.ledger_entry_id;
+  if (ledgerEntryId !== null && typeof ledgerEntryId !== "string") {
     return null;
   }
 
@@ -67,7 +65,7 @@ export function readPlayerAttendanceClockInRpcRow(
     attendance_date: row.attendance_date,
     clocked_in_at: row.clocked_in_at,
     was_created: row.was_created,
-    ledger_entry_id: row.ledger_entry_id,
+    ledger_entry_id: ledgerEntryId as string | null,
     reward_amount: row.reward_amount,
     currency_code: row.currency_code,
   };
@@ -170,7 +168,9 @@ export function readPlayerAttendanceWindowConfig(
 ): PlayerAttendanceWindowConfig {
   const attendanceWindow = isRecord(value) ? value : {};
   const timezone = readValidTimeZone(attendanceWindow.timezone, "Asia/Seoul");
-  const lateCutoffMinutes = readOptionalTimeMinutes(attendanceWindow.lateCutoff);
+  const lateCutoffMinutes = readOptionalTimeMinutes(
+    attendanceWindow.lateCutoff,
+  );
   const presentRewardAmount = readOptionalNonNegativeAmount(
     attendanceWindow.presentRewardAmount ?? DEFAULT_PRESENT_REWARD_AMOUNT,
   );
@@ -209,7 +209,9 @@ function readAttendanceRewardCurrencyMode(
 
 function readOptionalBoolean(value: unknown, fallback: boolean): boolean {
   if (typeof value === "boolean") return value;
-  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const normalized = typeof value === "string"
+    ? value.trim().toLowerCase()
+    : "";
   if (["true", "1", "yes", "on"].includes(normalized)) return true;
   if (["false", "0", "no", "off"].includes(normalized)) return false;
   return fallback;
@@ -226,7 +228,9 @@ function firstDefined(
   return undefined;
 }
 
-function normalizedPayload(value: Record<string, unknown>): Record<string, unknown> {
+function normalizedPayload(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
   for (const key of ["scan", "player", "data", "payload"] as const) {
     const nested = value[key];
     if (isRecord(nested)) return { ...value, ...nested };
@@ -249,6 +253,12 @@ export async function readStaffAttendanceScanRequestBody(
     );
   }
 
+  return parseStaffAttendanceScanRequestBody(value);
+}
+
+export function parseStaffAttendanceScanRequestBody(
+  value: unknown,
+): StaffAttendanceScanRequestBody {
   if (!isRecord(value)) {
     throw new EdgeActivationError(
       "invalid_request_body",

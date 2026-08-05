@@ -1,23 +1,20 @@
 import {
-  EdgeActivationError,
   type EdgeErrorBody,
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
+  AdminMutationError,
+  adminMutationErrorBody,
+  type AdminMutationRpcClient,
+  readAdminMutationIdentity,
+} from "../../../platform/supabase/adminMutation.ts";
+import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import {
-  normalizeRequiredStockMarketWindowSetting,
-  StockMarketWindowConfigError,
-} from "../../stocks/calendars/stockMarketWindowConfig.ts";
-import {
-  isRecord,
-  parseOptionalJsonObject,
-  parseOptionalText,
-} from "../../../platform/supabase/edgeParsing.ts";
+import { updateGameSettings } from "../application/updateGameSettings.ts";
 
 interface GameSettingsDependencies {
   readonly resolveStaffForRequest: (
@@ -27,22 +24,24 @@ interface GameSettingsDependencies {
       readonly missingMessage: string;
     },
   ) => Promise<StaffRequestResolution>;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly updateSettings?: typeof updateGameSettings;
 }
 
 type StaffRequestResolution =
   | {
-      readonly ok: true;
-      readonly staff: {
-        readonly id: string;
-        readonly email: string | null;
-      };
-      readonly serviceClient: EdgeSupabaseClient;
-    }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
+    readonly ok: true;
+    readonly staff: {
+      readonly id: string;
+      readonly email: string | null;
     };
+    readonly serviceClient: EdgeSupabaseClient;
+  }
+  | {
+    readonly ok: false;
+    readonly status: number;
+    readonly error: EdgeErrorBody["error"];
+  };
 
 interface GameSettingsBody {
   readonly ok: true;
@@ -59,14 +58,8 @@ interface GameSettingsBody {
     readonly newsSchedule: Record<string, unknown>;
     readonly updatedAt: string;
   };
-}
-
-interface GameSettingsPatchBody {
-  readonly difficultyPreset: string | null;
-  readonly attendanceWindow: Record<string, unknown> | null;
-  readonly businessMarketWindow: Record<string, unknown> | null;
-  readonly stockMarketWindow: Record<string, unknown> | null;
-  readonly newsSchedule: Record<string, unknown> | null;
+  readonly difficultyPolicy?: Record<string, unknown> | null;
+  readonly replayed?: boolean;
 }
 
 export async function handleGameSettingsRequest(
@@ -83,7 +76,7 @@ export async function handleGameSettingsRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
@@ -93,11 +86,16 @@ export async function handleGameSettingsRequest(
       });
     }
 
-    const staffResult = await dependencies.resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to load game settings.",
-    });
+    const staffResult = await dependencies.resolveStaffForRequest(
+      request,
+      envResult.value,
+      {
+        missingMessage:
+          "A verified Supabase Auth user is required to load game settings.",
+      },
+    );
 
-    if (!staffResult.ok) {
+    if (staffResult.ok === false) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
@@ -129,34 +127,36 @@ export async function handleGameSettingsRequest(
     }
 
     if (request.method === "PATCH") {
-      const patchBody = await readGameSettingsPatchBody(request);
-      const updatePayload = buildGameSettingsUpdatePayload(patchBody);
+      const requestBody = await readGameSettingsMutationBody(request);
+      const mutation = readAdminMutationIdentity(request, requestBody);
+      const result = await (dependencies.updateSettings ?? updateGameSettings)(
+        serviceClient as unknown as AdminMutationRpcClient,
+        {
+          gameSessionId: gameSession.id,
+          staffUserId: staffResult.staff.id,
+          requestBody,
+          mutation,
+        },
+      );
 
-      if (Object.keys(updatePayload).length === 0) {
-        return jsonError(400, {
-          code: "settings_update_empty",
-          message: "At least one game setting must be provided.",
-          retryable: false,
-        });
-      }
-
-      const updateResponse = await serviceClient
-        .from("game_settings")
-        .update(updatePayload)
-        .eq("game_session_id", gameSession.id);
-
-      if (updateResponse.error) {
-        return jsonError(500, {
-          code: "game_settings_failed",
-          message: "Game settings request failed.",
-          retryable: false,
-        });
-      }
+      return jsonResponse<GameSettingsBody>(result.status, {
+        ok: true,
+        gameSession: {
+          id: gameSession.id,
+          name: gameSession.name,
+          status: gameSession.status,
+        },
+        settings: result.settings,
+        difficultyPolicy: result.difficultyPolicy,
+        replayed: result.replayed,
+      });
     }
 
     const settingsResponse = await serviceClient
       .from("game_settings")
-      .select("difficulty_preset,attendance_window,business_market_window,stock_market_window,news_schedule,updated_at")
+      .select(
+        "difficulty_preset,attendance_window,business_market_window,stock_market_window,news_schedule,updated_at",
+      )
       .eq("game_session_id", gameSession.id)
       .maybeSingle();
 
@@ -188,27 +188,17 @@ export async function handleGameSettingsRequest(
       settings: {
         difficultyPreset: settings.difficulty_preset,
         attendanceWindow: readJsonObjectSetting(settings.attendance_window),
-        businessMarketWindow: readJsonObjectSetting(settings.business_market_window),
+        businessMarketWindow: readJsonObjectSetting(
+          settings.business_market_window,
+        ),
         stockMarketWindow: readJsonObjectSetting(settings.stock_market_window),
         newsSchedule: readJsonObjectSetting(settings.news_schedule),
         updatedAt: settings.updated_at,
       },
     });
   } catch (error) {
-    if (error instanceof StockMarketWindowConfigError) {
-      return jsonError(400, {
-        code: "invalid_stock_market_timezone",
-        message: error.message,
-        retryable: false,
-      });
-    }
-
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
+    if (error instanceof AdminMutationError) {
+      return jsonError(error.status, adminMutationErrorBody(error).error);
     }
 
     return jsonError(500, {
@@ -219,15 +209,15 @@ export async function handleGameSettingsRequest(
   }
 }
 
-async function readGameSettingsPatchBody(
+async function readGameSettingsMutationBody(
   request: Request,
-): Promise<GameSettingsPatchBody> {
+): Promise<Record<string, unknown>> {
   let value: unknown;
 
   try {
     value = await request.json();
   } catch {
-    throw new EdgeActivationError(
+    throw new AdminMutationError(
       "invalid_request_body",
       "Request body must be a JSON object.",
       400,
@@ -235,55 +225,20 @@ async function readGameSettingsPatchBody(
   }
 
   if (!isRecord(value)) {
-    throw new EdgeActivationError(
+    throw new AdminMutationError(
       "invalid_request_body",
       "Request body must be a JSON object.",
       400,
     );
   }
 
-  return {
-    difficultyPreset: parseOptionalText(value.difficultyPreset),
-    attendanceWindow: parseOptionalJsonObject(value.attendanceWindow),
-    businessMarketWindow: parseOptionalJsonObject(value.businessMarketWindow),
-    stockMarketWindow: parseOptionalJsonObject(value.stockMarketWindow),
-    newsSchedule: parseOptionalJsonObject(value.newsSchedule),
-  };
-}
-
-function buildGameSettingsUpdatePayload(
-  body: GameSettingsPatchBody,
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {};
-
-  if (body.difficultyPreset !== undefined && body.difficultyPreset !== null) {
-    payload.difficulty_preset = body.difficultyPreset;
-  }
-
-  if (body.attendanceWindow !== undefined && body.attendanceWindow !== null) {
-    payload.attendance_window = body.attendanceWindow;
-  }
-
-  if (
-    body.businessMarketWindow !== undefined &&
-    body.businessMarketWindow !== null
-  ) {
-    payload.business_market_window = body.businessMarketWindow;
-  }
-
-  if (body.stockMarketWindow !== undefined && body.stockMarketWindow !== null) {
-    payload.stock_market_window = normalizeRequiredStockMarketWindowSetting(
-      body.stockMarketWindow,
-    );
-  }
-
-  if (body.newsSchedule !== undefined && body.newsSchedule !== null) {
-    payload.news_schedule = body.newsSchedule;
-  }
-
-  return payload;
+  return value;
 }
 
 function readJsonObjectSetting(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

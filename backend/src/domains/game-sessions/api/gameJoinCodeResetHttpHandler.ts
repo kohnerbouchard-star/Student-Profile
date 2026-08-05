@@ -4,11 +4,27 @@ import {
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
+  AdminMutationError,
+  adminMutationErrorBody,
+  type AdminMutationRpcClient,
+  readAdminMutationIdentity,
+} from "../../../platform/supabase/adminMutation.ts";
+import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readOwnedGameSession,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import {
+  GameJoinCodeReadError,
+  readGameJoinCode,
+  type ReadGameJoinCodeInput,
+  type ReadGameJoinCodeResult,
+} from "../application/readGameJoinCode.ts";
+import {
+  createSupabaseGameJoinCodeReadRepository,
+} from "../infrastructure/supabaseGameJoinCodeReadRepository.ts";
+import { rotateGameJoinCode } from "../application/rotateGameJoinCode.ts";
 
 interface GameJoinCodeResetDependencies {
   readonly resolveStaffForRequest: (
@@ -18,22 +34,29 @@ interface GameJoinCodeResetDependencies {
       readonly missingMessage: string;
     },
   ) => Promise<StaffRequestResolution>;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly readOwnedSession?: typeof readOwnedGameSession;
+  readonly readJoinCode?: (
+    input: ReadGameJoinCodeInput,
+    serviceClient: EdgeSupabaseClient,
+  ) => Promise<ReadGameJoinCodeResult>;
+  readonly rotateJoinCode?: typeof rotateGameJoinCode;
 }
 
 type StaffRequestResolution =
   | {
-      readonly ok: true;
-      readonly staff: {
-        readonly id: string;
-        readonly email: string | null;
-      };
-      readonly serviceClient: EdgeSupabaseClient;
-    }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
+    readonly ok: true;
+    readonly staff: {
+      readonly id: string;
+      readonly email: string | null;
     };
+    readonly serviceClient: EdgeSupabaseClient;
+  }
+  | {
+    readonly ok: false;
+    readonly status: number;
+    readonly error: EdgeErrorBody["error"];
+  };
 
 interface GameJoinCodeSuccessBody {
   readonly ok: true;
@@ -47,12 +70,7 @@ interface GameJoinCodeSuccessBody {
     readonly status: "active";
     readonly updatedAt: string;
   };
-}
-
-interface IssuedJoinCodeRow {
-  readonly game_join_code: string;
-  readonly game_join_code_status: string;
-  readonly updated_at: string;
+  readonly replayed?: boolean;
 }
 
 export async function handleResetGameJoinCodeRequest(
@@ -69,7 +87,7 @@ export async function handleResetGameJoinCodeRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
@@ -79,50 +97,90 @@ export async function handleResetGameJoinCodeRequest(
       });
     }
 
-    const staffResult = await dependencies.resolveStaffForRequest(request, envResult.value, {
-      missingMessage: request.method === "GET"
-        ? "A verified Supabase Auth user is required to read a game join code."
-        : "A verified Supabase Auth user is required to reset a game join code.",
-    });
+    const staffResult = await dependencies.resolveStaffForRequest(
+      request,
+      envResult.value,
+      {
+        missingMessage: request.method === "GET"
+          ? "A verified Supabase Auth user is required to read a game join code."
+          : "A verified Supabase Auth user is required to reset a game join code.",
+      },
+    );
 
-    if (!staffResult.ok) {
+    if (staffResult.ok === false) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
-    const ownershipResult = await readOwnedGameSession(
+    const ownershipResult = await (
+      dependencies.readOwnedSession ?? readOwnedGameSession
+    )(
       staffResult.serviceClient,
       gameSessionId,
       staffResult.staff.id,
     );
 
-    if (!ownershipResult.ok) {
+    if (ownershipResult.ok === false) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
-    const joinCodeResult = request.method === "GET"
-      ? await readGameJoinCode(staffResult.serviceClient, gameSessionId, staffResult.staff.id)
-      : await issueGameJoinCode(staffResult.serviceClient, gameSessionId, staffResult.staff.id);
+    if (request.method === "GET") {
+      const input = {
+        gameSessionId,
+        staffUserId: staffResult.staff.id,
+        gameSession: ownershipResult.gameSession,
+      };
+      const result = await (dependencies.readJoinCode ?? readPersistedJoinCode)(
+        input,
+        staffResult.serviceClient,
+      );
 
-    if (!joinCodeResult.ok) {
-      return jsonError(joinCodeResult.status, joinCodeResult.error);
+      return jsonResponse<GameJoinCodeSuccessBody>(200, {
+        ok: true,
+        gameSession: result.gameSession,
+        joinCode: result.joinCode,
+      });
     }
 
-    return jsonResponse<GameJoinCodeSuccessBody>(200, {
+    const requestBody = await readJoinCodeRotationBody(request);
+    const mutation = readAdminMutationIdentity(request, requestBody);
+    const joinCodeResult = await (
+      dependencies.rotateJoinCode ?? rotateGameJoinCode
+    )(
+      staffResult.serviceClient as unknown as AdminMutationRpcClient,
+      {
+        gameSessionId,
+        staffUserId: staffResult.staff.id,
+        requestBody,
+        mutation,
+      },
+    );
+
+    return jsonResponse<GameJoinCodeSuccessBody>(joinCodeResult.status, {
       ok: true,
       gameSession: {
         id: ownershipResult.gameSession.id,
         name: ownershipResult.gameSession.name,
         status: ownershipResult.gameSession.status,
       },
-      joinCode: {
-        gameJoinCode: joinCodeResult.gameJoinCode,
-        status: "active",
-        updatedAt: joinCodeResult.updatedAt,
-      },
+      joinCode: joinCodeResult.joinCode,
+      replayed: joinCodeResult.replayed,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AdminMutationError) {
+      return jsonError(error.status, adminMutationErrorBody(error).error);
+    }
+    if (error instanceof GameJoinCodeReadError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
     return jsonError(500, {
-      code: request.method === "GET" ? "join_code_read_failed" : "join_code_reset_failed",
+      code: request.method === "GET"
+        ? "join_code_read_failed"
+        : "join_code_reset_failed",
       message: request.method === "GET"
         ? "Game join code could not be loaded."
         : "Game join code could not be reset.",
@@ -131,106 +189,38 @@ export async function handleResetGameJoinCodeRequest(
   }
 }
 
-async function readGameJoinCode(
+function readPersistedJoinCode(
+  input: ReadGameJoinCodeInput,
   serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  staffUserId: string,
-): Promise<JoinCodeResult> {
-  const response = await serviceClient
-    .from("game_sessions")
-    .select("game_join_code,game_join_code_status,updated_at")
-    .eq("id", gameSessionId)
-    .eq("owner_staff_user_id", staffUserId)
-    .maybeSingle();
-
-  if (response.error) {
-    return failure("join_code_read_failed", "Game join code could not be loaded.", 500, false);
-  }
-
-  const row = response.data as IssuedJoinCodeRow | null;
-  if (!row?.game_join_code || row.game_join_code_status !== "active" || !row.updated_at) {
-    return failure(
-      "join_code_not_available",
-      "This legacy game does not have a persisted readable code yet. Rotate it once to create one.",
-      409,
-      false,
-    );
-  }
-
-  return {
-    ok: true,
-    gameJoinCode: row.game_join_code,
-    updatedAt: row.updated_at,
-  };
+): Promise<ReadGameJoinCodeResult> {
+  return readGameJoinCode(
+    input,
+    createSupabaseGameJoinCodeReadRepository(serviceClient),
+  );
 }
 
-async function issueGameJoinCode(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  staffUserId: string,
-): Promise<JoinCodeResult> {
-  const response = await serviceClient.rpc("issue_game_join_code_v1", {
-    p_game_session_id: gameSessionId,
-    p_staff_user_id: staffUserId,
-  });
+async function readJoinCodeRotationBody(
+  request: Request,
+): Promise<Record<string, unknown>> {
+  const text = await request.text();
+  if (!text.trim()) return {};
 
-  if (response.error) {
-    const message = response.error.message?.toUpperCase() ?? "";
-    const conflict = message.includes("GENERATION_CONFLICT");
-    const unavailable = message.includes("GAME_UNAVAILABLE");
-
-    return failure(
-      conflict
-        ? "join_code_generation_conflict"
-        : unavailable
-        ? "join_code_game_unavailable"
-        : "join_code_reset_failed",
-      conflict
-        ? "A unique game join code could not be generated."
-        : unavailable
-        ? "Game join code cannot be changed for this game."
-        : "Game join code could not be reset.",
-      conflict || unavailable ? 409 : 500,
-      conflict,
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new AdminMutationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
     );
   }
-
-  const row = (Array.isArray(response.data) ? response.data[0] : response.data) as
-    | IssuedJoinCodeRow
-    | null;
-
-  if (!row?.game_join_code || row.game_join_code_status !== "active" || !row.updated_at) {
-    return failure("join_code_reset_failed", "Game join code could not be reset.", 500, false);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new AdminMutationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
   }
-
-  return {
-    ok: true,
-    gameJoinCode: row.game_join_code,
-    updatedAt: row.updated_at,
-  };
-}
-
-type JoinCodeResult =
-  | {
-      readonly ok: true;
-      readonly gameJoinCode: string;
-      readonly updatedAt: string;
-    }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    };
-
-function failure(
-  code: string,
-  message: string,
-  status: number,
-  retryable: boolean,
-): JoinCodeResult {
-  return {
-    ok: false,
-    status,
-    error: { code, message, retryable },
-  };
+  return value as Record<string, unknown>;
 }

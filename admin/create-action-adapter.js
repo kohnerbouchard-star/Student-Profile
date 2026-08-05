@@ -344,7 +344,15 @@
     const rawCategory = formValue(form, "category");
     const rawStatus = formValue(form, "status") || "Active";
     const rawVisibility = formValue(form, "visibility") || "All players";
-    const stockQuantity = numberOrUndefined(formValue(form, "stockQuantity"));
+    const stockMode = formValue(form, "stockMode") || "Unlimited";
+    const sharedStockQuantity = numberOrUndefined(formValue(form, "stockQuantity"));
+    const countryStockQuantity = [...form.querySelectorAll("[data-admin-terminal-store-country-stock]")]
+      .reduce((total, input) => total + Math.max(0, numberOrUndefined(input.value) || 0), 0);
+    const stockQuantity = stockMode === "Country"
+      ? Math.trunc(countryStockQuantity)
+      : stockMode === "Limited" && sharedStockQuantity !== undefined
+        ? Math.max(0, Math.trunc(sharedStockQuantity))
+        : 0;
 
     return {
       ...source,
@@ -358,7 +366,7 @@
         status: normalizedStoreStatus(rawStatus),
         price: numberOrUndefined(formValue(form, "price")),
         currencyCode: preferredStoreCurrency(),
-        stockQuantity: stockQuantity === undefined ? 0 : Math.max(0, Math.trunc(stockQuantity)),
+        stockQuantity,
         visibility: normalizedStoreVisibility(rawVisibility),
         sortOrder: 0
       })

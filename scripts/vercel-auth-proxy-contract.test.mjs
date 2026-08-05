@@ -64,6 +64,9 @@ test("Admin BFF signs exact requests with Vercel OIDC and overwrites browser met
     "The signed client IP is carried for compatibility with the currently deployed legacy function.",
   );
   assert.equal(headers.has("x-vercel-forwarded-for"), false);
+  assert.equal(headers.has("x-forwarded-for"), false);
+  assert.equal(headers.get("idempotency-key"), "admin-command-001");
+  assert.equal(headers.has("x-idempotency-key"), false);
 
   const canonicalPayload = buildAdminBffSignaturePayload({
     timestampSeconds: 1785362400,
@@ -168,6 +171,47 @@ test("Admin BFF fails closed without platform-owned client IP", async () => {
   assert.match(response.text(), /admin_bff_network_metadata_unavailable/u);
 });
 
+test("Admin BFF rejects raw forwarding-header spoofing without Vercel client IP", async () => {
+  let called = false;
+  const response = mockResponse();
+  await proxyAdminBff(adminRequest({
+    headers: {
+      "x-vercel-forwarded-for": "",
+      "x-real-ip": "203.0.113.77",
+      "x-forwarded-for": "203.0.113.78",
+    },
+  }), response, {
+    fetchImpl: async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(called, false);
+  assert.match(response.text(), /admin_bff_network_metadata_unavailable/u);
+});
+
+test("Admin BFF rejects conflicting canonical and compatibility idempotency headers", async () => {
+  let called = false;
+  const response = mockResponse();
+  await proxyAdminBff(adminRequest({
+    headers: {
+      "idempotency-key": "admin-command-canonical",
+      "x-idempotency-key": "admin-command-compatibility",
+    },
+  }), response, {
+    fetchImpl: async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(called, false);
+  assert.match(response.text(), /idempotency_key_header_mismatch/u);
+});
+
 test("password recovery proxy forwards only verified recovery and trusted IP", async () => {
   let upstreamRequest = null;
   globalThis.fetch = async (url, options) => {
@@ -205,12 +249,14 @@ function adminRequest(overrides = {}) {
   const baseHeaders = {
     host: "econovaria.example",
     "x-forwarded-host": "econovaria.example",
-    "x-vercel-forwarded-for": "198.51.100.99",
-    "x-real-ip": "203.0.113.25",
+    "x-vercel-forwarded-for": "203.0.113.25",
+    "x-real-ip": "198.51.100.99",
+    "x-forwarded-for": "192.0.2.44",
     "x-vercel-oidc-token": OIDC_TOKEN,
     origin: "https://econovaria.example",
     "content-type": "application/json",
     "x-econovaria-bff-signature": "browser-forgery",
+    "x-idempotency-key": "admin-command-001",
   };
   return {
     method: "POST",

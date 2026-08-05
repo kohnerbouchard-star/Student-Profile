@@ -31,6 +31,10 @@ interface PlayerCredentialOptions {
   readonly iterations?: number;
 }
 
+export interface PlayerCredentialLookupOptions {
+  readonly pepper?: string;
+}
+
 const TEXT_ENCODER = new TextEncoder();
 const HEX_PATTERN = /^[0-9a-f]{64}$/u;
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
@@ -59,10 +63,9 @@ export async function createPlayerCredentialMaterial(
     throw new Error("Player credential salt must be exactly 16 bytes.");
   }
 
-  const lookupDigest = await hmacHex(
+  const lookupDigest = await derivePlayerCredentialLookupDigest(accessCode, {
     pepper,
-    `econovaria-player-credential-lookup-v2\u0000${accessCode}`,
-  );
+  });
   const passwordMaterial = await hmacBytes(
     pepper,
     `econovaria-player-credential-kdf-v2\u0000${accessCode}`,
@@ -80,6 +83,19 @@ export async function createPlayerCredentialMaterial(
     verifier: encodeBase64Url(verifierBytes),
     iterations,
   };
+}
+
+export function derivePlayerCredentialLookupDigest(
+  normalizedAccessCode: string,
+  options: PlayerCredentialLookupOptions = {},
+): Promise<string> {
+  const accessCode = validateAccessCode(normalizedAccessCode);
+  const pepper = options.pepper ?? readPlayerCredentialPepper();
+  validatePepper(pepper);
+  return hmacHex(
+    pepper,
+    `econovaria-player-credential-lookup-v2\u0000${accessCode}`,
+  );
 }
 
 export async function verifyPlayerCredential(
@@ -121,7 +137,9 @@ export async function verifyPlayerCredential(
   }
 }
 
-export function isLegacyPlayerCredential(record: PlayerCredentialRecord): boolean {
+export function isLegacyPlayerCredential(
+  record: PlayerCredentialRecord,
+): boolean {
   return record.credential_version === "sha256-v1" &&
     HEX_PATTERN.test(record.normalized_student_code_hash) &&
     record.credential_salt === null &&
@@ -150,7 +168,9 @@ function validatePepper(value: string): void {
 
 function validateIterations(value: number): void {
   if (!Number.isSafeInteger(value) || value < 100_000 || value > 1_000_000) {
-    throw new Error("Player credential PBKDF2 iterations are outside the allowed range.");
+    throw new Error(
+      "Player credential PBKDF2 iterations are outside the allowed range.",
+    );
   }
 }
 
@@ -184,16 +204,18 @@ async function derivePbkdf2(
     false,
     ["deriveBits"],
   );
-  return new Uint8Array(await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: concreteArrayBuffer(salt),
-      iterations,
-    },
-    key,
-    PLAYER_CREDENTIAL_DERIVED_BYTES * 8,
-  ));
+  return new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        salt: concreteArrayBuffer(salt),
+        iterations,
+      },
+      key,
+      PLAYER_CREDENTIAL_DERIVED_BYTES * 8,
+    ),
+  );
 }
 
 function concreteArrayBuffer(bytes: Uint8Array): ArrayBuffer {

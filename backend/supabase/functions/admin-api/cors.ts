@@ -60,7 +60,7 @@ export function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("origin") || "";
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers":
-      "authorization, apikey, content-type, x-econovaria-game-id, x-client-info, x-csrf-token, x-idempotency-key, x-econovaria-admin-action, x-requested-with, if-match, x-request-id",
+      "authorization, apikey, content-type, x-econovaria-game-id, x-client-info, x-csrf-token, idempotency-key, x-idempotency-key, x-econovaria-admin-action, x-requested-with, if-match, x-request-id",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",

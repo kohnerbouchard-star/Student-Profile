@@ -1,8 +1,6 @@
 import {
-  bindGatewayTrustedClientIp,
-} from "../../../src/security/edgeGatewayClientIp.ts";
-import {
   buildStaffRateLimitBuckets,
+  overwriteTrustedClientIpHeaders,
   readTrustedClientIp,
   TRUSTED_IP_HEADERS,
   type TrustedIpHeader,
@@ -47,6 +45,7 @@ export function normalizeAdminRateLimitRequest(
   ) {
     throw new Error("rate limit configuration unavailable");
   }
+  const trustedIpHeader = trustedHeader as TrustedIpHeader;
 
   // Rate limiting needs only method, URL, and trusted network metadata. Building
   // the normalized request from the live POST Request would transfer/disturb its
@@ -56,10 +55,17 @@ export function normalizeAdminRateLimitRequest(
     method: request.method,
     headers: request.headers,
   });
+  const clientIp = readTrustedClientIp(metadataRequest, trustedIpHeader);
 
   return {
-    request: bindGatewayTrustedClientIp(metadataRequest, trustedHeader),
-    trustedHeader: trustedHeader as TrustedIpHeader,
+    request: new Request(metadataRequest, {
+      headers: overwriteTrustedClientIpHeaders(
+        metadataRequest.headers,
+        trustedIpHeader,
+        clientIp,
+      ),
+    }),
+    trustedHeader: trustedIpHeader,
   };
 }
 
@@ -74,7 +80,8 @@ export async function consumeAdminProgressionRateLimit(
   },
 ): Promise<RateLimitDecision> {
   const hmacSecret = Deno.env.get("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ?? "";
-  const configuredHeader = Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "";
+  const configuredHeader =
+    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "";
   const normalized = normalizeAdminRateLimitRequest(
     input.request,
     configuredHeader,
@@ -128,9 +135,12 @@ function isValidRow(value: unknown): value is {
     Number.isSafeInteger(row.retry_after_seconds) &&
     Number(row.retry_after_seconds) >= 0 &&
     (row.limiting_dimension === null ||
-      ["action", "game", "identity", "ip"].includes(String(row.limiting_dimension))) &&
+      ["action", "game", "identity", "ip"].includes(
+        String(row.limiting_dimension),
+      )) &&
     Number.isSafeInteger(row.limit_count) && Number(row.limit_count) > 0 &&
-    Number.isSafeInteger(row.remaining_count) && Number(row.remaining_count) >= 0 &&
+    Number.isSafeInteger(row.remaining_count) &&
+    Number(row.remaining_count) >= 0 &&
     typeof row.reset_at === "string" &&
     Number.isFinite(Date.parse(row.reset_at));
 }

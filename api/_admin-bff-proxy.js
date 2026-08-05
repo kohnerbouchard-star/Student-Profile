@@ -27,7 +27,6 @@ const FORWARDED_HEADERS = Object.freeze({
   "x-econovaria-csrf-token": "x-econovaria-csrf-token",
   "x-econovaria-device-id": "x-econovaria-device-id",
   "x-econovaria-game-id": "x-econovaria-game-id",
-  "x-idempotency-key": "x-idempotency-key",
   "x-request-id": "x-request-id"
 });
 const SIGNED_CONTEXT_HEADERS = Object.freeze([
@@ -36,7 +35,7 @@ const SIGNED_CONTEXT_HEADERS = Object.freeze([
   "x-econovaria-csrf-token",
   "x-econovaria-device-id",
   "x-econovaria-game-id",
-  "x-idempotency-key",
+  "idempotency-key",
   "x-request-id"
 ]);
 
@@ -59,6 +58,11 @@ async function proxyAdminBff(request, response, options = {}) {
     if (!clientIp) return sendJson(response, 503, retryableErrorBody(
       "admin_bff_network_metadata_unavailable",
       "Administrator request protection is temporarily unavailable."
+    ));
+    const idempotency = canonicalIdempotencyHeader(request);
+    if (!idempotency.ok) return sendJson(response, 400, errorBody(
+      "idempotency_key_header_mismatch",
+      "Idempotency-Key headers must identify the same request."
     ));
 
     const oidcToken = vercelOidcToken(request);
@@ -87,6 +91,7 @@ async function proxyAdminBff(request, response, options = {}) {
     });
     const cookie = safeHeaderValue(request.headers?.cookie);
     if (cookie) headers.set("Cookie", cookie);
+    if (idempotency.value) headers.set("Idempotency-Key", idempotency.value);
     for (const [source, target] of Object.entries(FORWARDED_HEADERS)) {
       const value = safeHeaderValue(request.headers?.[source]);
       if (value) headers.set(target, value);
@@ -212,20 +217,27 @@ function requestOrigin(request) {
 }
 
 function trustedVercelClientIp(request) {
-  const candidates = [
-    request.headers?.["x-real-ip"],
+  const value = safeHeaderValue(
     request.headers?.["x-vercel-forwarded-for"]
-  ];
-  for (const candidate of candidates) {
-    const value = safeHeaderValue(candidate).trim();
-    if (!value || value.includes(",")) continue;
-    const normalized = value.startsWith("::ffff:") ? value.slice(7) : value;
-    const bracketless = normalized.startsWith("[") && normalized.endsWith("]")
-      ? normalized.slice(1, -1)
-      : normalized;
-    if (isIP(bracketless)) return bracketless.toLowerCase();
-  }
-  return "";
+  ).trim();
+  if (!value || value.includes(",")) return "";
+  const normalized = value.startsWith("::ffff:") ? value.slice(7) : value;
+  const bracketless = normalized.startsWith("[") && normalized.endsWith("]")
+    ? normalized.slice(1, -1)
+    : normalized;
+  return isIP(bracketless) ? bracketless.toLowerCase() : "";
+}
+
+function canonicalIdempotencyHeader(request) {
+  const canonical = safeHeaderValue(
+    request.headers?.["idempotency-key"]
+  ).trim();
+  const compatibility = safeHeaderValue(
+    request.headers?.["x-idempotency-key"]
+  ).trim();
+  return canonical && compatibility && canonical !== compatibility
+    ? { ok: false, value: "" }
+    : { ok: true, value: canonical || compatibility };
 }
 
 function vercelOidcToken(request) {

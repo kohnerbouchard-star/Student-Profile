@@ -1,14 +1,15 @@
 (function initEconovariaGameCodeWiring() {
   "use strict";
 
-  const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
   const RESET_ACTION = "reset-game-code";
   const RESET_ACTION_SELECTOR = `[data-admin-terminal-action="${RESET_ACTION}"]`;
+  const RESET_KEY_PREFIX = "econovaria.admin.join-code-mutation.v1";
   const SHARE_ACTIONS = new Set(["share-game-code", "share-current-game"]);
   const EMPTY_CODES = new Set(["", "—", "-", "undefined", "null"]);
   let resetInFlight = false;
   let readInFlight = null;
   let decorationFrame = 0;
+  const resetMutationMemory = new Map();
 
   function selectedGameId() {
     return String(
@@ -33,19 +34,42 @@
     ).join("");
   }
 
-  function ensureActionIntegrityToken() {
-    let token = "";
-    try {
-      token = String(
-        window.sessionStorage.getItem(CSRF_TOKEN_KEY) || "",
-      ).trim();
-      if (!token) {
-        token = randomToken();
-        window.sessionStorage.setItem(CSRF_TOKEN_KEY, token);
-      }
-    } catch (_) {
-      token = randomToken();
+  function resetMutationKey(gameId) {
+    const storageKey = `${RESET_KEY_PREFIX}.${gameId}`;
+    const memoryKey = String(resetMutationMemory.get(storageKey) || "").trim();
+    if (/^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/.test(memoryKey)) {
+      return { key: memoryKey, storageKey };
     }
+
+    let existing = "";
+    try {
+      existing = String(window.sessionStorage.getItem(storageKey) || "").trim();
+    } catch (_) {}
+    if (/^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/.test(existing)) {
+      resetMutationMemory.set(storageKey, existing);
+      return { key: existing, storageKey };
+    }
+
+    const key = `admin.join-code.rotate.${window.crypto.randomUUID?.() || randomToken()}`;
+    resetMutationMemory.set(storageKey, key);
+    try {
+      window.sessionStorage.setItem(storageKey, key);
+    } catch (_) {}
+    return { key, storageKey };
+  }
+
+  function completeResetMutation(storageKey) {
+    if (!storageKey) return;
+    resetMutationMemory.delete(storageKey);
+    try {
+      window.sessionStorage.removeItem(storageKey);
+    } catch (_) {}
+  }
+
+  function ensureActionIntegrityToken() {
+    const session = window.EconovariaAdminAuthSession?.read?.() || null;
+    const candidate = String(session?.csrfToken || "").trim();
+    const token = /^[A-Za-z0-9_-]{43}$/.test(candidate) ? candidate : "";
 
     window.ECONOVARIA_CSRF_TOKEN = token;
     const meta = document.querySelector(
@@ -403,6 +427,7 @@
     setInlineMessage(modal, "Saving a new Game Code…", "pending");
 
     try {
+      const mutation = resetMutationKey(gameId);
       const response = await window.fetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/join-code/reset`,
         {
@@ -410,8 +435,13 @@
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
+            "X-Idempotency-Key": mutation.key,
+            "X-Request-Id": mutation.key,
           },
-          body: JSON.stringify({ source: "admin_share_panel" }),
+          body: JSON.stringify({
+            source: "admin_share_panel",
+            idempotencyKey: mutation.key,
+          }),
         },
       );
 
@@ -432,6 +462,7 @@
       }
 
       syncModelCode(nextCode);
+      completeResetMutation(mutation.storageKey);
       applyCodeToRenderedShareSurface(nextCode);
       decorateShareModal();
       setInlineMessage(
