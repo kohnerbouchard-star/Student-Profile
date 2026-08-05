@@ -5,7 +5,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("Admin rate limiting rejects forwarding chains instead of promoting them", () => {
+Deno.test("Admin rate limiting canonicalizes the gateway-appended forwarding chain", () => {
   const incoming = new Request(
     "https://example.test/admin-api/session/bootstrap",
     {
@@ -18,10 +18,16 @@ Deno.test("Admin rate limiting rejects forwarding chains instead of promoting th
     },
   );
 
-  assertThrows(
-    () => normalizeAdminRateLimitRequest(incoming, "x-real-ip"),
-    "a raw forwarding chain must never become Admin identity",
+  const normalized = normalizeAdminRateLimitRequest(incoming, "x-real-ip");
+  assertEquals(
+    readTrustedClientIp(normalized.request, normalized.trustedHeader),
+    "203.0.113.8",
+    "the rightmost validated gateway hop must become the canonical client IP",
   );
+  assertEquals(normalized.request.headers.get("x-real-ip"), "203.0.113.8");
+  assertEquals(normalized.request.headers.get("x-forwarded-for"), null);
+  assertEquals(normalized.request.headers.get("client-ip"), null);
+  assertEquals(normalized.request.headers.get("forwarded"), null);
 });
 
 Deno.test("Admin rate limiting preserves a valid proxy-overwritten direct IP", () => {
@@ -45,21 +51,21 @@ Deno.test("Admin rate limiting preserves a valid proxy-overwritten direct IP", (
   assertEquals(normalized.request.headers.get("true-client-ip"), null);
 });
 
-Deno.test("Admin rate limiting cannot derive identity from forged forwarding aliases", () => {
+Deno.test("Admin rate limiting does not derive identity from non-gateway forwarding aliases", () => {
   const incoming = new Request(
     "https://example.test/admin-api/session/bootstrap",
     {
       headers: {
-        "x-forwarded-for": "203.0.113.91",
         "cf-connecting-ip": "203.0.113.92",
         "client-ip": "203.0.113.93",
+        "forwarded": "for=203.0.113.94",
       },
     },
   );
 
   assertThrows(
     () => normalizeAdminRateLimitRequest(incoming, "x-real-ip"),
-    "a missing proxy-overwritten header must fail closed",
+    "untrusted forwarding aliases must not become Admin rate-limit identity",
   );
 });
 
