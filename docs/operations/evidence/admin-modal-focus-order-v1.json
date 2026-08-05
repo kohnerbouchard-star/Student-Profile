@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "scopeId": "econovaria.admin-modal-focus-order.v1",
+  "purpose": "move-focus-before-background-inertness",
+  "sourceCommit": "31e1958abc063a8d19cf8e00a9b499623d5b4532",
+  "sourceBranch": "main",
+  "implementationBranch": "fix/admin-modal-focus-order-v1",
+  "supersededUnmergedBranch": "agent/admin-modal-drawer-accessibility-v1",
+  "preservedGeneratedBundle": "admin/dist/admin-overview-terminal.js",
+  "generatedBundleModified": false,
+  "modalLayerRequiredOutsideInertBackground": true,
+  "backgroundIsolationMechanism": "inert",
+  "redundantBundleAriaHiddenSuppressed": true,
+  "focusMovesBeforeInert": true,
+  "focusRestorationRetained": true,
+  "nativeDialogMigrationDeferred": true,
+  "databaseChangesAllowed": false,
+  "edgeFunctionDeploymentsAllowed": false,
+  "productionDeploymentAllowed": false,
+  "requiredChecks": [
+    "admin-modal-focus-order",
+    "backend-typecheck"
+  ]
+}
