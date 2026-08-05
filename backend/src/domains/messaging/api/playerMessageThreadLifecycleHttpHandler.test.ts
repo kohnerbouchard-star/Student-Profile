@@ -30,11 +30,15 @@ Deno.test("Player Messaging policy remains private and attachments disabled", as
   assertNoUuid(JSON.stringify(body));
 });
 
-Deno.test("Player thread creation preserves applied and replayed public results", async () => {
+Deno.test("Player thread creation preserves applied and replayed public results through the canonical header", async () => {
   for (const [outcome, expectedStatus] of [["applied", 201], ["replayed", 200]] as const) {
     const response = await handlePlayerMessageThreadLifecycleRequest(
       request("/players/me/messages/threads", {
         method: "POST",
+        headers: {
+          "idempotency-key": "message-thread:1",
+          "x-request-id": "request-thread:1",
+        },
         body: {
           recipientPlayerId: "PLAYER-002",
           title: "Trade coordination",
@@ -61,6 +65,38 @@ Deno.test("Player thread creation preserves applied and replayed public results"
     assertEquals(body.data.messageId, MESSAGE);
     assertNoUuid(JSON.stringify(body));
   }
+});
+
+Deno.test("Player thread creation retains legacy idempotency-header compatibility", async () => {
+  const response = await handlePlayerMessageThreadLifecycleRequest(
+    request("/players/me/messages/threads", {
+      method: "POST",
+      headers: {
+        "x-idempotency-key": "message-thread:legacy",
+        "x-request-id": "request-thread:legacy",
+      },
+      body: {
+        recipientPlayerId: "PLAYER-002",
+        title: "Legacy header",
+        body: "Legacy compatibility remains bounded.",
+        idempotencyKey: "message-thread:legacy",
+      },
+    }),
+    { kind: "createThread" },
+    dependencies({
+      create_player_message_thread_atomic_v1: [{
+        create_outcome: "applied",
+        thread_id: THREAD,
+        message_id: MESSAGE,
+        thread_title: "Legacy header",
+        recipient_reference: "PLAYER-002",
+        created_at: NOW.toISOString(),
+      }],
+    }),
+  );
+
+  assertEquals(response.status, 201);
+  assertEquals((await response.json()).data.outcome, "applied");
 });
 
 Deno.test("Player thread creation rejects UUID ownership injection, attachments, and unsafe payloads", async () => {
@@ -183,8 +219,9 @@ function request(path: string, options: {
   readonly token?: string | null;
   readonly method?: string;
   readonly body?: unknown;
+  readonly headers?: Readonly<Record<string, string>>;
 } = {}): Request {
-  const headers = new Headers();
+  const headers = new Headers(options.headers);
   if (options.token !== null) headers.set("x-player-session-token", options.token ?? "player-token");
   if (options.body !== undefined) headers.set("content-type", "application/json");
   return new Request(`https://example.test${path}`, {
