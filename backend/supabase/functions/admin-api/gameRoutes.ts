@@ -33,6 +33,7 @@ import {
   handleAttendancePlayerOperation,
   loadPlayerHistoryAudit,
 } from "./attendancePlayerOperations.ts";
+import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
 
 function classroomGamePath(gameId: string, suffix: string): string {
   return `/games/${encodeURIComponent(gameId)}${suffix}`;
@@ -103,12 +104,19 @@ export async function handleGameRead(
   }
 
   if (suffix === "/join-code/reset") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/join-code/reset"),
-      "GET",
+    const operation = await handleGameJoinCodeReadOperation(
+      context.service,
+      {
+        gameSessionId: gameId,
+        staffUserId: context.staff.id,
+        gameSession: {
+          id: game.id,
+          name: game.name,
+          status: game.status,
+        },
+      },
     );
+    return json(request, operation.status, operation.body);
   }
 
   if (suffix === "/dashboard") {
