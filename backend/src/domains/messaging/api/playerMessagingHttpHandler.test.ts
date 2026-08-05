@@ -152,10 +152,14 @@ Deno.test("player messaging handler reads an exact participant thread outside in
   assertNoUuid(JSON.stringify(body));
 });
 
-Deno.test("player messaging handler preserves applied and replayed send outcomes", async () => {
+Deno.test("player messaging handler preserves applied and replayed send outcomes across canonical and legacy headers", async () => {
   const applied = await handlePlayerMessagingRequest(
     request(`/players/me/messages/threads/${THREAD}/messages`, {
       method: "POST",
+      headers: {
+        "idempotency-key": "message-send:1",
+        "x-request-id": "request-send:1",
+      },
       body: { body: "Ready.", idempotencyKey: "message-send:1" },
     }),
     { kind: "send", threadId: THREAD },
@@ -176,6 +180,10 @@ Deno.test("player messaging handler preserves applied and replayed send outcomes
   const replayed = await handlePlayerMessagingRequest(
     request(`/players/me/messages/threads/${THREAD}/messages`, {
       method: "POST",
+      headers: {
+        "x-idempotency-key": "message-send:1",
+        "x-request-id": "request-send:2",
+      },
       body: { body: "Ready.", idempotencyKey: "message-send:1" },
     }),
     { kind: "send", threadId: THREAD },
@@ -306,8 +314,9 @@ function request(path: string, options: {
   readonly method?: string;
   readonly body?: unknown;
   readonly header?: readonly [string, string];
+  readonly headers?: Readonly<Record<string, string>>;
 } = {}): Request {
-  const headers = new Headers();
+  const headers = new Headers(options.headers);
   if (options.token !== null) headers.set("x-player-session-token", options.token ?? "player-token");
   if (options.body !== undefined) headers.set("content-type", "application/json");
   if (options.header) headers.set(options.header[0], options.header[1]);
