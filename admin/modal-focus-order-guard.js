@@ -23,7 +23,6 @@
     "[contenteditable='true']",
     "[tabindex]:not([tabindex='-1'])",
   ].join(",");
-  const BUNDLE_INERT_MARKER = "data-admin-terminal-was-inert";
 
   function visible(element) {
     if (!(element instanceof HTMLElement) || element.hidden) return false;
@@ -104,28 +103,8 @@
     inertPatched = true;
   }
 
-  const nativeSetAttribute = Element.prototype.setAttribute;
-  Element.prototype.setAttribute = function econovariaModalSetAttribute(
-    name,
-    value,
-  ) {
-    const normalizedName = String(name || "").toLowerCase();
-    const normalizedValue = String(value || "").toLowerCase();
-    if (
-      normalizedName === "aria-hidden" &&
-      normalizedValue === "true" &&
-      this instanceof HTMLElement &&
-      this.hasAttribute(BUNDLE_INERT_MARKER) &&
-      this.inert === true
-    ) {
-      return;
-    }
-    return nativeSetAttribute.call(this, name, value);
-  };
-
   window.EconovariaAdminModalFocusOrderGuard = Object.freeze({
     focusDialogBeforeBackgroundInert,
     inertPatched,
-    bundleInertMarker: BUNDLE_INERT_MARKER,
   });
 })();
