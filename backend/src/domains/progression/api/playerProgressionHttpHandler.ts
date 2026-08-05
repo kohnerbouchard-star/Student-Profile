@@ -184,7 +184,8 @@ async function readIdempotencyKey(request: Request): Promise<string> {
   const bodyKey = typeof value.idempotencyKey === "string"
     ? value.idempotencyKey.trim()
     : "";
-  const headerKey = request.headers.get("x-idempotency-key")?.trim() ??
+  const headerKey = request.headers.get("idempotency-key")?.trim() ??
+    request.headers.get("x-idempotency-key")?.trim() ??
     request.headers.get("x-request-id")?.trim() ?? "";
   if (bodyKey && headerKey && bodyKey !== headerKey) {
     throw new ProgressionError(
