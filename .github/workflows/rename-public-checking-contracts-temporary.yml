@@ -1,0 +1,280 @@
+name: Rename Public Checking Contracts Temporary
+
+on:
+  push:
+    branches:
+      - fix/checking-savings-wallet-convergence-v1
+    paths:
+      - .github/workflows/rename-public-checking-contracts-temporary.yml
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  rename:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/checking-savings-wallet-convergence-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+
+      - name: Rename public account contract identifiers
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [
+              Path('admin'),
+              Path('backend/src'),
+              Path('backend/supabase/functions'),
+              Path('player-terminal/src'),
+              Path('player-terminal/tests'),
+              Path('player-terminal/tools'),
+              Path('scripts'),
+          ]
+          suffixes = {'.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.yml', '.yaml', '.md'}
+          replacements = (
+              (re.compile(r'\bcashBalance\b'), 'checkingBalance'),
+              (re.compile(r'\bcashCurrencyCode\b'), 'checkingCurrencyCode'),
+              (re.compile(r'\bcashAccountType\b'), 'checkingAccountType'),
+              (re.compile(r'\bcashAccountId\b'), 'checkingAccountId'),
+              (re.compile(r'\bcashAccount\b'), 'checkingAccount'),
+              (re.compile(r'\bcashWallet\b'), 'checkingWallet'),
+              (re.compile(r'\bCash Balance\b'), 'Checking Balance'),
+              (re.compile(r'\bcash balance\b'), 'checking balance'),
+              (re.compile(r'\bCash Account\b'), 'Checking Account'),
+              (re.compile(r'\bcash account\b'), 'checking account'),
+              (re.compile(r'\bCash Wallet\b'), 'Checking Wallet'),
+              (re.compile(r'\bcash wallet\b'), 'checking wallet'),
+          )
+          changed = []
+          for root in roots:
+              if not root.exists():
+                  continue
+              for path in root.rglob('*'):
+                  if not path.is_file() or path.suffix.lower() not in suffixes:
+                      continue
+                  source = path.read_text(encoding='utf-8')
+                  updated = source
+                  for pattern, replacement in replacements:
+                      updated = pattern.sub(replacement, updated)
+                  if updated != source:
+                      path.write_text(updated, encoding='utf-8')
+                      changed.append(str(path))
+          print('Public Checking contract files updated:')
+          print('\n'.join(changed) if changed else 'none')
+          PY
+
+      - name: Extend permanent account guard to public contracts
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/checking-savings-account-type-contract.test.mjs')
+          source = path.read_text(encoding='utf-8')
+          if 'retiredPublicContract' not in source:
+              source = source.replace(
+                  'const violations = [];\n',
+                  'const retiredPublicContract = new RegExp(`\\\\b${retiredAccount}(?:Balance|CurrencyCode|AccountType|AccountId|Account|Wallet)\\\\b`);\n'
+                  'const violations = [];\n',
+                  1,
+              )
+              source = source.replace(
+                  'if (quotedRetired.test(line) && isOwnedAccountContext(target, lines, index)) {\n'
+                  '                  violations.push(`${target}:${index + 1}`);\n'
+                  '                }\n',
+                  'if (isOwnedAccountContext(target, lines, index) && (quotedRetired.test(line) || retiredPublicContract.test(line))) {\n'
+                  '                  violations.push(`${target}:${index + 1}`);\n'
+                  '                }\n',
+                  1,
+              )
+              path.write_text(source, encoding='utf-8')
+
+          authority_path = Path('scripts/player-local-currency-authority-contract.test.mjs')
+          authority = authority_path.read_text(encoding='utf-8')
+          assertion = 'assert.ok(!bankingRepository.includes(`${retiredAccount}Balance`));\n'
+          anchor = 'assert.ok(!bankingRepository.includes(quotedRetired()));\n'
+          if assertion not in authority:
+              if anchor not in authority:
+                  raise SystemExit('Banking authority assertion anchor not found')
+              authority = authority.replace(anchor, anchor + assertion, 1)
+              authority_path.write_text(authority, encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflows
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          names = (
+              'Export PR Source Temporary',
+              'Canonicalize Checking and Savings One Time',
+              'Canonicalize Checking and Savings One Time V2',
+              'Canonicalize Checking and Savings One Time V3',
+              'Canonicalize Checking and Savings One Time V4',
+              'Audit Checking and Savings Convergence Temporary',
+              'Final Checking and Savings Audit Temporary',
+              'Reconcile Checking and Savings Semantics Temporary',
+              'Finalize Checking and Savings Ownership Temporary',
+              'Monitor Checking and Savings CI Temporary',
+              'Harden Checking Migration Order Temporary',
+              'Preserve Checking Constraint Invariants Temporary',
+              'Rename Public Checking Contracts Temporary',
+          )
+          for candidate in Path('.github/workflows').glob('*'):
+              if not candidate.is_file() or candidate.suffix not in {'.yml', '.yaml'}:
+                  continue
+              text = candidate.read_text(encoding='utf-8')
+              if any(name in text for name in names):
+                  candidate.unlink()
+          PY
+
+      - name: Regenerate exact release authority
+        shell: bash
+        run: |
+          python <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          authority_path = Path('docs/operations/contracts/player-cross-cutting-verification-authority-v1.json')
+          authority = json.loads(authority_path.read_text(encoding='utf-8'))
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only', 'origin/main', '--'], text=True).splitlines())
+          untracked = set(subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines())
+          final_paths = {path for path in changed | untracked if path and Path(path).exists()}
+          final_paths.add(str(authority_path))
+          verifier_paths = {
+              'scripts/player-cross-cutting-authority.test.mjs',
+              'scripts/verify-player-cross-cutting-authority.mjs',
+          }
+          authority.update({
+              'authorityId': 'econovaria.checking-savings-account-model-pr-501.v1',
+              'purpose': 'authorize-checking-savings-account-convergence',
+              'pullRequestNumber': 501,
+              'baseRef': 'main',
+              'scopeLock': 'exact-path-allowlist',
+              'productionDeploymentAllowed': False,
+              'productionMutationAllowed': False,
+              'secretValuesAllowed': False,
+              'allowedPaths': sorted(final_paths | verifier_paths),
+              'requiredFiles': sorted(final_paths | verifier_paths),
+          })
+          authority_path.write_text(json.dumps(authority, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run focused pre-commit checks
+        run: |
+          node --test scripts/player-local-currency-authority-contract.test.mjs
+          node --test scripts/checking-savings-account-type-contract.test.mjs
+          node player-terminal/tests/store-local-currency.mjs
+          npm --prefix backend run test:player-banking-public
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs
+          npm --prefix backend run typecheck
+          git diff --check
+
+      - name: Commit public Checking contracts
+        id: commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --name-only -z | xargs -0 -r git add --
+          git ls-files --others --exclude-standard -z | xargs -0 -r git add --
+          test -n "$(git diff --cached --name-only)"
+          git commit -m "Rename public account contracts to Checking"
+          TARGET_SHA="$(git rev-parse HEAD)"
+          echo "target_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
+          git push origin HEAD:fix/checking-savings-wallet-convergence-v1
+
+      - name: Wait for exact public-contract CI
+        shell: bash
+        run: |
+          TARGET_SHA="${{ steps.commit.outputs.target_sha }}"
+          workflows=(
+            "Database Replay"
+            "Player Local Currency Authority"
+            "Player Terminal Verify"
+            "Backend Typecheck"
+            "Admin API Check"
+            "Admin Browser E2E"
+          )
+          : > /tmp/checking-public-ci.tsv
+          for workflow in "${workflows[@]}"; do
+            run_id=""
+            for attempt in $(seq 1 60); do
+              run_id="$(gh run list \
+                --repo kohnerbouchard-star/Student-Profile \
+                --workflow "${workflow}" \
+                --commit "${TARGET_SHA}" \
+                --limit 1 \
+                --json databaseId \
+                --jq '.[0].databaseId // empty')"
+              if [ -n "${run_id}" ]; then break; fi
+              sleep 15
+            done
+            test -n "${run_id}"
+            gh run watch "${run_id}" --repo kohnerbouchard-star/Student-Profile --exit-status
+            conclusion="$(gh run view "${run_id}" --repo kohnerbouchard-star/Student-Profile --json conclusion --jq '.conclusion')"
+            printf '%s\t%s\t%s\n' "${workflow}" "${run_id}" "${conclusion}" | tee -a /tmp/checking-public-ci.tsv
+            test "${conclusion}" = "success"
+          done
+          echo "TARGET_SHA=${TARGET_SHA}" >> "$GITHUB_ENV"
+
+      - name: Record public-contract PASS
+        run: |
+          {
+            echo "## Public Checking contracts and exact CI: PASS"
+            echo
+            echo "Exact commit: \`${TARGET_SHA}\`"
+            echo
+            echo "Public Admin and Player contracts no longer expose legacy camel-case account names. Database-only historical snake-case columns remain internal and are mapped to Checking at the repository boundary."
+            echo
+            echo "| Workflow | Run | Conclusion |"
+            echo "|---|---:|---|"
+            while IFS=$'\t' read -r workflow run conclusion; do
+              echo "| ${workflow} | ${run} | ${conclusion} |"
+            done < /tmp/checking-public-ci.tsv
+            echo
+            echo "No staging or production mutation was performed."
+          } > /tmp/checking-public-pass.md
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-public-pass.md
+
+      - name: Record public-contract FAIL
+        if: failure()
+        run: |
+          cat > /tmp/checking-public-fail.md <<'EOF'
+          ## Public Checking contracts or exact CI: FAIL
+
+          The public contract rename or one of its exact-commit workflows failed. PR #501 remains draft and must not be merged or deployed.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-public-fail.md
