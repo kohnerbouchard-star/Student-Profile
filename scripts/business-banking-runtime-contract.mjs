@@ -184,7 +184,7 @@ for (const template of [
 ]) {
   assert.match(source.operability, new RegExp(template, "u"));
 }
-assert.match(source.operability, /'cash', 0, v_currency, null/u);
+assert.match(source.operability, /'checking', 0, v_currency, null/u);
 assert.match(source.operability, /'savings', 0, v_currency, null/u);
 assert.doesNotMatch(source.operability, /create trigger ensure_game_banking_after_insert/iu);
 const savingsTransferSql = source.operability.slice(

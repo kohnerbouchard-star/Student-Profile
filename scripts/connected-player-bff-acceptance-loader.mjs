@@ -63,7 +63,7 @@ function adaptMarketAuthenticatedReads(source) {
     (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
   );
   const checking = banking.payload.currentBalances.find((item) =>
-    ["cash", "checking"].includes(String(item?.accountType || "").toLowerCase())
+    String(item?.accountType || "").toLowerCase() === "checking"
   );
   const holdingQuantity = Number(holding?.quantity ?? 0);
   const cashBalance = Number(checking?.balance);
@@ -106,7 +106,7 @@ async function readAuthoritativeReplayState(page, original, ticker) {
     (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
   );
   const checking = banking.payload.currentBalances.find((item) =>
-    ["cash", "checking"].includes(String(item?.accountType || "").toLowerCase())
+    String(item?.accountType || "").toLowerCase() === "checking"
   );
   const holdingQuantity = Number(holding?.quantity ?? 0);
   const cashBalance = Number(checking?.balance);

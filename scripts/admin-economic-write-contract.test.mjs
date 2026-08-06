@@ -79,7 +79,7 @@ test("Admin ledger writes flatten the exact terminal envelope and preserve idemp
           playerId: "player-1",
           amount: "25",
           adjustmentType: "debit",
-          accountType: "cash",
+          accountType: "checking",
           currencyCode: "NRC",
           reason: "Correction",
           effectiveDate: "2026-07-25",

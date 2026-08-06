@@ -32,7 +32,7 @@ assert.match(adminWiring, /player_country/);
 assert.match(adminWiring, /global_eco/);
 assert.match(adminWiring, /THALORIS:\s*"THD"/);
 assert.match(adminWiring, /preferLocalCurrency/);
-assert.match(adminWiring, /CHECKING_LEDGER_ACCOUNT_TYPE\s*=\s*"cash"/);
+assert.match(adminWiring, /CHECKING_LEDGER_ACCOUNT_TYPE\s*=\s*"checking"/);
 assert.match(adminWiring, /accountType:\s*CHECKING_LEDGER_ACCOUNT_TYPE/);
 assert.match(adminWiring, /matchingRows\.reduce/);
 assert.doesNotMatch(adminWiring, /accountType:\s*"checking"/);
@@ -56,15 +56,15 @@ assert.doesNotMatch(
 
 assert.match(bankingRepository, /aggregatePublicBalances/);
 assert.match(bankingRepository, /current\.balance\s*=\s*roundMoney\(current\.balance \+ balance\)/);
-assert.match(bankingRepository, /normalized === "cash" \|\| normalized === "checking"/);
+assert.match(bankingRepository, /normalized === "checking"/);
 
-assert.match(checkingMigration, /cash_row\.balance \+ checking_row\.balance/);
-assert.match(checkingMigration, /delete from public\.account_balances as checking_row/);
-assert.match(checkingMigration, /set account_type = 'cash'/);
-assert.match(checkingMigration, /account_balances_checking_alias_forbidden/);
-assert.match(checkingMigration, /when 'checking' then 'cash'/);
+assert.match(checkingMigration, /checking_row\.balance \+ cash_row\.balance/);
+assert.match(checkingMigration, /delete from public\.account_balances as cash_row/);
+assert.match(checkingMigration, /set account_type = 'checking'/);
+assert.match(checkingMigration, /account_balances_cash_alias_forbidden/);
+assert.match(checkingMigration, /when 'cash' then 'checking'/);
 assert.match(checkingMigration, /when 'savings' then 'savings'/);
-assert.match(checkingMigration, /Historical ledger entries are not rewritten/);
+assert.match(checkingMigration, /Historical monetary values are preserved/);
 
 assert.match(storePage, /item\.currencyCode/);
 assert.match(storePage, /checkingBalanceForCurrency\(data, localCurrencyCode\)/);

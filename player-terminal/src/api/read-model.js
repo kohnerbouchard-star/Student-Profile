@@ -213,7 +213,7 @@ function normalizeSession(rawSession, rawDashboard, base) {
   const me = object(dashboard.me);
   const cash = object(me.cash);
   const balances = list(direct.balances);
-  const primaryBalance = balances.find((entry) => entry.accountType === "cash") || balances[0] || {};
+  const primaryBalance = balances.find((entry) => entry.accountType === "checking") || balances[0] || {};
   const displayName = text(player.displayName || me.displayName, base.displayName);
   const countryCode = text(me.countryCode);
   const currencyCode = text(cash.primaryCurrencyCode || primaryBalance.currencyCode, base.currencyCode);
@@ -524,7 +524,7 @@ function normalizeBankingRead(response, currentBanking) {
   const body = object(response);
   const current = object(currentBanking);
   const balances = list(body.currentBalances);
-  const checking = balances.find((item) => ["cash", "checking"].includes(text(item.accountType).toLowerCase())) || balances[0] || {};
+  const checking = balances.find((item) => text(item.accountType).toLowerCase() === "checking") || balances[0] || {};
   const savings = balances.find((item) => text(item.accountType).toLowerCase() === "savings");
   const checkingBalance = number(checking.balance);
   const page = object(body.pagination);

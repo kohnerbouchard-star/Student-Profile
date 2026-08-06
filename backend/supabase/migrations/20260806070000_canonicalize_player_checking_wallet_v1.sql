@@ -1,58 +1,68 @@
 -- Canonicalize the Player Checking wallet across Admin and Player runtimes.
--- Product copy remains "Checking" while the existing ledger persistence key
--- remains `cash`. Historical ledger entries are not rewritten.
+-- Checking is the canonical persisted personal transaction account. Savings remains separate.
+-- Historical monetary values are preserved while legacy account classifications converge.
 
 begin;
 
 lock table public.account_balances in share row exclusive mode;
 
--- Merge any split Checking projection into the authoritative cash row for the
--- same game, player, and currency. The ledger history remains append-only; the
--- balance projection becomes the sum of both aliases.
-update public.account_balances as cash_row
+-- Merge any legacy cash projection into the authoritative Checking row for the
+-- same game, player, and currency. The projection becomes the sum of both aliases.
+update public.account_balances as checking_row
 set
-  balance = round(cash_row.balance + checking_row.balance, 2),
+  balance = round(checking_row.balance + cash_row.balance, 2),
   last_ledger_entry_id = (
     select candidate.id
     from public.ledger_entries as candidate
     where candidate.id in (
-      cash_row.last_ledger_entry_id,
-      checking_row.last_ledger_entry_id
+      checking_row.last_ledger_entry_id,
+      cash_row.last_ledger_entry_id
     )
     order by candidate.created_at desc, candidate.id desc
     limit 1
   ),
-  updated_at = greatest(cash_row.updated_at, checking_row.updated_at)
-from public.account_balances as checking_row
+  updated_at = greatest(checking_row.updated_at, cash_row.updated_at)
+from public.account_balances as cash_row
+where checking_row.game_session_id = cash_row.game_session_id
+  and checking_row.player_id = cash_row.player_id
+  and checking_row.currency_code = cash_row.currency_code
+  and checking_row.account_type = 'checking'
+  and cash_row.account_type = 'cash';
+
+delete from public.account_balances as cash_row
+using public.account_balances as checking_row
 where cash_row.game_session_id = checking_row.game_session_id
   and cash_row.player_id = checking_row.player_id
   and cash_row.currency_code = checking_row.currency_code
   and cash_row.account_type = 'cash'
   and checking_row.account_type = 'checking';
 
-delete from public.account_balances as checking_row
-using public.account_balances as cash_row
-where cash_row.game_session_id = checking_row.game_session_id
-  and cash_row.player_id = checking_row.player_id
-  and cash_row.currency_code = checking_row.currency_code
-  and cash_row.account_type = 'cash'
-  and checking_row.account_type = 'checking';
-
--- A Checking row without an existing cash projection can retain its identity;
--- only its internal persistence key changes.
+-- A legacy cash row without an existing Checking projection retains its balance
+-- while its account classification becomes canonical Checking.
 update public.account_balances
-set account_type = 'cash'
-where account_type = 'checking';
+set account_type = 'checking'
+where account_type = 'cash';
+
+update public.ledger_entries
+set account_type = 'checking'
+where account_type = 'cash';
+
+update public.player_transfers
+set from_account_type = case when from_account_type = 'cash' then 'checking' else from_account_type end,
+    to_account_type = case when to_account_type = 'cash' then 'checking' else to_account_type end
+where from_account_type = 'cash' or to_account_type = 'cash';
+
+alter table public.account_balances alter column account_type set default 'checking';
 
 alter table public.account_balances
-  drop constraint if exists account_balances_checking_alias_forbidden;
+  drop constraint if exists account_balances_cash_alias_forbidden;
 
 alter table public.account_balances
-  add constraint account_balances_checking_alias_forbidden
-  check (lower(btrim(account_type)) <> 'checking') not valid;
+  add constraint account_balances_cash_alias_forbidden
+  check (lower(btrim(account_type)) <> 'cash') not valid;
 
 alter table public.account_balances
-  validate constraint account_balances_checking_alias_forbidden;
+  validate constraint account_balances_cash_alias_forbidden;
 
 create or replace function public.record_player_ledger_entry(
   p_game_session_id uuid,
@@ -84,10 +94,10 @@ declare
   v_player public.players%rowtype;
   v_ledger public.ledger_entries%rowtype;
   v_balance public.account_balances%rowtype;
-  v_requested_account_type text := btrim(coalesce(p_account_type, 'cash'));
+  v_requested_account_type text := btrim(coalesce(p_account_type, 'checking'));
   v_account_type text := case lower(v_requested_account_type)
-    when 'checking' then 'cash'
-    when 'cash' then 'cash'
+    when 'checking' then 'checking'
+    when 'cash' then 'checking'
     when 'savings' then 'savings'
     else v_requested_account_type
   end;
@@ -290,5 +300,32 @@ grant execute on function public.record_player_ledger_entry(
   uuid,
   jsonb
 ) to service_role;
+
+-- Recreate installed public functions that still reference the retired personal
+-- account literal. This is limited to exact SQL string literals and preserves
+-- function signatures, privileges, ownership, and all non-account semantics.
+do $migration$
+declare
+  function_row record;
+  rewritten_definition text;
+begin
+  for function_row in
+    select p.oid, pg_get_functiondef(p.oid) as definition
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and pg_get_functiondef(p.oid) like '%''cash''%'
+  loop
+    rewritten_definition := replace(
+      function_row.definition,
+      '''cash''',
+      '''checking'''
+    );
+    if rewritten_definition is distinct from function_row.definition then
+      execute rewritten_definition;
+    end if;
+  end loop;
+end;
+$migration$;
 
 commit;

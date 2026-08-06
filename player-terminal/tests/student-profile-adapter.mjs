@@ -15,7 +15,7 @@ const rawSession = {
     status: "active",
     expiresAt: "2026-07-27T08:00:00.000Z"
   },
-  balances: [{ accountType: "cash", currencyCode: "ECO", balance: 1250 }]
+  balances: [{ accountType: "checking", currencyCode: "ECO", balance: 1250 }]
 };
 
 const capabilityManifest = {
@@ -62,7 +62,7 @@ const responses = {
       cash: {
         primaryCurrencyCode: "ECO",
         totalBalance: 1250,
-        balances: [{ accountType: "cash", currencyCode: "ECO", balance: 1250 }]
+        balances: [{ accountType: "checking", currencyCode: "ECO", balance: 1250 }]
       },
       stocks: { portfolio: { holdingsMarketValue: 250 }, holdings: [] },
       store: { listings: [], inventory: [] },
@@ -111,7 +111,7 @@ const responses = {
       status: "filled",
       rejectionReason: null
     },
-    cash: { accountType: "cash", currencyCode: "ECO", balance: 1050 },
+    cash: { accountType: "checking", currencyCode: "ECO", balance: 1050 },
     holding: { quantity: 2, averageCost: 100 }
   },
   bankTransfer: {

@@ -22,7 +22,7 @@ export interface StockMarketPlayerReadInput {
 }
 
 export interface StockMarketPlayerCashDto {
-  readonly accountType: "cash";
+  readonly accountType: "checking";
   readonly currencyCode: string;
   readonly balance: number;
 }

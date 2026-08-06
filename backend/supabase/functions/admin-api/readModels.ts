@@ -187,7 +187,7 @@ export async function loadPlayers(
       updatedAt: entry.updated_at,
     }));
     const cashBalance = rawBalances
-      .filter((entry) => String(entry.account_type).toLowerCase() === "cash")
+      .filter((entry) => String(entry.account_type).toLowerCase() === "checking")
       .reduce((sum, entry) => sum + number(entry.balance), 0);
 
     const stockPositions = (holdingsByPlayer.get(playerId) || []).map(
@@ -273,7 +273,7 @@ export async function loadPlayers(
       overallScoreStatus: "not_configured",
       scoreFormulaVersion: null,
       currencyCode: balances.find((entry) =>
-        String(entry.accountType).toLowerCase() === "cash"
+        String(entry.accountType).toLowerCase() === "checking"
       )?.currencyCode || country?.currency_code || "ECO",
       countryCode: country?.country_code || "",
       countryName: country?.country_name || "Unassigned",

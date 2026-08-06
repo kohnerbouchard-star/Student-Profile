@@ -166,7 +166,7 @@
     const cash = cashAmount && cashAmount > 0
       ? {
         amount: Math.round(cashAmount * 100) / 100,
-        accountType: text(cashSource.accountType) || "cash",
+        accountType: text(cashSource.accountType) || "checking",
         currencyCode: text(
           cashSource.currencyCode || cashSource.currency || payload.currencyCode
         ).toUpperCase() || preferredStoreCurrency()

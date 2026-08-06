@@ -156,7 +156,7 @@ Deno.test("stock player read returns portfolio DTOs", async () => {
     playerSessionId: PLAYER_SESSION_ID,
     playerId: PLAYER_ID,
     cash: {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO",
       balance: 9500,
     },
@@ -273,7 +273,7 @@ class MockPlayerReadRepository implements StockMarketPlayerReadRepository {
       playerSessionId: input.playerSessionId,
       playerId: PLAYER_ID,
       cash: {
-        accountType: "cash" as const,
+        accountType: "checking" as const,
         currencyCode: "ECO",
         balance: 9500,
       },

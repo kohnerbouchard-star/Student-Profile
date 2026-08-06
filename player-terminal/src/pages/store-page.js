@@ -29,7 +29,7 @@ function checkingBalanceForCurrency(data, currencyCode) {
   const matchingRows = balances.filter((entry) => {
     const accountType = String(entry?.accountType || "").trim().toLowerCase();
     const code = String(entry?.currencyCode || "").trim().toUpperCase();
-    return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+    return accountType === "checking" && code === normalizedCurrency;
   });
   if (matchingRows.length) {
     const total = matchingRows.reduce((sum, entry) => {

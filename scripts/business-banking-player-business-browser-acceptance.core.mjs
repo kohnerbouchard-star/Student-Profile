@@ -106,7 +106,7 @@ function databaseFundingState(admin, currencyCode) {
         from public.account_balances
         where game_session_id = '${admin.gameId}'::uuid
           and player_id = '${admin.playerId}'::uuid
-          and account_type = 'cash'
+          and account_type = 'checking'
           and currency_code = '${currencyCode}'
         limit 1
       ), 0),

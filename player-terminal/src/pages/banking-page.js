@@ -22,7 +22,7 @@ function publicAccountType(value) {
 
 function publicCheckingAccountId(value) {
   const normalized = String(value || "").trim();
-  if (!normalized || ["cash", "checking"].includes(normalized.toLowerCase())) return "CHECKING";
+  if (!normalized || normalized.toLowerCase() === "checking") return "CHECKING";
   return normalized;
 }
 

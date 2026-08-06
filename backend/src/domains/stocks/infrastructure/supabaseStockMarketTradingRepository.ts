@@ -78,7 +78,7 @@ export class SupabaseStockMarketTradingRepository
         rejectionReason: null,
       },
       cash: {
-        accountType: "cash",
+        accountType: "checking",
         currencyCode: row.cash_currency_code,
         balance: toNumber(row.cash_balance),
       },

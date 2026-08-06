@@ -2,9 +2,8 @@
   "use strict";
 
   const ACTION = "confirm-player-balance-adjustment";
-  // Checking is the product-facing account. "cash" remains the canonical
-  // persistence key until the historical ledger schema is fully renamed.
-  const CHECKING_LEDGER_ACCOUNT_TYPE = "cash";
+  // Checking is the canonical personal transaction account.
+  const CHECKING_LEDGER_ACCOUNT_TYPE = "checking";
   const inFlight = new WeakSet();
   const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
     NORTHREACH: "NRC",
@@ -121,7 +120,7 @@
     const matchingRows = balanceRows(player).filter((entry) => {
       const accountType = text(entry?.accountType || entry?.account_type).toLowerCase();
       const code = text(entry?.currencyCode || entry?.currency_code).toUpperCase();
-      return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+      return accountType === "checking" && code === normalizedCurrency;
     });
     if (matchingRows.length) {
       const total = matchingRows.reduce((sum, entry) => {

@@ -122,7 +122,7 @@ function aggregatePublicBalances(
 
 function publicAccountType(value: string): string {
   const normalized = String(value).trim().toLowerCase();
-  if (normalized === "cash" || normalized === "checking") return "checking";
+  if (normalized === "checking") return "checking";
   return normalized;
 }
 

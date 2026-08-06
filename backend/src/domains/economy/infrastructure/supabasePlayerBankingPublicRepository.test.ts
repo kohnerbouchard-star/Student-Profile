@@ -91,9 +91,9 @@ class FakeQuery implements PromiseLike<any> {
   ): PromiseLike<TResult1 | TResult2> {
     const data = this.table === "account_balances"
       ? [
-        { account_type: "cash", balance: "1200", currency_code: "ECO" },
+        { account_type: "checking", balance: "1200", currency_code: "ECO" },
         { account_type: "checking", balance: "50", currency_code: "ECO" },
-        { account_type: "cash", balance: "25", currency_code: "THD" },
+        { account_type: "checking", balance: "25", currency_code: "THD" },
         { account_type: "checking", balance: "5", currency_code: "THD" },
         { account_type: "savings", balance: "100", currency_code: "THD" },
       ]
@@ -108,7 +108,7 @@ class FakeQuery implements PromiseLike<any> {
 
 function ledger(amount: string, currencyCode: string, createdAt: string) {
   return {
-    account_type: "cash",
+    account_type: "checking",
     amount,
     currency_code: currencyCode,
     entry_type: Number(amount) < 0 ? "debit" : "credit",

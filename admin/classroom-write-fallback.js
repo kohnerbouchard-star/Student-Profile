@@ -190,7 +190,7 @@
 
     const reason = first(source, ["reason", "note", "ledgerNote", "memo"]);
     if (reason !== undefined) normalized.reason = reason;
-    normalized.accountType = text(first(source, ["accountType", "account"])) || "cash";
+    normalized.accountType = text(first(source, ["accountType", "account"])) || "checking";
     normalized.currencyCode = (
       text(first(source, ["currencyCode", "currency"])) || "ECO"
     ).toUpperCase();

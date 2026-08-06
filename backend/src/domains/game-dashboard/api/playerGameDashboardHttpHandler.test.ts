@@ -188,7 +188,7 @@ Deno.test("player dashboard includes same-player stock history across sessions a
   assertEquals(body.me.countryCode, "SOLVEND");
   assertEquals(body.me.cash, {
     balances: [{
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "SLV",
       balance: 9500,
     }],
@@ -796,21 +796,21 @@ function tables(): Record<string, readonly Record<string, unknown>[]> {
       {
         game_session_id: GAME_SESSION_ID,
         player_id: PLAYER_ID,
-        account_type: "cash",
+        account_type: "checking",
         balance: 9500,
         currency_code: "SLV",
       },
       {
         game_session_id: GAME_SESSION_ID,
         player_id: OTHER_PLAYER_ID,
-        account_type: "cash",
+        account_type: "checking",
         balance: 50000,
         currency_code: "ELD",
       },
       {
         game_session_id: OTHER_GAME_SESSION_ID,
         player_id: OTHER_GAME_PLAYER_ID,
-        account_type: "cash",
+        account_type: "checking",
         balance: 999999,
         currency_code: "SLV",
       },

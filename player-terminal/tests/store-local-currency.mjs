@@ -14,9 +14,9 @@ const html = renderStorePage({
       currencyCode: "ECO",
     },
     balances: [
-      { accountType: "cash", balance: 700, currencyCode: "ECO" },
+      { accountType: "checking", balance: 700, currencyCode: "ECO" },
       { accountType: "checking", balance: 301, currencyCode: "ECO" },
-      { accountType: "cash", balance: 10, currencyCode: "THD" },
+      { accountType: "checking", balance: 10, currencyCode: "THD" },
       { accountType: "checking", balance: 15, currencyCode: "THD" },
     ],
   },

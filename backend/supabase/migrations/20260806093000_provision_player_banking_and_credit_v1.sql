@@ -289,7 +289,7 @@ begin
     game_session_id, player_id, account_type, balance, currency_code,
     last_ledger_entry_id
   ) values (
-    p_game_session_id, p_player_id, 'cash', 0, v_currency, null
+    p_game_session_id, p_player_id, 'checking', 0, v_currency, null
   )
   on conflict on constraint account_balances_scope_unique do nothing;
   get diagnostics v_rows = row_count;
@@ -323,7 +323,7 @@ begin
       p_player_id,
       jsonb_build_object(
         'currency_code', v_currency,
-        'account_types', jsonb_build_array('cash', 'savings'),
+        'account_types', jsonb_build_array('checking', 'savings'),
         'balance_effect', 0
       )
     );
@@ -433,11 +433,11 @@ set search_path = public, extensions, pg_temp
 as $function$
 declare
   v_from text := case lower(btrim(coalesce(p_from_account_type, '')))
-    when 'checking' then 'cash'
+    when 'checking' then 'checking'
     else lower(btrim(coalesce(p_from_account_type, '')))
   end;
   v_to text := case lower(btrim(coalesce(p_to_account_type, '')))
-    when 'checking' then 'cash'
+    when 'checking' then 'checking'
     else lower(btrim(coalesce(p_to_account_type, '')))
   end;
   v_currency text := upper(btrim(coalesce(p_currency_code, '')));
@@ -452,8 +452,8 @@ declare
   v_debit uuid;
   v_credit uuid;
 begin
-  if v_from not in ('cash', 'savings')
-    or v_to not in ('cash', 'savings')
+  if v_from not in ('checking', 'savings')
+    or v_to not in ('checking', 'savings')
     or v_from = v_to
   then
     raise exception 'ACCOUNT_TRANSFER_INVALID' using errcode = 'P0001';
@@ -809,12 +809,12 @@ begin
     and (
       (
         v_product.borrower_type = 'player'
-        and entry_row.account_type in ('cash', 'savings')
+        and entry_row.account_type in ('checking', 'savings')
       )
       or (
         v_product.borrower_type = 'business'
         and entry_row.account_type in (
-          'cash',
+          'checking',
           public.business_account_type_v1(v_business.public_key)
         )
       )
@@ -910,7 +910,7 @@ declare
   v_principal_paid numeric;
   v_balance numeric := 0;
   v_entry uuid;
-  v_account text := 'cash';
+  v_account text := 'checking';
   v_new_principal numeric;
   v_new_interest numeric;
   v_is_paid boolean;
@@ -1186,7 +1186,7 @@ begin
           where balance_row.game_session_id = assignment_row.game_session_id
             and balance_row.player_id = assignment_row.player_id
             and balance_row.currency_code = profile_row.currency_code
-            and balance_row.account_type = 'cash'
+            and balance_row.account_type = 'checking'
         )
         or not exists (
           select 1
