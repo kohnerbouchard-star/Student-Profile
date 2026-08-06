@@ -15,7 +15,7 @@ const currencyAdr = fs.readFileSync(
   "utf8",
 );
 
-assert.match(currencyAdr, /ECO is the global settlement and comparison unit/);
+assert.match(currencyAdr, /`ECO` is the global settlement and comparison unit/);
 assert.match(currencyAdr, /national currencies remain the official local currencies/);
 assert.match(currencyAdr, /There is no silent 1:1 fallback/);
 
