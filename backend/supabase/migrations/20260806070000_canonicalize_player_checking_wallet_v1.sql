@@ -48,7 +48,9 @@ update public.ledger_entries
 set account_type = 'checking'
 where account_type = 'cash';
 
-update public.player_transfers
+-- banking_transfer_requests is the canonical transfer persistence table in the
+-- clean migration chain and both connected environments.
+update public.banking_transfer_requests
 set from_account_type = case when from_account_type = 'cash' then 'checking' else from_account_type end,
     to_account_type = case when to_account_type = 'cash' then 'checking' else to_account_type end
 where from_account_type = 'cash' or to_account_type = 'cash';
