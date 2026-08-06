@@ -61,6 +61,12 @@ assert.match(bankingRepository, /normalized === "checking"/);
 assert.match(checkingMigration, /checking_row\.balance \+ cash_row\.balance/);
 assert.match(checkingMigration, /delete from public\.account_balances as cash_row/);
 assert.match(checkingMigration, /set account_type = 'checking'/);
+assert.match(checkingMigration, /update public\.banking_transfer_requests/);
+assert.doesNotMatch(
+  checkingMigration,
+  /update public\.player_transfers/,
+  "The Checking migration must target the canonical banking_transfer_requests table.",
+);
 assert.match(checkingMigration, /account_balances_cash_alias_forbidden/);
 assert.match(checkingMigration, /when 'cash' then 'checking'/);
 assert.match(checkingMigration, /when 'savings' then 'savings'/);
