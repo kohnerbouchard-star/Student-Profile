@@ -5,18 +5,6 @@
   // Checking is the canonical personal transaction account.
   const CHECKING_LEDGER_ACCOUNT_TYPE = "checking";
   const inFlight = new WeakSet();
-  const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
-    NORTHREACH: "NRC",
-    YRETHIA: "YRC",
-    THALORIS: "THD",
-    SOLVEND: "SLV",
-    ELDORAN: "ELD",
-    VALERION: "VAL",
-    LUMENOR: "LUM",
-    XALVORIA: "XAL",
-    DRAVENLOK: "DRV",
-    SYNDALIS: "SYN",
-  });
 
   function text(value) {
     return String(value ?? "").trim();
@@ -53,21 +41,12 @@
       model.selectedPlayerId ||
       record(model.selectedPlayer).id,
     );
-    if (explicitId) {
-      const match = Array.isArray(model.players)
-        ? model.players.find((player) => text(player?.id) === explicitId)
-        : null;
-      return Object.keys(record(match)).length ? record(match) : { id: explicitId };
-    }
+    if (!explicitId) return {};
 
-    const modalText = text(modal?.textContent).toLowerCase();
     const match = Array.isArray(model.players)
-      ? model.players.find((player) => {
-          const name = text(player?.displayName || player?.name).toLowerCase();
-          return Boolean(name && modalText.includes(name));
-        })
+      ? model.players.find((player) => text(player?.id) === explicitId)
       : null;
-    return record(match);
+    return Object.keys(record(match)).length ? record(match) : { id: explicitId };
   }
 
   function activeGameId(model) {
@@ -82,14 +61,6 @@
   }
 
   function playerLocalCurrencyCode(player) {
-    const countryCode = text(
-      player.countryCode ||
-      record(player.country).countryCode ||
-      record(player.country).code,
-    ).toUpperCase();
-    const mapped = COUNTRY_CURRENCY_BY_CODE[countryCode];
-    if (mapped) return mapped;
-
     const candidates = [
       player.countryCurrencyCode,
       player.localCurrencyCode,
@@ -300,6 +271,5 @@
 
   window.EconovariaLedgerAdjustmentWiring = Object.freeze({
     action: ACTION,
-    countryCurrencyByCode: COUNTRY_CURRENCY_BY_CODE,
   });
 })();
