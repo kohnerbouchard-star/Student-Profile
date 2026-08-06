@@ -189,6 +189,9 @@ export async function loadPlayers(
     const cashBalance = rawBalances
       .filter((entry) => String(entry.account_type).toLowerCase() === "checking")
       .reduce((sum, entry) => sum + number(entry.balance), 0);
+    const savingsBalance = rawBalances
+      .filter((entry) => String(entry.account_type).toLowerCase() === "savings")
+      .reduce((sum, entry) => sum + number(entry.balance), 0);
 
     const stockPositions = (holdingsByPlayer.get(playerId) || []).map(
       (holding) => {
@@ -237,7 +240,8 @@ export async function loadPlayers(
       (sum, position) => sum + position.marketValue,
       0,
     );
-    const netWorth = cashBalance + stockMarketValue + inventoryMarketValue;
+    const depositBalance = cashBalance + savingsBalance;
+    const netWorth = depositBalance + stockMarketValue + inventoryMarketValue;
 
     const assignment = assignmentByPlayer.get(playerId);
     const country = assignment
@@ -263,7 +267,7 @@ export async function loadPlayers(
       inventoryMarketValue,
       netWorth,
       netWorthBreakdown: {
-        cash: cashBalance,
+        cash: depositBalance,
         stocks: stockMarketValue,
         inventory: inventoryMarketValue,
       },
