@@ -2,6 +2,9 @@
   "use strict";
 
   const ACTION = "confirm-player-balance-adjustment";
+  // Checking is the product-facing account. "cash" remains the canonical
+  // persistence key until the historical ledger schema is fully renamed.
+  const CHECKING_LEDGER_ACCOUNT_TYPE = "cash";
   const inFlight = new WeakSet();
   const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
     NORTHREACH: "NRC",
@@ -115,14 +118,17 @@
 
   function numericBalance(player, currencyCode) {
     const normalizedCurrency = text(currencyCode).toUpperCase();
-    const row = balanceRows(player).find((entry) => {
+    const matchingRows = balanceRows(player).filter((entry) => {
       const accountType = text(entry?.accountType || entry?.account_type).toLowerCase();
       const code = text(entry?.currencyCode || entry?.currency_code).toUpperCase();
       return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
     });
-    if (row) {
-      const amount = Number(row.balance);
-      if (Number.isFinite(amount)) return amount;
+    if (matchingRows.length) {
+      const total = matchingRows.reduce((sum, entry) => {
+        const amount = Number(entry?.balance);
+        return Number.isFinite(amount) ? sum + amount : sum;
+      }, 0);
+      return Math.round(total * 100) / 100;
     }
 
     if (text(player.currencyCode).toUpperCase() !== normalizedCurrency) return 0;
@@ -241,7 +247,7 @@
           action: ACTION,
           amount,
           reason,
-          accountType: "checking",
+          accountType: CHECKING_LEDGER_ACCOUNT_TYPE,
           currencyMode: currency.currencyMode,
           currencyCode: currency.currencyCode,
         }),

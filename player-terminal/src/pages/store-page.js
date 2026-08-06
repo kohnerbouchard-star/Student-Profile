@@ -26,14 +26,17 @@ function renderStoreItem(item, inventoryItems) {
 function checkingBalanceForCurrency(data, currencyCode) {
   const normalizedCurrency = String(currencyCode || "").trim().toUpperCase();
   const balances = Array.isArray(data?.banking?.balances) ? data.banking.balances : [];
-  const row = balances.find((entry) => {
+  const matchingRows = balances.filter((entry) => {
     const accountType = String(entry?.accountType || "").trim().toLowerCase();
     const code = String(entry?.currencyCode || "").trim().toUpperCase();
     return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
   });
-  if (row) {
-    const amount = Number(row.balance);
-    return Number.isFinite(amount) ? amount : 0;
+  if (matchingRows.length) {
+    const total = matchingRows.reduce((sum, entry) => {
+      const amount = Number(entry?.balance);
+      return Number.isFinite(amount) ? sum + amount : sum;
+    }, 0);
+    return Math.round(total * 100) / 100;
   }
 
   const checkingCode = String(data?.banking?.checking?.currencyCode || "").trim().toUpperCase();

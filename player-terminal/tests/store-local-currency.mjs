@@ -8,14 +8,16 @@ const html = renderStorePage({
   banking: {
     checking: {
       accountId: "CHECKING",
-      balance: 1001,
-      available: 1001,
+      balance: 9999,
+      available: 9999,
       pending: 0,
       currencyCode: "ECO",
     },
     balances: [
-      { accountType: "checking", balance: 1001, currencyCode: "ECO" },
-      { accountType: "checking", balance: 25, currencyCode: "THD" },
+      { accountType: "cash", balance: 700, currencyCode: "ECO" },
+      { accountType: "checking", balance: 301, currencyCode: "ECO" },
+      { accountType: "cash", balance: 10, currencyCode: "THD" },
+      { accountType: "checking", balance: 15, currencyCode: "THD" },
     ],
   },
   store: {
@@ -43,9 +45,14 @@ assert.doesNotMatch(
   /AVAILABLE BALANCE[\s\S]{0,300}ECO 1,001<\/strong>/,
   "The Store must not present the global ECO wallet as locally spendable cash.",
 );
+assert.doesNotMatch(
+  html,
+  /ECO 9,999/,
+  "Structured balance rows must take precedence over the legacy single checking summary.",
+);
 assert.match(
   html,
   /authoritative quote converts the final amount into your THD local wallet/i,
 );
 
-console.log("Store local-currency rendering passed: authored item currency, local spendable wallet, and separate ECO settlement balance are explicit.");
+console.log("Store local-currency rendering passed: cash/checking aliases converge in the UI, authored item currency remains explicit, and ECO stays separate.");
