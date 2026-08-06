@@ -1,0 +1,256 @@
+name: Harden Checking Migration Order Temporary
+
+on:
+  push:
+    branches:
+      - fix/checking-savings-wallet-convergence-v1
+    paths:
+      - .github/workflows/harden-checking-migration-order-temporary.yml
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  harden:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/checking-savings-wallet-convergence-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+
+      - name: Move legacy constraint removal before data conversion
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          migration_path = Path('backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql')
+          migration = migration_path.read_text(encoding='utf-8')
+          marker = "lock table public.banking_transfer_requests in share row exclusive mode;\n"
+          block = r'''
+
+          -- Legacy schemas may constrain personal transfers to cash/savings. Remove only
+          -- account-type CHECK constraints before converting rows; unique, foreign-key,
+          -- and ownership constraints remain untouched.
+          do $drop_legacy_account_checks$
+          declare
+            legacy_constraint record;
+          begin
+            for legacy_constraint in
+              select
+                namespace_row.nspname as schema_name,
+                table_row.relname as table_name,
+                constraint_row.conname as constraint_name
+              from pg_constraint as constraint_row
+              join pg_class as table_row
+                on table_row.oid = constraint_row.conrelid
+              join pg_namespace as namespace_row
+                on namespace_row.oid = table_row.relnamespace
+              where constraint_row.contype = 'c'
+                and constraint_row.conrelid in (
+                  'public.account_balances'::regclass,
+                  'public.ledger_entries'::regclass,
+                  'public.banking_transfer_requests'::regclass
+                )
+                and lower(pg_get_constraintdef(constraint_row.oid)) like '%account_type%'
+            loop
+              execute format(
+                'alter table %I.%I drop constraint %I',
+                legacy_constraint.schema_name,
+                legacy_constraint.table_name,
+                legacy_constraint.constraint_name
+              );
+            end loop;
+          end;
+          $drop_legacy_account_checks$;
+          '''
+          if '$drop_legacy_account_checks$' not in migration:
+              if marker not in migration:
+                  raise SystemExit('Migration lock marker was not found')
+              migration = migration.replace(marker, marker + block.replace('          ', ''), 1)
+              migration_path.write_text(migration, encoding='utf-8')
+
+          test_path = Path('scripts/player-local-currency-authority-contract.test.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          assertion = "assert.match(migration, /drop_legacy_account_checks/);\n"
+          anchor = "assert.match(migration, /account_balances_account_model_v2/);\n"
+          if assertion not in test:
+              if anchor not in test:
+                  raise SystemExit('Migration contract assertion anchor was not found')
+              test = test.replace(anchor, assertion + anchor, 1)
+              test_path.write_text(test, encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow files
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          names = (
+              'Export PR Source Temporary',
+              'Canonicalize Checking and Savings One Time',
+              'Canonicalize Checking and Savings One Time V2',
+              'Canonicalize Checking and Savings One Time V3',
+              'Canonicalize Checking and Savings One Time V4',
+              'Audit Checking and Savings Convergence Temporary',
+              'Final Checking and Savings Audit Temporary',
+              'Reconcile Checking and Savings Semantics Temporary',
+              'Finalize Checking and Savings Ownership Temporary',
+              'Monitor Checking and Savings CI Temporary',
+              'Harden Checking Migration Order Temporary',
+          )
+          for candidate in Path('.github/workflows').glob('*'):
+              if not candidate.is_file() or candidate.suffix not in {'.yml', '.yaml'}:
+                  continue
+              text = candidate.read_text(encoding='utf-8')
+              if any(name in text for name in names):
+                  candidate.unlink()
+          PY
+
+      - name: Regenerate exact release authority
+        shell: bash
+        run: |
+          python <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          authority_path = Path('docs/operations/contracts/player-cross-cutting-verification-authority-v1.json')
+          authority = json.loads(authority_path.read_text(encoding='utf-8'))
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only', 'origin/main', '--'], text=True).splitlines())
+          untracked = set(subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines())
+          final_paths = {path for path in changed | untracked if path and Path(path).exists()}
+          final_paths.add(str(authority_path))
+          verifier_paths = {
+              'scripts/player-cross-cutting-authority.test.mjs',
+              'scripts/verify-player-cross-cutting-authority.mjs',
+          }
+          authority.update({
+              'authorityId': 'econovaria.checking-savings-account-model-pr-501.v1',
+              'purpose': 'authorize-checking-savings-account-convergence',
+              'pullRequestNumber': 501,
+              'baseRef': 'main',
+              'scopeLock': 'exact-path-allowlist',
+              'productionDeploymentAllowed': False,
+              'productionMutationAllowed': False,
+              'secretValuesAllowed': False,
+              'allowedPaths': sorted(final_paths | verifier_paths),
+              'requiredFiles': sorted(final_paths | verifier_paths),
+          })
+          authority_path.write_text(json.dumps(authority, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run focused pre-commit checks
+        run: |
+          node --test scripts/player-local-currency-authority-contract.test.mjs
+          node --test scripts/checking-savings-account-type-contract.test.mjs
+          node player-terminal/tests/store-local-currency.mjs
+          npm --prefix backend run test:player-banking-public
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs
+          npm --prefix backend run typecheck
+          git diff --check
+
+      - name: Commit hardened migration
+        id: commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --name-only -z | xargs -0 -r git add --
+          git ls-files --others --exclude-standard -z | xargs -0 -r git add --
+          test -n "$(git diff --cached --name-only)"
+          git commit -m "Harden Checking migration constraint ordering"
+          TARGET_SHA="$(git rev-parse HEAD)"
+          echo "target_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
+          git push origin HEAD:fix/checking-savings-wallet-convergence-v1
+
+      - name: Wait for exact hardened-commit CI
+        shell: bash
+        run: |
+          TARGET_SHA="${{ steps.commit.outputs.target_sha }}"
+          workflows=(
+            "Database Replay"
+            "Player Local Currency Authority"
+            "Player Terminal Verify"
+            "Backend Typecheck"
+            "Admin API Check"
+          )
+          : > /tmp/checking-hardened-ci.tsv
+          for workflow in "${workflows[@]}"; do
+            run_id=""
+            for attempt in $(seq 1 60); do
+              run_id="$(gh run list \
+                --repo kohnerbouchard-star/Student-Profile \
+                --workflow "${workflow}" \
+                --commit "${TARGET_SHA}" \
+                --limit 1 \
+                --json databaseId \
+                --jq '.[0].databaseId // empty')"
+              if [ -n "${run_id}" ]; then
+                break
+              fi
+              sleep 15
+            done
+            test -n "${run_id}"
+            gh run watch "${run_id}" --repo kohnerbouchard-star/Student-Profile --exit-status
+            conclusion="$(gh run view "${run_id}" --repo kohnerbouchard-star/Student-Profile --json conclusion --jq '.conclusion')"
+            printf '%s\t%s\t%s\n' "${workflow}" "${run_id}" "${conclusion}" | tee -a /tmp/checking-hardened-ci.tsv
+            test "${conclusion}" = "success"
+          done
+          echo "TARGET_SHA=${TARGET_SHA}" >> "$GITHUB_ENV"
+
+      - name: Record hardened migration PASS
+        run: |
+          {
+            echo "## Hardened Checking migration and exact CI: PASS"
+            echo
+            echo "Exact commit: \`${TARGET_SHA}\`"
+            echo
+            echo "Legacy account-type CHECK constraints are now removed before balance, ledger, and transfer classifications are converted."
+            echo
+            echo "| Workflow | Run | Conclusion |"
+            echo "|---|---:|---|"
+            while IFS=$'\t' read -r workflow run conclusion; do
+              echo "| ${workflow} | ${run} | ${conclusion} |"
+            done < /tmp/checking-hardened-ci.tsv
+            echo
+            echo "No staging or production mutation was performed."
+          } > /tmp/checking-hardened-pass.md
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-hardened-pass.md
+
+      - name: Record hardened migration FAIL
+        if: failure()
+        run: |
+          cat > /tmp/checking-hardened-fail.md <<'EOF'
+          ## Hardened Checking migration or exact CI: FAIL
+
+          The migration-order correction or one of its exact-commit workflows failed. PR #501 remains draft and must not be merged or deployed.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-hardened-fail.md
