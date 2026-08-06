@@ -31,15 +31,15 @@ jobs:
           set -euo pipefail
           expected_base="297ac8cb7820521bf95989e3bd54e7a00816b861"
           git merge-base --is-ancestor "$expected_base" HEAD
-          unexpected="$(git diff --name-only "$expected_base"..HEAD | grep -Ev '^(\.github/workflows/apply-checking-savings-final-temporary\.yml|\.github/account-migration/checking-savings-final\.patch\.gz\.b64\.part-[0-9]{2}|\.github/account-migration/checking-savings-final\.ready)$' || true)"
+          unexpected="$(git diff --name-only "$expected_base"..HEAD | grep -Ev '^(\.github/workflows/apply-checking-savings-final-temporary\.yml|\.github/account-migration/checking-savings-final\.patch\.xz\.b64\.part-[0-9]{2}|\.github/account-migration/checking-savings-final\.ready)$' || true)"
           if [[ -n "$unexpected" ]]; then
             printf 'Unexpected concurrent branch changes:\n%s\n' "$unexpected" >&2
             exit 1
           fi
-          cat .github/account-migration/checking-savings-final.patch.gz.b64.part-* > /tmp/checking-savings-final.patch.gz.b64
-          base64 --decode /tmp/checking-savings-final.patch.gz.b64 > /tmp/checking-savings-final.patch.gz
-          echo "4bb13e9c22dca8ffa576fa5a6ad80d2aa40610c100ac41b2c7a8a671aeb53563  /tmp/checking-savings-final.patch.gz" | sha256sum --check
-          gzip --decompress --stdout /tmp/checking-savings-final.patch.gz > /tmp/checking-savings-final.patch
+          cat .github/account-migration/checking-savings-final.patch.xz.b64.part-* > /tmp/checking-savings-final.patch.xz.b64
+          base64 --decode /tmp/checking-savings-final.patch.xz.b64 > /tmp/checking-savings-final.patch.xz
+          echo "55e50db4821e7dc6d2b4d1294438943efe59647fa48b0d5043f70595097e2cbf  /tmp/checking-savings-final.patch.xz" | sha256sum --check
+          xz --decompress --stdout /tmp/checking-savings-final.patch.xz > /tmp/checking-savings-final.patch
           echo "eedbe42629572ee051f773d18bc5c71b40ecfc1dba8c4fcdc6d2cc86aafc9f56  /tmp/checking-savings-final.patch" | sha256sum --check
 
       - name: Apply exact Checking and Savings change set
@@ -72,7 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           git rm -f \
-            .github/account-migration/checking-savings-final.patch.gz.b64.part-* \
+            .github/account-migration/checking-savings-final.patch.xz.b64.part-* \
             .github/account-migration/checking-savings-final.ready \
             .github/workflows/apply-checking-savings-final-temporary.yml
           git diff --cached --check
