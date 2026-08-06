@@ -1,6 +1,7 @@
 -- Canonicalize the Player Checking wallet across Admin and Player runtimes.
 -- Checking is the canonical persisted personal transaction account. Savings remains separate.
 -- Historical monetary values are preserved while legacy account classifications converge.
+-- Release candidate: true persisted Checking and Savings model.
 
 begin;
 
@@ -269,7 +270,7 @@ comment on function public.record_player_ledger_entry(
   uuid,
   jsonb
 ) is
-  'Atomically writes the Player ledger and balance projection. Product-facing Checking is persisted under the canonical cash account key; Savings remains separate.';
+  'Atomically writes the Player ledger and balance projection. Checking is persisted under the canonical checking account key; Savings remains separate.';
 
 revoke all on function public.record_player_ledger_entry(
   uuid,
