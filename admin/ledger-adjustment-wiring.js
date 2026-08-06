@@ -3,6 +3,18 @@
 
   const ACTION = "confirm-player-balance-adjustment";
   const inFlight = new WeakSet();
+  const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
+    NORTHREACH: "NRC",
+    YRETHIA: "YRC",
+    THALORIS: "THD",
+    SOLVEND: "SLV",
+    ELDORAN: "ELD",
+    VALERION: "VAL",
+    LUMENOR: "LUM",
+    XALVORIA: "XAL",
+    DRAVENLOK: "DRV",
+    SYNDALIS: "SYN",
+  });
 
   function text(value) {
     return String(value ?? "").trim();
@@ -67,7 +79,53 @@
     );
   }
 
-  function numericBalance(player) {
+  function playerLocalCurrencyCode(player) {
+    const countryCode = text(
+      player.countryCode ||
+      record(player.country).countryCode ||
+      record(player.country).code,
+    ).toUpperCase();
+    const mapped = COUNTRY_CURRENCY_BY_CODE[countryCode];
+    if (mapped) return mapped;
+
+    const candidates = [
+      player.countryCurrencyCode,
+      player.localCurrencyCode,
+      record(player.country).currencyCode,
+      player.currencyCode,
+    ];
+    for (const candidate of candidates) {
+      const code = text(candidate).toUpperCase();
+      if (/^[A-Z]{3,16}$/.test(code) && code !== "ECO") return code;
+    }
+    return "";
+  }
+
+  function balanceRows(player) {
+    const candidates = [
+      player.balances,
+      player.accountBalances,
+      player.accounts,
+    ];
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) return candidate;
+    }
+    return [];
+  }
+
+  function numericBalance(player, currencyCode) {
+    const normalizedCurrency = text(currencyCode).toUpperCase();
+    const row = balanceRows(player).find((entry) => {
+      const accountType = text(entry?.accountType || entry?.account_type).toLowerCase();
+      const code = text(entry?.currencyCode || entry?.currency_code).toUpperCase();
+      return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+    });
+    if (row) {
+      const amount = Number(row.balance);
+      if (Number.isFinite(amount)) return amount;
+    }
+
+    if (text(player.currencyCode).toUpperCase() !== normalizedCurrency) return 0;
     const candidates = [
       player.checkingBalance,
       player.cashBalance,
@@ -79,10 +137,39 @@
       const amount = Number(candidate);
       if (Number.isFinite(amount)) return amount;
     }
-    return null;
+    return 0;
   }
 
-  function adjustmentAmount(modal, player) {
+  function preferLocalCurrency(modal) {
+    const select = modal?.querySelector('select[name="valueUnit"]');
+    if (!(select instanceof HTMLSelectElement)) return;
+    if (select.dataset.econovariaCurrencyChoiceTouched === "true") return;
+
+    const option = [...select.options].find((candidate) => {
+      const label = `${candidate.value} ${candidate.textContent || ""}`.toLowerCase();
+      return label.includes("local");
+    });
+    if (!option) return;
+
+    select.value = option.value;
+    select.dataset.econovariaLocalDefaultApplied = "true";
+  }
+
+  function currencySelection(modal, player) {
+    preferLocalCurrency(modal);
+    const unit = controlValue(modal, "valueUnit").toLowerCase();
+    if (!unit.includes("local")) {
+      return { currencyMode: "global_eco", currencyCode: "ECO" };
+    }
+
+    const currencyCode = playerLocalCurrencyCode(player);
+    if (!currencyCode) {
+      throw new Error("The player's active country currency is unavailable.");
+    }
+    return { currencyMode: "player_country", currencyCode };
+  }
+
+  function adjustmentAmount(modal, player, currencyCode) {
     const requested = Number(controlValue(modal, "amount"));
     if (!Number.isFinite(requested) || requested === 0) {
       throw new Error("Enter a non-zero ledger adjustment amount.");
@@ -91,27 +178,12 @@
     const type = controlValue(modal, "adjustmentType").toLowerCase();
     if (type.includes("debit")) return -Math.abs(requested);
     if (type.includes("set exact")) {
-      const current = numericBalance(player);
-      if (!Number.isFinite(current)) {
-        throw new Error("The current checking balance is unavailable.");
-      }
+      const current = numericBalance(player, currencyCode);
       const delta = Math.round((requested - current) * 100) / 100;
       if (delta === 0) throw new Error("The requested checking balance is unchanged.");
       return delta;
     }
     return Math.abs(requested);
-  }
-
-  function currencyCode(modal, player) {
-    const unit = controlValue(modal, "valueUnit").toLowerCase();
-    if (!unit.includes("local")) return "ECO";
-    return text(
-      player.currencyCode ||
-      player.localCurrencyCode ||
-      player.countryCurrencyCode ||
-      record(player.country).currencyCode ||
-      "ECO",
-    ).toUpperCase();
   }
 
   function failureMessage(payload, status) {
@@ -153,6 +225,9 @@
     const reason = note || category;
     if (!reason) throw new Error("Enter a reason for the ledger adjustment.");
 
+    const currency = currencySelection(modal, player);
+    const amount = adjustmentAmount(modal, player, currency.currencyCode);
+
     control.disabled = true;
     control.setAttribute("aria-busy", "true");
     const response = await window.fetch(
@@ -164,10 +239,11 @@
         cache: "no-store",
         body: JSON.stringify({
           action: ACTION,
-          amount: adjustmentAmount(modal, player),
+          amount,
           reason,
           accountType: "checking",
-          currencyCode: currencyCode(modal, player),
+          currencyMode: currency.currencyMode,
+          currencyCode: currency.currencyCode,
         }),
       },
     );
@@ -191,7 +267,34 @@
       .finally(() => inFlight.delete(control));
   }
 
-  document.addEventListener("click", onClick, true);
+  function onCurrencyChoice(event) {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement) || select.name !== "valueUnit") return;
+    select.dataset.econovariaCurrencyChoiceTouched = "true";
+  }
 
-  window.EconovariaLedgerAdjustmentWiring = Object.freeze({ action: ACTION });
+  function applyLocalDefaults(root = document) {
+    if (root instanceof Element && root.matches('[role="dialog"]')) {
+      preferLocalCurrency(root);
+    }
+    root.querySelectorAll?.('[role="dialog"]').forEach(preferLocalCurrency);
+  }
+
+  document.addEventListener("click", onClick, true);
+  document.addEventListener("change", onCurrencyChoice, true);
+  applyLocalDefaults();
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node instanceof Element) applyLocalDefaults(node);
+      }
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  window.EconovariaLedgerAdjustmentWiring = Object.freeze({
+    action: ACTION,
+    countryCurrencyByCode: COUNTRY_CURRENCY_BY_CODE,
+  });
 })();
