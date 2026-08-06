@@ -6,6 +6,10 @@ const adminBackend = fs.readFileSync(
   "backend/supabase/functions/admin-api/playerOperations.ts",
   "utf8",
 );
+const adminIdempotentLedger = fs.readFileSync(
+  "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts",
+  "utf8",
+);
 const bankingRepository = fs.readFileSync(
   "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts",
   "utf8",
@@ -54,6 +58,17 @@ assert.doesNotMatch(
   "The Admin backend must not default an unspecified ledger adjustment to ECO.",
 );
 
+assert.match(
+  adminIdempotentLedger,
+  /normalized === "checking" \|\| normalized === "cash" \? "checking" : normalized/,
+  "Admin idempotent ledger routes must persist Checking directly.",
+);
+assert.doesNotMatch(
+  adminIdempotentLedger,
+  /normalized === "checking" \|\| normalized === "cash" \? "cash" : normalized/,
+  "Admin idempotent ledger routes must not remap Checking back to legacy cash.",
+);
+
 assert.match(bankingRepository, /aggregatePublicBalances/);
 assert.match(bankingRepository, /current\.balance\s*=\s*roundMoney\(current\.balance \+ balance\)/);
 assert.match(bankingRepository, /normalized === "checking"/);
@@ -73,6 +88,11 @@ assert.match(checkingMigration, /when 'savings' then 'savings'/);
 assert.match(checkingMigration, /Historical monetary values are preserved/);
 assert.match(checkingMigration, /with function_source as materialized/);
 assert.match(checkingMigration, /p\.prokind in \('f', 'p'\)/);
+assert.match(
+  checkingMigration,
+  /p\.proname <> 'record_player_ledger_entry'/,
+  "The bulk function rewrite must preserve record_player_ledger_entry's cash compatibility mapper.",
+);
 assert.doesNotMatch(
   checkingMigration,
   /where n\.nspname = 'public'\s+and pg_get_functiondef\(p\.oid\)/,
