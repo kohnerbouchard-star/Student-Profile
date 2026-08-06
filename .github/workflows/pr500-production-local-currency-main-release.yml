@@ -1,0 +1,175 @@
+name: PR 500 Production Local Currency Main Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/pr500-production-local-currency-main-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr500-production-local-currency-main-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: af1c0536ee58a341fb1d42f0f0432de4cadb3ab3
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  EXPECTED_PREDEPLOY_ADMIN_DIGEST: b3d9f4ab72ee7d9007ffd82437c50be569e30057335d7b5b39e90f84843216d7
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  deploy:
+    name: Deploy exact merged Admin API to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce production-only release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_PRODUCTION_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$EXPECTED_PREDEPLOY_ADMIN_DIGEST" = "b3d9f4ab72ee7d9007ffd82437c50be569e30057335d7b5b39e90f84843216d7"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact source and bounded scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test -f backend/supabase/functions/admin-api/index.ts
+          test -f backend/supabase/functions/admin-api/playerOperations.ts
+          test -f backend/supabase/functions/admin-api/deno.json
+          grep -q 'resolvePlayerLedgerCurrencyAuthority' backend/supabase/functions/admin-api/playerOperations.ts
+          grep -q 'player_country_currency_unavailable' backend/supabase/functions/admin-api/playerOperations.ts
+          grep -q 'currencyMode: currency.currencyMode' backend/supabase/functions/admin-api/playerOperations.ts
+          grep -q 'global_eco' backend/supabase/functions/admin-api/playerOperations.ts
+
+      - name: Run focused local-currency release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/player-local-currency-authority-contract.test.mjs
+          node --test player-terminal/tests/store-local-currency.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Capture and verify pre-deploy production identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-before.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const row = rows.find((entry) => entry.slug === 'admin-api');
+          if (!row || row.status !== 'ACTIVE' || row.verify_jwt !== true) {
+            throw new Error('Production Admin API is not in the expected secure state.');
+          }
+          if (row.ezbr_sha256 !== process.env.EXPECTED_PREDEPLOY_ADMIN_DIGEST) {
+            throw new Error(`Production Admin API digest drifted: ${row.ezbr_sha256 || 'missing'}`);
+          }
+          fs.writeFileSync(process.env.RUNNER_TEMP + '/admin-version-before.txt', String(row.version));
+          NODE
+
+      - name: Deploy only the production Admin API
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy admin-api \
+            --workdir backend \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+      - name: Verify deployed identity and source markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          before_version="$(cat "$RUNNER_TEMP/admin-version-before.txt")"
+          for attempt in $(seq 1 20); do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions" \
+              > "$RUNNER_TEMP/functions-after.json"
+            if FUNCTIONS_PATH="$RUNNER_TEMP/functions-after.json" BEFORE_VERSION="$before_version" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const row = rows.find((entry) => entry.slug === 'admin-api');
+          if (!row || row.status !== 'ACTIVE' || row.verify_jwt !== true) process.exit(1);
+          if (!Number.isSafeInteger(Number(row.version)) || Number(row.version) <= Number(process.env.BEFORE_VERSION)) process.exit(1);
+          if (!/^[a-f0-9]{64}$/.test(String(row.ezbr_sha256 || ''))) process.exit(1);
+          if (row.ezbr_sha256 === process.env.EXPECTED_PREDEPLOY_ADMIN_DIGEST) process.exit(1);
+          fs.writeFileSync(process.env.RUNNER_TEMP + '/admin-version-after.txt', String(row.version));
+          fs.writeFileSync(process.env.RUNNER_TEMP + '/admin-digest-after.txt', String(row.ezbr_sha256));
+          NODE
+            then
+              ready=true
+              break
+            fi
+            sleep 3
+          done
+          test "$ready" = true
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/functions/admin-api/body" \
+            > "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'resolvePlayerLedgerCurrencyAuthority' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'player_country_currency_unavailable' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'global_eco' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'resolvedCurrencyCode' "$RUNNER_TEMP/admin-api-body.json"
+
+      - name: Verify unauthorized production requests remain denied
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/unauthorized.json" \
+            --write-out '%{http_code}' \
+            "https://$EXPECTED_PRODUCTION_PROJECT_REF.supabase.co/functions/v1/admin-api/session/bootstrap")"
+          test "$status" = "401"
+
+      - name: Record bounded production result
+        shell: bash
+        run: |
+          {
+            echo '## PR 500 production local-currency runtime released'
+            echo "- Exact merged source SHA: \`$EXPECTED_SOURCE_SHA\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo '- Staging project denied: `true`'
+            echo '- Function deployed: `admin-api` only'
+            echo '- Database migrations: `none`'
+            echo '- Production data rewrites: `none`'
+            echo '- Vercel deployment: `already released separately`'
+            echo "- Admin API version: \`$(cat "$RUNNER_TEMP/admin-version-after.txt")\`"
+            echo "- Admin API digest: \`$(cat "$RUNNER_TEMP/admin-digest-after.txt")\`"
+            echo '- JWT verification: `true`'
+            echo '- Unauthorized smoke: `401`'
+            echo '- Source markers: `verified`'
+          } >> "$GITHUB_STEP_SUMMARY"
