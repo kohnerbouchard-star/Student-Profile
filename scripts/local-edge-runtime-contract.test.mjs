@@ -15,7 +15,6 @@ const FUNCTION_POLICIES = Object.freeze({
   "web-session-api": false,
   "admin-password-recovery": false,
   "admin-email-verification": false,
-  "staff-api": true,
   "admin-api": true,
   "staff-mfa-api": true,
   "password-reset-api": true,
@@ -83,8 +82,6 @@ test("local Supabase starts every declared split Edge security boundary", async 
     }
   }
 
-  assert.match(functionSources["staff-api"], /resolveStaffForRequest/);
-  assert.match(functionSources["staff-api"], /handleStaffBootstrapRequest/);
   assert.match(functionSources["staff-mfa-api"], /resolveStaffSessionForRequest/);
   assert.match(functionSources["staff-mfa-api"], /requiredAssuranceLevel/);
   assert.match(functionSources["staff-mfa-api"], /mfa\.challengeAndVerify/);
@@ -111,6 +108,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["admin-email-verification"], /\/auth\/v1\/verify/);
   assert.doesNotMatch(functionSources["admin-email-verification"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(config, /\[functions\.admin-logout-api\]/);
+  assert.doesNotMatch(config, /\[functions\.staff-api\]/);
   assert.match(functionSources["player-web-session-api"], /WEB_PLAYER_SESSION_COOKIE/);
   assert.match(functionSources["player-web-session-api"], /constantTimePlayerTextEqual/);
   assert.match(functionSources["player-web-session-api"], /\/functions\/v1\/player-api/);

@@ -8,21 +8,30 @@ import {
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 483;
+const AUTHORIZED_PR = 484;
 
 function manifest() {
-  const paths = [
-    ".github/workflows/stock-market-production-promote.yml",
-    ".github/workflows/stock-market-staging-candidate.yml",
-    "backend/supabase/functions/stock-market-player-read/index.ts",
-    "backend/supabase/functions/stock-market-read/index.ts",
-    "backend/supabase/stock-market-edge-function-manifest.json",
+  const allowedPaths = [
+    ".github/workflows/edge-function-inventory.yml",
+    ".github/workflows/production-admin-bootstrap-503-hotfix.yml",
+    ".github/workflows/vercel-deployment-contract.yml",
+    "api/_admin-bff-proxy.js",
+    "api/admin-proxy.js",
+    "backend/supabase/config.toml",
+    "backend/supabase/edge-function-manifest.json",
     DEFAULT_AUTHORITY_PATH,
-    "scripts/auth-boundary-contract.test.mjs",
-    "scripts/high-priority-boundary-ratchet.mjs",
+    "scripts/edge-function-inventory/validate.mjs",
+    "scripts/edge-function-inventory/validate.test.mjs",
+    "scripts/local-edge-runtime-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/runtime-health-contract.test.mjs",
+    "scripts/runtime-security-headers-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
+    "vercel.json",
   ];
+  const requiredFiles = allowedPaths.filter(
+    (path) => path !== ".github/workflows/production-admin-bootstrap-503-hotfix.yml",
+  );
   return {
     schemaVersion: 1,
     authorityId: EXPECTED_AUTHORITY_ID,
@@ -33,8 +42,8 @@ function manifest() {
     productionDeploymentAllowed: false,
     productionMutationAllowed: false,
     secretValuesAllowed: false,
-    allowedPaths: paths,
-    requiredFiles: [...paths],
+    allowedPaths,
+    requiredFiles,
     requiredChecks: [
       "player-terminal-verify",
       "player-edge-trusted-ip-entrypoint-contract",
@@ -55,6 +64,19 @@ test("cross-cutting Player authority accepts only its PR-bound exact scope", () 
     baseRef: "main",
   });
   assert.equal(result.changedPathCount, value.allowedPaths.length);
+});
+
+test("cross-cutting Player authority permits an authorized deletion without requiring the file", () => {
+  const value = manifest();
+  assert.ok(value.allowedPaths.includes(".github/workflows/production-admin-bootstrap-503-hotfix.yml"));
+  assert.ok(!value.requiredFiles.includes(".github/workflows/production-admin-bootstrap-503-hotfix.yml"));
+  const result = verifyAuthority({
+    manifest: value,
+    changedPaths: [".github/workflows/production-admin-bootstrap-503-hotfix.yml"],
+    pullRequestNumber: AUTHORIZED_PR,
+    baseRef: "main",
+  });
+  assert.equal(result.changedPathCount, 1);
 });
 
 test("cross-cutting Player authority rejects an unreviewed path", () => {
@@ -110,7 +132,7 @@ test("Player and Admin CSRF response state remains surface-isolated", async () =
   );
 });
 
-test("Player namespaces retain explicit Vercel rewrites", async () => {
+test("Player namespaces and runtime health retain explicit Vercel rewrites", async () => {
   const configuration = JSON.parse(
     await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   );
@@ -126,5 +148,12 @@ test("Player namespaces retain explicit Vercel rewrites", async () => {
         destination: "/api/player-proxy?path=:path*",
       },
     ],
+  );
+  assert.deepEqual(
+    configuration.rewrites.find((entry) => entry.source === "/api/health"),
+    {
+      source: "/api/health",
+      destination: "/api/admin-proxy?path=__health",
+    },
   );
 });

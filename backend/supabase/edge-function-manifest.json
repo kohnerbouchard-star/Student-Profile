@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "econovaria.edge-functions.v1",
+  "environments": {
+    "staging": {
+      "projectRef": "eecvbssdvarfcykcfrny"
+    },
+    "production": {
+      "projectRef": "cgiukdjwicykrmtkhudh"
+    }
+  },
+  "canonicalFunctions": [
+    {
+      "slug": "admin-api",
+      "entrypoint": "backend/supabase/functions/admin-api/index.ts",
+      "verifyJwt": true,
+      "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-policy"
+    },
+    {
+      "slug": "admin-email-verification",
+      "entrypoint": "backend/supabase/functions/admin-email-verification/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "single-use-auth-token-plus-double-submit-challenge"
+    },
+    {
+      "slug": "admin-password-recovery",
+      "entrypoint": "backend/supabase/functions/admin-password-recovery/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "single-use-recovery-token-plus-double-submit-challenge"
+    },
+    {
+      "slug": "bootstrap-api",
+      "entrypoint": "backend/supabase/functions/bootstrap-api/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
+    },
+    {
+      "slug": "player-api",
+      "entrypoint": "backend/supabase/functions/player-api/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-opaque-player-session"
+    },
+    {
+      "slug": "player-web-session-api",
+      "entrypoint": "backend/supabase/functions/player-web-session-api/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-origin-plus-http-only-player-session"
+    },
+    {
+      "slug": "password-reset-api",
+      "entrypoint": "backend/supabase/functions/password-reset-api/index.ts",
+      "verifyJwt": true,
+      "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-resolution"
+    },
+    {
+      "slug": "staff-mfa-api",
+      "entrypoint": "backend/supabase/functions/staff-mfa-api/index.ts",
+      "verifyJwt": true,
+      "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-mfa-policy"
+    },
+    {
+      "slug": "stock-market-player-read",
+      "entrypoint": "backend/supabase/functions/stock-market-player-read/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce"
+    },
+    {
+      "slug": "stock-market-read",
+      "entrypoint": "backend/supabase/functions/stock-market-read/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce"
+    },
+    {
+      "slug": "stock-market-runner",
+      "entrypoint": "backend/supabase/functions/stock-market-runner/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce"
+    },
+    {
+      "slug": "stock-market-seed-copy",
+      "entrypoint": "backend/supabase/functions/stock-market-seed-copy/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce"
+    },
+    {
+      "slug": "stock-market-trading",
+      "entrypoint": "backend/supabase/functions/stock-market-trading/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-hmac-sha256-plus-nonce"
+    },
+    {
+      "slug": "web-session-api",
+      "entrypoint": "backend/supabase/functions/web-session-api/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-origin-plus-http-only-staff-session"
+    }
+  ],
+  "compatibilityFunctions": [
+    {
+      "slug": "classroom-api",
+      "entrypoint": "backend/supabase/functions/classroom-api/index.ts",
+      "verifyJwt": true,
+      "allowedEnvironments": ["staging", "production"],
+      "retirementCondition": "admin-api internal compatibility caller count reaches zero"
+    }
+  ],
+  "temporaryStagingFunctions": [
+    {
+      "slug": "security-config-probe",
+      "verifyJwt": true
+    },
+    {
+      "slug": "crafting-staging-acceptance-v1",
+      "verifyJwt": true
+    },
+    {
+      "slug": "crafting-acceptance-operator-bootstrap-v1",
+      "verifyJwt": true
+    }
+  ],
+  "retiredFunctions": [
+    "admin-api-staging",
+    "admin-logout-api",
+    "make-server-0dbf686f",
+    "player-api-probe-once",
+    "player-login-audit-once",
+    "player-login-audit-trigger",
+    "player-runtime-config-audit-once",
+    "player-web-session-audit-once",
+    "server",
+    "staff-api",
+    "web-session-config-probe"
+  ],
+  "productionUnexpectedFunctionsAllowed": false,
+  "sourceDigestRequired": true,
+  "verifyJwtExactMatchRequired": true
+}
