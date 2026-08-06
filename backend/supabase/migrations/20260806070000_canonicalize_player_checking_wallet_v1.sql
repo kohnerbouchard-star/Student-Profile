@@ -304,20 +304,25 @@ grant execute on function public.record_player_ledger_entry(
   jsonb
 ) to service_role;
 
--- Recreate installed public functions that still reference the retired personal
--- account literal. This is limited to exact SQL string literals and preserves
--- function signatures, privileges, ownership, and all non-account semantics.
+-- Recreate installed public functions and procedures that still reference the
+-- retired personal account literal. Materializing the callable-only catalog
+-- avoids invoking pg_get_functiondef on aggregates and window functions.
 do $migration$
 declare
   function_row record;
   rewritten_definition text;
 begin
   for function_row in
-    select p.oid, pg_get_functiondef(p.oid) as definition
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-      and pg_get_functiondef(p.oid) like '%''cash''%'
+    with function_source as materialized (
+      select p.oid, pg_get_functiondef(p.oid) as definition
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.prokind in ('f', 'p')
+    )
+    select function_source.oid, function_source.definition
+    from function_source
+    where function_source.definition like '%''cash''%'
   loop
     rewritten_definition := replace(
       function_row.definition,
