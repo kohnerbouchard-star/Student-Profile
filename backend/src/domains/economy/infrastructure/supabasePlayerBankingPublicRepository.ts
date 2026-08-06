@@ -56,7 +56,9 @@ export class SupabasePlayerBankingPublicRepository
       .eq("game_session_id", input.gameSessionId)
       .eq("player_id", input.playerId)
       .order("account_type", { ascending: true })
-      .order("currency_code", { ascending: true }) as QueryResponse<BalanceRow[]>;
+      .order("currency_code", { ascending: true }) as QueryResponse<
+        BalanceRow[]
+      >;
 
     if (balancesResponse.error) {
       throw unavailable("Player Banking balances could not be loaded.");
@@ -71,7 +73,9 @@ export class SupabasePlayerBankingPublicRepository
       .eq("player_id", input.playerId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
-      .range(input.offset, input.offset + input.limit) as QueryResponse<LedgerRow[]>;
+      .range(input.offset, input.offset + input.limit) as QueryResponse<
+        LedgerRow[]
+      >;
 
     if (ledgerResponse.error) {
       throw unavailable("Player Banking activity could not be loaded.");
@@ -94,7 +98,9 @@ export class SupabasePlayerBankingPublicRepository
   }
 }
 
-function aggregatePublicBalances(rows: readonly BalanceRow[]): PublicBalanceRow[] {
+function aggregatePublicBalances(
+  rows: readonly BalanceRow[],
+): PublicBalanceRow[] {
   const aggregated = new Map<string, PublicBalanceRow>();
   for (const row of rows) {
     const accountType = publicAccountType(row.account_type);

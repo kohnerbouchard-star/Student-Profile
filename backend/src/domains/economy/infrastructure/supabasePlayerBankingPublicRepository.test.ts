@@ -16,7 +16,10 @@ Deno.test("public Banking repository converges cash/checking aliases by currency
 
   assertEquals(client.queries.length, 2);
   assertEquals(client.queries[0].table, "account_balances");
-  assertEquals(client.queries[0].selection, "account_type,balance,currency_code");
+  assertEquals(
+    client.queries[0].selection,
+    "account_type,balance,currency_code",
+  );
   assertEquals(client.queries[1].table, "ledger_entries");
   assertEquals(
     client.queries[1].selection,
