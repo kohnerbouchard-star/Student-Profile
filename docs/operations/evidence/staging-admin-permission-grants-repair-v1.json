@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "roadmapItem": "BETA-STAGING-ADMIN-PERMISSION-GRANTS-REPAIR-001",
+  "targetProjectRef": "eecvbssdvarfcykcfrny",
+  "deniedProjectRefs": [
+    "cgiukdjwicykrmtkhudh"
+  ],
+  "canonicalMigration": {
+    "version": "20260726095000",
+    "name": "add_staff_permission_grants_v2",
+    "path": "backend/supabase/migrations/20260726095000_add_staff_permission_grants_v2.sql",
+    "gitBlobSha": "cac86d86cc9b8b0862ed471ca1f1c0d8de7a8bd0"
+  },
+  "requiredPermissions": [
+    "account.read",
+    "audit.read",
+    "attendance.manage",
+    "business.manage",
+    "contracts.manage",
+    "economy.adjust",
+    "game.create",
+    "game.read",
+    "game.switch",
+    "game.update",
+    "inventory.redeem",
+    "market.manage",
+    "marketplace.moderate",
+    "messaging.moderate",
+    "players.manage",
+    "progression.review",
+    "settings.manage",
+    "store.manage",
+    "world.manage"
+  ],
+  "expectedUnlinkedStaffIdentity": {
+    "email": "canonical-source@econovaria.internal",
+    "displayName": "Econovaria Canonical Provisioner"
+  },
+  "databaseSchemaWritesAllowed": true,
+  "migrationLedgerWritesAllowed": true,
+  "authAppMetadataWritesAllowed": true,
+  "applicationRowWritesAllowed": false,
+  "edgeFunctionDeploymentAllowed": false,
+  "secretMutationAllowed": false,
+  "vercelDeploymentAllowed": false,
+  "destructiveChangesAllowed": false,
+  "rollbackStrategy": "forward-only-idempotent-rerun"
+}
