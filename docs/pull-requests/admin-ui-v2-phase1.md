@@ -10,9 +10,17 @@
 
 `BETA-ADMIN-UI-V2-001 — Source-owned Admin v2 foundation and Overview reference migration`
 
+### Delivery state
+
+- Status: `IMPLEMENTED_NOT_MERGED`
+- Base: `f2694e40bac39b4ceb20951d88dddd38c6a9270a`
+- Implementation commit: `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`
+- Draft PR: [#502](https://github.com/kohnerbouchard-star/Student-Profile/pull/502)
+- Git-connected preview: https://econovaria-git-refactor-admin-ui-v2-overview-a22902-econovaria.vercel.app
+
 ### Summary
 
-Adds an opt-in source-owned Admin entry at `/admin/v2.html` and migrates only Overview into a vanilla-ESM component architecture. It uses the accepted Econovaria v606 terminal visual character as its design baseline; local screenshots are reviewed, while final reviewer and preview parity evidence remain pending. `/admin` remains the legacy application for every route not yet migrated. Selecting an unmigrated route renders an explicit v2 handoff screen; the user then chooses **Open existing admin** to leave v2 for the canonical legacy URL.
+Adds an opt-in source-owned Admin entry at `/admin/v2.html` and migrates only Overview into a vanilla-ESM component architecture. It uses the accepted Econovaria v606 terminal visual character as its design baseline; local screenshots are committed and the static preview contract is verified, while reviewer approval, required workflows, and merge remain pending. `/admin` remains the legacy application for every route not yet migrated. Selecting an unmigrated route renders an explicit v2 handoff screen; the user then chooses **Open existing admin** to leave v2 for the canonical legacy URL.
 
 World Management now appears as a first-class primary destination in the `World` navigation group, while its page remains clearly labeled and legacy-owned for this phase. Overview is the only migrated route.
 
@@ -76,7 +84,7 @@ World Management now appears as a first-class primary destination in the `World`
 - [x] 390×844
 - [x] 320×568
 
-The local screenshots are sanitized and use an explicitly controlled same-origin Admin BFF fixture. They include initial-loading, empty, stale, failed, and permission-denied evidence in addition to ready and short-desktop states. The product owner has authorized committing this bounded tranche; these captures were regenerated from the reconciled worktree and will be included in the implementation commit.
+The local screenshots are sanitized and use an explicitly controlled same-origin Admin BFF fixture. They include initial-loading, empty, stale, failed, and permission-denied evidence in addition to ready and short-desktop states. These captures were regenerated from the reconciled worktree and are included in implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`.
 
 ### Local test results
 
@@ -92,6 +100,18 @@ The local screenshots are sanitized and use an explicitly controlled same-origin
 - `git diff --check`, v2 syntax checks, and changed-scope audit: pass.
 - Browser manifest and captures: `docs/operations/evidence/admin-ui-v2-phase1/`.
 
+### Preview evidence
+
+- The Git-connected Vercel preview is Ready; no manual or production deployment was performed.
+- Direct navigation and reload of `/admin/v2.html` each return initial HTML HTTP 200. All 48 intended preview files return HTTP 200 with correct MIME types; the browser direct-load records all 40 V2 JavaScript and CSS resources with no missing-resource, CSP, or Trusted Types failure.
+- The session-dependent preview probe encounters inherited staging-preview CORS behavior. The same condition reproduces on the unrelated PR #501 preview's legacy Admin route, so it is not a new Phase 1 regression. This branch changes no authentication, Backend, BFF, or environment behavior and does not claim authenticated preview-session parity from that probe.
+
+### CI status at the implementation commit
+
+- PR #502 records 31 successful, nine skipped, and six failed check runs for implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`.
+- All six failed runs are current-main/base-identical at their first failure: Admin Game Lifecycle Controls reports the legacy runtime style tag; Admin Game Session Controls reports the stale v606 page-shell hash; Admin Scroll Integrity and Admin Shell Smoke report the same two inherited scroll assertions; Repository Quality and Seed Executable Beta Pack report the same existing legacy MutationObserver ratchet.
+- The owning legacy runtime, styles, selectors, ratchets, and tests are byte-identical between base and the implementation commit. No V2 file contains a `MutationObserver`, no changed file owns a first failure, and no genuine new Phase 1 regression is present. This branch does not alter or weaken those checks.
+
 ### Legacy and deletion note
 
 Phase 1 intentionally deletes no legacy Admin file. The generated v606 bundle, legacy entrypoint, ordered compatibility scripts, feature bridges, feature styles, session/auth runtime, and Admin assets remain under `/admin`. The approved continuation order is Store with shared artwork, World native, Players and Attendance, Contracts, Marketplace/Settings/Logs, then legacy deletion after the required ownership and parity gates. See `docs/architecture/admin-ui-v2-phase1.md` for the exhaustive retained-category inventory, selective `frontend/admin-terminal-source-v1` donor disposition, and route-by-route deletion plan.
@@ -102,9 +122,9 @@ Phase 1 intentionally deletes no legacy Admin file. The generated v606 bundle, l
 - The legacy selected-game contract requires an internal UUID in `?game=`. The product owner accepts this as a documented, non-blocking Phase 1 legacy privacy/hygiene exception. All eight UUID-free URL assertions remain red and separately reported. A coordinated public-handle/Backend/legacy design is deferred and not authorized here.
 - Native `<dialog>` migration is also deferred to separately authorized compatibility, focus, and browser work; the current shared source-owned dialog contract remains the Phase 1 implementation.
 - PR #498 is a separate draft legacy modal compatibility fix. Reconcile `admin/index.html` overlap and merge order; do not make v2 depend on its prototype guard.
-- Local direct load and reload of `/admin/v2.html` pass without changing API rewrites; no extensionless alias is claimed. Preview/runtime verification remains pending.
-- Rerun the documented commands and screenshots against the authorized implementation commit, then add CI/workflow and preview links before marking ready.
-- No implementation commit, push, pull request, CI run, preview verification, merge, staging evidence, or production authorization exists at this pre-commit handoff point. The product owner has authorized the first four actions for this bounded tranche; merge and production remain unauthorized.
+- Direct load and reload of the exact preview `/admin/v2.html` route are verified; no extensionless alias is claimed.
+- The documented local release checks and screenshots were rerun against implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`; reviewer approval, required workflows, and merge remain pending.
+- Draft PR #502 and its Git-connected preview exist. Nothing was merged, manually deployed, promoted to production, or changed in authentication.
 
 ### Approved continuation order
 

@@ -4,13 +4,13 @@
 
 **Owner branch:** `refactor/admin-ui-v2-overview-foundation-v1`
 
-**Status:** `IN_PROGRESS`
+**Status:** `IMPLEMENTED_NOT_MERGED`
 
 **Production promotion authorized:** No
 
 ## Purpose
 
-Phase 1 creates a source-owned Admin UI foundation and migrates only Overview. It uses the accepted Econovaria v606 visual character as its design baseline while ending the pattern of adding generated markup, global reconciliation, feature bridges, and global CSS overrides to every new Admin change. Local screenshot review is complete; final reviewer and preview parity evidence remain pending.
+Phase 1 creates a source-owned Admin UI foundation and migrates only Overview. It uses the accepted Econovaria v606 visual character as its design baseline while ending the pattern of adding generated markup, global reconciliation, feature bridges, and global CSS overrides to every new Admin change. Local screenshot review is complete and the static preview contract is verified; reviewer approval, required workflows, authenticated environment parity, and merge remain pending.
 
 This is an architecture migration, not a product redesign. It changes no Backend route, authentication or authorization rule, Supabase configuration, database migration, Player Terminal behavior, or production environment.
 
@@ -293,7 +293,7 @@ Deletion is gated by source ownership, parity evidence, merge to `main`, and any
 
 ## Test and evidence matrix
 
-Local verification ran on 2026-08-06 in the uncommitted owner worktree based on `origin/main` SHA `65df2f3ae5d6117be0ce6b9061f7a721d69e1d27`. The product-owner instruction not to commit or push means these results are not yet final-commit, CI, preview, or staging evidence.
+Verification ran on 2026-08-06 against implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`, based on fetched `origin/main` SHA `f2694e40bac39b4ceb20951d88dddd38c6a9270a`. The implementation is published in draft PR #502 with a Git-connected Vercel preview; it is not merged or production-deployed.
 
 | Evidence | Required assertion | Result |
 |---|---|---|
@@ -320,7 +320,10 @@ Local verification ran on 2026-08-06 in the uncommitted owner worktree based on 
 | Security/API boundaries | Existing authentication and BFF request-auth contracts, secret scan, and v2 same-origin read boundary | **LOCAL PASS** — `npm run test:auth-boundaries` (16/16 plus 8/8), `npm run security:secrets`, and browser assertions for GET-only `/api/admin` requests without an `Authorization` header |
 | Player Terminal regression | Player runtime source ownership and retired-path boundary remain green | **LOCAL PASS** — `npm run test:player-runtime-cutover` (38 retired paths) |
 | Scope diff audit | No Backend, migration, Supabase config, Player Terminal, production config, or unrelated file change | **LOCAL PASS** — only `admin/v2*`, focused scripts/package registration, evidence, architecture/PR docs, and the roadmap ledger are changed |
-| Screenshots | Sanitized captures for all six required viewport sizes plus data-state and short-desktop evidence | **LOCAL PASS, NOT COMMIT-BOUND** — 12 captures under `docs/operations/evidence/admin-ui-v2-phase1/` |
+| Vercel preview static contract | Direct exact-route load and reload; complete intended resource inventory; correct MIME; no CSP or Trusted Types regression | **PREVIEW PASS** — https://econovaria-git-refactor-admin-ui-v2-overview-a22902-econovaria.vercel.app returns initial HTML HTTP 200 for both direct load and reload of `/admin/v2.html`; all 48 intended files return HTTP 200 with correct MIME, and the browser direct-load records all 40 V2 JavaScript and CSS resources with no missing-resource, CSP, or Trusted Types failure. |
+| Vercel preview session boundary | Distinguish Phase 1 behavior from inherited preview-environment behavior without changing authentication | **INHERITED ENVIRONMENT LIMITATION, NOT A PHASE 1 REGRESSION** — the session-dependent probe encounters staging-preview CORS behavior that reproduces on the unrelated PR #501 legacy Admin preview. Phase 1 changes no authentication, Backend, BFF, or environment behavior and does not claim authenticated preview-session parity from this probe. |
+| Initial implementation-commit CI | Identify every terminal check without attributing current-main debt to V2 | **31 SUCCESS, 9 SKIPPED, 6 BASELINE-IDENTICAL FAILURES; 0 NEW PHASE 1 REGRESSIONS** — the six failed runs reduce to legacy runtime-style injection, stale v606 hash, two inherited scroll assertions reported twice, and the existing legacy MutationObserver ratchet reported twice. No V2 file owns a first failure. |
+| Screenshots | Sanitized captures for all six required viewport sizes plus data-state and short-desktop evidence | **COMMIT-BOUND FIXTURE PASS** — 12 captures under `docs/operations/evidence/admin-ui-v2-phase1/` |
 | Whitespace/source audit | `git diff --check`; no broad observer, additional global fetch wrapper, runtime style injection, undocumented `!important`, or generated v606 import | **LOCAL PASS** — `git diff --check`, syntax checks, and scoped V2 source search pass. |
 
-`BETA-ADMIN-UI-V2-001` remains `IN_PROGRESS`: the product owner has authorized commit, draft-PR, and preview work, but no CI, preview, merge, or staging evidence exists at this pre-commit point. The selected-game UUID URL assertions and two baseline-identical legacy ratchets remain visible as separately reported debt; none is weakened or relabeled as passing. The product owner has classified the UUID contract as a non-blocking Phase 1 legacy exception. The item may become `VERIFIED_COMPLETE` only after merge to `main` and all required preview/runtime evidence exists.
+`BETA-ADMIN-UI-V2-001` is `IMPLEMENTED_NOT_MERGED`: implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb` is published in draft PR #502 and its static Git-connected preview contract passes. Required workflows, review, authenticated environment parity, and merge remain outstanding. The selected-game UUID assertions and two baseline-identical legacy ratchets remain separately reported debt; none is weakened or relabeled as passing. The inherited staging-preview session CORS condition reproduces on unrelated PR #501 legacy Admin and is not a Phase 1 regression; no authentication behavior changed. The item may become `VERIFIED_COMPLETE` only after merge to `main` and all required preview/runtime evidence exists.
