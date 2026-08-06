@@ -1,0 +1,76 @@
+:where([data-admin-v2-root], [data-admin-v2-layer]) {
+  color: var(--admin-color-text);
+  font-family: var(--admin-font-sans);
+  font-size: var(--admin-text-md);
+  line-height: var(--admin-leading-copy);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-admin-v2-root] {
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  background:
+    linear-gradient(rgb(70 232 226 / 2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(70 232 226 / 2%) 1px, transparent 1px),
+    var(--admin-color-canvas);
+  background-size: 32px 32px;
+  isolation: isolate;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--admin-color-cyan);
+  outline-offset: 2px;
+  box-shadow: var(--admin-focus-ring);
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) a {
+  color: var(--admin-color-cyan);
+  text-underline-offset: 0.2em;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) button {
+  cursor: pointer;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) ::selection {
+  color: var(--admin-color-void);
+  background: var(--admin-color-cyan);
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(*) {
+  scrollbar-color: var(--admin-color-line-strong) var(--admin-color-surface-1);
+  scrollbar-width: thin;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) ::-webkit-scrollbar {
+  inline-size: 0.65rem;
+  block-size: 0.65rem;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) ::-webkit-scrollbar-track {
+  background: var(--admin-color-surface-1);
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--admin-color-surface-1);
+  border-radius: 999px;
+  background: var(--admin-color-line-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([data-admin-v2-root], [data-admin-v2-layer]),
+  :where([data-admin-v2-root], [data-admin-v2-layer]) *,
+  :where([data-admin-v2-root], [data-admin-v2-layer]) *::before,
+  :where([data-admin-v2-root], [data-admin-v2-layer]) *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}

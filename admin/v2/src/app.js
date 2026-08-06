@@ -1,0 +1,342 @@
+import {
+  AdminDrawer,
+  AdminEmptyState,
+  AdminErrorState,
+  AdminNavigation,
+  AdminPermissionBoundary,
+  AdminRouteBoundary,
+  AdminShell,
+  AdminToast,
+  AdminTopbar,
+} from "./components/index.js";
+import { createElement } from "./components/dom.js";
+import { createAdminApiClient } from "./api/admin-api-client.js";
+import { createAdminBffTransport } from "./api/admin-bff-transport.js";
+import {
+  ADMIN_DEFAULT_ROUTE_ID,
+  ADMIN_NAVIGATION_GROUPS,
+  getAdminNavigationRoute,
+} from "./core/navigation-registry.js";
+import {
+  createLegacyAdminHandoffUrl,
+  resolveCurrentAdminRouteBoundary,
+} from "./core/route-boundary.js";
+import { createOverviewController } from "./routes/overview/OverviewController.js";
+
+const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
+
+function text(value, fallback = "") {
+  const normalized = String(value || "").trim();
+  return normalized || fallback;
+}
+
+function permissionSet(session) {
+  return new Set(Array.isArray(session?.permissions)
+    ? session.permissions.map((permission) => text(permission)).filter(Boolean)
+    : []);
+}
+
+function routeAllowed(route, permissions) {
+  const allOf = route?.permission?.allOf || [];
+  const anyOf = route?.permission?.anyOf || [];
+  return allOf.every((permission) => permissions.has(permission))
+    && (anyOf.length === 0 || anyOf.some((permission) => permissions.has(permission)));
+}
+
+function selectedSessionGame(session, selectedGameId) {
+  const games = Array.isArray(session?.activeGameSessions) ? session.activeGameSessions : [];
+  return games.find((game) => text(game?.id || game?.gameId) === selectedGameId) || null;
+}
+
+function selectedGameContext(session, selectedGameId, model = null) {
+  const sessionGame = selectedSessionGame(session, selectedGameId) || {};
+  const modelGame = model?.game || {};
+  return {
+    name: text(modelGame.name || sessionGame.name, "Current game"),
+    code: text(modelGame.gameCode || modelGame.joinCode || sessionGame.gameCode || sessionGame.joinCode),
+    status: text(modelGame.status || sessionGame.status, "Status unavailable"),
+  };
+}
+
+function navigationGroups() {
+  return ADMIN_NAVIGATION_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.routes.map((route) => ({
+      id: route.id,
+      label: route.label,
+      icon: route.icon,
+      href: route.href,
+    })),
+  }));
+}
+
+function safeCollapsedPreference() {
+  try {
+    return window.localStorage.getItem(NAVIGATION_COLLAPSED_KEY) === "true";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function rememberCollapsedPreference(collapsed) {
+  try {
+    window.localStorage.setItem(NAVIGATION_COLLAPSED_KEY, String(Boolean(collapsed)));
+  } catch (_error) {}
+}
+
+function accountDrawerContent(session, gameContext) {
+  const user = session?.user || {};
+  return createElement("dl", {
+    className: "admin-u-stack",
+    children: [
+      createElement("div", { children: [
+        createElement("dt", { className: "admin-u-muted", text: "Administrator" }),
+        createElement("dd", { text: text(user.displayName || user.email, "Administrator") }),
+      ] }),
+      createElement("div", { children: [
+        createElement("dt", { className: "admin-u-muted", text: "Email" }),
+        createElement("dd", { text: text(user.email, "Not available") }),
+      ] }),
+      createElement("div", { children: [
+        createElement("dt", { className: "admin-u-muted", text: "Current game" }),
+        createElement("dd", { text: gameContext.name }),
+      ] }),
+    ],
+  });
+}
+
+function gameDrawerContent({ session, selectedGameId, onSelect, error }) {
+  if (error) {
+    return AdminErrorState({
+      title: "Game list is unavailable",
+      message: error.userMessage,
+      requestId: error.requestId,
+      compact: true,
+    });
+  }
+  const games = Array.isArray(session?.activeGameSessions) ? session.activeGameSessions : [];
+  if (games.length === 0) {
+    return AdminEmptyState({
+      title: "No available games",
+      message: "No game sessions are available to this administrator.",
+      compact: true,
+    });
+  }
+  const list = createElement("div", { className: "admin-u-stack" });
+  games.forEach((game) => {
+    const gameId = text(game?.id || game?.gameId);
+    const selected = gameId === selectedGameId;
+    const button = createElement("button", {
+      className: `admin-button${selected ? "" : " admin-button--quiet"}`,
+      attrs: { type: "button", "aria-current": selected ? "true" : null, disabled: selected },
+      text: `${text(game?.name, "Game session")} · ${text(game?.status, "Status unavailable")}`,
+    });
+    button.addEventListener("click", () => onSelect(gameId));
+    list.append(button);
+  });
+  return list;
+}
+
+export function mountAdminV2({ mount, session, selectedGameId } = {}) {
+  if (!(mount instanceof HTMLElement)) throw new TypeError("Admin v2 mount is unavailable.");
+  if (!session?.authenticated || !selectedGameId) {
+    throw new Error("ADMIN_V2_SESSION_CONTEXT_REQUIRED");
+  }
+
+  const permissions = permissionSet(session);
+  const hasPermission = (permission) => permissions.has(permission);
+  const api = createAdminApiClient({
+    fetchImpl: createAdminBffTransport({ selectedGameId }),
+  });
+  let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
+  let destroyed = false;
+  const overview = createOverviewController({
+    api,
+    selectedGameId,
+    hasPermission,
+    onChange: renderOverviewChange,
+    onResolved: updateOverviewShell,
+  });
+
+  const initialGame = selectedGameContext(session, selectedGameId);
+  let notificationDrawer;
+  let accountDrawer;
+  let gameDrawer;
+  const navigation = AdminNavigation({
+    groups: navigationGroups(),
+    currentId: activeRouteId,
+    collapsed: safeCollapsedPreference(),
+    gameName: initialGame.name,
+    gameCode: initialGame.code,
+    status: initialGame.status,
+    onNavigate(route, event) {
+      event.preventDefault();
+      navigate(route.id);
+    },
+    onSelectGame() { gameDrawer?.open(); },
+  });
+
+  const topbar = AdminTopbar({
+    title: getAdminNavigationRoute(activeRouteId)?.label || "Overview",
+    context: "Teacher administration",
+    navigationId: navigation.id,
+    notificationCount: 0,
+    identity: {
+      name: text(session.user?.displayName || session.user?.email, "Administrator"),
+      gameName: initialGame.name,
+    },
+    onNotifications() { notificationDrawer?.open(); },
+    onIdentity() { accountDrawer?.open(); },
+  });
+
+  const shell = AdminShell({ navigation, topbar });
+  const toast = AdminToast();
+  notificationDrawer = AdminDrawer({
+    title: "Notifications",
+    description: "Administrator alerts for the current game context.",
+    content: overview.renderNotifications(),
+  });
+  accountDrawer = AdminDrawer({
+    title: "Administrator account",
+    description: "Authenticated administrator and current game context.",
+    content: accountDrawerContent(session, initialGame),
+  });
+  gameDrawer = AdminDrawer({
+    title: "Select game",
+    description: "Choose from the game sessions available to this administrator.",
+    content: gameDrawerContent({ session, selectedGameId, onSelect: selectGame }),
+  });
+
+  mount.replaceChildren(shell.element);
+  shell.element.dataset.adminV2State = overview.getState().status;
+
+  function selectGame(gameId) {
+    if (!gameId) return;
+    try {
+      window.EconovariaAdminGameSelection?.write?.(gameId);
+      window.location.reload();
+    } catch (_error) {
+      toast.push({
+        tone: "error",
+        title: "Game could not be selected",
+        message: "The selected game context could not be applied. Try again.",
+      });
+    }
+  }
+
+  function navigate(routeId) {
+    const route = getAdminNavigationRoute(routeId) || getAdminNavigationRoute(ADMIN_DEFAULT_ROUTE_ID);
+    if (window.location.hash !== route.href) {
+      window.location.hash = route.id;
+      return;
+    }
+    activeRouteId = route.id;
+    renderRoute();
+  }
+
+  function renderRoute() {
+    if (destroyed) return;
+    const boundary = resolveCurrentAdminRouteBoundary();
+    activeRouteId = boundary.route.id;
+    navigation.setCurrent(activeRouteId);
+    topbar.setTitle(boundary.route.label);
+
+    let content;
+    if (boundary.kind === "migrated") {
+      const overviewRoute = overview.render({ onOpenLegacy: navigate });
+      content = AdminRouteBoundary({
+        routeId: boundary.route.id,
+        mode: "source",
+        content: overviewRoute.element,
+      }).element;
+      shell.element.dataset.adminV2State = overview.getState().status;
+    } else if (boundary.kind === "legacy") {
+      content = AdminRouteBoundary({
+        routeId: boundary.route.id,
+        mode: "legacy",
+        icon: boundary.route.icon,
+        legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
+        legacyTitle: `${boundary.route.label} remains in the existing Admin`,
+        legacyMessage: "Phase 1 migrates only Overview. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+      }).element;
+      shell.element.dataset.adminV2State = "legacy-boundary";
+    } else {
+      content = AdminRouteBoundary({
+        routeId: boundary.route.id,
+        mode: "planned",
+        icon: boundary.route.icon,
+        plannedTitle: `${boundary.route.label} is planned for Admin v2`,
+        plannedMessage: "This domain is part of the Admin product, but its source-owned v2 surface has not migrated yet. No unrelated legacy page will be opened.",
+      }).element;
+      shell.element.dataset.adminV2State = "planned-boundary";
+    }
+
+    const allowed = routeAllowed(boundary.route, permissions);
+    const permission = AdminPermissionBoundary({
+      allowed,
+      content,
+      deniedTitle: `${boundary.route.label} access restricted`,
+      deniedMessage: "Your administrator session does not include the permission required for this destination.",
+      onDenied: activeRouteId === ADMIN_DEFAULT_ROUTE_ID ? null : () => navigate(ADMIN_DEFAULT_ROUTE_ID),
+    });
+    shell.setContent(permission.element);
+    if (!allowed) shell.element.dataset.adminV2State = "permission-denied";
+
+    const overviewState = overview.getState();
+    if (boundary.kind === "migrated" && allowed && !overviewState.hasResolved && overviewState.requestVersion === 0) {
+      void overview.load();
+    }
+  }
+
+  function renderOverviewChange() {
+    if (activeRouteId === ADMIN_DEFAULT_ROUTE_ID) renderRoute();
+  }
+
+  function updateOverviewShell(data) {
+    const game = selectedGameContext(session, selectedGameId, data.model);
+    navigation.setGameContext({ gameName: game.name, gameCode: game.code, status: game.status });
+    topbar.setIdentity({
+      name: text(session.user?.displayName || session.user?.email, "Administrator"),
+      gameName: game.name,
+    });
+    topbar.setNotificationCount(data.model.notificationCount ?? data.model.notifications?.length ?? 0);
+    notificationDrawer.setContent(overview.renderNotifications());
+    accountDrawer.setContent(accountDrawerContent(session, game));
+    gameDrawer.setContent(gameDrawerContent({
+      session,
+      selectedGameId,
+      onSelect: selectGame,
+      error: data.panels.games?.status === "rejected" ? data.panels.games.reason : null,
+    }));
+  }
+
+  function handleHashChange() {
+    activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
+    renderRoute();
+  }
+
+  function handleCollapse(event) {
+    rememberCollapsedPreference(event.detail?.collapsed);
+  }
+
+  window.addEventListener("hashchange", handleHashChange);
+  navigation.element.addEventListener("admin-navigation-collapse", handleCollapse);
+  renderRoute();
+
+  return {
+    element: shell.element,
+    refresh: overview.load,
+    destroy() {
+      destroyed = true;
+      overview.destroy();
+      window.removeEventListener("hashchange", handleHashChange);
+      navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
+      notificationDrawer.destroy();
+      accountDrawer.destroy();
+      gameDrawer.destroy();
+      toast.destroy();
+      shell.destroy();
+    },
+  };
+}

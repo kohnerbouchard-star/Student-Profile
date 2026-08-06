@@ -1,0 +1,47 @@
+:where([data-admin-v2-root], [data-admin-v2-layer]),
+:where([data-admin-v2-root], [data-admin-v2-layer]) *,
+:where([data-admin-v2-root], [data-admin-v2-layer]) *::before,
+:where([data-admin-v2-root], [data-admin-v2-layer]) *::after {
+  box-sizing: border-box;
+}
+
+body[data-admin-ui-version="2"] {
+  min-inline-size: 0;
+  margin: 0;
+  background: var(--admin-color-canvas, #081116);
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(h1, h2, h3, h4, p, figure, blockquote, dl, dd) {
+  margin: 0;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(button, input, select, textarea) {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) button {
+  border: 0;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) :where(img, picture, video, canvas, svg) {
+  display: block;
+  max-inline-size: 100%;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer]) table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+:where([data-admin-v2-root], [data-admin-v2-layer])[hidden][hidden],
+:where([data-admin-v2-root], [data-admin-v2-layer]) [hidden][hidden] {
+  display: none;
+}

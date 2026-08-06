@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob: https:; media-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self' https://*.supabase.co" />
+  <meta name="econovaria-admin-api-base" content="" />
+  <meta name="econovaria-csrf-token" content="" />
+  <meta name="econovaria-admin-reauth-url" content="../?mode=admin&amp;reason=session-expired" />
+  <meta name="referrer" content="same-origin" />
+  <title>Econovaria Administrator Console · Overview</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/favicon-32.png" />
+  <link rel="stylesheet" href="./css/session-gate.css" />
+  <link rel="stylesheet" href="./v2/styles/reset.css" />
+  <link rel="stylesheet" href="./v2/styles/tokens.css" />
+  <link rel="stylesheet" href="./v2/styles/base.css" />
+  <link rel="stylesheet" href="./v2/styles/components.css" />
+  <link rel="stylesheet" href="./v2/styles/utilities.css" />
+  <link rel="stylesheet" href="./v2/styles/routes/overview.css" />
+  <script src="../runtime-config.env.js"></script>
+  <script src="../frontend/src/core/runtime-config.js"></script>
+  <script defer src="../frontend/src/core/admin-game-selection.js"></script>
+  <script defer src="./auth-session-manager.js"></script>
+  <script defer src="./session-gate.js"></script>
+  <script type="module" src="./v2/src/main.js"></script>
+</head>
+<body data-admin-ui-version="2">
+  <div
+    id="adminSessionGate"
+    class="admin-session-gate"
+    role="status"
+    aria-live="polite"
+    aria-label="Verifying administrator access"
+  >
+    <div class="admin-session-gate__panel">
+      <span class="admin-v2-session-pulse" aria-hidden="true"></span>
+      <p>Verifying administrator access…</p>
+    </div>
+  </div>
+  <div id="adminPreview" aria-label="Econovaria administrator console" hidden></div>
+</body>
+</html>
