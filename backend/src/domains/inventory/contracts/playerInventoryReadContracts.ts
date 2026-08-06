@@ -13,9 +13,12 @@ export interface PlayerInventoryReadScope {
 
 export interface PlayerInventoryRecord {
   readonly internalHoldingUuid: string;
-  readonly internalStoreItemUuid: string;
+  readonly internalGameItemUuid: string;
+  /** Optional acquisition provenance. Ownership does not depend on a Store offer. */
+  readonly internalStoreItemUuid: string | null;
   readonly gameId: string;
   readonly playerUuid: string;
+  /** Canonical game-scoped item key. */
   readonly itemKey: string;
   readonly name: string;
   readonly description: string | null;
@@ -23,7 +26,10 @@ export interface PlayerInventoryRecord {
   readonly unitValue: number;
   readonly currencyCode: string;
   readonly itemStatus: "active" | "disabled" | "archived";
+  /** Owned items are visible independently of Store merchandising visibility. */
   readonly itemVisibility: "visible" | "hidden";
+  /** True only when the canonical item definition exposes an enabled effect. */
+  readonly usable: boolean;
   readonly quantityOwned: number;
   readonly quantityReserved: number;
   readonly createdAt: string;
@@ -45,9 +51,9 @@ export interface PlayerInventoryReadRepository {
 }
 
 export interface PlayerInventoryItemDto {
-  /** Public per-game item key. Internal holding and Store UUIDs are never serialized. */
+  /** Canonical public per-game item key. Internal UUIDs are never serialized. */
   readonly id: string;
-  /** Compatibility alias for the Player Terminal read model; also the public item key. */
+  /** Compatibility alias retained for the Player Terminal read model. */
   readonly storeItemId: string;
   readonly itemKey: string;
   readonly name: string;
