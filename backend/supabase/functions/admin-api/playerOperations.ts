@@ -62,6 +62,134 @@ async function findPlayer(
   return result.data || null;
 }
 
+type PlayerLedgerCurrencyMode = "player_country" | "global_eco";
+
+type PlayerLedgerCurrencyResolution =
+  | {
+      readonly ok: true;
+      readonly currencyMode: PlayerLedgerCurrencyMode;
+      readonly currencyCode: string;
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly body: {
+        readonly code: string;
+        readonly message: string;
+      };
+    };
+
+function currencyError(
+  status: number,
+  code: string,
+  message: string,
+): PlayerLedgerCurrencyResolution {
+  return { ok: false, status, body: { code, message } };
+}
+
+function requestedLedgerCurrencyMode(
+  body: Record<string, any>,
+): PlayerLedgerCurrencyMode | "invalid" {
+  const value = text(body.currencyMode).toLowerCase();
+  if (!value) {
+    return text(body.currencyCode || body.currency).toUpperCase() === "ECO"
+      ? "global_eco"
+      : "player_country";
+  }
+  if (["player_country", "local", "player_local"].includes(value)) {
+    return "player_country";
+  }
+  if (["global_eco", "eco", "global"].includes(value)) {
+    return "global_eco";
+  }
+  return "invalid";
+}
+
+async function readPlayerCountryCurrency(
+  service: any,
+  gameSessionId: string,
+  playerId: string,
+): Promise<string> {
+  const assignmentResult = await service
+    .from("player_country_assignments")
+    .select("country_profile_id")
+    .eq("game_session_id", gameSessionId)
+    .eq("player_id", playerId)
+    .eq("status", "active")
+    .order("assigned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (assignmentResult.error) throw assignmentResult.error;
+
+  const countryProfileId = text(assignmentResult.data?.country_profile_id);
+  if (!countryProfileId) return "";
+
+  const countryResult = await service
+    .from("country_profiles")
+    .select("currency_code,status")
+    .eq("id", countryProfileId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (countryResult.error) throw countryResult.error;
+
+  const currencyCode = text(countryResult.data?.currency_code).toUpperCase();
+  return /^[A-Z]{3,16}$/.test(currencyCode) ? currencyCode : "";
+}
+
+export async function resolvePlayerLedgerCurrencyAuthority(
+  service: any,
+  input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+    readonly body: Record<string, any>;
+  },
+): Promise<PlayerLedgerCurrencyResolution> {
+  const currencyMode = requestedLedgerCurrencyMode(input.body);
+  if (currencyMode === "invalid") {
+    return currencyError(
+      400,
+      "ledger_currency_mode_invalid",
+      "currencyMode must be player_country or global_eco.",
+    );
+  }
+
+  const requestedCurrencyCode = text(
+    input.body.currencyCode || input.body.currency,
+  ).toUpperCase();
+
+  if (currencyMode === "global_eco") {
+    if (requestedCurrencyCode && requestedCurrencyCode !== "ECO") {
+      return currencyError(
+        400,
+        "ledger_currency_mismatch",
+        "The requested currency does not match the selected currency mode.",
+      );
+    }
+    return { ok: true, currencyMode, currencyCode: "ECO" };
+  }
+
+  const currencyCode = await readPlayerCountryCurrency(
+    service,
+    input.gameSessionId,
+    input.playerId,
+  );
+  if (!currencyCode) {
+    return currencyError(
+      409,
+      "player_country_currency_unavailable",
+      "The player's active country currency is unavailable.",
+    );
+  }
+  if (requestedCurrencyCode && requestedCurrencyCode !== currencyCode) {
+    return currencyError(
+      400,
+      "ledger_currency_mismatch",
+      "The requested currency does not match the player's active country.",
+    );
+  }
+  return { ok: true, currencyMode, currencyCode };
+}
+
 async function adjustPlayerLedger(service: any, input: any): Promise<any> {
   const body = object(input.body);
   let amount = number(body.amount ?? body.value, Number.NaN);
@@ -89,13 +217,26 @@ async function adjustPlayerLedger(service: any, input: any): Promise<any> {
       },
     };
   }
+
+  const currency = await resolvePlayerLedgerCurrencyAuthority(service, {
+    gameSessionId: input.gameSessionId,
+    playerId: input.playerId,
+    body,
+  });
+  if (currency.ok === false) {
+    return {
+      handled: true,
+      status: currency.status,
+      body: currency.body,
+    };
+  }
+
   const rpc = await service.rpc("record_player_ledger_entry", {
     p_game_session_id: input.gameSessionId,
     p_player_id: input.playerId,
     p_account_type: text(body.accountType, "cash"),
     p_amount: amount,
-    p_currency_code: text(body.currencyCode || body.currency, "ECO")
-      .toUpperCase(),
+    p_currency_code: currency.currencyCode,
     p_entry_type: amount > 0 ? "credit" : "debit",
     p_source_domain: "players",
     p_source_action: "staff_player_balance_adjustment",
@@ -105,6 +246,8 @@ async function adjustPlayerLedger(service: any, input: any): Promise<any> {
     p_audit_metadata: {
       note: text(body.note || body.ledgerNote || body.reason) || null,
       effectiveDate: isoDate(body.effectiveDate) || null,
+      currencyMode: currency.currencyMode,
+      resolvedCurrencyCode: currency.currencyCode,
     },
   });
   if (rpc.error) throw rpc.error;
@@ -116,6 +259,8 @@ async function adjustPlayerLedger(service: any, input: any): Promise<any> {
         adjusted: true,
         playerId: input.playerId,
         amount,
+        currencyMode: currency.currencyMode,
+        currencyCode: currency.currencyCode,
         ledger: Array.isArray(rpc.data) ? rpc.data[0] : rpc.data,
       },
     },
