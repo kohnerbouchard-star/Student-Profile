@@ -1,0 +1,48 @@
+name: Temporary Econovaria Brand Export
+
+on:
+  push:
+    branches:
+      - feat/econovaria-marketing-site-v1
+    paths:
+      - .github/workflows/temp-econovaria-brand-export.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export-brand:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact current main source
+        uses: actions/checkout@v6
+        with:
+          ref: f2694e40bac39b4ceb20951d88dddd38c6a9270a
+          persist-credentials: false
+
+      - name: Verify exact source and bounded asset set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "f2694e40bac39b4ceb20951d88dddd38c6a9270a"
+          test -s "assets/brand/Econovaria Logo.png"
+          test -s "assets/brand/econovaria-icon.webp"
+          test -s "assets/brand/favicon-32.png"
+          test -s "assets/Login_Screen_Background_image_balanced_vibrant.png"
+          test -s "assets/novaria-building-blue-purple-outline-balanced.png"
+          test -s "player-terminal/assets/images/econovaria-world-map.png"
+
+      - name: Upload current production-brand assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-current-brand-assets
+          path: |
+            assets/brand/Econovaria Logo.png
+            assets/brand/econovaria-icon.webp
+            assets/brand/favicon-32.png
+            assets/Login_Screen_Background_image_balanced_vibrant.png
+            assets/novaria-building-blue-purple-outline-balanced.png
+            player-terminal/assets/images/econovaria-world-map.png
+          if-no-files-found: error
+          retention-days: 1
