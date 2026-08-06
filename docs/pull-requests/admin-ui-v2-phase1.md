@@ -15,6 +15,7 @@
 - Status: `IMPLEMENTED_NOT_MERGED`
 - Base: `f2694e40bac39b4ceb20951d88dddd38c6a9270a`
 - Implementation commit: `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`
+- Navigation-taxonomy correction commit: `462a15aaf8b9c292f786509b2fc52cf6cce3b425`
 - Draft PR: [#502](https://github.com/kohnerbouchard-star/Student-Profile/pull/502)
 - Git-connected preview: https://econovaria-git-refactor-admin-ui-v2-overview-a22902-econovaria.vercel.app
 
@@ -126,7 +127,7 @@ Phase 1 intentionally deletes no legacy Admin file. The generated v606 bundle, l
 - Native `<dialog>` migration is also deferred to separately authorized compatibility, focus, and browser work; the current shared source-owned dialog contract remains the Phase 1 implementation.
 - PR #498 is a separate draft legacy modal compatibility fix. Reconcile `admin/index.html` overlap and merge order; do not make v2 depend on its prototype guard.
 - Direct load and reload of the exact preview `/admin/v2.html` route are verified; no extensionless alias is claimed.
-- The documented local release checks and screenshots were rerun against implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`; reviewer approval, required workflows, and merge remain pending.
+- The documented local release checks and screenshots were rerun against navigation-taxonomy correction commit `462a15aaf8b9c292f786509b2fc52cf6cce3b425`; reviewer approval, required workflows, and merge remain pending.
 - Draft PR #502 and its Git-connected preview exist. Nothing was merged, manually deployed, promoted to production, or changed in authentication.
 
 ### Approved continuation order
