@@ -1,0 +1,695 @@
+name: Staging Admin Permission Grants Repair
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/staging-admin-permission-grants-repair.yml"
+      - "scripts/staging-admin-permission-grants-repair-contract.test.mjs"
+      - "docs/operations/evidence/staging-admin-permission-grants-repair-v1.json"
+      - "backend/supabase/migrations/20260726095000_add_staff_permission_grants_v2.sql"
+      - "scripts/security/reconcile-staff-security-metadata.mjs"
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact current main commit to repair"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact staging project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type REPAIR STAGING ADMIN PERMISSION GRANTS"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-admin-permission-grants-repair-v1
+  cancel-in-progress: false
+
+env:
+  MANIFEST_PATH: docs/operations/evidence/staging-admin-permission-grants-repair-v1.json
+  MIGRATION_PATH: backend/supabase/migrations/20260726095000_add_staff_permission_grants_v2.sql
+  MIGRATION_VERSION: "20260726095000"
+  MIGRATION_NAME: add_staff_permission_grants_v2
+  EXPECTED_MIGRATION_BLOB: cac86d86cc9b8b0862ed471ca1f1c0d8de7a8bd0
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  EXPECTED_CANONICAL_UNLINKED_EMAIL: canonical-source@econovaria.internal
+  EXPECTED_CANONICAL_UNLINKED_NAME: Econovaria Canonical Provisioner
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  contract:
+    name: Validate bounded staging repair contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate workflow, manifest, and migration identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          node --test scripts/staging-admin-permission-grants-repair-contract.test.mjs
+
+  repair:
+    name: Repair staging Admin permission grants and Auth claims
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Enforce explicit staging authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "REPAIR STAGING ADMIN PERMISSION GRANTS"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Check out exact authorized source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main and immutable repair contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          test "$(git hash-object "$MIGRATION_PATH")" = "$EXPECTED_MIGRATION_BLOB"
+          node --test scripts/staging-admin-permission-grants-repair-contract.test.mjs
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install locked operator dependencies
+        shell: bash
+        run: npm ci --ignore-scripts
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Link only the isolated staging project
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase --yes link \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Bind the linked database identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          pooler_path="backend/supabase/.temp/pooler-url"
+          test -s "$pooler_path"
+          pooler_url="$(tr -d '\r\n' < "$pooler_path")"
+          POOLER_URL="$pooler_url" node - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          const expected = process.env.EXPECTED_STAGING_PROJECT_REF;
+          const username = decodeURIComponent(parsed.username || "");
+          const directHost = parsed.hostname === `db.${expected}.supabase.co`;
+          const poolerUser = username === `postgres.${expected}` ||
+            username.endsWith(`.${expected}`);
+          if (
+            !["postgresql:", "postgres:"].includes(parsed.protocol) ||
+            (!directHost && !poolerUser) ||
+            expected === process.env.DENIED_PRODUCTION_PROJECT_REF
+          ) {
+            throw new Error("Linked database identity is not isolated staging.");
+          }
+          NODE
+          echo "::add-mask::$SUPABASE_DB_PASSWORD"
+          {
+            printf 'SUPABASE_DB_URL=%s\n' "$pooler_url"
+            printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD"
+            printf 'PGSSLMODE=require\n'
+          } >> "$GITHUB_ENV"
+
+      - name: Ensure PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+
+      - name: Resolve protected staging service credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$service" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/api-keys?reveal=true" \
+              > "$RUNNER_TEMP/project-api-keys.json"
+            node - <<'NODE'
+          const fs = require("node:fs");
+          const rows = JSON.parse(
+            fs.readFileSync(process.env.RUNNER_TEMP + "/project-api-keys.json", "utf8"),
+          );
+          const service = rows.find(
+            (row) => row.name === "service_role" && row.api_key,
+          )?.api_key || "";
+          fs.writeFileSync(
+            process.env.RUNNER_TEMP + "/service-role-key",
+            service,
+            { mode: 0o600 },
+          );
+          NODE
+            service="$(cat "$RUNNER_TEMP/service-role-key")"
+          fi
+          test -n "$service"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_SECRET_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f \
+            "$RUNNER_TEMP/project-api-keys.json" \
+            "$RUNNER_TEMP/service-role-key"
+
+      - name: Verify bounded staging preconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          statement_identity="$MIGRATION_PATH@$EXPECTED_MIGRATION_BLOB"
+          schema_state="$(
+            psql "$SUPABASE_DB_URL" \
+              --set=ON_ERROR_STOP=1 \
+              --no-psqlrc \
+              --tuples-only \
+              --no-align \
+              --field-separator='|' \
+              --command="
+                select
+                  (to_regclass('public.staff_permission_grants') is not null),
+                  (to_regprocedure('public.default_game_admin_permissions_v2()') is not null),
+                  (to_regprocedure('public.seed_staff_permission_grants_v2()') is not null),
+                  (to_regprocedure('public.bump_staff_permission_version_v2()') is not null),
+                  (select count(*) from pg_trigger where not tgisinternal and tgname='staff_users_seed_permissions_v2'),
+                  (select count(*) from pg_trigger where not tgisinternal and tgname='staff_permission_grants_version_v2'),
+                  (select count(*) from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'),
+                  (select count(*) from supabase_migrations.schema_migrations
+                    where version='$MIGRATION_VERSION'
+                      and name='$MIGRATION_NAME'
+                      and statements=array['$statement_identity']
+                      and created_by='github-actions-staging-repair'
+                      and idempotency_key='$MIGRATION_NAME');
+              "
+          )"
+          IFS='|' read -r \
+            relation_present \
+            defaults_present \
+            seed_present \
+            bump_present \
+            seed_trigger_rows \
+            version_trigger_rows \
+            ledger_rows \
+            exact_ledger_rows \
+            <<< "$schema_state"
+
+          if (
+            [ "$relation_present" = "f" ] &&
+            [ "$defaults_present" = "f" ] &&
+            [ "$seed_present" = "f" ] &&
+            [ "$bump_present" = "f" ] &&
+            [ "$seed_trigger_rows" = "0" ] &&
+            [ "$version_trigger_rows" = "0" ] &&
+            [ "$ledger_rows" = "0" ] &&
+            [ "$exact_ledger_rows" = "0" ]
+          ); then
+            repair_state="missing"
+          elif (
+            [ "$relation_present" = "t" ] &&
+            [ "$defaults_present" = "t" ] &&
+            [ "$seed_present" = "t" ] &&
+            [ "$bump_present" = "t" ] &&
+            [ "$seed_trigger_rows" = "1" ] &&
+            [ "$version_trigger_rows" = "1" ] &&
+            [ "$ledger_rows" = "1" ] &&
+            [ "$exact_ledger_rows" = "1" ]
+          ); then
+            repair_state="complete"
+          else
+            echo "Ambiguous partial permission-grants state; refusing repair." >&2
+            exit 1
+          fi
+          echo "REPAIR_STATE=$repair_state" >> "$GITHUB_ENV"
+
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/staff-preconditions.json"
+          select json_build_object(
+            'staffRows', count(*)::int,
+            'gameAdminRows', count(*) filter (
+              where staff.role = 'game_admin'
+            )::int,
+            'securityOperatorRows', count(*) filter (
+              where staff.role = 'security_operator'
+            )::int,
+            'unsupportedRoleRows', count(*) filter (
+              where staff.role not in ('game_admin', 'security_operator')
+            )::int,
+            'invalidVersionRows', count(*) filter (
+              where staff.permission_version < 1
+                or staff.security_version < 1
+            )::int,
+            'knownCanonicalUnlinkedRows', count(*) filter (
+              where auth_user.id is null
+                and staff.email = 'canonical-source@econovaria.internal'
+                and staff.display_name = 'Econovaria Canonical Provisioner'
+            )::int,
+            'otherUnlinkedRows', count(*) filter (
+              where auth_user.id is null
+                and not (
+                  staff.email = 'canonical-source@econovaria.internal'
+                  and staff.display_name = 'Econovaria Canonical Provisioner'
+                )
+            )::int,
+            'requiredStaffColumns', (
+              select count(*)::int
+              from information_schema.columns
+              where table_schema = 'public'
+                and table_name = 'staff_users'
+                and column_name in (
+                  'status',
+                  'role',
+                  'permission_version',
+                  'security_version',
+                  'mfa_required',
+                  'security_hold_reason',
+                  'suspended_at',
+                  'compromised_at'
+                )
+            )
+          )
+          from public.staff_users as staff
+          left join auth.users as auth_user
+            on auth_user.id = staff.supabase_auth_user_id;
+          SQL
+
+          PRECONDITIONS_PATH="$RUNNER_TEMP/staff-preconditions.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.PRECONDITIONS_PATH, "utf8").trim(),
+          );
+          if (
+            Number(result.staffRows) < 1 ||
+            Number(result.gameAdminRows) + Number(result.securityOperatorRows) !==
+              Number(result.staffRows) ||
+            Number(result.unsupportedRoleRows) !== 0 ||
+            Number(result.invalidVersionRows) !== 0 ||
+            Number(result.knownCanonicalUnlinkedRows) !== 1 ||
+            Number(result.otherUnlinkedRows) !== 0 ||
+            Number(result.requiredStaffColumns) !== 8
+          ) {
+            throw new Error("Staging Staff permission preconditions failed.");
+          }
+          NODE
+
+      - name: Generate one atomic canonical migration repair
+        if: env.REPAIR_STATE == 'missing'
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT_PATH="$RUNNER_TEMP/permission-grants-repair.sql" node - <<'NODE'
+          const fs = require("node:fs");
+          const { execFileSync } = require("node:child_process");
+          const manifest = JSON.parse(
+            fs.readFileSync(process.env.MANIFEST_PATH, "utf8"),
+          );
+          const migration = manifest.canonicalMigration;
+          const actualBlob = execFileSync(
+            "git",
+            ["hash-object", migration.path],
+            { encoding: "utf8" },
+          ).trim();
+          if (actualBlob !== process.env.EXPECTED_MIGRATION_BLOB) {
+            throw new Error("Canonical migration blob changed.");
+          }
+          const sql = fs.readFileSync(migration.path, "utf8").trim();
+          const body = sql
+            .replace(/^begin;\s*/iu, "")
+            .replace(/\s*commit;$/iu, "")
+            .trim();
+          if (!body) throw new Error("Canonical migration body is empty.");
+
+          const literal = (value) =>
+            `'${String(value).replaceAll("'", "''")}'`;
+          const statementIdentity = `${migration.path}@${actualBlob}`;
+          const ledgerPredicate = [
+            `version=${literal(migration.version)}`,
+            `name=${literal(migration.name)}`,
+            `statements=array[${literal(statementIdentity)}]`,
+            "created_by='github-actions-staging-repair'",
+            `idempotency_key=${literal(migration.name)}`,
+          ].join(" and ");
+
+          const generated = [
+            "begin;",
+            `-- exact source: ${statementIdentity}`,
+            body,
+            `insert into supabase_migrations.schema_migrations (version, name, statements, created_by, idempotency_key) values (${literal(migration.version)}, ${literal(migration.name)}, array[${literal(statementIdentity)}], 'github-actions-staging-repair', ${literal(migration.name)}) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where ${ledgerPredicate}) then raise exception 'Migration ledger conflict for version ${migration.version}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            "commit;",
+            "",
+          ].join("\n\n");
+          fs.writeFileSync(process.env.OUTPUT_PATH, generated, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/permission-grants-repair.sql"
+
+      - name: Apply only the canonical permission-grants migration
+        if: env.REPAIR_STATE == 'missing'
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/permission-grants-repair.sql"
+          rm -f "$RUNNER_TEMP/permission-grants-repair.sql"
+
+      - name: Reconcile controlled staging Auth app metadata
+        shell: bash
+        env:
+          SUPABASE_URL: https://eecvbssdvarfcykcfrny.supabase.co
+          ECONOVARIA_PROJECT_REF: eecvbssdvarfcykcfrny
+          ECONOVARIA_PRODUCTION_PROJECT_REFS: cgiukdjwicykrmtkhudh
+        run: |
+          set -euo pipefail
+          node scripts/security/reconcile-staff-security-metadata.mjs \
+            --apply \
+            > "$RUNNER_TEMP/staff-security-metadata-apply.json"
+
+          METADATA_PATH="$RUNNER_TEMP/staff-security-metadata-apply.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.METADATA_PATH, "utf8"),
+          );
+          const counters = result.counters || {};
+          if (
+            result.ok !== true ||
+            result.mode !== "apply" ||
+            result.projectRef !== process.env.EXPECTED_STAGING_PROJECT_REF ||
+            result.productionProject !== false ||
+            Number(counters.inspected) < 1 ||
+            Number(counters.skippedMissingAuthUser) !== 1 ||
+            Number(counters.failures) !== 0 ||
+            Number(counters.updated) !== Number(counters.requiresUpdate) ||
+            Number(counters.alreadyCurrent) +
+                Number(counters.requiresUpdate) +
+                Number(counters.skippedMissingAuthUser) !==
+              Number(counters.inspected)
+          ) {
+            throw new Error("Staging Auth metadata reconciliation failed.");
+          }
+          NODE
+
+      - name: Verify final schema, grants, claims, and ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          statement_identity="$MIGRATION_PATH@$EXPECTED_MIGRATION_BLOB"
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align \
+            --set=statement_identity="$statement_identity" <<'SQL' \
+            > "$RUNNER_TEMP/permission-grants-postconditions.json"
+          with expected_grants as (
+            select
+              staff.id as staff_user_id,
+              permission
+            from public.staff_users as staff
+            cross join lateral unnest(
+              case
+                when staff.role = 'game_admin'
+                  then public.default_game_admin_permissions_v2()
+                when staff.role = 'security_operator'
+                  then array['audit.read']::text[]
+                else array[]::text[]
+              end
+            ) as permissions(permission)
+          ),
+          linked_staff as (
+            select
+              staff.*,
+              auth_user.raw_app_meta_data
+            from public.staff_users as staff
+            join auth.users as auth_user
+              on auth_user.id = staff.supabase_auth_user_id
+          )
+          select json_build_object(
+            'relationPresent',
+              to_regclass('public.staff_permission_grants') is not null,
+            'defaultPermissionCount',
+              cardinality(public.default_game_admin_permissions_v2()),
+            'seedTriggerRows', (
+              select count(*)::int
+              from pg_trigger
+              where not tgisinternal
+                and tgname = 'staff_users_seed_permissions_v2'
+            ),
+            'versionTriggerRows', (
+              select count(*)::int
+              from pg_trigger
+              where not tgisinternal
+                and tgname = 'staff_permission_grants_version_v2'
+            ),
+            'grantRows', (
+              select count(*)::int
+              from public.staff_permission_grants
+            ),
+            'expectedGrantRows', (
+              select count(*)::int
+              from expected_grants
+            ),
+            'missingGrantRows', (
+              select count(*)::int
+              from expected_grants as expected
+              left join public.staff_permission_grants as actual
+                on actual.staff_user_id = expected.staff_user_id
+                and actual.permission = expected.permission
+              where actual.staff_user_id is null
+            ),
+            'unexpectedGrantRows', (
+              select count(*)::int
+              from public.staff_permission_grants as actual
+              left join expected_grants as expected
+                on expected.staff_user_id = actual.staff_user_id
+                and expected.permission = actual.permission
+              where expected.staff_user_id is null
+            ),
+            'metadataMismatchRows', (
+              select count(*)::int
+              from linked_staff
+              where (raw_app_meta_data->>'econovaria_role')
+                  is distinct from role
+                or (raw_app_meta_data->>'permission_version')::bigint
+                  is distinct from permission_version
+                or (raw_app_meta_data->>'security_version')::bigint
+                  is distinct from security_version
+                or (raw_app_meta_data->>'econovaria_account_status')
+                  is distinct from status
+                or (raw_app_meta_data->>'econovaria_mfa_required')::boolean
+                  is distinct from mfa_required
+            ),
+            'knownCanonicalUnlinkedRows', (
+              select count(*)::int
+              from public.staff_users as staff
+              left join auth.users as auth_user
+                on auth_user.id = staff.supabase_auth_user_id
+              where auth_user.id is null
+                and staff.email = 'canonical-source@econovaria.internal'
+                and staff.display_name = 'Econovaria Canonical Provisioner'
+            ),
+            'otherUnlinkedRows', (
+              select count(*)::int
+              from public.staff_users as staff
+              left join auth.users as auth_user
+                on auth_user.id = staff.supabase_auth_user_id
+              where auth_user.id is null
+                and not (
+                  staff.email = 'canonical-source@econovaria.internal'
+                  and staff.display_name = 'Econovaria Canonical Provisioner'
+                )
+            ),
+            'rowLevelSecurity', (
+              select relrowsecurity
+              from pg_class
+              where oid = 'public.staff_permission_grants'::regclass
+            ),
+            'forceRowLevelSecurity', (
+              select relforcerowsecurity
+              from pg_class
+              where oid = 'public.staff_permission_grants'::regclass
+            ),
+            'serviceRoleSelect',
+              has_table_privilege(
+                'service_role',
+                'public.staff_permission_grants',
+                'SELECT'
+              ),
+            'anonSelect',
+              has_table_privilege(
+                'anon',
+                'public.staff_permission_grants',
+                'SELECT'
+              ),
+            'authenticatedSelect',
+              has_table_privilege(
+                'authenticated',
+                'public.staff_permission_grants',
+                'SELECT'
+              ),
+            'exactLedgerRows', (
+              select count(*)::int
+              from supabase_migrations.schema_migrations
+              where version = '20260726095000'
+                and name = 'add_staff_permission_grants_v2'
+                and statements = array[:'statement_identity']
+                and created_by = 'github-actions-staging-repair'
+                and idempotency_key = 'add_staff_permission_grants_v2'
+            )
+          );
+          SQL
+
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/permission-grants-postconditions.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const result = JSON.parse(
+            fs.readFileSync(process.env.POSTCONDITIONS_PATH, "utf8").trim(),
+          );
+          if (
+            result.relationPresent !== true ||
+            Number(result.defaultPermissionCount) !== 19 ||
+            Number(result.seedTriggerRows) !== 1 ||
+            Number(result.versionTriggerRows) !== 1 ||
+            Number(result.grantRows) !== Number(result.expectedGrantRows) ||
+            Number(result.missingGrantRows) !== 0 ||
+            Number(result.unexpectedGrantRows) !== 0 ||
+            Number(result.metadataMismatchRows) !== 0 ||
+            Number(result.knownCanonicalUnlinkedRows) !== 1 ||
+            Number(result.otherUnlinkedRows) !== 0 ||
+            result.rowLevelSecurity !== true ||
+            result.forceRowLevelSecurity !== true ||
+            result.serviceRoleSelect !== true ||
+            result.anonSelect !== false ||
+            result.authenticatedSelect !== false ||
+            Number(result.exactLedgerRows) !== 1
+          ) {
+            throw new Error("Staging permission-grants postconditions failed.");
+          }
+          NODE
+
+      - name: Write sanitized staging repair evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="${{ inputs.source_commit }}" node - <<'NODE'
+          const fs = require("node:fs");
+          const read = (name) => {
+            const file = `${process.env.RUNNER_TEMP}/${name}`;
+            if (!fs.existsSync(file)) return null;
+            return JSON.parse(fs.readFileSync(file, "utf8").trim());
+          };
+          const metadata = read("staff-security-metadata-apply.json");
+          const evidence = {
+            schemaVersion: 1,
+            environment: "staging",
+            projectRef: process.env.EXPECTED_STAGING_PROJECT_REF,
+            deniedProductionProjectRef: process.env.DENIED_PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            migration: {
+              version: process.env.MIGRATION_VERSION,
+              name: process.env.MIGRATION_NAME,
+              gitBlobSha: process.env.EXPECTED_MIGRATION_BLOB,
+            },
+            initialState: process.env.REPAIR_STATE || "unknown",
+            preconditions: read("staff-preconditions.json"),
+            metadataCounters: metadata?.counters || null,
+            postconditions: read("permission-grants-postconditions.json"),
+            edgeFunctionsDeployed: false,
+            secretsChanged: false,
+            vercelDeployed: false,
+            productionTouched: false,
+            nextAction:
+              "Affected staging Staff users must sign in again before hosted Admin acceptance.",
+          };
+          fs.writeFileSync(
+            `${process.env.RUNNER_TEMP}/staging-admin-permission-grants-repair.json`,
+            `${JSON.stringify(evidence, null, 2)}\n`,
+          );
+          NODE
+
+      - name: Upload sanitized repair evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: staging-admin-permission-grants-${{ inputs.source_commit }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/staging-admin-permission-grants-repair.json
+
+      - name: Record bounded release result
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "### Staging Admin Permission Grants Repair"
+            echo ""
+            echo "- Exact staging project: \`$EXPECTED_STAGING_PROJECT_REF\`"
+            echo "- Canonical migration: \`$MIGRATION_VERSION\`"
+            echo "- Auth app metadata reconciled: \`true\`"
+            echo "- Existing Staff JWTs invalidated by version convergence: \`true\`"
+            echo "- Edge Functions deployed: \`false\`"
+            echo "- Secrets changed: \`false\`"
+            echo "- Vercel deployed: \`false\`"
+            echo '- Production touched: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
