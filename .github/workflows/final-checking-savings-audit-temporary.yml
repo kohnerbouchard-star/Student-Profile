@@ -1,0 +1,107 @@
+name: Final Checking and Savings Audit Temporary
+
+on:
+  push:
+    branches:
+      - fix/checking-savings-wallet-convergence-v1
+    paths:
+      - .github/workflows/final-checking-savings-audit-temporary.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  audit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/checking-savings-wallet-convergence-v1
+          fetch-depth: 0
+
+      - name: Confirm coordinated conversion was published
+        run: |
+          git log -8 --format='%s' | grep -F '[checking-conversion-complete] Canonicalize personal accounts to checking and savings'
+          test ! -f .github/workflows/canonicalize-checking-savings-one-time.yml
+          test ! -f .github/workflows/canonicalize-checking-savings-one-time-v2.yml
+          test ! -f .github/workflows/canonicalize-checking-savings-one-time-v3.yml
+          test ! -f .github/workflows/canonicalize-checking-savings-one-time-v4.yml
+          test ! -f .github/workflows/audit-checking-savings-convergence-temporary.yml
+          ! grep -RIl 'Export PR Source Temporary' .github/workflows
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+
+      - name: Run account-model verification
+        run: |
+          node --test scripts/player-local-currency-authority-contract.test.mjs
+          node --test scripts/checking-savings-account-type-contract.test.mjs
+          node player-terminal/tests/store-local-currency.mjs
+          npm --prefix backend run test:player-banking-public
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs
+
+      - name: Run backend typecheck
+        run: npm --prefix backend run typecheck
+
+      - name: Verify the final diff is clean
+        run: |
+          git diff --check main...HEAD
+          test -z "$(git status --porcelain)"
+
+      - name: Record final PASS
+        run: |
+          cat > /tmp/final-checking-savings-pass.md <<'EOF'
+          ## Final Checking and Savings branch audit: PASS
+
+          The coordinated conversion commit is published and the final focused branch audit passed:
+          - active Admin, Player, API, route, runner, and test source rejects the retired personal account key;
+          - Admin adjustments write Checking;
+          - Player Banking and Store use Checking and preserve Savings separately;
+          - the forward migration merges legacy balances, converts ledger and transfer classifications, changes the default, and protects the account model;
+          - valid `business:biz_...` operating accounts remain supported;
+          - focused Node/Deno tests, migration validation, release-authority verification, and backend typecheck passed.
+
+          No staging or production database mutation was performed by this audit. PR #501 remains draft until the full CI suite and connected staging rollout are complete.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/final-checking-savings-pass.md
+
+      - name: Remove temporary final audit workflow
+        run: |
+          rm -- .github/workflows/final-checking-savings-audit-temporary.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- .github/workflows/final-checking-savings-audit-temporary.yml
+          git commit -m "Remove temporary final checking and savings audit"
+          git push origin HEAD:fix/checking-savings-wallet-convergence-v1
+
+      - name: Record final FAIL
+        if: failure()
+        run: |
+          cat > /tmp/final-checking-savings-fail.md <<'EOF'
+          ## Final Checking and Savings branch audit: FAIL
+
+          The final branch audit did not pass. PR #501 remains draft and must not be merged or deployed. Review the first failing step in this workflow.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/final-checking-savings-fail.md
