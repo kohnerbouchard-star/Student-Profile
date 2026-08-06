@@ -15,7 +15,7 @@ function number(value: unknown, fallback = 0): number {
 
 function storageAccountType(value: unknown): string {
   const normalized = text(value, "checking").toLowerCase();
-  return normalized === "checking" || normalized === "cash" ? "cash" : normalized;
+  return normalized === "checking" || normalized === "cash" ? "checking" : normalized;
 }
 
 function publicAccountType(value: unknown): string {
