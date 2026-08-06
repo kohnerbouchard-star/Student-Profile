@@ -82,9 +82,13 @@ function fixtureUser() {
 }
 
 function permissionsForScenario(scenario) {
-  return scenario === "permission"
-    ? ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "game.read")
-    : [...ADMIN_V2_FIXTURE_PERMISSIONS];
+  if (scenario === "permission") {
+    return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "game.read");
+  }
+  if (scenario === "planned-permission") {
+    return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "marketplace.moderate");
+  }
+  return [...ADMIN_V2_FIXTURE_PERMISSIONS];
 }
 
 function sessionTimes({ expired = false } = {}) {

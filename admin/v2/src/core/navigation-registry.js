@@ -1,7 +1,17 @@
+const MIGRATION_STATUSES = new Set(["v2", "legacy", "planned"]);
+
 function freezePermissions(...allOf) {
   return Object.freeze({
     allOf: Object.freeze(allOf),
     anyOf: Object.freeze([]),
+  });
+}
+
+function freezeLegacyDestination(destination) {
+  if (!destination) return null;
+  return Object.freeze({
+    section: destination.section,
+    fragment: destination.fragment,
   });
 }
 
@@ -11,10 +21,18 @@ function defineRoute({
   groupId,
   icon,
   permission,
-  migration = "legacy",
-  legacySection = null,
+  migration,
+  legacyDestination = null,
 }) {
+  if (!MIGRATION_STATUSES.has(migration)) {
+    throw new TypeError(`Admin route ${id} has an invalid migration status.`);
+  }
   const migrated = migration === "v2";
+  const legacy = migration === "legacy";
+  if (legacy !== Boolean(legacyDestination?.section && legacyDestination?.fragment)) {
+    throw new TypeError(`Admin route ${id} has an invalid legacy destination.`);
+  }
+  const destination = freezeLegacyDestination(legacyDestination);
   return Object.freeze({
     id,
     label,
@@ -24,8 +42,9 @@ function defineRoute({
     migration,
     migrated,
     href: `#${id}`,
-    legacySection: migrated ? null : legacySection,
-    legacyHref: migrated ? null : `./#${id}`,
+    legacyDestination: destination,
+    legacySection: destination?.section || null,
+    legacyHref: destination ? `./#${destination.fragment}` : null,
   });
 }
 
@@ -44,7 +63,8 @@ const ROUTES = Object.freeze([
     groupId: "operations",
     icon: "players",
     permission: "players.manage",
-    legacySection: "Players",
+    migration: "legacy",
+    legacyDestination: { section: "Players", fragment: "players" },
   }),
   defineRoute({
     id: "attendance",
@@ -52,31 +72,83 @@ const ROUTES = Object.freeze([
     groupId: "operations",
     icon: "attendance",
     permission: "attendance.manage",
-    legacySection: "Attendance",
+    migration: "legacy",
+    legacyDestination: { section: "Attendance", fragment: "attendance" },
+  }),
+  defineRoute({
+    id: "market",
+    label: "Market",
+    groupId: "finance",
+    icon: "market",
+    permission: "market.manage",
+    migration: "legacy",
+    legacyDestination: { section: "Market", fragment: "market" },
+  }),
+  defineRoute({
+    id: "banking",
+    label: "Banking",
+    groupId: "finance",
+    icon: "banking",
+    permission: "economy.adjust",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "loans",
+    label: "Loans",
+    groupId: "finance",
+    icon: "loans",
+    permission: "economy.adjust",
+    migration: "planned",
   }),
   defineRoute({
     id: "contracts",
     label: "Contracts",
-    groupId: "operations",
+    groupId: "work",
     icon: "contracts",
     permission: "contracts.manage",
-    legacySection: "Assignments",
+    migration: "legacy",
+    legacyDestination: { section: "Assignments", fragment: "contracts" },
+  }),
+  defineRoute({
+    id: "business",
+    label: "Business",
+    groupId: "work",
+    icon: "business",
+    permission: "business.manage",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "crafting",
+    label: "Crafting",
+    groupId: "work",
+    icon: "crafting",
+    permission: "inventory.redeem",
+    migration: "planned",
   }),
   defineRoute({
     id: "store",
     label: "Store",
-    groupId: "economy",
+    groupId: "trade",
     icon: "store",
     permission: "store.manage",
-    legacySection: "Store",
+    migration: "legacy",
+    legacyDestination: { section: "Store", fragment: "store" },
   }),
   defineRoute({
     id: "marketplace",
     label: "Marketplace",
-    groupId: "economy",
+    groupId: "trade",
     icon: "marketplace",
-    permission: "market.manage",
-    legacySection: "Market",
+    permission: "marketplace.moderate",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "inventory",
+    label: "Inventory",
+    groupId: "trade",
+    icon: "inventory",
+    permission: "inventory.redeem",
+    migration: "planned",
   }),
   defineRoute({
     id: "world-management",
@@ -84,7 +156,31 @@ const ROUTES = Object.freeze([
     groupId: "world",
     icon: "world",
     permission: "world.manage",
-    legacySection: "World Management",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "news-events",
+    label: "News & Events",
+    groupId: "world",
+    icon: "news",
+    permission: "world.manage",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "messages",
+    label: "Messages",
+    groupId: "engagement",
+    icon: "messages",
+    permission: "messaging.moderate",
+    migration: "planned",
+  }),
+  defineRoute({
+    id: "progression",
+    label: "Progression",
+    groupId: "engagement",
+    icon: "progression",
+    permission: "progression.review",
+    migration: "planned",
   }),
   defineRoute({
     id: "settings",
@@ -92,7 +188,8 @@ const ROUTES = Object.freeze([
     groupId: "system",
     icon: "settings",
     permission: "settings.manage",
-    legacySection: "Settings",
+    migration: "legacy",
+    legacyDestination: { section: "Settings", fragment: "settings" },
   }),
   defineRoute({
     id: "logs",
@@ -100,7 +197,8 @@ const ROUTES = Object.freeze([
     groupId: "system",
     icon: "logs",
     permission: "audit.read",
-    legacySection: "Logs",
+    migration: "legacy",
+    legacyDestination: { section: "Logs", fragment: "logs" },
   }),
 ]);
 
@@ -114,15 +212,15 @@ function defineGroup(id, label) {
   });
 }
 
-/**
- * Canonical Admin left-navigation order. The first group intentionally has no
- * visible heading so Overview remains the primary destination above Operations.
- */
+/** Canonical Admin v2 left-navigation taxonomy and order. */
 export const ADMIN_NAVIGATION_GROUPS = Object.freeze([
-  defineGroup("overview", null),
+  defineGroup("overview", "Overview"),
   defineGroup("operations", "Operations"),
-  defineGroup("economy", "Economy"),
+  defineGroup("finance", "Finance"),
+  defineGroup("work", "Work"),
+  defineGroup("trade", "Trade"),
   defineGroup("world", "World"),
+  defineGroup("engagement", "Engagement"),
   defineGroup("system", "System"),
 ]);
 

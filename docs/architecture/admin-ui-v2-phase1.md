@@ -21,30 +21,58 @@ The boundary is an explicit document route:
 | URL | Entrypoint | Owner in Phase 1 |
 |---|---|---|
 | `/admin/v2.html` | `admin/v2.html` | Source-owned v2 shell and Overview route |
-| `/admin` | `admin/index.html` | Preserved legacy v606 Admin runtime and every route not yet migrated |
+| `/admin` | `admin/index.html` | Preserved legacy v606 Admin runtime and exact legacy destinations |
 
 `admin/v2.html` is deliberately a sibling of `admin/index.html`, not `admin/v2/index.html`. This keeps the existing relative login, runtime-config, asset, and authentication URL semantics unchanged. `/admin/v2.html` is the canonical Phase 1 URL; no extensionless rewrite is claimed. Deployment verification must prove direct navigation and reload of that exact URL. Phase 1 does not add or alter API rewrites.
 
-The v2 document owns its complete DOM. It must not import the generated v606 page markup, mount the legacy application inside the v2 root, iframe `/admin`, or make a body-wide observer reconcile the two applications. `AdminRouteBoundary` resolves Overview to the local source module. Selecting any other navigation destination first renders a source-owned handoff screen inside v2; only the explicit **Open existing admin** action then performs a full-document handoff to the canonical legacy destination under `/admin`. This two-step boundary keeps the ownership transition visible and testable until the route is migrated.
+The v2 document owns its complete DOM. It must not import the generated v606 page markup, mount the legacy application inside the v2 root, iframe `/admin`, or make a body-wide observer reconcile the two applications. `AdminRouteBoundary` resolves Overview to the local source module. A route classified `legacy` first renders a source-owned handoff screen inside v2; only the explicit **Open existing Admin** action then performs a full-document handoff under `/admin`. A route classified `planned` renders a neutral source-owned state with no legacy action, because no stable standalone legacy destination exists for that exact domain. Neither boundary imports or blends legacy DOM.
 
-World Management is present in the canonical v2 navigation registry under the first-class `World` group. In Phase 1 its implementation remains legacy-owned, but it is no longer rendered as a lower-screen utility or secondary tool.
+World Management is present in the canonical v2 navigation registry under the first-class `World` group. The retained v606 runtime exposes World operations only through a global modal launcher, not a standalone route, so the strict destination rule classifies the V2 item as `planned`. This does not migrate the page or demote World Management from primary navigation.
 
-### Legacy handoff contract audit
+### Canonical navigation registry
 
-The browser suite exercises every non-Overview item twice: once with a non-private opaque fixture context to prove interaction semantics, and once with the authoritative current UUID contract to keep the known privacy/hygiene exception observable. In every row, activating the navigation item retains focus on that item, the explicit **Open existing admin** action accepts focus, hash activation adds one history entry, Back returns to Overview, Forward restores the boundary, the full-document handoff adds exactly one `/admin/` navigation, and Back returns to the same V2 boundary without a loop.
+The registry is the single source of truth for ID, visible label, group, icon, permission, migration status, and legacy destination. Overview is the only native V2 route.
 
-| Destination ID | Visible label | Phase 1 owner | Selected-game preservation | Focus/history/no-loop | Internal ID absent from authoritative URL |
+| Group | Route ID | Label | Permission | Migration | Exact legacy section |
 |---|---|---|---|---|---|
-| `players` | Players | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `attendance` | Attendance | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `contracts` | Contracts | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `store` | Store | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `marketplace` | Marketplace | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `world-management` | World Management | Legacy, first-class `World` item | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `settings` | Settings | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
-| `logs` | Logs | Legacy | Pass with opaque context; UUID preserved by current contract | Pass | **Fail** |
+| Overview | `overview` | Overview | `game.read` | `v2` | — |
+| Operations | `players` | Players | `players.manage` | `legacy` | Players |
+| Operations | `attendance` | Attendance | `attendance.manage` | `legacy` | Attendance |
+| Finance | `market` | Market | `market.manage` | `legacy` | Market |
+| Finance | `banking` | Banking | `economy.adjust` | `planned` | — |
+| Finance | `loans` | Loans | `economy.adjust` | `planned` | — |
+| Work | `contracts` | Contracts | `contracts.manage` | `legacy` | Assignments |
+| Work | `business` | Business | `business.manage` | `planned` | — |
+| Work | `crafting` | Crafting | `inventory.redeem` | `planned` | — |
+| Trade | `store` | Store | `store.manage` | `legacy` | Store |
+| Trade | `marketplace` | Marketplace | `marketplace.moderate` | `planned` | — |
+| Trade | `inventory` | Inventory | `inventory.redeem` | `planned` | — |
+| World | `world-management` | World Management | `world.manage` | `planned` | — |
+| World | `news-events` | News & Events | `world.manage` | `planned` | — |
+| Engagement | `messages` | Messages | `messaging.moderate` | `planned` | — |
+| Engagement | `progression` | Progression | `progression.review` | `planned` | — |
+| System | `settings` | Settings | `settings.manage` | `legacy` | Settings |
+| System | `logs` | Logs | `audit.read` | `legacy` | Logs |
 
-No row is claimed as migrated. The product owner accepts the eight UUID-free URL assertion failures as a documented, non-blocking Phase 1 legacy privacy/hygiene exception. The assertions remain enabled and red, are reported separately as deferred debt, and are not reclassified as passes. The URL result cannot be repaired in V2 alone while also preserving the legacy-selected game: the legacy selection helper and BFF scope expect that UUID. Discussion and implementation of a public, server-authoritative browser handle plus coordinated legacy/backend adoption are deferred to separately authorized work.
+Market and Marketplace are intentionally separate. The inherited v606 navigation labels its financial `Market` section “Marketplace,” but its renderer and `/market/**` reads are securities and trading functionality. V2 therefore maps that exact surface only to `market`. The dormant Marketplace lifecycle loader requires a standalone `marketplace` section the legacy shell does not expose, so `marketplace` is planned and never hands off to Market.
+
+### Legacy and planned boundary audit
+
+The browser suite exercises every exact legacy item with a non-private opaque fixture context. Activating the item retains focus, the explicit **Open existing Admin** action accepts focus, hash activation adds one history entry, Back returns to Overview, Forward restores the boundary, the full-document handoff adds exactly one `/admin/` navigation, and Back returns to the same V2 boundary without a loop.
+
+| Destination ID | Visible label | Exact legacy section | Selected-game preservation | Focus/history/no-loop |
+|---|---|---|---|---|
+| `players` | Players | Players | Pass with opaque context | Pass |
+| `attendance` | Attendance | Attendance | Pass with opaque context | Pass |
+| `market` | Market | Market | Pass with opaque context | Pass |
+| `contracts` | Contracts | Assignments | Pass with opaque context | Pass |
+| `store` | Store | Store | Pass with opaque context | Pass |
+| `settings` | Settings | Settings | Pass with opaque context | Pass |
+| `logs` | Logs | Logs | Pass with opaque context | Pass |
+
+All ten planned items render the source-owned planned state, keep focus/history behavior, stay on `/admin/v2.html`, expose no action or unrelated link, and do not enter a navigation loop. A missing planned-route permission fails closed through `AdminPermissionBoundary` before planned content is rendered.
+
+The product owner accepts the eight previously recorded UUID-free URL assertion failures as a documented, non-blocking Phase 1 privacy/hygiene exception. Those same eight assertions remain enabled and red across their current V2 boundary URLs and any available legacy handoff URL; they are reported separately as deferred debt and are not reclassified as passes. The URL result cannot be repaired in V2 alone while also preserving the legacy-selected game: the legacy selection helper and BFF scope expect that UUID. Discussion and implementation of a public, server-authoritative browser handle plus coordinated legacy/backend adoption are deferred to separately authorized work.
 
 The legacy route remains operational and independently testable throughout the migration. A v2 failure must preserve the v2 shell when safe, and it must never silently fall through to a fabricated Overview or blend legacy and v2 DOM state.
 
@@ -187,10 +215,10 @@ The required v2 primitives are source-owned under `admin/v2/src/components/`. Th
 | Component | Actual path | Responsibility |
 |---|---|---|
 | `AdminShell` | `admin/v2/src/components/AdminShell.js` | Desktop/mobile shell geometry and landmark composition |
-| `AdminNavigation` | `admin/v2/src/components/AdminNavigation.js` | Canonical grouped registry, active state, collapsed accessible names, keyboard movement, and selection of legacy-boundary routes |
+| `AdminNavigation` | `admin/v2/src/components/AdminNavigation.js` | Canonical grouped registry, active state, collapsed accessible names, keyboard movement, and selection of legacy or planned boundaries |
 | `AdminTopbar` | `admin/v2/src/components/AdminTopbar.js` | Current route, game, and administrator summary without exposing private identifiers |
 | `AdminPageFrame` | `admin/v2/src/components/AdminPageFrame.js` | Route heading, actions, state announcements, and route scroll boundary |
-| `AdminRouteBoundary` | `admin/v2/src/components/AdminRouteBoundary.js` | Renders source-owned Overview or a legacy-boundary panel whose explicit link performs the document handoff |
+| `AdminRouteBoundary` | `admin/v2/src/components/AdminRouteBoundary.js` | Renders source-owned Overview, an explicit legacy handoff, or a neutral planned state with no unrelated link |
 | `AdminPermissionBoundary` | `admin/v2/src/components/AdminPermissionBoundary.js` | Safe permission-denied presentation and guarded route activation |
 | `AdminDialog` | `admin/v2/src/components/AdminDialog.js` | Shared modal geometry and accessibility lifecycle |
 | `AdminConfirmDialog` | `admin/v2/src/components/AdminConfirmDialog.js` | Confirmation content and action state using `AdminDialog` |
@@ -235,7 +263,7 @@ Phase 1 deletes no legacy Admin file. The following path sets collectively cover
 | Retained category | Exact paths or path set | Reason retained |
 |---|---|---|
 | Legacy document and records | `admin/index.html`, `admin/README.md`, `admin/docs/**` | `/admin` remains the stable v606 boundary and its historical evidence remains authoritative |
-| Generated v606 runtime | `admin/dist/admin-overview-terminal.js`, `admin/dist/admin-overview-boot.js` | Players, Attendance, Contracts, Store, Marketplace, Settings, Logs, account, Games, help, and notification surfaces remain legacy-owned |
+| Generated v606 runtime | `admin/dist/admin-overview-terminal.js`, `admin/dist/admin-overview-boot.js` | Players, Attendance, Contracts, Store, financial Market, Settings, Logs, account, Games, help, and notification surfaces remain legacy-owned; its stale Market-as-Marketplace label is not adopted by V2 |
 | Accepted visual baseline | `admin/css/admin-overview-terminal.css`, `admin/css/admin-overview-integrity.css`, `admin/css/admin-overview-integrity-v606.edec218457e4.css`, `admin/css/page-shell.css` | Visual/reference parity and legacy runtime operation |
 | Session and authentication runtime | `admin/auth-session-manager.js`, `admin/session-gate.js`, `admin/session-timeout-safe-exit.js`, `admin/admin-auth.js`, `admin/admin-auth.css`, `admin/admin-logout-controller.js`, `admin/logout-account-trigger-bridge.js`, `admin/logout-confirmation.js`, `admin/admin-bootstrap.js` | Existing web-session, expiry, logout, bootstrap, and legacy mount behavior remains unchanged |
 | Legacy compatibility and interaction layers | `admin/admin-stabilization.js`, `admin/asset-wiring.js`, `admin/classroom-write-fallback.js`, `admin/create-action-adapter.js`, `admin/data-state-contracts.js`, `admin/export-history-modal-accessibility.js`, `admin/interaction-quality.js`, `admin/interaction-quality-control-reset.js`, `admin/keyboard-navigation.js`, `admin/modal-accessibility.js`, `admin/modal-lifecycle-bridge.js`, `admin/overview-quick-actions.js` | Required by still-unmigrated v606 routes; not imported by v2 |
@@ -243,7 +271,7 @@ Phase 1 deletes no legacy Admin file. The following path sets collectively cover
 | Attendance controllers | `admin/attendance-reward-save-controller-v3.js`, `admin/attendance-reward-settings-route-bridge-v2.js`, `admin/attendance-reward-settings-v4.js`, `admin/scanner-auto-refresh.js`, `admin/scanner-lifecycle-settle.js`, `admin/scanner-reward-localization.js` | Attendance remains legacy-owned |
 | Game lifecycle, creation, share, and code controllers | `admin/game-code-wiring.js`, `admin/game-creation-controls.js`, `admin/game-creation-runtime-bridge.js`, `admin/game-creation-style-loader.js`, `admin/game-lifecycle-controls.js`, `admin/game-session-compact-layering.js`, `admin/game-session-controls.js`, `admin/game-session-mount-lifecycle.js`, `admin/game-session-share-link-contract.js`, `admin/share-game-code-layout-fix.js` | Game selection/control surfaces and legacy route handoff remain operational |
 | Settings controllers | `admin/settings-lifecycle-bridge.js`, `admin/settings-save-error-bridge.js`, `admin/settings-simplified.js` | Settings remains legacy-owned |
-| Expansion feature surfaces | `admin/crafting-oversight-{client,loader,surface}.js`, `admin/inventory-redemption-queue-{client,loader,surface}.js`, `admin/marketplace-lifecycle-{client,loader,surface}.js`, `admin/messaging-moderation-{client,loader,surface}.js`, `admin/messaging-policy-{client,surface}.js`, `admin/progression-review-{client,loader,surface}.js`, `admin/world-runtime-console.js`, `admin/world-runtime-console-loader.js` | These bounded features are not migrated in Phase 1; World remains a first-class navigation destination with legacy implementation |
+| Expansion feature surfaces | `admin/crafting-oversight-{client,loader,surface}.js`, `admin/inventory-redemption-queue-{client,loader,surface}.js`, `admin/marketplace-lifecycle-{client,loader,surface}.js`, `admin/messaging-moderation-{client,loader,surface}.js`, `admin/messaging-policy-{client,surface}.js`, `admin/progression-review-{client,loader,surface}.js`, `admin/world-runtime-console.js`, `admin/world-runtime-console-loader.js` | These retained drawers, injected panels, and launchers are not stable standalone legacy destinations. Their exact V2 domain items remain planned; World Management remains first-class. |
 | Legacy component/feature styles | `admin/css/admin-scroll-integrity.css`, `admin/css/admin-stabilization.css`, `admin/css/admin-stabilization-visual-finish.css`, `admin/css/attendance-reward-settings.css`, `admin/css/crafting-oversight.css`, `admin/css/data-state-contracts.css`, `admin/css/game-creation-controls.css`, `admin/css/game-lifecycle-controls.css`, `admin/css/game-session-compact-layering.css`, `admin/css/game-session-controls.css`, `admin/css/interaction-quality.css`, `admin/css/inventory-redemption-queue.css`, `admin/css/keyboard-navigation.css`, `admin/css/logout-confirmation.css`, `admin/css/marketplace-lifecycle.css`, `admin/css/overview-quick-actions.css`, `admin/css/player-create-confirmation.css`, `admin/css/player-runtime-integration.css`, `admin/css/responsive-card-grid.css`, `admin/css/session-gate.css`, `admin/css/session-skeleton.css`, `admin/css/settings-final-polish.css`, `admin/css/settings-simplified.css`, `admin/css/world-runtime-console.css`, `admin/messaging-moderation.css`, `admin/progression-review.css` | Still required by legacy pages and compatibility surfaces; v2 retains only the scoped `admin/css/session-gate.css` bootstrap prerequisite, then uses `admin/v2/styles/**` for its UI |
 | Repository-owned Admin assets | `admin/assets/icons/**`, `admin/assets/images/**`, `admin/assets/media/**`, `admin/assets/videos/**` | Shared visual assets remain valid; reuse must go through v2 icon/media primitives without changing bytes or Player assets |
 | Historical marker file | `admin/window.ECONOVARIA_ADMIN_MOTION_BACKGROUND` | Preserved pending a deliberate provenance/consumer audit; Phase 1 does not delete unexplained legacy artifacts |
@@ -267,9 +295,9 @@ Any reused file or idea must be selected individually, checked against current `
 
 Deletion is gated by source ownership, parity evidence, merge to `main`, and any required runtime verification. No phase may delete a legacy surface merely because a replacement exists on an unmerged branch.
 
-1. **Phase 1 — shell and Overview:** delete nothing. Establish `/admin/v2.html`, canonical navigation, primitives, authoritative Overview, and the explicit two-step legacy boundary and handoff action. Overview remains the only migrated route at the end of this phase.
+1. **Phase 1 — shell and Overview:** delete nothing. Establish `/admin/v2.html`, canonical navigation, primitives, authoritative Overview, exact legacy handoffs, and neutral planned boundaries. Overview remains the only migrated route at the end of this phase.
 2. **Store and shared artwork:** migrate Store next and establish the reviewed repository-owned artwork/media treatment shared by later native routes. Retire only Store-specific legacy surfaces after merge and parity evidence.
-3. **World native:** migrate World Management as the primary native `World` destination. Until that tranche is merged, it remains a first-class navigation item with clearly labeled legacy ownership. Retire `world-runtime-console*` only after world permissions, short-height navigation, and connected-data evidence pass.
+3. **World native:** migrate World Management as the primary native `World` destination. Until that tranche is merged, it remains a first-class navigation item with a clearly labeled planned boundary. Retire `world-runtime-console*` only after world permissions, short-height navigation, and connected-data evidence pass.
 4. **Players and Attendance:** migrate Players and Attendance in that order within the approved tranche. Remove only route-specific bridges, controllers, modals, and CSS whose consumers are proven absent.
 5. **Contracts:** migrate Contracts after Players and Attendance, preserving server-authoritative reward and game-scope boundaries before removing its legacy surface.
 6. **Marketplace, Settings, and Logs:** migrate these remaining canonical destinations after Contracts, with route-specific parity and security evidence before any matching legacy removal.
@@ -288,7 +316,7 @@ Deletion is gated by source ownership, parity evidence, merge to `main`, and any
 | Authentication compatibility | Reuse the unchanged session/game-selection contracts and relative redirects. V2 uses a local, dependency-injected read transport and does not load or change legacy `admin-auth.js`. Wrong-role, expiry, revocation/security-version invalidation, AAL2, missing-game, 401/403/429/5xx, and retryable outage behavior must fail closed. |
 | Legacy/v2 CSS collision | Apart from the retained `admin/css/session-gate.css` bootstrap prerequisite, v2 UI styling comes only from `admin/v2/styles/**`; any unavoidable `!important` must be documented with selector and reason. |
 | Overview response drift | Normalize and validate the existing dashboard response. Never fabricate missing values or render raw errors. |
-| Scope expansion | Players, Attendance, Contracts, Store, Marketplace, World implementation, Settings, Logs, and backend work remain out of Phase 1. |
+| Scope expansion | Every route except Overview—including Market, Banking, Loans, Business, Crafting, Store, Marketplace, Inventory, World Management, News & Events, Messages, Progression, Players, Attendance, Contracts, Settings, and Logs—remains implementation-out-of-scope for Phase 1. Backend work also remains out of scope. |
 | Existing dirty/shared work | Final diff must exclude unrelated roadmap, Backend, Player, auth, migration, and infrastructure changes. |
 
 ## Test and evidence matrix
@@ -311,11 +339,13 @@ Verification ran on 2026-08-06 against implementation commit `3baed2ae36b9cbdf19
 | Browser 320×568 | Narrow/short layout, reachable nav/game region, no clipped controls | **LOCAL PASS** — `overview-ready-320x568.png` |
 | Short desktop | Independent rail scroll and persistent game selector at 1024×540 | **LOCAL PASS** — `overview-short-desktop-1024x540.png` |
 | Long-name fixtures | Long administrator, game, and player names do not collide, clip, or expose private identifiers | **LOCAL PASS** — asserted at every ready viewport |
-| Overview variants | Authoritative non-empty, empty, initial-loading, refreshing, stale, failed, and permission-denied presentations | **LOCAL PASS** — covered within the 40-check source and built-dist runs, with 12 screenshots; see `admin-v2-browser-results.json` |
+| Overview variants | Authoritative non-empty, empty, initial-loading, refreshing, stale, failed, and permission-denied presentations | **LOCAL PASS** — covered within the 42-pass source and built-dist runs, with 12 screenshots; see `admin-v2-browser-results.json` |
 | Navigation rail scrolling | Every item and game selector/code region reachable at short heights; World Management visible | **LOCAL PASS** — 1024×540 desktop and 320×568 mobile assertions |
 | Document integrity | No horizontal document overflow and no concealed content at all required viewports | **LOCAL PASS** — all browser scenarios |
 | Browser safety and built MIME/CSP | Correct JS/CSS MIME; no missing/failed resources; no CSP or Trusted Types warnings; no unexpected console/page error; no raw backend message rendered | **LOCAL PASS** — final source records 1,387 and built dist records 1,384 JS/CSS responses with zero MIME errors, missing/failed static requests, CSP/Trusted Types warnings, or unexpected console/page errors. Each run's 24 deliberate session/API failures produce only their correlated browser HTTP-status messages. |
-| Legacy boundary smoke | Every non-Overview label remains explicitly legacy; opaque context preserves selection; focus, history, return, and no-loop behavior pass; internal IDs stay out of URLs | **LOCAL PASS EXCEPT 8 OWNER-ACCEPTED DEFERRED LEGACY ASSERTIONS** — all eight routes pass ownership, label, opaque selection, focus, history, and no-loop checks. All eight UUID-free URL assertions remain enabled and fail because the authoritative current legacy selection contract requires the internal UUID in both V2 and handoff URLs. The product owner classifies this as non-blocking Phase 1 privacy/hygiene debt, not a pass. World Management remains first-class and clearly legacy. |
+| Legacy boundary smoke | All seven exact legacy labels preserve opaque selection; focus, history, deliberate handoff, return, and no-loop behavior pass | **LOCAL PASS** — Players, Attendance, Market, Contracts, Store, Settings, and Logs each pass the exact legacy-boundary contract. |
+| Planned boundary smoke | All ten planned labels render a neutral source-owned state, expose no unrelated legacy link, retain focus/history, and fail closed on permission denial | **LOCAL PASS** — includes independently reachable Marketplace and first-class World Management. |
+| Deferred selected-game URL assertions | Preserve the eight previously documented UUID-free predicates without relabeling them as passes | **8 EXPECTED LEGACY-CONTRACT EXCEPTIONS, 0 NEW FAILURES** — the authoritative `?game=<UUID>` contract remains unchanged; public-handle cleanup is separately deferred. |
 | Existing Admin checks | Relevant required Phase 1 release checks remain unchanged and no assertion is weakened | **LOCAL PASS WITH DOCUMENTED DEFERRED LEGACY DEBT** — the requested release matrix passes. The inherited viewport assertions in `admin-shell-smoke.mjs` and stale page-shell hash in `admin-v606-full-drift-audit.mjs` remain outside this tranche under separate ownership. |
 | Security/API boundaries | Existing authentication and BFF request-auth contracts, secret scan, and v2 same-origin read boundary | **LOCAL PASS** — `npm run test:auth-boundaries` (16/16 plus 8/8), `npm run security:secrets`, and browser assertions for GET-only `/api/admin` requests without an `Authorization` header |
 | Player Terminal regression | Player runtime source ownership and retired-path boundary remain green | **LOCAL PASS** — `npm run test:player-runtime-cutover` (38 retired paths) |

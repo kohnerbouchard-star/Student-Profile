@@ -22,6 +22,7 @@ import {
 } from "../admin/v2/src/core/error-envelope.js";
 import {
   ADMIN_NAVIGATION_GROUPS,
+  ADMIN_NAVIGATION_ROUTE_IDS,
   ADMIN_NAVIGATION_ROUTES,
   getAdminNavigationRoute,
   isMigratedAdminRoute,
@@ -32,6 +33,7 @@ import {
   readCurrentAdminV2Route,
   resolveAdminRouteBoundary,
 } from "../admin/v2/src/core/route-boundary.js";
+import { ADMIN_ICON_NAMES } from "../admin/v2/src/components/AdminIcon.js";
 
 const GAME_ID = "10000000-0000-4000-8000-000000000001";
 const OTHER_INTERNAL_ID = "20000000-0000-4000-8000-000000000002";
@@ -50,45 +52,156 @@ function fulfilled(value) {
   return Object.freeze({ status: "fulfilled", value });
 }
 
-test("Admin v2 navigation is canonical, permission-bound, and migrates only Overview", () => {
+test("Admin v2 navigation is canonical, unique, permission-bound, and migrates only Overview", () => {
+  const expectedRouteIds = [
+    "overview",
+    "players",
+    "attendance",
+    "market",
+    "banking",
+    "loans",
+    "contracts",
+    "business",
+    "crafting",
+    "store",
+    "marketplace",
+    "inventory",
+    "world-management",
+    "news-events",
+    "messages",
+    "progression",
+    "settings",
+    "logs",
+  ];
   assert.deepEqual(
     ADMIN_NAVIGATION_GROUPS.map(({ id, label }) => ({ id, label })),
     [
-      { id: "overview", label: null },
+      { id: "overview", label: "Overview" },
       { id: "operations", label: "Operations" },
-      { id: "economy", label: "Economy" },
+      { id: "finance", label: "Finance" },
+      { id: "work", label: "Work" },
+      { id: "trade", label: "Trade" },
       { id: "world", label: "World" },
+      { id: "engagement", label: "Engagement" },
       { id: "system", label: "System" },
     ],
   );
+  assert.deepEqual(ADMIN_NAVIGATION_ROUTE_IDS, expectedRouteIds);
+  assert.deepEqual(ADMIN_NAVIGATION_ROUTES.map((route) => route.id), expectedRouteIds);
   assert.deepEqual(
-    ADMIN_NAVIGATION_ROUTES.map((route) => route.id),
+    ADMIN_NAVIGATION_ROUTES.map(({ id, label }) => [id, label]),
     [
-      "overview",
-      "players",
-      "attendance",
-      "contracts",
-      "store",
-      "marketplace",
-      "world-management",
-      "settings",
-      "logs",
+      ["overview", "Overview"],
+      ["players", "Players"],
+      ["attendance", "Attendance"],
+      ["market", "Market"],
+      ["banking", "Banking"],
+      ["loans", "Loans"],
+      ["contracts", "Contracts"],
+      ["business", "Business"],
+      ["crafting", "Crafting"],
+      ["store", "Store"],
+      ["marketplace", "Marketplace"],
+      ["inventory", "Inventory"],
+      ["world-management", "World Management"],
+      ["news-events", "News & Events"],
+      ["messages", "Messages"],
+      ["progression", "Progression"],
+      ["settings", "Settings"],
+      ["logs", "Logs"],
+    ],
+  );
+  assert.deepEqual(
+    ADMIN_NAVIGATION_ROUTES.map((route) => [route.id, route.permission.allOf[0]]),
+    [
+      ["overview", "game.read"],
+      ["players", "players.manage"],
+      ["attendance", "attendance.manage"],
+      ["market", "market.manage"],
+      ["banking", "economy.adjust"],
+      ["loans", "economy.adjust"],
+      ["contracts", "contracts.manage"],
+      ["business", "business.manage"],
+      ["crafting", "inventory.redeem"],
+      ["store", "store.manage"],
+      ["marketplace", "marketplace.moderate"],
+      ["inventory", "inventory.redeem"],
+      ["world-management", "world.manage"],
+      ["news-events", "world.manage"],
+      ["messages", "messaging.moderate"],
+      ["progression", "progression.review"],
+      ["settings", "settings.manage"],
+      ["logs", "audit.read"],
     ],
   );
 
   const migratedRoutes = ADMIN_NAVIGATION_ROUTES.filter((route) => route.migrated);
   assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview"]);
+  assert.deepEqual(
+    ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy").map((route) => route.id),
+    ["players", "attendance", "market", "contracts", "store", "settings", "logs"],
+  );
+  assert.deepEqual(
+    ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned").map((route) => route.id),
+    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "world-management", "news-events", "messages", "progression"],
+  );
   assert.equal(isMigratedAdminRoute("overview"), true);
   assert.equal(isMigratedAdminRoute("world-management"), false);
+
+  const market = getAdminNavigationRoute("market");
+  const marketplace = getAdminNavigationRoute("marketplace");
+  assert.notEqual(market.id, marketplace.id);
+  assert.notEqual(market.href, marketplace.href);
+  assert.deepEqual(market.permission.allOf, ["market.manage"]);
+  assert.deepEqual(marketplace.permission.allOf, ["marketplace.moderate"]);
+  assert.equal(market.migration, "legacy");
+  assert.equal(market.legacyDestination.section, "Market");
+  assert.equal(marketplace.migration, "planned");
+  assert.equal(marketplace.legacyDestination, null);
 
   const world = getAdminNavigationRoute("world-management");
   assert.equal(world.label, "World Management");
   assert.equal(world.groupId, "world");
   assert.deepEqual(world.permission.allOf, ["world.manage"]);
-  assert.equal(world.legacySection, "World Management");
+  assert.equal(world.migration, "planned");
+  assert.equal(world.legacySection, null);
+
+  const routeIds = ADMIN_NAVIGATION_ROUTES.map((route) => route.id);
+  const routeHrefs = ADMIN_NAVIGATION_ROUTES.map((route) => route.href);
+  const legacyFragments = ADMIN_NAVIGATION_ROUTES
+    .map((route) => route.legacyDestination?.fragment)
+    .filter(Boolean);
+  assert.equal(new Set(routeIds).size, routeIds.length);
+  assert.equal(new Set(routeHrefs).size, routeHrefs.length);
+  assert.equal(new Set(legacyFragments).size, legacyFragments.length);
+  assert.equal(routeIds.includes("portfolio"), false);
+  assert.equal(routeIds.includes("account"), false);
+
+  const groupedRoutes = ADMIN_NAVIGATION_GROUPS.flatMap((group) => group.routes);
+  assert.deepEqual(groupedRoutes.map((route) => route.id), expectedRouteIds);
+  for (const route of ADMIN_NAVIGATION_ROUTES) {
+    assert.equal(
+      ADMIN_NAVIGATION_GROUPS.filter((group) => group.routes.includes(route)).length,
+      1,
+      `${route.id} does not belong to exactly one navigation group`,
+    );
+    assert.equal(route.permission.allOf.length, 1, `${route.id} has no explicit permission`);
+    assert.equal(route.permission.anyOf.length, 0);
+    assert.ok(ADMIN_ICON_NAMES.includes(route.icon), `${route.id} references a missing icon`);
+    if (route.migration === "legacy") {
+      assert.ok(route.legacyDestination?.section);
+      assert.ok(route.legacyDestination?.fragment);
+      assert.ok(route.legacyHref);
+    } else {
+      assert.equal(route.legacyDestination, null);
+      assert.equal(route.legacyHref, null);
+    }
+  }
+
   assert.equal(normalizeAdminNavigationRouteId("unknown-or-injected"), "overview");
   assert.ok(Object.isFrozen(ADMIN_NAVIGATION_GROUPS));
   assert.ok(ADMIN_NAVIGATION_ROUTES.every((route) => Object.isFrozen(route)));
+  assert.ok(ADMIN_NAVIGATION_ROUTES.every((route) => Object.isFrozen(route.permission)));
 });
 
 test("Admin v2 route resolution fails closed and preserves only a validated game selector", () => {
@@ -102,7 +215,13 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
     createLegacyAdminHandoffUrl("players", locationLike),
     `./?game=${GAME_ID}#players`,
   );
+  assert.equal(
+    createLegacyAdminHandoffUrl("market", locationLike),
+    `./?game=${GAME_ID}#market`,
+  );
   assert.equal(createLegacyAdminHandoffUrl("overview", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("marketplace", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("world-management", locationLike), null);
   assert.deepEqual(
     resolveAdminRouteBoundary({ routeId: "players", locationLike }),
     {
@@ -115,6 +234,20 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.equal(
     createLegacyAdminHandoffUrl("players", { search: "?game=../../etc/passwd" }),
     "./#players",
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "marketplace", locationLike }),
+    {
+      kind: "planned",
+      route: getAdminNavigationRoute("marketplace"),
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "world-management", locationLike }),
+    {
+      kind: "planned",
+      route: getAdminNavigationRoute("world-management"),
+    },
   );
   assert.equal(readCurrentAdminV2Route({ hash: "#<script>" }), "overview");
   assert.equal(resolveAdminRouteBoundary({ routeId: "overview" }).kind, "migrated");

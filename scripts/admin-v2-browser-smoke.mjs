@@ -17,6 +17,10 @@ import {
   createAdminV2FixtureSession,
   startAdminV2FixtureServer,
 } from "./admin-v2-browser-fixture-server.mjs";
+import {
+  ADMIN_NAVIGATION_GROUPS,
+  ADMIN_NAVIGATION_ROUTES,
+} from "../admin/v2/src/core/navigation-registry.js";
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, "..");
@@ -50,16 +54,28 @@ const FORBIDDEN_UI_DETAILS = Object.freeze([
 ]);
 const UUID_IN_URL_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const SECURITY_WARNING_PATTERN = /content security policy|trusted\s*types?|trustedtype|refused to (?:execute|load|apply|connect)/i;
-const LEGACY_NAVIGATION_DESTINATIONS = Object.freeze([
-  Object.freeze({ id: "players", label: "Players" }),
-  Object.freeze({ id: "attendance", label: "Attendance" }),
-  Object.freeze({ id: "contracts", label: "Contracts" }),
-  Object.freeze({ id: "store", label: "Store" }),
-  Object.freeze({ id: "marketplace", label: "Marketplace" }),
-  Object.freeze({ id: "world-management", label: "World Management" }),
-  Object.freeze({ id: "settings", label: "Settings" }),
-  Object.freeze({ id: "logs", label: "Logs" }),
+const LEGACY_NAVIGATION_DESTINATIONS = Object.freeze(
+  ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy"),
+);
+const PLANNED_NAVIGATION_DESTINATIONS = Object.freeze(
+  ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned"),
+);
+// Preserves the eight previously accepted UUID-free URL assertions unchanged as
+// deferred debt while the taxonomy correction changes route dispositions.
+const DEFERRED_UUID_ROUTE_ASSERTION_IDS = Object.freeze([
+  "players",
+  "attendance",
+  "contracts",
+  "store",
+  "marketplace",
+  "world-management",
+  "settings",
+  "logs",
 ]);
+const DEFERRED_UUID_ROUTE_ASSERTIONS = Object.freeze(
+  DEFERRED_UUID_ROUTE_ASSERTION_IDS.map((routeId) =>
+    ADMIN_NAVIGATION_ROUTES.find((route) => route.id === routeId)),
+);
 const runtimeDiagnostics = [];
 
 mkdirSync(EVIDENCE_DIRECTORY, { recursive: true });
@@ -160,6 +176,13 @@ async function assertMeaningfulOverview(page, label) {
     (await page.locator('[data-route="world-management"]').textContent())?.trim(),
     "World Management",
   );
+  assert.equal(await page.locator('[data-route="market"]').count(), 1, `${label} omitted Market`);
+  assert.equal(await page.locator('[data-route="marketplace"]').count(), 1, `${label} omitted Marketplace`);
+  assert.equal(
+    await page.locator('[data-route="market"]').evaluate((element) => element === document.querySelector('[data-route="marketplace"]')),
+    false,
+    `${label} conflated Market and Marketplace`,
+  );
 
   const bodyText = await page.locator("body").textContent() || "";
   assert.ok(bodyText.includes(ADMIN_V2_FIXTURE_LONG_GAME_NAME), `${label} omitted the long game name`);
@@ -173,6 +196,77 @@ async function assertMeaningfulOverview(page, label) {
   );
   await assertNoRawBackendDetails(page, label);
   await assertNoDocumentHorizontalOverflow(page, label);
+}
+
+async function verifyCanonicalNavigationLayout(page, label, { openMobile = false } = {}) {
+  if (openMobile) {
+    await page.getByRole("button", { name: "Open navigation", exact: true }).click();
+    await page.locator('.admin-shell[data-mobile-navigation-open="true"]').waitFor({ state: "attached" });
+  }
+
+  const actual = await page.locator(".admin-navigation__group").evaluateAll((sections) => sections.map((section) => {
+    const heading = section.querySelector(".admin-navigation__group-label");
+    const sectionRect = section.getBoundingClientRect();
+    return {
+      group: heading?.textContent?.trim() || "",
+      top: sectionRect.top,
+      bottom: sectionRect.bottom,
+      routes: [...section.querySelectorAll(".admin-navigation__link")].map((link) => {
+        const routeLabel = link.querySelector(".admin-navigation__label");
+        return {
+          id: link.getAttribute("data-route"),
+          label: routeLabel?.textContent?.trim() || "",
+          accessibleName: link.getAttribute("aria-label"),
+          hasIcon: Boolean(link.querySelector("svg path")),
+          labelClientWidth: routeLabel?.clientWidth || 0,
+          labelScrollWidth: routeLabel?.scrollWidth || 0,
+          labelClientHeight: routeLabel?.clientHeight || 0,
+          labelScrollHeight: routeLabel?.scrollHeight || 0,
+        };
+      }),
+    };
+  }));
+  const expected = ADMIN_NAVIGATION_GROUPS.map((group) => ({
+    group: group.label,
+    routes: group.routes.map((route) => ({
+      id: route.id,
+      label: route.label,
+      accessibleName: route.label,
+    })),
+  }));
+  assert.deepEqual(
+    actual.map((group) => ({
+      group: group.group,
+      routes: group.routes.map(({ id, label: routeLabel, accessibleName }) => ({ id, label: routeLabel, accessibleName })),
+    })),
+    expected,
+    `${label} rendered a non-canonical navigation taxonomy`,
+  );
+  for (let index = 1; index < actual.length; index += 1) {
+    assert.ok(
+      actual[index].top >= actual[index - 1].bottom - 1,
+      `${label} navigation groups ${actual[index - 1].group} and ${actual[index].group} collide`,
+    );
+  }
+  for (const group of actual) {
+    for (const route of group.routes) {
+      assert.equal(route.hasIcon, true, `${label} route ${route.id} has no icon`);
+      assert.ok(route.labelClientWidth > 0 && route.labelClientHeight > 0, `${label} route ${route.id} has no visible label`);
+      assert.ok(
+        route.labelScrollWidth <= route.labelClientWidth + 1,
+        `${label} route ${route.id} truncates horizontally`,
+      );
+      assert.ok(
+        route.labelScrollHeight <= route.labelClientHeight + 1,
+        `${label} route ${route.id} clips vertically`,
+      );
+    }
+  }
+
+  if (openMobile) {
+    await page.keyboard.press("Escape");
+    await page.locator('.admin-shell[data-mobile-navigation-open="false"]').waitFor({ state: "attached" });
+  }
 }
 
 function browserErrorRecorder(page) {
@@ -463,24 +557,23 @@ async function verifyDialogFocusLifecycle(page) {
   assert.equal(await opener.evaluate((element) => document.activeElement === element), true, "Dialog did not restore opener focus");
 }
 
-async function verifyWorldLegacyBoundary(page) {
+async function verifyWorldPlannedBoundary(page) {
   await page.locator('.admin-navigation__link[data-route="world-management"]').click();
   await page.locator('.admin-navigation__link[data-route="world-management"][aria-current="page"]')
     .waitFor({ state: "attached" });
-  await page.locator('.admin-route-boundary[data-route="world-management"][data-mode="legacy"]')
+  const boundary = page.locator('.admin-route-boundary[data-route="world-management"][data-mode="planned"]');
+  await boundary
     .waitFor({ state: "visible" });
   assert.match(page.url(), /\/admin\/v2\.html\?/i, "World Management bypassed the explicit v2 boundary");
-
-  const handoff = page.getByRole("link", { name: "Open existing admin", exact: true });
-  await handoff.waitFor({ state: "visible" });
-  const resolvedHandoff = await handoff.evaluate((element) => {
-    const url = new URL(element.href);
-    return `${url.pathname}${url.search}${url.hash}`;
-  });
+  assert.match(await boundary.innerText(), /World Management is planned for Admin v2/i);
+  assert.match(await boundary.innerText(), /No unrelated legacy page will be opened/i);
+  assert.equal(await boundary.getByRole("link").count(), 0, "World Management exposed a legacy destination");
+  const group = page.locator('.admin-navigation__link[data-route="world-management"]')
+    .locator("xpath=ancestor::section[contains(@class, 'admin-navigation__group')]");
   assert.equal(
-    resolvedHandoff,
-    `/admin/?game=${ADMIN_V2_FIXTURE_GAME_ID}#world-management`,
-    "World Management legacy handoff did not retain only the validated game context",
+    (await group.getByRole("heading", { name: "World", exact: true }).textContent())?.trim(),
+    "World",
+    "World Management is not a first-class item in the World navigation group",
   );
 }
 
@@ -550,13 +643,13 @@ async function verifyLegacyHandoffContract(browser, fixture, destination) {
       `${label} did not add a browser-history entry for route activation`,
     );
 
-    const handoff = runtime.page.getByRole("link", { name: "Open existing admin", exact: true });
+    const handoff = runtime.page.getByRole("link", { name: "Open existing Admin", exact: true });
     await handoff.focus();
     assert.equal(await handoff.evaluate((element) => document.activeElement === element), true, `${label} action cannot receive focus`);
     const handoffUrl = new URL(await handoff.getAttribute("href"), runtime.page.url());
     assert.equal(handoffUrl.pathname, "/admin/");
     assert.deepEqual([...handoffUrl.searchParams], [["game", ADMIN_V2_FIXTURE_OPAQUE_GAME_ID]]);
-    assert.equal(handoffUrl.hash, `#${destination.id}`);
+    assert.equal(handoffUrl.hash, `#${destination.legacyDestination.fragment}`);
     assertBrowserUrlHasNoInternalId(handoffUrl.href, `${label} target`);
 
     await runtime.page.goBack({ waitUntil: "domcontentloaded" });
@@ -569,8 +662,8 @@ async function verifyLegacyHandoffContract(browser, fixture, destination) {
 
     const navigationsBeforeHandoff = mainFrameNavigations.length;
     await Promise.all([
-      runtime.page.waitForURL((url) => url.pathname === "/admin/" && url.hash === `#${destination.id}`),
-      runtime.page.getByRole("link", { name: "Open existing admin", exact: true }).click(),
+      runtime.page.waitForURL((url) => url.pathname === "/admin/" && url.hash === `#${destination.legacyDestination.fragment}`),
+      runtime.page.getByRole("link", { name: "Open existing Admin", exact: true }).click(),
     ]);
     await runtime.page.getByRole("heading", { level: 1, name: "Existing Admin fixture target" }).waitFor({ state: "visible" });
     const legacyUrl = runtime.page.url();
@@ -596,39 +689,109 @@ async function verifyLegacyHandoffContract(browser, fixture, destination) {
   }
 }
 
+async function verifyPlannedBoundaryContract(browser, fixture, destination) {
+  const runtime = await createScenarioRuntime(browser, fixture, "legacy-handoff");
+  const label = `${destination.label} planned boundary`;
+  const mainFrameNavigations = [];
+  runtime.page.on("framenavigated", (frame) => {
+    if (frame === runtime.page.mainFrame()) mainFrameNavigations.push(frame.url());
+  });
+  try {
+    await waitForState(runtime.page, "ready");
+    await waitForSessionGateRelease(runtime.page);
+
+    const navigationLink = runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"]`);
+    await navigationLink.waitFor({ state: "visible" });
+    assert.equal((await navigationLink.textContent())?.trim(), destination.label);
+    assert.equal(await navigationLink.getAttribute("aria-label"), destination.label);
+
+    const startingHistoryLength = await runtime.page.evaluate(() => history.length);
+    await navigationLink.click();
+    const boundary = runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="planned"]`);
+    await boundary.waitFor({ state: "visible" });
+    await runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"][aria-current="page"]`)
+      .waitFor({ state: "attached" });
+    assert.equal(
+      await navigationLink.evaluate((element) => document.activeElement === element),
+      true,
+      `${label} did not retain focus on the activated navigation item`,
+    );
+    assert.match(await boundary.innerText(), new RegExp(`${destination.label} is planned for Admin v2`, "i"));
+    assert.match(await boundary.innerText(), /part of the Admin product/i);
+    assert.match(await boundary.innerText(), /No unrelated legacy page will be opened/i);
+    assert.equal(await boundary.getByRole("link").count(), 0, `${label} exposed an unrelated legacy link`);
+    assert.equal(await boundary.getByRole("button").count(), 0, `${label} exposed a non-functional action`);
+
+    const plannedUrl = new URL(runtime.page.url());
+    assert.equal(plannedUrl.pathname, "/admin/v2.html");
+    assert.equal(plannedUrl.searchParams.get("game"), ADMIN_V2_FIXTURE_OPAQUE_GAME_ID);
+    assert.equal(plannedUrl.hash, `#${destination.id}`);
+    assertBrowserUrlHasNoInternalId(plannedUrl.href, label);
+    assert.equal(
+      await runtime.page.evaluate((initialLength) => history.length >= initialLength + 1, startingHistoryLength),
+      true,
+      `${label} did not add a browser-history entry`,
+    );
+
+    await runtime.page.waitForTimeout(100);
+    assert.equal(new URL(runtime.page.url()).pathname, "/admin/v2.html", `${label} entered a navigation loop`);
+    assert.equal(
+      mainFrameNavigations.some((url) => new URL(url).pathname === "/admin/"),
+      false,
+      `${label} navigated to the legacy Admin`,
+    );
+
+    await runtime.page.goBack({ waitUntil: "domcontentloaded" });
+    await runtime.page.locator('.admin-route-boundary[data-route="overview"][data-mode="source"]')
+      .waitFor({ state: "visible" });
+    assert.equal(new URL(runtime.page.url()).hash, "#overview", `${label} history Back did not return to Overview`);
+    await runtime.page.goForward({ waitUntil: "domcontentloaded" });
+    await boundary.waitFor({ state: "visible" });
+    assert.equal(new URL(runtime.page.url()).hash, `#${destination.id}`, `${label} history Forward did not restore the boundary`);
+    await assertNoRawBackendDetails(runtime.page, label);
+    await assertNoRuntimeErrors(runtime, label);
+    assertNoBearerRequests(fixture, runtime.runId, label);
+  } finally {
+    await runtime.close();
+  }
+}
+
 async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
   const runtime = await createScenarioRuntime(browser, fixture, "ready");
   const findings = [];
   try {
     await waitForState(runtime.page, "ready");
     await waitForSessionGateRelease(runtime.page);
-    for (const destination of LEGACY_NAVIGATION_DESTINATIONS) {
+    for (const destination of DEFERRED_UUID_ROUTE_ASSERTIONS) {
       await runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"]`).click();
-      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="legacy"]`)
+      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="${destination.migration}"]`)
         .waitFor({ state: "visible" });
       const browserUrl = runtime.page.url();
-      const handoffUrl = new URL(
-        await runtime.page.getByRole("link", { name: "Open existing admin", exact: true }).getAttribute("href"),
-        browserUrl,
-      ).href;
-      const internalIdAbsent = !UUID_IN_URL_PATTERN.test(browserUrl) && !UUID_IN_URL_PATTERN.test(handoffUrl);
+      const handoffHref = destination.migration === "legacy"
+        ? await runtime.page.getByRole("link", { name: "Open existing Admin", exact: true }).getAttribute("href")
+        : null;
+      const handoffUrl = handoffHref ? new URL(handoffHref, browserUrl).href : null;
+      const internalIdAbsent = !UUID_IN_URL_PATTERN.test(browserUrl)
+        && (!handoffUrl || !UUID_IN_URL_PATTERN.test(handoffUrl));
       findings.push({
         scenario: "legacy-route-internal-id-contract",
         classification: "expected-legacy-contract-exception",
         debtStatus: "deferred-pending-public-game-handoff-contract",
         destination: destination.id,
         label: destination.label,
-        ownership: "legacy",
+        ownership: destination.migration,
         selectedGame: "authoritative-current-uuid",
-        assertion: "No internal UUID appears in the v2 boundary URL or legacy handoff URL.",
+        assertion: "No internal UUID appears in the v2 boundary URL or an available legacy handoff URL.",
         assertionPassed: internalIdAbsent,
         internalIdAbsent,
         browserUrl: new URL(browserUrl).pathname + new URL(browserUrl).search + new URL(browserUrl).hash,
-        handoffUrl: new URL(handoffUrl).pathname + new URL(handoffUrl).search + new URL(handoffUrl).hash,
+        handoffUrl: handoffUrl
+          ? new URL(handoffUrl).pathname + new URL(handoffUrl).search + new URL(handoffUrl).hash
+          : null,
         status: internalIdAbsent ? "passed" : "expected-exception",
         failure: internalIdAbsent
           ? null
-          : "The authoritative selected-game contract is an internal UUID and is preserved in both v2 and legacy handoff URLs.",
+          : "The authoritative selected-game contract is an internal UUID and is preserved in the v2 route URL and any available legacy handoff URL.",
       });
     }
     await assertNoRawBackendDetails(runtime.page, "authoritative UUID handoff audit");
@@ -727,6 +890,7 @@ try {
       await waitForState(runtime.page, "ready");
       await waitForSessionGateRelease(runtime.page);
       await assertMeaningfulOverview(runtime.page, label);
+      await verifyCanonicalNavigationLayout(runtime.page, label, { openMobile: viewport.width <= 760 });
       if (viewport.width === 320 && viewport.height === 568) {
         await verifyShortRail(runtime.page, { openMobile: true });
       }
@@ -746,6 +910,7 @@ try {
       await waitForState(runtime.page, "ready");
       await waitForSessionGateRelease(runtime.page);
       await assertMeaningfulOverview(runtime.page, "short desktop 1024x540");
+      await verifyCanonicalNavigationLayout(runtime.page, "short desktop 1024x540");
       await verifyShortRail(runtime.page);
       const destination = await capture(runtime.page, screenshotName("short-desktop", SHORT_DESKTOP_VIEWPORT));
       evidence.push(path.relative(REPOSITORY_ROOT, destination));
@@ -767,7 +932,7 @@ try {
       await assertMeaningfulOverview(runtime.page, "direct reload 1280x720");
       await verifyNavigationKeyboardAndCollapsedLabels(runtime.page);
       await verifyDialogFocusLifecycle(runtime.page);
-      await verifyWorldLegacyBoundary(runtime.page);
+      await verifyWorldPlannedBoundary(runtime.page);
       await assertNoDocumentHorizontalOverflow(runtime.page, "keyboard and dialog lifecycle");
       await assertNoRuntimeErrors(runtime, "keyboard and dialog lifecycle");
       checks.push({ scenario: "direct-reload-keyboard-dialog-legacy-boundary", viewport: "1280x720", status: "passed" });
@@ -786,6 +951,20 @@ try {
       selectedGame: "opaque",
       focus: "navigation-item-then-handoff-action",
       history: "back-forward-and-return",
+      status: "passed",
+    });
+  }
+
+  for (const destination of PLANNED_NAVIGATION_DESTINATIONS) {
+    await verifyPlannedBoundaryContract(browser, fixture, destination);
+    checks.push({
+      scenario: "planned-route-boundary",
+      destination: destination.id,
+      label: destination.label,
+      ownership: "planned",
+      legacyDestination: null,
+      focus: "navigation-item",
+      history: "back-forward-and-no-handoff",
       status: "passed",
     });
   }
@@ -1065,6 +1244,33 @@ try {
       evidence.push(path.relative(REPOSITORY_ROOT, destination));
       await assertNoRuntimeErrors(runtime, "permission denial");
       checks.push({ scenario: "permission-denied", viewport: "1280x720", status: "passed" });
+    } finally {
+      await runtime.close();
+    }
+  }
+
+  {
+    const runtime = await createScenarioRuntime(browser, fixture, "planned-permission");
+    try {
+      await waitForState(runtime.page, "ready");
+      await waitForSessionGateRelease(runtime.page);
+      const marketplace = runtime.page.locator('.admin-navigation__link[data-route="marketplace"]');
+      await marketplace.click();
+      const denial = runtime.page.locator('.admin-permission-boundary[data-state="denied"]');
+      await denial.waitFor({ state: "visible" });
+      assert.match(await denial.innerText(), /Marketplace access restricted/i);
+      assert.match(await denial.innerText(), /permission required for this destination/i);
+      assert.equal(
+        await runtime.page.locator('.admin-route-boundary[data-route="marketplace"]').count(),
+        0,
+        "A permission-denied planned route rendered its planned content",
+      );
+      assert.equal(await denial.getByRole("link").count(), 0, "A permission-denied planned route exposed a link");
+      assert.equal(new URL(runtime.page.url()).hash, "#marketplace");
+      await assertNoRawBackendDetails(runtime.page, "planned route permission denial");
+      await assertNoDocumentHorizontalOverflow(runtime.page, "planned route permission denial");
+      await assertNoRuntimeErrors(runtime, "planned route permission denial");
+      checks.push({ scenario: "planned-route-permission-denied", route: "marketplace", status: "passed" });
     } finally {
       await runtime.close();
     }

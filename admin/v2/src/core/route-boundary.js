@@ -37,11 +37,11 @@ export function readCurrentAdminV2Route(locationLike = globalThis.location) {
  */
 export function createLegacyAdminHandoffUrl(routeId, locationLike = globalThis.location) {
   const route = getAdminNavigationRoute(routeId);
-  if (!route || route.migrated) return null;
+  if (!route || route.migration !== "legacy" || !route.legacyDestination) return null;
 
   const selectedGame = selectedGameFromLocation(locationLike);
   const query = selectedGame ? `?game=${encodeURIComponent(selectedGame)}` : "";
-  return `./${query}#${route.id}`;
+  return `./${query}#${route.legacyDestination.fragment}`;
 }
 
 /**
@@ -62,6 +62,13 @@ export function resolveAdminRouteBoundary({
       kind: "migrated",
       route,
       moduleKey: route.id,
+    });
+  }
+
+  if (route.migration === "planned") {
+    return Object.freeze({
+      kind: "planned",
+      route,
     });
   }
 

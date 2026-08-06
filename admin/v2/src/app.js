@@ -251,15 +251,25 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         content: overviewRoute.element,
       }).element;
       shell.element.dataset.adminV2State = overview.getState().status;
-    } else {
+    } else if (boundary.kind === "legacy") {
       content = AdminRouteBoundary({
         routeId: boundary.route.id,
         mode: "legacy",
+        icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
         legacyMessage: "Phase 1 migrates only Overview. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
+    } else {
+      content = AdminRouteBoundary({
+        routeId: boundary.route.id,
+        mode: "planned",
+        icon: boundary.route.icon,
+        plannedTitle: `${boundary.route.label} is planned for Admin v2`,
+        plannedMessage: "This domain is part of the Admin product, but its source-owned v2 surface has not migrated yet. No unrelated legacy page will be opened.",
+      }).element;
+      shell.element.dataset.adminV2State = "planned-boundary";
     }
 
     const allowed = routeAllowed(boundary.route, permissions);
