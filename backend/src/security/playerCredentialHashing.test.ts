@@ -1,8 +1,12 @@
+import { EdgeActivationError } from "../platform/supabase/edgeResponse.ts";
 import {
   createPlayerCredentialMaterial,
   derivePlayerCredentialLookupDigest,
   isLegacyPlayerCredential,
+  PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE,
   PLAYER_CREDENTIAL_VERSION,
+  readPlayerCredentialRuntimeStatus,
+  requirePlayerCredentialRuntimePepper,
   verifyPlayerCredential,
 } from "./playerCredentialHashing.ts";
 
@@ -111,7 +115,7 @@ Deno.test("recognizes only the bounded legacy SHA-256 shape", () => {
   );
 });
 
-Deno.test("rejects an undersized pepper", async () => {
+Deno.test("rejects an undersized explicit pepper", async () => {
   let threw = false;
   try {
     await createPlayerCredentialMaterial("938204", {
@@ -123,6 +127,35 @@ Deno.test("rejects an undersized pepper", async () => {
     threw = true;
   }
   assertEquals(threw, true);
+});
+
+Deno.test("reports only bounded credential runtime readiness metadata", () => {
+  assertEquals(readPlayerCredentialRuntimeStatus(PEPPER), {
+    ok: true,
+    credentialVersion: PLAYER_CREDENTIAL_VERSION,
+    iterations: 600_000,
+  });
+  assertEquals(readPlayerCredentialRuntimeStatus(""), {
+    ok: false,
+    code: PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE,
+    retryable: true,
+  });
+});
+
+Deno.test("maps a missing runtime pepper to a retryable HTTP 503 error", () => {
+  let captured: unknown = null;
+  try {
+    requirePlayerCredentialRuntimePepper("");
+  } catch (error) {
+    captured = error;
+  }
+
+  assertEquals(captured instanceof EdgeActivationError, true);
+  const error = captured as EdgeActivationError;
+  assertEquals(error.code, PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE);
+  assertEquals(error.status, 503);
+  assertEquals(error.retryable, true);
+  assertEquals(error.message.includes("ECONOVARIA_PLAYER_CREDENTIAL_PEPPER"), false);
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

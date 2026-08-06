@@ -71,6 +71,25 @@ Deno.test("authenticated game creation redeems the supplied license and complete
   assertEquals(serialized.includes(PURCHASE_CODE_ID), false);
 });
 
+Deno.test("legacy x-idempotency-key remains accepted during header convergence", async () => {
+  let requestId = "";
+  const result = await handleGameProvisioningOperation({}, {
+    request: gameRequest("x-idempotency-key"),
+    path: "/games",
+    staffUserId: STAFF_ID,
+  }, {
+    activate: async (_service, _body, context) => {
+      requestId = context.requestId;
+      return successActivation(201);
+    },
+    completeOnboarding: async () => true,
+    readGame: async () => ({ id: GAME_ID }),
+  });
+
+  assertEquals(result.status, 201);
+  assertEquals(requestId, IDEMPOTENCY_KEY);
+});
+
 Deno.test("activation failure is returned safely and never completes onboarding", async () => {
   let completionCalls = 0;
   let readCalls = 0;
@@ -176,12 +195,12 @@ Deno.test("unrelated routes and methods remain unhandled", async () => {
   assertEquals(wrongMethod, { handled: false });
 });
 
-function gameRequest(): Request {
+function gameRequest(headerName = "idempotency-key"): Request {
   return new Request("https://example.test/admin-api/games", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-idempotency-key": IDEMPOTENCY_KEY,
+      [headerName]: IDEMPOTENCY_KEY,
     },
     body: JSON.stringify(validBody()),
   });

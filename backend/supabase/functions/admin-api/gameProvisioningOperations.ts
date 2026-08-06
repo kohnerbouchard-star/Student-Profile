@@ -68,7 +68,8 @@ function text(value: unknown): string {
 
 function idempotencyKey(request: Request): string {
   return text(
-    request.headers.get("x-idempotency-key") ||
+    request.headers.get("idempotency-key") ||
+      request.headers.get("x-idempotency-key") ||
       request.headers.get("x-request-id"),
   );
 }

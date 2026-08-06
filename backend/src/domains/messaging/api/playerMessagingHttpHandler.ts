@@ -306,7 +306,9 @@ async function parseSendCommand(request: Request): Promise<
     return invalidResult("Message body must contain 1 to 1000 safe text characters, at most 50 lines, and no more than 10 links.");
   }
   const bodyKey = typeof value.idempotencyKey === "string" ? value.idempotencyKey.trim() : "";
-  const headerKey = request.headers.get("x-idempotency-key")?.trim() ?? request.headers.get("x-request-id")?.trim() ?? "";
+  const headerKey = request.headers.get("idempotency-key")?.trim() ??
+    request.headers.get("x-idempotency-key")?.trim() ??
+    request.headers.get("x-request-id")?.trim() ?? "";
   if (bodyKey && headerKey && bodyKey !== headerKey) return invalidResult("Request and header idempotency keys must match.");
   const idempotencyKey = bodyKey || headerKey;
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(idempotencyKey)) return invalidResult("A safe idempotency key is required.");

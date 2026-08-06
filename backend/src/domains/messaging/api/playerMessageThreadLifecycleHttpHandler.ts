@@ -127,7 +127,8 @@ async function parseCreateCommand(request: Request): Promise<
   const title = clean(value.title);
   const body = clean(value.body);
   const bodyKey = clean(value.idempotencyKey);
-  const headerKey = request.headers.get("x-idempotency-key")?.trim() ??
+  const headerKey = request.headers.get("idempotency-key")?.trim() ??
+    request.headers.get("x-idempotency-key")?.trim() ??
     request.headers.get("x-request-id")?.trim() ?? "";
   if (bodyKey && headerKey && bodyKey !== headerKey) {
     return { ok: false, response: invalid("Request and header idempotency keys must match.") };

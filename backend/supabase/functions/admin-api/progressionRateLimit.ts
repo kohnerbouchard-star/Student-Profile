@@ -1,6 +1,8 @@
 import {
+  bindGatewayTrustedClientIp,
+} from "../../../src/security/edgeGatewayClientIp.ts";
+import {
   buildStaffRateLimitBuckets,
-  overwriteTrustedClientIpHeaders,
   readTrustedClientIp,
   TRUSTED_IP_HEADERS,
   type TrustedIpHeader,
@@ -55,16 +57,14 @@ export function normalizeAdminRateLimitRequest(
     method: request.method,
     headers: request.headers,
   });
-  const clientIp = readTrustedClientIp(metadataRequest, trustedIpHeader);
+  const boundRequest = bindGatewayTrustedClientIp(
+    metadataRequest,
+    trustedIpHeader,
+  );
+  readTrustedClientIp(boundRequest, trustedIpHeader);
 
   return {
-    request: new Request(metadataRequest, {
-      headers: overwriteTrustedClientIpHeaders(
-        metadataRequest.headers,
-        trustedIpHeader,
-        clientIp,
-      ),
-    }),
+    request: boundRequest,
     trustedHeader: trustedIpHeader,
   };
 }

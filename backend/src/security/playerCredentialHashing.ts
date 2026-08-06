@@ -1,3 +1,5 @@
+import { EdgeActivationError } from "../platform/supabase/edgeResponse.ts";
+
 declare const Deno: {
   readonly env: {
     get(name: string): string | undefined;
@@ -8,6 +10,8 @@ export const PLAYER_CREDENTIAL_VERSION = "pbkdf2-sha256-v2";
 export const PLAYER_CREDENTIAL_ITERATIONS = 600_000;
 export const PLAYER_CREDENTIAL_SALT_BYTES = 16;
 export const PLAYER_CREDENTIAL_DERIVED_BYTES = 32;
+export const PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE =
+  "player_credential_runtime_unavailable";
 
 export interface PlayerCredentialMaterial {
   readonly credentialVersion: typeof PLAYER_CREDENTIAL_VERSION;
@@ -25,6 +29,18 @@ export interface PlayerCredentialRecord {
   readonly credential_iterations: number | string | null;
 }
 
+export type PlayerCredentialRuntimeStatus =
+  | {
+      readonly ok: true;
+      readonly credentialVersion: typeof PLAYER_CREDENTIAL_VERSION;
+      readonly iterations: number;
+    }
+  | {
+      readonly ok: false;
+      readonly code: typeof PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE;
+      readonly retryable: true;
+    };
+
 interface PlayerCredentialOptions {
   readonly pepper?: string;
   readonly saltBytes?: Uint8Array;
@@ -40,11 +56,55 @@ const HEX_PATTERN = /^[0-9a-f]{64}$/u;
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
 
 export function readPlayerCredentialPepper(): string {
-  const pepper = String(
-    Deno.env.get("ECONOVARIA_PLAYER_CREDENTIAL_PEPPER") || "",
+  return requirePlayerCredentialRuntimePepper(
+    String(Deno.env.get("ECONOVARIA_PLAYER_CREDENTIAL_PEPPER") || ""),
   );
-  validatePepper(pepper);
-  return pepper;
+}
+
+/**
+ * Returns only bounded readiness metadata. The pepper itself must never be
+ * returned by health endpoints, logs, browser payloads, or audit evidence.
+ */
+export function readPlayerCredentialRuntimeStatus(
+  pepper = String(
+    Deno.env.get("ECONOVARIA_PLAYER_CREDENTIAL_PEPPER") || "",
+  ),
+): PlayerCredentialRuntimeStatus {
+  try {
+    requirePlayerCredentialRuntimePepper(pepper);
+    return {
+      ok: true,
+      credentialVersion: PLAYER_CREDENTIAL_VERSION,
+      iterations: PLAYER_CREDENTIAL_ITERATIONS,
+    };
+  } catch (error) {
+    if (
+      error instanceof EdgeActivationError &&
+      error.code === PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE
+    ) {
+      return {
+        ok: false,
+        code: PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE,
+        retryable: true,
+      };
+    }
+    throw error;
+  }
+}
+
+/** Test and readiness seam. Never pass browser-controlled values here. */
+export function requirePlayerCredentialRuntimePepper(value: string): string {
+  try {
+    validatePepper(value);
+    return value;
+  } catch {
+    throw new EdgeActivationError(
+      PLAYER_CREDENTIAL_RUNTIME_ERROR_CODE,
+      "Player credential operations are temporarily unavailable.",
+      503,
+      true,
+    );
+  }
 }
 
 export async function createPlayerCredentialMaterial(
@@ -132,7 +192,8 @@ export async function verifyPlayerCredential(
       TEXT_ENCODER.encode(expected.lookupDigest),
       TEXT_ENCODER.encode(record.normalized_student_code_hash),
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof EdgeActivationError) throw error;
     return false;
   }
 }
