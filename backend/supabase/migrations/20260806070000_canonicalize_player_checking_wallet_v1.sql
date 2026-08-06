@@ -307,6 +307,9 @@ grant execute on function public.record_player_ledger_entry(
 -- Recreate installed public functions and procedures that still reference the
 -- retired personal account literal. Materializing the callable-only catalog
 -- avoids invoking pg_get_functiondef on aggregates and window functions.
+-- record_player_ledger_entry is intentionally excluded because its explicit
+-- compatibility branch must continue accepting historical cash callers and
+-- normalize them to canonical Checking.
 do $migration$
 declare
   function_row record;
@@ -319,6 +322,7 @@ begin
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and p.prokind in ('f', 'p')
+        and p.proname <> 'record_player_ledger_entry'
     )
     select function_source.oid, function_source.definition
     from function_source
