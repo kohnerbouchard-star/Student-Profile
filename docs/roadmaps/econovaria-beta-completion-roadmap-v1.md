@@ -2,8 +2,8 @@
 
 **Document ID:** `ECON-BETA-ROADMAP-V1`  
 **Roadmap authority:** Chat 1  
-**Audited main:** `f2694e40bac39b4ceb20951d88dddd38c6a9270a`
-**Audit date:** 2026-08-06
+**Audited main:** `38ce8feb7837fb29dac69e6949ac3249a19d63fd`
+**Audit date:** 2026-08-07
 **Current decision:** `BLOCKED`  
 **Production deployment authorized:** No
 
@@ -23,7 +23,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 - **`BETA-ADMIN-UI-V2-001` — Source-owned Admin v2 foundation and Overview reference migration**
   - Status: `IMPLEMENTED_NOT_MERGED`
-  - Owner branch, base, implementation, and pull request: `refactor/admin-ui-v2-overview-foundation-v1` is reconciled onto fetched `origin/main` at `f2694e40bac39b4ceb20951d88dddd38c6a9270a`. Initial implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb` and bounded navigation-taxonomy correction commit `462a15aaf8b9c292f786509b2fc52cf6cce3b425` are published in draft PR [#502](https://github.com/kohnerbouchard-star/Student-Profile/pull/502). Merge and production deployment remain unauthorized.
+  - Owner branch, base, implementation, and pull request: `refactor/admin-ui-v2-overview-foundation-v1` is reconciled onto fetched `origin/main` at `38ce8feb7837fb29dac69e6949ac3249a19d63fd`. Initial implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb` and bounded navigation-taxonomy correction commit `462a15aaf8b9c292f786509b2fc52cf6cce3b425` are published in draft PR [#502](https://github.com/kohnerbouchard-star/Student-Profile/pull/502). Merge and production deployment remain unauthorized.
   - Ownership reconciliation: draft PR #502 owns this bounded Admin v2 Phase 1 migration. Draft PR #498 / `fix/admin-modal-focus-order-v1` owns only the legacy modal focus-order compatibility correction (`BETA-ADMIN-MODAL-A11Y-008`). The retained `frontend/admin-terminal-source-v1` branch is a stale source-preservation donor without a pull request, not active feature authority, and must not be merged wholesale.
   - Scope implemented in draft PR #502: isolated source-owned vanilla-ESM Admin shell and component system; canonical eight-group, 18-route primary navigation with Market and Marketplace kept distinct and World Management first-class under `World`; accepted v606 visual language as the design baseline; authoritative Overview reads and all six data states; explicit legacy handoffs only for exact standalone destinations; neutral planned boundaries with no unrelated links for the remaining domains; shared tokens, dialog/drawer, data, form, table, error, permission, and accessibility primitives. Overview remains the only native V2 route.
   - Dependencies and beta impact: architecture, accessibility, resilience, and maintainability hardening only; no gameplay semantics, backend endpoint or authentication/authorization policy, Supabase configuration, BFF routing, database migration, or Player Terminal behavior changed. Reconcile the legacy-only PR #498 before merge if it lands first. Two inherited legacy required-check failures remain unchanged: `admin-shell-smoke.mjs` passes four source children but only 2/4 viewport assertions, and `admin-v606-full-drift-audit.mjs` expects obsolete `admin/css/page-shell.css` blob `c4df8ae6…` instead of current `a9644c2…`. They are separately owned legacy debt and are non-blocking for this V2 tranche; their assertions and accepted hash remain unchanged.

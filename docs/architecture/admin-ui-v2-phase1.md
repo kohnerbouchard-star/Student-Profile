@@ -321,7 +321,7 @@ Deletion is gated by source ownership, parity evidence, merge to `main`, and any
 
 ## Test and evidence matrix
 
-Verification ran on 2026-08-06 against implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`, based on fetched `origin/main` SHA `f2694e40bac39b4ceb20951d88dddd38c6a9270a`. The implementation is published in draft PR #502 with a Git-connected Vercel preview; it is not merged or production-deployed.
+Initial verification ran on 2026-08-06 against implementation commit `3baed2ae36b9cbdf19fadab9b696f5b504d89eeb`. The taxonomy and release checks were rerun on 2026-08-07 after correction commit `462a15aaf8b9c292f786509b2fc52cf6cce3b425` was reconciled to fetched `origin/main` SHA `38ce8feb7837fb29dac69e6949ac3249a19d63fd`. The implementation is published in draft PR #502 with a Git-connected Vercel preview; it is not merged or production-deployed.
 
 | Evidence | Required assertion | Result |
 |---|---|---|
