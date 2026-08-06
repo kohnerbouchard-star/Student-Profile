@@ -320,6 +320,7 @@ function normalizeStoreItem(row) {
     stock: safeInteger(firstDefined(row.stock, row.stockQuantity)),
     status: safeText(row.status, 64),
     visibility: safeText(row.visibility, 64),
+    sourceType: safeText(firstDefined(row.sourceType, row.source_type), 64),
     sortOrder: safeNumber(row.sortOrder),
     purchaseStats: compactObject({
       purchaseCount: safeInteger(purchaseStats.purchaseCount),
