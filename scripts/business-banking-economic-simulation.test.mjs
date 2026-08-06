@@ -83,12 +83,13 @@ test("inflation, exchange, supply and difficulty change demand without randomnes
   assert.equal(constrained.failureRisk, "high");
 });
 
-test("loan affordability includes rate, fee, inflation and existing debt", () => {
+test("weekly-cycle loan affordability amortizes principal and withholds fees from proceeds", () => {
   const affordable = calculateLoanAffordability({
     amount: 1_200,
     annualRate: 0.12,
     originationFeeRate: 0.02,
     termCycles: 12,
+    paymentFrequencyCycles: 1,
     recurringIncomePerCycle: 600,
     existingDebtPaymentPerCycle: 20,
     maximumPaymentToIncome: 0.35,
@@ -100,15 +101,52 @@ test("loan affordability includes rate, fee, inflation and existing debt", () =>
     annualRate: 0.25,
     originationFeeRate: 0.05,
     termCycles: 6,
+    paymentFrequencyCycles: 1,
     recurringIncomePerCycle: 300,
     existingDebtPaymentPerCycle: 100,
     maximumPaymentToIncome: 0.35,
     inflationRate: 0.2,
     interestDifficultyModifier: 1.5,
   });
+  assert.equal(affordable.paymentCount, 12);
+  assert.equal(affordable.originationFee, 24);
+  assert.equal(affordable.netProceeds, 1_176);
+  assert.ok(affordable.totalRepayment > 1_200);
+  assert.ok(affordable.totalRepayment < 1_250);
   assert.equal(affordable.affordable, true);
   assert.equal(unaffordable.affordable, false);
   assert.ok(unaffordable.paymentToIncome > affordable.paymentToIncome);
+});
+
+test("payment frequency changes installment count without treating game cycles as months", () => {
+  const weekly = calculateLoanAffordability({
+    amount: 1_000,
+    annualRate: 0.1,
+    originationFeeRate: 0.01,
+    termCycles: 12,
+    paymentFrequencyCycles: 1,
+    recurringIncomePerCycle: 500,
+    existingDebtPaymentPerCycle: 0,
+    maximumPaymentToIncome: 0.75,
+    inflationRate: 0,
+    interestDifficultyModifier: 1,
+  });
+  const biweekly = calculateLoanAffordability({
+    amount: 1_000,
+    annualRate: 0.1,
+    originationFeeRate: 0.01,
+    termCycles: 12,
+    paymentFrequencyCycles: 2,
+    recurringIncomePerCycle: 500,
+    existingDebtPaymentPerCycle: 0,
+    maximumPaymentToIncome: 0.75,
+    inflationRate: 0,
+    interestDifficultyModifier: 1,
+  });
+  assert.equal(weekly.paymentCount, 12);
+  assert.equal(biweekly.paymentCount, 6);
+  assert.ok(biweekly.scheduledPayment > weekly.scheduledPayment);
+  assert.ok(Math.abs(biweekly.totalRepayment - weekly.totalRepayment) < 1);
 });
 
 test("creditworthiness uses economic behavior only", () => {

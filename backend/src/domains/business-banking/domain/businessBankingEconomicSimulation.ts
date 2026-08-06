@@ -31,6 +31,7 @@ export interface LoanAffordabilityInput {
   readonly annualRate: number;
   readonly originationFeeRate: number;
   readonly termCycles: number;
+  readonly paymentFrequencyCycles: number;
   readonly recurringIncomePerCycle: number;
   readonly existingDebtPaymentPerCycle: number;
   readonly maximumPaymentToIncome: number;
@@ -40,6 +41,9 @@ export interface LoanAffordabilityInput {
 
 export interface LoanAffordabilityResult {
   readonly effectiveAnnualRate: number;
+  readonly paymentCount: number;
+  readonly originationFee: number;
+  readonly netProceeds: number;
   readonly totalRepayment: number;
   readonly scheduledPayment: number;
   readonly paymentToIncome: number;
@@ -125,6 +129,12 @@ export function calculateLoanAffordability(
   assertRange(input.annualRate, 0, 1, "annualRate");
   assertRange(input.originationFeeRate, 0, 0.25, "originationFeeRate");
   assertIntegerRange(input.termCycles, 1, 240, "termCycles");
+  assertIntegerRange(
+    input.paymentFrequencyCycles,
+    1,
+    input.termCycles,
+    "paymentFrequencyCycles",
+  );
   assertNonNegative(input.recurringIncomePerCycle, "recurringIncomePerCycle");
   assertNonNegative(
     input.existingDebtPaymentPerCycle,
@@ -148,18 +158,32 @@ export function calculateLoanAffordability(
     0,
     1,
   );
-  const termYears = input.termCycles / 12;
-  const interest = input.amount * effectiveAnnualRate * termYears;
-  const fee = input.amount * input.originationFeeRate;
-  const totalRepayment = money(input.amount + interest + fee);
-  const scheduledPayment = money(totalRepayment / input.termCycles);
-  const totalPayment = scheduledPayment + input.existingDebtPaymentPerCycle;
-  const paymentToIncome = input.recurringIncomePerCycle > 0
-    ? round(totalPayment / input.recurringIncomePerCycle, 6)
+  const paymentCount = Math.ceil(
+    input.termCycles / input.paymentFrequencyCycles,
+  );
+  const periodicRate = effectiveAnnualRate *
+    (input.paymentFrequencyCycles * 7 / 365);
+  const scheduledPayment = money(periodicRate === 0
+    ? input.amount / paymentCount
+    : input.amount * periodicRate * (1 + periodicRate) ** paymentCount /
+      ((1 + periodicRate) ** paymentCount - 1));
+  const originationFee = money(input.amount * input.originationFeeRate);
+  const netProceeds = money(input.amount - originationFee);
+  const totalRepayment = money(scheduledPayment * paymentCount);
+  const incomePerPayment = input.recurringIncomePerCycle *
+    input.paymentFrequencyCycles;
+  const existingDebtPerPayment = input.existingDebtPaymentPerCycle *
+    input.paymentFrequencyCycles;
+  const totalPayment = scheduledPayment + existingDebtPerPayment;
+  const paymentToIncome = incomePerPayment > 0
+    ? round(totalPayment / incomePerPayment, 6)
     : 100;
 
   return {
     effectiveAnnualRate: round(effectiveAnnualRate, 6),
+    paymentCount,
+    originationFee,
+    netProceeds,
     totalRepayment,
     scheduledPayment,
     paymentToIncome,
