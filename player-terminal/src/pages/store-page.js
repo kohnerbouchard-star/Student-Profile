@@ -12,9 +12,10 @@ function ownedQuantity(inventoryItems, itemId) {
   return Number.isFinite(quantity) ? quantity : 0;
 }
 
-function renderStoreItem(item, currencyCode, inventoryItems) {
+function renderStoreItem(item, inventoryItems) {
   const soldOut = item.stock <= 0;
   const owned = ownedQuantity(inventoryItems, item.id);
+  const currencyCode = String(item.currencyCode || "").trim().toUpperCase() || "—";
   return `<article class="player-terminal-store-card${soldOut ? " is-sold-out" : ""}">
     <div class="player-terminal-store-image"><img src="${escapeHtml(resolveStoreItemImage(item))}" alt="" /><span>${escapeHtml(item.category)}</span></div>
     <div class="player-terminal-store-copy"><small>STOCK ${escapeHtml(item.stock)} · OWNED ${escapeHtml(owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
@@ -22,19 +23,45 @@ function renderStoreItem(item, currencyCode, inventoryItems) {
   </article>`;
 }
 
+function checkingBalanceForCurrency(data, currencyCode) {
+  const normalizedCurrency = String(currencyCode || "").trim().toUpperCase();
+  const balances = Array.isArray(data?.banking?.balances) ? data.banking.balances : [];
+  const row = balances.find((entry) => {
+    const accountType = String(entry?.accountType || "").trim().toLowerCase();
+    const code = String(entry?.currencyCode || "").trim().toUpperCase();
+    return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+  });
+  if (row) {
+    const amount = Number(row.balance);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  const checkingCode = String(data?.banking?.checking?.currencyCode || "").trim().toUpperCase();
+  if (checkingCode === normalizedCurrency) {
+    const amount = Number(data?.banking?.checking?.available);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+  return 0;
+}
+
 export function renderStorePage(data, ui) {
   const category = ui.storeCategory || "All";
   const items = data.store.items.filter((item) => category === "All" || item.category === category);
-  const currencyCode = data.session.currencyCode;
+  const localCurrencyCode = String(data.session.currencyCode || "").trim().toUpperCase() || "ECO";
   const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const localBalance = checkingBalanceForCurrency(data, localCurrencyCode);
+  const ecoBalance = checkingBalanceForCurrency(data, "ECO");
   const availableBalance = bankingUnavailable
     ? "Unavailable"
-    : formatCurrency(data.banking.checking.available, currencyCode);
+    : formatCurrency(localBalance, localCurrencyCode);
+  const globalWallet = !bankingUnavailable && localCurrencyCode !== "ECO"
+    ? `<small>GLOBAL SETTLEMENT WALLET ${escapeHtml(formatCurrency(ecoBalance, "ECO"))}</small>`
+    : "";
 
   return `<section class="player-terminal-page player-terminal-store-page" data-page="store">
     <header class="player-terminal-page-heading">
-      <div><small>PLAYER COMMERCE NETWORK</small><h2>Store</h2><p>Review equipment, materials, consumables, and access items available to your player account.</p></div>
-      <div class="player-terminal-heading-balance"><small>AVAILABLE BALANCE</small><strong>${escapeHtml(availableBalance)}</strong>${renderStatusPill(bankingUnavailable ? "BALANCE UNAVAILABLE" : "LIVE INVENTORY", bankingUnavailable ? "amber" : "purple")}</div>
+      <div><small>PLAYER COMMERCE NETWORK</small><h2>Store</h2><p>Catalog prices retain their authored currency. The authoritative quote converts the final amount into your ${escapeHtml(localCurrencyCode)} local wallet before purchase.</p></div>
+      <div class="player-terminal-heading-balance"><small>LOCAL AVAILABLE BALANCE</small><strong>${escapeHtml(availableBalance)}</strong>${globalWallet}${renderStatusPill(bankingUnavailable ? "BALANCE UNAVAILABLE" : "LOCAL WALLET", bankingUnavailable ? "amber" : "purple")}</div>
     </header>
 
     <div class="player-terminal-store-toolbar">
@@ -42,7 +69,7 @@ export function renderStorePage(data, ui) {
       <label class="player-terminal-search-field">${icon("eye")}<input type="search" placeholder="Search store" data-player-store-search /></label>
     </div>
 
-    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, currencyCode, data.inventory.items)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
+    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, data.inventory.items)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
 
   </section>`;
 }
