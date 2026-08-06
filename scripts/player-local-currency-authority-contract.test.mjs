@@ -71,6 +71,13 @@ assert.match(checkingMigration, /account_balances_cash_alias_forbidden/);
 assert.match(checkingMigration, /when 'cash' then 'checking'/);
 assert.match(checkingMigration, /when 'savings' then 'savings'/);
 assert.match(checkingMigration, /Historical monetary values are preserved/);
+assert.match(checkingMigration, /with function_source as materialized/);
+assert.match(checkingMigration, /p\.prokind in \('f', 'p'\)/);
+assert.doesNotMatch(
+  checkingMigration,
+  /where n\.nspname = 'public'\s+and pg_get_functiondef\(p\.oid\)/,
+  "The migration must filter callable routines before invoking pg_get_functiondef.",
+);
 
 assert.match(storePage, /item\.currencyCode/);
 assert.match(storePage, /checkingBalanceForCurrency\(data, localCurrencyCode\)/);
