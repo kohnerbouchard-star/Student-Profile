@@ -136,7 +136,7 @@ function emptyTerminalData() {
     },
     inventory: { capacity: null, capacityUsed: null, capacityMax: null, categories: ["All"], items: [] },
     banking: {
-      checking: { accountId: "CASH", balance: 0, available: 0, pending: 0 },
+      checking: { accountId: "CHECKING", balance: 0, available: 0, pending: 0 },
       savings: { configured: false, accountId: "NOT CONFIGURED", balance: null, available: null, interestRate: null, interestEarned: null },
       creditConfigured: false,
       transfersConfigured: false,
@@ -213,7 +213,7 @@ function normalizeSession(rawSession, rawDashboard, base) {
   const me = object(dashboard.me);
   const cash = object(me.cash);
   const balances = list(direct.balances);
-  const primaryBalance = balances.find((entry) => entry.accountType === "checking") || balances[0] || {};
+  const primaryBalance = balances.find((entry) => text(entry.accountType).toLowerCase() === "checking") || {};
   const displayName = text(player.displayName || me.displayName, base.displayName);
   const countryCode = text(me.countryCode);
   const currencyCode = text(cash.primaryCurrencyCode || primaryBalance.currencyCode, base.currencyCode);
@@ -524,7 +524,7 @@ function normalizeBankingRead(response, currentBanking) {
   const body = object(response);
   const current = object(currentBanking);
   const balances = list(body.currentBalances);
-  const checking = balances.find((item) => text(item.accountType).toLowerCase() === "checking") || balances[0] || {};
+  const checking = balances.find((item) => text(item.accountType).toLowerCase() === "checking") || {};
   const savings = balances.find((item) => text(item.accountType).toLowerCase() === "savings");
   const checkingBalance = number(checking.balance);
   const page = object(body.pagination);
@@ -555,7 +555,7 @@ function normalizeBankingRead(response, currentBanking) {
       currencyCode: text(balance.currencyCode)
     })),
     checking: {
-      accountId: text(checking.accountType, "CASH").toUpperCase(),
+      accountId: text(checking.accountType, "CHECKING").toUpperCase(),
       balance: checkingBalance,
       available: checkingBalance,
       pending: 0,
@@ -817,9 +817,10 @@ function applyDashboardSnapshot(data, rawDashboard) {
 
   const cash = object(object(snapshot.me).cash);
   const primaryCurrency = text(cash.primaryCurrencyCode, data.session.currencyCode);
-  const primaryBalance = list(cash.balances).find((entry) => entry.currencyCode === primaryCurrency) || list(cash.balances)[0] || {};
+  const checkingBalances = list(cash.balances).filter((entry) => text(entry.accountType).toLowerCase() === "checking");
+  const primaryBalance = checkingBalances.find((entry) => text(entry.currencyCode).toUpperCase() === primaryCurrency.toUpperCase()) || {};
   const available = number(primaryBalance.balance, number(cash.totalBalance));
-  data.banking.checking = { accountId: text(primaryBalance.accountType, "CASH").toUpperCase(), balance: available, available, pending: 0 };
+  data.banking.checking = { accountId: text(primaryBalance.accountType, "CHECKING").toUpperCase(), balance: available, available, pending: 0 };
   data.session.currencyCode = primaryCurrency;
   data.session.currencyName = primaryCurrency;
   data.session.countryId = text(object(snapshot.me).countryCode).toLowerCase();
@@ -959,6 +960,11 @@ export function mergeTerminalRead(data, endpointKey, response) {
   }
   if (endpointKey === "banking") {
     next.banking = normalizeBankingRead(response, data.banking);
+    next.dashboard = {
+      ...data.dashboard,
+      liquidBalance: next.banking.checking.balance,
+      savingsBalance: next.banking.savings.configured ? next.banking.savings.balance : null
+    };
   }
   if (endpointKey === "notifications") {
     next.notifications = normalizeNotificationItems(object(response).items);
