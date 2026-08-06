@@ -42,6 +42,8 @@
     "test:admin-game-session-controls": "node scripts/admin-game-session-controls-smoke.mjs",
     "test:admin-economic-writes": "node --test scripts/admin-economic-write-contract.test.mjs",
     "test:admin-local-mutation-ui": "node --test scripts/admin-local-handler-architecture-contract.test.mjs scripts/admin-local-mutation-ui-contract.test.mjs scripts/persisted-game-code-contract.test.mjs",
+    "test:admin-v2": "node --test scripts/admin-v2-unit.test.mjs",
+    "test:admin-v2:browser": "node scripts/admin-v2-browser-smoke.mjs",
     "test:admin-messaging": "node scripts/admin-messaging-moderation-contract.mjs",
     "test:auth-boundaries": "node --test scripts/auth-boundary-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs scripts/internal-runner-auth-contract.test.mjs && node --experimental-strip-types --test scripts/admin-bff-request-auth.test.mjs",
     "test:web-session-release": "node --test scripts/web-session-release-contract.test.mjs scripts/mfa-handle-secret-provision-contract.test.mjs scripts/verify-downloaded-edge-function-source.test.mjs scripts/verify-edge-function-multipart-source.test.mjs scripts/production-web-session-release-orchestrator.test.mjs scripts/production-admin-staff-security-reconciliation-contract.test.mjs scripts/production-admin-bootstrap-schema-reconciliation-contract.test.mjs scripts/login-retry-countdown.test.mjs scripts/web-session-trusted-ip-contract.test.mjs scripts/admin-mfa-enrollment-lifecycle.test.mjs && node --experimental-strip-types --test scripts/admin-mfa-qr-code.test.mjs",
