@@ -1,0 +1,192 @@
+name: Finalize Checking Route Segments Temporary
+
+on:
+  push:
+    branches:
+      - fix/checking-savings-wallet-convergence-v1
+    paths:
+      - .github/workflows/finalize-checking-route-segments-temporary.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  routes:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/checking-savings-wallet-convergence-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+
+      - name: Replace retired account route segments
+        shell: bash
+        run: |
+          python <<'PY'
+          from __future__ import annotations
+
+          import re
+          from pathlib import Path
+
+          roots = [
+              Path('admin'),
+              Path('backend/src'),
+              Path('backend/supabase/functions'),
+              Path('player-terminal/src'),
+              Path('player-terminal/tests'),
+              Path('player-terminal/tools'),
+              Path('scripts'),
+          ]
+          suffixes = {'.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.yml', '.yaml', '.md'}
+          string_literal = re.compile(r'(?P<quote>[\'"`])(?P<content>(?:\\.|(?!\1).)*?)(?P=quote)')
+          segment = re.compile(r'(^|[/.:_-])cash(?=$|[/.:_-])', re.IGNORECASE)
+          non_account_markers = (
+              'cash-flow', 'cash flow', 'cash-equivalent', 'cash equivalent',
+              'cash-instrument', 'cash instrument', 'cash-market', 'cash market',
+              'cash-price', 'cash price', 'cash-rate', 'cash rate',
+              'cash-yield', 'cash yield',
+          )
+
+          def rewrite_literal(match: re.Match[str]) -> str:
+              quote = match.group('quote')
+              content = match.group('content')
+              lowered = content.lower()
+              if 'migrations/' in lowered or lowered.endswith('.sql'):
+                  return match.group(0)
+              if any(marker in lowered for marker in non_account_markers):
+                  return match.group(0)
+              updated = segment.sub(lambda candidate: f"{candidate.group(1)}checking", content)
+              return f'{quote}{updated}{quote}'
+
+          changed = []
+          for root in roots:
+              if not root.exists():
+                  continue
+              for path in root.rglob('*'):
+                  if not path.is_file() or path.suffix.lower() not in suffixes:
+                      continue
+                  source = path.read_text(encoding='utf-8')
+                  updated = string_literal.sub(rewrite_literal, source)
+                  if updated != source:
+                      path.write_text(updated, encoding='utf-8')
+                      changed.append(str(path))
+          print('Route-bearing files updated:')
+          print('\n'.join(changed) if changed else 'none')
+          PY
+
+      - name: Install permanent route-segment guard
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/checking-savings-account-type-contract.test.mjs')
+          source = path.read_text(encoding='utf-8')
+          old = '''              lines.forEach((line, index) => {
+                if (!isAccountContext(lines, index)) return;
+                if (quotedRetired.test(line) || retiredPublicContract.test(line) || retiredRoute.test(line)) {
+                  violations.push(`${target}:${index + 1}`);
+                }
+              });'''
+          new = '''              lines.forEach((line, index) => {
+                const historicalMigrationReference = /migrations\\/[^"'`]+\\.sql/i.test(line);
+                const legitimateEconomicTerm = /cash(?:[- ](?:flow|equivalent|instrument|market|price|rate|yield))/i.test(line);
+                const accountViolation = isAccountContext(lines, index) &&
+                  (quotedRetired.test(line) || retiredPublicContract.test(line));
+                const routeViolation = retiredRoute.test(line) &&
+                  !historicalMigrationReference &&
+                  !legitimateEconomicTerm;
+                if (accountViolation || routeViolation) {
+                  violations.push(`${target}:${index + 1}`);
+                }
+              });'''
+          if old not in source:
+              raise SystemExit('Permanent guard block was not found')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow and refresh authority
+        shell: bash
+        run: |
+          rm -- .github/workflows/finalize-checking-route-segments-temporary.yml
+          python <<'PY'
+          import json
+          from pathlib import Path
+
+          authority_path = Path('docs/operations/contracts/player-cross-cutting-verification-authority-v1.json')
+          authority = json.loads(authority_path.read_text(encoding='utf-8'))
+          guard = 'scripts/checking-savings-account-type-contract.test.mjs'
+          authority['allowedPaths'] = sorted(set(authority.get('allowedPaths', [])) | {guard})
+          authority['requiredFiles'] = sorted(set(authority.get('requiredFiles', [])) | {guard})
+          authority_path.write_text(json.dumps(authority, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run route and account verification
+        run: |
+          node --test scripts/player-local-currency-authority-contract.test.mjs
+          node --test scripts/checking-savings-account-type-contract.test.mjs
+          node player-terminal/tests/store-local-currency.mjs
+          npm --prefix backend run test:player-banking-public
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs
+          npm --prefix backend run typecheck
+          git diff --check
+
+      - name: Commit route convergence
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --name-only -z | xargs -0 -r git add --
+          git ls-files --others --exclude-standard -z | xargs -0 -r git add --
+          if [ -z "$(git diff --cached --name-only)" ]; then
+            echo "No route convergence changes were required."
+            exit 0
+          fi
+          git commit -m "Finalize Checking account route convergence"
+          git push origin HEAD:fix/checking-savings-wallet-convergence-v1
+
+      - name: Post focused route PASS
+        run: |
+          cat > /tmp/checking-route-pass.md <<'EOF'
+          ## Checking account route convergence: PASS
+
+          Embedded retired account path segments were replaced with Checking. Historical migration filenames and legitimate economic terms such as cash-flow were explicitly excluded. The permanent source guard now enforces both account-key and route-segment convergence.
+
+          Focused tests and backend typecheck passed. No staging or production mutation was performed.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-route-pass.md
+
+      - name: Post focused route FAIL
+        if: failure()
+        run: |
+          cat > /tmp/checking-route-fail.md <<'EOF'
+          ## Checking account route convergence: FAIL
+
+          The route-segment correction did not publish. PR #501 remains draft and must not be merged or deployed.
+          EOF
+          gh pr comment 501 --repo kohnerbouchard-star/Student-Profile --body-file /tmp/checking-route-fail.md
