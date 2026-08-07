@@ -15,7 +15,7 @@ const bankingRepository = fs.readFileSync(
   "utf8",
 );
 const checkingMigration = fs.readFileSync(
-  "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql",
+  "backend/supabase/migrations/20260807012748_canonicalize_player_checking_wallet_v1.sql",
   "utf8",
 );
 const storePage = fs.readFileSync(
