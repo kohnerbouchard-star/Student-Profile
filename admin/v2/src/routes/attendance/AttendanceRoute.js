@@ -137,7 +137,7 @@ function scannerPanel({ model, scanner, onScan }) {
   });
 }
 
-function rosterTable(model, onSelect) {
+function rosterTable(model) {
   const table = AdminDataTable({
     caption: `Attendance roster for ${model.attendanceDate}`,
     rowKey: (row) => row.rowKey,
@@ -169,19 +169,6 @@ function rosterTable(model, onSelect) {
         key: "note",
         label: "Note",
         render: (value) => value || "—",
-      },
-      {
-        key: "actions",
-        label: "Actions",
-        align: "end",
-        render: (_value, row) => button({
-          label: "Manage",
-          icon: "settings",
-          quiet: true,
-          disabled: model.lock.locked,
-          action: "select-player",
-          onClick: () => onSelect(row.rowKey),
-        }),
       },
     ],
     emptyState: AdminEmptyState({
@@ -217,14 +204,12 @@ function field({ label, name, type = "text", value = "", options = null, placeho
   };
 }
 
-function playerActions({ model, selectedRowKey, setSelectedRowKey, onCorrect, onSaveNote, onAdjustReward }) {
+function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
   const selectable = model.rows.map((row) => ({
     value: row.rowKey,
     label: `${row.displayName}${row.rosterLabel ? ` · ${row.rosterLabel}` : ""}`,
   }));
-  const firstKey = selectable.some((option) => option.value === selectedRowKey)
-    ? selectedRowKey
-    : selectable[0]?.value || "";
+  const firstKey = selectable[0]?.value || "";
   const player = field({ label: "Player", name: "player", value: firstKey, options: selectable });
   const correction = field({
     label: "Correction",
@@ -248,7 +233,6 @@ function playerActions({ model, selectedRowKey, setSelectedRowKey, onCorrect, on
     className: "admin-attendance-route__action-status",
     attrs: { role: "status", "aria-live": "polite" },
   });
-  player.control.addEventListener("change", () => setSelectedRowKey(player.control.value));
 
   async function run(action, successMessage) {
     status.textContent = "Saving…";
@@ -338,7 +322,7 @@ function lockPanel({ model, onSetLocked }) {
   });
 }
 
-function resolvedContent({ model, scanner, selectedRowKey, setSelectedRowKey, onScan, onCorrect, onSaveNote, onAdjustReward, onSetLocked }) {
+function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdjustReward, onSetLocked }) {
   const root = createElement("div", {
     className: "admin-attendance-route__resolved",
     children: [summary(model), scannerPanel({ model, scanner, onScan }), lockPanel({ model, onSetLocked })],
@@ -353,9 +337,9 @@ function resolvedContent({ model, scanner, selectedRowKey, setSelectedRowKey, on
       createElement("section", {
         className: "admin-attendance-route__roster",
         attrs: { "aria-label": "Attendance roster" },
-        children: [rosterTable(model, setSelectedRowKey)],
+        children: [rosterTable(model)],
       }),
-      playerActions({ model, selectedRowKey, setSelectedRowKey, onCorrect, onSaveNote, onAdjustReward }),
+      playerActions({ model, onCorrect, onSaveNote, onAdjustReward }),
     );
   }
   return root;
@@ -373,7 +357,6 @@ export function AttendanceRoute({
   onSetLocked = async () => ({ ok: false }),
 } = {}) {
   let destroyed = false;
-  let selectedRowKey = state.data?.rows?.[0]?.rowKey || "";
   const refreshButton = button({
     label: state.status === ADMIN_DATA_STATES.REFRESHING ? "Refreshing…" : "Refresh",
     icon: "refresh",
@@ -404,8 +387,6 @@ export function AttendanceRoute({
     const content = resolvedContent({
       model: state.data,
       scanner,
-      selectedRowKey,
-      setSelectedRowKey(value) { selectedRowKey = value; },
       onScan,
       onCorrect,
       onSaveNote,
