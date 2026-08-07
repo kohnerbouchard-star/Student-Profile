@@ -58,8 +58,8 @@ jobs:
           changed="$(git diff --name-only HEAD^ HEAD)"
           test "$changed" = ".github/workflows/banking-staging-runtime-release.yml"
 
-          test -f backend/supabase/migrations/20260807070000_provision_player_banking_system.sql
-          test -f backend/supabase/migrations/20260807071000_enforce_checking_canonical_account.sql
+          test -f backend/supabase/migrations/20260807070000_canonicalize_player_checking_wallet_v1.sql
+          test -f backend/supabase/migrations/20260807071000_provision_player_banking_and_credit_v1.sql
           test -f backend/supabase/functions/admin-api/index.ts
           test -f backend/supabase/functions/player-api/index.ts
           grep -Fq '[functions.admin-api]' backend/supabase/config.toml
