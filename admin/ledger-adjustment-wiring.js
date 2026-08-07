@@ -280,18 +280,15 @@
     root.querySelectorAll?.('[role="dialog"]').forEach(preferLocalCurrency);
   }
 
+  function onMountedModalBound(event) {
+    const root = event.target instanceof Element ? event.target : document;
+    applyLocalDefaults(root);
+  }
+
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onCurrencyChoice, true);
+  document.addEventListener("econovaria:admin-mounted-modal-bound", onMountedModalBound);
   applyLocalDefaults();
-
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node instanceof Element) applyLocalDefaults(node);
-      }
-    }
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
 
   window.EconovariaLedgerAdjustmentWiring = Object.freeze({
     action: ACTION,
