@@ -11,6 +11,7 @@
 - Owner branch: `refactor/admin-ui-v2-store-media-v1`
 - Exact base: `60334c2e92c6396a15c61fdd7b3552b055aee271`
 - Implementation commit: `3663c2f906778c98469d5d68b4abcda72f34f28c`
+- Standalone Player static-root correction: `e52db6e37f3430c4cfd47a194b9065dbae67b718`
 - Draft PR: [#505](https://github.com/kohnerbouchard-star/Student-Profile/pull/505), targeting `main`
 - Git-connected Vercel preview: blocked before build by the team-wide `api-deployments-free-per-day` limit; no preview URL exists yet
 - Production promotion authorized: No
@@ -146,15 +147,15 @@ Local evidence belongs under `docs/operations/evidence/admin-ui-v2-store/` and m
 
 ## Final review record
 
-- Exact implementation commit: `3663c2f906778c98469d5d68b4abcda72f34f28c`
+- Exact implementation commits: `3663c2f906778c98469d5d68b4abcda72f34f28c` and standalone Player static-root correction `e52db6e37f3430c4cfd47a194b9065dbae67b718`
 - Draft PR number and URL: [#505](https://github.com/kohnerbouchard-star/Student-Profile/pull/505)
-- Changed files and lines: 69 files, 5,648 additions, 113 deletions relative to exact base
-- Local test summary: Admin v2 unit/API/media 21/21; Store browser source 20/20 and built-dist 20/20; Overview regression source/built 41 passing plus eight documented URL exceptions each; auth 16/16; Admin request-auth 8/8; Vercel contract 6/6; Store artwork 50/50/50; focused Player and runtime checks passed; 159 Player modules and 21 changed JavaScript files passed syntax; diff and 69-file secret scan passed.
-- Baseline-identical red checks: architecture MutationObserver ratchet 12/11, legacy shell scroll assertions 2/4, and stale v606 `page-shell.css` hash. Their owning files are unchanged.
+- Changed files and lines: 69 files, 5,658 additions, 113 deletions relative to exact base
+- Local test summary: Admin v2 unit/API/media 21/21; Store browser source 20/20 and built-dist 20/20; Overview regression source/built 41 passing plus eight documented URL exceptions each; auth 16/16; Admin request-auth 8/8; Vercel deployment 6/6 plus namespace routing 2/2; Store artwork 50/50/50; five focused Player Store/Marketplace scripts, standalone Progression 4/4, enabled-button safety 16/16, and runtime cutover passed; 159 Player modules and 21 changed JavaScript files passed syntax; asset, diff, and 69-file secret checks passed.
+- Baseline-identical red checks: architecture MutationObserver ratchet 12/11, legacy shell scroll assertions 2/4, stale v606 `page-shell.css` hash, and the legacy lifecycle runtime-style assertion. Their owning files are unchanged.
 - Required CI checks: GitHub workflows were started against the exact implementation commit. `Player Terminal Verify` failed before tests because the unchanged repository cross-cutting authority manifest remains bound to PR #500; the check was not bypassed or weakened. This is a delivery-scope blocker, not a failing Player product test.
 - Vercel preview URL: unavailable. The automatic Git integration failed before build with `api-deployments-free-per-day` after the team exceeded 100 free deployments in 24 hours. No manual preview was created.
 - Preview `/admin/v2.html#store` direct-load result: not run because Vercel did not create a deployment. The configured local built-dist direct-load and resource audit passed.
 - Screenshot evidence: source and built-dist manifests plus all required captures are under `docs/operations/evidence/admin-ui-v2-store/`, including seven ready viewports, loading, empty, failed, stale, permission, media, create/edit/archive, validation, retryable-mutation, and AAL2 states.
-- Genuine new failures relative to base: no v2 product, API, browser, build, Player behavior, or legacy Admin regression; two branch delivery blockers remain—the PR-bound Player authority preflight and the external Vercel daily deployment limit.
+- Genuine new failures relative to base: the first published head exposed one standalone Player static-root 404 for the shared media module in Progression and button-safety CI. Correction `e52db6e37f3430c4cfd47a194b9065dbae67b718` relocates the canonical module and placeholder beneath `player-terminal/assets/`; standalone Player, source Admin, and built Admin now load their context-correct paths with the required MIME types, and the affected local browser suites pass. No genuine failure remains in the corrected implementation. Two delivery blockers remain—the PR-bound Player authority preflight and the external Vercel daily deployment limit.
 
 Do not mark this item `VERIFIED_COMPLETE` from local work, a branch, a draft PR, or a preview. It requires merge to `main`, passing required checks, and the required runtime evidence. Stop after the Phase 2 draft PR and automatic preview are available; do not begin World Management or another migration automatically.
