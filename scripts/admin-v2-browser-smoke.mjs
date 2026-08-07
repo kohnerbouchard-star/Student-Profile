@@ -30,7 +30,7 @@ const STATIC_ROOT = path.resolve(
 );
 const EVIDENCE_DIRECTORY = path.resolve(
   process.env.ADMIN_V2_EVIDENCE_DIR
-    || path.join(REPOSITORY_ROOT, "docs", "operations", "evidence", "admin-ui-v2-phase1"),
+    || path.join(REPOSITORY_ROOT, "docs", "operations", "evidence", "admin-ui-v2-store"),
 );
 const VIEWPORTS = Object.freeze([
   Object.freeze({ width: 1440, height: 900 }),
@@ -629,7 +629,7 @@ async function verifyLegacyHandoffContract(browser, fixture, destination) {
       `${label} did not retain focus on the activated navigation item`,
     );
     assert.match(await boundary.innerText(), new RegExp(`${destination.label} remains in the existing Admin`, "i"));
-    assert.match(await boundary.innerText(), /Phase 1 migrates only Overview/i, `${label} did not clearly identify its legacy status`);
+    assert.match(await boundary.innerText(), /Overview and Store are native Admin v2 routes/i, `${label} did not clearly identify its legacy status`);
 
     const v2BoundaryUrl = runtime.page.url();
     const parsedBoundaryUrl = new URL(v2BoundaryUrl);
@@ -764,7 +764,8 @@ async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
     await waitForSessionGateRelease(runtime.page);
     for (const destination of DEFERRED_UUID_ROUTE_ASSERTIONS) {
       await runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"]`).click();
-      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="${destination.migration}"]`)
+      const boundaryMode = destination.migrated ? "source" : destination.migration;
+      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="${boundaryMode}"]`)
         .waitFor({ state: "visible" });
       const browserUrl = runtime.page.url();
       const handoffHref = destination.migration === "legacy"
@@ -1300,7 +1301,7 @@ try {
   const expectedExceptions = checks.filter((check) => check.status === "expected-exception");
   const failedChecks = checks.filter((check) => check.status === "failed");
   const result = {
-    roadmapItem: "BETA-ADMIN-UI-V2-001",
+    roadmapItem: "BETA-ADMIN-UI-V2-002",
     fixture: "local same-origin Admin BFF read fixture",
     staticRoot: path.relative(REPOSITORY_ROOT, STATIC_ROOT) || ".",
     generatedAt: new Date().toISOString(),
@@ -1322,7 +1323,7 @@ try {
         : "passed",
   };
   writeFileSync(
-    path.join(EVIDENCE_DIRECTORY, "admin-v2-browser-results.json"),
+    path.join(EVIDENCE_DIRECTORY, "admin-v2-overview-regression-results.json"),
     `${JSON.stringify(result, null, 2)}\n`,
   );
   if (failedChecks.length > 0) {
@@ -1338,7 +1339,7 @@ try {
   const expectedExceptions = checks.filter((check) => check.status === "expected-exception");
   const failedChecks = checks.filter((check) => check.status === "failed");
   const result = {
-    roadmapItem: "BETA-ADMIN-UI-V2-001",
+    roadmapItem: "BETA-ADMIN-UI-V2-002",
     generatedAt: new Date().toISOString(),
     staticRoot: path.relative(REPOSITORY_ROOT, STATIC_ROOT) || ".",
     checks,
@@ -1355,7 +1356,7 @@ try {
     failure: String(error?.stack || error?.message || error),
   };
   writeFileSync(
-    path.join(EVIDENCE_DIRECTORY, "admin-v2-browser-results.json"),
+    path.join(EVIDENCE_DIRECTORY, "admin-v2-overview-regression-results.json"),
     `${JSON.stringify(result, null, 2)}\n`,
   );
   throw error;

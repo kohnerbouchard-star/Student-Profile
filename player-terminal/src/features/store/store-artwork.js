@@ -1,32 +1,39 @@
-const STORE_COUNTRY_BY_PREFIX = Object.freeze({
-  drav: "dravenlok",
-  eldo: "eldoran",
-  lume: "lumenor",
-  nort: "northreach",
-  solv: "solvend",
-  synd: "syndalis",
-  thal: "thaloris",
-  vale: "valerion",
-  xalv: "xalvoria",
-  yret: "yrethia"
-});
+import {
+  STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+  resolveStoreItemMedia as resolveCanonicalStoreItemMedia,
+} from "../../../../assets/store-item-media.mjs";
 
-const SAFE_ITEM_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DEFAULT_STORE_IMAGE = "./assets/store-items/store-item-custom.svg";
+const PLAYER_MEDIA_OPTIONS = Object.freeze({ assetBase: "./assets" });
+const CONTROLLED_LOCAL_STORE_ITEM_IMAGE = /^\.\/assets\/store-items\/[a-z0-9]+(?:-[a-z0-9]+)*\.svg$/u;
 
-function fallbackImage(item) {
-  const candidate = typeof item?.image === "string" ? item.image.trim() : "";
-  return candidate || DEFAULT_STORE_IMAGE;
+export { STORE_ITEM_MEDIA_PLACEHOLDER_SRC };
+
+export function resolveStoreItemMedia(item) {
+  return resolveCanonicalStoreItemMedia(item, PLAYER_MEDIA_OPTIONS);
 }
 
 export function resolveStoreItemImage(item) {
-  const itemKey = typeof item?.itemKey === "string" ? item.itemKey.trim().toLowerCase() : "";
-  const match = /^beta-([a-z]{4})-(.+)$/.exec(itemKey);
-  if (!match) return fallbackImage(item);
+  return resolveStoreItemMedia(item).src;
+}
 
-  const country = STORE_COUNTRY_BY_PREFIX[match[1]];
-  const itemSlug = match[2];
-  if (!country || !SAFE_ITEM_SLUG.test(itemSlug)) return fallbackImage(item);
+// Marketplace's existing read model supplies only repository-owned local SVGs.
+// Keep that legacy contract separate from canonical Store media resolution so
+// an API-provided URL can never become a Store media authority.
+export function resolveLegacyMarketplaceItemImage(value) {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  return CONTROLLED_LOCAL_STORE_ITEM_IMAGE.test(candidate)
+    ? candidate
+    : STORE_ITEM_MEDIA_PLACEHOLDER_SRC;
+}
 
-  return `./assets/images/items/store/${country}/${itemSlug}.webp`;
+export function handleStoreItemMediaError(event) {
+  const image = event?.target;
+  const isImage = String(image?.tagName || "").toUpperCase() === "IMG";
+  const isStoreMedia = image?.dataset?.storeItemMedia === "true";
+  if (!isImage || !isStoreMedia || image.dataset.storeItemMediaState === "fallback") return false;
+
+  image.dataset.storeItemMediaState = "fallback";
+  image.src = STORE_ITEM_MEDIA_PLACEHOLDER_SRC;
+  if (!String(image.alt || "").trim()) image.alt = "Store item artwork unavailable";
+  return true;
 }

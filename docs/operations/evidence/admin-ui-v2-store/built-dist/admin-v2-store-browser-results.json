@@ -1,0 +1,776 @@
+{
+  "roadmapItem": "BETA-ADMIN-UI-V2-002",
+  "fixture": "local same-origin HttpOnly Admin BFF Store fixture",
+  "staticRoot": "../econovaria-admin-ui-v2-store-dist-final",
+  "generatedAt": "2026-08-07T00:47:33.684Z",
+  "selectedGameUrlContract": "documented legacy exception; excluded from private-DOM assertion",
+  "viewports": [
+    "1440x900",
+    "1280x720",
+    "1024x768",
+    "768x1024",
+    "390x844",
+    "320x568",
+    "1024x540"
+  ],
+  "checks": [
+    {
+      "name": "ready-1440x900",
+      "status": "passed",
+      "durationMs": 601,
+      "scenario": "ready",
+      "viewport": "1440x900"
+    },
+    {
+      "name": "ready-1280x720",
+      "status": "passed",
+      "durationMs": 417,
+      "scenario": "ready",
+      "viewport": "1280x720"
+    },
+    {
+      "name": "ready-1024x768",
+      "status": "passed",
+      "durationMs": 306,
+      "scenario": "ready",
+      "viewport": "1024x768"
+    },
+    {
+      "name": "ready-768x1024",
+      "status": "passed",
+      "durationMs": 303,
+      "scenario": "ready",
+      "viewport": "768x1024"
+    },
+    {
+      "name": "ready-390x844",
+      "status": "passed",
+      "durationMs": 278,
+      "scenario": "ready",
+      "viewport": "390x844"
+    },
+    {
+      "name": "ready-320x568",
+      "status": "passed",
+      "durationMs": 273,
+      "scenario": "ready",
+      "viewport": "320x568"
+    },
+    {
+      "name": "ready-1024x540",
+      "status": "passed",
+      "durationMs": 305,
+      "scenario": "ready",
+      "viewport": "1024x540"
+    },
+    {
+      "name": "search-and-filters",
+      "status": "passed",
+      "durationMs": 294,
+      "scenario": "search-filter",
+      "records": 3
+    },
+    {
+      "name": "cardinality-store-empty",
+      "status": "passed",
+      "durationMs": 302,
+      "scenario": "store-empty",
+      "records": 0
+    },
+    {
+      "name": "cardinality-store-one",
+      "status": "passed",
+      "durationMs": 204,
+      "scenario": "store-one",
+      "records": 1
+    },
+    {
+      "name": "cardinality-store-many",
+      "status": "passed",
+      "durationMs": 251,
+      "scenario": "store-many",
+      "records": 52
+    },
+    {
+      "name": "initial-loading",
+      "status": "passed",
+      "durationMs": 3071,
+      "scenario": "store-loading"
+    },
+    {
+      "name": "failed-state",
+      "status": "passed",
+      "durationMs": 324,
+      "scenario": "store-failed",
+      "safeError": true
+    },
+    {
+      "name": "refreshing-to-stale",
+      "status": "passed",
+      "durationMs": 647,
+      "scenario": "store-stale",
+      "preservedResolvedData": true
+    },
+    {
+      "name": "permission-boundary",
+      "status": "passed",
+      "durationMs": 389,
+      "scenario": "store-permission",
+      "protectedReads": 0
+    },
+    {
+      "name": "unauthenticated-boundary",
+      "status": "passed",
+      "durationMs": 87,
+      "scenario": "unauthenticated",
+      "protectedReads": 0
+    },
+    {
+      "name": "create-validation-focus-success",
+      "status": "passed",
+      "durationMs": 845,
+      "scenario": "create",
+      "mutationCount": 1,
+      "refetched": true,
+      "duplicateSuppressed": true
+    },
+    {
+      "name": "edit-and-archive",
+      "status": "passed",
+      "durationMs": 1026,
+      "scenario": "edit-archive",
+      "patchCount": 1,
+      "deleteCount": 1,
+      "focusRestored": true
+    },
+    {
+      "name": "retryable-mutation-idempotency",
+      "status": "passed",
+      "durationMs": 820,
+      "scenario": "store-mutation-failed",
+      "attempts": 2,
+      "reusedIdempotencyKey": true
+    },
+    {
+      "name": "aal2-mutation-boundary",
+      "status": "passed",
+      "durationMs": 709,
+      "scenario": "store-mutation-aal2",
+      "safeError": true
+    }
+  ],
+  "counts": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0
+  },
+  "evidence": [
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-1440x900.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-media-contract-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-1024x768.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-768x1024.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-390x844.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-320x568.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-ready-1024x540.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-empty-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-loading-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-failed-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-stale-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-permission-denied-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-create-dialog-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-create-validation-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-edit-dialog-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-archive-dialog-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-mutation-retryable-error-1280x720.png",
+    "docs/operations/evidence/admin-ui-v2-store/built-dist/store-mutation-aal2-required-1280x720.png"
+  ],
+  "resourceManifest": [
+    {
+      "pathname": "/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/admin/auth-session-manager.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/css/session-gate.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/session-gate.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/admin/v2/src/api/admin-api-client.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/api/admin-bff-transport.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/api/overview-read-model.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/app.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminConfirmDialog.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminDataTable.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminDialog.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminDrawer.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminEmptyState.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminErrorState.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminField.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminIcon.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminMedia.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminNavigation.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminPageFrame.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminPermissionBoundary.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminRouteBoundary.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminShell.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminSkeleton.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminStaleState.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminToast.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminTopbar.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/AdminValidationSummary.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/dom.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/components/index.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/core/data-state.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/core/error-envelope.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/core/navigation-registry.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/core/route-boundary.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/main.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/overview/OverviewController.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/overview/OverviewNotifications.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/overview/OverviewRoute.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/overview/OverviewSkeleton.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/store/StoreController.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/store/StoreItemForm.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/store/StoreRoute.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/src/routes/store/StoreSkeleton.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/admin/v2/styles/base.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/components.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/reset.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/routes/overview.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/routes/store.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/tokens.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/admin/v2/styles/utilities.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "kind": "css"
+    },
+    {
+      "pathname": "/assets/store-item-media.mjs",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/assets/store-item-placeholder.svg",
+      "status": 200,
+      "contentType": "image/svg+xml; charset=utf-8",
+      "kind": "image"
+    },
+    {
+      "pathname": "/frontend/src/core/admin-game-selection.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/frontend/src/core/admin-logout-override.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/frontend/src/core/runtime-config.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+      "status": 201,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+      "status": 403,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+      "status": 503,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items/90000000-0000-4000-8000-000000000009",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/proxy/session/bootstrap",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/status",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/functions/v1/web-session-api/status",
+      "status": 401,
+      "contentType": "application/json; charset=utf-8",
+      "kind": "other"
+    },
+    {
+      "pathname": "/player-terminal/assets/images/items/store/northreach/sensor-board.webp",
+      "status": 200,
+      "contentType": "image/webp",
+      "kind": "image"
+    },
+    {
+      "pathname": "/runtime-config.env.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    }
+  ],
+  "diagnostics": [
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "store-empty",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 57
+    },
+    {
+      "scenario": "store-one",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 58
+    },
+    {
+      "scenario": "store-many",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "store-loading",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 59
+    },
+    {
+      "scenario": "store-failed",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 57
+    },
+    {
+      "scenario": "store-stale",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 60
+    },
+    {
+      "scenario": "store-permission",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 56
+    },
+    {
+      "scenario": "unauthenticated",
+      "errors": [
+        "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [
+        {
+          "method": "GET",
+          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/status",
+          "status": 401,
+          "fixtureErrorCode": "auth_required"
+        }
+      ],
+      "resourceCount": 24
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 60
+    },
+    {
+      "scenario": "ready",
+      "errors": [],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [],
+      "resourceCount": 60
+    },
+    {
+      "scenario": "store-mutation-failed",
+      "errors": [
+        "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      ],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+          "status": 503,
+          "fixtureErrorCode": "UPSTREAM_UNAVAILABLE"
+        }
+      ],
+      "resourceCount": 60
+    },
+    {
+      "scenario": "store-mutation-aal2",
+      "errors": [
+        "console: Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      ],
+      "securityWarnings": [],
+      "failedRequests": [],
+      "httpFailures": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+          "status": 403,
+          "fixtureErrorCode": "MFA_REQUIRED"
+        }
+      ],
+      "resourceCount": 60
+    }
+  ],
+  "status": "passed"
+}

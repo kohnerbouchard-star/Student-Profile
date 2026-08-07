@@ -724,12 +724,24 @@ button.admin-navigation__game-context:hover {
 
 .admin-media__fallback {
   display: grid;
+  inline-size: 100%;
+  block-size: 100%;
   place-items: center;
   gap: var(--admin-space-2);
   padding: var(--admin-space-4);
   color: var(--admin-color-text-muted);
   font-size: var(--admin-text-xs);
   text-align: center;
+}
+
+.admin-media__fallback-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.admin-media__fallback--image {
+  padding: 0;
 }
 
 .admin-toast-region {

@@ -131,8 +131,7 @@ const ROUTES = Object.freeze([
     groupId: "trade",
     icon: "store",
     permission: "store.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Store", fragment: "store" },
+    migration: "v2",
   }),
   defineRoute({
     id: "marketplace",

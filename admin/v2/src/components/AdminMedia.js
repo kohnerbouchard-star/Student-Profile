@@ -1,4 +1,3 @@
-import { AdminIcon } from "./AdminIcon.js";
 import { createElement } from "./dom.js";
 
 export function AdminMedia({
@@ -7,6 +6,8 @@ export function AdminMedia({
   aspect = "square",
   fit = "cover",
   fallbackLabel = "Media unavailable",
+  fallbackSrc = "",
+  fallbackAlt = fallbackLabel,
   loading = "lazy",
   width,
   height,
@@ -18,9 +19,30 @@ export function AdminMedia({
   });
   const fallback = createElement("div", {
     className: "admin-media__fallback",
-    attrs: { role: "img", "aria-label": fallbackLabel },
-    children: [AdminIcon({ name: "image", size: 24 }), createElement("span", { text: fallbackLabel })],
+    attrs: { role: "img", "aria-label": fallbackAlt },
   });
+
+  if (fallbackSrc) {
+    fallback.classList.add("admin-media__fallback--image");
+    const fallbackImage = createElement("img", {
+      className: "admin-media__fallback-image",
+      attrs: {
+        src: fallbackSrc,
+        alt: "",
+        "aria-hidden": "true",
+        loading,
+        decoding: "async",
+        width,
+        height,
+      },
+    });
+    fallbackImage.addEventListener("error", () => {
+      fallback.replaceChildren(createElement("span", { text: fallbackLabel }));
+    }, { once: true });
+    fallback.append(fallbackImage);
+  } else {
+    fallback.append(createElement("span", { text: fallbackLabel }));
+  }
 
   if (!src) {
     root.append(fallback);

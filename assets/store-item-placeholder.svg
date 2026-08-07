@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-labelledby="store-placeholder-title store-placeholder-description">
+  <title id="store-placeholder-title">Econovaria Store artwork unavailable</title>
+  <desc id="store-placeholder-description">A decorative geometric frame marking a Store item without artwork.</desc>
+  <defs>
+    <linearGradient id="store-placeholder-bg" x1="12" y1="10" x2="148" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d2635"/>
+      <stop offset="0.5" stop-color="#091321"/>
+      <stop offset="1" stop-color="#050811"/>
+    </linearGradient>
+    <radialGradient id="store-placeholder-glow" cx="0" cy="0" r="1" gradientTransform="translate(80 68) rotate(90) scale(68)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#58e7f5" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#58e7f5" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="store-placeholder-edge" x1="30" y1="30" x2="132" y2="134" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#76eff8"/>
+      <stop offset="0.52" stop-color="#7f8cff"/>
+      <stop offset="1" stop-color="#ff995a"/>
+    </linearGradient>
+    <pattern id="store-placeholder-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M16 0H0V16" fill="none" stroke="#8debf2" stroke-opacity="0.07"/>
+    </pattern>
+  </defs>
+  <rect x="1" y="1" width="158" height="158" rx="24" fill="url(#store-placeholder-bg)" stroke="#86edf5" stroke-opacity="0.24" stroke-width="2"/>
+  <rect x="10" y="10" width="140" height="140" rx="18" fill="url(#store-placeholder-grid)"/>
+  <rect x="10" y="10" width="140" height="140" rx="18" fill="url(#store-placeholder-glow)"/>
+  <path d="M34 29h92l17 17v68l-17 17H34l-17-17V46l17-17Z" fill="#07101c" fill-opacity="0.72" stroke="url(#store-placeholder-edge)" stroke-opacity="0.66" stroke-width="2"/>
+  <path d="M49 53 80 37l31 16v38l-31 18-31-18V53Z" fill="#64e8f4" fill-opacity="0.055" stroke="#85edf5" stroke-opacity="0.52" stroke-width="2"/>
+  <path d="m49 53 31 18 31-18M80 71v38" fill="none" stroke="#ff9b61" stroke-opacity="0.56" stroke-width="2"/>
+  <path d="M41 120h78" stroke="#77edf6" stroke-opacity="0.24" stroke-width="3" stroke-linecap="round"/>
+  <path d="M55 129h50" stroke="#918cff" stroke-opacity="0.2" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="25" cy="39" r="3" fill="#7ceef7" fill-opacity="0.62"/>
+  <circle cx="135" cy="121" r="3" fill="#ff9b61" fill-opacity="0.62"/>
+</svg>
