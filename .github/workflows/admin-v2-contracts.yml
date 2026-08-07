@@ -1,0 +1,92 @@
+name: Admin V2 Contracts
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-v2-contracts.yml"
+      - "admin/v2.html"
+      - "admin/v2/src/api/contracts-api-client.js"
+      - "admin/v2/src/app.js"
+      - "admin/v2/src/core/navigation-registry.js"
+      - "admin/v2/src/routes/contracts/**"
+      - "admin/v2/styles/routes/contracts.css"
+      - "admin/v2/src/components/**"
+      - "admin/v2/src/core/**"
+      - "scripts/admin-v2-contracts-api.test.mjs"
+      - "scripts/admin-v2-contracts-browser-smoke.mjs"
+      - "scripts/admin-v2-unit.test.mjs"
+      - "scripts/admin-v2-store-api.test.mjs"
+      - "scripts/admin-v2-store-media.test.mjs"
+      - "scripts/admin-v2-market-api.test.mjs"
+      - "scripts/admin-v2-browser-fixture-server.mjs"
+      - "docs/operations/evidence/admin-ui-v2-contracts/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-v2-contracts-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  contracts-v2:
+    name: Contracts source-owned route
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate Contracts source and API regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check admin/v2/src/api/contracts-api-client.js
+          node --check admin/v2/src/routes/contracts/ContractForm.js
+          node --check admin/v2/src/routes/contracts/ContractsController.js
+          node --check admin/v2/src/routes/contracts/ContractsRoute.js
+          node --check scripts/admin-v2-contracts-browser-smoke.mjs
+          node --test \
+            scripts/admin-v2-unit.test.mjs \
+            scripts/admin-v2-contracts-api.test.mjs \
+            scripts/admin-v2-store-api.test.mjs \
+            scripts/admin-v2-store-media.test.mjs \
+            scripts/admin-v2-market-api.test.mjs
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium
+
+      - name: Execute Contracts responsive browser acceptance
+        env:
+          ADMIN_V2_CONTRACTS_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+        run: node scripts/admin-v2-contracts-browser-smoke.mjs
+
+      - name: Upload Contracts evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-v2-contracts-${{ github.event.pull_request.head.sha || github.sha }}
+          path: docs/operations/evidence/admin-ui-v2-contracts/
+          if-no-files-found: error
+          retention-days: 30
