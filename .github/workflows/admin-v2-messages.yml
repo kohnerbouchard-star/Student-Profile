@@ -74,6 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run test:admin-messaging
+          npm run test:admin-v2
           node --test scripts/admin-v2-messages.test.mjs
           node --check scripts/admin-v2-messages-browser-smoke.mjs
 
