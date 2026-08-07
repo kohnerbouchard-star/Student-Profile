@@ -1,40 +1,70 @@
 # Admin UI V2 Attendance Verification
 
-This record is completed against the branch and draft PR. It deliberately separates source/static verification from GitHub/Vercel runtime evidence.
+This record captures the completed focused verification for the source-owned Attendance migration. It distinguishes the audited branch point, current `origin/main`, exact tested head, and the external preview-capacity status.
 
-## Branch
+## Branch and reconciliation
 
-- Base: `b7827211f0ff15b8a963219a63738180b33a1b3d`
+- Original audited branch point: `b7827211f0ff15b8a963219a63738180b33a1b3d`
+- Current `origin/main` fetched during continuation: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
 - Branch: `refactor/admin-ui-v2-attendance-v1`
+- Draft PR: `#522`
 - Merge: not performed
+
+The two commits added to `main` after the audited branch point change only `player-terminal/` source. They do not overlap the Admin V2 Attendance route, shared Admin V2 navigation, or Attendance verification files. No merge or rebase was therefore necessary to reconcile Attendance with current `main`; preserving the existing branch avoided unrelated churn.
 
 ## Focused cases
 
-The Attendance test contract covers:
+`scripts/admin-v2-attendance-api.test.mjs` now covers:
 
-- exact `/attendance/today` read path;
-- exact supported mutation paths;
-- no invented check-out method;
-- empty roster;
-- normal current-day roster;
-- 250-player roster;
-- long/Korean names;
-- error-envelope sanitization;
-- permission denial before protected read;
-- stale data after failed refresh;
-- player UUID exclusion from normalized presentation data;
-- legacy scanner 250 ms / 1.2 s / 2.0 s timing constants;
-- keyboard form submit and scanner focus restoration;
-- responsive mobile CSS and long-text wrapping.
+- exact authoritative `GET /attendance/today` read path;
+- exact supported Attendance mutation paths and idempotency;
+- no invented check-out/delete operation;
+- scanner success using the server-returned player, attendance timestamp/status, and reward outcome;
+- duplicate/repeated scan behavior through authoritative `attendance.wasCreated === false`;
+- scanner 5xx failure sanitization with no raw backend detail exposure;
+- read failure sanitization;
+- 0-player, 1-player, and 48-player rosters;
+- long Korean player names;
+- permission denial before any protected Attendance read;
+- empty and stale/retry data-state behavior;
+- private player UUID exclusion from normalized presentation data;
+- legacy scanner 250 ms re-arm, 1.2 s success reset, and 2.0 s failure reset constants;
+- keyboard form submission and scanner focus restoration;
+- desktop/tablet/mobile responsive source constraints, including 1100 px and 760 px breakpoints and long-text wrapping.
 
-Runtime scanner success/failure and duplicate/repeated-scan semantics remain authoritative server behavior. The UI reflects `wasCreated` rather than implementing its own duplicate policy.
+The client does not create a browser-side duplicate policy. It presents the server-authoritative `wasCreated` result and preserves the server-returned attendance timestamp.
 
-## Local source checks
+## Exact focused CI
 
-- New/modified Attendance ESM files: `node --check` PASS in the implementation workspace.
-- Focused Attendance test file: `node --check` PASS in the implementation workspace.
-- Full repository test/build status: recorded below from GitHub checks after draft PR creation.
+Dedicated workflow: `Admin V2 Attendance`
 
-## GitHub / Vercel
+- Exact tested head: `a4fdf18716124fb14e33cc67375572b0443c9e9f`
+- Workflow run: `31174850043`
+- Job: `focused`
+- Result: **PASS**
 
-Pending final branch head and automatic preview verification at the time this evidence file was first created. The final PR status is reported in the PR and completion report; this file may be amended with the final head/check state before work stops.
+Checks on that exact head:
+
+- Attendance JavaScript/test syntax: **PASS**
+- Focused Attendance suite: **8/8 PASS**
+- Admin V2 regression suite: **39/39 PASS**
+- `git diff --check origin/main...HEAD`: **PASS**
+- changed Attendance source/docs high-confidence secret scan: **PASS**
+
+The 39-test Admin V2 regression suite includes shared navigation/data-state/error tests plus existing Overview, Store, and Market coverage. The shared migration assertion now recognizes exactly Overview, Attendance, Market, and Store as source-owned V2 routes; Attendance is removed from the legacy-route expectation.
+
+## Security and privacy
+
+- Permission: `attendance.manage`.
+- Permission denial occurs before Attendance `load()` and the controller independently fails closed.
+- Browser-visible Attendance rows contain route-local row keys rather than ownership UUIDs.
+- Private player UUIDs exist only in the controller-private mutation reference map.
+- Scanner credentials are submitted through the existing Admin BFF boundary and are not copied into rendered Attendance state.
+- Unsafe backend messages/details are normalized to the shared Admin V2 safe error envelope.
+- No new Attendance backend endpoint, persistence model, authorization model, or mutation was introduced.
+
+## Automatic preview
+
+The Git-connected Vercel integration is enabled and receives branch pushes automatically. At the tested head, the Vercel status was rejected at the account/platform level with `build-rate-limit` (`upgradeToPro=build-rate-limit`) before an Attendance preview deployment URL could be produced. This is a preview-capacity failure, not an Attendance compilation/test failure.
+
+The final completion report records the Vercel status again against the final evidence-only branch head.
