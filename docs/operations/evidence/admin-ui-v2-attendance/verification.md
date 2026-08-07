@@ -1,6 +1,6 @@
 # Admin UI V2 Attendance Verification
 
-This record captures the completed focused verification for the source-owned Attendance migration. It distinguishes the audited branch point, current `origin/main`, exact tested head, and the external preview-capacity status.
+This record captures the completed focused verification for the source-owned Attendance migration. It distinguishes the audited branch point, current `origin/main`, exact tested head, and automatic preview results.
 
 ## Branch and reconciliation
 
@@ -14,7 +14,7 @@ The two commits added to `main` after the audited branch point change only `play
 
 ## Focused cases
 
-`scripts/admin-v2-attendance-api.test.mjs` now covers:
+`scripts/admin-v2-attendance-api.test.mjs` covers:
 
 - exact authoritative `GET /attendance/today` read path;
 - exact supported Attendance mutation paths and idempotency;
@@ -51,7 +51,7 @@ Checks on that exact head:
 - `git diff --check origin/main...HEAD`: **PASS**
 - changed Attendance source/docs high-confidence secret scan: **PASS**
 
-The 39-test Admin V2 regression suite includes shared navigation/data-state/error tests plus existing Overview, Store, and Market coverage. The shared migration assertion now recognizes exactly Overview, Attendance, Market, and Store as source-owned V2 routes; Attendance is removed from the legacy-route expectation.
+The 39-test Admin V2 regression suite includes shared navigation/data-state/error tests plus existing Overview, Store, and Market coverage. The shared migration assertion recognizes exactly Overview, Attendance, Market, and Store as source-owned V2 routes; Attendance is removed from the legacy-route expectation.
 
 ## Security and privacy
 
@@ -65,6 +65,19 @@ The 39-test Admin V2 regression suite includes shared navigation/data-state/erro
 
 ## Automatic preview
 
-The Git-connected Vercel integration is enabled and receives branch pushes automatically. At the tested head, the Vercel status was rejected at the account/platform level with `build-rate-limit` (`upgradeToPro=build-rate-limit`) before an Attendance preview deployment URL could be produced. This is a preview-capacity failure, not an Attendance compilation/test failure.
+The Git-connected Vercel integration created automatic PR #522 previews from this branch.
 
-The final completion report records the Vercel status again against the final evidence-only branch head.
+A verified READY implementation preview exists for commit `d7c523602b8c1e56ce7debf81822c4f6d15a2348`:
+
+- Deployment: `dpl_FmGchyZdGB5mpKVxJgbSxWmUzm8t`
+- State: **READY**
+- Source: `git`
+- PR: `522`
+- Branch: `refactor/admin-ui-v2-attendance-v1`
+- Branch alias: `econovaria-git-refactor-admin-ui-v2-attendance-v1-econovaria.vercel.app`
+
+The preview is protected by Vercel SSO; an authenticated-tool request to `/admin/v2.html` returned the expected Vercel SSO redirect rather than exposing the protected page body directly.
+
+Subsequent test/evidence-only pushes were rejected by Vercel's account-level `build-rate-limit` (`upgradeToPro=build-rate-limit`), so no newer preview deployment replaced the READY implementation preview. This capacity condition is external to the Attendance test/build result and no manual deployment was performed.
+
+The final completion report records the status against the final evidence-only branch head.
