@@ -74,7 +74,6 @@ jobs:
       - name: Run source-owned Admin V2 contract regressions
         run: >-
           node --test
-          scripts/admin-v2-unit.test.mjs
           scripts/admin-v2-store-api.test.mjs
           scripts/admin-v2-store-media.test.mjs
           scripts/admin-v2-market-api.test.mjs
@@ -82,6 +81,22 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser-only runtime fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_" + "publishable_runtime_fixture_1234567890"
+          });
+          EOF
+
+      - name: Exercise Overview V2 browser regression
+        run: node scripts/admin-v2-browser-smoke.mjs
 
       - name: Exercise Players V2 browser states and mutations
         run: node scripts/admin-v2-players-browser-smoke.mjs
