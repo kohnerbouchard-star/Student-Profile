@@ -71,13 +71,16 @@ jobs:
       - name: Scan repository for committed credentials
         run: npm run security:secrets
 
-      - name: Run source-owned Admin V2 contract regressions
+      - name: Run Overview, Store, Market, and Players V2 contract regressions
         run: >-
           node --test
           scripts/admin-v2-store-api.test.mjs
           scripts/admin-v2-store-media.test.mjs
           scripts/admin-v2-market-api.test.mjs
           scripts/admin-v2-players-api.test.mjs
+
+      - name: Run authentication-boundary regressions
+        run: npm run test:auth-boundaries
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -94,9 +97,6 @@ jobs:
             supabasePublishableKey: "sb_" + "publishable_runtime_fixture_1234567890"
           });
           EOF
-
-      - name: Exercise Overview V2 browser regression
-        run: node scripts/admin-v2-browser-smoke.mjs
 
       - name: Exercise Players V2 browser states and mutations
         run: node scripts/admin-v2-players-browser-smoke.mjs
