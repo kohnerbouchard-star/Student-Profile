@@ -75,6 +75,30 @@ function readResult(overrides = {}) {
   return { enhanced: today(overrides), current: true };
 }
 
+function rosterRows(count) {
+  return Array.from({ length: count }, (_, index) => {
+    const id = `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+    return {
+      id: `missing:${id}:2026-08-07`,
+      playerId: id,
+      displayName: index === 0
+        ? "김하늘 — 국제 경제 시뮬레이션 연구 프로젝트 참가자"
+        : `학생 ${index + 1}`,
+      rosterLabel: `R-${index + 1}`,
+      status: "absent",
+      source: "not_scanned",
+      player: {
+        id,
+        displayName: index === 0
+          ? "김하늘 — 국제 경제 시뮬레이션 연구 프로젝트 참가자"
+          : `학생 ${index + 1}`,
+        rosterLabel: `R-${index + 1}`,
+        status: "active",
+      },
+    };
+  });
+}
+
 test("Attendance client uses the exact authoritative Admin BFF today route", async () => {
   const calls = [];
   const api = createAttendanceApi({
@@ -134,7 +158,81 @@ test("Attendance mutations preserve exact existing action paths and idempotency"
   assert.equal(JSON.parse(calls[4].init.body).locked, true);
 });
 
-test("Attendance client normalizes unsafe backend failures", async () => {
+test("Attendance scanner preserves successful and duplicate server outcomes", async () => {
+  const responses = [{
+    player: { displayName: "김민서" },
+    attendance: {
+      status: "present",
+      attendanceDate: "2026-08-07",
+      clockedInAt: "2026-08-07T07:20:00.000Z",
+      wasCreated: true,
+    },
+    reward: { amount: 5, currencyCode: "ECO" },
+  }, {
+    player: { displayName: "김민서" },
+    attendance: {
+      status: "present",
+      attendanceDate: "2026-08-07",
+      clockedInAt: "2026-08-07T07:20:00.000Z",
+      wasCreated: false,
+    },
+    reward: { amount: 0, currencyCode: "ECO" },
+  }];
+  let call = 0;
+  const api = createAttendanceApi({
+    fetchImpl: async () => jsonResponse(responses[call++]),
+  });
+  const base = {
+    gameId: GAME_ID,
+    scanValue: "PLAYER-ACCESS-77",
+    deviceTimezone: "Asia/Seoul",
+    idempotencyKey: "attendance.scan.12345678",
+  };
+
+  const success = await api.scanAttendance(base);
+  const duplicate = await api.scanAttendance({
+    ...base,
+    idempotencyKey: "attendance.scan.87654321",
+  });
+
+  assert.equal(success.player.displayName, "김민서");
+  assert.equal(success.attendance.wasCreated, true);
+  assert.equal(success.attendance.status, "present");
+  assert.equal(success.reward.amount, 5);
+  assert.equal(duplicate.attendance.wasCreated, false);
+  assert.equal(duplicate.attendance.clockedInAt, success.attendance.clockedInAt);
+});
+
+test("Attendance scanner failures are safely normalized and do not expose backend detail", async () => {
+  const rawDetail = "SELECT credential FROM private.attendance USING service_role";
+  const api = createAttendanceApi({
+    fetchImpl: async () => jsonResponse({
+      error: {
+        code: "internal_attendance_scan_failure",
+        message: rawDetail,
+        details: rawDetail,
+        requestId: "attendance-scan-req-1",
+      },
+    }, { status: 503 }),
+  });
+
+  await assert.rejects(
+    () => api.scanAttendance({
+      gameId: GAME_ID,
+      scanValue: "RFID-FAIL-1",
+      deviceTimezone: "Asia/Seoul",
+      idempotencyKey: "attendance.scan.failure.12345678",
+    }),
+    (error) => {
+      assert.equal(error.code, "SERVICE_UNAVAILABLE");
+      assert.equal(error.userMessage.includes(rawDetail), false);
+      assert.equal(JSON.stringify(error).includes(rawDetail), false);
+      return true;
+    },
+  );
+});
+
+test("Attendance client normalizes unsafe backend read failures", async () => {
   const rawDetail = "SELECT secret FROM private_table USING service_role";
   const api = createAttendanceApi({
     fetchImpl: async () => jsonResponse({
@@ -155,7 +253,7 @@ test("Attendance client normalizes unsafe backend failures", async () => {
   );
 });
 
-test("Attendance read model handles normal, empty, large, and Korean-name rosters without UUID leakage", () => {
+test("Attendance read model handles 0, 1, and 48-player rosters with long Korean names and no UUID leakage", () => {
   const normal = normalizeAttendanceReadModel(readResult());
   const serialized = JSON.stringify(normal);
   assert.equal(normal.rows.length, 2);
@@ -169,20 +267,23 @@ test("Attendance read model handles normal, empty, large, and Korean-name roster
   assert.equal(empty.isEmpty, true);
   assert.equal(empty.rows.length, 0);
 
-  const largeRows = Array.from({ length: 250 }, (_, index) => {
-    const id = `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
-    return {
-      id: `missing:${id}:2026-08-07`,
-      playerId: id,
-      displayName: `학생 ${index + 1}`,
-      rosterLabel: `R-${index + 1}`,
-      status: "absent",
-      source: "not_scanned",
-      player: { id, displayName: `학생 ${index + 1}`, rosterLabel: `R-${index + 1}`, status: "active" },
-    };
-  });
-  const large = normalizeAttendanceReadModel(readResult({ attendanceRows: largeRows, attendanceSummary: {} }));
-  assert.equal(large.rows.length, 250);
+  const oneRows = rosterRows(1);
+  const one = normalizeAttendanceReadModel(readResult({
+    attendanceRows: oneRows,
+    attendanceSummary: { activePlayerCount: 1, absentCount: 1 },
+  }));
+  assert.equal(one.rows.length, 1);
+  assert.equal(one.rows[0].displayName.startsWith("김하늘"), true);
+  assert.equal(one.summary.activePlayerCount, 1);
+
+  const largeRows = rosterRows(48);
+  const large = normalizeAttendanceReadModel(readResult({
+    attendanceRows: largeRows,
+    attendanceSummary: { activePlayerCount: 48, absentCount: 48 },
+  }));
+  assert.equal(large.rows.length, 48);
+  assert.equal(large.summary.activePlayerCount, 48);
+  assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(JSON.stringify(large)), false);
 });
 
 test("Attendance controller fails closed on permission denial and owns empty/stale retry states", async () => {
@@ -226,7 +327,7 @@ test("Attendance controller fails closed on permission denial and owns empty/sta
   controller.destroy();
 });
 
-test("Attendance scanner source preserves legacy rearm/reset timing, keyboard submit, responsive layout, and no checkout invention", async () => {
+test("Attendance scanner source preserves legacy timing, keyboard focus, and responsive desktop/tablet/mobile behavior", async () => {
   const controllerSource = await readFile(new URL("../admin/v2/src/routes/attendance/AttendanceController.js", import.meta.url), "utf8");
   const routeSource = await readFile(new URL("../admin/v2/src/routes/attendance/AttendanceRoute.js", import.meta.url), "utf8");
   const cssSource = await readFile(new URL("../admin/v2/styles/routes/attendance.css", import.meta.url), "utf8");
@@ -237,7 +338,9 @@ test("Attendance scanner source preserves legacy rearm/reset timing, keyboard su
   assert.match(routeSource, /form\.addEventListener\("submit"/);
   assert.match(routeSource, /input\.focus\(\{ preventScroll: true \}\)/);
   assert.match(routeSource, /autocomplete:\s*"off"/);
+  assert.match(routeSource, /Scan RFID \/ player code/);
   assert.doesNotMatch(routeSource, /check.?out/i);
+  assert.match(cssSource, /@media \(max-width: 1100px\)/);
   assert.match(cssSource, /@media \(max-width: 760px\)/);
   assert.match(cssSource, /overflow-wrap:\s*anywhere/);
 });
