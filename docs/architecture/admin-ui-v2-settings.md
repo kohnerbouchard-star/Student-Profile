@@ -1,9 +1,9 @@
 # Admin UI V2 — Settings
 
-**Owner branch:** `refactor/admin-ui-v2-settings-v1`  
-**Base:** `4c17b942fcf4b2a6f60b629549f192d066053ba4`  
-**Route:** `/admin/v2.html#settings`  
-**Permission:** `settings.manage`  
+**Owner branch:** `refactor/admin-ui-v2-settings-v1`
+**Base:** `4c17b942fcf4b2a6f60b629549f192d066053ba4`
+**Route:** `/admin/v2.html#settings`
+**Permission:** `settings.manage`
 **Status:** implemented for draft review; no production promotion authorized.
 
 ## Boundary
