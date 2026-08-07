@@ -39,7 +39,7 @@ test("page skeleton reuses the parent gutter without becoming a scroll owner", (
   assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow:\s*hidden/);
   assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-gutter:\s*auto/);
   assert.doesNotMatch(css, /\.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\]::-webkit-scrollbar/);
-  assert.doesNotMatch(css, /(?:^|\n)\s*\.admin-terminal-shell-main\s*\{[\s\S]*?scrollbar-gutter:/);
+  assert.doesNotMatch(css, /(?:^|\n)\s*\.admin-terminal-shell-main\s*\{[^}]*scrollbar-gutter:/);
 });
 
 test("Player dossier owns one bounded tab-panel scroller", () => {
