@@ -21,6 +21,8 @@ import {
   createLegacyAdminHandoffUrl,
   resolveCurrentAdminRouteBoundary,
 } from "./core/route-boundary.js";
+import { createAttendanceApi } from "./routes/attendance/AttendanceApi.js";
+import { createAttendanceController } from "./routes/attendance/AttendanceController.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
@@ -148,12 +150,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
 
   const permissions = permissionSet(session);
   const hasPermission = (permission) => permissions.has(permission);
-  const api = createAdminApiClient({
-    fetchImpl: createAdminBffTransport({
-      selectedGameId,
-      session: () => window.EconovariaAdminAuthSession?.read?.(),
-    }),
+  const transport = createAdminBffTransport({
+    selectedGameId,
+    session: () => window.EconovariaAdminAuthSession?.read?.(),
   });
+  const api = createAdminApiClient({ fetchImpl: transport });
+  const attendanceApi = createAttendanceApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let destroyed = false;
@@ -164,6 +166,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     hasPermission,
     onChange: renderOverviewChange,
     onResolved: updateOverviewShell,
+  });
+  const attendance = createAttendanceController({
+    api: attendanceApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("attendance"),
+    notify: (notification) => toast?.push(notification),
   });
   const store = createStoreController({
     api,
@@ -182,6 +191,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     overview: Object.freeze({
       controller: overview,
       render: () => overview.render({ onOpenLegacy: navigate }),
+    }),
+    attendance: Object.freeze({
+      controller: attendance,
+      render: () => attendance.render(),
     }),
     store: Object.freeze({
       controller: store,
@@ -300,7 +313,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Attendance, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -379,6 +392,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     destroy() {
       destroyed = true;
       overview.destroy();
+      attendance.destroy();
       store.destroy();
       market.destroy();
       window.removeEventListener("hashchange", handleHashChange);
