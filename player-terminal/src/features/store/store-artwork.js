@@ -1,12 +1,11 @@
 import {
-  STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
   resolveStoreItemMedia as resolveCanonicalStoreItemMedia,
-} from "../../../../assets/store-item-media.mjs";
+} from "../../../assets/store-item-media.mjs";
 
 const PLAYER_MEDIA_OPTIONS = Object.freeze({ assetBase: "./assets" });
 const CONTROLLED_LOCAL_STORE_ITEM_IMAGE = /^\.\/assets\/store-items\/[a-z0-9]+(?:-[a-z0-9]+)*\.svg$/u;
 
-export { STORE_ITEM_MEDIA_PLACEHOLDER_SRC };
+export const STORE_ITEM_MEDIA_PLACEHOLDER_SRC = "./assets/store-item-placeholder.svg";
 
 export function resolveStoreItemMedia(item) {
   return resolveCanonicalStoreItemMedia(item, PLAYER_MEDIA_OPTIONS);

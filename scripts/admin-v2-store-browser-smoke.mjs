@@ -330,7 +330,7 @@ async function assertReadyMedia(page, label) {
   );
   assert.equal(
     await placeholder.locator("img").getAttribute("src"),
-    "/assets/store-item-placeholder.svg",
+    "/player-terminal/assets/store-item-placeholder.svg",
     `${label} did not use the branded graphical placeholder`,
   );
   assert.equal((await placeholder.textContent())?.trim(), "", `${label} used a text or glyph placeholder`);

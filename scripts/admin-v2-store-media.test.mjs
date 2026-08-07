@@ -5,8 +5,9 @@ import test from "node:test";
 import {
   STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
   resolveStoreItemMedia,
-} from "../assets/store-item-media.mjs";
+} from "../player-terminal/assets/store-item-media.mjs";
 import {
+  STORE_ITEM_MEDIA_PLACEHOLDER_SRC as PLAYER_STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
   handleStoreItemMediaError,
   resolveLegacyMarketplaceItemImage,
   resolveStoreItemImage,
@@ -55,7 +56,7 @@ test("Marketplace compatibility accepts only controlled repository-local SVG pat
     "./assets/store-items/market-lens.svg?redirect=https://attacker.example",
     "/assets/store-items/market-lens.svg",
   ]) {
-    assert.equal(resolveLegacyMarketplaceItemImage(unsafe), STORE_ITEM_MEDIA_PLACEHOLDER_SRC);
+    assert.equal(resolveLegacyMarketplaceItemImage(unsafe), PLAYER_STORE_ITEM_MEDIA_PLACEHOLDER_SRC);
   }
 });
 
@@ -102,14 +103,14 @@ test("broken Store artwork switches once to the branded placeholder", () => {
   };
 
   assert.equal(handleStoreItemMediaError({ target: image }), true);
-  assert.equal(image.src, STORE_ITEM_MEDIA_PLACEHOLDER_SRC);
+  assert.equal(image.src, PLAYER_STORE_ITEM_MEDIA_PLACEHOLDER_SRC);
   assert.equal(image.dataset.storeItemMediaState, "fallback");
   assert.equal(handleStoreItemMediaError({ target: image }), false);
   assert.equal(handleStoreItemMediaError({ target: { tagName: "IMG", dataset: {} } }), false);
 });
 
 test("placeholder is square graphical artwork without a letter or glyph stand-in", async () => {
-  const source = await readFile(new URL("../assets/store-item-placeholder.svg", import.meta.url), "utf8");
+  const source = await readFile(new URL("../player-terminal/assets/store-item-placeholder.svg", import.meta.url), "utf8");
   assert.match(source, /width="160" height="160" viewBox="0 0 160 160"/u);
   assert.match(source, /<title[^>]*>Econovaria Store artwork unavailable<\/title>/u);
   assert.equal(/<text\b/iu.test(source), false);

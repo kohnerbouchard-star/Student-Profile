@@ -75,7 +75,7 @@ Archive uses the existing `DELETE` route, which persists `status: "archived"` an
 
 ## Canonical Store media
 
-`assets/store-item-media.mjs` is the canonical resolver. It derives media from a public Store item key and an allow-listed repository asset root; it does not trust an item-supplied image URL, storage path, upload token, or internal UUID.
+`player-terminal/assets/store-item-media.mjs` is the canonical resolver. It derives media from a public Store item key and an allow-listed repository asset root; it does not trust an item-supplied image URL, storage path, upload token, or internal UUID.
 
 The resolver returns a small presentation descriptor:
 
@@ -93,7 +93,7 @@ Resolution order is deterministic:
 
 1. valid seeded keys map to the existing country artwork under `player-terminal/assets/images/items/store/**`;
 2. allow-listed catalog keys map to existing repository SVG artwork under `player-terminal/assets/store-items/**`;
-3. every unsupported, malformed, custom, missing, or private-key case uses the branded graphical placeholder at `assets/store-item-placeholder.svg`.
+3. every unsupported, malformed, custom, missing, or private-key case uses the branded graphical placeholder at `player-terminal/assets/store-item-placeholder.svg`.
 
 The current Store DTO contains no custom-media field, and the existing mutation handler explicitly rejects file-bearing Store multipart requests until an approved storage and media policy exists. Accordingly, Phase 2 has no upload affordance and does not preserve arbitrary `image` values. A custom Store item receives the branded placeholder. A seeded or catalog asset that fails to load also converges on that placeholder without rendering a glyph, initial, raw path, or broken-image treatment.
 
@@ -110,8 +110,8 @@ The Player Store retains its existing seeded and catalog artwork by adapting `pl
 | `admin/v2/src/api/admin-api-client.js` | Exact Store path construction, request/response validation, safe errors, and mutation request deduplication |
 | `admin/v2/src/api/admin-bff-transport.js` | Same-origin HttpOnly BFF transport, mutation CSRF/idempotency header boundary, and unchanged session-expiry handoff |
 | `admin/v2/styles/routes/store.css` | Store-only responsive table/card, media, status, controls, and dialog layout |
-| `assets/store-item-media.mjs` | Shared repository-owned Store media resolution |
-| `assets/store-item-placeholder.svg` | Branded graphical fallback with no item glyph or initials |
+| `player-terminal/assets/store-item-media.mjs` | Shared repository-owned Store media resolution, served from the Player static root and imported by Admin V2 |
+| `player-terminal/assets/store-item-placeholder.svg` | Branded graphical fallback with no item glyph or initials |
 
 The route reuses Phase 1 primitives: `AdminPageFrame`, `AdminDataTable`, `AdminMedia`, `AdminField`, `AdminDialog`, `AdminConfirmDialog`, data-state surfaces, validation summary, icons, and toast. Generic focus, error, permission, media, table, and dialog behavior is not duplicated inside the Store route.
 

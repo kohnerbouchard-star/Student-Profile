@@ -12,7 +12,7 @@ import {
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
-import { resolveStoreItemMedia } from "../../../../../assets/store-item-media.mjs";
+import { resolveStoreItemMedia } from "../../../../../player-terminal/assets/store-item-media.mjs";
 import { StoreItemForm } from "./StoreItemForm.js";
 import { StoreSkeleton } from "./StoreSkeleton.js";
 

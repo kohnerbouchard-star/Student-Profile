@@ -38,7 +38,7 @@ const UUID_IN_TEXT = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const ALLOWED_ASSET_ROOTS = new Set(["./assets", "/player-terminal/assets"]);
 const DEFAULT_ASSET_ROOT = "/player-terminal/assets";
 
-export const STORE_ITEM_MEDIA_PLACEHOLDER_SRC = "/assets/store-item-placeholder.svg";
+export const STORE_ITEM_MEDIA_PLACEHOLDER_SRC = "/player-terminal/assets/store-item-placeholder.svg";
 
 function publicItemName(item) {
   const value = typeof item?.name === "string" ? item.name.trim() : "";
@@ -57,13 +57,19 @@ function assetRoot(value) {
   return ALLOWED_ASSET_ROOTS.has(value) ? value : DEFAULT_ASSET_ROOT;
 }
 
-function descriptor({ src, alt, kind, fallback }) {
+function placeholderSrc(root) {
+  return root === "./assets"
+    ? "./assets/store-item-placeholder.svg"
+    : STORE_ITEM_MEDIA_PLACEHOLDER_SRC;
+}
+
+function descriptor({ src, alt, kind, fallback, root }) {
   return Object.freeze({
     src,
     alt,
     kind,
     fallback,
-    fallbackSrc: STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+    fallbackSrc: placeholderSrc(root),
   });
 }
 
@@ -88,6 +94,7 @@ export function resolveStoreItemMedia(item, { assetBase = DEFAULT_ASSET_ROOT } =
         alt: `${name} artwork`,
         kind: "seeded",
         fallback: false,
+        root,
       });
     }
   }
@@ -99,13 +106,15 @@ export function resolveStoreItemMedia(item, { assetBase = DEFAULT_ASSET_ROOT } =
       alt: `${name} artwork`,
       kind: "catalog",
       fallback: false,
+      root,
     });
   }
 
   return descriptor({
-    src: STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+    src: placeholderSrc(root),
     alt: `Artwork unavailable for ${name}`,
     kind: "placeholder",
     fallback: true,
+    root,
   });
 }

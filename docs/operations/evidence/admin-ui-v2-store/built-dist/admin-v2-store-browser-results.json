@@ -1,8 +1,8 @@
 {
   "roadmapItem": "BETA-ADMIN-UI-V2-002",
   "fixture": "local same-origin HttpOnly Admin BFF Store fixture",
-  "staticRoot": "../econovaria-admin-ui-v2-store-dist-final",
-  "generatedAt": "2026-08-07T00:47:33.684Z",
+  "staticRoot": "dist",
+  "generatedAt": "2026-08-07T01:17:07.341Z",
   "selectedGameUrlContract": "documented legacy exception; excluded from private-DOM assertion",
   "viewports": [
     "1440x900",
@@ -17,118 +17,118 @@
     {
       "name": "ready-1440x900",
       "status": "passed",
-      "durationMs": 601,
+      "durationMs": 399,
       "scenario": "ready",
       "viewport": "1440x900"
     },
     {
       "name": "ready-1280x720",
       "status": "passed",
-      "durationMs": 417,
+      "durationMs": 431,
       "scenario": "ready",
       "viewport": "1280x720"
     },
     {
       "name": "ready-1024x768",
       "status": "passed",
-      "durationMs": 306,
+      "durationMs": 307,
       "scenario": "ready",
       "viewport": "1024x768"
     },
     {
       "name": "ready-768x1024",
       "status": "passed",
-      "durationMs": 303,
+      "durationMs": 299,
       "scenario": "ready",
       "viewport": "768x1024"
     },
     {
       "name": "ready-390x844",
       "status": "passed",
-      "durationMs": 278,
+      "durationMs": 280,
       "scenario": "ready",
       "viewport": "390x844"
     },
     {
       "name": "ready-320x568",
       "status": "passed",
-      "durationMs": 273,
+      "durationMs": 272,
       "scenario": "ready",
       "viewport": "320x568"
     },
     {
       "name": "ready-1024x540",
       "status": "passed",
-      "durationMs": 305,
+      "durationMs": 309,
       "scenario": "ready",
       "viewport": "1024x540"
     },
     {
       "name": "search-and-filters",
       "status": "passed",
-      "durationMs": 294,
+      "durationMs": 265,
       "scenario": "search-filter",
       "records": 3
     },
     {
       "name": "cardinality-store-empty",
       "status": "passed",
-      "durationMs": 302,
+      "durationMs": 300,
       "scenario": "store-empty",
       "records": 0
     },
     {
       "name": "cardinality-store-one",
       "status": "passed",
-      "durationMs": 204,
+      "durationMs": 208,
       "scenario": "store-one",
       "records": 1
     },
     {
       "name": "cardinality-store-many",
       "status": "passed",
-      "durationMs": 251,
+      "durationMs": 248,
       "scenario": "store-many",
       "records": 52
     },
     {
       "name": "initial-loading",
       "status": "passed",
-      "durationMs": 3071,
+      "durationMs": 3070,
       "scenario": "store-loading"
     },
     {
       "name": "failed-state",
       "status": "passed",
-      "durationMs": 324,
+      "durationMs": 331,
       "scenario": "store-failed",
       "safeError": true
     },
     {
       "name": "refreshing-to-stale",
       "status": "passed",
-      "durationMs": 647,
+      "durationMs": 638,
       "scenario": "store-stale",
       "preservedResolvedData": true
     },
     {
       "name": "permission-boundary",
       "status": "passed",
-      "durationMs": 389,
+      "durationMs": 264,
       "scenario": "store-permission",
       "protectedReads": 0
     },
     {
       "name": "unauthenticated-boundary",
       "status": "passed",
-      "durationMs": 87,
+      "durationMs": 84,
       "scenario": "unauthenticated",
       "protectedReads": 0
     },
     {
       "name": "create-validation-focus-success",
       "status": "passed",
-      "durationMs": 845,
+      "durationMs": 641,
       "scenario": "create",
       "mutationCount": 1,
       "refetched": true,
@@ -137,7 +137,7 @@
     {
       "name": "edit-and-archive",
       "status": "passed",
-      "durationMs": 1026,
+      "durationMs": 1060,
       "scenario": "edit-archive",
       "patchCount": 1,
       "deleteCount": 1,
@@ -146,7 +146,7 @@
     {
       "name": "retryable-mutation-idempotency",
       "status": "passed",
-      "durationMs": 820,
+      "durationMs": 753,
       "scenario": "store-mutation-failed",
       "attempts": 2,
       "reusedIdempotencyKey": true
@@ -154,7 +154,7 @@
     {
       "name": "aal2-mutation-boundary",
       "status": "passed",
-      "durationMs": 709,
+      "durationMs": 486,
       "scenario": "store-mutation-aal2",
       "safeError": true
     }
@@ -487,18 +487,6 @@
       "kind": "css"
     },
     {
-      "pathname": "/assets/store-item-media.mjs",
-      "status": 200,
-      "contentType": "application/javascript; charset=utf-8",
-      "kind": "javascript"
-    },
-    {
-      "pathname": "/assets/store-item-placeholder.svg",
-      "status": 200,
-      "contentType": "image/svg+xml; charset=utf-8",
-      "kind": "image"
-    },
-    {
       "pathname": "/frontend/src/core/admin-game-selection.js",
       "status": 200,
       "contentType": "application/javascript; charset=utf-8",
@@ -574,6 +562,18 @@
       "pathname": "/player-terminal/assets/images/items/store/northreach/sensor-board.webp",
       "status": 200,
       "contentType": "image/webp",
+      "kind": "image"
+    },
+    {
+      "pathname": "/player-terminal/assets/store-item-media.mjs",
+      "status": 200,
+      "contentType": "application/javascript; charset=utf-8",
+      "kind": "javascript"
+    },
+    {
+      "pathname": "/player-terminal/assets/store-item-placeholder.svg",
+      "status": 200,
+      "contentType": "image/svg+xml; charset=utf-8",
       "kind": "image"
     },
     {
@@ -714,12 +714,12 @@
       "httpFailures": [
         {
           "method": "GET",
-          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/status",
+          "url": "http://127.0.0.1:58660/functions/v1/web-session-api/status",
           "status": 401,
           "fixtureErrorCode": "auth_required"
         }
       ],
-      "resourceCount": 24
+      "resourceCount": 18
     },
     {
       "scenario": "ready",
@@ -747,7 +747,7 @@
       "httpFailures": [
         {
           "method": "POST",
-          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+          "url": "http://127.0.0.1:58660/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
           "status": 503,
           "fixtureErrorCode": "UPSTREAM_UNAVAILABLE"
         }
@@ -764,7 +764,7 @@
       "httpFailures": [
         {
           "method": "POST",
-          "url": "http://127.0.0.1:55048/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
+          "url": "http://127.0.0.1:58660/functions/v1/web-session-api/proxy/games/10000000-0000-4000-8000-000000000001/store/items",
           "status": 403,
           "fixtureErrorCode": "MFA_REQUIRED"
         }

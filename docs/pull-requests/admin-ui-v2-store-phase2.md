@@ -32,7 +32,7 @@ The Store page reads, creates, edits, and archives items through the existing sa
 - mutation support in the scoped v2 BFF transport with authenticated-session CSRF and stable idempotency, without a browser-readable Staff bearer token;
 - responsive table/card presentation, search, status/stock and category filters, read-only summary/usage data, and initial-loading, ready, refreshing, stale, empty, and failed states;
 - create/edit dialogs and an explicit archive confirmation using the shared Phase 1 dialog, form, validation, focus, toast, data-table, media, error, and state primitives;
-- shared resolver `assets/store-item-media.mjs`, graphical fallback `assets/store-item-placeholder.svg`, and narrow Player compatibility wiring that preserves existing seeded/catalog artwork and purchase behavior;
+- shared resolver `player-terminal/assets/store-item-media.mjs`, graphical fallback `player-terminal/assets/store-item-placeholder.svg`, and narrow Player compatibility wiring that preserves existing seeded/catalog artwork and purchase behavior;
 - focused unit, API, media, source-browser, built-dist-browser, session, mutation, focus, overflow, resource, CSP, and Trusted Types coverage; and
 - architecture, roadmap, PR handoff, browser manifest, and screenshot evidence for the Phase 2 scope.
 
@@ -52,11 +52,11 @@ Archive is the product label for the established `DELETE` contract, which perfor
 
 ## Canonical media contract
 
-`assets/store-item-media.mjs` maps public Store item keys to allow-listed repository assets:
+`player-terminal/assets/store-item-media.mjs` maps public Store item keys to allow-listed repository assets:
 
 - seeded keys use the existing country WebP artwork under `player-terminal/assets/images/items/store/**`;
 - allow-listed catalog keys use existing SVG artwork under `player-terminal/assets/store-items/**`;
-- custom, malformed, unsupported, missing, and private-key cases use `assets/store-item-placeholder.svg`.
+- custom, malformed, unsupported, missing, and private-key cases use `player-terminal/assets/store-item-placeholder.svg`.
 
 The descriptor carries source, accessible alternative text, media kind, and the deterministic fallback source. Admin and Player Store error paths converge on the same graphical placeholder. No glyph, initial, raw URL, external image, or fake upload state substitutes for missing artwork.
 
