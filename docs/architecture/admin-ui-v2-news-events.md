@@ -24,6 +24,12 @@ The current Admin world runtime exposes these relevant contracts:
 
 Campaign `publish_news` effects expose a definition token and audience, not editable title/body copy. The UI therefore does not fabricate a content editor. Player-facing published world-news copy remains downstream of the authoritative campaign/news-definition pipeline.
 
+### Impact metadata boundary
+
+The authoritative player world-news DTO contains published-news impact fields (`magnitude`, `confidence`, `volatility`, and `volume`), but that read model is exposed through the player-session world-news path rather than the `world.manage` Admin/BFF contract. The current Admin campaign history/effect responses do not expose that impact tuple for a published news record.
+
+News & Events therefore does not copy player-session data into the Admin surface, infer impact from financial Market events, or add an unsupported Admin endpoint. Impact metadata should be rendered here only when an authoritative `world.manage` Admin contract exposes it. Until then, the route shows the Admin-authorized event transition, scope/audience, timing, state, and publication-delivery metadata that actually exist.
+
 ## Source ownership
 
 New route-owned modules:
