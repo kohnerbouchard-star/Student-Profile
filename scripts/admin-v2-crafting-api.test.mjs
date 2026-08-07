@@ -147,6 +147,26 @@ test("Crafting read model handles an authoritative empty oversight response", ()
   assert.deepEqual(model.effects, []);
 });
 
+test("Crafting read model supports the authoritative 250-job ceiling with many observed recipes", () => {
+  const jobs = Array.from({ length: 250 }, (_unused, index) => ({
+    jobKey: `cft_${index.toString(16).padStart(32, "0")}`,
+    playerId: `Player ${index + 1}`,
+    recipeKey: `recipe_${index + 1}`,
+    recipeName: `대량 제조 레시피 ${index + 1}`,
+    quantity: 1,
+    status: index % 2 === 0 ? "completed" : "in_progress",
+    countryCode: "LUM",
+    qualityBand: "standard",
+  }));
+  const model = normalizeCraftingReadModel({ data: oversightData({ jobs }) });
+
+  assert.equal(model.jobs.length, 250);
+  assert.equal(model.recipes.length, 250);
+  assert.equal(model.summary.observedRecipeCount, 250);
+  assert.equal(model.summary.activeJobCount, 125);
+  assert.equal(model.recipes.every((recipe) => !("inputs" in recipe) && !("outputs" in recipe)), true);
+});
+
 test("Crafting API reads and mutates only the existing Admin Crafting routes", async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
