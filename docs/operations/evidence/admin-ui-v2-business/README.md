@@ -1,14 +1,17 @@
 # Admin UI V2 Business evidence
 
-Branch: `refactor/admin-ui-v2-business-v1`  
-Base: `b7827211f0ff15b8a963219a63738180b33a1b3d`  
+Branch: `refactor/admin-ui-v2-business-v1`
+Reconciled main: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
 Disposition: draft PR only; not merged; not promoted.
+Final merge dependency: reconcile Business contracts against PR #503 if #503 remains unmerged or changes the canonical Business ownership/material-flow surface.
 
 ## Contract audit result
 
-The authoritative Business Admin surface on the recorded base consists of the Business directory, compliance mutation, business-cycle settlement, and a separate Business-product review mutation. The V2 page uses the directory and compliance mutation only. Settlement is intentionally withheld because its required macroeconomic inputs are not provided by the Business read contract. Business-product review is withheld because no Business Admin product list/detail read contract supports a coherent review workflow.
+The authoritative Business Admin surface on reconciled `main` consists of the Business directory, compliance mutation, business-cycle settlement, and a separate Business-product review mutation. The V2 page uses the directory and compliance mutation only. Settlement is intentionally withheld because its required macroeconomic inputs are not provided by the Business read contract. Business-product review is withheld because no Business Admin product list/detail read contract supports a coherent review workflow.
 
-The current Player Business ownership model has one canonical `owner_player_id`. Multi-player ownership is therefore **not supported by the current ownership contract** and is not simulated in this UI. Canonical inventory/product/production tables are left untouched and are not queried around the Admin API.
+The current merged Player Business ownership model has one canonical `owner_player_id`. Multi-player ownership is therefore **not supported by the current merged ownership contract** and is not simulated in this UI. Canonical inventory/product/production tables are left untouched and are not queried around the Admin API.
+
+PR #503 owns the canonical economic-asset convergence across Store → Inventory → Crafting → Business → Marketplace and remains open/draft at the time of this evidence update. This branch does not copy or pre-merge PR #503's warehouse, materials, finished-goods, COGS, or ownership model. Accounts/material/production views remain absent unless a current merged Business Admin contract exposes them authoritatively.
 
 ## Privacy/authorization hardening
 
@@ -35,6 +38,16 @@ The current Player Business ownership model has one canonical `owner_player_id`.
   - ready → stale refresh lifecycle;
   - compliance idempotency reuse after retryable failure;
   - confirmation that unsupported settlement/inventory methods are absent.
+
+## Main reconciliation
+
+The branch was reconciled with `main` at `4c17b942fcf4b2a6f60b629549f192d066053ba4`. The upstream delta since the original Business base contained only:
+
+- `player-terminal/src/app.js`;
+- `player-terminal/src/core/capability-controls.js`;
+- `player-terminal/src/core/route-renderer.js`.
+
+Those files do not overlap the Admin Business implementation.
 
 ## Required review/runtime matrix
 
