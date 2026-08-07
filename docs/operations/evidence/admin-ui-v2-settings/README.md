@@ -1,6 +1,6 @@
 # Admin UI V2 Settings evidence
 
-Branch: `refactor/admin-ui-v2-settings-v1`  
+Branch: `refactor/admin-ui-v2-settings-v1`
 Base: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
 
 This directory is the evidence root for the Settings migration. Do not record a check as passed unless it was actually executed against this branch/head.
