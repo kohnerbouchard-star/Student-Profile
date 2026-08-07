@@ -1,0 +1,175 @@
+name: Banking Staging Runtime Release
+
+on:
+  push:
+    branches:
+      - release/pr501-banking-20260807-v1
+    paths:
+      - ".github/workflows/banking-staging-runtime-release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: banking-staging-runtime-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  EXPECTED_RUNTIME_PARENT_SHA: 7da77b9d30346527760f96e6658dce5ab4857493
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  deploy:
+    name: Deploy frozen banking runtime to staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce staging-only release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/release/pr501-banking-20260807-v1"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_STAGING_PROJECT_REF" = "eecvbssdvarfcykcfrny"
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          test "$DENIED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          [[ "$EXPECTED_STAGING_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+
+      - name: Check out exact release head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Prove runtime source is the frozen banking tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_RUNTIME_PARENT_SHA"
+          changed="$(git diff --name-only HEAD^ HEAD)"
+          test "$changed" = ".github/workflows/banking-staging-runtime-release.yml"
+
+          test -f backend/supabase/migrations/20260807070000_provision_player_banking_system.sql
+          test -f backend/supabase/migrations/20260807071000_enforce_checking_canonical_account.sql
+          test -f backend/supabase/functions/admin-api/index.ts
+          test -f backend/supabase/functions/player-api/index.ts
+          grep -Fq '[functions.admin-api]' backend/supabase/config.toml
+          grep -A1 -F '[functions.admin-api]' backend/supabase/config.toml | grep -Fq 'verify_jwt = true'
+          grep -Fq '[functions.player-api]' backend/supabase/config.toml
+          grep -A1 -F '[functions.player-api]' backend/supabase/config.toml | grep -Fq 'verify_jwt = false'
+
+          bad='if (accountType === "checking" || accountType === "cash") return "cash";'
+          if grep -R -F -n "$bad" backend/supabase/functions backend/src; then
+            echo "Legacy checking-to-cash normalization is present in frozen source." >&2
+            exit 1
+          fi
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Deploy exact Admin and Player runtimes to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase functions deploy admin-api \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF"
+          supabase functions deploy player-api \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Verify deployed function security and source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 20); do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+              > "$RUNNER_TEMP/functions-after.json"
+            if FUNCTIONS_PATH="$RUNNER_TEMP/functions-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const parsed = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const rows = Array.isArray(parsed) ? parsed : (parsed.functions || []);
+          const expected = new Map([
+            ['admin-api', true],
+            ['player-api', false],
+          ]);
+          for (const [slug, verifyJwt] of expected) {
+            const row = rows.find((entry) => entry.slug === slug);
+            if (!row || row.status !== 'ACTIVE' || row.verify_jwt !== verifyJwt) process.exit(1);
+            if (!/^[a-f0-9]{64}$/.test(String(row.ezbr_sha256 || ''))) process.exit(1);
+          }
+          NODE
+            then
+              ready=true
+              break
+            fi
+            sleep 3
+          done
+          test "$ready" = true
+
+          for function_name in admin-api player-api; do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions/$function_name/body" \
+              > "$RUNNER_TEMP/$function_name-body.json"
+          done
+
+          bad='if (accountType === "checking" || accountType === "cash") return "cash";'
+          if grep -F -n "$bad" "$RUNNER_TEMP/admin-api-body.json" "$RUNNER_TEMP/player-api-body.json"; then
+            echo "Deployed runtime still contains legacy checking-to-cash normalization." >&2
+            exit 1
+          fi
+          grep -Fq 'checking' "$RUNNER_TEMP/admin-api-body.json"
+          grep -Fq 'checking' "$RUNNER_TEMP/player-api-body.json"
+
+      - name: Verify Player API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$RUNNER_TEMP/player-api-health.json"
+          status="$(curl --silent --show-error \
+            --output "$health" \
+            --write-out '%{http_code}' \
+            "https://$EXPECTED_STAGING_PROJECT_REF.supabase.co/functions/v1/player-api/health")"
+          test "$status" = "200"
+          HEALTH_PATH="$health" node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.HEALTH_PATH, 'utf8'));
+          if (body.ok !== true || body.service !== 'player-api' || body.status !== 'ready') {
+            throw new Error('Staging Player API health response is invalid.');
+          }
+          NODE
+
+      - name: Record staging banking runtime release
+        shell: bash
+        run: |
+          {
+            echo '## Frozen banking runtime released to staging'
+            echo "- Exact workflow head: \`$GITHUB_SHA\`"
+            echo "- Frozen runtime parent: \`$EXPECTED_RUNTIME_PARENT_SHA\`"
+            echo "- Project: \`$EXPECTED_STAGING_PROJECT_REF\`"
+            echo '- Production project denied: `true`'
+            echo '- Functions deployed: `admin-api`, `player-api`'
+            echo '- Admin verify_jwt: `true`'
+            echo '- Player verify_jwt: `false`'
+            echo '- Database migrations applied by this workflow: `none`'
+            echo '- Vercel deployment performed by this workflow: `none`'
+            echo '- Legacy checking-to-cash source marker: `absent`'
+            echo '- Player API health: `ready`'
+          } >> "$GITHUB_STEP_SUMMARY"
