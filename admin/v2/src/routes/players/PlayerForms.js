@@ -2,7 +2,7 @@ import {
   AdminField,
   AdminValidationSummary,
 } from "../../components/index.js";
-import { createElement } from "../../components/dom.js";
+import { createElement, createId } from "../../components/dom.js";
 
 const PLAYER_IDENTIFIER_PATTERN = /^[A-Z0-9:_-]+$/;
 const ACCESS_CODE_PATTERN = /^[A-Z0-9-]+$/;
@@ -24,7 +24,7 @@ function createFormShell({ fields, submitLabel, onCancel, onSubmit, validate }) 
   const summary = AdminValidationSummary();
   const form = createElement("form", {
     className: "admin-players-form",
-    attrs: { novalidate: true },
+    attrs: { id: createId("admin-players-form"), novalidate: true },
   });
   const grid = createElement("div", {
     className: "admin-players-form__grid",
@@ -34,6 +34,7 @@ function createFormShell({ fields, submitLabel, onCancel, onSubmit, validate }) 
 
   const cancel = actionButton("Cancel", { quiet: true, action: "cancel" });
   const submit = actionButton(submitLabel, { action: "submit" });
+  submit.setAttribute("form", form.id);
   const footer = createElement("div", {
     className: "admin-players-form__actions",
     children: [cancel, submit],
