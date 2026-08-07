@@ -12,6 +12,7 @@ import {
 import { createElement } from "./components/dom.js";
 import { createAdminApiClient } from "./api/admin-api-client.js";
 import { createAdminBffTransport } from "./api/admin-bff-transport.js";
+import { createContractsApiClient } from "./api/contracts-api-client.js";
 import {
   ADMIN_DEFAULT_ROUTE_ID,
   ADMIN_NAVIGATION_GROUPS,
@@ -23,6 +24,7 @@ import {
 } from "./core/route-boundary.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
+import { createContractsController } from "./routes/contracts/ContractsController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
@@ -148,12 +150,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
 
   const permissions = permissionSet(session);
   const hasPermission = (permission) => permissions.has(permission);
-  const api = createAdminApiClient({
-    fetchImpl: createAdminBffTransport({
-      selectedGameId,
-      session: () => window.EconovariaAdminAuthSession?.read?.(),
-    }),
+  const transport = createAdminBffTransport({
+    selectedGameId,
+    session: () => window.EconovariaAdminAuthSession?.read?.(),
   });
+  const api = createAdminApiClient({ fetchImpl: transport });
+  const contractsApi = createContractsApiClient({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let destroyed = false;
@@ -178,6 +180,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     hasPermission,
     onChange: () => renderControllerChange("market"),
   });
+  const contracts = createContractsController({
+    api: contractsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("contracts"),
+    notify: (notification) => toast?.push(notification),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -190,6 +199,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     market: Object.freeze({
       controller: market,
       render: () => market.render(),
+    }),
+    contracts: Object.freeze({
+      controller: contracts,
+      render: () => contracts.render(),
     }),
   });
 
@@ -300,7 +313,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Store, and Market are native Admin v2 routes. Contracts is also native in Admin v2. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -381,6 +394,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       overview.destroy();
       store.destroy();
       market.destroy();
+      contracts.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();
