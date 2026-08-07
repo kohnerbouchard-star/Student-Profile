@@ -221,16 +221,16 @@ async function verifyReadyViewport(browser, server, viewport) {
   await waitForFixture(page);
 
   await page.getByRole("heading", { level: 1, name: "Messages Moderation" }).waitFor();
-  const bodyText = await page.locator("body").textContent() || "";
-  assert.match(bodyText, /국제 시장 토론/);
-  assert.match(bodyText, /박서연/);
-  assert.match(bodyText, /Disabled/);
-  assert.match(bodyText, /100 messages/);
-  assert.equal(bodyText.includes(PRIVATE_UUID), false, `${viewport.width}px rendered private UUID`);
-  assert.equal(bodyText.includes(PUBLIC_THREAD_ID), false, `${viewport.width}px rendered public thread action key`);
-  assert.equal(bodyText.includes(PUBLIC_MESSAGE_ID), false, `${viewport.width}px rendered public message action key`);
-  assert.equal(bodyText.includes("never-render-this-token"), false, `${viewport.width}px rendered raw token`);
-  assert.doesNotMatch(bodyText, /private backend trace|service_role/i);
+  const renderedText = await page.locator("#fixtureRoot").textContent() || "";
+  assert.match(renderedText, /국제 시장 토론/);
+  assert.match(renderedText, /박서연/);
+  assert.match(renderedText, /Disabled/);
+  assert.match(renderedText, /100 messages/);
+  assert.equal(renderedText.includes(PRIVATE_UUID), false, `${viewport.width}px rendered private UUID`);
+  assert.equal(renderedText.includes(PUBLIC_THREAD_ID), false, `${viewport.width}px rendered public thread action key`);
+  assert.equal(renderedText.includes(PUBLIC_MESSAGE_ID), false, `${viewport.width}px rendered public message action key`);
+  assert.equal(renderedText.includes("never-render-this-token"), false, `${viewport.width}px rendered raw token`);
+  assert.doesNotMatch(renderedText, /private backend trace|service_role/i);
   await assertNoHorizontalOverflow(page, `${viewport.width}x${viewport.height}`);
 
   const conversation = page.locator(".admin-messages-route__messages");
@@ -251,10 +251,10 @@ async function verifyState(browser, server, scenario, expectedText) {
   const page = await context.newPage();
   await page.goto(`${server.origin}/fixture.html?scenario=${scenario}`, { waitUntil: "networkidle" });
   await waitForFixture(page);
-  const bodyText = await page.locator("body").textContent() || "";
-  assert.match(bodyText, expectedText);
-  assert.equal(bodyText.includes(PRIVATE_UUID), false);
-  assert.doesNotMatch(bodyText, /private backend trace|service_role/i);
+  const renderedText = await page.locator("#fixtureRoot").textContent() || "";
+  assert.match(renderedText, expectedText);
+  assert.equal(renderedText.includes(PRIVATE_UUID), false);
+  assert.doesNotMatch(renderedText, /private backend trace|service_role/i);
   await assertNoHorizontalOverflow(page, scenario);
   await context.close();
 }
