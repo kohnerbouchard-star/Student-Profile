@@ -1,18 +1,20 @@
 # Admin UI V2 Inventory Architecture
 
-Status: draft PR implementation
+Status: draft PR implementation, reconciled with current `main`
 
 Branch: `refactor/admin-ui-v2-inventory-v1`
 
-Base `origin/main`: `b7827211f0ff15b8a963219a63738180b33a1b3d`
+Reconciled `origin/main`: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
+
+Reconciliation commit: `d4b2a13ddb20ce2362934c549f2350e863ebf7fc`
 
 ## Scope
 
-Inventory becomes a source-owned Admin UI V2 route under the existing `inventory.redeem` permission. The route is an administrative supervision surface for the canonical inventory redemption workflow. It does not introduce an Admin-owned inventory ledger, duplicate ownership table, Store projection, Crafting projection, or Business inventory representation.
+Inventory is a source-owned Admin UI V2 route under the existing `inventory.redeem` permission. The route is an administrative supervision surface for the canonical inventory redemption workflow. It does not introduce an Admin-owned inventory ledger, duplicate ownership table, Store projection, Crafting projection, or Business inventory representation.
 
 The implementation deliberately leaves Store, Crafting, Business, and Player inventory semantics unchanged.
 
-## Authoritative contract audit
+## Authoritative contract on current main
 
 Current `main` exposes the following Admin inventory contract:
 
@@ -26,11 +28,28 @@ Current `main` exposes the following Admin inventory contract:
 
 Those routes are backed by the existing Admin RPCs `read_admin_inventory_redemptions_v1` and `review_inventory_redemption_atomic_v1`.
 
-The canonical Player inventory read model exists separately in the Inventory domain and remains the Player source of truth. A repository-wide endpoint sweep did **not** find an authoritative Admin API that lists arbitrary owned inventory balances for every player/business. Therefore this V2 route does not fabricate one.
+The canonical Player inventory read model exists separately in the Inventory domain and remains the Player source of truth. Current `main` does not expose an `inventory.redeem`-scoped Admin read for arbitrary owned-item positions across players/businesses. Therefore this V2 route does not fabricate one.
+
+## PR #503 dependency: canonical economic asset ownership
+
+PR #503 (`feat/economic-asset-ownership-core-v2`) is still open and draft. Its current head introduces the canonical economic ownership model around `game_items`, `economic_parties`, `inventory_accounts`, inventory positions, reservations, and compatibility for Store, Crafting, Business, Marketplace, and redemption.
+
+Relevant #503 changes include:
+
+- canonical player inventory positions with `quantityOwned`, `quantityReserved`, `availableQuantity`, item/category, `assetClass`, valuation metadata, and `identitySource`;
+- Store `sourceType` normalization for authoritative seeded/custom provenance where represented;
+- canonical redemption context (`inventory_account_id`, `game_item_id`, `canonical_item_key`, reservation linkage) without changing the existing public redemption queue DTO;
+- shared inventory account and item authority intended to converge Store -> Inventory -> Crafting -> Business -> Marketplace.
+
+However, #503 currently exposes the Admin canonical inventory positions through the `/games/:gameId/players` read projection. That route requires `players.manage`, while this Inventory route is explicitly owned by `inventory.redeem`. The `/inventory/redemptions` DTO remains unchanged.
+
+Accordingly, this branch does **not** consume `/players`, require `players.manage`, or copy #503's unmerged database model into browser code. Final merge requires reconciliation after #503 resolves. At that point the Inventory route must consume an authoritative `inventory.redeem`-compatible owned-item projection if one is exposed, or keep the owned-item directory unavailable if the permission/contract boundary remains unchanged.
+
+This is a merge dependency, not authorization to create a second inventory ownership API in this branch.
 
 ## Data boundary
 
-The V2 route renders only fields already supplied by the Admin redemption projection:
+The current V2 route renders only fields supplied by the Admin redemption projection:
 
 - player display name, public/reference label, and roster label;
 - item name and category;
@@ -39,9 +58,9 @@ The V2 route renders only fields already supplied by the Admin redemption projec
 - request/resolution note where present;
 - requested/reviewed/fulfilled/updated timestamps where present.
 
-Item provenance/type are normalized only if an authoritative response supplies them. Current Admin DTOs do not expose seeded/custom provenance, so the UI explicitly does not infer it from Store artwork, item names, item keys, Crafting recipes, or any other parallel heuristic.
+Item provenance/type are normalized only if an authoritative response supplies them. Current redemption DTOs do not expose seeded/custom provenance, so the UI explicitly does not infer it from Store artwork, item names, item keys, Crafting recipes, or any other parallel heuristic.
 
-The current Admin DTO does not expose a Business ownership relationship. The UI states that limitation instead of inventing a player/business ownership join.
+The current redemption DTO does not expose a Business ownership relationship. The UI states that limitation instead of inventing a player/business ownership join.
 
 Requested redemption quantity is not labeled or treated as an owned-item balance.
 
@@ -87,6 +106,6 @@ Responsive breakpoints are defined at 900 px and 620 px.
 
 ## Store -> Inventory -> Crafting preservation
 
-This change does not alter Store purchases, canonical inventory ownership, Crafting consumption/output, Business inventory, or Player inventory reads. Inventory V2 is a review/supervision layer over the existing canonical redemption contract only.
+This change does not alter Store purchases, canonical inventory ownership, Crafting consumption/output, Business inventory, Marketplace inventory, or Player inventory reads. Inventory V2 remains a review/supervision layer over the current authoritative redemption contract until #503 supplies a permission-compatible canonical ownership projection.
 
-No Backend, database, migration, Supabase schema, Store contract, Crafting contract, Business contract, or Player inventory contract is modified by this branch.
+No Backend, database, migration, Supabase schema, Store contract, Crafting contract, Business contract, Marketplace contract, or Player inventory contract is modified by this branch.
