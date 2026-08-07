@@ -1,91 +1,20 @@
 import { PlayerApi } from "./api/player-api.js";
 import { PLAYER_ENDPOINTS, resolveEndpoint } from "./api/endpoints.js";
 import { ApiConnectionPendingError, normalizeApiError } from "./api/errors.js";
-import { isActionEnabled, isEndpointEnabled, isRouteEnabled, resolveCapabilities } from "./api/capabilities.js";
+import { isEndpointEnabled, isRouteEnabled, resolveCapabilities } from "./api/capabilities.js";
 import { normalizeWritePayload } from "./api/payload-normalizer.js";
-import { PLAYER_NAV_GROUPS, renderShell } from "./components/layout.js";
+import { renderShell } from "./components/layout.js";
 import { renderModal } from "./components/modal.js";
 import { renderConnectionError, renderSkeletonPage } from "./components/ui.js";
 import { escapeHtml, formatCurrency, serializeForm } from "./core/format.js";
 import { navigate, readRoute } from "./core/router.js";
 import { createStore } from "./core/store.js";
 import { focusFirstInteractive, setButtonProcessing } from "./core/dom.js";
+import { applyCapabilityControls } from "./core/capability-controls.js";
+import { ROUTE_TITLES, renderPlayerRoute } from "./core/route-renderer.js";
 import { applyPlayerSessionHandoff, dispatchHostEvent, resolveExistingPlayerSession } from "./api/session-handoff.js";
 import { createEmptyReadModels } from "./data/empty-read-models.js";
-import { renderDashboardPage } from "./pages/dashboard-page.js";
-import { renderNewsPage } from "./pages/news-page.js";
-import { renderMarketPage } from "./pages/market-page.js";
-import { renderPortfolioPage } from "./pages/portfolio-page.js";
-import { renderBusinessPage } from "./pages/business-page.js";
-import { renderStorePage } from "./pages/store-page.js";
-import { renderMarketplacePage } from "./pages/marketplace-page.js";
-import { renderContractsPage } from "./pages/contracts-page.js";
-import { renderInventoryPage } from "./pages/inventory-page.js";
-import { renderCraftingPage } from "./pages/crafting-page.js";
-import { renderBankingPage } from "./pages/banking-page.js";
-import { renderLoansPage } from "./pages/loans-page.js";
-import { renderMessagesPage } from "./pages/messages-page.js";
-import { renderProgressionPage } from "./pages/progression-page.js";
-import { renderProfilePage } from "./pages/profile-page.js";
-import { renderWorldPage } from "./pages/world-page.js";
-import { getWorldRouteViewState } from "./features/world/world-route-view-state.js";
 import { handleStoreItemMediaError } from "./features/store/store-artwork.js";
-
-function fallbackWorldModel(data) {
-  const countries = Array.isArray(data?.countries) ? data.countries : [];
-  if (!countries.length) return null;
-  return {
-    runtimeAvailable: false,
-    countries,
-    campaign: null,
-    arrival: { required: false },
-    travel: { state: null, activeJourney: null },
-    residency: null,
-    world: null
-  };
-}
-
-function renderWorldRoutePage(data) {
-  const view = getWorldRouteViewState();
-  const resourceReady = data?.resourceStatus?.worldRuntime?.state === "ready";
-  const liveModel = resourceReady && data?.worldRuntime
-    ? { ...data.worldRuntime, runtimeAvailable: true }
-    : null;
-  const model = view.model || liveModel || fallbackWorldModel(data);
-  const unavailable = view.state === "unavailable" && !model;
-  const loading = !model && (view.state === "loading" || data?.resourceStatus?.worldRuntime?.state === "loading");
-  return renderWorldPage(model, {
-    state: unavailable ? "unavailable" : loading ? "loading" : "ready",
-    message: view.message,
-    quote: view.quote,
-    offline: globalThis.navigator?.onLine === false,
-    stale: Boolean(view.updatedAt && Date.now() - view.updatedAt > 60_000),
-    capabilities: data?.capabilities || { routes: {}, actions: {} }
-  });
-}
-
-const PAGE_RENDERERS = Object.freeze({
-  dashboard: (data, ui, config) => renderDashboardPage(data, ui, config),
-  news: renderNewsPage,
-  market: renderMarketPage,
-  portfolio: renderPortfolioPage,
-  business: renderBusinessPage,
-  store: renderStorePage,
-  marketplace: renderMarketplacePage,
-  contracts: renderContractsPage,
-  inventory: renderInventoryPage,
-  crafting: renderCraftingPage,
-  banking: renderBankingPage,
-  loans: renderLoansPage,
-  messages: renderMessagesPage,
-  progression: renderProgressionPage,
-  world: renderWorldRoutePage,
-  profile: (data, ui, config) => renderProfilePage(data, config)
-});
-
-const ROUTE_TITLES = Object.freeze(Object.fromEntries(
-  PLAYER_NAV_GROUPS.flatMap((group) => group.routes.map((item) => [item.route, item.label]))
-));
 
 function readStoredBoolean(key, fallback = false) {
   try {
@@ -235,9 +164,8 @@ export function createPlayerTerminal({ mount, config }) {
     } else if (state.routeErrors[state.route]) {
       pageHtml = `<section class="player-terminal-page player-terminal-route-error" role="alert"><small>SECTION UNAVAILABLE</small><h2>${escapeHtml(ROUTE_TITLES[state.route] || "Player view")} could not be loaded</h2><p>This section encountered a data problem. The rest of the terminal remains available.</p><button class="player-terminal-primary-button" type="button" data-player-action="retry-route">Retry this section</button></section>`;
     } else {
-      const pageRenderer = PAGE_RENDERERS[state.route] || PAGE_RENDERERS.dashboard;
       try {
-        pageHtml = pageRenderer(state.data, state.ui, config);
+        pageHtml = renderPlayerRoute({ route: state.route, data: state.data, ui: state.ui, config });
       } catch (error) {
         if (config.developerDiagnostics) console.error(`Failed to render player route ${state.route}`, error);
         pageHtml = `<section class="player-terminal-page player-terminal-route-error" role="alert"><small>VIEW COULD NOT BE RENDERED</small><h2>${escapeHtml(ROUTE_TITLES[state.route] || "Player view")} is temporarily unavailable</h2><p>The page received incomplete or invalid data.</p><button class="player-terminal-primary-button" type="button" data-player-action="retry-route">Retry this section</button></section>`;
@@ -245,7 +173,7 @@ export function createPlayerTerminal({ mount, config }) {
     }
     mount.innerHTML = `${renderShell({ route: state.route, data: state.data, pageHtml, ui: state.ui, config })}${renderModal(state.modal, config)}`;
     mount.querySelectorAll("[data-player-form]").forEach((form) => { form.noValidate = true; });
-    applyCapabilityControls(state.data.capabilities);
+    applyCapabilityControls(mount, state.data.capabilities);
     const appRoot = mount.querySelector(".player-terminal-app-root");
     const shell = mount.querySelector(".player-terminal-shell");
     const mobileNav = mount.querySelector(".player-terminal-mobile-nav");
@@ -260,53 +188,6 @@ export function createPlayerTerminal({ mount, config }) {
     document.title = `${ROUTE_TITLES[state.route] || "Dashboard"} · Econovaria Player Terminal`;
     updateClock();
     focusAfterRender(state);
-  }
-
-  function disableControl(control, reason = "Not available in this game.") {
-    if (!(control instanceof HTMLElement)) return;
-    if (control.matches("form")) {
-      control.querySelectorAll("input, select, textarea, button").forEach((field) => { field.disabled = true; });
-    } else if ("disabled" in control) {
-      control.disabled = true;
-    }
-    control.setAttribute("aria-disabled", "true");
-    control.setAttribute("title", reason);
-  }
-
-  function applyCapabilityControls(capabilities) {
-    mount.querySelectorAll("[data-route]").forEach((control) => {
-      if (!isRouteEnabled(capabilities, control.dataset.route)) disableControl(control, "This section is not enabled for the current game.");
-    });
-
-    mount.querySelectorAll("[data-player-form][data-endpoint]").forEach((form) => {
-      if (!isEndpointEnabled(capabilities, form.dataset.endpoint)) disableControl(form);
-    });
-
-    const endpointControls = [
-      ["[data-player-marketplace-cancel]", "marketplaceCancel"],
-      ["[data-player-skill-unlock]", "progressionUnlock"],
-      ["[data-player-reward-claim]", "progressionClaim"],
-      ["[data-player-market-watchlist]", "marketWatchlist"],
-      ["[data-player-purchase]", "storePurchase"],
-      ["[data-player-contract-accept]", "contractAccept"],
-      ["[data-player-inventory-use]", "inventoryUse"],
-      ["[data-player-action=\"notifications-read\"]", "notificationsRead"]
-    ];
-    endpointControls.forEach(([selector, endpointKey]) => {
-      if (!isEndpointEnabled(capabilities, endpointKey)) mount.querySelectorAll(selector).forEach((control) => disableControl(control));
-    });
-
-    const localControls = Object.freeze({
-      "download-transactions": "bankingExport",
-      "market-search": "marketSearch",
-      "chart-range": "chartRange",
-      "message-search": "messageSearch",
-      "message-attachment": "messageAttachment"
-    });
-    mount.querySelectorAll("[data-player-local-action]").forEach((control) => {
-      const action = localControls[control.dataset.playerLocalAction];
-      if (action && !isActionEnabled(capabilities, action)) disableControl(control);
-    });
   }
 
   function updateClock() {
