@@ -20,6 +20,8 @@ The route filters effect reads to `publish_news` in the client read model. It do
 
 No current Admin contract provides free-form world-news create/edit/schedule semantics. No such UI or client method was added.
 
+The player-facing authoritative world-news DTO does contain impact metadata (`magnitude`, `confidence`, `volatility`, `volume`). That DTO is player-session scoped, however, and the current `world.manage` Admin campaign history/effect responses do not expose those fields. News & Events does not import player-session data, infer impact from financial Market events, or fabricate an Admin impact contract. Impact metadata remains intentionally absent until an authoritative Admin/BFF contract exposes it.
+
 ## Authoring validation performed
 
 The new/changed JavaScript was syntax-checked with `node --check` while authored. The route's API/controller contract suite was also executed in the authoring environment with the rendering import stubbed only because that environment does not contain the complete repository component tree; the production API/controller source itself was unchanged for that run.
@@ -56,10 +58,12 @@ Covered assertions:
 - no UUID/effect-ID/raw-backend-detail exposure;
 - absence of fabricated Create/Edit/Schedule controls.
 
-`scripts/admin-v2-news-events-permission-smoke.mjs` separately verifies that a valid Admin session without `world.manage` receives the V2 permission-denied surface before any News & Events world-campaign read is issued.
+`scripts/admin-v2-news-events-permission-smoke.mjs` separately verifies that the document-load authorization refresh returns a valid Admin session without `world.manage`, producing the V2 permission-denied surface before any News & Events world-campaign read is issued.
+
+`.github/workflows/admin-v2-news-events.yml` executes the focused API/controller suite, standard Admin V2 regressions, both browser smokes, and uploads their machine-readable evidence as a GitHub Actions artifact.
 
 The browser harness writes its machine-readable result to `admin-v2-news-events-browser-results.json` when executed from a full repository checkout.
 
 ## Regression boundary
 
-The implementation makes no edits to Overview, Store, Market, World Management, player news, or backend world contracts. Shared changes are limited to V2 composition/navigation/stylesheet registration, which keeps the existing Overview/Store/Market source-owned controllers intact.
+The implementation makes no edits to Overview, Store, Market, World Management, player news, or backend world contracts. Shared changes are limited to V2 composition/navigation/stylesheet registration plus the source-owned News & Events acceptance workflow, which keeps the existing Overview/Store/Market controllers and domain contracts intact.
