@@ -91,7 +91,7 @@ assert.match(v2App, /createProgressionApiClient/);
 assert.match(v2App, /createProgressionController/);
 assert.match(v2App, /progression:\s*Object\.freeze/);
 assert.match(v2Html, /styles\/routes\/progression\.css/);
-assert.match(v2Client, /\/progression\/corrections/);
+assert.match(v2Client, /progressionPath\(gameId\)\}\/corrections/);
 assert.match(v2Client, /Idempotency-Key/);
 assert.match(v2Client, /idempotencyKey/);
 assert.match(v2Client, /credentials:\s*"include"/);
