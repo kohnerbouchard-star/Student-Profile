@@ -224,6 +224,7 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
     {
       kind: "migrated",
       route: getAdminNavigationRoute("players"),
+      moduleKey: "players",
     },
   );
   assert.equal(
