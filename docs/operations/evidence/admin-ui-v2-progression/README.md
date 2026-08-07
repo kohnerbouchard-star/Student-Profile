@@ -6,6 +6,8 @@ Branch: `refactor/admin-ui-v2-progression-v1`
 
 Initial contract audit: `main` at `b7827211f0ff15b8a963219a63738180b33a1b3d`. Before publication, the branch was rebased onto current `main` at `4c17b942fcf4b2a6f60b629549f192d066053ba4`; the intervening changes were Player app coordinator files and did not overlap this migration.
 
+Continuation reconciliation on 2026-08-07 confirmed `main` remains at `4c17b942fcf4b2a6f60b629549f192d066053ba4`. The branch required no rebase. One branch-local static contract assertion was aligned with the already-composed correction-history path; no runtime, domain, API, or Player behavior changed.
+
 The migration makes `#progression` a source-owned Admin UI V2 route under `progression.review` and preserves the existing Admin progression BFF as the sole authority.
 
 ## Contract evidence
@@ -20,7 +22,7 @@ Supported correction mechanics remain exactly the backend-defined experience/rep
 
 ## Safety assertions
 
-The V2 implementation is expected to prove:
+The V2 implementation proves:
 
 - `progression.review` blocks reads and writes when absent;
 - browser requests stay inside the local `/api/admin` BFF boundary;
@@ -49,4 +51,37 @@ node --test scripts/admin-v2-progression.test.mjs
 
 The V2-specific suite covers exact read/write paths, safe transport semantics, zero/normal/high records, achievement counts, correction history, UUID exclusion, partial failures, lifecycle conflicts, permission denial, and retry-safe replay behavior.
 
-Additional repository/PR checks should be treated as authoritative for integration regressions. No backend redesign or Player progression change is part of this branch.
+## Verified results
+
+Fresh branch head before this evidence-only commit: `115a2d11d6df9bba3cad9de7e785e3f203677d31`.
+
+GitHub Actions Progression Runtime run `31175081008`, job `92855198936`: **success**.
+
+Successful verification steps:
+
+- migration catalog validation;
+- deterministic Progression simulations;
+- Player and Admin browser contracts, including `npm run test:admin-progression`;
+- Admin UI V2 Progression suite: 6 tests, 6 pass, 0 fail;
+- Progression backend contracts;
+- Player capability contracts;
+- Player static verification;
+- Player Progression browser verification;
+- Player security contracts;
+- all-backend typecheck;
+- backend smoke;
+- committed-credential scan.
+
+The unrelated repository-wide Admin architecture/scroll ratchets were not modified by this branch. Progression adds no `MutationObserver` site and does not change shared Admin scrolling code.
+
+## Preview
+
+Vercel did not produce a preview for the verified head because the provider returned:
+
+```text
+Deployment rate limited — retry in 24 hours.
+```
+
+This is a provider build-quota failure before deployment, not a Progression test or runtime failure. Supabase preview branch creation is disabled for the repository integration and was skipped.
+
+No merge was performed.
