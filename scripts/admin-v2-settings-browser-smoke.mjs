@@ -15,25 +15,32 @@ import {
   startAdminV2FixtureServer,
 } from "./admin-v2-browser-fixture-server.mjs";
 
-const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, "..");
-const EVIDENCE_DIRECTORY = path.resolve(
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const EVIDENCE_DIR = path.resolve(
   process.env.ADMIN_V2_SETTINGS_EVIDENCE_DIR
-    || path.join(REPOSITORY_ROOT, "docs", "operations", "evidence", "admin-ui-v2-settings", "runtime"),
+    || path.join(ROOT, "docs", "operations", "evidence", "admin-ui-v2-settings", "runtime"),
 );
-const RESULT_PATH = path.join(EVIDENCE_DIRECTORY, "admin-v2-settings-browser-results.json");
+const RESULT_PATH = path.join(EVIDENCE_DIR, "admin-v2-settings-browser-results.json");
 const DEVICE_ID = "a0000000-0000-4000-8000-00000000000a";
-const SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
-const DEVICE_STORAGE_KEY = "econovaria.device.v1";
-const SETTINGS_PROXY_PATTERN = `**/functions/v1/web-session-api/proxy/games/${ADMIN_V2_FIXTURE_GAME_ID}/settings`;
-const SESSION_BOOTSTRAP_PATTERN = "**/functions/v1/web-session-api/proxy/session/bootstrap";
+const SESSION_KEY = "econovaria.admin.auth.v1";
+const DEVICE_KEY = "econovaria.device.v1";
 const PRIVATE_UUID = "90000000-0000-4000-8000-000000000099";
 const DESKTOP = Object.freeze({ width: 1280, height: 720 });
 const MOBILE = Object.freeze({ width: 390, height: 844 });
+const SETTINGS_PROXY = `**/functions/v1/web-session-api/proxy/games/${ADMIN_V2_FIXTURE_GAME_ID}/settings`;
+const BOOTSTRAP_PROXY = "**/functions/v1/web-session-api/proxy/session/bootstrap";
+const MODIFIERS = Object.freeze([
+  "priceMultiplier",
+  "incomeMultiplier",
+  "shockFrequency",
+  "shockSeverity",
+  "recoverySupport",
+  "tradeMultiplier",
+]);
 
-mkdirSync(EVIDENCE_DIRECTORY, { recursive: true });
+mkdirSync(EVIDENCE_DIR, { recursive: true });
 
-function baseSettings({ longKoreanPreset = false } = {}) {
+function fixtureSettings({ longKoreanPreset = false } = {}) {
   return {
     difficultyBasePreset: longKoreanPreset
       ? "교육-맞춤형-장기-경제-시뮬레이션-설정-".repeat(4)
@@ -60,7 +67,7 @@ function baseSettings({ longKoreanPreset = false } = {}) {
   };
 }
 
-function json(route, status, payload, headers = {}) {
+function fulfillJson(route, status, payload, headers = {}) {
   return route.fulfill({
     status,
     contentType: "application/json; charset=utf-8",
@@ -92,7 +99,7 @@ function bootstrapEnvelope(session) {
   };
 }
 
-async function createSettingsRuntime(browser, fixture, {
+async function createRuntime(browser, fixture, {
   viewport = DESKTOP,
   permissions = null,
   longKoreanPreset = false,
@@ -103,9 +110,9 @@ async function createSettingsRuntime(browser, fixture, {
   const runId = randomUUID();
   const session = createAdminV2FixtureSession("ready");
   if (permissions) session.permissions = permissions;
-  let settings = baseSettings({ longKoreanPreset });
+  let settings = fixtureSettings({ longKoreanPreset });
   let getCount = 0;
-  const settingsRequests = [];
+  const requests = [];
   const browserErrors = [];
 
   await context.addCookies([
@@ -117,56 +124,62 @@ async function createSettingsRuntime(browser, fixture, {
       window.sessionStorage.setItem(sessionKey, JSON.stringify(seededSession));
       window.localStorage.setItem(deviceKey, deviceId);
     } catch (_error) {}
-  }, {
-    sessionKey: SESSION_STORAGE_KEY,
-    deviceKey: DEVICE_STORAGE_KEY,
-    seededSession: session,
-    deviceId: DEVICE_ID,
-  });
+  }, { sessionKey: SESSION_KEY, deviceKey: DEVICE_KEY, seededSession: session, deviceId: DEVICE_ID });
 
   const page = await context.newPage();
   page.on("pageerror", (error) => browserErrors.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
-    if (message.type() === "error" && !/Failed to load resource: the server responded with a status of 503/i.test(message.text())) {
+    if (
+      message.type() === "error"
+      && !/Failed to load resource: the server responded with a status of 503/i.test(message.text())
+    ) {
       browserErrors.push(`console: ${message.text()}`);
     }
   });
 
   if (permissions) {
-    await page.route(SESSION_BOOTSTRAP_PATTERN, (route) => json(route, 200, bootstrapEnvelope(session)));
+    await page.route(BOOTSTRAP_PROXY, (route) => fulfillJson(route, 200, bootstrapEnvelope(session)));
   }
 
-  await page.route(SETTINGS_PROXY_PATTERN, async (route) => {
+  await page.route(SETTINGS_PROXY, async (route) => {
     const request = route.request();
-    const headers = request.headers();
     const method = request.method();
+    const headers = request.headers();
     let body = null;
     try { body = request.postDataJSON(); } catch (_error) {}
-    settingsRequests.push({ method, headers, body });
+    requests.push({ method, headers, body });
 
     if (method === "GET") {
       getCount += 1;
       if (staleAfterFirstRead && getCount > 1) {
-        return json(route, 503, {
-          error: { code: "UPSTREAM_UNAVAILABLE", message: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC, retryable: true },
+        return fulfillJson(route, 503, {
+          error: {
+            code: "UPSTREAM_UNAVAILABLE",
+            message: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC,
+            retryable: true,
+          },
         }, { "x-request-id": "settings-browser-stale" });
       }
-      return json(route, 200, readEnvelope(settings));
+      return fulfillJson(route, 200, readEnvelope(settings));
     }
 
     if (method !== "PATCH") {
-      return json(route, 405, { error: { code: "METHOD_NOT_ALLOWED" } });
+      return fulfillJson(route, 405, { error: { code: "METHOD_NOT_ALLOWED" } });
     }
     if (failPatch) {
-      return json(route, 503, {
-        error: { code: "UPSTREAM_UNAVAILABLE", message: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC, retryable: true },
+      return fulfillJson(route, 503, {
+        error: {
+          code: "UPSTREAM_UNAVAILABLE",
+          message: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC,
+          retryable: true,
+        },
       }, { "x-request-id": "settings-browser-save-failed" });
     }
 
     assert.equal(headers["x-econovaria-csrf-token"], ADMIN_V2_FIXTURE_CSRF, "Settings PATCH omitted CSRF");
-    assert.match(headers["idempotency-key"] || "", /^admin\.settings\.save\./, "Settings PATCH omitted idempotency identity");
-    assert.equal(headers.authorization || "", "", "Settings PATCH leaked a browser bearer token");
-    assert.equal(headers["x-econovaria-game-id"], ADMIN_V2_FIXTURE_GAME_ID, "Settings PATCH omitted selected game scope");
+    assert.match(headers["idempotency-key"] || "", /^admin\.settings\.save\./, "Settings PATCH omitted idempotency");
+    assert.equal(headers.authorization || "", "", "Settings PATCH leaked a bearer token");
+    assert.equal(headers["x-econovaria-game-id"], ADMIN_V2_FIXTURE_GAME_ID, "Settings PATCH omitted game scope");
 
     const incoming = body?.settings || {};
     settings = {
@@ -176,16 +189,15 @@ async function createSettingsRuntime(browser, fixture, {
         ? { ...settings.attendanceWindow, ...incoming.attendanceWindow }
         : settings.attendanceWindow,
     };
-    if (["priceMultiplier", "incomeMultiplier", "shockFrequency", "shockSeverity", "recoverySupport", "tradeMultiplier"]
-      .some((field) => Object.hasOwn(incoming, field))) {
+    if (MODIFIERS.some((field) => Object.hasOwn(incoming, field))) {
       settings.difficultyBasePreset = "custom";
     } else if (incoming.difficultyPreset) {
       settings.difficultyBasePreset = incoming.difficultyPreset;
     }
-    return json(route, 200, { ok: true, settings });
+    return fulfillJson(route, 200, { ok: true, settings });
   });
 
-  await page.goto(`${fixture.origin}/admin/v2.html?game=${encodeURIComponent(ADMIN_V2_FIXTURE_GAME_ID)}#settings`, {
+  await page.goto(`${fixture.origin}/admin/v2.html?game=${ADMIN_V2_FIXTURE_GAME_ID}#settings`, {
     waitUntil: "domcontentloaded",
     timeout: 15_000,
   });
@@ -195,25 +207,24 @@ async function createSettingsRuntime(browser, fixture, {
   return {
     context,
     page,
-    session,
-    settingsRequests,
+    requests,
     browserErrors,
     async close() { await context.close(); },
   };
 }
 
-async function waitForReady(page) {
+async function waitReady(page) {
   await page.locator('.admin-shell[data-admin-v2-state="ready"]').waitFor({ state: "attached", timeout: 10_000 });
   await page.getByRole("heading", { level: 1, name: "Settings", exact: true }).waitFor({ state: "visible" });
 }
 
-async function screenshot(page, name) {
-  const target = path.join(EVIDENCE_DIRECTORY, `${name}.png`);
+async function capture(page, name) {
+  const target = path.join(EVIDENCE_DIR, `${name}.png`);
   await page.screenshot({ path: target, fullPage: false, animations: "disabled" });
-  return path.relative(REPOSITORY_ROOT, target);
+  return path.relative(ROOT, target);
 }
 
-async function noHorizontalOverflow(page, label) {
+async function assertNoOverflow(page, label) {
   const metrics = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
     document: document.documentElement.scrollWidth,
@@ -223,172 +234,168 @@ async function noHorizontalOverflow(page, label) {
   assert.ok(metrics.body <= metrics.viewport + 1, `${label} body overflow: ${JSON.stringify(metrics)}`);
 }
 
-async function noSensitivePresentation(page, label) {
+async function assertNoSensitiveData(page, label) {
   const exposed = await page.evaluate(() => ({
     text: document.body.innerText,
-    attributes: [...document.body.querySelectorAll("*")].flatMap((element) => [...element.attributes].map((attribute) => `${attribute.name}=${attribute.value}`)),
+    attributes: [...document.body.querySelectorAll("*")]
+      .flatMap((element) => [...element.attributes].map((attribute) => `${attribute.name}=${attribute.value}`)),
   }));
   const combined = `${exposed.text}\n${exposed.attributes.join("\n")}`;
   assert.equal(combined.includes(PRIVATE_UUID), false, `${label} exposed a private settings UUID`);
   assert.equal(combined.includes(ADMIN_V2_FIXTURE_ADMIN_ID), false, `${label} exposed the administrator UUID`);
-  assert.equal(combined.includes("fixture-secret-never-render"), false, `${label} exposed a credential-like value`);
+  assert.equal(combined.includes("fixture-secret-never-render"), false, `${label} exposed credential-like data`);
   assert.equal(combined.includes(ADMIN_V2_RAW_BACKEND_DIAGNOSTIC), false, `${label} exposed raw backend detail`);
   assert.doesNotMatch(combined, /SUPABASE_SERVICE_ROLE_KEY|service_role|SELECT \* FROM/i, `${label} exposed backend secret detail`);
 }
 
-async function assertCleanRuntime(runtime, label) {
+function assertClean(runtime, label) {
   assert.deepEqual(runtime.browserErrors, [], `${label} emitted browser errors:\n${runtime.browserErrors.join("\n")}`);
 }
 
 const checks = [];
 const evidence = [];
-function passed(name, detail = "") {
-  checks.push({ name, status: "passed", detail });
-}
-
+let fatalError = null;
+const pass = (name) => checks.push({ name, status: "passed" });
 const fixture = await startAdminV2FixtureServer();
 const browser = await chromium.launch({ headless: true });
+
 try {
-  {
-    const runtime = await createSettingsRuntime(browser, fixture);
-    try {
-      await waitForReady(runtime.page);
-      assert.equal(await runtime.page.getByLabel("Difficulty preset").inputValue(), "moderate");
-      assert.equal(await runtime.page.getByLabel("Price multiplier").inputValue(), "1");
-      assert.equal(await runtime.page.getByLabel("Present reward").inputValue(), "5");
-      assert.equal(await runtime.page.getByLabel("Late reward").inputValue(), "2");
-      assert.equal(runtime.settingsRequests.filter(({ method }) => method === "GET").length, 1);
-      for (const routeId of ["overview", "store", "market", "settings"]) {
-        assert.equal(await runtime.page.locator(`[data-route="${routeId}"]`).count(), 1, `missing V2 navigation route ${routeId}`);
-      }
-      await noSensitivePresentation(runtime.page, "ready Settings");
-      await noHorizontalOverflow(runtime.page, "ready desktop Settings");
-      evidence.push(await screenshot(runtime.page, "settings-ready-1280x720"));
-      passed("current values and source-owned route");
-
-      await runtime.page.getByLabel("Price multiplier").fill("2.1");
-      await runtime.page.getByRole("button", { name: "Review and save" }).click();
-      const validation = runtime.page.locator(".admin-validation-summary");
-      await validation.waitFor({ state: "visible" });
-      assert.equal(await validation.evaluate((node) => node === document.activeElement), true, "validation summary did not receive focus");
-      assert.equal(runtime.settingsRequests.filter(({ method }) => method === "PATCH").length, 0, "invalid settings issued a PATCH");
-      evidence.push(await screenshot(runtime.page, "settings-validation"));
-      passed("validation and focus summary");
-
-      await runtime.page.getByLabel("Price multiplier").fill("1");
-      await runtime.page.getByLabel("Present reward").fill("6");
-      const opener = runtime.page.getByRole("button", { name: "Review and save" });
-      await opener.focus();
-      await opener.click();
-      const dialog = runtime.page.getByRole("alertdialog", { name: "Apply game settings?" });
-      await dialog.waitFor({ state: "visible" });
-      const confirm = dialog.getByRole("button", { name: "Apply settings" });
-      assert.equal(await confirm.evaluate((node) => node === document.activeElement), true, "confirmation did not autofocus the primary action");
-      await runtime.page.keyboard.press("Escape");
-      await dialog.waitFor({ state: "hidden" });
-      assert.equal(await opener.evaluate((node) => node === document.activeElement), true, "Escape did not restore opener focus");
-      await opener.click();
-      await dialog.getByRole("button", { name: "Apply settings" }).click();
-      await runtime.page.getByLabel("Present reward").waitFor({ state: "visible" });
-      await runtime.page.waitForFunction(() => document.querySelector('#admin-settings-present-reward')?.value === "6");
-      const attendancePatch = runtime.settingsRequests.filter(({ method }) => method === "PATCH").at(-1);
-      assert.deepEqual(Object.keys(attendancePatch.body.settings).sort(), ["attendanceWindow"]);
-      assert.equal(attendancePatch.body.settings.attendanceWindow.presentRewardAmount, 6);
-      assert.equal(attendancePatch.body.settings.attendanceWindow.currencyMode, "player_country");
-      assert.equal(attendancePatch.body.settings.attendanceWindow.applyDifficultyIncomeModifier, true);
-      passed("confirmed attendance edit preserves security and hidden attendance policy");
-
-      await runtime.page.getByLabel("Price multiplier").fill("1.25");
-      await opener.click();
-      await runtime.page.getByRole("alertdialog", { name: "Apply game settings?" }).getByRole("button", { name: "Apply settings" }).click();
-      await runtime.page.waitForFunction(() => document.querySelector('#admin-settings-difficulty-preset')?.value === "custom");
-      const modifierPatch = runtime.settingsRequests.filter(({ method }) => method === "PATCH").at(-1);
-      assert.equal(modifierPatch.body.settings.priceMultiplier, 1.25);
-      assert.equal(modifierPatch.body.settings.difficultyPreset, undefined);
-      passed("modifier edit follows authoritative custom-policy semantics");
-      await assertCleanRuntime(runtime, "ready/edit Settings");
-    } finally {
-      await runtime.close();
+  const ready = await createRuntime(browser, fixture);
+  try {
+    await waitReady(ready.page);
+    assert.equal(await ready.page.getByLabel("Difficulty preset").inputValue(), "moderate");
+    assert.equal(await ready.page.getByLabel("Price multiplier").inputValue(), "1");
+    assert.equal(await ready.page.getByLabel("Present reward").inputValue(), "5");
+    assert.equal(await ready.page.getByLabel("Late reward").inputValue(), "2");
+    assert.equal(ready.requests.filter(({ method }) => method === "GET").length, 1);
+    for (const routeId of ["overview", "store", "market", "settings"]) {
+      assert.ok(await ready.page.locator(`[data-route="${routeId}"]`).count() >= 1, `missing V2 navigation route ${routeId}`);
     }
+    await assertNoSensitiveData(ready.page, "ready Settings");
+    await assertNoOverflow(ready.page, "ready desktop Settings");
+    evidence.push(await capture(ready.page, "settings-ready-1280x720"));
+    pass("current values and source-owned route");
+
+    await ready.page.getByLabel("Price multiplier").fill("2.1");
+    await ready.page.getByRole("button", { name: "Review and save" }).click();
+    const summary = ready.page.locator(".admin-validation-summary");
+    await summary.waitFor({ state: "visible" });
+    assert.equal(await summary.evaluate((node) => node === document.activeElement), true, "validation summary did not receive focus");
+    assert.equal(ready.requests.filter(({ method }) => method === "PATCH").length, 0, "invalid Settings issued PATCH");
+    evidence.push(await capture(ready.page, "settings-validation"));
+    pass("validation and validation-summary focus");
+
+    await ready.page.getByLabel("Price multiplier").fill("1");
+    await ready.page.getByLabel("Present reward").fill("6");
+    const opener = ready.page.getByRole("button", { name: "Review and save" });
+    await opener.focus();
+    await opener.click();
+    let dialog = ready.page.getByRole("alertdialog", { name: "Apply game settings?" });
+    await dialog.waitFor({ state: "visible" });
+    const confirm = dialog.getByRole("button", { name: "Apply settings" });
+    assert.equal(await confirm.evaluate((node) => node === document.activeElement), true, "confirm action did not autofocus");
+    await ready.page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+    assert.equal(await opener.evaluate((node) => node === document.activeElement), true, "Escape did not restore opener focus");
+    await opener.click();
+    dialog = ready.page.getByRole("alertdialog", { name: "Apply game settings?" });
+    await dialog.getByRole("button", { name: "Apply settings" }).click();
+    await ready.page.waitForFunction(() => document.querySelector("#admin-settings-present-reward")?.value === "6");
+    const attendancePatch = ready.requests.filter(({ method }) => method === "PATCH").at(-1);
+    assert.deepEqual(Object.keys(attendancePatch.body.settings).sort(), ["attendanceWindow"]);
+    assert.equal(attendancePatch.body.settings.attendanceWindow.presentRewardAmount, 6);
+    assert.equal(attendancePatch.body.settings.attendanceWindow.currencyMode, "player_country");
+    assert.equal(attendancePatch.body.settings.attendanceWindow.applyDifficultyIncomeModifier, true);
+    pass("confirmation focus and attendance mutation semantics");
+
+    await ready.page.getByLabel("Price multiplier").fill("1.25");
+    await ready.page.getByRole("button", { name: "Review and save" }).click();
+    await ready.page.getByRole("alertdialog", { name: "Apply game settings?" })
+      .getByRole("button", { name: "Apply settings" }).click();
+    await ready.page.waitForFunction(() => document.querySelector("#admin-settings-difficulty-preset")?.value === "custom");
+    const modifierPatch = ready.requests.filter(({ method }) => method === "PATCH").at(-1);
+    assert.equal(modifierPatch.body.settings.priceMultiplier, 1.25);
+    assert.equal(modifierPatch.body.settings.difficultyPreset, undefined);
+    pass("modifier edit follows custom-policy semantics");
+    assertClean(ready, "ready/edit Settings");
+  } finally {
+    await ready.close();
   }
 
-  {
-    const runtime = await createSettingsRuntime(browser, fixture, { staleAfterFirstRead: true });
-    try {
-      await waitForReady(runtime.page);
-      await runtime.page.getByRole("button", { name: "Refresh", exact: true }).click();
-      await runtime.page.locator('.admin-shell[data-admin-v2-state="stale"]').waitFor({ state: "attached", timeout: 10_000 });
-      assert.equal(await runtime.page.getByLabel("Present reward").inputValue(), "5");
-      const blockedSave = runtime.page.getByRole("button", { name: "Refresh before saving" });
-      assert.equal(await blockedSave.isDisabled(), true, "stale Settings did not block mutation");
-      await noSensitivePresentation(runtime.page, "stale Settings");
-      evidence.push(await screenshot(runtime.page, "settings-stale"));
-      passed("stale data retained and mutation blocked");
-      await assertCleanRuntime(runtime, "stale Settings");
-    } finally {
-      await runtime.close();
-    }
+  const stale = await createRuntime(browser, fixture, { staleAfterFirstRead: true });
+  try {
+    await waitReady(stale.page);
+    await stale.page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await stale.page.locator('.admin-shell[data-admin-v2-state="stale"]').waitFor({ state: "attached", timeout: 10_000 });
+    assert.equal(await stale.page.getByLabel("Present reward").inputValue(), "5");
+    assert.equal(await stale.page.getByRole("button", { name: "Refresh before saving" }).isDisabled(), true);
+    await assertNoSensitiveData(stale.page, "stale Settings");
+    evidence.push(await capture(stale.page, "settings-stale"));
+    pass("stale data retained and mutation blocked");
+    assertClean(stale, "stale Settings");
+  } finally {
+    await stale.close();
   }
 
-  {
-    const runtime = await createSettingsRuntime(browser, fixture, { failPatch: true });
-    try {
-      await waitForReady(runtime.page);
-      await runtime.page.getByLabel("Late reward").fill("3");
-      await runtime.page.getByRole("button", { name: "Review and save" }).click();
-      await runtime.page.getByRole("alertdialog", { name: "Apply game settings?" }).getByRole("button", { name: "Apply settings" }).click();
-      await runtime.page.getByText("Settings were not saved", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-      await noSensitivePresentation(runtime.page, "failed-save Settings");
-      evidence.push(await screenshot(runtime.page, "settings-failed-save"));
-      passed("failed save uses safe error presentation");
-      await assertCleanRuntime(runtime, "failed-save Settings");
-    } finally {
-      await runtime.close();
-    }
+  const failed = await createRuntime(browser, fixture, { failPatch: true });
+  try {
+    await waitReady(failed.page);
+    await failed.page.getByLabel("Late reward").fill("3");
+    await failed.page.getByRole("button", { name: "Review and save" }).click();
+    await failed.page.getByRole("alertdialog", { name: "Apply game settings?" })
+      .getByRole("button", { name: "Apply settings" }).click();
+    await failed.page.getByText("Settings were not saved", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+    await assertNoSensitiveData(failed.page, "failed-save Settings");
+    evidence.push(await capture(failed.page, "settings-failed-save"));
+    pass("failed save uses safe error presentation");
+    assertClean(failed, "failed-save Settings");
+  } finally {
+    await failed.close();
   }
 
-  {
-    const permissions = createAdminV2FixtureSession("ready").permissions.filter((permission) => permission !== "settings.manage");
-    const runtime = await createSettingsRuntime(browser, fixture, { permissions });
-    try {
-      await runtime.page.locator('.admin-shell[data-admin-v2-state="permission-denied"]').waitFor({ state: "attached", timeout: 10_000 });
-      await runtime.page.getByText("Settings access restricted", { exact: true }).waitFor({ state: "visible" });
-      assert.equal(runtime.settingsRequests.length, 0, "permission-denied Settings still queried the settings API");
-      evidence.push(await screenshot(runtime.page, "settings-permission-denied"));
-      passed("settings.manage permission denial is fail-closed");
-      await assertCleanRuntime(runtime, "permission-denied Settings");
-    } finally {
-      await runtime.close();
-    }
+  const deniedPermissions = createAdminV2FixtureSession("ready").permissions
+    .filter((permission) => permission !== "settings.manage");
+  const denied = await createRuntime(browser, fixture, { permissions: deniedPermissions });
+  try {
+    await denied.page.locator('.admin-shell[data-admin-v2-state="permission-denied"]').waitFor({ state: "attached", timeout: 10_000 });
+    await denied.page.getByText("Settings access restricted", { exact: true }).waitFor({ state: "visible" });
+    assert.equal(denied.requests.length, 0, "permission-denied Settings queried the settings API");
+    evidence.push(await capture(denied.page, "settings-permission-denied"));
+    pass("settings.manage permission denial is fail-closed");
+    assertClean(denied, "permission-denied Settings");
+  } finally {
+    await denied.close();
   }
 
-  {
-    const runtime = await createSettingsRuntime(browser, fixture, { viewport: MOBILE, longKoreanPreset: true });
-    try {
-      await waitForReady(runtime.page);
-      const currentPreset = await runtime.page.getByLabel("Difficulty preset").inputValue();
-      assert.match(currentPreset, /교육-맞춤형/);
-      assert.ok(currentPreset.length <= 80, "long current preset was not presentation-bounded");
-      await noHorizontalOverflow(runtime.page, "mobile long/Korean Settings");
-      await noSensitivePresentation(runtime.page, "mobile long/Korean Settings");
-      evidence.push(await screenshot(runtime.page, "settings-mobile-korean-390x844"));
-      passed("mobile and long/Korean value containment");
-      await assertCleanRuntime(runtime, "mobile Settings");
-    } finally {
-      await runtime.close();
-    }
+  const mobile = await createRuntime(browser, fixture, { viewport: MOBILE, longKoreanPreset: true });
+  try {
+    await waitReady(mobile.page);
+    const currentPreset = await mobile.page.getByLabel("Difficulty preset").inputValue();
+    assert.match(currentPreset, /교육-맞춤형/);
+    assert.ok(currentPreset.length <= 80, "long current preset was not bounded");
+    await assertNoOverflow(mobile.page, "mobile long/Korean Settings");
+    await assertNoSensitiveData(mobile.page, "mobile long/Korean Settings");
+    evidence.push(await capture(mobile.page, "settings-mobile-korean-390x844"));
+    pass("mobile and long/Korean value containment");
+    assertClean(mobile, "mobile Settings");
+  } finally {
+    await mobile.close();
   }
+} catch (error) {
+  fatalError = error;
+  checks.push({ name: "browser acceptance", status: "failed", detail: String(error?.stack || error) });
 } finally {
   await browser.close();
   await fixture.close();
+  const result = {
+    generatedAt: new Date().toISOString(),
+    route: "/admin/v2.html#settings",
+    permission: "settings.manage",
+    checks,
+    evidence,
+  };
+  writeFileSync(RESULT_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  console.log(JSON.stringify(result, null, 2));
 }
 
-const result = {
-  generatedAt: new Date().toISOString(),
-  route: "/admin/v2.html#settings",
-  permission: "settings.manage",
-  checks,
-  evidence,
-};
-writeFileSync(RESULT_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
-console.log(JSON.stringify(result, null, 2));
+if (fatalError) throw fatalError;
