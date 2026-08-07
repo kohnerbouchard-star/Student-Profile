@@ -22,6 +22,7 @@ import {
   resolveCurrentAdminRouteBoundary,
 } from "./core/route-boundary.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
+import { createMarketController } from "./routes/market/MarketController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
@@ -171,6 +172,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("store"),
     notify: (notification) => toast?.push(notification),
   });
+  const market = createMarketController({
+    api,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("market"),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -179,6 +186,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     store: Object.freeze({
       controller: store,
       render: () => store.render(),
+    }),
+    market: Object.freeze({
+      controller: market,
+      render: () => market.render(),
     }),
   });
 
@@ -289,7 +300,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview and Store are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -369,6 +380,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       destroyed = true;
       overview.destroy();
       store.destroy();
+      market.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();

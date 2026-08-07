@@ -7,6 +7,16 @@ export const ADMIN_OVERVIEW_RESOURCE_KEYS = Object.freeze([
   "notifications",
   "store",
 ]);
+export const ADMIN_MARKET_RESOURCE_KEYS = Object.freeze([
+  "assets",
+  "events",
+  "trades",
+]);
+export const ADMIN_MARKET_DETAIL_RESOURCE_KEYS = Object.freeze([
+  "profile",
+  "chart",
+  "financials",
+]);
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -84,6 +94,27 @@ function storeCollectionPath(gameId, { includeReadProjection = false } = {}) {
 
 function storeItemPath(gameId, itemId) {
   return `${storeCollectionPath(gameId)}/${requireItemToken(itemId)}`;
+}
+
+function marketBasePath(gameId) {
+  return `/games/${requireGameToken(gameId)}/market`;
+}
+
+function marketResourceSpecs(gameId) {
+  return Object.freeze({
+    assets: () => `${marketBasePath(gameId)}/assets?include=quotes`,
+    events: () => `${marketBasePath(gameId)}/events?status=active,recent`,
+    trades: () => `${marketBasePath(gameId)}/trades/recent?scope=all-players`,
+  });
+}
+
+function marketDetailResourceSpecs(gameId, resourceId) {
+  const assetPath = () => `${marketBasePath(gameId)}/assets/${requireItemToken(resourceId)}`;
+  return Object.freeze({
+    profile: () => `${assetPath()}/profile`,
+    chart: () => `${assetPath()}/chart`,
+    financials: () => `${assetPath()}/financials`,
+  });
 }
 
 function overviewResourceSpecs(gameId) {
@@ -278,6 +309,54 @@ function validateStoreMutation(payload, response) {
   return payload;
 }
 
+function isRecord(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function validateMarketArray(payload, response, keys) {
+  const data = payload?.data;
+  if (!isRecord(data) || !keys.some((key) => Array.isArray(data[key]))) {
+    throw invalidResponse(response);
+  }
+  return payload;
+}
+
+function validateMarketObject(payload, response, keys) {
+  const data = payload?.data;
+  if (!isRecord(data) || !keys.some((key) => isRecord(data[key]))) {
+    throw invalidResponse(response);
+  }
+  return payload;
+}
+
+const MARKET_PANEL_VALIDATORS = Object.freeze({
+  assets: (payload, response) => validateMarketArray(
+    payload,
+    response,
+    ["assets", "marketplaceSecurities"],
+  ),
+  events: (payload, response) => validateMarketArray(
+    payload,
+    response,
+    ["events", "marketEvents", "news"],
+  ),
+  trades: (payload, response) => validateMarketArray(
+    payload,
+    response,
+    ["trades", "marketplaceTrades"],
+  ),
+});
+
+const MARKET_DETAIL_VALIDATORS = Object.freeze({
+  profile: (payload, response) => validateMarketObject(payload, response, ["asset", "profile"]),
+  chart: (payload, response) => validateMarketArray(payload, response, ["candles", "chart"]),
+  financials: (payload, response) => validateMarketObject(
+    payload,
+    response,
+    ["financials", "fundamentals"],
+  ),
+});
+
 function asSafeRejection(error) {
   return Promise.reject(
     error && typeof error === "object" && "userMessage" in error
@@ -313,6 +392,10 @@ export function createAdminApiClient({
   let activeRequestVersion = 0;
   let activeController = null;
   let activeStoreController = null;
+  let activeMarketRequestVersion = 0;
+  let activeMarketController = null;
+  let activeMarketDetailRequestVersion = 0;
+  let activeMarketDetailController = null;
   const inFlightMutations = new Map();
 
   async function readOverview({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
@@ -382,6 +465,89 @@ export function createAdminApiClient({
     if (!activeStoreController) return false;
     activeStoreController.abort();
     activeStoreController = null;
+    return true;
+  }
+
+  async function readMarket({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
+    activeMarketRequestVersion += 1;
+    const requestVersion = activeMarketRequestVersion;
+    activeMarketController?.abort();
+
+    const batchController = new AbortController();
+    activeMarketController = batchController;
+    const unlinkAbort = linkAbortSignal(signal, batchController);
+    const specs = marketResourceSpecs(gameId);
+    const requestTimeout = normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs));
+
+    try {
+      const entries = await Promise.all(ADMIN_MARKET_RESOURCE_KEYS.map(async (key) => [
+        key,
+        await settlePanel(fetchImpl, specs[key], {
+          signal: batchController.signal,
+          timeoutMs: requestTimeout,
+          validate: MARKET_PANEL_VALIDATORS[key],
+        }),
+      ]));
+      return Object.freeze({
+        requestVersion,
+        current: requestVersion === activeMarketRequestVersion,
+        panels: Object.freeze(Object.fromEntries(entries)),
+      });
+    } finally {
+      unlinkAbort();
+      if (activeMarketController === batchController) activeMarketController = null;
+    }
+  }
+
+  function cancelMarketRequest() {
+    if (!activeMarketController) return false;
+    activeMarketRequestVersion += 1;
+    activeMarketController.abort();
+    activeMarketController = null;
+    return true;
+  }
+
+  async function readMarketDetail({
+    gameId,
+    resourceId,
+    signal,
+    timeoutMs: requestTimeoutMs,
+  } = {}) {
+    activeMarketDetailRequestVersion += 1;
+    const requestVersion = activeMarketDetailRequestVersion;
+    activeMarketDetailController?.abort();
+
+    const detailController = new AbortController();
+    activeMarketDetailController = detailController;
+    const unlinkAbort = linkAbortSignal(signal, detailController);
+    const specs = marketDetailResourceSpecs(gameId, resourceId);
+    const requestTimeout = normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs));
+
+    try {
+      const entries = await Promise.all(ADMIN_MARKET_DETAIL_RESOURCE_KEYS.map(async (key) => [
+        key,
+        await settlePanel(fetchImpl, specs[key], {
+          signal: detailController.signal,
+          timeoutMs: requestTimeout,
+          validate: MARKET_DETAIL_VALIDATORS[key],
+        }),
+      ]));
+      return Object.freeze({
+        requestVersion,
+        current: requestVersion === activeMarketDetailRequestVersion,
+        panels: Object.freeze(Object.fromEntries(entries)),
+      });
+    } finally {
+      unlinkAbort();
+      if (activeMarketDetailController === detailController) activeMarketDetailController = null;
+    }
+  }
+
+  function cancelMarketDetailRequest() {
+    if (!activeMarketDetailController) return false;
+    activeMarketDetailRequestVersion += 1;
+    activeMarketDetailController.abort();
+    activeMarketDetailController = null;
     return true;
   }
 
@@ -496,6 +662,10 @@ export function createAdminApiClient({
     cancelOverviewRequest,
     readStore,
     cancelStoreRequest,
+    readMarket,
+    cancelMarketRequest,
+    readMarketDetail,
+    cancelMarketDetailRequest,
     createStoreItem,
     updateStoreItem,
     archiveStoreItem,

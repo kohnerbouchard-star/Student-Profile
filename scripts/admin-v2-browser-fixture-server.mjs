@@ -9,6 +9,8 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
 export const ADMIN_V2_FIXTURE_GAME_ID = "10000000-0000-4000-8000-000000000001";
 export const ADMIN_V2_FIXTURE_OPAQUE_GAME_ID = "phase1reviewgame0001";
 export const ADMIN_V2_FIXTURE_ADMIN_ID = "20000000-0000-4000-8000-000000000002";
+export const ADMIN_V2_FIXTURE_MARKET_ASSET_ID = "a1000000-0000-4000-8000-000000000001";
+export const ADMIN_V2_FIXTURE_MARKET_NO_HISTORY_ASSET_ID = "a2000000-0000-4000-8000-000000000002";
 export const ADMIN_V2_FIXTURE_CSRF = "C".repeat(43);
 export const ADMIN_V2_FIXTURE_LONG_ADMIN_NAME =
   "Dr. Alexandria Montgomery-Rivera — International Economics Program Administrator";
@@ -90,6 +92,9 @@ function permissionsForScenario(scenario) {
   }
   if (scenario === "store-permission") {
     return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "store.manage");
+  }
+  if (scenario === "market-permission") {
+    return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "market.manage");
   }
   return [...ADMIN_V2_FIXTURE_PERMISSIONS];
 }
@@ -337,6 +342,260 @@ function storeData(items) {
   return { storeItems: items, items };
 }
 
+function fixtureMarketAssets({ empty = false, many = false } = {}) {
+  if (empty) return [];
+  const assets = [
+    {
+      id: ADMIN_V2_FIXTURE_MARKET_ASSET_ID,
+      assetId: ADMIN_V2_FIXTURE_MARKET_ASSET_ID,
+      symbol: "NRCX",
+      ticker: "NRCX",
+      name: "Northreach Intercontinental Renewable Infrastructure and Cooperative Exchange Holdings",
+      companyName: "Northreach Intercontinental Renewable Infrastructure and Cooperative Exchange Holdings",
+      type: "stock",
+      assetType: "stock",
+      sector: "Renewable infrastructure, cooperative logistics, and intercontinental classroom systems",
+      countryCode: "KR",
+      description: "A long-horizon infrastructure issuer used to exercise responsive supervisory layouts.",
+      price: 185.25,
+      currentPrice: 185.25,
+      previousClose: 172.5,
+      open: 174.2,
+      high: 188.9,
+      low: 171.75,
+      change: 12.75,
+      changePct: 7.3913043478,
+      marketCap: 9876543210123.45,
+      beta: 1.42,
+      volatility: 0.37,
+      chartHistory: [],
+      financials: {
+        revenueGrowth: 0.18,
+        profitMargin: 0.23,
+        debtLevel: 0.31,
+        cashReserves: 0.81,
+        innovationScore: 0.94,
+        supplyChainRisk: 0.28,
+        politicalExposure: 0.12,
+        commodityExposure: 0.44,
+      },
+      fundamentals: {
+        revenueGrowth: 0.18,
+        profitMargin: 0.23,
+        debtLevel: 0.31,
+        cashReserves: 0.81,
+        innovationScore: 0.94,
+        supplyChainRisk: 0.28,
+        politicalExposure: 0.12,
+        commodityExposure: 0.44,
+      },
+      isActive: true,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-07T03:00:00.000Z",
+    },
+    {
+      id: ADMIN_V2_FIXTURE_MARKET_NO_HISTORY_ASSET_ID,
+      assetId: ADMIN_V2_FIXTURE_MARKET_NO_HISTORY_ASSET_ID,
+      symbol: "HANUL",
+      ticker: "HANUL",
+      name: "한울 지역 공동체의 초소형 정밀 부품 및 순환 경제 연구 기업",
+      companyName: "한울 지역 공동체의 초소형 정밀 부품 및 순환 경제 연구 기업",
+      type: "stock",
+      assetType: "stock",
+      sector: "초정밀 순환 경제 연구",
+      countryCode: "KR",
+      description: "매우 작은 가격과 큰 음의 변동을 안전하게 표시하는 한국어 종목입니다.",
+      price: 0.000004,
+      currentPrice: 0.000004,
+      previousClose: 0.000032,
+      open: 0.00003,
+      high: 0.000035,
+      low: 0.000003,
+      change: -0.000028,
+      changePct: -87.5,
+      marketCap: 125000,
+      beta: 2.75,
+      volatility: 0.99,
+      chartHistory: [],
+      financials: {},
+      fundamentals: {},
+      isActive: true,
+      createdAt: "2026-08-02T00:00:00.000Z",
+      updatedAt: "2026-08-07T03:00:00.000Z",
+    },
+    {
+      id: "a3000000-0000-4000-8000-000000000003",
+      assetId: "a3000000-0000-4000-8000-000000000003",
+      symbol: "FLAT",
+      ticker: "FLAT",
+      name: "Stable classroom reserve instrument",
+      companyName: "Stable classroom reserve instrument",
+      type: "stock",
+      assetType: "stock",
+      sector: "Reserves",
+      countryCode: { malformed: true },
+      description: { diagnostic: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC },
+      price: 9876543210.12,
+      currentPrice: 9876543210.12,
+      previousClose: 9876543210.12,
+      open: 9876543210.12,
+      high: 9876543210.12,
+      low: 9876543210.12,
+      change: 0,
+      changePct: 0,
+      marketCap: "not-a-number",
+      beta: ["malformed"],
+      volatility: { malformed: true },
+      chartHistory: "malformed-history",
+      financials: {
+        revenueGrowth: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC,
+        profitMargin: null,
+        debtLevel: { malformed: true },
+      },
+      fundamentals: {
+        revenueGrowth: ADMIN_V2_RAW_BACKEND_DIAGNOSTIC,
+        profitMargin: null,
+        debtLevel: { malformed: true },
+      },
+      isActive: true,
+      createdAt: "not-a-date",
+      updatedAt: null,
+    },
+  ];
+
+  if (many) {
+    for (let index = assets.length; index < 52; index += 1) {
+      const sequence = index + 1;
+      const positive = index % 3 === 0;
+      const negative = index % 3 === 1;
+      const previousClose = 20 + index;
+      const changePct = positive ? 48.75 : negative ? -42.5 : 0;
+      const currentPrice = previousClose * (1 + changePct / 100);
+      const id = `a4000000-0000-4000-8000-${String(sequence).padStart(12, "0")}`;
+      assets.push({
+        id,
+        assetId: id,
+        symbol: `M${String(sequence).padStart(3, "0")}`,
+        ticker: `M${String(sequence).padStart(3, "0")}`,
+        name: `Classroom listed instrument ${sequence}`,
+        companyName: `Classroom listed instrument ${sequence}`,
+        type: "stock",
+        assetType: "stock",
+        sector: index % 2 ? "Services" : "Manufacturing",
+        countryCode: index % 2 ? "KR" : "NZ",
+        description: "Scale fixture for the Admin Market directory.",
+        price: currentPrice,
+        currentPrice,
+        previousClose,
+        open: previousClose,
+        high: Math.max(previousClose, currentPrice),
+        low: Math.min(previousClose, currentPrice),
+        change: currentPrice - previousClose,
+        changePct,
+        marketCap: currentPrice * (10_000_000 + index),
+        beta: 0.5 + index / 100,
+        volatility: 0.1 + index / 1_000,
+        chartHistory: [],
+        financials: {},
+        fundamentals: {},
+        isActive: true,
+        createdAt: "2026-08-03T00:00:00.000Z",
+        updatedAt: "2026-08-07T03:00:00.000Z",
+      });
+    }
+  }
+  return assets;
+}
+
+function fixtureMarketTrades({ empty = false } = {}) {
+  if (empty) return [];
+  return [
+    {
+      id: "b1000000-0000-4000-8000-000000000001",
+      tradeId: "b1000000-0000-4000-8000-000000000001",
+      playerId: "b2000000-0000-4000-8000-000000000002",
+      assetId: ADMIN_V2_FIXTURE_MARKET_ASSET_ID,
+      symbol: "NRCX",
+      ticker: "NRCX",
+      side: "buy",
+      quantity: 1250000,
+      price: 185.25,
+      executionPrice: 185.25,
+      grossValue: 231562500,
+      createdAt: "2026-08-07T02:58:00.000Z",
+      assetName: "Northreach Intercontinental Renewable Infrastructure and Cooperative Exchange Holdings",
+    },
+    {
+      id: "b3000000-0000-4000-8000-000000000003",
+      tradeId: "b3000000-0000-4000-8000-000000000003",
+      playerId: "b4000000-0000-4000-8000-000000000004",
+      assetId: ADMIN_V2_FIXTURE_MARKET_NO_HISTORY_ASSET_ID,
+      symbol: "HANUL",
+      ticker: "HANUL",
+      side: "sell",
+      quantity: 500000000,
+      price: 0.000004,
+      executionPrice: 0.000004,
+      grossValue: 2000,
+      createdAt: "2026-08-07T02:56:00.000Z",
+      assetName: "한울 지역 공동체의 초소형 정밀 부품 및 순환 경제 연구 기업",
+    },
+  ];
+}
+
+function fixtureMarketEvents({ empty = false } = {}) {
+  if (empty) return [];
+  return [
+    {
+      id: "c1000000-0000-4000-8000-000000000001",
+      eventId: "c1000000-0000-4000-8000-000000000001",
+      headline: "Regional infrastructure demand expands",
+      title: "Regional infrastructure demand expands",
+      explanation: "Public classroom procurement increased demand across infrastructure issuers.",
+      description: "Public classroom procurement increased demand across infrastructure issuers.",
+      category: "macro",
+      sentiment: "positive",
+      source: "World simulation",
+      magnitude: 0.72,
+      volatilityImpact: 0.18,
+      active: true,
+      status: "active",
+      createdAt: "2026-08-07T02:45:00.000Z",
+      updatedAt: "2026-08-07T02:45:00.000Z",
+    },
+    {
+      id: "c2000000-0000-4000-8000-000000000002",
+      eventId: "c2000000-0000-4000-8000-000000000002",
+      headline: "정밀 부품 공급망 변동성 확대",
+      title: "정밀 부품 공급망 변동성 확대",
+      explanation: "공급망 변동이 초정밀 부품 분야의 가격 위험을 높였습니다.",
+      description: "공급망 변동이 초정밀 부품 분야의 가격 위험을 높였습니다.",
+      category: "supply-chain",
+      sentiment: "negative",
+      source: "World simulation",
+      magnitude: -0.84,
+      volatilityImpact: 0.91,
+      active: false,
+      status: "recent",
+      createdAt: "2026-08-07T01:30:00.000Z",
+      updatedAt: "2026-08-07T01:30:00.000Z",
+    },
+  ];
+}
+
+function fixtureMarketChart(assetId) {
+  if (assetId === ADMIN_V2_FIXTURE_MARKET_NO_HISTORY_ASSET_ID) return [];
+  if (assetId !== ADMIN_V2_FIXTURE_MARKET_ASSET_ID) return [];
+  return [
+    { time: "2026-08-07T02:05:00.000Z", timestamp: "2026-08-07T02:05:00.000Z", open: 171, high: 174, low: 170.5, close: 173, volume: 925000, changePct: 1.17 },
+    { time: "2026-08-07T02:15:00.000Z", timestamp: "2026-08-07T02:15:00.000Z", open: 173, high: 176.5, low: 172.5, close: 176, volume: 1150000, changePct: 1.73 },
+    { time: "2026-08-07T02:25:00.000Z", timestamp: "2026-08-07T02:25:00.000Z", open: 176, high: 179, low: 175.5, close: 178.5, volume: 1310000, changePct: 1.42 },
+    { time: "2026-08-07T02:35:00.000Z", timestamp: "2026-08-07T02:35:00.000Z", open: 178.5, high: 182, low: 177.75, close: 181.25, volume: 1600000, changePct: 1.54 },
+    { time: "2026-08-07T02:45:00.000Z", timestamp: "2026-08-07T02:45:00.000Z", open: 181.25, high: 184, low: 180, close: 183.5, volume: 1925000, changePct: 1.24 },
+    { time: "2026-08-07T02:55:00.000Z", timestamp: "2026-08-07T02:55:00.000Z", open: 183.5, high: 188.9, low: 182.75, close: 185.25, volume: 2250000, changePct: 0.95 },
+  ];
+}
+
 function parseCookies(header = "") {
   return Object.fromEntries(String(header)
     .split(";")
@@ -489,10 +748,11 @@ function serveStatic(request, response, repositoryRoot, pathname) {
   createReadStream(filePath).pipe(response);
 }
 
-function requestRecord(request, scenario, runId, pathname) {
+function requestRecord(request, scenario, runId, pathname, search = "") {
   return Object.freeze({
     method: request.method,
     pathname,
+    search: String(search || ""),
     scenario,
     runId,
     apikey: String(request.headers.apikey || ""),
@@ -588,7 +848,7 @@ export async function startAdminV2FixtureServer({
     }
 
     const upstreamPath = requestUrl.pathname.slice(bffPrefix.length) || "/";
-    requests.push(requestRecord(request, scenario, runId, upstreamPath));
+    requests.push(requestRecord(request, scenario, runId, upstreamPath, requestUrl.search));
     const countKey = `${runId}:${upstreamPath}`;
     const requestCount = (requestCounts.get(countKey) || 0) + 1;
     requestCounts.set(countKey, requestCount);
@@ -617,10 +877,21 @@ export async function startAdminV2FixtureServer({
       : ADMIN_V2_FIXTURE_GAME_ID;
     const overviewPath = `/games/${gameId}/dashboard`;
     const storePath = `/games/${gameId}/store/items`;
+    const marketAssetsPath = `/games/${gameId}/market/assets`;
+    const marketTradesPath = `/games/${gameId}/market/trades/recent`;
+    const marketEventsPath = `/games/${gameId}/market/events`;
+    const marketAssetMatch = upstreamPath.match(
+      new RegExp(`^${marketAssetsPath}/([^/]+)/(profile|chart|financials)$`),
+    );
+    const isMarketRead = upstreamPath === marketAssetsPath
+      || upstreamPath === marketTradesPath
+      || upstreamPath === marketEventsPath
+      || Boolean(marketAssetMatch);
     const isOverviewRead = upstreamPath === overviewPath
       || upstreamPath === "/games"
       || upstreamPath === "/notifications"
-      || upstreamPath === storePath;
+      || upstreamPath === storePath
+      || isMarketRead;
 
     const storeItemMatch = upstreamPath.match(new RegExp(`^${storePath}/([^/]+)$`));
     const isStoreMutation = request.method === "POST" && upstreamPath === storePath
@@ -704,6 +975,11 @@ export async function startAdminV2FixtureServer({
       if (response.destroyed) return;
     }
 
+    if (scenario === "market-loading" && isMarketRead) {
+      await delayForResponse(2_500, response);
+      if (response.destroyed) return;
+    }
+
     if (scenario === "stale" && requestCount > 1) {
       await delayForResponse(250, response);
       if (response.destroyed) return;
@@ -718,6 +994,18 @@ export async function startAdminV2FixtureServer({
 
     if (scenario === "store-failed" && upstreamPath === storePath) {
       sendRawFailure(response, "admin-v2-store-failed");
+      return;
+    }
+
+    if (scenario === "market-stale" && upstreamPath === marketAssetsPath && requestCount > 1) {
+      await delayForResponse(250, response);
+      if (response.destroyed) return;
+      sendRawFailure(response, "admin-v2-market-stale");
+      return;
+    }
+
+    if (scenario === "market-failed" && upstreamPath === marketAssetsPath && requestCount === 1) {
+      sendRawFailure(response, "admin-v2-market-failed");
       return;
     }
 
@@ -768,6 +1056,61 @@ export async function startAdminV2FixtureServer({
         storeItemsByRun.set(runId, scenario === "store-one" ? initialItems.slice(0, 1) : initialItems);
       }
       sendJson(response, 200, responseEnvelope(storeData(storeItemsByRun.get(runId)), "admin-v2-store"));
+      return;
+    }
+    if (upstreamPath === marketAssetsPath) {
+      const assets = fixtureMarketAssets({
+        empty: scenario === "market-empty",
+        many: scenario === "market-many",
+      });
+      const selected = scenario === "market-one" ? assets.slice(0, 1) : assets;
+      sendJson(response, 200, responseEnvelope({
+        assets: selected,
+        marketplaceSecurities: selected,
+      }, "admin-v2-market-assets"));
+      return;
+    }
+    if (upstreamPath === marketTradesPath) {
+      const trades = fixtureMarketTrades({ empty: scenario === "market-empty" });
+      sendJson(response, 200, responseEnvelope({
+        trades,
+        marketplaceTrades: trades,
+      }, "admin-v2-market-trades"));
+      return;
+    }
+    if (upstreamPath === marketEventsPath) {
+      const events = fixtureMarketEvents({ empty: scenario === "market-empty" });
+      sendJson(response, 200, responseEnvelope({
+        events,
+        marketEvents: events,
+        news: events,
+      }, "admin-v2-market-events"));
+      return;
+    }
+    if (marketAssetMatch) {
+      const assetId = decodeURIComponent(marketAssetMatch[1]);
+      const resource = marketAssetMatch[2];
+      const asset = fixtureMarketAssets().find((candidate) => candidate.id === assetId);
+      if (!asset) {
+        sendFailure(response, 404, "ASSET_NOT_FOUND", {
+          requestId: "admin-v2-market-asset-missing",
+        });
+        return;
+      }
+      if (resource === "profile") {
+        sendJson(response, 200, responseEnvelope({ asset, profile: asset }, "admin-v2-market-profile"));
+        return;
+      }
+      if (resource === "chart") {
+        const candles = fixtureMarketChart(assetId);
+        sendJson(response, 200, responseEnvelope({ candles, chart: candles }, "admin-v2-market-chart"));
+        return;
+      }
+      sendJson(response, 200, responseEnvelope({
+        assetId,
+        financials: asset.financials || {},
+        fundamentals: asset.fundamentals || {},
+      }, "admin-v2-market-financials"));
       return;
     }
   });
