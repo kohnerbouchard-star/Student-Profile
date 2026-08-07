@@ -195,8 +195,7 @@ const ROUTES = Object.freeze([
     groupId: "system",
     icon: "logs",
     permission: "audit.read",
-    migration: "legacy",
-    legacyDestination: { section: "Logs", fragment: "logs" },
+    migration: "v2",
   }),
 ]);
 
