@@ -1,0 +1,104 @@
+name: Admin V2 Messages
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-v2-messages.yml"
+      - "admin/v2.html"
+      - "admin/v2/src/app.js"
+      - "admin/v2/src/core/**"
+      - "admin/v2/src/components/**"
+      - "admin/v2/src/routes/messages/**"
+      - "admin/v2/styles/**"
+      - "admin/messaging-moderation-*.js"
+      - "backend/supabase/functions/admin-api/messagingOperations*.ts"
+      - "player-terminal/src/api/messaging-backend-routes.js"
+      - "scripts/admin-messaging-moderation-contract.mjs"
+      - "scripts/admin-v2-messages*.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-v2-messages-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  messages:
+    name: Messages moderation contract and browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npm install --global npm@10.9.8; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Install repository dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npm ci; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Verify messaging source and privacy contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:admin-messaging
+          node --test scripts/admin-v2-messages.test.mjs
+          node --check scripts/admin-v2-messages-browser-smoke.mjs
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            sleep $((ATTEMPT * 5))
+          done
+          exit 1
+
+      - name: Exercise responsive Messages moderation
+        env:
+          ADMIN_V2_MESSAGES_EVIDENCE_DIR: /tmp/admin-v2-messages-evidence
+        run: node scripts/admin-v2-messages-browser-smoke.mjs
+
+      - name: Upload Messages browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-v2-messages-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/admin-v2-messages-evidence/
+          if-no-files-found: warn
+          retention-days: 30
