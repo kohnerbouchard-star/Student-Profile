@@ -218,6 +218,15 @@ async function waitReady(page) {
   await page.getByRole("heading", { level: 1, name: "Settings", exact: true }).waitFor({ state: "visible" });
 }
 
+async function waitForRequestCount(runtime, method, count, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (runtime.requests.filter((request) => request.method === method).length >= count) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.fail(`Timed out waiting for ${count} Settings ${method} requests.`);
+}
+
 async function capture(page, name) {
   const target = path.join(EVIDENCE_DIR, `${name}.png`);
   await page.screenshot({ path: target, fullPage: false, animations: "disabled" });
@@ -300,7 +309,10 @@ try {
     await opener.click();
     dialog = ready.page.getByRole("alertdialog", { name: "Apply game settings?" });
     await dialog.getByRole("button", { name: "Apply settings" }).click();
-    await ready.page.waitForFunction(() => document.querySelector("#admin-settings-present-reward")?.value === "6");
+    await waitForRequestCount(ready, "PATCH", 1);
+    await waitForRequestCount(ready, "GET", 2);
+    await waitReady(ready.page);
+    assert.equal(await ready.page.getByLabel("Present reward").inputValue(), "6");
     const attendancePatch = ready.requests.filter(({ method }) => method === "PATCH").at(-1);
     assert.deepEqual(Object.keys(attendancePatch.body.settings).sort(), ["attendanceWindow"]);
     assert.equal(attendancePatch.body.settings.attendanceWindow.presentRewardAmount, 6);
@@ -312,7 +324,10 @@ try {
     await ready.page.getByRole("button", { name: "Review and save" }).click();
     await ready.page.getByRole("alertdialog", { name: "Apply game settings?" })
       .getByRole("button", { name: "Apply settings" }).click();
-    await ready.page.waitForFunction(() => document.querySelector("#admin-settings-difficulty-preset")?.value === "custom");
+    await waitForRequestCount(ready, "PATCH", 2);
+    await waitForRequestCount(ready, "GET", 3);
+    await waitReady(ready.page);
+    assert.equal(await ready.page.getByLabel("Difficulty preset").inputValue(), "custom");
     const modifierPatch = ready.requests.filter(({ method }) => method === "PATCH").at(-1);
     assert.equal(modifierPatch.body.settings.priceMultiplier, 1.25);
     assert.equal(modifierPatch.body.settings.difficultyPreset, undefined);
