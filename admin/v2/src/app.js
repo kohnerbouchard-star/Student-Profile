@@ -144,7 +144,9 @@ function gameDrawerContent({ session, selectedGameId, onSelect, error }) {
 
 export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("Admin v2 mount is unavailable.");
-  if (!session?.authenticated || !selectedGameId) throw new Error("ADMIN_V2_SESSION_CONTEXT_REQUIRED");
+  if (!session?.authenticated || !selectedGameId) {
+    throw new Error("ADMIN_V2_SESSION_CONTEXT_REQUIRED");
+  }
 
   const permissions = permissionSet(session);
   const hasPermission = (permission) => permissions.has(permission);
@@ -186,10 +188,22 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     notify: (notification) => toast?.push(notification),
   });
   const routeControllers = Object.freeze({
-    overview: Object.freeze({ controller: overview, render: () => overview.render({ onOpenLegacy: navigate }) }),
-    store: Object.freeze({ controller: store, render: () => store.render() }),
-    market: Object.freeze({ controller: market, render: () => market.render() }),
-    business: Object.freeze({ controller: business, render: () => business.render() }),
+    overview: Object.freeze({
+      controller: overview,
+      render: () => overview.render({ onOpenLegacy: navigate }),
+    }),
+    store: Object.freeze({
+      controller: store,
+      render: () => store.render(),
+    }),
+    market: Object.freeze({
+      controller: market,
+      render: () => market.render(),
+    }),
+    business: Object.freeze({
+      controller: business,
+      render: () => business.render(),
+    }),
   });
 
   const initialGame = selectedGameContext(session, selectedGameId);
@@ -242,7 +256,8 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   });
 
   mount.replaceChildren(shell.element);
-  shell.element.dataset.adminV2State = routeControllers[activeRouteId]?.controller.getState().status || "route-boundary";
+  shell.element.dataset.adminV2State = routeControllers[activeRouteId]?.controller.getState().status
+    || "route-boundary";
 
   function selectGame(gameId) {
     if (!gameId) return;
@@ -250,7 +265,11 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       window.EconovariaAdminGameSelection?.write?.(gameId);
       window.location.reload();
     } catch (_error) {
-      toast.push({ tone: "error", title: "Game could not be selected", message: "The selected game context could not be applied. Try again." });
+      toast.push({
+        tone: "error",
+        title: "Game could not be selected",
+        message: "The selected game context could not be applied. Try again.",
+      });
     }
   }
 
@@ -280,7 +299,11 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       const entry = routeControllers[boundary.moduleKey];
       if (!entry) throw new Error("ADMIN_V2_ROUTE_CONTROLLER_UNAVAILABLE");
       const routeView = entry.render();
-      content = AdminRouteBoundary({ routeId: boundary.route.id, mode: "source", content: routeView.element }).element;
+      content = AdminRouteBoundary({
+        routeId: boundary.route.id,
+        mode: "source",
+        content: routeView.element,
+      }).element;
       renderedMigratedRouteId = boundary.route.id;
       shell.element.dataset.adminV2State = entry.controller.getState().status;
     } else if (boundary.kind === "legacy") {
@@ -290,7 +313,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Source-owned destinations run natively in Admin v2. Continue to the existing Admin only for destinations that have not migrated.",
+        legacyMessage: "Overview, Store, Market, and Business are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -322,13 +345,21 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     }
   }
 
-  function renderOverviewChange() { renderControllerChange(ADMIN_DEFAULT_ROUTE_ID); }
-  function renderControllerChange(routeId) { if (activeRouteId === routeId) renderRoute(); }
+  function renderOverviewChange() {
+    renderControllerChange(ADMIN_DEFAULT_ROUTE_ID);
+  }
+
+  function renderControllerChange(routeId) {
+    if (activeRouteId === routeId) renderRoute();
+  }
 
   function updateOverviewShell(data) {
     const game = selectedGameContext(session, selectedGameId, data.model);
     navigation.setGameContext({ gameName: game.name, gameCode: game.code, status: game.status });
-    topbar.setIdentity({ name: text(session.user?.displayName || session.user?.email, "Administrator"), gameName: game.name });
+    topbar.setIdentity({
+      name: text(session.user?.displayName || session.user?.email, "Administrator"),
+      gameName: game.name,
+    });
     topbar.setNotificationCount(data.model.notificationCount ?? data.model.notifications?.length ?? 0);
     notificationDrawer.setContent(overview.renderNotifications());
     accountDrawer.setContent(accountDrawerContent(session, game));
@@ -344,7 +375,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
     renderRoute();
   }
-  function handleCollapse(event) { rememberCollapsedPreference(event.detail?.collapsed); }
+
+  function handleCollapse(event) {
+    rememberCollapsedPreference(event.detail?.collapsed);
+  }
 
   window.addEventListener("hashchange", handleHashChange);
   navigation.element.addEventListener("admin-navigation-collapse", handleCollapse);
@@ -352,7 +386,9 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
 
   return {
     element: shell.element,
-    refresh() { return routeControllers[activeRouteId]?.controller.load?.() || overview.load(); },
+    refresh() {
+      return routeControllers[activeRouteId]?.controller.load?.() || overview.load();
+    },
     destroy() {
       destroyed = true;
       overview.destroy();
