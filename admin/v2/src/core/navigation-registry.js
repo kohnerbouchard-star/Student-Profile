@@ -154,7 +154,7 @@ const ROUTES = Object.freeze([
     groupId: "world",
     icon: "world",
     permission: "world.manage",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "news-events",

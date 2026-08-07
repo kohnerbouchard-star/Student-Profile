@@ -24,6 +24,7 @@ import {
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
+import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
 
@@ -178,6 +179,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     hasPermission,
     onChange: () => renderControllerChange("market"),
   });
+  const worldManagement = createWorldManagementController({
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("world-management"),
+    notify: (notification) => toast?.push(notification),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -190,6 +197,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     market: Object.freeze({
       controller: market,
       render: () => market.render(),
+    }),
+    "world-management": Object.freeze({
+      controller: worldManagement,
+      render: () => worldManagement.render(),
     }),
   });
 
@@ -300,7 +311,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Store, Market, and World Management are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -381,6 +392,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       overview.destroy();
       store.destroy();
       market.destroy();
+      worldManagement.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();

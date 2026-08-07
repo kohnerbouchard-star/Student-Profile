@@ -1,0 +1,413 @@
+.admin-world-route,
+.admin-world-route__resolved,
+.admin-world-route__loading-layout,
+.admin-world-route__section,
+.admin-world-route__table {
+  min-inline-size: 0;
+}
+
+.admin-world-route__resolved,
+.admin-world-route__loading-layout {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-world-route__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.admin-world-route__metric {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  border-block-start: 2px solid var(--admin-color-cyan);
+  background: linear-gradient(145deg, var(--admin-color-surface-2), var(--admin-color-surface-1));
+}
+
+.admin-world-route__metric:nth-child(2) {
+  border-block-start-color: var(--admin-color-green);
+}
+
+.admin-world-route__metric:nth-child(3) {
+  border-block-start-color: var(--admin-color-orange);
+}
+
+.admin-world-route__metric:nth-child(4) {
+  border-block-start-color: var(--admin-color-red);
+}
+
+.admin-world-route__metric span,
+.admin-world-route__metric small {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-world-route__metric span {
+  font-family: var(--admin-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-world-route__metric output {
+  color: var(--admin-color-text);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xl);
+  font-weight: var(--admin-weight-bold);
+  line-height: var(--admin-leading-tight);
+}
+
+.admin-world-route__section {
+  display: grid;
+  gap: var(--admin-space-4);
+  padding: var(--admin-space-5);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-world-route__section-header {
+  display: flex;
+  min-inline-size: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--admin-space-4);
+}
+
+.admin-world-route__section-copy {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+}
+
+.admin-world-route__section-copy small {
+  color: var(--admin-color-cyan);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-world-route__section-copy h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-lg);
+}
+
+.admin-world-route__section-copy p {
+  max-inline-size: 70rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--admin-color-text-muted);
+}
+
+.admin-world-route__section-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--admin-space-2);
+}
+
+.admin-world-route__section-actions .admin-button[data-tone="danger"],
+.admin-world-route .admin-button[data-tone="danger"] {
+  border-color: var(--admin-color-red);
+  color: var(--admin-color-red);
+}
+
+.admin-world-route__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-line);
+}
+
+.admin-world-route__facts > div {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-3);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-world-route__facts dt {
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-world-route__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-world-route__partial-error,
+.admin-world-route__refresh-state {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--admin-space-3);
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border: 1px solid var(--admin-color-orange);
+  border-inline-start-width: 3px;
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-world-route__refresh-state {
+  border-color: var(--admin-color-cyan);
+  background: var(--admin-color-cyan-soft);
+  color: var(--admin-color-cyan);
+}
+
+.admin-world-route__partial-error strong,
+.admin-world-route__partial-error p {
+  margin: 0;
+}
+
+.admin-world-route__partial-error p {
+  margin-block-start: var(--admin-space-1);
+  color: var(--admin-color-text-muted);
+}
+
+.admin-world-route__status {
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  align-items: center;
+  padding: var(--admin-space-1) var(--admin-space-2);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: 999px;
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.admin-world-route__status[data-status="active"],
+.admin-world-route__status[data-status="open"],
+.admin-world-route__status[data-status="available"],
+.admin-world-route__status[data-status="completed"] {
+  border-color: var(--admin-color-green);
+  background: var(--admin-color-green-soft);
+  color: var(--admin-color-green);
+}
+
+.admin-world-route__status[data-status="paused"],
+.admin-world-route__status[data-status="restricted"],
+.admin-world-route__status[data-status="pending"],
+.admin-world-route__status[data-status="processing"] {
+  border-color: var(--admin-color-orange);
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-world-route__status[data-status="failed"],
+.admin-world-route__status[data-status="closed"],
+.admin-world-route__status[data-status="emergency_disabled"],
+.admin-world-route__status[data-status="unavailable"] {
+  border-color: var(--admin-color-red);
+  background: var(--admin-color-red-soft);
+  color: var(--admin-color-red);
+}
+
+.admin-world-route__select {
+  inline-size: min(14rem, 100%);
+  min-block-size: 2.35rem;
+  padding: var(--admin-space-1) var(--admin-space-2);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text);
+  font: inherit;
+}
+
+.admin-world-route__table {
+  min-inline-size: 0;
+}
+
+.admin-world-route__table + .admin-world-route__table {
+  margin-block-start: var(--admin-space-2);
+}
+
+.admin-world-route__table .admin-data-table__cell {
+  max-inline-size: 30rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-world-route__table .admin-data-table__cell[data-column="actions"] {
+  min-inline-size: 8rem;
+}
+
+.admin-world-route__table .admin-data-table__cell[data-column="reason"],
+.admin-world-route__table .admin-data-table__cell[data-column="eligibleCountryIds"] {
+  min-inline-size: 14rem;
+}
+
+@media (max-width: 1100px) {
+  .admin-world-route__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-world-route__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* At tablet/mobile widths, authoritative tables become semantic stacked cards
+   rather than squeezing identifiers and controls into an unreadable grid. */
+@media (max-width: 900px) {
+  .admin-world-route__section {
+    padding: var(--admin-space-4);
+  }
+
+  .admin-world-route__section-header {
+    display: grid;
+  }
+
+  .admin-world-route__section-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-world-route__table .admin-data-table__scroll {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .admin-world-route__table .admin-data-table__table,
+  .admin-world-route__table .admin-data-table__table tbody {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .admin-world-route__table .admin-data-table__table thead {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-world-route__table .admin-data-table__row {
+    display: block;
+    margin-block-end: var(--admin-space-4);
+    padding: var(--admin-space-4);
+    border: 1px solid var(--admin-color-line);
+    border-block-start: 2px solid var(--admin-color-cyan);
+    background: var(--admin-color-surface-2);
+  }
+
+  .admin-world-route__table .admin-data-table__cell {
+    display: grid;
+    grid-template-columns: minmax(8.5rem, 0.48fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--admin-space-3);
+    max-inline-size: none;
+    padding: var(--admin-space-2) 0;
+    border-block-end: 1px solid var(--admin-color-line);
+    text-align: start;
+  }
+
+  .admin-world-route__table .admin-data-table__cell:last-child {
+    border-block-end: 0;
+  }
+
+  .admin-world-route__table .admin-data-table__cell::before {
+    color: var(--admin-color-text-faint);
+    font-family: var(--admin-font-mono);
+    font-size: var(--admin-text-xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .admin-world-route__table .admin-data-table__cell[data-column="countryId"]::before { content: "Country"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="locationCount"]::before { content: "Locations"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="residencyCount"]::before { content: "Residents"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="pendingResidencyCount"]::before { content: "Pending moves"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="currencies"]::before { content: "Currencies"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="currencyCode"]::before { content: "Currency"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="journeyCount"]::before { content: "Travel records"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="journeyCostMinor"]::before { content: "Travel cost"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="eventKey"]::before { content: "Event"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="fromPhase"]::before { content: "Transition"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="sequence"]::before { content: "Sequence"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="reason"]::before { content: "Reason"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="occurredAt"]::before { content: "Occurred"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="effectKind"]::before { content: "Effect"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="status"]::before { content: "State"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="attemptCount"]::before { content: "Attempts"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="lastErrorCode"]::before { content: "Last error"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="classId"]::before { content: "Arrival Class"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="source"]::before { content: "Source"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="revision"]::before { content: "Revision"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="displayName"]::before { content: "Location"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="locationKind"]::before { content: "Type"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="availability"]::before { content: "Availability"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="fromLocationId"]::before { content: "Route / journey"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="mode"]::before { content: "Mode"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="baseCostMinor"]::before { content: "Base cost"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="baseDurationMinutes"]::before { content: "Base duration"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="costMultiplierBasisPoints"]::before { content: "Cost factor"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="totalCostMinor"]::before { content: "Cost"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="totalDurationMinutes"]::before { content: "Duration"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="arrivalAt"]::before { content: "Arrival"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="currentCountryId"]::before { content: "Current country"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="pendingCountryId"]::before { content: "Pending move"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="eligibleCountryIds"]::before { content: "Eligible countries"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="updatedAt"]::before { content: "Updated"; }
+  .admin-world-route__table .admin-data-table__cell[data-column="actions"]::before { content: "Actions"; }
+
+  .admin-world-route__table .admin-data-table__cell[data-column="actions"] {
+    min-inline-size: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-world-route__summary,
+  .admin-world-route__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-world-route__section {
+    padding: var(--admin-space-3);
+  }
+
+  .admin-world-route__section-actions .admin-button {
+    flex: 1 1 10rem;
+  }
+
+  .admin-world-route__table .admin-data-table__row {
+    padding: var(--admin-space-3);
+  }
+
+  .admin-world-route__table .admin-data-table__cell {
+    grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
+  }
+
+  .admin-world-route__select {
+    inline-size: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-world-route__table .admin-data-table__cell {
+    display: block;
+  }
+
+  .admin-world-route__table .admin-data-table__cell::before {
+    display: block;
+    margin-block-end: var(--admin-space-1);
+  }
+}
