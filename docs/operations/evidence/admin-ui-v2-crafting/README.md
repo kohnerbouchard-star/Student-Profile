@@ -1,101 +1,149 @@
 # Admin UI V2 Crafting — Evidence
 
-## Scope
+## Current disposition
 
 - Repository: `kohnerbouchard-star/Student-Profile`
 - Branch: `refactor/admin-ui-v2-crafting-v1`
-- Original implementation base: `b7827211f0ff15b8a963219a63738180b33a1b3d`
-- Reconciled `main`: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
-- Reconciliation commit: `9c44517a2cdb9bb27f8d97113546797b74dbadd9`
-- Focused V2 CI addition: `41eea3fb3aa1f4cf66ccc88dfb1861800bfdd791`
 - Draft PR: #510
-- No Backend/Supabase file is modified.
-- No Inventory/Business semantic file is modified.
-- No Player application file is modified by the Crafting tranche.
-- Draft PR only; no production promotion.
+- Prior audited head: `4df2cad921d2aa98fccb93c7fb53f35d2c739a93`
+- Latest inspected PR #503 head: `84f12d0b20c9947958c19e19e4106b243ebcd147`
+- No Backend/Supabase permission mapping changed by PR #510.
+- No Inventory/Business/Player semantics changed by this hold update.
+- Crafting route source is preserved.
+- No merge or production promotion is authorized.
 
-## Dependency gate — PR #503
+Status:
 
-PR #503 (`feat/economic-asset-ownership-core-v2`) is still open and draft at the latest review. Its current scope includes canonical asset ownership and a canonical Crafting read model, while its own remaining work still includes Crafting mutation cutover, Business material-flow cutover, compatibility/replay work, and Store → Inventory → Crafting → Business acceptance.
+`CRAFTING_WAITING_FOR_503_AND_PERMISSION_FIX`
 
-**Required merge condition:** PR #510 must be reconciled against the finalized #503 contracts before merge. This branch must not consume an unmerged #503 API/DTO shape directly.
+## Gate 1 — PR #503 canonical asset ownership
 
-The final reconciliation must re-check only:
+PR #503 remains open/draft. This inspection was limited to its latest canonical-asset/Crafting contract changes; no broad repository audit was performed.
 
-- finalized Admin Crafting read fields;
-- finalized Crafting mutation/recovery semantics;
-- canonical Inventory ownership requirements and identifiers;
-- Store → Inventory → Crafting → Business relationship preservation;
-- privacy/public-identifier boundaries.
+Relevant inspected #503 files:
 
-## Focused contract evidence
+- `docs/architecture/adr-economic-asset-ownership-core-v2.md`
+- `backend/supabase/migrations/20260806120120_cutover_crafting_read_v2.sql`
+- `backend/supabase/migrations/20260806120130_cutover_crafting_start_v2.sql`
+- `backend/supabase/migrations/20260806120140_cutover_crafting_cancel_claim_v2.sql`
+- `backend/supabase/functions/admin-api/readExtensions.ts`
+- `scripts/economic-asset-core-v2-contract.test.mjs`
 
-The authoritative Admin surface on the reconciled `main` supports:
+### Code-level findings at #503 head
+
+The #503 code now establishes:
+
+- canonical item identity through game-scoped `game_items` / canonical item keys;
+- canonical ownership/location through `inventory_account_id + game_item_id` internally;
+- Store identity as optional acquisition provenance rather than ownership identity;
+- canonical Player Crafting recipe reads with ingredient/output definitions;
+- ingredient `owned` values resolved from canonical personal inventory holdings after reservations;
+- canonical Crafting reservation at job start;
+- canonical reservation release at cancel;
+- canonical input consumption and output production at claim;
+- crafted outputs that do not require a Store offer;
+- canonical Business material-flow migrations in the same ownership core;
+- a contract rule that browser payloads do not serialize canonical UUIDs.
+
+The #503 PR description is stale relative to the changed files: it still describes some Crafting mutation and Business material-flow work as remaining even though those migrations now exist in the branch. PR #510 must therefore reconcile against the final code/contract that actually lands, not the draft description.
+
+### Important Admin boundary
+
+The richer recipe/input/output/owned-quantity projection currently inspected in #503 is the **Player Crafting** read model. It is not an Admin `inventory.redeem` projection.
+
+PR #510 must not call Player Crafting RPCs, read raw canonical tables, or consume `/players` merely to reconstruct Crafting ownership requirements.
+
+## Exact final Admin contract required
+
+Before PR #510 can leave the dependency hold, the finalized Admin/BFF Crafting contract must be checked for the following semantics. PR #510 will consume only fields that actually exist in that final Admin DTO.
+
+### Public identity
+
+For recipe inputs, outputs and inventory requirements, the Admin payload must use privacy-safe public item identity such as the canonical item key plus display name. It must not expose:
+
+- `game_item_id` UUIDs;
+- `inventory_account_id` UUIDs;
+- holding/reservation/transaction UUIDs;
+- Player ownership UUIDs.
+
+### Recipe/availability semantics
+
+Where the final Admin DTO exposes them, V2 requires authoritative equivalents of:
+
+- recipe key/name/category/tier/workshop/duration;
+- enabled/scarcity/country or equivalent availability state;
+- input item key/name, required quantity, role and substitution grouping;
+- output item key/name, quantity and output kind.
+
+No recipe create/edit/delete contract is required or permitted by PR #510.
+
+### Inventory requirement semantics
+
+Any missing/sufficient ingredient display must come from a server-computed canonical ownership projection. Canonical sufficiency is based on available personal ownership after reservations (`quantity_owned - quantity_reserved`), but the browser must not receive or join the internal ownership IDs used to compute it.
+
+Physical-economy supply availability remains separate from Player inventory ownership.
+
+### Crafting records/actions
+
+The existing Admin Crafting job records and supported recovery/supply actions may remain the V2 mutation surface, but final reconciliation must verify that recovery still respects #503's canonical reservation/consumption/output state and idempotency. PR #510 does not gain Player Crafting start/cancel/claim authority or direct inventory posting authority.
+
+### Store → Inventory → Crafting → Business
+
+Final reconciliation must preserve:
+
+1. Store purchase moves/grants a canonical item into Player canonical inventory.
+2. Crafting reserves/consumes canonical Player inventory.
+3. Crafting produces canonical outputs back into Player inventory without requiring Store provenance.
+4. Business ownership changes only through authoritative Business procurement/contribution/material-flow operations.
+
+Crafting V2 must not materialize a second Business or Player inventory model.
+
+## Gate 2 — separate backend permission blocker
+
+The V2 product permission is `inventory.redeem`.
+
+The currently audited server-side Admin resource mapping does not explicitly map the Crafting resource to `inventory.redeem`; Crafting therefore falls through generic game permissions. PR #510 correctly does not modify that policy.
+
+A separately owned Backend/Supabase/security correction is required before Crafting merge. Its acceptance contract is:
+
+- Crafting Admin reads enforce `inventory.redeem` server-side.
+- Supported Crafting recovery/supply mutations enforce `inventory.redeem` server-side unless a separately approved stricter action-level policy is adopted.
+- generic `game.read` / `game.update` alone do not silently satisfy Crafting authorization when the product route requires `inventory.redeem`.
+- existing game scoping, AAL2, CSRF, idempotency and safe-error protections remain intact.
+- denied requests disclose no private Crafting/inventory data.
+
+The V2 client-side permission check remains defense in depth only; it is not the permission fix.
+
+## Preserved PR #510 behavior while held
+
+The current route continues to use only the existing Admin Crafting surface:
 
 - `GET /games/:gameId/crafting/oversight?status=&limit=`;
 - `POST /games/:gameId/crafting/jobs/:jobKey/recover`;
 - `POST /games/:gameId/crafting/supply/:itemKey`.
 
-No supported recipe CRUD is exposed by this Admin contract.
+Because the reconciled-main Admin oversight DTO does not yet expose standalone recipe inputs/outputs or canonical per-player holdings, V2 continues to:
 
-The current Admin oversight DTO exposes Crafting job recipe identity/name, job lifecycle/timing, physical-economy supply state, effects, pack metadata, and Inventory/Crafting invariant counters. It does not expose standalone recipe input/output lines or per-player canonical holdings on this reconciled `main`.
+- show Observed recipes from authoritative Crafting jobs;
+- omit fabricated ingredient sufficiency;
+- omit fabricated output item lines;
+- keep physical supply distinct from ownership;
+- leave canonical reservations, consumption and grants to server authority;
+- expose no private UUIDs.
 
-V2 therefore:
+No application source was changed for this dependency hold.
 
-- derives **Observed recipes** only from authoritative Crafting job records;
-- does not invent recipe create/edit/delete actions;
-- does not fabricate required ingredient lines or sufficiency;
-- does not fabricate output item lines;
-- distinguishes physical-economy supply availability from player Inventory ownership;
-- leaves Crafting reservation/consumption/output grants to existing server authority;
-- displays Inventory/Crafting invariant counters read-only;
-- uses `inventory.redeem` as the V2 route permission and fails closed client-side when absent.
+## Required convergence procedure
 
-A backend permission-resource mismatch remains outside this UI tranche: the backend Crafting resource is not explicitly mapped to `inventory.redeem` on this reconciled `main`. This branch records the mismatch but does not change Backend/Supabase policy.
+After both blockers are resolved:
 
-## Test matrix
+1. fetch current `main`;
+2. inspect only finalized Admin Crafting/BFF DTOs plus the explicit server Crafting permission mapping;
+3. bind richer recipe/input/output/inventory requirement fields only where authoritative Admin fields exist;
+4. preserve the canonical ownership/privacy boundary;
+5. rerun focused Admin V2 Crafting plus Player Crafting/Inventory regressions;
+6. update evidence and reassess PR #510 for merge.
 
-| Case | Coverage |
-|---|---|
-| No recipes/jobs | Empty oversight model and observed-recipe empty state |
-| Many recipes/jobs | Normalizer supports the authoritative 250-job read limit |
-| Missing/sufficient ingredients | Not fabricated; physical supply quantity/scarcity remains distinct from Inventory ownership |
-| Crafted outputs | Completed/claimed job states shown; output item lines omitted when absent from Admin DTO |
-| Long/Korean names | Preserved/wrapped; API/controller and browser fixtures include Korean/long content |
-| Permission denial | Route/controller require `inventory.redeem`; fail closed before read/mutation |
-| Safe failures | 403/5xx normalized through shared safe Admin error envelope; raw diagnostics suppressed |
-| Private IDs | UUID-like private identifiers stripped; public Crafting job key is never rendered |
-| Mobile/desktop | Dedicated browser smoke checks both layouts and horizontal overflow |
-| Overview/Store/Market regression | `npm run test:admin-v2` retains the existing V2 unit/Store/Market suites and adds Crafting |
-| Player Crafting/Inventory regression | Existing `Crafting Item Runtime` workflow runs Crafting runtime, backend player-crafting tests, player-terminal verify, and desktop/mobile Player Crafting browser coverage |
+Until then:
 
-## Focused verification commands
-
-```sh
-npm run test:admin-v2
-npm run test:admin-v2:crafting-browser
-npm run test:crafting-runtime
-npm run test:player-runtime-cutover
-git diff --check
-```
-
-The local execution sandbox cannot resolve `github.com`, so authenticated GitHub Actions is used for execution rather than claiming an unavailable local run.
-
-### GitHub execution launched
-
-On code head `41eea3fb3aa1f4cf66ccc88dfb1861800bfdd791`:
-
-- **Admin V2 Crafting** run `31175180126` — dedicated `npm run test:admin-v2` plus Crafting desktop/mobile browser smoke; state at evidence capture: queued.
-- **Crafting Item Runtime** run `31175180043` — `test:crafting-runtime`, backend Player Crafting integration/typechecks, player-terminal verification, and Player Crafting desktop/mobile browser matrix; state at evidence capture: queued.
-- Existing Admin shell/browser, security, typecheck, repository-quality, and release-contract checks were also triggered by the PR, but they are supplemental rather than substitutes for the two focused gates above.
-
-The final chat report must state the latest observed outcomes; queued checks are not represented as passing.
-
-## Status
-
-`IMPLEMENTED_NOT_MERGED`
-
-Merge is blocked until both conditions are satisfied:
-
-1. final contract reconciliation with PR #503 after its Crafting/asset contracts stabilize; and
-2. focused Crafting V2 + Player Crafting/Inventory verification is green or any failures are resolved/explicitly identified.
+`CRAFTING_WAITING_FOR_503_AND_PERMISSION_FIX`
