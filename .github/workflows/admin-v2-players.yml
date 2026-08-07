@@ -12,6 +12,7 @@ on:
       - "admin/v2/src/core/navigation-registry.js"
       - "admin/v2/src/routes/players/**"
       - "admin/v2/styles/routes/players.css"
+      - "scripts/admin-v2-unit.test.mjs"
       - "scripts/admin-v2-players-api.test.mjs"
       - "scripts/admin-v2-players-browser-smoke.mjs"
 
@@ -59,6 +60,7 @@ jobs:
           node --check admin/v2/src/routes/players/PlayersController.js
           node --check admin/v2/src/routes/players/PlayersRoute.js
           node --check admin/v2/src/routes/players/PlayersSkeleton.js
+          node --check scripts/admin-v2-unit.test.mjs
           node --check scripts/admin-v2-players-api.test.mjs
           node --check scripts/admin-v2-players-browser-smoke.mjs
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -70,6 +72,9 @@ jobs:
 
       - name: Scan repository for committed credentials
         run: npm run security:secrets
+
+      - name: Run standard Admin V2 tests
+        run: npm run test:admin-v2
 
       - name: Run Overview, Store, Market, and Players V2 contract regressions
         run: >-
