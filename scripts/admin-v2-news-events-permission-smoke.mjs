@@ -48,6 +48,27 @@ try {
     if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
   });
 
+  // Admin V2 intentionally refreshes authorization on every document load.
+  // Deny world.manage at that authoritative bootstrap boundary rather than
+  // relying only on the cached browser summary, which refresh() replaces.
+  await page.route("**/functions/v1/web-session-api/proxy/session/bootstrap", async (route) => {
+    assert.equal(route.request().method(), "GET");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        data: {
+          admin: deniedSession.user,
+          permissions: deniedSession.permissions,
+          roles: ["game_admin"],
+          adminRole: "game_admin",
+        },
+        error: null,
+        meta: { requestId: "admin-v2-news-events-permission-bootstrap" },
+      }),
+    });
+  });
+
   await page.goto(`${fixture.origin}/admin/v2.html?game=${encodeURIComponent(ADMIN_V2_FIXTURE_GAME_ID)}#news-events`, {
     waitUntil: "domcontentloaded",
     timeout: 15_000,
