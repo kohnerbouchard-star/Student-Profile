@@ -26,10 +26,41 @@ export async function handleBusinessBankingAdminOperation(
   try {
     if (input.suffix === "/businesses" && input.request.method === "GET") {
       const { data, error } = await service.from("business_entities").select(
-        "public_key,owner_player_id,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,revenue_total,expense_total,profit_total,valuation,reputation_score,failure_count,updated_at",
+        "public_key,owner_player_id,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,revenue_total,expense_total,profit_total,valuation,reputation_score,capacity_units,demand_index,failure_count,created_at,updated_at,closed_at",
       ).eq("game_session_id", input.gameId).order("updated_at", { ascending: false });
       if (error) return failure(error.message);
-      return success({ businesses: data ?? [] });
+
+      const businesses = Array.isArray(data) ? data : [];
+      const ownerIds = [...new Set(businesses
+        .map((row: Record<string, unknown>) => String(row.owner_player_id || ""))
+        .filter(Boolean))];
+      let owners: Record<string, unknown>[] = [];
+      if (ownerIds.length > 0) {
+        const ownerResult = await service.from("players")
+          .select("id,display_name,roster_label,status")
+          .eq("game_session_id", input.gameId)
+          .in("id", ownerIds);
+        if (ownerResult.error) return failure(ownerResult.error.message);
+        owners = Array.isArray(ownerResult.data) ? ownerResult.data : [];
+      }
+      const ownerById = new Map(owners.map((row) => [String(row.id || ""), row]));
+      return success({
+        businesses: businesses.map((row: Record<string, unknown>) => {
+          const ownerId = String(row.owner_player_id || "");
+          const owner = ownerById.get(ownerId);
+          const { owner_player_id: _privateOwnerId, ...business } = row;
+          return {
+            ...business,
+            owner: owner
+              ? {
+                display_name: owner.display_name ?? null,
+                roster_label: owner.roster_label ?? null,
+                status: owner.status ?? null,
+              }
+              : null,
+          };
+        }),
+      });
     }
 
     if (input.suffix === "/loan-applications" && input.request.method === "GET") {
@@ -198,10 +229,7 @@ function failure(message: string): OperationResult {
   return {
     handled: true,
     status,
-    body: {
-      code,
-      message: "The Business or Banking administrator operation could not be completed.",
-    },
+    body: { code, message: "The Business or Banking administrator operation could not be completed." },
   };
 }
 async function readBody(request: Request): Promise<Record<string, unknown>> {
