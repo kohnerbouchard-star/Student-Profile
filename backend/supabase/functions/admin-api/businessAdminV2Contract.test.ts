@@ -1,6 +1,10 @@
 import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
 import { normalizedAdminAction, requiredAdminPermission } from "./adminSecurityGuard.ts";
 
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
+
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const STAFF_ID = "00000000-0000-4000-8000-000000000002";
 const OWNER_ID = "00000000-0000-4000-8000-000000000003";
