@@ -2,13 +2,15 @@
 
 **Exact audited start base:** `b7827211f0ff15b8a963219a63738180b33a1b3d`
 
-**Current reconciled main/base:** `4c17b942fcf4b2a6f60b629549f192d066053ba4`
+**Current convergence target main:** `2b8c8ae245fea4e51d173d14489a21458b7935c8`
 
 **Verified implementation head:** `2b5100d4971ebe31be588bf89014e5be47e73521`
 
 **Draft PR:** #519
 
-While the branch was being built, `main` advanced by PR #507. The intervening delta touched Player Terminal ownership/coordinator files and had no Admin V2 Players overlap. The Players branch was reconciled onto `4c17b942fcf4b2a6f60b629549f192d066053ba4` and no further main reconciliation was required before final verification.
+The Players implementation was originally reconciled against `4c17b942fcf4b2a6f60b629549f192d066053ba4`. Since then, the Admin baseline advanced through the narrow pre-convergence cleanup PRs #523, #524, #525, and #526. Those changes repair scroll-contract acceptance, remove excess `MutationObserver` debt without raising the ratchet, align the v606 drift audit with the fluid Admin shell, and retire the remaining share-code runtime style injection. They do not change Admin V2 Players route source, its authoritative Admin/BFF contracts, or its permission model.
+
+The current convergence target is therefore `2b8c8ae245fea4e51d173d14489a21458b7935c8`. GitHub PR checks on the current branch head must validate the Players tranche against that target before controller merge.
 
 ## Focused acceptance
 
@@ -54,12 +56,12 @@ The artifact contains `admin-v2-players-browser-results.json` plus the generated
 
 The implementation head received a successful automatic Git-connected Vercel preview build. No manual deployment or production promotion was performed.
 
-## Inherited repository failures
+## Baseline cleanup status
 
-These failures are outside the bounded Players tranche and were not modified:
+The formerly inherited repository failures are resolved on current `main` before Players convergence:
 
-- `Admin Scroll Integrity` fails against unchanged legacy Admin scroll-contract assertions that expect the previous viewport CSS representation.
-- `Admin Shell Smoke` inherits the same scroll-integrity failure because it invokes that contract.
-- `Repository Quality` reaches the pre-existing Admin architecture ratchet and reports 12 `MutationObserver` uses against an allowed maximum of 11. The Players tranche adds no `MutationObserver`.
+- Admin Scroll Integrity is green after PR #523 corrected stale fluid-shell contract assertions.
+- Repository Quality is green after PR #524 reduced Admin observer debt back to the authoritative maximum of 11 without raising the threshold, and PR #525 reconciled the accepted v606 drift audit with the fluid shell.
+- Admin Shell Smoke and Admin Browser E2E are green after PR #526 retired the remaining runtime share-code style injection.
 
-Per the Players concurrency/scope rules, no legacy scroll subsystem, global Admin architecture ratchet, backend, database, Supabase, or other Admin route was changed to mask these inherited failures.
+The Players tranche itself still does not modify the legacy Admin scroll subsystem, global architecture ratchet, backend, database, or Supabase ownership model. Final merge remains contingent on fresh PR checks against the current convergence target.
