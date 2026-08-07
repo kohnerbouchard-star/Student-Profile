@@ -1,0 +1,351 @@
+.admin-players-route,
+.admin-players-route__resolved,
+.admin-players-route__roster,
+.admin-players-route__detail {
+  min-inline-size: 0;
+}
+
+.admin-players-route__resolved,
+.admin-players-route__skeleton,
+.admin-players-route__detail,
+.admin-players-route__detail-section {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-players-route__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.admin-players-route__metric {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  border-block-start: 2px solid var(--admin-color-cyan);
+  background: linear-gradient(145deg, var(--admin-color-surface-2), var(--admin-color-surface-1));
+}
+
+.admin-players-route__metric:nth-child(2) { border-block-start-color: var(--admin-color-green); }
+.admin-players-route__metric:nth-child(3) { border-block-start-color: var(--admin-color-orange); }
+.admin-players-route__metric:nth-child(4) { border-block-start-color: var(--admin-color-red); }
+
+.admin-players-route__metric span,
+.admin-players-route__metric small {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-players-route__metric span {
+  font-family: var(--admin-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-players-route__metric output {
+  color: var(--admin-color-text);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xl);
+  font-weight: var(--admin-weight-bold);
+  line-height: var(--admin-leading-tight);
+}
+
+.admin-players-route__controls {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(10rem, 1fr));
+  align-items: end;
+  gap: var(--admin-space-4);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-players-route__refreshing {
+  margin: 0;
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border: 1px solid var(--admin-color-cyan);
+  border-inline-start-width: 3px;
+  background: var(--admin-color-cyan-soft);
+  color: var(--admin-color-cyan);
+}
+
+.admin-players-route__player-copy {
+  display: grid;
+  min-inline-size: 0;
+  inline-size: min(25rem, 38vw);
+  gap: var(--admin-space-1);
+}
+
+.admin-players-route__player-copy strong,
+.admin-players-route__player-copy small,
+.admin-players-route__definition dd,
+.admin-players-route__definition small,
+.admin-players-route__credential-note p {
+  overflow-wrap: anywhere;
+}
+
+.admin-players-route__player-copy small,
+.admin-players-route__definition small,
+.admin-players-route__credential-note p {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-players-route__status,
+.admin-players-route__presence {
+  display: inline-flex;
+  inline-size: fit-content;
+  align-items: center;
+  padding: var(--admin-space-1) var(--admin-space-2);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: 999px;
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  white-space: nowrap;
+}
+
+.admin-players-route__status[data-status="active"],
+.admin-players-route__presence[data-presence="online"] {
+  border-color: var(--admin-color-green);
+  background: var(--admin-color-green-soft);
+  color: var(--admin-color-green);
+}
+
+.admin-players-route__presence[data-presence="recently_active"] {
+  border-color: var(--admin-color-orange);
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-players-route__status[data-status="suspended"],
+.admin-players-route__status[data-status="inactive"] {
+  border-color: var(--admin-color-red);
+  background: var(--admin-color-red-soft);
+  color: var(--admin-color-red);
+}
+
+.admin-players-route__page-actions,
+.admin-players-route__detail-actions,
+.admin-players-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--admin-space-3);
+}
+
+.admin-players-route__detail-section {
+  gap: var(--admin-space-3);
+}
+
+.admin-players-route__detail-section h3 {
+  margin: 0;
+  font-size: var(--admin-text-lg);
+}
+
+.admin-players-route__definitions {
+  display: grid;
+  gap: var(--admin-space-3);
+  margin: 0;
+}
+
+.admin-players-route__definition {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1fr);
+  gap: var(--admin-space-1) var(--admin-space-4);
+  padding-block-end: var(--admin-space-3);
+  border-block-end: 1px solid var(--admin-color-line);
+}
+
+.admin-players-route__definition dt {
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-players-route__definition dd {
+  margin: 0;
+  color: var(--admin-color-text);
+}
+
+.admin-players-route__definition small {
+  grid-column: 2;
+}
+
+.admin-players-route__credential-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--admin-space-3);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line-strong);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-players-route__credential-note strong,
+.admin-players-route__credential-note p {
+  display: block;
+  margin: 0;
+}
+
+.admin-players-route__credential-note p {
+  margin-block-start: var(--admin-space-1);
+}
+
+.admin-players-form {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-players-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--admin-space-4);
+}
+
+.admin-players-form__grid .admin-field:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .admin-players-route__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-players-route__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-players-route__controls > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-players-route__roster .admin-data-table__scroll {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .admin-players-route__roster .admin-data-table__table,
+  .admin-players-route__roster .admin-data-table__table tbody {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .admin-players-route__roster .admin-data-table__table thead {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-players-route__roster .admin-data-table__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-block-end: var(--admin-space-4);
+    padding: var(--admin-space-4);
+    border: 1px solid var(--admin-color-line);
+    border-block-start: 2px solid var(--admin-color-cyan);
+    background: var(--admin-color-surface-1);
+  }
+
+  .admin-players-route__roster .admin-data-table__cell {
+    max-inline-size: none;
+    padding: var(--admin-space-3) 0;
+    border-block-end: 1px solid var(--admin-color-line);
+    text-align: start;
+  }
+
+  .admin-players-route__roster .admin-data-table__cell[data-column="displayName"] {
+    padding-block-start: 0;
+  }
+
+  .admin-players-route__roster .admin-data-table__cell:not([data-column="displayName"]):not([data-column="actions"]) {
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 0.5fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--admin-space-3);
+  }
+
+  .admin-players-route__roster .admin-data-table__cell:not([data-column="displayName"]):not([data-column="actions"])::before {
+    color: var(--admin-color-text-faint);
+    font-family: var(--admin-font-mono);
+    font-size: var(--admin-text-xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .admin-players-route__roster .admin-data-table__cell[data-column="rosterLabel"]::before { content: "Roster"; }
+  .admin-players-route__roster .admin-data-table__cell[data-column="countryName"]::before { content: "Country"; }
+  .admin-players-route__roster .admin-data-table__cell[data-column="sessionStatus"]::before { content: "Presence"; }
+  .admin-players-route__roster .admin-data-table__cell[data-column="status"]::before { content: "Status"; }
+  .admin-players-route__roster .admin-data-table__cell[data-column="flagCount"]::before { content: "Flags"; }
+
+  .admin-players-route__roster .admin-data-table__cell[data-column="actions"] {
+    padding-block-end: 0;
+    border-block-end: 0;
+  }
+
+  .admin-players-route__player-copy {
+    inline-size: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-players-route__summary,
+  .admin-players-route__controls,
+  .admin-players-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-players-route__controls > :first-child,
+  .admin-players-form__grid .admin-field:has(textarea) {
+    grid-column: auto;
+  }
+
+  .admin-players-route__page-actions,
+  .admin-players-route__detail-actions,
+  .admin-players-form__actions {
+    justify-content: stretch;
+  }
+
+  .admin-players-route__page-actions .admin-button,
+  .admin-players-route__detail-actions .admin-button,
+  .admin-players-form__actions .admin-button {
+    flex: 1 1 9rem;
+  }
+
+  .admin-players-route__definition {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-players-route__definition small {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-players-route__roster .admin-data-table__row {
+    padding: var(--admin-space-3);
+  }
+
+  .admin-players-route__roster .admin-data-table__cell:not([data-column="displayName"]):not([data-column="actions"]) {
+    grid-template-columns: minmax(6rem, 0.55fr) minmax(0, 1fr);
+  }
+
+  .admin-players-route__status,
+  .admin-players-route__presence {
+    white-space: normal;
+  }
+}
