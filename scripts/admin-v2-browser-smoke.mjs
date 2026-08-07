@@ -629,7 +629,11 @@ async function verifyLegacyHandoffContract(browser, fixture, destination) {
       `${label} did not retain focus on the activated navigation item`,
     );
     assert.match(await boundary.innerText(), new RegExp(`${destination.label} remains in the existing Admin`, "i"));
-    assert.match(await boundary.innerText(), /Overview and Store are native Admin v2 routes/i, `${label} did not clearly identify its legacy status`);
+    assert.match(
+      await boundary.innerText(),
+      /Overview, Store, and Market are native Admin v2 routes/i,
+      `${label} did not clearly identify its legacy status`,
+    );
 
     const v2BoundaryUrl = runtime.page.url();
     const parsedBoundaryUrl = new URL(v2BoundaryUrl);
