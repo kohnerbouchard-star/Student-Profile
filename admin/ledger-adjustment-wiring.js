@@ -2,19 +2,9 @@
   "use strict";
 
   const ACTION = "confirm-player-balance-adjustment";
+  // Checking is the canonical personal transaction account.
+  const CHECKING_LEDGER_ACCOUNT_TYPE = "checking";
   const inFlight = new WeakSet();
-  const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
-    NORTHREACH: "NRC",
-    YRETHIA: "YRC",
-    THALORIS: "THD",
-    SOLVEND: "SLV",
-    ELDORAN: "ELD",
-    VALERION: "VAL",
-    LUMENOR: "LUM",
-    XALVORIA: "XAL",
-    DRAVENLOK: "DRV",
-    SYNDALIS: "SYN",
-  });
 
   function text(value) {
     return String(value ?? "").trim();
@@ -51,21 +41,12 @@
       model.selectedPlayerId ||
       record(model.selectedPlayer).id,
     );
-    if (explicitId) {
-      const match = Array.isArray(model.players)
-        ? model.players.find((player) => text(player?.id) === explicitId)
-        : null;
-      return Object.keys(record(match)).length ? record(match) : { id: explicitId };
-    }
+    if (!explicitId) return {};
 
-    const modalText = text(modal?.textContent).toLowerCase();
     const match = Array.isArray(model.players)
-      ? model.players.find((player) => {
-          const name = text(player?.displayName || player?.name).toLowerCase();
-          return Boolean(name && modalText.includes(name));
-        })
+      ? model.players.find((player) => text(player?.id) === explicitId)
       : null;
-    return record(match);
+    return Object.keys(record(match)).length ? record(match) : { id: explicitId };
   }
 
   function activeGameId(model) {
@@ -80,14 +61,6 @@
   }
 
   function playerLocalCurrencyCode(player) {
-    const countryCode = text(
-      player.countryCode ||
-      record(player.country).countryCode ||
-      record(player.country).code,
-    ).toUpperCase();
-    const mapped = COUNTRY_CURRENCY_BY_CODE[countryCode];
-    if (mapped) return mapped;
-
     const candidates = [
       player.countryCurrencyCode,
       player.localCurrencyCode,
@@ -115,14 +88,17 @@
 
   function numericBalance(player, currencyCode) {
     const normalizedCurrency = text(currencyCode).toUpperCase();
-    const row = balanceRows(player).find((entry) => {
+    const matchingRows = balanceRows(player).filter((entry) => {
       const accountType = text(entry?.accountType || entry?.account_type).toLowerCase();
       const code = text(entry?.currencyCode || entry?.currency_code).toUpperCase();
-      return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+      return accountType === "checking" && code === normalizedCurrency;
     });
-    if (row) {
-      const amount = Number(row.balance);
-      if (Number.isFinite(amount)) return amount;
+    if (matchingRows.length) {
+      const total = matchingRows.reduce((sum, entry) => {
+        const amount = Number(entry?.balance);
+        return Number.isFinite(amount) ? sum + amount : sum;
+      }, 0);
+      return Math.round(total * 100) / 100;
     }
 
     if (text(player.currencyCode).toUpperCase() !== normalizedCurrency) return 0;
@@ -241,7 +217,7 @@
           action: ACTION,
           amount,
           reason,
-          accountType: "checking",
+          accountType: CHECKING_LEDGER_ACCOUNT_TYPE,
           currencyMode: currency.currencyMode,
           currencyCode: currency.currencyCode,
         }),
@@ -295,6 +271,5 @@
 
   window.EconovariaLedgerAdjustmentWiring = Object.freeze({
     action: ACTION,
-    countryCurrencyByCode: COUNTRY_CURRENCY_BY_CODE,
   });
 })();

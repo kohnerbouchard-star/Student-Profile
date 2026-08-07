@@ -317,7 +317,7 @@ export class SupabasePlayerGameDashboardRepository
       publicMarket,
       players,
       countryByPlayerId,
-      cashBalances,
+      financialBalances,
       holdings,
       orders,
       trades,
@@ -333,7 +333,7 @@ export class SupabasePlayerGameDashboardRepository
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
-      this.readCashBalances(input.gameSessionId),
+      this.readFinancialBalances(input.gameSessionId),
       this.readStockHoldings(input.gameSessionId),
       this.readStockOrders(input),
       this.readStockTrades(input),
@@ -361,8 +361,18 @@ export class SupabasePlayerGameDashboardRepository
       countryCode: null,
       currencyCode: null,
     };
+    const meBalances = financialBalances.filter((balance) =>
+      balance.player_id === input.playerId
+    );
+    const meCheckingBalances = meBalances.filter((balance) =>
+      balance.account_type === "checking"
+    );
+    const meSavingsTotal = sum(
+      meBalances.filter((balance) => balance.account_type === "savings"),
+      (balance) => toNumber(balance.balance),
+    );
     const meCash = toCashDto(
-      cashBalances.filter((balance) => balance.player_id === input.playerId),
+      meCheckingBalances,
       meCountry.currencyCode,
     );
     const meHoldings = holdings
@@ -374,7 +384,7 @@ export class SupabasePlayerGameDashboardRepository
     const leaderboard = toLeaderboard(
       players,
       countryByPlayerId,
-      cashBalances,
+      financialBalances,
       holdings,
       stockByAssetId,
     );
@@ -398,7 +408,8 @@ export class SupabasePlayerGameDashboardRepository
         displayName: input.playerDisplayName,
         rosterLabel: input.playerRosterLabel,
         countryCode: meCountry.countryCode,
-        netWorth: myLeaderboardEntry?.netWorth ?? portfolio.totalEquity,
+        netWorth: myLeaderboardEntry?.netWorth ??
+          round(portfolio.totalEquity + meSavingsTotal),
         cash: meCash,
         stocks: {
           portfolio,
@@ -566,14 +577,15 @@ export class SupabasePlayerGameDashboardRepository
     return countryByPlayerId;
   }
 
-  private async readCashBalances(
+  private async readFinancialBalances(
     gameSessionId: string,
   ): Promise<readonly AccountBalanceRow[]> {
     const response = await this.client
       .from("account_balances")
       .select(CASH_SELECT)
       .eq("game_session_id", gameSessionId)
-      .eq("account_type", "cash")
+      .in("account_type", ["checking", "savings"])
+      .order("account_type", { ascending: true })
       .order("currency_code", { ascending: true });
 
     if (response.error) {
@@ -921,17 +933,20 @@ function toPublicPlayerDto(
 function toLeaderboard(
   players: readonly PlayerRow[],
   countryByPlayerId: ReadonlyMap<string, CountryInfo>,
-  cashBalances: readonly AccountBalanceRow[],
+  financialBalances: readonly AccountBalanceRow[],
   holdings: readonly StockHoldingRow[],
   stockByAssetId: ReadonlyMap<string, StockMarketBoardStockDto>,
 ): readonly PlayerGameDashboardLeaderboardEntryDto[] {
-  const cashByPlayerId = groupBy(cashBalances, (balance) => balance.player_id);
+  const financialByPlayerId = groupBy(
+    financialBalances,
+    (balance) => balance.player_id,
+  );
   const holdingsByPlayerId = groupBy(holdings, (holding) => holding.player_id);
 
   return players
     .map((player) => {
-      const cashTotal = sum(
-        cashByPlayerId.get(player.id) ?? [],
+      const financialTotal = sum(
+        financialByPlayerId.get(player.id) ?? [],
         (balance) => toNumber(balance.balance),
       );
       const holdingsMarketValue = sum(
@@ -945,7 +960,7 @@ function toLeaderboard(
       return {
         ...toPublicPlayerDto(player, countryByPlayerId.get(player.id)),
         rank: 0,
-        netWorth: round(cashTotal + holdingsMarketValue),
+        netWorth: round(financialTotal + holdingsMarketValue),
       };
     })
     .sort((left, right) =>

@@ -4,8 +4,11 @@ on:
   pull_request:
     paths:
       - "admin/ledger-adjustment-wiring.js"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
       - "backend/supabase/functions/admin-api/playerOperations.ts"
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
+      - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/store-local-currency.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
@@ -15,8 +18,11 @@ on:
       - main
     paths:
       - "admin/ledger-adjustment-wiring.js"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
       - "backend/supabase/functions/admin-api/playerOperations.ts"
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
+      - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/store-local-currency.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
@@ -31,9 +37,9 @@ concurrency:
 
 jobs:
   contract:
-    name: Local wallet and Store settlement contract
+    name: Checking, Savings, and local-currency contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -47,8 +53,22 @@ jobs:
         with:
           node-version: "22.23.1"
 
-      - name: Validate currency authority source contract
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Validate currency and Checking-wallet source contract
         run: node --test scripts/player-local-currency-authority-contract.test.mjs
 
-      - name: Validate Player Store local-wallet rendering
+      - name: Validate Player Store alias aggregation
         run: node player-terminal/tests/store-local-currency.mjs
+
+      - name: Validate Player Banking alias aggregation
+        run: npm --prefix backend run test:player-banking-public
+
+      - name: Check focused TypeScript formatting
+        run: |
+          deno fmt --check \
+            backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts \
+            backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts

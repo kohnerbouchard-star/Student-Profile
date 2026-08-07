@@ -244,7 +244,7 @@ function normalizeContractRewards(
     cash: cashAmount !== undefined && cashAmount > 0
       ? {
         amount: Math.round(cashAmount * 100) / 100,
-        accountType: optionalText(explicitCash, ["accountType"]) || "cash",
+        accountType: optionalText(explicitCash, ["accountType"]) || "checking",
         currencyCode: currencyCode.toUpperCase(),
       }
       : explicit.cash === null

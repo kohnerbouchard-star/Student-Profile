@@ -296,7 +296,7 @@ export class SupabasePlayerStoryContextRepository
       .from("account_balances")
       .select(CASH_SELECT)
       .eq("game_session_id", gameSessionId)
-      .eq("account_type", "cash");
+      .eq("account_type", "checking");
 
     assertNoError(response, "account_balances", "select");
 

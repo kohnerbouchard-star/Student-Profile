@@ -133,7 +133,7 @@ Deno.test("Contract cash rewards issue one ledger write while invalid and alread
       return Promise.resolve({
         data: [{
           ledger_entry_id: "00000000-0000-4000-8000-000000000041",
-          account_type: "cash",
+          account_type: "checking",
           balance: 125,
           currency_code: "ECO",
           created_at: "2026-07-19T06:00:00.000Z",
@@ -148,7 +148,7 @@ Deno.test("Contract cash rewards issue one ledger write while invalid and alread
     contractId: "00000000-0000-4000-8000-000000000051",
     progressId: "00000000-0000-4000-8000-000000000061",
     playerId: PLAYER,
-    rewardPayload: { cash: { amount: 15, currencyCode: "ECO", accountType: "cash" } },
+    rewardPayload: { cash: { amount: 15, currencyCode: "ECO", accountType: "checking" } },
     issuedAt: "2026-07-19T06:00:00.000Z",
     staffId: STAFF,
     requestId: "contract-reward-001",

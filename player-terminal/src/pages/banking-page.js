@@ -22,7 +22,8 @@ function publicAccountType(value) {
 
 function publicCheckingAccountId(value) {
   const normalized = String(value || "").trim();
-  if (!normalized || ["cash", "checking"].includes(normalized.toLowerCase())) return "CHECKING";
+  const semanticAccountId = normalized.toLowerCase();
+  if (!normalized || semanticAccountId === "checking" || semanticAccountId === "cash") return "CHECKING";
   return normalized;
 }
 

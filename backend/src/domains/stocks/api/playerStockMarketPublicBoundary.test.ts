@@ -241,7 +241,7 @@ class TradingRepository implements StockMarketTradingRepository {
         rejectionReason: null,
       },
       cash: {
-        accountType: "cash" as const,
+        accountType: "checking" as const,
         currencyCode: "XAL",
         balance: 9800,
       },
@@ -264,7 +264,7 @@ class ReadRepository implements StockMarketPlayerReadRepository {
       playerSessionId: input.playerSessionId,
       playerId: PLAYER_ID,
       cash: {
-        accountType: "cash",
+        accountType: "checking",
         currencyCode: "XAL",
         balance: 9800,
       },

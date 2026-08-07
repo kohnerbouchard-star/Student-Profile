@@ -277,13 +277,13 @@ function baseTables(): FakeTables {
       {
         player_id: "player-1",
         game_session_id: "game-1",
-        account_type: "cash",
+        account_type: "checking",
         balance: "1000",
       },
       {
         player_id: "player-1",
         game_session_id: "game-1",
-        account_type: "cash",
+        account_type: "checking",
         balance: 250,
       },
       {
@@ -295,7 +295,7 @@ function baseTables(): FakeTables {
       {
         player_id: "player-2",
         game_session_id: "game-1",
-        account_type: "cash",
+        account_type: "checking",
         balance: 500,
       },
     ],

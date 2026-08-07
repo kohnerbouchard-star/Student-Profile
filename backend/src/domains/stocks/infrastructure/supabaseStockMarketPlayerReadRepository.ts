@@ -292,7 +292,7 @@ export class SupabaseStockMarketPlayerReadRepository
       .select(CASH_SELECT)
       .eq("game_session_id", gameSessionId)
       .eq("player_id", playerId)
-      .eq("account_type", "cash")
+      .eq("account_type", "checking")
       .eq("currency_code", "ECO")
       .limit(1);
 
@@ -303,7 +303,7 @@ export class SupabaseStockMarketPlayerReadRepository
     const row = ((response.data ?? []) as AccountBalanceReadRow[])[0];
 
     return {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: row?.currency_code ?? "ECO",
       balance: toNumber(row?.balance),
     };

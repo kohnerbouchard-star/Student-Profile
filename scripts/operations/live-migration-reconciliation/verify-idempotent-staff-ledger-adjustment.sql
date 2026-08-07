@@ -13,7 +13,7 @@ select
   gen_random_uuid() as source_id,
   'ops-stage-bank-004-' || replace(gen_random_uuid()::text, '-', '') as idempotency_key,
   'ops-stage-bank-004-retry-probe'::text as route_key,
-  'cash'::text as account_type,
+  'checking'::text as account_type,
   7::numeric as amount,
   'ECO'::text as currency_code;
 

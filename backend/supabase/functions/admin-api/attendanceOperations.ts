@@ -248,7 +248,7 @@ async function adjustAttendanceReward(service: any, input: any): Promise<any> {
   const rpc = await service.rpc("record_player_ledger_entry", {
     p_game_session_id: input.gameSessionId,
     p_player_id: playerId,
-    p_account_type: text(body.accountType, "cash"),
+    p_account_type: text(body.accountType, "checking"),
     p_amount: amount,
     p_currency_code: text(body.currencyCode || body.currency, "ECO")
       .toUpperCase(),
