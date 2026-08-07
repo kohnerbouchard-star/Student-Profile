@@ -165,12 +165,12 @@ export function createAttendanceApi({
     const unlink = linkAbortSignal(signal, controller);
     const base = attendanceBase(gameId);
     try {
-      const [daily, enhanced] = await Promise.all([
-        requestAdminJson(fetchImpl, base, { signal: controller.signal, timeoutMs: requestTimeoutMs }),
-        requestAdminJson(fetchImpl, `${base}/today`, { signal: controller.signal, timeoutMs: requestTimeoutMs }),
-      ]);
+      const enhanced = await requestAdminJson(
+        fetchImpl,
+        `${base}/today`,
+        { signal: controller.signal, timeoutMs: requestTimeoutMs },
+      );
       return Object.freeze({
-        daily: payloadData(daily),
         enhanced: payloadData(enhanced),
         current: activeReadController === controller,
       });
