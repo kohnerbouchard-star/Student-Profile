@@ -15,6 +15,7 @@ function response(payload, status = 200, headers = {}) {
 function business(overrides = {}) {
   return {
     public_key: BUSINESS_KEY,
+    owner_player_id: OWNER_UUID,
     legal_name: "한강 로보틱스와 미래 산업 주식회사",
     entity_type: "corporation",
     industry_code: "ROBOTICS",
@@ -27,18 +28,13 @@ function business(overrides = {}) {
     profit_total: 150,
     valuation: 2500,
     reputation_score: 84,
-    capacity_units: 12,
-    demand_index: 1.08,
     failure_count: 0,
-    created_at: "2026-08-01T00:00:00.000Z",
     updated_at: "2026-08-07T00:00:00.000Z",
-    closed_at: null,
-    owner: { display_name: "김민준", roster_label: "Y10-04", status: "active" },
     ...overrides,
   };
 }
 
-test("Business API uses exact read and compliance contracts", async () => {
+test("Business API uses exact current-main read and compliance contracts", async () => {
   const calls = [];
   const api = createBusinessApi({
     fetchImpl: async (url, init) => {
@@ -80,23 +76,25 @@ test("Business API converts backend detail to safe error envelopes", async () =>
   });
 });
 
-test("Business read model supports zero, one, many, Korean text, signed profit, and no UUID presentation", () => {
+test("Business read model uses current-main fields and never presents owner_player_id", () => {
   const empty = normalizeBusinessReadModel({ data: { businesses: [] } });
   assert.equal(empty.isEmpty, true);
   const one = normalizeBusinessReadModel({ data: { businesses: [business()] } });
   assert.equal(one.businesses[0].legalName, "한강 로보틱스와 미래 산업 주식회사");
-  assert.equal(one.businesses[0].owner.displayName, "김민준");
+  assert.equal(one.businesses[0].owner.displayName, "Owner unavailable");
+  assert.equal(one.businesses[0].owner.rosterLabel, "");
+  assert.equal(one.businesses[0].owner.status, "");
+  assert.equal(JSON.stringify(one).includes(OWNER_UUID), false);
   const many = normalizeBusinessReadModel({ data: { businesses: [
     business(),
-    business({ public_key: `biz_${"b".repeat(32)}`, legal_name: "Northreach Logistics", status: "distressed", profit_total: -75, owner: { display_name: "Morgan Lee", roster_label: "Y10-05", status: "active" } }),
-    business({ public_key: `biz_${"c".repeat(32)}`, legal_name: "Solvend Cooperative", status: "restructuring", reputation_score: null }),
+    business({ public_key: `biz_${"b".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000003", legal_name: "Northreach Logistics", status: "distressed", profit_total: -75 }),
+    business({ public_key: `biz_${"c".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000004", legal_name: "Solvend Cooperative", status: "restructuring", reputation_score: null }),
   ] } });
   assert.equal(many.businesses.length, 3);
   assert.equal(many.summary.attentionCount, 2);
   assert.equal(many.businesses[1].profitTotal, -75);
-  assert.equal(JSON.stringify(many).includes(OWNER_UUID), false);
-  const malicious = normalizeBusinessReadModel({ data: { businesses: [business({ owner: { display_name: OWNER_UUID, roster_label: OWNER_UUID, status: "active" } })] } });
-  assert.equal(JSON.stringify(malicious).includes(OWNER_UUID), false);
+  assert.equal(many.businesses.every((row) => row.owner.displayName === "Owner unavailable"), true);
+  assert.equal(JSON.stringify(many).includes("owner_player_id"), false);
 });
 
 test("Business controller fails closed before reads and preserves stale data on refresh failure", async () => {
