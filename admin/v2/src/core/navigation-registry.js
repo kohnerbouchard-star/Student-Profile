@@ -146,7 +146,7 @@ const ROUTES = Object.freeze([
     groupId: "trade",
     icon: "inventory",
     permission: "inventory.redeem",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "world-management",
