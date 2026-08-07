@@ -2,7 +2,7 @@ import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 import { isResourceUnavailable } from "../api/resource-status.js";
-import { resolveStoreItemImage } from "../features/store/store-artwork.js";
+import { resolveStoreItemMedia } from "../features/store/store-artwork.js";
 
 function ownedQuantity(inventoryItems, itemId) {
   const holding = (Array.isArray(inventoryItems) ? inventoryItems : []).find((item) =>
@@ -16,8 +16,9 @@ function renderStoreItem(item, inventoryItems) {
   const soldOut = item.stock <= 0;
   const owned = ownedQuantity(inventoryItems, item.id);
   const currencyCode = String(item.currencyCode || "").trim().toUpperCase() || "—";
+  const media = resolveStoreItemMedia(item);
   return `<article class="player-terminal-store-card${soldOut ? " is-sold-out" : ""}">
-    <div class="player-terminal-store-image"><img src="${escapeHtml(resolveStoreItemImage(item))}" alt="" /><span>${escapeHtml(item.category)}</span></div>
+    <div class="player-terminal-store-image"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" width="160" height="160" loading="lazy" decoding="async" data-store-item-media="true" data-store-item-media-state="${escapeHtml(media.kind)}" /><span>${escapeHtml(item.category)}</span></div>
     <div class="player-terminal-store-copy"><small>STOCK ${escapeHtml(item.stock)} · OWNED ${escapeHtml(owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
     <div class="player-terminal-store-footer"><strong>${escapeHtml(formatCurrency(item.price, currencyCode))}</strong><button class="player-terminal-compact-button" type="button" data-player-purchase="${escapeHtml(item.id)}" ${soldOut ? "disabled" : ""}>${icon("cart")} ${soldOut ? "Sold out" : "Purchase"}</button></div>
   </article>`;

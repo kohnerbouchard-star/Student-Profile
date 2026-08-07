@@ -22,6 +22,7 @@ import {
   resolveCurrentAdminRouteBoundary,
 } from "./core/route-boundary.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
+import { createStoreController } from "./routes/store/StoreController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
 
@@ -147,16 +148,38 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const permissions = permissionSet(session);
   const hasPermission = (permission) => permissions.has(permission);
   const api = createAdminApiClient({
-    fetchImpl: createAdminBffTransport({ selectedGameId }),
+    fetchImpl: createAdminBffTransport({
+      selectedGameId,
+      session: () => window.EconovariaAdminAuthSession?.read?.(),
+    }),
   });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
+  let renderedMigratedRouteId = null;
   let destroyed = false;
+  let toast = null;
   const overview = createOverviewController({
     api,
     selectedGameId,
     hasPermission,
     onChange: renderOverviewChange,
     onResolved: updateOverviewShell,
+  });
+  const store = createStoreController({
+    api,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("store"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const routeControllers = Object.freeze({
+    overview: Object.freeze({
+      controller: overview,
+      render: () => overview.render({ onOpenLegacy: navigate }),
+    }),
+    store: Object.freeze({
+      controller: store,
+      render: () => store.render(),
+    }),
   });
 
   const initialGame = selectedGameContext(session, selectedGameId);
@@ -191,7 +214,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   });
 
   const shell = AdminShell({ navigation, topbar });
-  const toast = AdminToast();
+  toast = AdminToast();
   notificationDrawer = AdminDrawer({
     title: "Notifications",
     description: "Administrator alerts for the current game context.",
@@ -209,7 +232,8 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   });
 
   mount.replaceChildren(shell.element);
-  shell.element.dataset.adminV2State = overview.getState().status;
+  shell.element.dataset.adminV2State = routeControllers[activeRouteId]?.controller.getState().status
+    || "route-boundary";
 
   function selectGame(gameId) {
     if (!gameId) return;
@@ -238,19 +262,26 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   function renderRoute() {
     if (destroyed) return;
     const boundary = resolveCurrentAdminRouteBoundary();
+    if (renderedMigratedRouteId && renderedMigratedRouteId !== boundary.route.id) {
+      routeControllers[renderedMigratedRouteId]?.controller.deactivate?.();
+      renderedMigratedRouteId = null;
+    }
     activeRouteId = boundary.route.id;
     navigation.setCurrent(activeRouteId);
     topbar.setTitle(boundary.route.label);
 
     let content;
     if (boundary.kind === "migrated") {
-      const overviewRoute = overview.render({ onOpenLegacy: navigate });
+      const entry = routeControllers[boundary.moduleKey];
+      if (!entry) throw new Error("ADMIN_V2_ROUTE_CONTROLLER_UNAVAILABLE");
+      const routeView = entry.render();
       content = AdminRouteBoundary({
         routeId: boundary.route.id,
         mode: "source",
-        content: overviewRoute.element,
+        content: routeView.element,
       }).element;
-      shell.element.dataset.adminV2State = overview.getState().status;
+      renderedMigratedRouteId = boundary.route.id;
+      shell.element.dataset.adminV2State = entry.controller.getState().status;
     } else if (boundary.kind === "legacy") {
       content = AdminRouteBoundary({
         routeId: boundary.route.id,
@@ -258,7 +289,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Phase 1 migrates only Overview. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview and Store are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -283,14 +314,19 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     shell.setContent(permission.element);
     if (!allowed) shell.element.dataset.adminV2State = "permission-denied";
 
-    const overviewState = overview.getState();
-    if (boundary.kind === "migrated" && allowed && !overviewState.hasResolved && overviewState.requestVersion === 0) {
-      void overview.load();
+    const activeController = routeControllers[boundary.moduleKey]?.controller;
+    const activeState = activeController?.getState?.();
+    if (boundary.kind === "migrated" && allowed && !activeState?.hasResolved && activeState?.requestVersion === 0) {
+      void activeController.load();
     }
   }
 
   function renderOverviewChange() {
-    if (activeRouteId === ADMIN_DEFAULT_ROUTE_ID) renderRoute();
+    renderControllerChange(ADMIN_DEFAULT_ROUTE_ID);
+  }
+
+  function renderControllerChange(routeId) {
+    if (activeRouteId === routeId) renderRoute();
   }
 
   function updateOverviewShell(data) {
@@ -326,16 +362,19 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
 
   return {
     element: shell.element,
-    refresh: overview.load,
+    refresh() {
+      return routeControllers[activeRouteId]?.controller.load?.() || overview.load();
+    },
     destroy() {
       destroyed = true;
       overview.destroy();
+      store.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();
       accountDrawer.destroy();
       gameDrawer.destroy();
-      toast.destroy();
+      toast?.destroy();
       shell.destroy();
     },
   };

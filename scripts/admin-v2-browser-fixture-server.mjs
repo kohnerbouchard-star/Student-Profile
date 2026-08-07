@@ -88,6 +88,9 @@ function permissionsForScenario(scenario) {
   if (scenario === "planned-permission") {
     return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "marketplace.moderate");
   }
+  if (scenario === "store-permission") {
+    return ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "store.manage");
+  }
   return [...ADMIN_V2_FIXTURE_PERMISSIONS];
 }
 
@@ -251,24 +254,87 @@ function notificationsData({ empty = false } = {}) {
   };
 }
 
-function storeData({ empty = false } = {}) {
-  return {
-    items: empty
-      ? []
-      : [
-        {
-          id: "90000000-0000-4000-8000-000000000009",
-          ownerId: ADMIN_V2_FIXTURE_ADMIN_ID,
-          key: "transit-pass",
-          name: "Regional transit pass",
-          status: "active",
-          price: 45,
-          currencyCode: "ECO",
-          stockQuantity: 18,
-          purchaseStats: { purchaseCount: 12, unitsSold: 15, revenue: 675 },
-        },
-      ],
-  };
+function fixtureStoreItems({ empty = false, many = false } = {}) {
+  if (empty) return [];
+  const items = [
+    {
+      id: "90000000-0000-4000-8000-000000000009",
+      itemKey: "beta-nort-sensor-board",
+      key: "beta-nort-sensor-board",
+      name: "Northreach sensor board",
+      description: "Precision control board for classroom production systems.",
+      category: "Components",
+      status: "active",
+      visibility: "visible",
+      price: 45,
+      currencyCode: "NRC",
+      stockQuantity: 18,
+      sortOrder: 10,
+      purchaseStats: { purchaseCount: 12, unitsSold: 15, revenue: 675 },
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-06T00:00:00.000Z",
+    },
+    {
+      id: "91000000-0000-4000-8000-000000000010",
+      itemKey: "classroom-transit-pass",
+      key: "classroom-transit-pass",
+      name: "교실 지역 간 협력 연구를 위한 매우 긴 맞춤형 교통 이용권",
+      description: "A custom classroom item without persisted artwork.",
+      category: "Classroom services",
+      status: "active",
+      visibility: "visible",
+      price: 1250.5,
+      currencyCode: "YRC",
+      stockQuantity: 3,
+      sortOrder: 20,
+      purchaseStats: { purchaseCount: 2, unitsSold: 2, revenue: 2501 },
+      createdAt: "2026-08-02T00:00:00.000Z",
+      updatedAt: "2026-08-06T00:00:00.000Z",
+    },
+    {
+      id: "92000000-0000-4000-8000-000000000011",
+      itemKey: "archived-field-kit",
+      key: "archived-field-kit",
+      name: "Archived field kit",
+      description: "Retained for historical Store records.",
+      category: "Equipment",
+      status: "archived",
+      visibility: "hidden",
+      price: 80,
+      currencyCode: "THD",
+      stockQuantity: 0,
+      sortOrder: 30,
+      purchaseStats: { purchaseCount: 0, unitsSold: 0, revenue: 0 },
+      createdAt: "2026-08-03T00:00:00.000Z",
+      updatedAt: "2026-08-06T00:00:00.000Z",
+    },
+  ];
+  if (many) {
+    for (let index = items.length; index < 52; index += 1) {
+      items.push({
+        id: `93000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        itemKey: `classroom-item-${index + 1}`,
+        key: `classroom-item-${index + 1}`,
+        name: `Classroom Store item ${index + 1}`,
+        description: "Custom classroom Store inventory.",
+        category: index % 2 ? "Supplies" : "Services",
+        status: "active",
+        visibility: "visible",
+        price: index + 10,
+        currencyCode: index % 2 ? "ELD" : "NRC",
+        stockQuantity: index % 7,
+        sortOrder: (index + 1) * 10,
+        purchaseStats: { purchaseCount: index, unitsSold: index, revenue: index * (index + 10) },
+        createdAt: "2026-08-03T00:00:00.000Z",
+        updatedAt: "2026-08-06T00:00:00.000Z",
+      });
+    }
+  }
+  return items;
+}
+
+function storeData(items) {
+  return { storeItems: items, items };
 }
 
 function parseCookies(header = "") {
@@ -433,6 +499,9 @@ function requestRecord(request, scenario, runId, pathname) {
     authorization: String(request.headers.authorization || ""),
     deviceId: String(request.headers["x-econovaria-device-id"] || ""),
     gameId: String(request.headers["x-econovaria-game-id"] || ""),
+    csrfToken: String(request.headers["x-econovaria-csrf-token"] || ""),
+    idempotencyKey: String(request.headers["idempotency-key"] || ""),
+    contentType: String(request.headers["content-type"] || ""),
   });
 }
 
@@ -443,6 +512,7 @@ export async function startAdminV2FixtureServer({
 } = {}) {
   const requests = [];
   const requestCounts = new Map();
+  const storeItemsByRun = new Map();
   let origin = "";
 
   const server = http.createServer(async (request, response) => {
@@ -552,12 +622,84 @@ export async function startAdminV2FixtureServer({
       || upstreamPath === "/notifications"
       || upstreamPath === storePath;
 
-    if (!isOverviewRead || request.method !== "GET") {
+    const storeItemMatch = upstreamPath.match(new RegExp(`^${storePath}/([^/]+)$`));
+    const isStoreMutation = request.method === "POST" && upstreamPath === storePath
+      || ["PATCH", "PUT", "DELETE"].includes(request.method || "") && Boolean(storeItemMatch);
+
+    if ((!isOverviewRead || request.method !== "GET") && !isStoreMutation) {
       sendJson(response, 404, responseEnvelope(null, "admin-v2-unknown-route"));
       return;
     }
 
-    if (scenario === "loading") {
+    if (isStoreMutation) {
+      if (
+        request.headers["x-econovaria-csrf-token"] !== ADMIN_V2_FIXTURE_CSRF
+        || !String(request.headers["idempotency-key"] || "").trim()
+      ) {
+        sendFailure(response, 403, "CSRF_OR_IDEMPOTENCY_REQUIRED", {
+          requestId: "admin-v2-store-mutation-boundary",
+        });
+        return;
+      }
+      if (scenario === "store-mutation-failed" || scenario === "store-mutation-aal2") {
+        sendFailure(
+          response,
+          scenario === "store-mutation-aal2" ? 403 : 503,
+          scenario === "store-mutation-aal2" ? "MFA_REQUIRED" : "UPSTREAM_UNAVAILABLE",
+          { requestId: "admin-v2-store-mutation-failed", retryable: scenario !== "store-mutation-aal2" },
+        );
+        return;
+      }
+      let body = {};
+      try {
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+      } catch (_error) {
+        sendFailure(response, 400, "INVALID_REQUEST", { requestId: "admin-v2-store-invalid-json" });
+        return;
+      }
+      const current = storeItemsByRun.get(runId)
+        || fixtureStoreItems({ many: scenario === "store-many" });
+      let item;
+      if (request.method === "POST") {
+        item = {
+          id: "94000000-0000-4000-8000-000000000099",
+          itemKey: String(body.itemKey || "created-classroom-item"),
+          key: String(body.itemKey || "created-classroom-item"),
+          name: String(body.name || "Created classroom item"),
+          description: String(body.description || ""),
+          category: String(body.category || "General"),
+          price: Number(body.price || 0),
+          currencyCode: String(body.currencyCode || "NRC"),
+          stockQuantity: Number(body.stockQuantity || 0),
+          status: String(body.status || "active"),
+          visibility: String(body.visibility || "visible"),
+          sortOrder: Number(body.sortOrder || 0),
+          purchaseStats: { purchaseCount: 0, unitsSold: 0, revenue: 0 },
+          createdAt: "2026-08-07T00:00:00.000Z",
+          updatedAt: "2026-08-07T00:00:00.000Z",
+        };
+        current.push(item);
+      } else {
+        const itemId = decodeURIComponent(storeItemMatch[1]);
+        item = current.find((candidate) => candidate.id === itemId);
+        if (!item) {
+          sendFailure(response, 404, "STORE_ITEM_NOT_FOUND", { requestId: "admin-v2-store-missing" });
+          return;
+        }
+        if (request.method === "DELETE") {
+          Object.assign(item, { status: "archived", visibility: "hidden", updatedAt: "2026-08-07T00:00:00.000Z" });
+        } else {
+          Object.assign(item, body, { updatedAt: "2026-08-07T00:00:00.000Z" });
+        }
+      }
+      storeItemsByRun.set(runId, current);
+      sendJson(response, request.method === "POST" ? 201 : 200, { ok: true, item }, "admin-v2-store-mutation");
+      return;
+    }
+
+    if (scenario === "loading" || scenario === "store-loading" && upstreamPath === storePath) {
       await delayForResponse(2_500, response);
       if (response.destroyed) return;
     }
@@ -565,6 +707,18 @@ export async function startAdminV2FixtureServer({
     if (scenario === "stale" && requestCount > 1) {
       await delayForResponse(250, response);
       if (response.destroyed) return;
+    }
+
+    if (scenario === "store-stale" && upstreamPath === storePath && requestCount > 1) {
+      await delayForResponse(250, response);
+      if (response.destroyed) return;
+      sendRawFailure(response, "admin-v2-store-stale");
+      return;
+    }
+
+    if (scenario === "store-failed" && upstreamPath === storePath) {
+      sendRawFailure(response, "admin-v2-store-failed");
+      return;
     }
 
     if (
@@ -606,7 +760,14 @@ export async function startAdminV2FixtureServer({
       return;
     }
     if (upstreamPath === storePath) {
-      sendJson(response, 200, responseEnvelope(storeData({ empty }), "admin-v2-store"));
+      if (!storeItemsByRun.has(runId)) {
+        const initialItems = fixtureStoreItems({
+          empty: empty || scenario === "store-empty",
+          many: scenario === "store-many",
+        });
+        storeItemsByRun.set(runId, scenario === "store-one" ? initialItems.slice(0, 1) : initialItems);
+      }
+      sendJson(response, 200, responseEnvelope(storeData(storeItemsByRun.get(runId)), "admin-v2-store"));
       return;
     }
   });

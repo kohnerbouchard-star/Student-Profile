@@ -2,7 +2,12 @@ const LOCAL_ADMIN_API_PREFIX = "/api/admin";
 const DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const DEVICE_HEADER = "x-econovaria-device-id";
 const GAME_HEADER = "x-econovaria-game-id";
+const CSRF_HEADER = "x-econovaria-csrf-token";
+const IDEMPOTENCY_HEADER = "Idempotency-Key";
 const DEVICE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/;
+const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE"]);
 
 function deviceId(storage, cryptoObject) {
   const existing = String(storage?.getItem?.(DEVICE_STORAGE_KEY) || "").trim().toLowerCase();
@@ -34,18 +39,70 @@ function redirectToSignIn(reason, locationLike) {
   locationLike.replace(destination.href);
 }
 
+function transportFailure(code, message, status = 0) {
+  const error = new Error(message);
+  error.name = "AdminBffTransportError";
+  error.code = code;
+  error.status = status;
+  error.retryable = false;
+  return error;
+}
+
+function readMutationSession(session, sessionManager) {
+  const current = typeof session === "function"
+    ? session()
+    : session || sessionManager?.read?.();
+  const csrfToken = String(current?.csrfToken || "").trim();
+  const expired = typeof sessionManager?.isExpired === "function"
+    ? sessionManager.isExpired(current, 0)
+    : false;
+  if (current?.authenticated !== true || expired || !CSRF_PATTERN.test(csrfToken)) {
+    throw transportFailure(
+      "SESSION_REQUIRED",
+      "Administrator session verification is unavailable.",
+      401,
+    );
+  }
+  return csrfToken;
+}
+
+function canonicalIdempotencyKey(headers) {
+  const canonical = String(headers.get("idempotency-key") || "").trim();
+  const compatibility = String(headers.get("x-idempotency-key") || "").trim();
+  headers.delete("idempotency-key");
+  headers.delete("x-idempotency-key");
+  if (canonical && compatibility && canonical !== compatibility) {
+    throw transportFailure(
+      "INVALID_REQUEST",
+      "Administrator request identity is inconsistent.",
+      400,
+    );
+  }
+  const value = canonical || compatibility;
+  if (!IDEMPOTENCY_KEY_PATTERN.test(value)) {
+    throw transportFailure(
+      "INVALID_REQUEST",
+      "Administrator request identity is unavailable.",
+      400,
+    );
+  }
+  return value;
+}
+
 /**
- * Creates a V2-scoped, read-only transport for the existing HttpOnly Admin BFF.
+ * Creates a V2-scoped transport for the existing HttpOnly Admin BFF.
  * It never installs a global fetch wrapper and never accepts a bearer token.
  */
 export function createAdminBffTransport({
   selectedGameId,
+  session = null,
   runtimeConfig = globalThis.EconovariaRuntimeConfig,
   sessionManager = globalThis.EconovariaAdminAuthSession,
   fetchImpl = globalThis.fetch?.bind(globalThis),
   locationLike = globalThis.location,
   storage = globalThis.localStorage,
   cryptoObject = globalThis.crypto,
+  setTimeoutImpl = globalThis.setTimeout?.bind(globalThis),
 } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("Admin BFF transport is unavailable.");
   const gameId = String(selectedGameId || "").trim();
@@ -54,18 +111,31 @@ export function createAdminBffTransport({
 
   return async function adminBffFetch(input, init = {}) {
     const method = String(init.method || "GET").toUpperCase();
-    if (method !== "GET" && method !== "HEAD") {
-      throw new TypeError("Admin v2 Phase 1 transport is read-only.");
+    if (!ALLOWED_METHODS.has(method)) {
+      throw transportFailure("INVALID_REQUEST", "Admin v2 request method is unsupported.", 400);
     }
+    const isMutation = method !== "GET" && method !== "HEAD";
 
     const headers = new Headers(init.headers || {});
     headers.delete("authorization");
     headers.delete("cookie");
-    headers.delete("x-econovaria-csrf-token");
+    headers.delete(CSRF_HEADER);
+    headers.delete(DEVICE_HEADER);
+    headers.delete(GAME_HEADER);
     headers.set("Accept", "application/json");
     headers.set("apikey", String(runtimeConfig?.supabasePublishableKey || ""));
     headers.set(DEVICE_HEADER, deviceId(storage, cryptoObject));
     headers.set(GAME_HEADER, gameId);
+    if (isMutation) {
+      headers.set(CSRF_HEADER, readMutationSession(session, sessionManager));
+      headers.set(IDEMPOTENCY_HEADER, canonicalIdempotencyKey(headers));
+      if (init.body !== undefined && !headers.has("content-type")) {
+        headers.set("Content-Type", "application/json");
+      }
+    } else {
+      headers.delete("idempotency-key");
+      headers.delete("x-idempotency-key");
+    }
 
     const response = await fetchImpl(adminBffUrl(input, runtimeConfig, locationLike), {
       ...init,
@@ -80,7 +150,7 @@ export function createAdminBffTransport({
     if (response.status === 401 && !unauthorizedRedirectScheduled) {
       unauthorizedRedirectScheduled = true;
       sessionManager?.clear?.();
-      globalThis.setTimeout?.(() => redirectToSignIn("session-expired", locationLike), 250);
+      setTimeoutImpl?.(() => redirectToSignIn("session-expired", locationLike), 250);
     }
     return response;
   };

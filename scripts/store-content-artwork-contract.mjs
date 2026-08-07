@@ -53,8 +53,13 @@ export async function validateStoreContentArtworkContract() {
   const [contentSource, artworkSource, store, generatedArtwork, pack, mappings] = await Promise.all(
     Object.values(requiredPaths).map((filePath) => readJson(filePath)),
   );
-  const { resolveStoreItemImage } = await import(pathToFileURL(PLAYER_STORE_ARTWORK_PATH).href);
+  const {
+    STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+    resolveStoreItemImage,
+    resolveStoreItemMedia,
+  } = await import(pathToFileURL(PLAYER_STORE_ARTWORK_PATH).href);
   requireCondition(typeof resolveStoreItemImage === 'function', 'Player Store artwork resolver is not exported.');
+  requireCondition(typeof resolveStoreItemMedia === 'function', 'Canonical Store media resolver is not exported to Player.');
 
   requireCondition(contentSource.count === 50 && contentSource.records?.length === 50, 'Authored Store content must contain exactly 50 records.');
   requireCondition(artworkSource.recordCount === 50 && artworkSource.records?.length === 50, 'Artwork source must contain exactly 50 records.');
@@ -106,15 +111,18 @@ export async function validateStoreContentArtworkContract() {
       resolveStoreItemImage({ itemKey: item.itemKey, image: './assets/store-items/store-item-custom.svg' }) === expectedPlayerImagePath(artwork.runtimeImagePath),
       `${item.stableId} does not resolve to its repository-owned Player image.`,
     );
+    const descriptor = resolveStoreItemMedia({ itemKey: item.itemKey, name: item.name });
+    requireCondition(descriptor.src === expectedPlayerImagePath(artwork.runtimeImagePath), `${item.stableId} canonical media path is inconsistent.`);
+    requireCondition(descriptor.kind === 'seeded' && descriptor.fallback === false, `${item.stableId} canonical media classification is inconsistent.`);
   }
 
   requireCondition(
-    resolveStoreItemImage({ itemKey: 'custom-unseeded-item', image: './assets/store-items/custom.svg' }) === './assets/store-items/custom.svg',
-    'Non-seed Store items must preserve their supplied fallback image.',
+    resolveStoreItemImage({ itemKey: 'custom-unseeded-item', image: 'https://attacker.example/item.png' }) === STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+    'Non-seed Store items must ignore unpersisted media and use the branded placeholder.',
   );
   requireCondition(
-    resolveStoreItemImage({ itemKey: 'beta-nort-../unsafe', image: './assets/store-items/safe.svg' }) === './assets/store-items/safe.svg',
-    'Unsafe Store item slugs must fail closed to the supplied fallback image.',
+    resolveStoreItemImage({ itemKey: 'beta-nort-../unsafe', image: 'javascript:alert(1)' }) === STORE_ITEM_MEDIA_PLACEHOLDER_SRC,
+    'Unsafe Store item slugs must fail closed to the branded placeholder.',
   );
 
   const mappingByStore = new Map((mappings.mappings?.storeItems ?? []).map((entry) => [entry.stableId, entry]));

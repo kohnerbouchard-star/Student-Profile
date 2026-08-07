@@ -29,6 +29,7 @@ import { renderProgressionPage } from "./pages/progression-page.js";
 import { renderProfilePage } from "./pages/profile-page.js";
 import { renderWorldPage } from "./pages/world-page.js";
 import { getWorldRouteViewState } from "./features/world/world-route-view-state.js";
+import { handleStoreItemMediaError } from "./features/store/store-artwork.js";
 
 function fallbackWorldModel(data) {
   const countries = Array.isArray(data?.countries) ? data.countries : [];
@@ -1070,6 +1071,7 @@ export function createPlayerTerminal({ mount, config }) {
   mount.addEventListener("submit", handleSubmit);
   mount.addEventListener("input", handleInput);
   mount.addEventListener("keydown", handleKeyDown);
+  mount.addEventListener("error", handleStoreItemMediaError, true);
   globalThis.addEventListener("hashchange", handleHashChange);
   globalThis.addEventListener("resize", handleResize);
   globalThis.addEventListener("offline", handleOffline);
@@ -1115,6 +1117,7 @@ export function createPlayerTerminal({ mount, config }) {
       mount.removeEventListener("submit", handleSubmit);
       mount.removeEventListener("input", handleInput);
       mount.removeEventListener("keydown", handleKeyDown);
+      mount.removeEventListener("error", handleStoreItemMediaError, true);
       globalThis.removeEventListener("hashchange", handleHashChange);
       globalThis.removeEventListener("resize", handleResize);
       globalThis.removeEventListener("offline", handleOffline);
