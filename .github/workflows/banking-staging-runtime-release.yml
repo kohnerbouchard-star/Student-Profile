@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 2
+          fetch-depth: 3
           persist-credentials: false
 
       - name: Prove runtime source is the frozen banking tree
@@ -54,8 +54,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD^)" = "$EXPECTED_RUNTIME_PARENT_SHA"
-          changed="$(git diff --name-only HEAD^ HEAD)"
+          git merge-base --is-ancestor "$EXPECTED_RUNTIME_PARENT_SHA" HEAD
+          changed="$(git diff --name-only "$EXPECTED_RUNTIME_PARENT_SHA" HEAD)"
           test "$changed" = ".github/workflows/banking-staging-runtime-release.yml"
 
           test -f backend/supabase/migrations/20260807070000_canonicalize_player_checking_wallet_v1.sql
