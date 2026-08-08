@@ -174,14 +174,16 @@ export async function handlePlayerSessionBootstrapRequest(
     }
 
     const balances = (balancesResponse.data ?? []) as AccountBalanceRow[];
-    const checkingCurrencyCodes = [...new Set(
-      balances
-        .filter((balanceRow) =>
-          String(balanceRow.account_type).trim().toLowerCase() === "checking"
-        )
-        .map((balanceRow) => normalizedCurrencyCode(balanceRow.currency_code))
-        .filter(Boolean),
-    )];
+    const checkingCurrencyCodes = [
+      ...new Set(
+        balances
+          .filter((balanceRow) =>
+            String(balanceRow.account_type).trim().toLowerCase() === "checking"
+          )
+          .map((balanceRow) => normalizedCurrencyCode(balanceRow.currency_code))
+          .filter(Boolean),
+      ),
+    ];
     let playerCurrencyCode = checkingCurrencyCodes.length === 1
       ? checkingCurrencyCodes[0]
       : "";

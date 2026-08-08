@@ -134,7 +134,9 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
 
   then<TResult1 = { data: unknown; error: null }, TResult2 = never>(
     onfulfilled?:
-      | ((value: { data: unknown; error: null }) => TResult1 | PromiseLike<TResult1>)
+      | ((
+        value: { data: unknown; error: null },
+      ) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
