@@ -66,15 +66,31 @@ source = replaceExactlyOnce(
   };
 }`,
   `async function bankingBalances(page) {
-  const savingsCard = page.locator('[data-player-banking-balance^="savings:"]').first();
-  await savingsCard.waitFor({ state: "visible", timeout: 30_000 });
-  const savingsKey = String(await savingsCard.getAttribute("data-player-banking-balance") || "");
-  const currencyCode = savingsKey.split(":")[1] || "";
-  if (!currencyCode) throw new Error("Savings balance did not expose its currency code.");
+  const sessionResponse = await page.evaluate(async () => {
+    const response = await fetch("/functions/v1/player-web-session-api/proxy/players/me", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    return {
+      status: response.status,
+      payload: await response.json().catch(() => null),
+    };
+  });
+  if (sessionResponse.status !== 200 || sessionResponse.payload?.ok !== true) {
+    throw new Error(\`Player session currency lookup returned \${sessionResponse.status}.\`);
+  }
+  const currencyCode = String(sessionResponse.payload?.player?.currencyCode || "")
+    .trim()
+    .toUpperCase();
+  if (!currencyCode) throw new Error("Player session did not expose its assigned currency code.");
   const checkingCard = page.locator(
     \`[data-player-banking-balance="checking:\${currencyCode}"]\`,
   ).first();
+  const savingsCard = page.locator(
+    \`[data-player-banking-balance="savings:\${currencyCode}"]\`,
+  ).first();
   await checkingCard.waitFor({ state: "visible", timeout: 30_000 });
+  await savingsCard.waitFor({ state: "visible", timeout: 30_000 });
   return {
     currencyCode,
     checking: numberFromText(await checkingCard.locator("h3").textContent()),
