@@ -14,6 +14,7 @@ const migrations = [
   "20260806120030_enforce_economic_asset_constraints_v2.sql",
   "20260806120040_add_economic_asset_projection_context_triggers_v2.sql",
   "20260806120050_add_economic_asset_runtime_compatibility_triggers_v2.sql",
+  "20260806120055_repair_store_source_identity_resolution_v2.sql",
   "20260806120060_add_economic_asset_sync_gate_v2.sql",
   "20260806120100_add_canonical_inventory_posting_v2.sql",
   "20260806120110_cutover_store_settlement_v2.sql",
@@ -29,6 +30,9 @@ const migrations = [
   "20260806120300_integrate_seed_catalog_with_economic_core_v2.sql",
   "20260806120400_add_marketplace_redemption_canonical_context_v2.sql",
   "20260806120410_add_economic_asset_integrity_validator_v2.sql",
+  "20260806120420_harden_inventory_journal_append_only_v2.sql",
+  "20260806120430_repair_seed_and_supply_canonical_identity_v2.sql",
+  "20260806120440_repair_seed_store_rollback_compatibility_v2.sql",
 ];
 
 const sources = new Map(await Promise.all(migrations.map(async (name) => {
@@ -67,6 +71,8 @@ function assertNotContains(value, pattern, message) {
 test("migration manifest is ordered, unique, and transaction bounded", () => {
   assert.equal(new Set(migrations).size, migrations.length);
   assert.deepEqual([...migrations].sort(), migrations);
+  assert.equal(migrations.length, 25);
+  assert.equal(migrations.at(-1), "20260806120440_repair_seed_store_rollback_compatibility_v2.sql");
   for (const [name, sql] of sources) {
     const withoutLeadingComments = sql.replace(/^(?:\s*--[^\n]*\n)*/u, "").trimStart();
     assert.ok(withoutLeadingComments.startsWith("begin;"), `${name} must begin transactionally`);
@@ -166,6 +172,19 @@ test("Seed import keeps its public RPC and uses explicit source item identity", 
   assertContains(sql, /apply_seed_content_release_legacy_v1/iu);
   assertContains(sql, /sync_game_item_catalog_v2\(\s*p_game_session_id,\s*p_store_items/iu);
   assertContains(source("20260806120060_add_economic_asset_sync_gate_v2.sql"), /sourceItemStableId/iu);
+  assertContains(source("20260806120430_repair_seed_and_supply_canonical_identity_v2.sql"), /promote_store_game_item_key_v2/iu);
+});
+
+test("Seed rollback removes synthetic Store stock only when canonical history is absent", () => {
+  const sql = source("20260806120440_repair_seed_store_rollback_compatibility_v2.sql");
+  const body = functionBody(sql, "release_history_free_store_stock_projection_v2");
+  assertContains(body, /inventory_transaction_lines/iu, "Canonical journal history must block hard Store deletion");
+  assertContains(body, /errcode\s*=\s*'23503'/iu, "Journal-backed Store rows must use the legacy soft-rollback path");
+  assertContains(body, /delete from public\.inventory_holdings/iu, "History-free synthetic Store stock must be removable");
+  assertContains(body, /account_kind\s*=\s*'store_stock'/iu);
+  assertContains(body, /location_key\s*=\s*'store_item:'/iu);
+  assertContains(body, /holding\.player_id\s+is\s+null/iu);
+  assertContains(sql, /before delete on public\.store_items/iu);
 });
 
 test("Marketplace and redemption gain canonical context without replacing public workflows", () => {
@@ -208,6 +227,7 @@ test("Player inventory reads canonical metadata without serializing canonical UU
   assertContains(contracts, /internalStoreItemUuid:\s*string\s*\|\s*null/iu);
   assertContains(repository, /from\("game_items"\)/iu);
   assertContains(repository, /canonical_key/iu);
+  assertContains(repository, /itemStatus:\s*requireGameItemStatus\(item\.status\)/iu);
   assertContains(service, /storeItemId:\s*publicItemId/iu);
   assertContains(service, /itemKey:\s*publicItemId/iu);
   assertNotContains(service, /internalGameItemUuid/iu);

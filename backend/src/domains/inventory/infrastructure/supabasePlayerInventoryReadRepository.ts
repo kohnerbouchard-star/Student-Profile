@@ -72,7 +72,6 @@ const STORE_ITEM_SELECT = [
   "category",
   "price",
   "currency_code",
-  "status",
   "visibility",
 ].join(",");
 
@@ -221,9 +220,7 @@ function toInventoryRecord(
         metadata.currencyCode,
         "ECO",
       ),
-    itemStatus: storeItem
-      ? requireStoreItemStatus(storeItem.status)
-      : requireGameItemStatus(item.status),
+    itemStatus: requireGameItemStatus(item.status),
     itemVisibility: storeItem
       ? requireStoreItemVisibility(storeItem.visibility)
       : "visible",
@@ -311,16 +308,6 @@ function firstCurrencyCode(...values: unknown[]): string {
     if (typeof value !== "string" || !value.trim()) continue;
     const text = value.trim().toUpperCase();
     if (/^[A-Z0-9_]{3,16}$/.test(text)) return text;
-  }
-  throw readFailed();
-}
-
-function requireStoreItemStatus(
-  value: unknown,
-): "active" | "disabled" | "archived" {
-  const status = requireText(value).toLowerCase();
-  if (status === "active" || status === "disabled" || status === "archived") {
-    return status;
   }
   throw readFailed();
 }

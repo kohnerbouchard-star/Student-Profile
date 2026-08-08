@@ -85,6 +85,59 @@ Deno.test("inventory repository preserves Store public metadata while joining ca
   });
 });
 
+Deno.test("inventory repository uses canonical item status instead of Store offer status", async () => {
+  const repository = new SupabasePlayerInventoryReadRepository(client({
+    inventory_holdings: [{
+      id: HOLDING,
+      game_session_id: GAME,
+      player_id: PLAYER,
+      store_item_id: STORE_ITEM,
+      inventory_account_id: ACCOUNT,
+      game_item_id: GAME_ITEM,
+      quantity_owned: 1,
+      quantity_reserved: 0,
+      average_unit_cost: "1.00",
+      cost_currency_code: "ECO",
+      created_at: NOW,
+      updated_at: NOW,
+    }],
+    game_items: [{
+      id: GAME_ITEM,
+      game_session_id: GAME,
+      canonical_key: "effect-token",
+      name: "Effect Token",
+      description: "Owned canonical item",
+      item_class: "consumable",
+      subtype: "general",
+      status: "disabled",
+      metadata: { effectEnabled: true, currencyCode: "ECO" },
+    }],
+    store_items: [{
+      id: STORE_ITEM,
+      game_session_id: GAME,
+      game_item_id: GAME_ITEM,
+      item_key: "beta-nort-effect-token",
+      name: "Effect Token Offer",
+      description: "Commercial offer remains active",
+      category: "consumables",
+      price: "1.00",
+      currency_code: "ECO",
+      status: "active",
+      visibility: "visible",
+    }],
+  }) as never);
+
+  const result = await repository.readInventory({
+    gameId: GAME,
+    playerUuid: PLAYER,
+    limit: LIMIT,
+  });
+
+  assertEquals(result.records[0]?.itemStatus, "disabled");
+  assertEquals(result.records[0]?.itemVisibility, "visible");
+  assertEquals(result.records[0]?.usable, true);
+});
+
 Deno.test("inventory repository reads crafted ownership without a Store offer", async () => {
   const accessed: string[] = [];
   const repository = new SupabasePlayerInventoryReadRepository(client({

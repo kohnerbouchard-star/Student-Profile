@@ -31,7 +31,8 @@ env:
   DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
   MIGRATION_PREFIX: "2026080612"
-  EXPECTED_FINAL_MIGRATION: "20260806120420"
+  EXPECTED_FINAL_MIGRATION: "20260806120440"
+  EXPECTED_MIGRATION_COUNT: "25"
 
 jobs:
   release:
@@ -68,7 +69,7 @@ jobs:
           test -f scripts/economic-asset-core-staging-acceptance.sql
           test -f scripts/build-economic-asset-migration-bundle.mjs
           mapfile -t migrations < <(find backend/supabase/migrations -maxdepth 1 -type f -name "${MIGRATION_PREFIX}*.sql" -printf '%f\n' | sort)
-          test "${#migrations[@]}" -ge 23
+          test "${#migrations[@]}" = "$EXPECTED_MIGRATION_COUNT"
           test "${migrations[-1]%%_*}" = "$EXPECTED_FINAL_MIGRATION"
           printf '%s\n' "${migrations[@]}" > /tmp/economic-asset-migration-manifest.txt
           echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
