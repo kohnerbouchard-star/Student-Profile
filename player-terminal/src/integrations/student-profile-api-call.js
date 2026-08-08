@@ -49,6 +49,7 @@ function explicitSessionCurrency(rawSession) {
     rawSession?.localCurrencyCode,
     player.countryCurrencyCode,
     player.localCurrencyCode,
+    player.currencyCode,
     country.currencyCode,
   ]) {
     const code = currencyCode(value);
