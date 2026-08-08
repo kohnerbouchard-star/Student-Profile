@@ -29,6 +29,7 @@ import { createOverviewController } from "./routes/overview/OverviewController.j
 import { createMarketController } from "./routes/market/MarketController.js";
 import { createPlayersController } from "./routes/players/PlayersController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
+import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
 
@@ -205,6 +206,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("contracts"),
     notify: (notification) => toast?.push(notification),
   });
+  const worldManagement = createWorldManagementController({
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("world-management"),
+    notify: (notification) => toast?.push(notification),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -229,6 +236,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     contracts: Object.freeze({
       controller: contracts,
       render: () => contracts.render(),
+    }),
+    "world-management": Object.freeze({
+      controller: worldManagement,
+      render: () => worldManagement.render(),
     }),
   });
 
@@ -339,7 +350,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, and Market are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, and World Management are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -423,6 +434,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       market.destroy();
       players.destroy();
       contracts.destroy();
+      worldManagement.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();
