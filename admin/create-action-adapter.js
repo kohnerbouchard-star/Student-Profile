@@ -68,10 +68,27 @@
       : "hidden";
   }
 
-  function preferredStoreCurrency() {
+  function validCurrencyCode(value) {
+    const code = text(value).toUpperCase();
+    return /^[A-Z0-9]{3,16}$/.test(code) ? code : "";
+  }
+
+  function preferredStoreCurrency(source = {}) {
+    const sourcePayload = object(source.payload);
+    const explicitCandidates = [
+      sourcePayload.currencyCode,
+      sourcePayload.currency,
+      source.currencyCode,
+      source.currency
+    ];
+    for (const candidate of explicitCandidates) {
+      const code = validCurrencyCode(candidate);
+      if (code) return code;
+    }
+
     const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
     const game = model.activeGame || model.game || {};
-    const candidates = [
+    const contextCandidates = [
       game.countryCurrencyCode,
       game.localCurrencyCode,
       game.currencyCode,
@@ -83,11 +100,15 @@
       model.country_currency_code,
       model.local_currency_code
     ];
-    for (const candidate of candidates) {
-      const code = text(candidate).toUpperCase();
-      if (/^[A-Z0-9]{3,16}$/.test(code) && code !== "ECO") return code;
+    for (const candidate of contextCandidates) {
+      const code = validCurrencyCode(candidate);
+      if (code) return code;
     }
-    throw new Error("The active game's local currency is unavailable.");
+
+    // No national currency can be inferred from a game session. Author the
+    // otherwise unscoped Store/Contract value in the explicit global unit
+    // rather than inventing a country currency or a conversion rate.
+    return "ECO";
   }
 
   async function readJson(request) {
@@ -159,7 +180,7 @@
         accountType: text(cashSource.accountType) || "checking",
         currencyCode: text(
           cashSource.currencyCode || cashSource.currency || payload.currencyCode
-        ).toUpperCase() || preferredStoreCurrency()
+        ).toUpperCase() || preferredStoreCurrency(payload)
       }
       : undefined;
 
@@ -363,7 +384,7 @@
         category: slug(rawCategory, "general").slice(0, 32),
         status: normalizedStoreStatus(rawStatus),
         price: numberOrUndefined(formValue(form, "price")),
-        currencyCode: preferredStoreCurrency(),
+        currencyCode: preferredStoreCurrency(source),
         stockQuantity,
         visibility: normalizedStoreVisibility(rawVisibility),
         sortOrder: 0
