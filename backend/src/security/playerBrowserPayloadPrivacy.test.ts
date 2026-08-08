@@ -82,6 +82,7 @@ Deno.test("browser payload privacy: bootstrap exposes no raw token or internal U
       rosterLabel: "Table 4",
       playerIdentifier: "CARD-200",
       status: "active",
+      currencyCode: "ECO",
     },
     session: {
       status: "active",
@@ -152,42 +153,46 @@ function visit(
   findings: string[],
   allowedSensitivePaths: ReadonlySet<string>,
 ): void {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) =>
-      visit(entry, `${path}[${index}]`, findings, allowedSensitivePaths)
-    );
-    return;
-  }
-
-  if (value === null || typeof value !== "object") {
-    if (typeof value === "string" && UUID_PATTERN.test(value)) {
+  if (typeof value === "string") {
+    if (UUID_PATTERN.test(value)) {
       findings.push(`${path || "<root>"} contains a UUID value`);
     }
     return;
   }
 
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    const childPath = path ? `${path}.${key}` : key;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => visit(
+      item,
+      `${path}[${index}]`,
+      findings,
+      allowedSensitivePaths,
+    ));
+    return;
+  }
+
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  for (const [key, nested] of Object.entries(value)) {
+    const nestedPath = path ? `${path}.${key}` : key;
     if (
       SENSITIVE_KEY_PATTERN.test(key) &&
-      !allowedSensitivePaths.has(childPath)
+      !allowedSensitivePaths.has(nestedPath)
     ) {
-      findings.push(`${childPath} uses a sensitive field name`);
-      continue;
+      findings.push(`${nestedPath} uses a sensitive field name`);
     }
-    if (INTERNAL_IDENTIFIER_KEY_PATTERN.test(childPath)) {
-      findings.push(`${childPath} exposes an internal identifier`);
+    if (INTERNAL_IDENTIFIER_KEY_PATTERN.test(nestedPath)) {
+      findings.push(`${nestedPath} exposes an internal identifier`);
     }
-    visit(child, childPath, findings, allowedSensitivePaths);
+    visit(nested, nestedPath, findings, allowedSensitivePaths);
   }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${
-        JSON.stringify(expected)
-      }`,
+      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
     );
   }
 }
