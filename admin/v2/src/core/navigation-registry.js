@@ -175,7 +175,7 @@ const ROUTES = Object.freeze([
     groupId: "engagement",
     icon: "progression",
     permission: "progression.review",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "settings",
