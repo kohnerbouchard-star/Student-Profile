@@ -27,6 +27,8 @@ import { createAttendanceController } from "./routes/attendance/AttendanceContro
 import { createBankingApiClient } from "./routes/banking/BankingApi.js";
 import { createBankingController } from "./routes/banking/BankingController.js";
 import { createContractsController } from "./routes/contracts/ContractsController.js";
+import { createLoansApiClient } from "./routes/loans/LoansApiClient.js";
+import { createLoansController } from "./routes/loans/LoansController.js";
 import { createLogsApiClient } from "./routes/logs/LogsApi.js";
 import { createLogsController } from "./routes/logs/LogsController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
@@ -174,6 +176,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const attendanceApi = createAttendanceApi({ fetchImpl: transport });
   const bankingApi = createBankingApiClient({ fetchImpl: transport });
   const contractsApi = createContractsApiClient({ fetchImpl: transport });
+  const loansApi = createLoansApiClient({ fetchImpl: transport });
   const logsApi = createLogsApiClient({ fetchImpl: transport });
   const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
   const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
@@ -216,6 +219,12 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     hasPermission,
     onChange: () => renderControllerChange("banking"),
     notify: (notification) => toast?.push(notification),
+  });
+  const loans = createLoansController({
+    api: loansApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("loans"),
   });
   const players = createPlayersController({
     api,
@@ -291,6 +300,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     banking: Object.freeze({
       controller: banking,
       render: () => banking.render(),
+    }),
+    loans: Object.freeze({
+      controller: loans,
+      render: () => loans.render(),
     }),
     players: Object.freeze({
       controller: players,
@@ -433,7 +446,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, Banking, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -516,6 +529,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       store.destroy();
       market.destroy();
       banking.destroy();
+      loans.destroy();
       players.destroy();
       contracts.destroy();
       worldManagement.destroy();
