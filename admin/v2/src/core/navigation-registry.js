@@ -63,8 +63,7 @@ const ROUTES = Object.freeze([
     groupId: "operations",
     icon: "players",
     permission: "players.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Players", fragment: "players" },
+    migration: "v2",
   }),
   defineRoute({
     id: "attendance",
@@ -72,8 +71,7 @@ const ROUTES = Object.freeze([
     groupId: "operations",
     icon: "attendance",
     permission: "attendance.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Attendance", fragment: "attendance" },
+    migration: "v2",
   }),
   defineRoute({
     id: "market",
@@ -105,8 +103,7 @@ const ROUTES = Object.freeze([
     groupId: "work",
     icon: "contracts",
     permission: "contracts.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Assignments", fragment: "contracts" },
+    migration: "v2",
   }),
   defineRoute({
     id: "business",
@@ -154,7 +151,7 @@ const ROUTES = Object.freeze([
     groupId: "world",
     icon: "world",
     permission: "world.manage",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "news-events",
@@ -162,7 +159,7 @@ const ROUTES = Object.freeze([
     groupId: "world",
     icon: "news",
     permission: "world.manage",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "messages",
@@ -170,7 +167,7 @@ const ROUTES = Object.freeze([
     groupId: "engagement",
     icon: "messages",
     permission: "messaging.moderate",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "progression",
