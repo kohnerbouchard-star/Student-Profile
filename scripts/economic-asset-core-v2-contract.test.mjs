@@ -33,6 +33,7 @@ const migrations = [
   "20260806120420_harden_inventory_journal_append_only_v2.sql",
   "20260806120430_repair_seed_and_supply_canonical_identity_v2.sql",
   "20260806120440_repair_seed_store_rollback_compatibility_v2.sql",
+  "20260806120450_finalize_seed_store_rollback_ordering_v2.sql",
 ];
 
 const sources = new Map(await Promise.all(migrations.map(async (name) => {
@@ -71,8 +72,8 @@ function assertNotContains(value, pattern, message) {
 test("migration manifest is ordered, unique, and transaction bounded", () => {
   assert.equal(new Set(migrations).size, migrations.length);
   assert.deepEqual([...migrations].sort(), migrations);
-  assert.equal(migrations.length, 25);
-  assert.equal(migrations.at(-1), "20260806120440_repair_seed_store_rollback_compatibility_v2.sql");
+  assert.equal(migrations.length, 26);
+  assert.equal(migrations.at(-1), "20260806120450_finalize_seed_store_rollback_ordering_v2.sql");
   for (const [name, sql] of sources) {
     const withoutLeadingComments = sql.replace(/^(?:\s*--[^\n]*\n)*/u, "").trimStart();
     assert.ok(withoutLeadingComments.startsWith("begin;"), `${name} must begin transactionally`);
@@ -175,16 +176,20 @@ test("Seed import keeps its public RPC and uses explicit source item identity", 
   assertContains(source("20260806120430_repair_seed_and_supply_canonical_identity_v2.sql"), /promote_store_game_item_key_v2/iu);
 });
 
-test("Seed rollback removes synthetic Store stock only when canonical history is absent", () => {
-  const sql = source("20260806120440_repair_seed_store_rollback_compatibility_v2.sql");
-  const body = functionBody(sql, "release_history_free_store_stock_projection_v2");
-  assertContains(body, /inventory_transaction_lines/iu, "Canonical journal history must block hard Store deletion");
-  assertContains(body, /errcode\s*=\s*'23503'/iu, "Journal-backed Store rows must use the legacy soft-rollback path");
-  assertContains(body, /delete from public\.inventory_holdings/iu, "History-free synthetic Store stock must be removable");
-  assertContains(body, /account_kind\s*=\s*'store_stock'/iu);
-  assertContains(body, /location_key\s*=\s*'store_item:'/iu);
-  assertContains(body, /holding\.player_id\s+is\s+null/iu);
+test("Seed rollback removes synthetic Store stock before deleting the Store row and its account after", () => {
+  const sql = source("20260806120450_finalize_seed_store_rollback_ordering_v2.sql");
+  const beforeBody = functionBody(sql, "release_history_free_store_stock_projection_v2");
+  const afterBody = functionBody(sql, "cleanup_history_free_store_stock_account_v2");
+  assertContains(beforeBody, /inventory_transaction_lines/iu, "Canonical journal history must block hard Store deletion");
+  assertContains(beforeBody, /errcode\s*=\s*'23503'/iu, "Journal-backed Store rows must use the legacy soft-rollback path");
+  assertContains(beforeBody, /delete from public\.inventory_holdings/iu, "History-free synthetic Store stock must be removable before Store deletion");
+  assertNotContains(beforeBody, /delete from public\.inventory_accounts/iu, "The Store row still references its stock account during BEFORE DELETE");
+  assertContains(afterBody, /delete from public\.inventory_accounts/iu, "The per-Store stock account must be cleaned only after Store deletion");
+  assertContains(beforeBody, /account_kind\s*=\s*'store_stock'/iu);
+  assertContains(beforeBody, /location_key\s*=\s*'store_item:'/iu);
+  assertContains(beforeBody, /holding\.player_id\s+is\s+null/iu);
   assertContains(sql, /before delete on public\.store_items/iu);
+  assertContains(sql, /after delete on public\.store_items/iu);
 });
 
 test("Marketplace and redemption gain canonical context without replacing public workflows", () => {
