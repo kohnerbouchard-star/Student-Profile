@@ -52,7 +52,7 @@ function fulfilled(value) {
   return Object.freeze({ status: "fulfilled", value });
 }
 
-test("Admin v2 navigation is canonical, unique, permission-bound, and migrates Overview, Players, Attendance, Contracts, Store, and Market", () => {
+test("Admin v2 navigation is canonical, unique, permission-bound, and migrates Overview, Players, Attendance, Contracts, Store, Market, and World Management", () => {
   const expectedRouteIds = [
     "overview",
     "players",
@@ -136,14 +136,14 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates O
   );
 
   const migratedRoutes = ADMIN_NAVIGATION_ROUTES.filter((route) => route.migrated);
-  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "contracts", "store"]);
+  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "contracts", "store", "world-management"]);
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy").map((route) => route.id),
     ["settings", "logs"],
   );
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned").map((route) => route.id),
-    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "world-management", "news-events", "messages", "progression"],
+    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "news-events", "messages", "progression"],
   );
   assert.equal(isMigratedAdminRoute("overview"), true);
   assert.equal(isMigratedAdminRoute("players"), true);
@@ -151,7 +151,7 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates O
   assert.equal(isMigratedAdminRoute("contracts"), true);
   assert.equal(isMigratedAdminRoute("store"), true);
   assert.equal(isMigratedAdminRoute("market"), true);
-  assert.equal(isMigratedAdminRoute("world-management"), false);
+  assert.equal(isMigratedAdminRoute("world-management"), true);
 
   const market = getAdminNavigationRoute("market");
   const marketplace = getAdminNavigationRoute("marketplace");
@@ -168,7 +168,7 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates O
   assert.equal(world.label, "World Management");
   assert.equal(world.groupId, "world");
   assert.deepEqual(world.permission.allOf, ["world.manage"]);
-  assert.equal(world.migration, "planned");
+  assert.equal(world.migration, "v2");
   assert.equal(world.legacySection, null);
 
   const routeIds = ADMIN_NAVIGATION_ROUTES.map((route) => route.id);
@@ -245,8 +245,9 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.deepEqual(
     resolveAdminRouteBoundary({ routeId: "world-management", locationLike }),
     {
-      kind: "planned",
+      kind: "migrated",
       route: getAdminNavigationRoute("world-management"),
+      moduleKey: "world-management",
     },
   );
   assert.equal(readCurrentAdminV2Route({ hash: "#<script>" }), "overview");
@@ -256,6 +257,7 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.equal(resolveAdminRouteBoundary({ routeId: "contracts" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "store" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "world-management" }).kind, "migrated");
 });
 
 test("Admin data states retain resolved content for refresh failures and ignore old responses", () => {
