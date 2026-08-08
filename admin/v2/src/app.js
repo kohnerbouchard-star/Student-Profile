@@ -27,6 +27,8 @@ import { createAttendanceController } from "./routes/attendance/AttendanceContro
 import { createContractsController } from "./routes/contracts/ContractsController.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
+import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
+import { createNewsEventsController } from "./routes/news-events/NewsEventsController.js";
 import { createPlayersController } from "./routes/players/PlayersController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
 import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
@@ -161,6 +163,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const api = createAdminApiClient({ fetchImpl: transport });
   const attendanceApi = createAttendanceApi({ fetchImpl: transport });
   const contractsApi = createContractsApiClient({ fetchImpl: transport });
+  const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let destroyed = false;
@@ -212,6 +215,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("world-management"),
     notify: (notification) => toast?.push(notification),
   });
+  const newsEvents = createNewsEventsController({
+    api: newsEventsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("news-events"),
+    notify: (notification) => toast?.push(notification),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -240,6 +250,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     "world-management": Object.freeze({
       controller: worldManagement,
       render: () => worldManagement.render(),
+    }),
+    "news-events": Object.freeze({
+      controller: newsEvents,
+      render: () => newsEvents.render(),
     }),
   });
 
@@ -350,7 +364,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, and World Management are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, World Management, and News & Events are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -435,6 +449,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       players.destroy();
       contracts.destroy();
       worldManagement.destroy();
+      newsEvents.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();
