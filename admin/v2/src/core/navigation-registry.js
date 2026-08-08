@@ -167,7 +167,7 @@ const ROUTES = Object.freeze([
     groupId: "engagement",
     icon: "messages",
     permission: "messaging.moderate",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "progression",
