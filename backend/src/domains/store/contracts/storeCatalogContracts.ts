@@ -1,5 +1,6 @@
 export type StoreItemStatus = "active" | "disabled" | "archived";
 export type StoreItemVisibility = "visible" | "hidden";
+export type StoreItemSourceType = "seeded" | "custom";
 
 export interface StoreItemRecord {
   readonly id: string;
@@ -16,6 +17,10 @@ export interface StoreItemRecord {
   readonly sort_order: number;
   readonly created_at: string;
   readonly updated_at: string;
+  /** Internal canonical ownership relation; public Store IDs remain offer identifiers. */
+  readonly game_item?: {
+    readonly source_kind: string;
+  } | null;
 }
 
 export interface StoreItemDto {
@@ -31,6 +36,7 @@ export interface StoreItemDto {
   readonly status: StoreItemStatus;
   readonly visibility: StoreItemVisibility;
   readonly sortOrder: number;
+  readonly sourceType?: StoreItemSourceType;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

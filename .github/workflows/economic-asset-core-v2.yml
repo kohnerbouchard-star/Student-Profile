@@ -1,0 +1,109 @@
+name: Economic Asset Core V2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/economic-asset-core-v2.yml"
+      - ".github/workflows/economic-asset-core-staging-release.yml"
+      - "backend/supabase/migrations/20260806120*.sql"
+      - "backend/supabase/functions/admin-api/readModels.ts"
+      - "backend/supabase/functions/admin-api/readExtensions.ts"
+      - "backend/src/domains/inventory/**"
+      - "backend/src/domains/store/**"
+      - "scripts/build-economic-asset-migration-bundle.mjs"
+      - "scripts/economic-asset-core-v2-contract.test.mjs"
+      - "scripts/economic-asset-migration-bundle.test.mjs"
+      - "scripts/store-provenance-authority-contract.test.mjs"
+      - "scripts/economic-asset-core-staging-acceptance.sql"
+      - "docs/architecture/adr-economic-asset-ownership-core-v2.md"
+  push:
+    branches: [feat/economic-asset-ownership-core-v2]
+    paths:
+      - ".github/workflows/economic-asset-core-v2.yml"
+      - ".github/workflows/economic-asset-core-staging-release.yml"
+      - "backend/supabase/migrations/20260806120*.sql"
+      - "backend/supabase/functions/admin-api/readModels.ts"
+      - "backend/supabase/functions/admin-api/readExtensions.ts"
+      - "backend/src/domains/inventory/**"
+      - "backend/src/domains/store/**"
+      - "scripts/build-economic-asset-migration-bundle.mjs"
+      - "scripts/economic-asset-core-v2-contract.test.mjs"
+      - "scripts/economic-asset-migration-bundle.test.mjs"
+      - "scripts/store-provenance-authority-contract.test.mjs"
+      - "scripts/economic-asset-core-staging-acceptance.sql"
+      - "docs/architecture/adr-economic-asset-ownership-core-v2.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: economic-asset-core-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm ci --prefix backend --ignore-scripts
+
+      - name: Verify architecture, migration, and release-bundle contracts
+        run: |
+          node --check scripts/build-economic-asset-migration-bundle.mjs
+          node --test \
+            scripts/economic-asset-core-v2-contract.test.mjs \
+            scripts/economic-asset-migration-bundle.test.mjs \
+            scripts/store-provenance-authority-contract.test.mjs
+
+      - name: Verify changed TypeScript syntax
+        run: |
+          node --experimental-strip-types --check backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts
+          node --experimental-strip-types --check backend/src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.ts
+          node --experimental-strip-types --check backend/src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.test.ts
+          node --experimental-strip-types --check backend/src/domains/inventory/services/playerInventoryReadService.ts
+          node --experimental-strip-types --check backend/src/domains/inventory/services/playerInventoryReadService.test.ts
+          node --experimental-strip-types --check backend/supabase/functions/admin-api/readModels.ts
+          node --experimental-strip-types --check backend/supabase/functions/admin-api/readExtensions.ts
+
+      - name: Run focused inventory and economic-domain tests
+        run: |
+          npm run test:player-inventory --prefix backend
+          npm run test:player-crafting --prefix backend
+          npm run test:player-store-public --prefix backend
+          npm run test:player-marketplace --prefix backend
+
+      - name: Typecheck affected runtime boundaries
+        working-directory: backend
+        run: |
+          deno check --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.ts \
+            src/domains/inventory/services/playerInventoryReadService.ts \
+            src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/readModels.ts \
+            supabase/functions/admin-api/readExtensions.ts

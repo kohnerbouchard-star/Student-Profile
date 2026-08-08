@@ -57,7 +57,7 @@ interface SupabaseStoreCatalogSelectBuilder {
 }
 
 const STORE_ITEM_SELECT =
-  "id,game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order,created_at,updated_at";
+  "id,game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order,created_at,updated_at,game_item:game_items!store_items_game_item_scope_fk(source_kind)";
 
 export class StoreCatalogPersistenceError extends Error {
   readonly code: string;
