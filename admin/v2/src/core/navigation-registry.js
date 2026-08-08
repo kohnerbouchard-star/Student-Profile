@@ -87,7 +87,7 @@ const ROUTES = Object.freeze([
     groupId: "finance",
     icon: "banking",
     permission: "economy.adjust",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "loans",
