@@ -32,6 +32,8 @@ import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
 import { createNewsEventsController } from "./routes/news-events/NewsEventsController.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createPlayersController } from "./routes/players/PlayersController.js";
+import { createSettingsApi } from "./routes/settings/SettingsApi.js";
+import { createSettingsController } from "./routes/settings/SettingsController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
 import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
 
@@ -167,6 +169,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const contractsApi = createContractsApiClient({ fetchImpl: transport });
   const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
   const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
+  const settingsApi = createSettingsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let destroyed = false;
@@ -232,6 +235,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("messages"),
     notify: (notification) => toast?.push(notification),
   });
+  const settings = createSettingsController({
+    api: settingsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("settings"),
+    notify: (notification) => toast?.push(notification),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
@@ -268,6 +278,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     messages: Object.freeze({
       controller: messages,
       render: () => messages.render(),
+    }),
+    settings: Object.freeze({
+      controller: settings,
+      render: () => settings.render(),
     }),
   });
 
@@ -378,7 +392,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, World Management, News & Events, and Messages are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, World Management, News & Events, Messages, and Settings are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -465,6 +479,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       worldManagement.destroy();
       newsEvents.destroy();
       messages.destroy();
+      settings.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();

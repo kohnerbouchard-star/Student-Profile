@@ -183,8 +183,7 @@ const ROUTES = Object.freeze([
     groupId: "system",
     icon: "settings",
     permission: "settings.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Settings", fragment: "settings" },
+    migration: "v2",
   }),
   defineRoute({
     id: "logs",
