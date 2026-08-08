@@ -71,8 +71,7 @@ const ROUTES = Object.freeze([
     groupId: "operations",
     icon: "attendance",
     permission: "attendance.manage",
-    migration: "legacy",
-    legacyDestination: { section: "Attendance", fragment: "attendance" },
+    migration: "v2",
   }),
   defineRoute({
     id: "market",
