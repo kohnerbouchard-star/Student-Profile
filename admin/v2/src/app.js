@@ -34,6 +34,8 @@ import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
 import { createNewsEventsController } from "./routes/news-events/NewsEventsController.js";
 import { createOverviewController } from "./routes/overview/OverviewController.js";
 import { createPlayersController } from "./routes/players/PlayersController.js";
+import { createProgressionApiClient } from "./routes/progression/ProgressionClient.js";
+import { createProgressionController } from "./routes/progression/ProgressionController.js";
 import { createSettingsApi } from "./routes/settings/SettingsApi.js";
 import { createSettingsController } from "./routes/settings/SettingsController.js";
 import { createStoreController } from "./routes/store/StoreController.js";
@@ -172,6 +174,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const logsApi = createLogsApiClient({ fetchImpl: transport });
   const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
   const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
+  const progressionApi = createProgressionApiClient({ fetchImpl: transport });
   const settingsApi = createSettingsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
@@ -238,6 +241,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("messages"),
     notify: (notification) => toast?.push(notification),
   });
+  const progression = createProgressionController({
+    api: progressionApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("progression"),
+    notify: (notification) => toast?.push(notification),
+  });
   const settings = createSettingsController({
     api: settingsApi,
     selectedGameId,
@@ -287,6 +297,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     messages: Object.freeze({
       controller: messages,
       render: () => messages.render(),
+    }),
+    progression: Object.freeze({
+      controller: progression,
+      render: () => progression.render(),
     }),
     settings: Object.freeze({
       controller: settings,
@@ -405,7 +419,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, World Management, News & Events, Messages, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -492,6 +506,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       worldManagement.destroy();
       newsEvents.destroy();
       messages.destroy();
+      progression.destroy();
       settings.destroy();
       logs.destroy();
       window.removeEventListener("hashchange", handleHashChange);
