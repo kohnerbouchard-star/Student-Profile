@@ -150,7 +150,7 @@ export class ContractRewardLedgerRpcWriter
 
     return {
       id: row.ledger_entry_id,
-      accountType: row.account_type,
+      accountType: canonicalPersonalAccountType(row.account_type),
       balance: readBalanceNumber(row.balance),
       currencyCode: row.currency_code,
       createdAt: row.created_at,
@@ -206,8 +206,9 @@ export async function issueContractRewards(
         rewardType: "cash",
         ledgerEntryId: ledgerResult.id,
         amount: validation.cashReward.amount,
-        accountType: ledgerResult.accountType ??
-          validation.cashReward.accountType,
+        accountType: canonicalPersonalAccountType(
+          ledgerResult.accountType ?? validation.cashReward.accountType,
+        ),
         currencyCode: ledgerResult.currencyCode ??
           validation.cashReward.currencyCode,
         balance: ledgerResult.balance ?? null,
@@ -311,9 +312,10 @@ function readRewardPlan(
     );
   }
 
-  const accountType = typeof cash.accountType === "string"
+  const rawAccountType = typeof cash.accountType === "string"
     ? cash.accountType.trim()
-    : "cash";
+    : "checking";
+  const accountType = canonicalPersonalAccountType(rawAccountType);
 
   if (!accountType) {
     return invalidRewardPayload("cash.accountType must be non-empty text.");
@@ -327,6 +329,12 @@ function readRewardPlan(
       currencyCode,
     },
   };
+}
+
+function canonicalPersonalAccountType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "cash" || normalized === "checking") return "checking";
+  return normalized;
 }
 
 function invalidRewardPayload(message: string): ContractRewardPlanFailure {

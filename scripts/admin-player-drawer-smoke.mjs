@@ -29,7 +29,7 @@ const player = {
   balance: 1250,
   netWorth: 1980,
   balances: [
-    { accountType: "cash", balance: 1250, currencyCode: "NRC" },
+    { accountType: "checking", balance: 1250, currencyCode: "NRC" },
     { accountType: "savings", balance: 300, currencyCode: "NRC" },
   ],
   stockMarketValue: 400,

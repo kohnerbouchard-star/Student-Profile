@@ -2,6 +2,7 @@ import {
   IdempotentStaffLedgerAdjustmentError,
   recordIdempotentStaffLedgerAdjustment,
 } from "../../../src/domains/economy/services/idempotentStaffLedgerAdjustment.ts";
+import { resolvePlayerLedgerCurrencyAuthority } from "./playerOperations.ts";
 
 function text(value: unknown, fallback = ""): string {
   const normalized = String(value ?? "").trim();
@@ -15,7 +16,7 @@ function number(value: unknown, fallback = 0): number {
 
 function storageAccountType(value: unknown): string {
   const normalized = text(value, "checking").toLowerCase();
-  return normalized === "checking" || normalized === "cash" ? "cash" : normalized;
+  return normalized === "checking" || normalized === "cash" ? "checking" : normalized;
 }
 
 function publicAccountType(value: unknown): string {
@@ -150,6 +151,19 @@ async function adjustAttendanceReward(service: any, input: any) {
     .maybeSingle();
   if (attendance.error) throw attendance.error;
 
+  const currency = await resolvePlayerLedgerCurrencyAuthority(service, {
+    gameSessionId: input.gameSessionId,
+    playerId,
+    body,
+  });
+  if (currency.ok === false) {
+    return {
+      handled: true,
+      status: currency.status,
+      body: currency.body,
+    };
+  }
+
   try {
     const ledger = await recordIdempotentStaffLedgerAdjustment(service, {
       gameSessionId: input.gameSessionId,
@@ -159,7 +173,7 @@ async function adjustAttendanceReward(service: any, input: any) {
       idempotencyKey,
       accountType: storageAccountType(body.accountType),
       amount,
-      currencyCode: text(body.currencyCode || body.currency, "ECO").toUpperCase(),
+      currencyCode: currency.currencyCode,
       entryType: amount > 0 ? "credit" : "debit",
       sourceDomain: "attendance",
       sourceAction: "staff_reward_adjustment",
@@ -168,6 +182,8 @@ async function adjustAttendanceReward(service: any, input: any) {
         attendanceDate,
         attendanceStatus: attendance.data?.status || "missing",
         note: text(body.note || body.ledgerNote || body.reason) || null,
+        currencyMode: currency.currencyMode,
+        resolvedCurrencyCode: currency.currencyCode,
       },
     });
     return {
@@ -180,6 +196,8 @@ async function adjustAttendanceReward(service: any, input: any) {
           playerId,
           attendanceDate,
           amount,
+          currencyMode: currency.currencyMode,
+          currencyCode: currency.currencyCode,
           ledger: publicLedgerResult(ledger),
         },
       },
@@ -227,6 +245,19 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
     };
   }
 
+  const currency = await resolvePlayerLedgerCurrencyAuthority(service, {
+    gameSessionId: input.gameSessionId,
+    playerId,
+    body,
+  });
+  if (currency.ok === false) {
+    return {
+      handled: true,
+      status: currency.status,
+      body: currency.body,
+    };
+  }
+
   try {
     const ledger = await recordIdempotentStaffLedgerAdjustment(service, {
       gameSessionId: input.gameSessionId,
@@ -236,7 +267,7 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
       idempotencyKey,
       accountType: storageAccountType(body.accountType),
       amount,
-      currencyCode: text(body.currencyCode || body.currency, "ECO").toUpperCase(),
+      currencyCode: currency.currencyCode,
       entryType: amount > 0 ? "credit" : "debit",
       sourceDomain: "players",
       sourceAction: "staff_player_balance_adjustment",
@@ -244,6 +275,8 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
       auditMetadata: {
         note: text(body.note || body.ledgerNote || body.reason) || null,
         effectiveDate: isoDate(body.effectiveDate) || null,
+        currencyMode: currency.currencyMode,
+        resolvedCurrencyCode: currency.currencyCode,
       },
     });
     return {
@@ -255,6 +288,8 @@ async function adjustPlayerLedger(service: any, input: any, playerId: string) {
           outcome: ledger.outcome,
           playerId,
           amount,
+          currencyMode: currency.currencyMode,
+          currencyCode: currency.currencyCode,
           ledger: publicLedgerResult(ledger),
         },
       },

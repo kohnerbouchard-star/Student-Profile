@@ -84,7 +84,7 @@ const apiCall = createStudentProfileApiCall({
         gameSession: { id: "private-game-uuid", name: "Econovaria", status: "active" },
         player: { id: "private-player-uuid", playerIdentifier: "CARD-100", displayName: "Alex Rivera" },
         session: { id: "private-session-uuid", status: "active" },
-        balances: [{ accountType: "cash", currencyCode: "NRC", balance: purchased ? 400 : 500 }]
+        balances: [{ accountType: "checking", currencyCode: "NRC", balance: purchased ? 400 : 500 }]
       };
     }
     if (request.path === "/players/me/capabilities") return manifest;
@@ -170,10 +170,10 @@ const apiCall = createStudentProfileApiCall({
     if (request.path === "/players/me/ledger") {
       return {
         ok: true,
-        currentBalances: [{ accountType: "cash", currencyCode: "NRC", balance: purchased ? 400 : 500 }],
+        currentBalances: [{ accountType: "checking", currencyCode: "NRC", balance: purchased ? 400 : 500 }],
         ledgerEntries: purchased ? [{
           id: "ledger_public_reference",
-          accountType: "cash",
+          accountType: "checking",
           amount: 100,
           currencyCode: "NRC",
           entryType: "debit",

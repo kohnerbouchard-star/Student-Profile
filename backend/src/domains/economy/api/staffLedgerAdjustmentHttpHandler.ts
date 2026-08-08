@@ -261,14 +261,18 @@ async function readStaffLedgerAdjustmentRequestBody(
       parseOptionalText(value.accountType) ?? "checking",
     ),
     currencyCode: normalizeCurrencyCode(
-      parseOptionalText(value.currencyCode) ?? "ECO",
+      parseRequiredText(
+        value.currencyCode,
+        "ledger_currency_required",
+        "currencyCode is required.",
+      ),
     ),
   };
 }
 
 function storageAccountType(value: string): string {
   const normalized = value.trim().toLowerCase();
-  if (normalized === "checking" || normalized === "cash") return "cash";
+  if (normalized === "checking" || normalized === "cash") return "checking";
   return normalized;
 }
 

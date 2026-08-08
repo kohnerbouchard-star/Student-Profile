@@ -3,18 +3,6 @@
 
   const LOCAL_API_PREFIX = "/api/admin";
   const delegatedFetch = window.fetch.bind(window);
-  const COUNTRY_CURRENCIES = {
-    NORTHREACH: "NRC",
-    YRETHIA: "YRC",
-    THALORIS: "THD",
-    SOLVEND: "SLV",
-    ELDORAN: "ELD",
-    VALERION: "VAL",
-    LUMENOR: "LUM",
-    SYNDALIS: "SYN",
-    XALVORIA: "XAL",
-    DRAVENLOK: "DRV"
-  };
   let contractCreateFlight = null;
 
   function text(value) {
@@ -82,22 +70,24 @@
 
   function preferredStoreCurrency() {
     const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
-    const candidates = [
-      ...(Array.isArray(model.storeItems) ? model.storeItems : []),
-      ...(Array.isArray(model.store) ? model.store : []),
-      ...(Array.isArray(model.items) ? model.items : [])
-    ];
-    const existing = candidates
-      .map((item) => text(item?.currencyCode || item?.currency_code).toUpperCase())
-      .find((value) => Object.values(COUNTRY_CURRENCIES).includes(value));
-    if (existing) return existing;
-
     const game = model.activeGame || model.game || {};
-    const explicit = text(game.currencyCode || game.currency_code).toUpperCase();
-    if (Object.values(COUNTRY_CURRENCIES).includes(explicit)) return explicit;
-
-    const countryCode = text(game.countryCode || game.country_code).toUpperCase();
-    return COUNTRY_CURRENCIES[countryCode] || "XAL";
+    const candidates = [
+      game.countryCurrencyCode,
+      game.localCurrencyCode,
+      game.currencyCode,
+      game.country_currency_code,
+      game.local_currency_code,
+      game.currency_code,
+      model.countryCurrencyCode,
+      model.localCurrencyCode,
+      model.country_currency_code,
+      model.local_currency_code
+    ];
+    for (const candidate of candidates) {
+      const code = text(candidate).toUpperCase();
+      if (/^[A-Z0-9]{3,16}$/.test(code) && code !== "ECO") return code;
+    }
+    throw new Error("The active game's local currency is unavailable.");
   }
 
   async function readJson(request) {
@@ -166,7 +156,7 @@
     const cash = cashAmount && cashAmount > 0
       ? {
         amount: Math.round(cashAmount * 100) / 100,
-        accountType: text(cashSource.accountType) || "cash",
+        accountType: text(cashSource.accountType) || "checking",
         currencyCode: text(
           cashSource.currencyCode || cashSource.currency || payload.currencyCode
         ).toUpperCase() || preferredStoreCurrency()
@@ -214,7 +204,15 @@
       form,
       '[data-admin-terminal-contract-location]:checked'
     );
-    const normalizedLocations = locations.includes("all") ? ["all"] : locations;
+    const explicitAllPlayers = locations.includes("all");
+    const normalizedLocations = explicitAllPlayers
+      ? ["all"]
+      : locations.filter((value) => value !== "all");
+    if (!explicitAllPlayers && normalizedLocations.length === 0) {
+      throw new Error(
+        "Choose All players or at least one contract target before publishing."
+      );
+    }
     const materials = array(sourcePayload.materials);
     const singularRequirement = object(sourcePayload.submissionRequirement);
     const existingRequirements = array(sourcePayload.submissionRequirements);
@@ -227,9 +225,9 @@
           : [];
     const rewardPayload = canonicalContractRewards(sourcePayload);
     const completionMode = reviewType === "auto" ? "auto_check" : "manual_review";
-    const targeting = normalizedLocations.includes("all") || normalizedLocations.length === 0
+    const targeting = explicitAllPlayers
       ? { allPlayers: true }
-      : { countryCodes: normalizedLocations };
+      : { allPlayers: false, countryCodes: normalizedLocations };
     const status = postSetting === "draft"
       ? "draft"
       : postAt
@@ -278,7 +276,7 @@
         deadlineAt: deadline,
         quantity,
         quantityScope,
-        locations: normalizedLocations.length ? normalizedLocations : ["all"],
+        locations: normalizedLocations,
         targeting,
         targetingPayload: targeting,
         visibility: targeting.allPlayers ? "public" : "targeted",

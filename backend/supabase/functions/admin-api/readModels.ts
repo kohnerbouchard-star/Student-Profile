@@ -187,7 +187,10 @@ export async function loadPlayers(
       updatedAt: entry.updated_at,
     }));
     const cashBalance = rawBalances
-      .filter((entry) => String(entry.account_type).toLowerCase() === "cash")
+      .filter((entry) => String(entry.account_type).toLowerCase() === "checking")
+      .reduce((sum, entry) => sum + number(entry.balance), 0);
+    const savingsBalance = rawBalances
+      .filter((entry) => String(entry.account_type).toLowerCase() === "savings")
       .reduce((sum, entry) => sum + number(entry.balance), 0);
 
     const stockPositions = (holdingsByPlayer.get(playerId) || []).map(
@@ -237,7 +240,8 @@ export async function loadPlayers(
       (sum, position) => sum + position.marketValue,
       0,
     );
-    const netWorth = cashBalance + stockMarketValue + inventoryMarketValue;
+    const depositBalance = cashBalance + savingsBalance;
+    const netWorth = depositBalance + stockMarketValue + inventoryMarketValue;
 
     const assignment = assignmentByPlayer.get(playerId);
     const country = assignment
@@ -263,7 +267,7 @@ export async function loadPlayers(
       inventoryMarketValue,
       netWorth,
       netWorthBreakdown: {
-        cash: cashBalance,
+        cash: depositBalance,
         stocks: stockMarketValue,
         inventory: inventoryMarketValue,
       },
@@ -273,7 +277,7 @@ export async function loadPlayers(
       overallScoreStatus: "not_configured",
       scoreFormulaVersion: null,
       currencyCode: balances.find((entry) =>
-        String(entry.accountType).toLowerCase() === "cash"
+        String(entry.accountType).toLowerCase() === "checking"
       )?.currencyCode || country?.currency_code || "ECO",
       countryCode: country?.country_code || "",
       countryName: country?.country_name || "Unassigned",

@@ -23,7 +23,7 @@ const browserSafeSession = {
     expiresAt: "2026-07-27T08:40:00.000Z",
   },
   balances: [{
-    accountType: "cash",
+    accountType: "checking",
     balance: 1250,
     currencyCode: "ECO",
   }],

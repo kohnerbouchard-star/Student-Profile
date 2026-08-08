@@ -64,7 +64,7 @@ Deno.test("stock trading repository maps filled buy response with actual cash ba
       rejectionReason: null,
     },
     cash: {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO",
       balance: 9500,
     },

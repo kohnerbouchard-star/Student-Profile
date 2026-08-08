@@ -141,7 +141,12 @@ async function executeRoute(
     p_player_id: scope.playerId,
   };
   switch (route.kind) {
-    case "businessCreate":
+    case "businessCreate": {
+      const idempotencyKey = readIdempotencyKey(body.idempotencyKey);
+      await repository.assertBusinessCreationAllowed?.({
+        ...scope,
+        idempotencyKey,
+      });
       return repository.execute("create_or_acquire_player_business_v1", {
         ...base,
         p_legal_name: readText(body.legalName, "legalName", 2, 120),
@@ -156,8 +161,9 @@ async function executeRoute(
         p_currency_code: context.currencyCode,
         p_capitalization: readMoney(body.capitalization, "capitalization", 0, 10_000_000),
         p_acquire_business_key: readOptionalKey(body.acquireBusinessKey, "biz"),
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
+        p_idempotency_key: idempotencyKey,
       });
+    }
     case "businessProductCreate":
       return repository.execute("submit_business_product_v1", {
         ...base,
@@ -412,8 +418,8 @@ function readIdempotencyKey(value: unknown): string {
 }
 function normalizeAccount(value: unknown): string {
   const account = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (account === "checking") return "cash";
-  if (account === "cash" || account === "savings") return account;
+  if (account === "checking" || account === "cash") return "checking";
+  if (account === "savings") return "savings";
   throw invalidRequest("Account type is invalid.");
 }
 function methodNotAllowed(message: string): PlayerBusinessBankingError {

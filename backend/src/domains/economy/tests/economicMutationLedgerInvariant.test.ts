@@ -39,7 +39,7 @@ Deno.test("staff Attendance and Player adjustments create one ledger result, rep
   assertEquals(attendanceApplied.status, 200);
   assertEquals(attendanceApplied.body.data.outcome, "applied");
   assertEquals(service.ledgerEntries.length, 1);
-  assertEquals(service.balance(GAME, PLAYER, "cash", "ECO"), 110);
+  assertEquals(service.balance(GAME, PLAYER, "checking", "ECO"), 110);
   assertEquals(service.ledgerEntries[0], {
     amount: 10,
     entryType: "credit",
@@ -51,7 +51,7 @@ Deno.test("staff Attendance and Player adjustments create one ledger result, rep
   assertEquals(attendanceReplay.status, 200);
   assertEquals(attendanceReplay.body.data.outcome, "replayed");
   assertEquals(service.ledgerEntries.length, 1);
-  assertEquals(service.balance(GAME, PLAYER, "cash", "ECO"), 110);
+  assertEquals(service.balance(GAME, PLAYER, "checking", "ECO"), 110);
 
   const attendanceConflict = await handleAttendancePlayerOperation(service, {
     ...attendanceInput,
@@ -104,7 +104,7 @@ Deno.test("staff Attendance and Player adjustments create one ledger result, rep
   assertEquals(playerApplied.status, 200);
   assertEquals(playerApplied.body.data.outcome, "applied");
   assertEquals(service.ledgerEntries.length, 2);
-  assertEquals(service.balance(GAME, PLAYER, "cash", "ECO"), 85);
+  assertEquals(service.balance(GAME, PLAYER, "checking", "ECO"), 85);
   assertEquals(service.ledgerEntries[1], {
     amount: -25,
     entryType: "debit",
@@ -115,7 +115,7 @@ Deno.test("staff Attendance and Player adjustments create one ledger result, rep
   const playerReplay = await handleAttendancePlayerOperation(service, playerInput);
   assertEquals(playerReplay.body.data.outcome, "replayed");
   assertEquals(service.ledgerEntries.length, 2);
-  assertEquals(service.balance(GAME, PLAYER, "cash", "ECO"), 85);
+  assertEquals(service.balance(GAME, PLAYER, "checking", "ECO"), 85);
 
   const playerConflict = await handleAttendancePlayerOperation(service, {
     ...playerInput,
@@ -133,7 +133,7 @@ Deno.test("Contract cash rewards issue one ledger write while invalid and alread
       return Promise.resolve({
         data: [{
           ledger_entry_id: "00000000-0000-4000-8000-000000000041",
-          account_type: "cash",
+          account_type: "checking",
           balance: 125,
           currency_code: "ECO",
           created_at: "2026-07-19T06:00:00.000Z",
@@ -148,7 +148,7 @@ Deno.test("Contract cash rewards issue one ledger write while invalid and alread
     contractId: "00000000-0000-4000-8000-000000000051",
     progressId: "00000000-0000-4000-8000-000000000061",
     playerId: PLAYER,
-    rewardPayload: { cash: { amount: 15, currencyCode: "ECO", accountType: "cash" } },
+    rewardPayload: { cash: { amount: 15, currencyCode: "ECO", accountType: "checking" } },
     issuedAt: "2026-07-19T06:00:00.000Z",
     staffId: STAFF,
     requestId: "contract-reward-001",
@@ -242,7 +242,7 @@ class LedgerFixtureService {
     sourceAction: string;
   }> = [];
   private readonly balances = new Map<string, number>([
-    [`${GAME}:${PLAYER}:cash:ECO`, 100],
+    [`${GAME}:${PLAYER}:checking:ECO`, 100],
   ]);
   private readonly idempotency = new Map<string, { hash: string; row: Record<string, unknown> }>();
 

@@ -202,7 +202,7 @@ The `execute_stock_market_order` RPC validates the game session, player session,
 active runtime stock asset, side, quantity, and idempotency key. It supports
 market orders only. Buys fill at
 `game_session_stock_assets.current_price`, require enough real player cash in
-`account_balances` for `account_type = 'cash'` and `currency_code = 'ECO'`,
+`account_balances` for `account_type = 'checking'` and `currency_code = 'ECO'`,
 debit cash through `record_player_ledger_entry`, increase holdings, and update
 weighted average cost. Sells require owned shares, prevent short selling, credit
 real player cash through `record_player_ledger_entry`, reduce holdings, and

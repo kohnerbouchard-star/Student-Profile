@@ -9,13 +9,18 @@ const rawSession = {
   player: {
     id: "0c80fe6d-e1d9-4e90-90f4-1b174be727f1",
     playerIdentifier: "CARD-200",
-    displayName: "Alex Rivera"
+    displayName: "Alex Rivera",
+    countryCurrencyCode: "ELD"
   },
   session: {
     status: "active",
     expiresAt: "2026-07-27T08:00:00.000Z"
   },
-  balances: [{ accountType: "cash", currencyCode: "ECO", balance: 1250 }]
+  balances: [
+    { accountType: "checking", currencyCode: "ECO", balance: 1250 },
+    { accountType: "checking", currencyCode: "ELD", balance: 480 },
+    { accountType: "savings", currencyCode: "ELD", balance: 120 }
+  ]
 };
 
 const capabilityManifest = {
@@ -42,6 +47,7 @@ const capabilityManifest = {
     { key: "capabilities", operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }] },
     { key: "dashboard", operations: [{ method: "GET", pathTemplate: "/players/me/game/dashboard" }] },
     { key: "store", operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }] },
+    { key: "banking", operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }] },
     { key: "storePurchase", operations: [{ method: "POST", pathTemplate: "/players/me/store/purchases" }] },
     { key: "marketOrder", operations: [{ method: "POST", pathTemplate: "/players/me/stocks/orders" }] },
     { key: "bankTransfer", operations: [{ method: "POST", pathTemplate: "/players/me/banking/transfers" }] },
@@ -58,17 +64,34 @@ const responses = {
       displayName: "Alex Rivera",
       playerIdentifier: "CARD-200",
       countryCode: "ELD",
-      netWorth: 1500,
+      netWorth: 600,
+      netWorthValuation: { currencyCode: "ELD", status: "partial_unconverted" },
       cash: {
-        primaryCurrencyCode: "ECO",
-        totalBalance: 1250,
-        balances: [{ accountType: "cash", currencyCode: "ECO", balance: 1250 }]
+        primaryCurrencyCode: "ELD",
+        totalBalance: 600,
+        balances: [
+          { accountType: "checking", currencyCode: "ECO", balance: 1250 },
+          { accountType: "checking", currencyCode: "ELD", balance: 480 },
+          { accountType: "savings", currencyCode: "ELD", balance: 120 }
+        ]
       },
       stocks: { portfolio: { holdingsMarketValue: 250 }, holdings: [] },
       store: { listings: [], inventory: [] },
       contracts: { available: [], progress: [] }
     },
     public: { market: { stocks: [] }, news: [] }
+  },
+  banking: {
+    currentBalances: [
+      { accountType: "checking", currencyCode: "ECO", balance: 1250 },
+      { accountType: "checking", currencyCode: "ELD", balance: 480 },
+      { accountType: "savings", currencyCode: "ELD", balance: 120 }
+    ],
+    ledgerEntries: [],
+    generatedAt: "2026-07-27T04:00:00.000Z",
+    staleAt: "2026-07-27T04:05:00.000Z",
+    stale: false,
+    pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 50 }
   },
   store: {
     items: [{
@@ -92,7 +115,7 @@ const responses = {
       quantity: 1,
       finalUnitPrice: 50,
       finalTotalPrice: 50,
-      currencyCode: "ECO",
+      currencyCode: "ELD",
       inventoryQuantityOwned: 2,
       completedAt: "2026-07-27T04:00:00.000Z",
       alreadyCompleted: false
@@ -111,7 +134,7 @@ const responses = {
       status: "filled",
       rejectionReason: null
     },
-    cash: { accountType: "cash", currencyCode: "ECO", balance: 1050 },
+    cash: { accountType: "checking", currencyCode: "ECO", balance: 1050 },
     holding: { quantity: 2, averageCost: 100 }
   },
   bankTransfer: {
@@ -119,7 +142,7 @@ const responses = {
     result: {
       transfer_key: "trf_33333333333333333333333333333333",
       amount: 10,
-      currency_code: "ECO",
+      currency_code: "ELD",
       recipient_player_identifier: "CARD-201",
       already_completed: false
     },
@@ -163,6 +186,8 @@ const sessionStart = calls.length;
 const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200");
+assert.equal(session.currencyCode, "ELD");
+assert.equal(session.currencyResolved, true);
 assert.equal(session.capabilitySchemaVersion, 1);
 assert.equal(session.capabilityManifestVersion, "2026-07-27.1");
 assert.equal(session.capabilityService, "classroom-api");
@@ -175,8 +200,16 @@ assert.equal(calls[sessionStart + 1].path, "/players/me/capabilities");
 assert.equal(calls[sessionStart + 1].headers["x-player-session-token"], undefined);
 
 const dashboard = await apiCall(context("dashboard", "GET", "/dashboard"));
-assert.equal(dashboard.netWorth, 1500);
+assert.equal(dashboard.netWorth, 600);
 assert.equal(calls.at(-1).path, "/players/me/game/dashboard");
+
+const banking = await apiCall(context("banking", "GET", "/banking"));
+assert.equal(banking.checking.currencyCode, "ELD");
+assert.equal(banking.checking.balance, 480);
+assert.equal(banking.savings.currencyCode, "ELD");
+assert.equal(banking.savings.balance, 120);
+assert.equal(banking.balances.length, 3);
+assert.equal(calls.at(-1).path, "/players/me/ledger?limit=50");
 
 const store = await apiCall(context("store", "GET", "/store/items"));
 assert.equal(store.items[0].name, "Market Lens");
@@ -225,4 +258,4 @@ assert.equal("recipientPlayerUuid" in calls.at(-1).payload, false);
 assert.equal("senderPlayerId" in calls.at(-1).payload, false);
 assert.equal("gameSessionId" in calls.at(-1).payload, false);
 
-console.log("Student-Profile adapter passed: cookie-session transport, capability preflight, canonical routes, ownership privacy, CSRF, and idempotent writes are valid.");
+console.log("Student-Profile adapter passed: authoritative local currency selects the correct Checking/Savings rows even when ECO appears first; cookie-session transport, ownership privacy, CSRF, and idempotent writes remain valid.");

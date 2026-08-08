@@ -79,7 +79,7 @@ test("Admin ledger writes flatten the exact terminal envelope and preserve idemp
           playerId: "player-1",
           amount: "25",
           adjustmentType: "debit",
-          accountType: "cash",
+          accountType: "checking",
           currencyCode: "NRC",
           reason: "Correction",
           effectiveDate: "2026-07-25",
@@ -98,7 +98,7 @@ test("Admin ledger writes flatten the exact terminal envelope and preserve idemp
   assert.equal(body.amount, "25");
   assert.equal(body.adjustmentType, "debit");
   assert.equal(body.reason, "Correction");
-  assert.equal(body.accountType, "cash");
+  assert.equal(body.accountType, "checking");
   assert.equal(body.currencyCode, "NRC");
   assert.equal(body.playerId, "player-1");
   assert.equal(body.effectiveDate, "2026-07-25");
@@ -109,7 +109,7 @@ test("Admin ledger writes flatten the exact terminal envelope and preserve idemp
   assert.equal(request.headers.get("apikey"), null);
 });
 
-test("Admin ledger writes continue to normalize legacy form aliases without creating remote authority", async () => {
+test("Admin ledger writes continue to normalize legacy form aliases without inventing currency authority", async () => {
   const { captured, window } = await createHarness();
 
   await window.fetch(
@@ -131,8 +131,9 @@ test("Admin ledger writes continue to normalize legacy form aliases without crea
   assert.equal(body.amount, "25");
   assert.equal(body.adjustmentType, "debit");
   assert.equal(body.reason, "Correction");
-  assert.equal(body.accountType, "cash");
-  assert.equal(body.currencyCode, "ECO");
+  assert.equal(body.accountType, "checking");
+  assert.equal(body.currencyCode, undefined);
+  assert.equal(body.currency, undefined);
   assert.match(body.idempotencyKey, /^[0-9a-f-]{36}$/i);
   assert.equal(request.headers.get("x-idempotency-key"), body.idempotencyKey);
   assert.equal(

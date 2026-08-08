@@ -62,7 +62,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
   const messagesUnavailable = isResourceUnavailable(data, "messages");
   const portfolioUnavailable = isResourceUnavailable(data, "portfolio");
   const activeContract = contractsUnavailable ? null : contracts.items.find((item) => item.status === "Active");
-  const playerCountry = countries.find((item) => item.id === session.countryId) || countries[0] || { id: session.countryId || "unknown", name: session.countryName || "Unassigned", condition: "Unavailable", policy: "Country intelligence is awaiting the world service.", growth: 0, inflation: 0, stability: 0 };
+  const playerCountry = countries.find((item) => item.id === session.countryId) || { id: session.countryId || "unknown", name: session.countryName || "Unassigned", condition: "Unavailable", policy: "Country intelligence is awaiting the world service.", growth: 0, inflation: 0, stability: 0 };
   const currencyCode = session.currencyCode;
   const allocation = portfolioUnavailable ? [] : (portfolio?.allocation || []);
   const allocationItems = allocation.length

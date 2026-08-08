@@ -62,7 +62,7 @@ const player = {
   currencyCode: "NRC",
   cashBalance: 125,
   netWorth: 125,
-  balances: [{ accountType: "cash", balance: 125, currencyCode: "NRC" }],
+  balances: [{ accountType: "checking", balance: 125, currencyCode: "NRC" }],
   stockPositions: [],
   inventoryPositions: [],
 };

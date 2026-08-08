@@ -155,7 +155,7 @@ Deno.test("player stock read returns portfolio DTO through the player-safe route
     playerSessionId: PLAYER_SESSION_ID,
     playerId: PLAYER_ID,
     cash: {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO",
       balance: 9500,
     },
@@ -382,7 +382,7 @@ function tables(): Record<string, readonly Record<string, unknown>[]> {
     account_balances: [{
       game_session_id: GAME_SESSION_ID,
       player_id: PLAYER_ID,
-      account_type: "cash",
+      account_type: "checking",
       balance: 9500,
       currency_code: "ECO",
     }],
