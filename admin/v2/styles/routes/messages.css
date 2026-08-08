@@ -1,0 +1,415 @@
+.admin-messages-route,
+.admin-messages-route__resolved,
+.admin-messages-route__thread-list,
+.admin-messages-route__thread,
+.admin-messages-route__messages,
+.admin-messages-route__message-list {
+  min-inline-size: 0;
+}
+
+.admin-messages-route__resolved,
+.admin-messages-route__loading-layout,
+.admin-messages-route__thread-list,
+.admin-messages-route__message-list {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-messages-route__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.admin-messages-route__metric {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  border-block-start: 2px solid var(--admin-color-cyan);
+  background: linear-gradient(145deg, var(--admin-color-surface-2), var(--admin-color-surface-1));
+}
+
+.admin-messages-route__metric:nth-child(2) {
+  border-block-start-color: var(--admin-color-green);
+}
+
+.admin-messages-route__metric:nth-child(3),
+.admin-messages-route__metric:nth-child(4) {
+  border-block-start-color: var(--admin-color-orange);
+}
+
+.admin-messages-route__metric > span,
+.admin-messages-route__metric > small {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-messages-route__metric > span {
+  font-family: var(--admin-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-messages-route__metric output {
+  color: var(--admin-color-text);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xl);
+  font-weight: var(--admin-weight-bold);
+  line-height: var(--admin-leading-tight);
+}
+
+.admin-messages-route__controls {
+  display: grid;
+  grid-template-columns: minmax(16rem, 2fr) minmax(12rem, 1fr) max-content;
+  align-items: end;
+  gap: var(--admin-space-4);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-messages-route__controls--loading {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-messages-route__refresh-state {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-2);
+  margin-block-end: var(--admin-space-4);
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border: 1px solid var(--admin-color-cyan);
+  border-inline-start-width: 3px;
+  background: var(--admin-color-cyan-soft);
+  color: var(--admin-color-cyan);
+}
+
+.admin-messages-route__thread {
+  display: grid;
+  gap: var(--admin-space-4);
+  padding: var(--admin-space-5);
+  border: 1px solid var(--admin-color-line);
+  border-block-start: 2px solid var(--admin-color-cyan);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-messages-route__thread-heading,
+.admin-messages-route__message-heading,
+.admin-messages-route__thread-actions,
+.admin-messages-route__message-actions,
+.admin-messages-route__pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-3);
+}
+
+.admin-messages-route__thread-heading,
+.admin-messages-route__message-heading {
+  justify-content: space-between;
+}
+
+.admin-messages-route__thread-heading > div,
+.admin-messages-route__message-heading > div,
+.admin-messages-route__participants {
+  min-inline-size: 0;
+}
+
+.admin-messages-route__thread-heading h2 {
+  margin: var(--admin-space-1) 0 0;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-lg);
+  line-height: var(--admin-leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.admin-messages-route__type {
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-messages-route__status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  inline-size: fit-content;
+  align-items: center;
+  padding: var(--admin-space-1) var(--admin-space-2);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: 999px;
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  white-space: nowrap;
+}
+
+.admin-messages-route__status[data-status="active"] {
+  border-color: var(--admin-color-green);
+  background: var(--admin-color-green-soft);
+  color: var(--admin-color-green);
+}
+
+.admin-messages-route__status[data-status="disabled"],
+.admin-messages-route__status[data-status="closed"] {
+  border-color: var(--admin-color-orange);
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-messages-route__participants {
+  display: grid;
+  gap: var(--admin-space-1);
+  margin: 0;
+}
+
+.admin-messages-route__participants strong {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-messages-route__participants span,
+.admin-messages-route__contract,
+.admin-messages-route__body,
+.admin-messages-route__moderation-note {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-messages-route__participants span {
+  color: var(--admin-color-text-faint);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-messages-route__metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--admin-space-3);
+  margin: 0;
+}
+
+.admin-messages-route__metadata > div {
+  display: grid;
+  gap: var(--admin-space-1);
+  min-inline-size: 0;
+  padding: var(--admin-space-3);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-messages-route__metadata dt {
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-messages-route__metadata dd {
+  margin: 0;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.admin-messages-route__contract,
+.admin-messages-route__moderation-note {
+  margin: 0;
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border-inline-start: 3px solid var(--admin-color-line-strong);
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text-muted);
+}
+
+.admin-messages-route__contract {
+  display: grid;
+  gap: var(--admin-space-1);
+}
+
+.admin-messages-route__contract strong {
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-messages-route__moderation-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--admin-space-2);
+  border-inline-start-color: var(--admin-color-orange);
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-messages-route__thread-actions,
+.admin-messages-route__message-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-messages-route__thread-actions .admin-button[data-tone="danger"],
+.admin-messages-route__message-actions .admin-button[data-tone="danger"] {
+  border-color: var(--admin-color-red);
+  color: var(--admin-color-red);
+}
+
+.admin-messages-route__messages {
+  border-block-start: 1px solid var(--admin-color-line);
+  padding-block-start: var(--admin-space-4);
+}
+
+.admin-messages-route__messages > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--admin-space-3);
+  min-block-size: 2.75rem;
+  cursor: pointer;
+  color: var(--admin-color-text);
+}
+
+.admin-messages-route__messages > summary span {
+  color: var(--admin-color-text-faint);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-messages-route__message-list {
+  margin-block-start: var(--admin-space-4);
+}
+
+.admin-messages-route__message {
+  display: grid;
+  gap: var(--admin-space-3);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-messages-route__message[data-hidden="true"] {
+  border-inline-start: 3px solid var(--admin-color-orange);
+}
+
+.admin-messages-route__message-heading strong,
+.admin-messages-route__message-heading span {
+  overflow-wrap: anywhere;
+}
+
+.admin-messages-route__message-heading span,
+.admin-messages-route__message-heading time {
+  color: var(--admin-color-text-faint);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-messages-route__message-heading > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--admin-space-2);
+}
+
+.admin-messages-route__body {
+  margin: 0;
+  color: var(--admin-color-text-muted);
+  line-height: var(--admin-leading-relaxed);
+  white-space: pre-wrap;
+}
+
+.admin-messages-route__pagination {
+  justify-content: flex-end;
+}
+
+.admin-messages-route__pagination > span {
+  min-inline-size: 7rem;
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-sm);
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .admin-messages-route__summary,
+  .admin-messages-route__metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-messages-route__controls {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.7fr);
+  }
+
+  .admin-messages-route__controls > .admin-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .admin-messages-route__thread {
+    padding: var(--admin-space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-messages-route__summary,
+  .admin-messages-route__controls,
+  .admin-messages-route__metadata {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-messages-route__controls > .admin-button {
+    grid-column: auto;
+    inline-size: 100%;
+  }
+
+  .admin-messages-route__thread-heading,
+  .admin-messages-route__message-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-messages-route__status {
+    white-space: normal;
+  }
+
+  .admin-messages-route__thread-actions,
+  .admin-messages-route__message-actions {
+    justify-content: stretch;
+  }
+
+  .admin-messages-route__thread-actions .admin-button,
+  .admin-messages-route__message-actions .admin-button {
+    flex: 1 1 12rem;
+  }
+
+  .admin-messages-route__messages > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-messages-route__pagination {
+    justify-content: space-between;
+  }
+
+  .admin-messages-route__pagination .admin-button {
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-messages-route__thread,
+  .admin-messages-route__message {
+    padding: var(--admin-space-3);
+  }
+
+  .admin-messages-route__pagination {
+    flex-wrap: wrap;
+  }
+
+  .admin-messages-route__pagination > span {
+    order: -1;
+    inline-size: 100%;
+  }
+}
