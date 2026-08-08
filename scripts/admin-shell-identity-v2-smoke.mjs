@@ -18,6 +18,7 @@ const expectedScripts = [
   "./auth-session-manager.js",
   "./session-gate.js",
   "./admin-auth.js",
+  "./modal-focus-order-guard.js",
   "./dist/admin-overview-terminal.js",
   "./asset-wiring.js",
   "./classroom-write-fallback.js",
@@ -68,6 +69,7 @@ const playerCreateUx = readAdmin("player-create-ux.js");
 const gameCodeWiring = readAdmin("game-code-wiring.js");
 const logoutConfirmation = readAdmin("logout-confirmation.js");
 const gameSessionControls = readAdmin("game-session-controls.js");
+const modalFocusOrderGuard = readAdmin("modal-focus-order-guard.js");
 
 assert(sessionManager.includes("/status"), "Admin BFF status route is missing.");
 assert(sessionManager.includes("/session/bootstrap"), "Admin granular authorization bootstrap is missing.");
@@ -122,6 +124,12 @@ assert(!credentialBridge.includes("STAFF_API_BASE"), "Player credential bridge s
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation is missing.");
 assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement.");
 
+assert(modalFocusOrderGuard.includes("focusDialogBeforeBackgroundInert"), "Modal focus-order guard is missing its bounded focus transfer.");
+assert(modalFocusOrderGuard.includes('descriptorOwner(HTMLElement.prototype, "inert")'), "Modal focus-order guard does not bind the native inert transition.");
+assert(!modalFocusOrderGuard.includes("Element.prototype.setAttribute ="), "Modal focus-order guard must not replace the global attribute API.");
+assert(html.indexOf("./modal-focus-order-guard.js") < html.indexOf("./dist/admin-overview-terminal.js"), "Modal focus-order guard must load before the preserved terminal bundle.");
+assert(html.indexOf("./player-access-code-bridge.js") < html.indexOf("./modal-accessibility.js"), "Shared modal accessibility must retain its canonical shell position.");
+
 assert(gameCodeWiring.includes('const RESET_ACTION = "reset-game-code"'), "Game Code reset action constant is missing.");
 assert(gameCodeWiring.includes("resetButton.dataset.adminTerminalAction = RESET_ACTION"), "Game Code rotation does not reuse the authenticated reset action.");
 assert(gameCodeWiring.includes("readPersistedGameCode"), "Game Code wiring does not retrieve the persisted code.");
@@ -139,4 +147,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell HttpOnly BFF identity, granular authorization, retired classroom fallback, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
+console.log("Admin shell HttpOnly BFF identity, granular authorization, retired classroom fallback, authenticated request, persisted Game Code, bounded Player credential, modal focus ordering, and logout contracts passed.");
