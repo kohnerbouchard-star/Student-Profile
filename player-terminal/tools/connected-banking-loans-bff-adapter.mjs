@@ -67,9 +67,14 @@ source = replaceExactlyOnce(
 }`,
   `async function bankingBalances(page) {
   const sessionResponse = await page.evaluate(async () => {
+    const publishableKey = String(
+      globalThis.EconovariaRuntimeConfig?.supabasePublishableKey || "",
+    ).trim();
+    if (!publishableKey) throw new Error("Player runtime publishable key was unavailable.");
     const response = await fetch("/functions/v1/player-web-session-api/proxy/players/me", {
       cache: "no-store",
       credentials: "include",
+      headers: { apikey: publishableKey },
     });
     return {
       status: response.status,
