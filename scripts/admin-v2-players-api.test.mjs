@@ -49,12 +49,11 @@ function playerRow(overrides = {}) {
 }
 
 
-test("Players is the only route flipped in the existing native V2 baseline", () => {
+test("Players remains native V2 without constraining later route migrations", () => {
   for (const routeId of ["overview", "store", "market", "players"]) {
     assert.equal(getAdminNavigationRoute(routeId)?.migration, "v2", `${routeId} is not native V2`);
   }
   assert.equal(getAdminNavigationRoute("marketplace")?.migration, "planned");
-  assert.equal(getAdminNavigationRoute("attendance")?.migration, "legacy");
 });
 
 test("Players API uses only the same-origin Admin BFF paths and authoritative payload fields", async () => {
