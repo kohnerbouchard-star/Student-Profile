@@ -136,14 +136,14 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   );
 
   const migratedRoutes = ADMIN_NAVIGATION_ROUTES.filter((route) => route.migrated);
-  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "contracts", "store", "world-management", "news-events"]);
+  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "contracts", "store", "world-management", "news-events", "messages"]);
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy").map((route) => route.id),
     ["settings", "logs"],
   );
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned").map((route) => route.id),
-    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "messages", "progression"],
+    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "progression"],
   );
   assert.equal(isMigratedAdminRoute("overview"), true);
   assert.equal(isMigratedAdminRoute("players"), true);
@@ -153,6 +153,7 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   assert.equal(isMigratedAdminRoute("market"), true);
   assert.equal(isMigratedAdminRoute("world-management"), true);
   assert.equal(isMigratedAdminRoute("news-events"), true);
+  assert.equal(isMigratedAdminRoute("messages"), true);
 
   const market = getAdminNavigationRoute("market");
   const marketplace = getAdminNavigationRoute("marketplace");
@@ -178,6 +179,13 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   assert.deepEqual(newsEvents.permission.allOf, ["world.manage"]);
   assert.equal(newsEvents.migration, "v2");
   assert.equal(newsEvents.legacyDestination, null);
+
+  const messages = getAdminNavigationRoute("messages");
+  assert.equal(messages.label, "Messages");
+  assert.equal(messages.groupId, "engagement");
+  assert.deepEqual(messages.permission.allOf, ["messaging.moderate"]);
+  assert.equal(messages.migration, "v2");
+  assert.equal(messages.legacyDestination, null);
 
   const routeIds = ADMIN_NAVIGATION_ROUTES.map((route) => route.id);
   const routeHrefs = ADMIN_NAVIGATION_ROUTES.map((route) => route.href);
@@ -229,6 +237,7 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.equal(createLegacyAdminHandoffUrl("contracts", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("market", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("overview", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("messages", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("marketplace", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("world-management", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("news-events", locationLike), null);
@@ -267,6 +276,14 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
       moduleKey: "news-events",
     },
   );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "messages", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("messages"),
+      moduleKey: "messages",
+    },
+  );
   assert.equal(readCurrentAdminV2Route({ hash: "#<script>" }), "overview");
   assert.equal(resolveAdminRouteBoundary({ routeId: "overview" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "players" }).kind, "migrated");
@@ -276,6 +293,7 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "world-management" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "news-events" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "messages" }).kind, "migrated");
 });
 
 test("Admin data states retain resolved content for refresh failures and ignore old responses", () => {
