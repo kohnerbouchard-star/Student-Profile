@@ -55,9 +55,14 @@
 
   function currentAttendanceWindow(gameId) {
     const cachedAttendanceWindow = object(cachedAttendanceWindows.get(gameId));
-    const fixedOption = field("currencyMode")?.querySelector('option[value="fixed"]')?.textContent || "";
-    const currencyCode = (text(fixedOption).match(/\b[A-Z]{3,8}\b/)?.[0] ||
-      text(cachedAttendanceWindow.currencyCode) || "ECO").toUpperCase();
+    const draftAttendanceWindow = object(
+      window.EconovariaAttendanceRewardSettings?.getDraftWindow?.(),
+    );
+    const currencyCode = (
+      text(draftAttendanceWindow.currencyCode) ||
+      text(cachedAttendanceWindow.currencyCode) ||
+      "ECO"
+    ).toUpperCase();
 
     return {
       ...cachedAttendanceWindow,

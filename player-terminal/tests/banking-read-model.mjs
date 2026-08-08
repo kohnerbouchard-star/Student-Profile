@@ -109,7 +109,7 @@ assert.ok(html.includes("data-player-banking-load-more"), "A real continuation c
 const legacyData = structuredClone(data);
 legacyData.banking.checking.accountId = "CASH";
 legacyData.banking.balances = [
-  { accountType: "cash", balance: 1250, currencyCode: "ECO" },
+  { accountType: "checking", balance: 1250, currencyCode: "ECO" },
 ];
 const legacyHtml = renderBankingPage(legacyData);
 assert.ok(

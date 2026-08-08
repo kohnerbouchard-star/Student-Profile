@@ -4,7 +4,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("public Banking repository uses two bounded scoped queries without selecting IDs", async () => {
+Deno.test("public Banking repository converges cash/checking aliases by currency without exposing IDs", async () => {
   const client = new FakeClient();
   const repository = new SupabasePlayerBankingPublicRepository(client as never);
   const page = await repository.readPage({
@@ -16,7 +16,10 @@ Deno.test("public Banking repository uses two bounded scoped queries without sel
 
   assertEquals(client.queries.length, 2);
   assertEquals(client.queries[0].table, "account_balances");
-  assertEquals(client.queries[0].selection, "account_type,balance,currency_code");
+  assertEquals(
+    client.queries[0].selection,
+    "account_type,balance,currency_code",
+  );
   assertEquals(client.queries[1].table, "ledger_entries");
   assertEquals(
     client.queries[1].selection,
@@ -29,7 +32,11 @@ Deno.test("public Banking repository uses two bounded scoped queries without sel
   ]);
   assertEquals(page.entries.length, 2);
   assertEquals(page.hasMore, true);
-  assertEquals(page.balances[0].accountType, "checking");
+  assertEquals(page.balances, [
+    { accountType: "checking", balance: 1250, currencyCode: "ECO" },
+    { accountType: "checking", balance: 30, currencyCode: "THD" },
+    { accountType: "savings", balance: 100, currencyCode: "THD" },
+  ]);
   assertEquals(page.entries.map((entry) => entry.accountType), [
     "checking",
     "checking",
@@ -83,7 +90,13 @@ class FakeQuery implements PromiseLike<any> {
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     const data = this.table === "account_balances"
-      ? [{ account_type: "cash", balance: "1250", currency_code: "ECO" }]
+      ? [
+        { account_type: "checking", balance: "1200", currency_code: "ECO" },
+        { account_type: "checking", balance: "50", currency_code: "ECO" },
+        { account_type: "checking", balance: "25", currency_code: "THD" },
+        { account_type: "checking", balance: "5", currency_code: "THD" },
+        { account_type: "savings", balance: "100", currency_code: "THD" },
+      ]
       : [
         ledger("25", "ECO", "2026-07-19T04:00:00.000Z"),
         ledger("-4", "LUM", "2026-07-19T03:59:00.000Z"),
@@ -95,7 +108,7 @@ class FakeQuery implements PromiseLike<any> {
 
 function ledger(amount: string, currencyCode: string, createdAt: string) {
   return {
-    account_type: "cash",
+    account_type: "checking",
     amount,
     currency_code: currencyCode,
     entry_type: Number(amount) < 0 ? "debit" : "credit",

@@ -17,16 +17,24 @@ const browserSafeSession = {
     rosterLabel: null,
     playerIdentifier: "CARD-200",
     status: "active",
+    currencyCode: "SYN",
   },
   session: {
     status: "active",
     expiresAt: "2026-07-27T08:40:00.000Z",
   },
-  balances: [{
-    accountType: "cash",
-    balance: 1250,
-    currencyCode: "ECO",
-  }],
+  balances: [
+    {
+      accountType: "checking",
+      balance: 400,
+      currencyCode: "ECO",
+    },
+    {
+      accountType: "checking",
+      balance: 1250,
+      currencyCode: "SYN",
+    },
+  ],
   attendance: {
     status: "not_configured",
   },
@@ -86,7 +94,8 @@ const session = await api.request("session");
 
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200");
-assert.equal(session.currencyCode, "ECO");
+assert.equal(session.currencyCode, "SYN");
+assert.equal(session.currencyResolved, true);
 assert.equal(session.gameSessionId, "");
 assert.equal(session.playerSessionId, "");
 assert.equal(session.capabilityManifestVersion, "2026-07-23.2");
@@ -102,4 +111,4 @@ assert.doesNotMatch(
 assert.equal("playerSessionToken" in api.config, false);
 assert.equal("accessToken" in api.config, false);
 
-console.log("Browser-safe Player session bootstrap passed without browser credentials or internal ownership UUIDs.");
+console.log("Browser-safe Player session resolved assigned currency across multi-currency Checking balances.");

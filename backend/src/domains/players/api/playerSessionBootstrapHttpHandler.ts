@@ -31,6 +31,11 @@ interface AccountBalanceRow {
   readonly currency_code: string;
 }
 
+function normalizedCurrencyCode(value: unknown): string {
+  const code = String(value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3,8}$/.test(code) ? code : "";
+}
+
 export async function handlePlayerSessionBootstrapRequest(
   request: Request,
   dependencies: PlayerSessionBootstrapDependencies,
@@ -169,6 +174,77 @@ export async function handlePlayerSessionBootstrapRequest(
     }
 
     const balances = (balancesResponse.data ?? []) as AccountBalanceRow[];
+    const checkingCurrencyCodes = [
+      ...new Set(
+        balances
+          .filter((balanceRow) =>
+            String(balanceRow.account_type).trim().toLowerCase() === "checking"
+          )
+          .map((balanceRow) => normalizedCurrencyCode(balanceRow.currency_code))
+          .filter(Boolean),
+      ),
+    ];
+    let playerCurrencyCode = checkingCurrencyCodes.length === 1
+      ? checkingCurrencyCodes[0]
+      : "";
+
+    if (!playerCurrencyCode) {
+      const assignmentResponse = await serviceClient
+        .from("player_country_assignments")
+        .select("country_profile_id")
+        .eq("game_session_id", session.game_session_id)
+        .eq("player_id", session.player_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (assignmentResponse.error) {
+        return jsonError(500, {
+          code: "player_session_bootstrap_failed",
+          message: "Player session bootstrap failed.",
+          retryable: false,
+        });
+      }
+
+      const assignment = assignmentResponse.data as {
+        readonly country_profile_id: string;
+      } | null;
+
+      if (!assignment?.country_profile_id) {
+        return jsonError(500, {
+          code: "player_session_bootstrap_failed",
+          message: "Player session bootstrap failed.",
+          retryable: false,
+        });
+      }
+
+      const countryResponse = await serviceClient
+        .from("country_profiles")
+        .select("currency_code")
+        .eq("id", assignment.country_profile_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (countryResponse.error) {
+        return jsonError(500, {
+          code: "player_session_bootstrap_failed",
+          message: "Player session bootstrap failed.",
+          retryable: false,
+        });
+      }
+
+      const country = countryResponse.data as {
+        readonly currency_code: string;
+      } | null;
+      playerCurrencyCode = normalizedCurrencyCode(country?.currency_code);
+    }
+
+    if (!playerCurrencyCode) {
+      return jsonError(500, {
+        code: "player_session_bootstrap_failed",
+        message: "Player session bootstrap failed.",
+        retryable: false,
+      });
+    }
 
     return jsonResponse<PlayerSessionBootstrapBody>(200, {
       ok: true,
@@ -181,6 +257,7 @@ export async function handlePlayerSessionBootstrapRequest(
         rosterLabel: player.roster_label ?? null,
         playerIdentifier: player.player_identifier,
         status: player.status,
+        currencyCode: playerCurrencyCode,
       },
       session: {
         status: "active",

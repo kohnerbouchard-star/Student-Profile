@@ -40,7 +40,7 @@ export interface PlayerSafeStockMarketOrderDto {
 }
 
 export interface StockMarketCashDto {
-  readonly accountType: "cash";
+  readonly accountType: "checking";
   readonly currencyCode: string;
   readonly balance: number;
 }

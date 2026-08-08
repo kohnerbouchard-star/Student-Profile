@@ -174,9 +174,10 @@
   }
 
   function draftAttendanceWindow(existing) {
-    const fixedOption = field("currencyMode")?.querySelector('option[value="fixed"]')?.textContent || "";
-    const currencyCode = (text(fixedOption).match(/\b[A-Z]{3,8}\b/)?.[0] ||
-      text(existing.currencyCode) || "ECO").toUpperCase();
+    const draft = object(window.EconovariaAttendanceRewardSettings?.getDraftWindow?.());
+    const currencyCode = (
+      text(draft.currencyCode) || text(existing.currencyCode) || "ECO"
+    ).toUpperCase();
     return {
       ...existing,
       timezone: text(existing.timezone) || "Asia/Seoul",

@@ -554,7 +554,7 @@ class InMemoryEconovariaRuntime
       args: {
         p_game_session_id: input.gameSessionId,
         p_player_id: input.playerId,
-        p_account_type: "cash",
+        p_account_type: "checking",
         p_amount: input.signedAmount,
         p_currency_code: "ECO",
         p_entry_type: input.signedAmount >= 0 ? "credit" : "debit",

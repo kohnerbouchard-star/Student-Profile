@@ -7,6 +7,7 @@ import {
 import {
   type ContractCompletionMode,
   type ContractStatus,
+  type ContractTargetingPayload,
   type ContractVisibility,
   parseGameSessionContractConfig,
 } from "../contracts/contractContracts.ts";
@@ -141,7 +142,49 @@ export function normalizeAdminContractCreateInput(
     metadata: body.metadata as CreateGameSessionContractInput["metadata"],
   });
 
+  validateAdminContractTargeting(parsed.visibility, parsed.targetingPayload);
   return parsed;
+}
+
+function validateAdminContractTargeting(
+  visibility: ContractVisibility,
+  targeting: ContractTargetingPayload,
+): void {
+  const allPlayers = targeting.allPlayers === true;
+  const hasNarrowTarget = hasTargetValues(targeting.countryCodes) ||
+    hasTargetValues(targeting.playerIds) ||
+    hasTargetValues(targeting.rosterLabels) ||
+    hasTargetValues(targeting.storyFlagConditions);
+
+  if (allPlayers && hasNarrowTarget) {
+    throw new AdminMutationError(
+      "contract_targeting_ambiguous",
+      "Choose All players or specific targets, not both.",
+      400,
+    );
+  }
+  if (visibility === "public" && !allPlayers) {
+    throw new AdminMutationError(
+      "contract_targeting_required",
+      "Public contracts require an explicit All players target.",
+      400,
+    );
+  }
+  if (visibility === "targeted" && (allPlayers || !hasNarrowTarget)) {
+    throw new AdminMutationError(
+      "contract_targeting_required",
+      "Targeted contracts require at least one explicit country, player, roster, or story target.",
+      400,
+    );
+  }
+}
+
+function hasTargetValues(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.some((entry) => {
+    if (typeof entry === "string") return entry.trim().length > 0;
+    return isRecord(entry) && Object.keys(entry).length > 0;
+  });
 }
 
 function normalizeMutation(

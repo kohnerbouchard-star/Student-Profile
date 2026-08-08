@@ -63,6 +63,62 @@ Deno.test("admin Contract create derives game and staff RPC authority", async ()
   assertEquals(client.calls[0]?.args.p_request_id, IDENTITY.requestId);
 });
 
+Deno.test("admin Contract public create requires explicit All players targeting", async () => {
+  const missing = new FakeMutationClient(successRow(contractRow()));
+  await assertMutationError(
+    () => mutateAdminContract(missing, {
+      gameSessionId: GAME_SESSION_ID,
+      staffUserId: STAFF_USER_ID,
+      operation: "create",
+      body: {
+        ...createBody(),
+        targetingPayload: {},
+      },
+      identity: IDENTITY,
+    }),
+    400,
+    "contract_targeting_required",
+  );
+  assertEquals(missing.calls.length, 0);
+
+  const ambiguous = new FakeMutationClient(successRow(contractRow()));
+  await assertMutationError(
+    () => mutateAdminContract(ambiguous, {
+      gameSessionId: GAME_SESSION_ID,
+      staffUserId: STAFF_USER_ID,
+      operation: "create",
+      body: {
+        ...createBody(),
+        targetingPayload: { allPlayers: true, countryCodes: ["NRC"] },
+      },
+      identity: IDENTITY,
+    }),
+    400,
+    "contract_targeting_ambiguous",
+  );
+  assertEquals(ambiguous.calls.length, 0);
+});
+
+Deno.test("admin Contract targeted create requires a concrete target", async () => {
+  const client = new FakeMutationClient(successRow(contractRow()));
+  await assertMutationError(
+    () => mutateAdminContract(client, {
+      gameSessionId: GAME_SESSION_ID,
+      staffUserId: STAFF_USER_ID,
+      operation: "create",
+      body: {
+        ...createBody(),
+        visibility: "targeted",
+        targetingPayload: { allPlayers: false },
+      },
+      identity: IDENTITY,
+    }),
+    400,
+    "contract_targeting_required",
+  );
+  assertEquals(client.calls.length, 0);
+});
+
 Deno.test("admin Contract publish keeps retry fingerprint stable", async () => {
   const client = new FakeMutationClient(successRow(
     contractRow({
@@ -245,6 +301,8 @@ function createBody(): Record<string, unknown> {
     title: "Trade Drive",
     description: "Create an export plan.",
     instructions: "Submit the plan.",
+    visibility: "public",
+    targetingPayload: { allPlayers: true },
   };
 }
 
@@ -281,7 +339,7 @@ function contractRow(
     category: "trade",
     status: "draft",
     visibility: "public",
-    targeting_payload: {},
+    targeting_payload: { allPlayers: true },
     requirements_payload: {},
     reward_payload: {},
     completion_mode: "manual_review",

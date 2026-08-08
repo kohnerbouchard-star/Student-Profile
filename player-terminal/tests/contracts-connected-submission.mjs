@@ -71,7 +71,7 @@ const apiCall = createStudentProfileApiCall({
         gameSession: { id: "game-private-uuid", name: "Econovaria", status: "active" },
         player: { id: "player-private-uuid", playerIdentifier: "CARD-100", displayName: "Alex Rivera" },
         session: { id: "session-private-uuid", status: "active" },
-        balances: [{ accountType: "cash", currencyCode: "ECO", balance: 100 }]
+        balances: [{ accountType: "checking", currencyCode: "ECO", balance: 100 }]
       };
     }
     if (request.path === "/players/me/capabilities") return manifest;

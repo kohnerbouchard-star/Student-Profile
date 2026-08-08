@@ -11,7 +11,7 @@
     "[data-admin-player-identity-settings-row]",
   ].join(",");
 
-  const playerCache = new Map();
+  const playerCacheByGame = new Map();
   const loadingPlayers = new Set();
   let selectedPlayerId = "";
 
@@ -29,6 +29,10 @@
 
   function terminalFeature() {
     return window.Econovaria?.features?.adminOverviewTerminal || null;
+  }
+
+  function currentGameId() {
+    return text(window.EconovariaAdminGameSelection?.read?.());
   }
 
   function playerUuid(player) {
@@ -77,9 +81,22 @@
     });
   }
 
-  function cachePlayers(players) {
+  function playerCache(gameId, create = true) {
+    const key = text(gameId);
+    if (!key) return null;
+    let cache = playerCacheByGame.get(key) || null;
+    if (!cache && create) {
+      cache = new Map();
+      playerCacheByGame.set(key, cache);
+    }
+    return cache;
+  }
+
+  function cachePlayers(gameId, players) {
+    const cache = playerCache(gameId);
+    if (!cache) return;
     for (const player of uniquePlayers(players)) {
-      playerCache.set(playerUuid(player), player);
+      cache.set(playerUuid(player), player);
     }
   }
 
@@ -111,16 +128,19 @@
     return uniquePlayers(arrays.flat());
   }
 
-  function allPlayers() {
-    cachePlayers(modelPlayers());
-    return [...playerCache.values()];
+  function allPlayers(gameId) {
+    const key = text(gameId);
+    if (!key) return [];
+    cachePlayers(key, modelPlayers());
+    return [...(playerCache(key, false)?.values() || [])];
   }
 
   async function loadPlayers(gameId) {
-    if (!gameId) return allPlayers();
+    const key = text(gameId);
+    if (!key) return [];
     try {
       const response = await window.fetch(
-        `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players`,
+        `${LOCAL_API_PREFIX}/games/${encodeURIComponent(key)}/players`,
         {
           method: "GET",
           credentials: "same-origin",
@@ -128,20 +148,21 @@
           headers: { Accept: "application/json" },
         },
       );
-      if (!response.ok) return allPlayers();
+      if (!response.ok) return allPlayers(key);
       const players = responsePlayers(await response.json());
-      cachePlayers(players);
-      return players.length ? players : allPlayers();
+      cachePlayers(key, players);
+      return players.length ? players : allPlayers(key);
     } catch (_) {
-      return allPlayers();
+      return allPlayers(key);
     }
   }
 
-  function updateCachedPlayer(playerId, values) {
+  function updateCachedPlayer(gameId, playerId, values) {
     const updates = object(values);
-    const cached = playerCache.get(playerId);
+    const cache = playerCache(gameId, false);
+    const cached = cache?.get(playerId);
     if (cached) {
-      playerCache.set(playerId, {
+      cache.set(playerId, {
         ...cached,
         ...(updates.displayName ? {
           displayName: updates.displayName,
@@ -160,6 +181,7 @@
       });
     }
 
+    if (gameId !== currentGameId()) return;
     const model = terminalFeature()?.currentModel;
     if (!model) return;
     for (const key of ["players", "roster", "playerRoster"]) {
@@ -264,29 +286,36 @@
   }
 
   function modalPlayerId(modal) {
-    return text(
-      selectedPlayerId ||
+    const modalId = text(
       modal?.querySelector('[data-admin-terminal-action="confirm-player-settings-save"][data-player-id]')?.getAttribute("data-player-id") ||
+      modal?.getAttribute?.("data-player-id") ||
       modal?.querySelector("[data-player-id]")?.getAttribute("data-player-id"),
     );
+    if (modalId) {
+      selectedPlayerId = modalId;
+      return modalId;
+    }
+    return text(selectedPlayerId);
   }
 
   function requestModalPlayer(modal, playerId) {
-    if (!playerId || loadingPlayers.has(playerId)) return;
-    loadingPlayers.add(playerId);
-    const gameId = text(window.EconovariaAdminGameSelection?.read?.());
+    const gameId = currentGameId();
+    const requestKey = `${gameId}:${playerId}`;
+    if (!gameId || !playerId || loadingPlayers.has(requestKey)) return;
+    loadingPlayers.add(requestKey);
     void loadPlayers(gameId).then(() => {
-      loadingPlayers.delete(playerId);
+      loadingPlayers.delete(requestKey);
       if (modal?.isConnected) decorateProfileModal(modal);
     });
   }
 
   function resolveModalPlayer(modal) {
+    const gameId = currentGameId();
     const playerId = modalPlayerId(modal);
-    if (!playerId) return null;
+    if (!gameId || !playerId) return null;
     selectedPlayerId = playerId;
-    cachePlayers(modelPlayers());
-    const player = playerCache.get(playerId) || null;
+    cachePlayers(gameId, modelPlayers());
+    const player = playerCache(gameId, false)?.get(playerId) || null;
     if (player) return player;
     requestModalPlayer(modal, playerId);
     return null;
@@ -397,8 +426,9 @@
   }
 
   async function saveProfileSettings(modal, player) {
-    const gameId = text(window.EconovariaAdminGameSelection?.read?.());
+    const gameId = currentGameId();
     const playerId = playerUuid(player);
+    const modalId = modalPlayerId(modal);
     const displayName = text(fieldControl(fieldByCaption(modal, "Player name"))?.value) || playerName(player);
     const identifierInput = fieldControl(fieldByCaption(modal, "Player ID / RFID card"));
     const accessInput = fieldControl(fieldByCaption(modal, "New Access Code"));
@@ -410,7 +440,11 @@
     const save = modal.querySelector('[data-admin-terminal-action="confirm-player-settings-save"]');
     const bridge = window.EconovariaPlayerAccessCodeBridge;
 
-    if (!gameId || !playerId || !identifier) {
+    if (!gameId || !playerId || !modalId || modalId !== playerId) {
+      setProfileStatus(modal, "Player selection changed. Reopen Player Settings before saving.", "error");
+      return;
+    }
+    if (!identifier) {
       setProfileStatus(modal, "Player ID / RFID card is required.", "error");
       identifierInput?.focus?.();
       return;
@@ -466,9 +500,9 @@
         showCredentialDialog: false,
       });
 
-      updateCachedPlayer(playerId, { displayName, playerIdentifier: identifier, status, countryAssignment });
+      updateCachedPlayer(gameId, playerId, { displayName, playerIdentifier: identifier, status, countryAssignment });
       if (accessInput) accessInput.value = "";
-      updateProfileSummary(modal, playerCache.get(playerId) || player);
+      updateProfileSummary(modal, playerCache(gameId, false)?.get(playerId) || player);
       setProfileStatus(
         modal,
         accessCode
@@ -555,7 +589,11 @@
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
-        const current = playerCache.get(playerUuid(player)) || player;
+        const current = resolveModalPlayer(modal);
+        if (!current) {
+          setProfileStatus(modal, "Player identity is unavailable. Reopen Player Settings.", "error");
+          return;
+        }
         void saveProfileSettings(modal, current);
       }, true);
     }
@@ -580,7 +618,7 @@
     const settings = target.closest('[data-admin-terminal-action="player-settings"]');
     if (settings) {
       selectedPlayerId = text(settings.getAttribute("data-player-id"));
-      const gameId = text(window.EconovariaAdminGameSelection?.read?.());
+      const gameId = currentGameId();
       void loadPlayers(gameId).then(scheduleDecorate);
       scheduleDecorate();
       return;
@@ -590,7 +628,7 @@
     if (nav) {
       if (nav.getAttribute("data-admin-section") !== "Players") selectedPlayerId = "";
       else {
-        const gameId = text(window.EconovariaAdminGameSelection?.read?.());
+        const gameId = currentGameId();
         void loadPlayers(gameId).then(scheduleDecorate);
       }
     }
@@ -598,7 +636,8 @@
     scheduleDecorate();
   }
 
-  cachePlayers(modelPlayers());
+  const initialGameId = currentGameId();
+  if (initialGameId) cachePlayers(initialGameId, modelPlayers());
 
   const observerRoot = document.body || document.documentElement;
   if (observerRoot && typeof MutationObserver === "function") {
@@ -616,14 +655,15 @@
     loadPlayers,
     selectPlayer(player) {
       const id = playerUuid(player);
-      if (!id) return;
-      cachePlayers([player]);
+      const gameId = currentGameId();
+      if (!gameId || !id) return;
+      cachePlayers(gameId, [player]);
       selectedPlayerId = id;
       scheduleDecorate();
     },
     selectPlayerById(playerId) {
       selectedPlayerId = text(playerId);
-      const gameId = text(window.EconovariaAdminGameSelection?.read?.());
+      const gameId = currentGameId();
       return loadPlayers(gameId).then(scheduleDecorate);
     },
   };

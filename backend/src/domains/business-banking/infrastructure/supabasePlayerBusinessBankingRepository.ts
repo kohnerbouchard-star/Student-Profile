@@ -12,17 +12,62 @@ export class SupabasePlayerBusinessBankingRepository
   implements PlayerBusinessBankingRepository {
   constructor(private readonly client: EdgeSupabaseClient) {}
 
+  async assertBusinessCreationAllowed(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+    readonly idempotencyKey: string;
+  }): Promise<void> {
+    const replayRows = await rows(
+      this.client.from("audit_log")
+        .select("id")
+        .eq("game_session_id", input.gameSessionId)
+        .eq("actor_id", input.playerId)
+        .eq("action", "business.create_or_acquire")
+        .eq("metadata->>idempotency_key", input.idempotencyKey)
+        .limit(1),
+    );
+    if (replayRows.length === 1) return;
+
+    const ownedBusinesses = (await rows(
+      this.client.from("business_entities").select("id,status,created_at")
+        .eq("game_session_id", input.gameSessionId)
+        .eq("owner_player_id", input.playerId)
+        .order("created_at", { ascending: true }),
+    )).filter((row) => text(row.status) !== "closed");
+    if (ownedBusinesses.length > 1) {
+      throw new PlayerBusinessBankingError(
+        "business_ownership_ambiguous",
+        "Multiple open businesses are owned by this player. Resolve ownership before continuing.",
+        409,
+      );
+    }
+    if (ownedBusinesses.length === 1) {
+      throw new PlayerBusinessBankingError(
+        "business_already_owned",
+        "Close the current business before creating or acquiring another one.",
+        409,
+      );
+    }
+  }
+
   async readBusiness(input: {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto> {
-    const business = await maybeRow(
+    const ownedBusinesses = (await rows(
       this.client.from("business_entities").select("*")
         .eq("game_session_id", input.gameSessionId)
         .eq("owner_player_id", input.playerId)
-        .order("created_at", { ascending: false })
-        .limit(1),
-    );
+        .order("created_at", { ascending: true }),
+    )).filter((row) => text(row.status) !== "closed");
+    if (ownedBusinesses.length > 1) {
+      throw new PlayerBusinessBankingError(
+        "business_ownership_ambiguous",
+        "Multiple open businesses are owned by this player. Resolve ownership before continuing.",
+        409,
+      );
+    }
+    const business = ownedBusinesses[0];
     if (!business) return emptyBusiness();
 
     const businessId = text(business.id);
@@ -128,9 +173,27 @@ export class SupabasePlayerBusinessBankingRepository
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<LoansSnapshotDto> {
+    const context = await rpcMaybeRow(
+      this.client,
+      "resolve_player_economic_context_v1",
+      {
+        p_game_session_id: input.gameSessionId,
+        p_player_id: input.playerId,
+      },
+    );
+    const localCurrency = text(context?.currency_code).toUpperCase();
+    if (!localCurrency) {
+      throw new PlayerBusinessBankingError(
+        "player_economic_context_missing",
+        "Player country and currency must be assigned before loans can be viewed.",
+        409,
+      );
+    }
+
     const [products, loans, profileRows, paymentRows, businesses] = await Promise.all([
       rows(this.client.from("loan_products").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("status", "active")
+        .eq("game_session_id", input.gameSessionId)
+        .eq("currency_code", localCurrency)
         .order("minimum_amount", { ascending: true })),
       rows(this.client.from("player_loans").select("*")
         .eq("game_session_id", input.gameSessionId).eq("player_id", input.playerId)
@@ -155,6 +218,7 @@ export class SupabasePlayerBusinessBankingRepository
     );
     const next = [...active].sort((a, b) => Date.parse(text(a.next_due_at)) - Date.parse(text(b.next_due_at)))[0];
     const eligibleProducts = products.filter((row) => {
+      if (text(row.status) !== "active") return false;
       if (integer(row.minimum_credit_score, 550) > creditScore) return false;
       return text(row.borrower_type) !== "business" || businesses.some((business) => ["active", "restructuring"].includes(text(business.status)));
     });
@@ -205,12 +269,16 @@ export class SupabasePlayerBusinessBankingRepository
       }),
       schedule: active.flatMap((row) => {
         const product = productById.get(text(row.loan_product_id)) ?? {};
-        const term = Math.min(integer(product.term_cycles, 1), 24);
+        const frequencyCycles = Math.max(1, integer(product.payment_frequency_cycles, 1));
+        const paymentCount = Math.min(
+          Math.ceil(integer(product.term_cycles, 1) / frequencyCycles),
+          24,
+        );
         const nextDue = Date.parse(text(row.next_due_at));
         if (!Number.isFinite(nextDue)) return [];
-        return Array.from({ length: term }, (_, index) => ({
-          cycle: `Cycle ${index + 1}`,
-          due: new Date(nextDue + index * 7 * 86_400_000).toISOString(),
+        return Array.from({ length: paymentCount }, (_, index) => ({
+          cycle: `Payment ${index + 1}`,
+          due: new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString(),
           amount: number(row.scheduled_payment),
           status: index === 0 && text(row.status) === "delinquent" ? "Late" : "Scheduled",
         }));
@@ -246,12 +314,23 @@ async function rows(builder: PromiseLike<{ data: unknown; error: { message: stri
     : [];
 }
 
-async function maybeRow(builder: { maybeSingle(): PromiseLike<{ data: unknown; error: { message: string } | null }> }): Promise<Row | null> {
-  const response = await builder.maybeSingle();
+async function rpcMaybeRow(
+  client: EdgeSupabaseClient,
+  command: string,
+  args: Readonly<Record<string, unknown>>,
+): Promise<Row | null> {
+  const response = await client.rpc<unknown>(command, args);
   if (response.error) throw mapDatabaseError(response.error.message);
-  return response.data && typeof response.data === "object" && !Array.isArray(response.data)
-    ? response.data as Row
-    : null;
+  const value = Array.isArray(response.data) ? response.data[0] : response.data;
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new PlayerBusinessBankingError(
+      "business_banking_result_invalid",
+      "The operation completed without a valid result.",
+      500,
+    );
+  }
+  return value as Row;
 }
 
 function mapDatabaseError(message: string): PlayerBusinessBankingError {
@@ -259,10 +338,12 @@ function mapDatabaseError(message: string): PlayerBusinessBankingError {
   const mappings: Record<string, [number, string]> = {
     PLAYER_SCOPE_REQUIRED: [401, "Player session scope is required."],
     PLAYER_NOT_FOUND: [404, "Player was not found in this game."],
+    PLAYER_ECONOMIC_CONTEXT_REQUIRED: [409, "Player country and currency must be assigned first."],
     RECIPIENT_NOT_FOUND: [404, "Recipient Player ID was not found in this game."],
     SELF_TRANSFER_NOT_ALLOWED: [409, "A player cannot transfer funds to the same account."],
     INSUFFICIENT_FUNDS: [409, "Available funds are insufficient."],
     IDEMPOTENCY_KEY_CONFLICT: [409, "This idempotency key was already used for a different request."],
+    ACCOUNT_CURRENCY_MISMATCH: [409, "Checking and savings transfers must use the player's current local currency."],
     BUSINESS_NOT_FOUND: [404, "Business was not found or is not owned by this player."],
     PRODUCT_NOT_FOUND: [404, "Business product was not found."],
     EMPLOYEE_NOT_FOUND: [404, "Business employee was not found."],
@@ -271,6 +352,7 @@ function mapDatabaseError(message: string): PlayerBusinessBankingError {
     INSUFFICIENT_INPUT_INVENTORY: [409, "Business input inventory is insufficient."],
     WAGE_UNAFFORDABLE: [409, "The business cannot afford the proposed wage."],
     LOAN_PRODUCT_NOT_FOUND: [404, "Loan offer was not found."],
+    LOAN_CURRENCY_MISMATCH: [409, "Loan offers must use the player's current local currency."],
     LOAN_NOT_FOUND: [404, "Loan was not found."],
     CREDIT_SCORE_INELIGIBLE: [409, "Current economic behavior does not meet this offer's credit requirement."],
     LOAN_UNAFFORDABLE: [409, "Projected payments exceed the affordability limit."],

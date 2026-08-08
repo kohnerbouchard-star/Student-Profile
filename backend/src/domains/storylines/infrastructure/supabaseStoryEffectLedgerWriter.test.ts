@@ -20,7 +20,7 @@ Deno.test("story effect ledger writer records cash credit through ledger RPC", a
   assertEquals(client.calls[0]?.args, {
     p_game_session_id: "game-1",
     p_player_id: "player-1",
-    p_account_type: "cash",
+    p_account_type: "checking",
     p_amount: 150,
     p_currency_code: "ECO",
     p_entry_type: "credit",
@@ -125,7 +125,7 @@ class FakeRpcClient {
     return Promise.resolve({
       data: [{
         ledger_entry_id: "ledger-1",
-        account_type: "cash",
+        account_type: "checking",
         balance: "1150",
         currency_code: "ECO",
         created_at: "2026-06-25T12:00:00.000Z",

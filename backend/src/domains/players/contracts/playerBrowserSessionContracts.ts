@@ -29,6 +29,7 @@ export interface PlayerSessionBootstrapBody {
     readonly rosterLabel: string | null;
     readonly playerIdentifier: string;
     readonly status: string;
+    readonly currencyCode: string;
   };
   readonly session: {
     readonly status: "active";

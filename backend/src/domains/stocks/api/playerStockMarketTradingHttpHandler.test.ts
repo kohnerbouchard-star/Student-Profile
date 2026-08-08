@@ -140,7 +140,7 @@ Deno.test("player stock trading resolves the public ticker inside authenticated 
       rejectionReason: null,
     },
     cash: {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "XAL",
       balance: 9700,
     },
@@ -303,7 +303,7 @@ class MockTradingRepository implements StockMarketTradingRepository {
         rejectionReason: null,
       },
       cash: {
-        accountType: "cash" as const,
+        accountType: "checking" as const,
         currencyCode: "XAL",
         balance: input.side === "buy" ? 9700 : 10200,
       },

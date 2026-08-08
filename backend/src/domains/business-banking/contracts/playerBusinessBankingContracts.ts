@@ -131,6 +131,11 @@ export interface PlayerBusinessBankingRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<PlayerEconomicContext>;
+  assertBusinessCreationAllowed?(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+    readonly idempotencyKey: string;
+  }): Promise<void>;
   readBusiness(input: {
     readonly gameSessionId: string;
     readonly playerId: string;

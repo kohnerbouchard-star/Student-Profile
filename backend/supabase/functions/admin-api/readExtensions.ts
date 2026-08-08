@@ -66,17 +66,161 @@ async function attendanceRewards(
   if (result.error) throw result.error;
   for (const row of result.data || []) {
     const key = String(row.source_id || "");
-    if (!key) continue;
+    const code = currencyCode(row.currency_code);
+    if (!key || !code) continue;
     const current = map.get(key) || {
-      amount: 0,
-      currency_code: row.currency_code,
+      amountsByCurrency: {},
       entries: [],
     };
-    current.amount += number(row.amount);
+    current.amountsByCurrency[code] = number(
+      current.amountsByCurrency[code],
+    ) + number(row.amount);
     current.entries.push(row);
     map.set(key, current);
   }
   return map;
+}
+
+function currencyCode(value: unknown): string {
+  const normalized = text(value).toUpperCase();
+  return /^[A-Z0-9]{3,16}$/.test(normalized) ? normalized : "";
+}
+
+function attendanceRewardSummary(reward: any): Record<string, any> {
+  const source = reward?.amountsByCurrency &&
+      typeof reward.amountsByCurrency === "object" &&
+      !Array.isArray(reward.amountsByCurrency)
+    ? reward.amountsByCurrency
+    : {};
+  const amountsByCurrency = Object.fromEntries(
+    Object.entries(source)
+      .map(([code, amount]) => [currencyCode(code), number(amount)] as const)
+      .filter(([code]) => Boolean(code)),
+  );
+  const currencies = Object.keys(amountsByCurrency).sort();
+  const singleCurrency = currencies.length === 1 ? currencies[0] : null;
+  const singleAmount = singleCurrency
+    ? number(amountsByCurrency[singleCurrency])
+    : null;
+  return {
+    rewardAmount: singleAmount,
+    rewardCurrencyCode: singleCurrency,
+    rewardAmountsByCurrency: amountsByCurrency,
+    rewardValuationStatus: currencies.length === 0
+      ? "none"
+      : currencies.length === 1
+      ? "single_currency"
+      : "multi_currency_unconverted",
+    rewardBreakdown: currencies
+      .map((code) => `${code} ${number(amountsByCurrency[code]).toFixed(2)}`)
+      .join("; "),
+    rewardEntries: reward?.entries || [],
+  };
+}
+
+function resolveValuationCurrency(
+  player: any,
+  authoritativeCountryCurrency: string,
+): string {
+  if (authoritativeCountryCurrency) return authoritativeCountryCurrency;
+  const currencies = [...new Set(
+    (Array.isArray(player?.balances) ? player.balances : [])
+      .filter((entry: any) =>
+        ["checking", "savings"].includes(text(entry?.accountType).toLowerCase())
+      )
+      .map((entry: any) => currencyCode(entry?.currencyCode))
+      .filter(Boolean),
+  )];
+  return currencies.length === 1 ? String(currencies[0] || "") : "";
+}
+
+function balanceTotal(
+  player: any,
+  accountType: string,
+  valuationCurrencyCode: string,
+): number {
+  if (!valuationCurrencyCode) return 0;
+  return (Array.isArray(player?.balances) ? player.balances : [])
+    .filter((entry: any) =>
+      text(entry?.accountType).toLowerCase() === accountType &&
+      currencyCode(entry?.currencyCode) === valuationCurrencyCode
+    )
+    .reduce((sum: number, entry: any) => sum + number(entry?.balance), 0);
+}
+
+function currencyScopedPlayerWealth(
+  player: any,
+  authoritativeCountryCurrency: string,
+  storeCurrencyById: ReadonlyMap<string, string>,
+): any {
+  const valuationCurrencyCode = resolveValuationCurrency(
+    player,
+    authoritativeCountryCurrency,
+  );
+  const checkingBalance = balanceTotal(
+    player,
+    "checking",
+    valuationCurrencyCode,
+  );
+  const savingsBalance = balanceTotal(
+    player,
+    "savings",
+    valuationCurrencyCode,
+  );
+  const inventoryPositions = Array.isArray(player?.inventoryPositions)
+    ? player.inventoryPositions
+    : [];
+  let inventoryMarketValue = 0;
+  let excludedInventoryMarketValue = 0;
+  for (const position of inventoryPositions) {
+    const positionValue = number(position?.marketValue);
+    const itemCurrencyCode = storeCurrencyById.get(String(position?.storeItemId || "")) || "";
+    if (
+      valuationCurrencyCode &&
+      itemCurrencyCode === valuationCurrencyCode
+    ) {
+      inventoryMarketValue += positionValue;
+    } else if (positionValue !== 0) {
+      excludedInventoryMarketValue += positionValue;
+    }
+  }
+  const rawStockMarketValue = number(player?.stockMarketValue);
+  const stockMarketValue = valuationCurrencyCode === "ECO"
+    ? rawStockMarketValue
+    : 0;
+  const excludedStockMarketValue = stockMarketValue === rawStockMarketValue
+    ? 0
+    : rawStockMarketValue;
+  const depositBalance = checkingBalance + savingsBalance;
+  const netWorth = depositBalance + stockMarketValue + inventoryMarketValue;
+
+  return {
+    ...player,
+    balance: checkingBalance,
+    cashBalance: checkingBalance,
+    checkingBalance,
+    savingsBalance,
+    currencyCode: valuationCurrencyCode || null,
+    stockMarketValue,
+    inventoryMarketValue,
+    netWorth,
+    netWorthBreakdown: {
+      cash: depositBalance,
+      stocks: stockMarketValue,
+      inventory: inventoryMarketValue,
+    },
+    netWorthValuation: {
+      currencyCode: valuationCurrencyCode || null,
+      status:
+        valuationCurrencyCode &&
+          excludedInventoryMarketValue === 0 &&
+          excludedStockMarketValue === 0
+          ? "complete"
+          : "partial_unconverted",
+      excludedInventoryMarketValue,
+      excludedStockMarketValue,
+    },
+  };
 }
 
 export async function loadPlayersEnhanced(
@@ -84,15 +228,33 @@ export async function loadPlayersEnhanced(
   gameId: string,
 ): Promise<any[]> {
   const players = await loadPlayers(service, gameId);
-  const [flagsResult, settingsResult] = await Promise.all([
+  const [
+    flagsResult,
+    settingsResult,
+    assignmentsResult,
+    countriesResult,
+    storeItemsResult,
+  ] = await Promise.all([
     service.from("player_admin_flags").select("*")
       .eq("game_session_id", gameId)
       .order("created_at", { ascending: false }),
     service.from("player_admin_settings").select("*")
       .eq("game_session_id", gameId),
+    service.from("player_country_assignments")
+      .select("player_id,country_profile_id,status,assigned_at")
+      .eq("game_session_id", gameId)
+      .eq("status", "active")
+      .order("assigned_at", { ascending: false }),
+    service.from("country_profiles")
+      .select("id,currency_code,status")
+      .eq("status", "active"),
+    service.from("store_items")
+      .select("id,currency_code")
+      .eq("game_session_id", gameId),
   ]);
-  if (flagsResult.error) throw flagsResult.error;
-  if (settingsResult.error) throw settingsResult.error;
+  const error = flagsResult.error || settingsResult.error ||
+    assignmentsResult.error || countriesResult.error || storeItemsResult.error;
+  if (error) throw error;
 
   const flagsByPlayer = new Map<string, any[]>();
   for (const flag of flagsResult.data || []) {
@@ -104,8 +266,34 @@ export async function loadPlayersEnhanced(
   const settingsByPlayer = new Map<string, any>(
     (settingsResult.data || []).map((row: any) => [String(row.player_id), row]),
   );
+  const countryCurrencyById = new Map<string, string>(
+    (countriesResult.data || []).map((row: any) => [
+      String(row.id),
+      currencyCode(row.currency_code),
+    ]),
+  );
+  const countryCurrencyByPlayer = new Map<string, string>();
+  for (const assignment of assignmentsResult.data || []) {
+    const playerId = String(assignment.player_id || "");
+    if (!playerId || countryCurrencyByPlayer.has(playerId)) continue;
+    countryCurrencyByPlayer.set(
+      playerId,
+      countryCurrencyById.get(String(assignment.country_profile_id)) || "",
+    );
+  }
+  const storeCurrencyById = new Map<string, string>(
+    (storeItemsResult.data || []).map((row: any) => [
+      String(row.id),
+      currencyCode(row.currency_code),
+    ]),
+  );
 
-  return players.map((player) => {
+  return players.map((rawPlayer) => {
+    const player = currencyScopedPlayerWealth(
+      rawPlayer,
+      countryCurrencyByPlayer.get(String(rawPlayer.id)) || "",
+      storeCurrencyById,
+    );
     const flags = flagsByPlayer.get(String(player.id)) || [];
     const activeFlags = flags.filter((flag) => flag.status === "open");
     return {
@@ -247,7 +435,7 @@ export async function loadAttendanceHistoryEnhanced(
   );
   const rows = pageRecords.map((record: any) => {
     const player = playersById.get(String(record.player_id));
-    const reward = rewards.get(String(record.id));
+    const reward = attendanceRewardSummary(rewards.get(String(record.id)));
     return {
       id: record.id,
       attendanceId: record.id,
@@ -263,9 +451,7 @@ export async function loadAttendanceHistoryEnhanced(
       note: record.note || null,
       correctedByStaffUserId: record.corrected_by_staff_user_id || null,
       correctedAt: record.corrected_at || null,
-      rewardAmount: number(reward?.amount),
-      rewardCurrencyCode: reward?.currency_code || player?.currencyCode || "ECO",
-      rewardEntries: reward?.entries || [],
+      ...reward,
       createdAt: record.created_at,
       updatedAt: record.updated_at,
     };
@@ -313,6 +499,8 @@ export function attendanceRowsToCsv(rows: any[]): string {
     ["note", "Note"],
     ["rewardAmount", "Reward Amount"],
     ["rewardCurrencyCode", "Reward Currency"],
+    ["rewardValuationStatus", "Reward Valuation Status"],
+    ["rewardBreakdown", "Reward Breakdown"],
     ["correctedAt", "Corrected At"],
   ];
   return [

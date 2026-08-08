@@ -158,7 +158,7 @@ Deno.test("stock trading returns execute success response shape with actual cash
       rejectionReason: null,
     },
     cash: {
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO",
       balance: 9500,
     },
@@ -238,7 +238,7 @@ class MockTradingRepository implements StockMarketTradingRepository {
         rejectionReason: null,
       },
       cash: {
-        accountType: "cash" as const,
+        accountType: "checking" as const,
         currencyCode: "ECO",
         balance: 9500,
       },

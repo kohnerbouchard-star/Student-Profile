@@ -3,18 +3,6 @@
 
   const LOCAL_API_PREFIX = "/api/admin";
   const delegatedFetch = window.fetch.bind(window);
-  const COUNTRY_CURRENCIES = {
-    NORTHREACH: "NRC",
-    YRETHIA: "YRC",
-    THALORIS: "THD",
-    SOLVEND: "SLV",
-    ELDORAN: "ELD",
-    VALERION: "VAL",
-    LUMENOR: "LUM",
-    SYNDALIS: "SYN",
-    XALVORIA: "XAL",
-    DRAVENLOK: "DRV"
-  };
   let contractCreateFlight = null;
 
   function text(value) {
@@ -80,24 +68,47 @@
       : "hidden";
   }
 
-  function preferredStoreCurrency() {
-    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
-    const candidates = [
-      ...(Array.isArray(model.storeItems) ? model.storeItems : []),
-      ...(Array.isArray(model.store) ? model.store : []),
-      ...(Array.isArray(model.items) ? model.items : [])
+  function validCurrencyCode(value) {
+    const code = text(value).toUpperCase();
+    return /^[A-Z0-9]{3,16}$/.test(code) ? code : "";
+  }
+
+  function preferredStoreCurrency(source = {}) {
+    const sourcePayload = object(source.payload);
+    const explicitCandidates = [
+      sourcePayload.currencyCode,
+      sourcePayload.currency,
+      source.currencyCode,
+      source.currency
     ];
-    const existing = candidates
-      .map((item) => text(item?.currencyCode || item?.currency_code).toUpperCase())
-      .find((value) => Object.values(COUNTRY_CURRENCIES).includes(value));
-    if (existing) return existing;
+    for (const candidate of explicitCandidates) {
+      const code = validCurrencyCode(candidate);
+      if (code) return code;
+    }
 
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
     const game = model.activeGame || model.game || {};
-    const explicit = text(game.currencyCode || game.currency_code).toUpperCase();
-    if (Object.values(COUNTRY_CURRENCIES).includes(explicit)) return explicit;
+    const contextCandidates = [
+      game.countryCurrencyCode,
+      game.localCurrencyCode,
+      game.currencyCode,
+      game.country_currency_code,
+      game.local_currency_code,
+      game.currency_code,
+      model.countryCurrencyCode,
+      model.localCurrencyCode,
+      model.country_currency_code,
+      model.local_currency_code
+    ];
+    for (const candidate of contextCandidates) {
+      const code = validCurrencyCode(candidate);
+      if (code) return code;
+    }
 
-    const countryCode = text(game.countryCode || game.country_code).toUpperCase();
-    return COUNTRY_CURRENCIES[countryCode] || "XAL";
+    // No national currency can be inferred from a game session. Author the
+    // otherwise unscoped Store/Contract value in the explicit global unit
+    // rather than inventing a country currency or a conversion rate.
+    return "ECO";
   }
 
   async function readJson(request) {
@@ -166,10 +177,10 @@
     const cash = cashAmount && cashAmount > 0
       ? {
         amount: Math.round(cashAmount * 100) / 100,
-        accountType: text(cashSource.accountType) || "cash",
+        accountType: text(cashSource.accountType) || "checking",
         currencyCode: text(
           cashSource.currencyCode || cashSource.currency || payload.currencyCode
-        ).toUpperCase() || preferredStoreCurrency()
+        ).toUpperCase() || preferredStoreCurrency(payload)
       }
       : undefined;
 
@@ -214,7 +225,15 @@
       form,
       '[data-admin-terminal-contract-location]:checked'
     );
-    const normalizedLocations = locations.includes("all") ? ["all"] : locations;
+    const explicitAllPlayers = locations.includes("all");
+    const normalizedLocations = explicitAllPlayers
+      ? ["all"]
+      : locations.filter((value) => value !== "all");
+    if (!explicitAllPlayers && normalizedLocations.length === 0) {
+      throw new Error(
+        "Choose All players or at least one contract target before publishing."
+      );
+    }
     const materials = array(sourcePayload.materials);
     const singularRequirement = object(sourcePayload.submissionRequirement);
     const existingRequirements = array(sourcePayload.submissionRequirements);
@@ -227,9 +246,9 @@
           : [];
     const rewardPayload = canonicalContractRewards(sourcePayload);
     const completionMode = reviewType === "auto" ? "auto_check" : "manual_review";
-    const targeting = normalizedLocations.includes("all") || normalizedLocations.length === 0
+    const targeting = explicitAllPlayers
       ? { allPlayers: true }
-      : { countryCodes: normalizedLocations };
+      : { allPlayers: false, countryCodes: normalizedLocations };
     const status = postSetting === "draft"
       ? "draft"
       : postAt
@@ -278,7 +297,7 @@
         deadlineAt: deadline,
         quantity,
         quantityScope,
-        locations: normalizedLocations.length ? normalizedLocations : ["all"],
+        locations: normalizedLocations,
         targeting,
         targetingPayload: targeting,
         visibility: targeting.allPlayers ? "public" : "targeted",
@@ -365,7 +384,7 @@
         category: slug(rawCategory, "general").slice(0, 32),
         status: normalizedStoreStatus(rawStatus),
         price: numberOrUndefined(formValue(form, "price")),
-        currencyCode: preferredStoreCurrency(),
+        currencyCode: preferredStoreCurrency(source),
         stockQuantity,
         visibility: normalizedStoreVisibility(rawVisibility),
         sortOrder: 0
