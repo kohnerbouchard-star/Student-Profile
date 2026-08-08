@@ -54,6 +54,27 @@ source = replaceExactlyOnce(
 );
 source = replaceExactlyOnce(
   source,
+  "Banking/Loans assigned-currency fixture",
+  `      select ab.currency_code into v_currency
+      from public.account_balances ab
+      where ab.game_session_id = v_game_id
+        and ab.player_id = v_player_id
+        and ab.account_type = 'checking'
+      limit 1;
+      v_currency := coalesce(v_currency, 'ECO');`,
+  `      select profile.currency_code into v_currency
+      from public.player_country_assignments assignment
+      join public.country_profiles profile on profile.id = assignment.country_profile_id
+      where assignment.game_session_id = v_game_id
+        and assignment.player_id = v_player_id
+        and assignment.status = 'active'
+        and profile.status = 'active'
+      order by assignment.assigned_at desc
+      limit 1;
+      if coalesce(v_currency, '') = '' then raise exception 'PLAYER_ECONOMIC_CONTEXT_REQUIRED'; end if;`,
+);
+source = replaceExactlyOnce(
+  source,
   "Banking/Loans matched currency balances",
   `async function bankingBalances(page) {
   const checking = page.locator('[data-player-banking-balance^="checking:"] h3').first();
