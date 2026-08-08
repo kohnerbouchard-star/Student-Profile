@@ -1,0 +1,30 @@
+{
+  "baseline": "4c17b942fcf4b2a6f60b629549f192d066053ba4",
+  "branch": "refactor/admin-ui-v2-news-events-v1",
+  "permission": "world.manage",
+  "contractAudit": {
+    "reads": [
+      "/world/campaign",
+      "/world/campaign/history?limit=250",
+      "/world/campaign/effects?status=all&limit=250"
+    ],
+    "mutation": "/world/campaign/effects/:effectId/recover",
+    "mutationScope": "failed publish_news effects only",
+    "freeFormCrudExposed": false,
+    "financialMarketEventsUsed": false
+  },
+  "authoringChecks": {
+    "javascriptSyntax": "passed",
+    "apiControllerTests": {
+      "passed": 8,
+      "failed": 0,
+      "note": "Rendering import was stubbed only in the partial authoring filesystem; production API/controller source was unchanged."
+    }
+  },
+  "browserSmoke": {
+    "script": "scripts/admin-v2-news-events-browser-smoke.mjs",
+    "permissionScript": "scripts/admin-v2-news-events-permission-smoke.mjs",
+    "fullCheckoutRequired": true,
+    "resultPath": "docs/operations/evidence/admin-ui-v2-news-events/admin-v2-news-events-browser-results.json"
+  }
+}
