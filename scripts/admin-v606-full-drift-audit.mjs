@@ -15,7 +15,7 @@ function gitBlobSha(path) {
 const acceptedV606Blobs = {
   "admin/dist/admin-overview-terminal.js": "03cf8d402136502688994e6cce670b9701f8f74f",
   "admin/css/admin-overview-terminal.css": "7a609ccff33d61fee96d2ea944e0d1a6059a6081",
-  "admin/css/page-shell.css": "c4df8ae6d2500192a213b4b49829fe4b34f37f8b",
+  "admin/css/page-shell.css": "a9644c2af3d2851f49c5f0354ed80d31784cf397",
   "admin/css/admin-overview-integrity.css": "887ae8ffaff27e9013093f6aae92529134b80c18",
 };
 for (const [path, expected] of Object.entries(acceptedV606Blobs)) {
@@ -174,12 +174,15 @@ for (const path of [
 }
 
 const scrollIntegrityCss = readText("admin/css/admin-scroll-integrity.css");
+const mobileScrollBoundary = scrollIntegrityCss.indexOf("@media (max-width: 1100px)");
 const desktopScrollBoundary = scrollIntegrityCss.indexOf("@media (min-width: 1101px)");
-assert(desktopScrollBoundary >= 0, "Scroll integrity CSS has no desktop viewport boundary.");
-assert(scrollIntegrityCss.indexOf("html,") > desktopScrollBoundary, "Scroll integrity root selectors escape the desktop viewport boundary.");
-assert(!/(^|[},\s])(?:body|html)\s*\{/m.test(scrollIntegrityCss.slice(0, desktopScrollBoundary)), "Scroll integrity CSS contains an unbounded root selector.");
+assert(mobileScrollBoundary >= 0, "Scroll integrity CSS has no mobile/tablet viewport boundary.");
+assert(desktopScrollBoundary > mobileScrollBoundary, "Scroll integrity CSS has no desktop viewport boundary after mobile/tablet flow.");
+assert(scrollIntegrityCss.indexOf("html,") > mobileScrollBoundary, "Scroll integrity root selectors escape the bounded viewport media rules.");
+assert(scrollIntegrityCss.slice(desktopScrollBoundary).includes("html,"), "Scroll integrity CSS has no desktop root selectors.");
+assert(!/(^|[},\s])(?:body|html)\s*\{/m.test(scrollIntegrityCss.slice(0, mobileScrollBoundary)), "Scroll integrity CSS contains an unbounded root selector.");
 for (const token of [
-  "box-sizing: border-box", "height: calc(100dvh - 48px)", ".admin-terminal-left-menu",
+  "box-sizing: border-box", "height: var(--admin-viewport-block-size)", ".admin-terminal-left-menu",
   ".admin-terminal-shell-main", "overflow-y: auto", "overscroll-behavior-y: contain",
   ".admin-terminal-player-tab-panels-v301", ".admin-terminal-modal.is-player-modal",
 ]) {
