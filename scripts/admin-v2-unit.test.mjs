@@ -139,14 +139,14 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   );
 
   const migratedRoutes = ADMIN_NAVIGATION_ROUTES.filter((route) => route.migrated);
-  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "banking", "loans", "contracts", "crafting", "store", "inventory", "world-management", "news-events", "messages", "progression", "settings", "logs"]);
+  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "banking", "loans", "contracts", "business", "crafting", "store", "inventory", "world-management", "news-events", "messages", "progression", "settings", "logs"]);
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy").map((route) => route.id),
     [],
   );
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned").map((route) => route.id),
-    ["business", "marketplace"],
+    ["marketplace"],
   );
   assert.equal(isMigratedAdminRoute("overview"), true);
   assert.equal(isMigratedAdminRoute("players"), true);
@@ -155,6 +155,7 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   assert.equal(isMigratedAdminRoute("store"), true);
   assert.equal(isMigratedAdminRoute("inventory"), true);
   assert.equal(isMigratedAdminRoute("market"), true);
+  assert.equal(isMigratedAdminRoute("business"), true);
   assert.equal(isMigratedAdminRoute("crafting"), true);
   assert.equal(isMigratedAdminRoute("banking"), true);
   assert.equal(isMigratedAdminRoute("loans"), true);
@@ -366,6 +367,7 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.equal(resolveAdminRouteBoundary({ routeId: "store" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "inventory" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "business" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "crafting" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "banking" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "loans" }).kind, "migrated");
