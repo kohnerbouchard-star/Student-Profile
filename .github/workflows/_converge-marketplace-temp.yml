@@ -73,6 +73,30 @@ jobs:
           PY
             git add -- admin/v2.html admin/v2/src/app.js scripts/admin-v2-unit.test.mjs package.json
           fi
+
+          # The pre-convergence Marketplace test carried two source-shape assumptions
+          # superseded by the merged authoritative contracts. Policy timestamps are
+          # read metadata, not writable policy fields, and financial Market URLs are
+          # now composed through marketBasePath(). Keep the behavioral separation
+          # assertions while binding them to current source authority.
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("scripts/admin-v2-marketplace.test.mjs")
+          text = p.read_text()
+          old_policy = '    blockedCountryCodes: [],\n    updatedAt: "2026-08-07T00:00:00.000Z",\n  };\n}\n'
+          new_policy = '    blockedCountryCodes: [],\n  };\n}\n'
+          if old_policy not in text:
+              raise SystemExit("missing Marketplace writable-policy fixture anchor")
+          text = text.replace(old_policy, new_policy, 1)
+          old_market = '  assert.match(marketClient, /\\/market\\/assets\\?include=quotes/);'
+          new_market = '  assert.match(marketClient, /function marketBasePath\\(gameId\\)/);\n  assert.match(marketClient, /\\/assets\\?include=quotes/);'
+          if old_market not in text:
+              raise SystemExit("missing Marketplace financial-Market source anchor")
+          text = text.replace(old_market, new_market, 1)
+          p.write_text(text)
+          PY
+          git add -- scripts/admin-v2-marketplace.test.mjs
+
           rm .github/workflows/_converge-marketplace-temp.yml
           git add -u -- .github/workflows/_converge-marketplace-temp.yml
           git diff --cached --check
