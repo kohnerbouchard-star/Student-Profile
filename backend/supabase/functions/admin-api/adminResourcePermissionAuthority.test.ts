@@ -59,7 +59,9 @@ Deno.test("generic game grants cannot authorize Crafting or plural Business rout
       },
     );
     assertEquals(result.ok, false);
-    if (!result.ok) assertEquals(result.code, "staff_permission_denied");
+    if (result.ok === false) {
+      assertEquals(result.code, "staff_permission_denied");
+    }
     assertEquals(rateLimitCalls, 0);
   }
 });
@@ -78,7 +80,9 @@ Deno.test("explicit Crafting and Business grants authorize their own routes", as
       { consumeRateLimit: async () => allowedDecision() },
     );
     assertEquals(result.ok, true);
-    if (result.ok) assertEquals(result.requiredPermission, permission);
+    if (result.ok === true) {
+      assertEquals(result.requiredPermission, permission);
+    }
   }
 });
 
