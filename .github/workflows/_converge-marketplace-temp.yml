@@ -69,16 +69,12 @@ jobs:
           replace_once("scripts/admin-v2-unit.test.mjs", '  assert.equal(isMigratedAdminRoute("inventory"), true);\n', '  assert.equal(isMigratedAdminRoute("marketplace"), true);\n  assert.equal(isMigratedAdminRoute("inventory"), true);\n')
           replace_once("scripts/admin-v2-unit.test.mjs", '  assert.equal(marketplace.migration, "planned");', '  assert.equal(marketplace.migration, "v2");')
           replace_once("scripts/admin-v2-unit.test.mjs", '  assert.equal(resolveAdminRouteBoundary({ routeId: "inventory" }).kind, "migrated");\n', '  assert.equal(resolveAdminRouteBoundary({ routeId: "marketplace" }).kind, "migrated");\n  assert.equal(resolveAdminRouteBoundary({ routeId: "inventory" }).kind, "migrated");\n')
+          replace_once("scripts/admin-v2-unit.test.mjs", '    {\n      kind: "planned",\n      route: getAdminNavigationRoute("marketplace"),\n    },\n', '    {\n      kind: "migrated",\n      route: getAdminNavigationRoute("marketplace"),\n      moduleKey: "marketplace",\n    },\n')
           replace_once("package.json", 'scripts/admin-v2-business-api.test.mjs scripts/admin-v2-logs-api.test.mjs', 'scripts/admin-v2-business-api.test.mjs scripts/admin-v2-marketplace.test.mjs scripts/admin-v2-logs-api.test.mjs')
           PY
             git add -- admin/v2.html admin/v2/src/app.js scripts/admin-v2-unit.test.mjs package.json
           fi
 
-          # The pre-convergence Marketplace test carried two source-shape assumptions
-          # superseded by the merged authoritative contracts. Policy timestamps are
-          # read metadata, not writable policy fields, and financial Market URLs are
-          # now composed through marketBasePath(). Keep the behavioral separation
-          # assertions while binding them to current source authority.
           python - <<'PY'
           from pathlib import Path
           p = Path("scripts/admin-v2-marketplace.test.mjs")
