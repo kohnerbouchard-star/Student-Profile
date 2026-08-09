@@ -236,7 +236,7 @@ function adaptCommerceUsableInventoryFixture(source) {
   if (!source.includes(oldBlock)) return source;
 
   const newBlock = `  const databaseUrl = String(process.env.DATABASE_URL || "").trim();
-  if (!databaseUrl) throw new Error("DATABASE_URL is required to resolve the connected usable Store fixture.");
+  if (!databaseUrl) throw new Error("DATABASE_URL is required to resolve the connected canonical Store fixture.");
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
   const execFileAsync = promisify(execFile);
@@ -251,7 +251,6 @@ where si.currency_code = '\${escapedCurrency}'
   and si.visibility = 'visible'
   and coalesce(si.stock_quantity, 0) > 0
   and gi.status = 'active'
-  and coalesce((gi.metadata ->> 'effectEnabled')::boolean, false) is true
 order by si.sort_order asc, si.item_key asc
 limit 1\`;
   const { stdout } = await execFileAsync("psql", [
@@ -264,13 +263,13 @@ limit 1\`;
     query,
   ], { timeout: 30_000, maxBuffer: 1_048_576 });
   const itemKey = String(stdout || "").trim().split(/\\r?\\n/u).filter(Boolean)[0] || "";
-  if (!itemKey) throw new Error(\`No purchasable effect-enabled Store offer exists for \${currencyCode}.\`);
+  if (!itemKey) throw new Error(\`No purchasable canonical Store offer exists for \${currencyCode}.\`);
   const button = session.page.locator(\`[data-player-purchase="\${itemKey}"]:not([disabled])\`).first();
   await button.waitFor({ state: "visible", timeout: 30_000 });`;
 
   return replaceExactlyOnce(
     source,
-    "Commerce effect-enabled Store fixture",
+    "Commerce canonical Store fixture",
     oldBlock,
     newBlock,
   );
