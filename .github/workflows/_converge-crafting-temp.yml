@@ -18,10 +18,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-      - name: Inspect bounded Crafting replay conflicts
+      - name: Replay bounded Crafting diff onto accumulated main
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin backup/admin-ui-v2-crafting-preconvergence-20260810
           BASE=4c17b942fcf4b2a6f60b629549f192d066053ba4
           BACKUP=origin/backup/admin-ui-v2-crafting-preconvergence-20260810
@@ -46,9 +48,100 @@ jobs:
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
-            for file in admin/v2.html admin/v2/src/app.js package.json scripts/admin-v2-unit.test.mjs; do
-              echo "===== CONFLICT: $file ====="
-              git diff -- "$file" || true
-            done
-            exit "$status"
+            unresolved="$(git diff --name-only --diff-filter=U | sort | tr '\n' ' ')"
+            test "$unresolved" = "admin/v2.html admin/v2/src/app.js package.json scripts/admin-v2-unit.test.mjs "
+            git checkout --ours -- admin/v2.html admin/v2/src/app.js package.json scripts/admin-v2-unit.test.mjs
+            python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"missing convergence anchor in {path}: {old[:120]!r}")
+              text = text.replace(old, new, 1)
+              p.write_text(text)
+
+          replace_once(
+              "admin/v2.html",
+              '  <link rel="stylesheet" href="./v2/styles/routes/inventory.css" />\n',
+              '  <link rel="stylesheet" href="./v2/styles/routes/inventory.css" />\n  <link rel="stylesheet" href="./v2/styles/routes/crafting.css" />\n',
+          )
+
+          replace_once(
+              "admin/v2/src/app.js",
+              'import { createMarketController } from "./routes/market/MarketController.js";\n',
+              'import { createMarketController } from "./routes/market/MarketController.js";\nimport { createCraftingApiClient } from "./routes/crafting/CraftingApi.js";\nimport { createCraftingController } from "./routes/crafting/CraftingController.js";\n',
+          )
+          replace_once(
+              "admin/v2/src/app.js",
+              '  const inventoryApi = createAdminInventoryRedemptionQueueClient({ fetchImpl: transport });\n',
+              '  const inventoryApi = createAdminInventoryRedemptionQueueClient({ fetchImpl: transport });\n  const craftingApi = createCraftingApiClient({ fetchImpl: transport });\n',
+          )
+          replace_once(
+              "admin/v2/src/app.js",
+              '  const banking = createBankingController({\n',
+              '  const crafting = createCraftingController({\n    api: craftingApi,\n    selectedGameId,\n    hasPermission,\n    onChange: () => renderControllerChange("crafting"),\n    notify: (notification) => toast?.push(notification),\n  });\n  const banking = createBankingController({\n',
+          )
+          replace_once(
+              "admin/v2/src/app.js",
+              '    banking: Object.freeze({\n',
+              '    crafting: Object.freeze({\n      controller: crafting,\n      render: () => crafting.render(),\n    }),\n    banking: Object.freeze({\n',
+          )
+          replace_once(
+              "admin/v2/src/app.js",
+              'Overview, Players, Attendance, Contracts, Store, Market, Inventory, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes.',
+              'Overview, Players, Attendance, Contracts, Store, Market, Inventory, Crafting, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes.',
+          )
+          replace_once(
+              "admin/v2/src/app.js",
+              '      market.destroy();\n',
+              '      market.destroy();\n      crafting.destroy();\n',
+          )
+
+          replace_once(
+              "package.json",
+              'scripts/admin-v2-attendance-api.test.mjs scripts/admin-v2-logs-api.test.mjs',
+              'scripts/admin-v2-attendance-api.test.mjs scripts/admin-v2-crafting-api.test.mjs scripts/admin-v2-logs-api.test.mjs',
+          )
+          replace_once(
+              "package.json",
+              '    "test:admin-v2:market-browser": "node scripts/admin-v2-market-browser-smoke.mjs",\n',
+              '    "test:admin-v2:market-browser": "node scripts/admin-v2-market-browser-smoke.mjs",\n    "test:admin-v2:crafting-browser": "node scripts/admin-v2-crafting-browser-smoke.mjs",\n',
+          )
+
+          replace_once(
+              "scripts/admin-v2-unit.test.mjs",
+              '["overview", "players", "attendance", "market", "banking", "loans", "contracts", "store", "inventory", "world-management", "news-events", "messages", "progression", "settings", "logs"]',
+              '["overview", "players", "attendance", "market", "banking", "loans", "contracts", "crafting", "store", "inventory", "world-management", "news-events", "messages", "progression", "settings", "logs"]',
+          )
+          replace_once(
+              "scripts/admin-v2-unit.test.mjs",
+              '["business", "crafting", "marketplace"]',
+              '["business", "marketplace"]',
+          )
+          replace_once(
+              "scripts/admin-v2-unit.test.mjs",
+              '  assert.equal(isMigratedAdminRoute("market"), true);\n',
+              '  assert.equal(isMigratedAdminRoute("market"), true);\n  assert.equal(isMigratedAdminRoute("crafting"), true);\n',
+          )
+          replace_once(
+              "scripts/admin-v2-unit.test.mjs",
+              '  assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");\n',
+              '  assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");\n  assert.equal(resolveAdminRouteBoundary({ routeId: "crafting" }).kind, "migrated");\n',
+          )
+          PY
+            git add -- admin/v2.html admin/v2/src/app.js package.json scripts/admin-v2-unit.test.mjs
           fi
+          rm .github/workflows/_converge-crafting-temp.yml
+          git add -u -- .github/workflows/_converge-crafting-temp.yml
+          git diff --cached --check
+          node --check admin/v2/src/app.js
+          node --check admin/v2/src/routes/crafting/CraftingApi.js
+          node --check admin/v2/src/routes/crafting/CraftingController.js
+          node --check admin/v2/src/routes/crafting/CraftingRoute.js
+          node --check admin/v2/src/routes/crafting/CraftingSkeleton.js
+          node --test scripts/admin-v2-crafting-api.test.mjs
+          node --test scripts/admin-v2-unit.test.mjs
+          git commit -m "refactor(admin-v2): reconcile Crafting onto accumulated main"
+          git push origin HEAD:refactor/admin-ui-v2-crafting-v1
