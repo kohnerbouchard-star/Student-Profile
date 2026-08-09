@@ -34,6 +34,8 @@ begin
     length(v_definition) - length(replace(v_definition, '''checking''', ''))
   ) / length('''checking''');
 
+  -- Contract note: legacy source requires v_cash_literal_count <> 2 to be rejected
+  -- unless the accumulated schema is already bound to Checking.
   if v_cash_literal_count = 2 then
     v_rewritten_definition := replace(
       v_definition,
@@ -48,8 +50,6 @@ begin
 
     execute v_rewritten_definition;
   elsif v_cash_literal_count = 0 and v_checking_literal_count >= 2 then
-    -- The accumulated schema already carries the authoritative Checking binding.
-    -- Do not rewrite or reject an already-converged function definition.
     null;
   else
     raise exception 'ECONOMIC_CORE_STORE_SETTLEMENT_ACCOUNT_LITERAL_DRIFT:cash=%,checking=%',
@@ -73,6 +73,29 @@ begin
   end if;
 end;
 $migration$;
+
+-- Store-created canonical items predate physical-pack effect metadata. Preserve the
+-- pre-cutover public behavior for active, visible Store items without changing the
+-- explicit effectEnabled authority of physical-pack items.
+update public.game_items gi
+set
+  metadata = coalesce(gi.metadata, '{}'::jsonb) || jsonb_build_object(
+    'effectEnabled', true,
+    'legacyStoreUseCompatibility', true
+  ),
+  version = gi.version + 1,
+  updated_at = now()
+where gi.source_kind = 'store_created'
+  and gi.status = 'active'
+  and coalesce(gi.metadata, '{}'::jsonb)->>'effectEnabled' is null
+  and exists (
+    select 1
+    from public.store_items si
+    where si.game_session_id = gi.game_session_id
+      and si.game_item_id = gi.id
+      and si.status = 'active'
+      and si.visibility = 'visible'
+  );
 
 comment on function public.purchase_quoted_store_item(
   uuid, uuid, uuid, text, timestamptz, jsonb
