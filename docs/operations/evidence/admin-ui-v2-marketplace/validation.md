@@ -1,61 +1,58 @@
 # Marketplace Moderation Validation Matrix
 
-## Source checks
+Branch: `refactor/admin-ui-v2-marketplace-v1`
+Accumulated base: `ba69f5fcda551148b31b7a85e0c3dbb47a027238`
+Reconciled implementation: `035ee1f47b74ae61cd9f7c43ce8b044980191386`
+Status: `MARKETPLACE_RECONCILED_FINAL_CI`.
 
-Focused validation is implemented in `scripts/admin-v2-marketplace.test.mjs`.
+## Final convergence result
 
-Coverage:
+Marketplace Moderation is reconstructed additively on the accumulated Admin V2 shell after Inventory #508, Crafting #510, and Business #520. The navigation registry now has no `planned` Admin product destination: all 18 canonical routes resolve as native V2 modules.
 
-- authoritative Marketplace GET path;
-- listing moderation paths and idempotency payload/header;
-- dispute moderation paths and idempotency payload/header;
-- policy mutation path;
-- unsupported mutation rejection before transport;
-- safe Backend error normalization;
-- zero, one, and many listing normalization;
-- active, sold, cancelled, and dispute-derived `disputed` presentation;
-- search/filter source guard;
-- long and Korean item/player text;
-- private UUID and unsafe audit-metadata stripping;
-- `marketplace.moderate` denial before reads/mutations;
-- explicit financial Market / Marketplace route separation;
-- Player Marketplace contract presence/regression guard;
-- responsive CSS boundaries at 900px, 640px, and 420px.
+PR #503 canonical economic asset ownership is merged. Its compatibility boundary preserves the public Marketplace listing/item identifiers and lifecycle semantics used by this route; no raw canonical inventory table, internal ownership UUID, or duplicate ownership model is exposed to the browser.
 
-## Syntax checks performed before publication
+## Domain boundary
 
-The following new/modified source files were checked with `node --check` in the implementation workspace before publishing:
+Marketplace remains distinct from financial Market.
 
-- `MarketplaceApiClient.js`
-- `MarketplaceController.js`
-- `MarketplaceRoute.js`
-- `MarketplaceSkeleton.js`
-- `app.js`
-- `navigation-registry.js`
-- `admin-v2-marketplace.test.mjs`
+- Financial Market: securities, instruments, quotes, trading sessions, market events, and trades.
+- Marketplace: player-to-player listings, reservations/orders, settlement, disputes, moderation, lifecycle audit, and policy.
+- Player Marketplace routes remain player-scoped and are not reused as Admin authority.
 
-## Current-main reconciliation
+The Admin route continues to use only `/games/:gameId/marketplace...` paths and `marketplace.moderate`.
 
-The branch was reconciled with `main` at `4c17b942fcf4b2a6f60b629549f192d066053ba4` using merge commit `4c24c64763463e406ea42bfac3db2c85f94e44ce`. The incoming `main` delta was confined to Player Terminal coordinator/runtime files. Marketplace implementation blobs were preserved during the merge, and the pull-request functional delta remained the same twelve Admin V2 / Marketplace / evidence files.
+## Supported authoritative operations
 
-The PR diff contains no financial `admin/v2/src/routes/market/` file, no `/games/:gameId/market/...` request, and no `MutationObserver`. Marketplace continues to use `marketplace.moderate` and `/games/:gameId/marketplace...` exclusively.
+Read:
 
-## PR #503 compatibility gate
+- `GET /games/:gameId/marketplace`.
 
-PR #503 (`feat/economy: canonical economic asset ownership core v2`) remains open and draft. Its current compatibility boundary keeps public HTTP paths, Store keys, and existing RPC signatures stable while canonical inventory ownership moves underneath those compatibility projections. It also still lists Marketplace/redemption canonical compatibility and validation as unfinished work.
+Mutations:
 
-Therefore PR #521 must not merge until the final PR #503 contract is reconciled. Before merge, verify that the Admin Marketplace snapshot and existing listing/dispute moderation actions still expose the public listing/item identifiers and lifecycle semantics consumed by this V2 route. If #503 changes those public contracts, update this branch first.
+- listing hold / approve / reject;
+- dispute refund / resolve-seller / reject;
+- Marketplace policy update.
 
-Separate Marketplace bids/offers remain intentionally absent because the authoritative Admin Marketplace snapshot exposes no offers collection and no offer mutation. PR #503's “commercial offers” terminology describes Store/resource provenance, not a new Marketplace bid/offer API.
+No Marketplace offer/bid endpoint is fabricated. PR #503's commercial-offer terminology remains Store/resource provenance and does not create an Admin Marketplace offers API.
 
-## Runtime/browser evidence
+## Current-contract test corrections
 
-The route is built on the existing Admin V2 responsive table/card, dialog, permission-boundary, safe-error, and six-state primitives. On the pre-reconciliation implementation head, Admin Browser E2E, Environment Neutral Browser, Backend Typecheck, Runtime Interaction Wiring, Button Action Coverage, Supply Chain Security, Release Integrity, and Staging Readiness Preflight completed successfully.
+Two pre-convergence source-shape assertions were stale after accumulated repository changes and were corrected without altering runtime semantics:
 
-The pre-reconciliation Admin Shell / Admin Scroll failures were caused by existing legacy Admin viewport-scroll contract assertions in files outside this PR. Repository Quality stopped on the repository-wide Admin architecture ratchet (`mutationObservers` count), while this PR introduces no `MutationObserver`.
+1. `updatedAt` is Marketplace policy read metadata, not one of the writable policy fields accepted by `MarketplaceApiClient.cleanPolicy()`.
+2. The financial Market asset URL is now composed through `marketBasePath(gameId)` plus `/assets?include=quotes`; the test verifies that composition rather than requiring one contiguous source literal.
 
-Fresh CI was triggered for the reconciled head. At reconciliation time those checks were queued; they must be evaluated on the draft PR before any merge decision.
+The separate Market/Marketplace boundary remains asserted.
 
-Vercel's Git-connected preview check for the reconciled head was blocked by the account build-rate limit, and no Marketplace preview deployment was created. No manual deployment was attempted because this task authorizes only the normal draft-PR preview flow.
+## Verification
 
-The branch must remain a draft until checks settle and PR #503 reconciliation is complete. This task does not authorize merge.
+The reconciliation runner passed:
+
+- `git diff --cached --check`;
+- syntax checks for the accumulated `app.js` and all Marketplace V2 route modules;
+- `node --test scripts/admin-v2-marketplace.test.mjs`: **7/7 pass**;
+- `node --test scripts/admin-v2-unit.test.mjs`: **all pass**.
+
+The accumulated V2 unit registry verifies Marketplace as migrated with module key `marketplace`, an empty planned-route list, and no legacy handoff. The standard `test:admin-v2` command now includes the Marketplace focused contract suite.
+
+This owner-authored evidence commit triggers normal exact-head pull-request CI. Exact-head repository checks are the final merge gate.
