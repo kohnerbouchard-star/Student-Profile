@@ -81,6 +81,7 @@ const ADMIN_RATE_LIMIT_RESOURCES = new Set([
   "business",
   "capabilities",
   "contracts",
+  "crafting",
   "dashboard",
   "games",
   "inventory",
@@ -271,7 +272,9 @@ export function requiredAdminPermission(
     banking: "economy.adjust",
     balances: "economy.adjust",
     business: "business.manage",
+    businesses: "business.manage",
     contracts: "contracts.manage",
+    crafting: "inventory.redeem",
     economy: "economy.adjust",
     inventory: "inventory.redeem",
     ledger: "economy.adjust",
@@ -331,6 +334,10 @@ function adminRateLimitResource(path: string): string {
     UUID_PATTERN.test(segments[2])
   ) {
     candidate = segments[3] || "games";
+  }
+
+  if (candidate.toLowerCase() === "businesses") {
+    candidate = "business";
   }
 
   const normalized = candidate
