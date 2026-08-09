@@ -6,6 +6,10 @@ const orchestrator = await readFile(
   new URL("../backend/supabase/functions/stock-market-orchestrator/index.ts", import.meta.url),
   "utf8",
 );
+const runnerHandler = await readFile(
+  new URL("../backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts", import.meta.url),
+  "utf8",
+);
 const migration = await readFile(
   new URL("../backend/supabase/migrations/20260810073000_add_stock_market_runtime_scheduler_v1.sql", import.meta.url),
   "utf8",
@@ -15,24 +19,29 @@ const workflow = await readFile(
   "utf8",
 );
 
-test("orchestrator uses vault-token authentication and canonical stock runtime", () => {
+test("orchestrator uses vault-token authentication and the canonical stock HTTP handler", () => {
   assert.match(orchestrator, /x-econovaria-scheduler-token/u);
   assert.match(orchestrator, /verify_runtime_scheduler_token_v1/u);
   assert.match(orchestrator, /sha256Hex/u);
-  assert.match(orchestrator, /SupabaseStockMarketRunnerRepository/u);
-  assert.match(orchestrator, /calculateNextStockMarketTick/u);
-  assert.match(orchestrator, /readStockMarketOpenState/u);
+  assert.match(orchestrator, /handleStockMarketRunnerRequest/u);
+  assert.match(orchestrator, /readRunnerSecret:\s*\(\)\s*=>\s*internalSecret/u);
+  assert.match(orchestrator, /crypto\.randomUUID\(\)/u);
+  assert.doesNotMatch(orchestrator, /calculateNextStockMarketTick/u);
+  assert.doesNotMatch(orchestrator, /SupabaseStockMarketRunnerRepository/u);
   assert.doesNotMatch(orchestrator, /STOCK_MARKET_RUNNER_SECRET/u);
   assert.doesNotMatch(orchestrator, /SUPABASE_PUBLISHABLE_KEY/u);
-  assert.doesNotMatch(orchestrator, /x-econovaria-runner-signature/u);
 });
 
-test("orchestrator advances only active ready games and obeys market calendar", () => {
+test("scheduled ticks preserve market-calendar, realtime, and storyline-after-tick semantics", () => {
   assert.match(orchestrator, /\.eq\("status", "active"\)/u);
   assert.match(orchestrator, /\.eq\("lifecycle_state", "active"\)/u);
   assert.match(orchestrator, /\.eq\("provisioning_status", "ready"\)/u);
-  assert.match(orchestrator, /if \(!marketOpen\)/u);
-  assert.match(orchestrator, /outcome: "closed"/u);
+  assert.match(orchestrator, /stock_market_closed/u);
+  assert.match(runnerHandler, /readStockMarketOpenState/u);
+  assert.match(runnerHandler, /createDefaultPublicRealtimePublisher/u);
+  assert.match(runnerHandler, /createDefaultStorylineRunnerAfterTick/u);
+  assert.match(runnerHandler, /runStorylineEventsAfterStockTickBestEffort/u);
+  assert.match(runnerHandler, /runDueStorylineEvents/u);
 });
 
 test("database owns the autonomous 15-minute scheduler without embedded service credentials", () => {
