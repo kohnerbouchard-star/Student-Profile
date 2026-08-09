@@ -34,6 +34,7 @@ const migrations = [
   "20260806120430_repair_seed_and_supply_canonical_identity_v2.sql",
   "20260806120440_repair_seed_store_rollback_compatibility_v2.sql",
   "20260806120450_finalize_seed_store_rollback_ordering_v2.sql",
+  "20260806120460_rebind_store_settlement_to_checking_v2.sql",
 ];
 
 const sources = new Map(await Promise.all(migrations.map(async (name) => {
@@ -72,8 +73,8 @@ function assertNotContains(value, pattern, message) {
 test("migration manifest is ordered, unique, and transaction bounded", () => {
   assert.equal(new Set(migrations).size, migrations.length);
   assert.deepEqual([...migrations].sort(), migrations);
-  assert.equal(migrations.length, 26);
-  assert.equal(migrations.at(-1), "20260806120450_finalize_seed_store_rollback_ordering_v2.sql");
+  assert.equal(migrations.length, 27);
+  assert.equal(migrations.at(-1), "20260806120460_rebind_store_settlement_to_checking_v2.sql");
   for (const [name, sql] of sources) {
     const withoutLeadingComments = sql.replace(/^(?:\s*--[^\n]*\n)*/u, "").trimStart();
     assert.ok(withoutLeadingComments.startsWith("begin;"), `${name} must begin transactionally`);
@@ -118,6 +119,16 @@ test("Store settlement preserves public signatures and posts both canonical side
   assertContains(body, /v_item\.inventory_account_id/iu);
   assertContains(body, /v_player_account_id/iu);
   assertContains(body, /'store_stock'/iu);
+});
+
+test("Store settlement is rebound to canonical Player Checking after the economic-core cutover", () => {
+  const sql = source("20260806120460_rebind_store_settlement_to_checking_v2.sql");
+  assertContains(sql, /purchase_quoted_store_item\(uuid,uuid,uuid,text,timestamp with time zone,jsonb\)/iu);
+  assertContains(sql, /pg_get_functiondef/iu);
+  assertContains(sql, /v_cash_literal_count\s*<>\s*2/iu);
+  assertContains(sql, /replace\(\s*v_definition,\s*'''cash''',\s*'''checking'''\s*\)/iu);
+  assertContains(sql, /STORE_SETTLEMENT_CASH_LITERAL_RETAINED/iu);
+  assertContains(sql, /STORE_SETTLEMENT_CHECKING_LITERAL_MISSING/iu);
 });
 
 test("Crafting resolves, reserves, consumes, and grants canonical items", () => {
