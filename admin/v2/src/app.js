@@ -36,6 +36,8 @@ import { createLogsController } from "./routes/logs/LogsController.js";
 import { createMarketController } from "./routes/market/MarketController.js";
 import { createCraftingApiClient } from "./routes/crafting/CraftingApi.js";
 import { createCraftingController } from "./routes/crafting/CraftingController.js";
+import { createBusinessApi } from "./routes/business/BusinessApi.js";
+import { createBusinessController } from "./routes/business/BusinessController.js";
 import { createMessagesAdminClient } from "./routes/messages/MessagesApi.js";
 import { createMessagesController } from "./routes/messages/MessagesController.js";
 import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
@@ -182,6 +184,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const contractsApi = createContractsApiClient({ fetchImpl: transport });
   const inventoryApi = createAdminInventoryRedemptionQueueClient({ fetchImpl: transport });
   const craftingApi = createCraftingApiClient({ fetchImpl: transport });
+  const businessApi = createBusinessApi({ fetchImpl: transport });
   const loansApi = createLoansApiClient({ fetchImpl: transport });
   const logsApi = createLogsApiClient({ fetchImpl: transport });
   const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
@@ -225,6 +228,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     selectedGameId,
     hasPermission,
     onChange: () => renderControllerChange("market"),
+  });
+  const business = createBusinessController({
+    api: businessApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("business"),
+    notify: (notification) => toast?.push(notification),
   });
   const crafting = createCraftingController({
     api: craftingApi,
@@ -320,6 +330,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     market: Object.freeze({
       controller: market,
       render: () => market.render(),
+    }),
+    business: Object.freeze({
+      controller: business,
+      render: () => business.render(),
     }),
     crafting: Object.freeze({
       controller: crafting,
@@ -474,7 +488,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, Inventory, Crafting, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, Inventory, Crafting, Business, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -558,6 +572,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       inventory.destroy();
       market.destroy();
       crafting.destroy();
+      business.destroy();
       banking.destroy();
       loans.destroy();
       players.destroy();

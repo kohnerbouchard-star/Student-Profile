@@ -111,7 +111,7 @@ const ROUTES = Object.freeze([
     groupId: "work",
     icon: "business",
     permission: "business.manage",
-    migration: "planned",
+    migration: "v2",
   }),
   defineRoute({
     id: "crafting",
