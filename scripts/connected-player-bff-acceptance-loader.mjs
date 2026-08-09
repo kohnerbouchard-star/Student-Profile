@@ -229,6 +229,37 @@ function adaptBusinessFundedBalanceWait(source) {
   );
 }
 
+function adaptCommerceUsableInventoryFixture(source) {
+  const oldBlock = `  const button = session.page.locator("[data-player-purchase]:not([disabled])").first();
+  await button.waitFor({ state: "visible", timeout: 30_000 });
+  const itemKey = String(await button.getAttribute("data-player-purchase"));`;
+  if (!source.includes(oldBlock)) return source;
+
+  const newBlock = `  const usableItemByCurrency = Object.freeze({
+    NRC: "sensor-calibration-pack",
+    YRC: "logistics-rerouting-kit",
+    THD: "portable-energy-cell",
+    SLV: "precision-calibration-pack",
+    ELD: "encrypted-data-charge",
+    VAL: "emergency-filter-cartridge",
+    LUM: "translation-data-pack",
+    XAL: "machine-tooling-replacement-pack",
+    DRV: "emergency-repair-kit",
+    SYN: "firmware-patch",
+  });
+  const itemKey = usableItemByCurrency[currencyCode];
+  if (!itemKey) throw new Error(\`No effect-enabled Store fixture is mapped for \${currencyCode}.\`);
+  const button = session.page.locator(\`[data-player-purchase="\${itemKey}"]:not([disabled])\`).first();
+  await button.waitFor({ state: "visible", timeout: 30_000 });`;
+
+  return replaceExactlyOnce(
+    source,
+    "Commerce effect-enabled Store fixture",
+    oldBlock,
+    newBlock,
+  );
+}
+
 export async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
@@ -257,6 +288,7 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
   source = adaptMarketAuthenticatedReads(source);
   source = adaptMarketExpectedNegativeConsoleErrors(source);
   source = adaptBusinessFundedBalanceWait(source);
+  source = adaptCommerceUsableInventoryFixture(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Connected Player BFF loader retained the retired login route.");
