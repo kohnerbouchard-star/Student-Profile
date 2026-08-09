@@ -235,20 +235,36 @@ function adaptCommerceUsableInventoryFixture(source) {
   const itemKey = String(await button.getAttribute("data-player-purchase"));`;
   if (!source.includes(oldBlock)) return source;
 
-  const newBlock = `  const usableItemByCurrency = Object.freeze({
-    NRC: "sensor-calibration-pack",
-    YRC: "logistics-rerouting-kit",
-    THD: "portable-energy-cell",
-    SLV: "precision-calibration-pack",
-    ELD: "encrypted-data-charge",
-    VAL: "emergency-filter-cartridge",
-    LUM: "translation-data-pack",
-    XAL: "machine-tooling-replacement-pack",
-    DRV: "emergency-repair-kit",
-    SYN: "firmware-patch",
-  });
-  const itemKey = usableItemByCurrency[currencyCode];
-  if (!itemKey) throw new Error(\`No effect-enabled Store fixture is mapped for \${currencyCode}.\`);
+  const newBlock = `  const databaseUrl = String(process.env.DATABASE_URL || "").trim();
+  if (!databaseUrl) throw new Error("DATABASE_URL is required to resolve the connected usable Store fixture.");
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const execFileAsync = promisify(execFile);
+  const escapedCurrency = String(currencyCode).replace(/'/g, "''");
+  const query = \`select si.item_key
+from public.store_items si
+join public.game_items gi
+  on gi.id = si.game_item_id
+ and gi.game_session_id = si.game_session_id
+where si.currency_code = '\${escapedCurrency}'
+  and si.status = 'active'
+  and si.visibility = 'visible'
+  and coalesce(si.stock_quantity, 0) > 0
+  and gi.status = 'active'
+  and coalesce((gi.metadata ->> 'effectEnabled')::boolean, false) is true
+order by si.sort_order asc, si.item_key asc
+limit 1\`;
+  const { stdout } = await execFileAsync("psql", [
+    databaseUrl,
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-c",
+    query,
+  ], { timeout: 30_000, maxBuffer: 1_048_576 });
+  const itemKey = String(stdout || "").trim().split(/\\r?\\n/u).filter(Boolean)[0] || "";
+  if (!itemKey) throw new Error(\`No purchasable effect-enabled Store offer exists for \${currencyCode}.\`);
   const button = session.page.locator(\`[data-player-purchase="\${itemKey}"]:not([disabled])\`).first();
   await button.waitFor({ state: "visible", timeout: 30_000 });`;
 
