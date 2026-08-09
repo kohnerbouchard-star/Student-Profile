@@ -1,6 +1,8 @@
 -- Rebind canonical Store settlement to the merged Checking/Savings personal banking authority.
 -- PR #503 recreates purchase_quoted_store_item after the Checking convergence migration,
 -- so the Store debit must not reintroduce the retired personal `cash` account key.
+-- The migration is intentionally idempotent when the authoritative function is already
+-- bound to Checking by an accumulated/rebased schema.
 
 begin;
 
@@ -13,6 +15,7 @@ declare
   v_definition text;
   v_rewritten_definition text;
   v_cash_literal_count integer;
+  v_checking_literal_count integer;
 begin
   v_function_oid := to_regprocedure(
     'public.purchase_quoted_store_item(uuid,uuid,uuid,text,timestamp with time zone,jsonb)'
@@ -27,24 +30,33 @@ begin
   v_cash_literal_count := (
     length(v_definition) - length(replace(v_definition, '''cash''', ''))
   ) / length('''cash''');
+  v_checking_literal_count := (
+    length(v_definition) - length(replace(v_definition, '''checking''', ''))
+  ) / length('''checking''');
 
-  if v_cash_literal_count <> 2 then
-    raise exception 'ECONOMIC_CORE_STORE_SETTLEMENT_CASH_LITERAL_DRIFT:%', v_cash_literal_count
+  if v_cash_literal_count = 2 then
+    v_rewritten_definition := replace(
+      v_definition,
+      '''cash''',
+      '''checking'''
+    );
+
+    if v_rewritten_definition = v_definition then
+      raise exception 'ECONOMIC_CORE_STORE_SETTLEMENT_CHECKING_REBIND_REQUIRED'
+        using errcode = 'P0001';
+    end if;
+
+    execute v_rewritten_definition;
+  elsif v_cash_literal_count = 0 and v_checking_literal_count >= 2 then
+    -- The accumulated schema already carries the authoritative Checking binding.
+    -- Do not rewrite or reject an already-converged function definition.
+    null;
+  else
+    raise exception 'ECONOMIC_CORE_STORE_SETTLEMENT_ACCOUNT_LITERAL_DRIFT:cash=%,checking=%',
+      v_cash_literal_count,
+      v_checking_literal_count
       using errcode = 'P0001';
   end if;
-
-  v_rewritten_definition := replace(
-    v_definition,
-    '''cash''',
-    '''checking'''
-  );
-
-  if v_rewritten_definition = v_definition then
-    raise exception 'ECONOMIC_CORE_STORE_SETTLEMENT_CHECKING_REBIND_REQUIRED'
-      using errcode = 'P0001';
-  end if;
-
-  execute v_rewritten_definition;
 
   v_definition := pg_get_functiondef(
     'public.purchase_quoted_store_item(uuid,uuid,uuid,text,timestamp with time zone,jsonb)'::regprocedure
