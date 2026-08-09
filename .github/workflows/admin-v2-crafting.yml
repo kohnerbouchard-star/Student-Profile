@@ -1,0 +1,57 @@
+name: Admin V2 Crafting
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-v2-crafting.yml"
+      - "admin/v2.html"
+      - "admin/v2/src/app.js"
+      - "admin/v2/src/core/navigation-registry.js"
+      - "admin/v2/src/routes/crafting/**"
+      - "admin/v2/styles/routes/crafting.css"
+      - "scripts/admin-v2-unit.test.mjs"
+      - "scripts/admin-v2-crafting-api.test.mjs"
+      - "scripts/admin-v2-crafting-browser-smoke.mjs"
+      - "package.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-v2-crafting-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  crafting-v2:
+    name: Crafting V2 contracts and browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact pull request head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Run Admin V2 contract regressions
+        run: npm run test:admin-v2
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Crafting V2 desktop and mobile smoke
+        run: npm run test:admin-v2:crafting-browser
