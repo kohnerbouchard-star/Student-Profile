@@ -257,7 +257,33 @@ async function verifyTargetGame(created) {
       'marketplacePolicies', (select count(*) from public.marketplace_policies where game_session_id=(select id from target)),
       'players', (select count(*) from public.players where game_session_id=(select id from target)),
       'balances', (select count(*) from public.account_balances where game_session_id=(select id from target)),
-      'inventory', (select count(*) from public.inventory_holdings where game_session_id=(select id from target)),
+      'playerInventory', (
+        select count(*)
+        from public.inventory_holdings h
+        join public.inventory_accounts a
+          on a.game_session_id = h.game_session_id
+         and a.id = h.inventory_account_id
+        where h.game_session_id = (select id from target)
+          and a.account_kind = 'personal'
+      ),
+      'storeStockHoldings', (
+        select count(*)
+        from public.inventory_holdings h
+        join public.inventory_accounts a
+          on a.game_session_id = h.game_session_id
+         and a.id = h.inventory_account_id
+        join public.store_items si
+          on si.game_session_id = h.game_session_id
+         and si.id = h.store_item_id
+         and si.inventory_account_id = h.inventory_account_id
+         and si.game_item_id = h.game_item_id
+        where h.game_session_id = (select id from target)
+          and a.account_kind = 'store_stock'
+          and a.location_key = 'store_item:' || si.id::text
+          and h.player_id is null
+          and h.quantity_owned = si.stock_quantity
+          and h.quantity_reserved = 0
+      ),
       'progressionProfiles', (select count(*) from public.player_progression_profiles where game_session_id=(select id from target)),
       'businesses', (select count(*) from public.business_entities where game_session_id=(select id from target))
     )::text;
@@ -283,7 +309,8 @@ async function verifyTargetGame(created) {
     marketplacePolicies: 1,
     players: 0,
     balances: 0,
-    inventory: 0,
+    playerInventory: 0,
+    storeStockHoldings: 50,
     progressionProfiles: 0,
     businesses: 0,
   };

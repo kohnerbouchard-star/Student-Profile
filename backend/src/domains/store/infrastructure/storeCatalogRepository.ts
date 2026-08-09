@@ -34,7 +34,20 @@ export function toStoreItemDto(record: StoreItemRecord): StoreItemDto {
     status: record.status,
     visibility: record.visibility,
     sortOrder: record.sort_order,
+    sourceType: toStoreItemSourceType(record.game_item?.source_kind),
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };
+}
+
+function toStoreItemSourceType(
+  sourceKind: string | undefined,
+): StoreItemDto["sourceType"] {
+  if (sourceKind === "store_created" || sourceKind === "admin_created") {
+    return "custom";
+  }
+  if (sourceKind === "physical_pack" || sourceKind === "system") {
+    return "seeded";
+  }
+  return undefined;
 }

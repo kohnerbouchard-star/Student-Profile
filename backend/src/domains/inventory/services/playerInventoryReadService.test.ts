@@ -11,29 +11,33 @@ declare const Deno: {
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
-const NOW = "2026-07-18T07:00:00.000Z";
+const NOW = "2026-08-06T07:00:00.000Z";
 
-Deno.test("inventory service returns deterministic UUID-private inventory summaries", async () => {
+Deno.test("inventory service returns deterministic canonical-item summaries without leaking UUIDs", async () => {
   const service = new PlayerInventoryReadService(repository([
     record({
       holdingUuid: "00000000-0000-4000-8000-000000000101",
+      gameItemUuid: "00000000-0000-4000-8000-000000000151",
       storeItemUuid: "00000000-0000-4000-8000-000000000201",
-      itemKey: "field_permit",
-      category: "access",
+      itemKey: "field-permit",
+      category: "authorization",
       owned: 2,
       reserved: 1,
       unitValue: 12.5,
       currencyCode: "NRC",
+      usable: true,
     }),
     record({
       holdingUuid: "00000000-0000-4000-8000-000000000102",
-      storeItemUuid: "00000000-0000-4000-8000-000000000202",
-      itemKey: "data_chip",
+      gameItemUuid: "00000000-0000-4000-8000-000000000152",
+      storeItemUuid: null,
+      itemKey: "data-chip",
       category: "material",
       owned: 3,
       reserved: 0,
       unitValue: 4,
       currencyCode: "ECO",
+      usable: false,
     }),
   ]));
 
@@ -43,11 +47,12 @@ Deno.test("inventory service returns deterministic UUID-private inventory summar
     effectiveAt: NOW,
   });
 
-  assertEquals(body.items.map((item) => item.id), ["field_permit", "data_chip"]);
+  assertEquals(body.items.map((item) => item.id), ["field-permit", "data-chip"]);
   assertEquals(body.items[0].quantityAvailable, 1);
-  assertEquals(body.items[0].storeItemId, "field_permit");
+  assertEquals(body.items[0].storeItemId, "field-permit");
   assertEquals(body.items[0].availableActions, ["inventory.use"]);
   assertEquals(body.items[0].itemVisibility, "player");
+  assertEquals(body.items[1].availableActions, []);
   assertEquals(body.summary, {
     itemTypes: 2,
     quantityOwned: 5,
@@ -58,9 +63,29 @@ Deno.test("inventory service returns deterministic UUID-private inventory summar
       { currencyCode: "NRC", totalOwnedValue: 25 },
     ],
   });
-  assertEquals(body.categories, ["access", "material"]);
+  assertEquals(body.categories, ["authorization", "material"]);
   assertEquals(body.emptyState, null);
   assertNoUuid(JSON.stringify(body));
+});
+
+Deno.test("inventory service shows owned crafted outputs independently of Store provenance", async () => {
+  const body = await new PlayerInventoryReadService(repository([
+    record({
+      storeItemUuid: null,
+      itemKey: "field-repair-kit",
+      category: "consumable",
+      owned: 1,
+      usable: true,
+    }),
+  ])).readInventory({
+    gameId: GAME,
+    playerUuid: PLAYER,
+    effectiveAt: NOW,
+  });
+
+  assertEquals(body.items[0]?.id, "field-repair-kit");
+  assertEquals(body.items[0]?.storeItemId, "field-repair-kit");
+  assertEquals(body.items[0]?.availableActions, ["inventory.use"]);
 });
 
 Deno.test("inventory service distinguishes empty inventory from persistence unavailability", async () => {
@@ -90,7 +115,7 @@ Deno.test("inventory service distinguishes empty inventory from persistence unav
   );
 });
 
-Deno.test("inventory service rejects cross-scope, duplicate public IDs, and invalid reservations", async () => {
+Deno.test("inventory service rejects cross-scope, duplicate canonical public IDs, and invalid reservations", async () => {
   const otherGame = "00000000-0000-4000-8000-000000000002";
   await assertRejects(
     () => new PlayerInventoryReadService({
@@ -105,12 +130,13 @@ Deno.test("inventory service rejects cross-scope, duplicate public IDs, and inva
 
   const duplicate = record({
     holdingUuid: "00000000-0000-4000-8000-000000000103",
-    storeItemUuid: "00000000-0000-4000-8000-000000000203",
-    itemKey: "data_chip",
+    gameItemUuid: "00000000-0000-4000-8000-000000000153",
+    storeItemUuid: null,
+    itemKey: "data-chip",
   });
   await assertRejects(
     () => new PlayerInventoryReadService(repository([
-      record({ itemKey: "data_chip" }),
+      record({ itemKey: "data-chip" }),
       duplicate,
     ])).readInventory({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW }),
     "player_inventory_scope_violation",
@@ -127,8 +153,9 @@ Deno.test("inventory service rejects cross-scope, duplicate public IDs, and inva
 Deno.test("inventory service fails closed above the 200-holding maximum", async () => {
   const records = Array.from({ length: 201 }, (_value, index) => record({
     holdingUuid: scopedUuid(index + 1000),
-    storeItemUuid: scopedUuid(index + 2000),
-    itemKey: `item_${index}`,
+    gameItemUuid: scopedUuid(index + 2000),
+    storeItemUuid: null,
+    itemKey: `item-${index}`,
   }));
 
   await assertRejects(
@@ -153,20 +180,25 @@ function repository(records: readonly PlayerInventoryRecord[]): PlayerInventoryR
 
 function record(options: {
   readonly holdingUuid?: string;
-  readonly storeItemUuid?: string;
+  readonly gameItemUuid?: string;
+  readonly storeItemUuid?: string | null;
   readonly itemKey?: string;
   readonly category?: string;
   readonly owned?: number;
   readonly reserved?: number;
   readonly unitValue?: number;
   readonly currencyCode?: string;
+  readonly usable?: boolean;
 } = {}): PlayerInventoryRecord {
   return {
     internalHoldingUuid: options.holdingUuid ?? "00000000-0000-4000-8000-000000000100",
-    internalStoreItemUuid: options.storeItemUuid ?? "00000000-0000-4000-8000-000000000200",
+    internalGameItemUuid: options.gameItemUuid ?? "00000000-0000-4000-8000-000000000150",
+    internalStoreItemUuid: options.storeItemUuid === undefined
+      ? "00000000-0000-4000-8000-000000000200"
+      : options.storeItemUuid,
     gameId: GAME,
     playerUuid: PLAYER,
-    itemKey: options.itemKey ?? "energy_cell_pack",
+    itemKey: options.itemKey ?? "energy-cell-pack",
     name: "Energy Cell Pack",
     description: "Inventory item",
     category: options.category ?? "consumable",
@@ -174,6 +206,7 @@ function record(options: {
     currencyCode: options.currencyCode ?? "ECO",
     itemStatus: "active",
     itemVisibility: "visible",
+    usable: options.usable ?? false,
     quantityOwned: options.owned ?? 2,
     quantityReserved: options.reserved ?? 0,
     createdAt: NOW,

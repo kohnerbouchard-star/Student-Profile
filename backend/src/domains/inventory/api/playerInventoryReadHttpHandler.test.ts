@@ -141,6 +141,7 @@ function repository(): PlayerInventoryReadRepository {
       playerUuid: input.playerUuid,
       records: [{
         internalHoldingUuid: "00000000-0000-4000-8000-000000000101",
+        internalGameItemUuid: "00000000-0000-4000-8000-000000000151",
         internalStoreItemUuid: "00000000-0000-4000-8000-000000000201",
         gameId: input.gameId,
         playerUuid: input.playerUuid,
@@ -152,6 +153,7 @@ function repository(): PlayerInventoryReadRepository {
         currencyCode: "ECO",
         itemStatus: "active",
         itemVisibility: "visible",
+        usable: false,
         quantityOwned: 3,
         quantityReserved: 1,
         createdAt: NOW.toISOString(),

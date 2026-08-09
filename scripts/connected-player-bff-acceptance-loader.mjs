@@ -229,6 +229,121 @@ function adaptBusinessFundedBalanceWait(source) {
   );
 }
 
+function adaptCommerceUsableInventoryFixture(source) {
+  const oldBlock = `  const button = session.page.locator("[data-player-purchase]:not([disabled])").first();
+  await button.waitFor({ state: "visible", timeout: 30_000 });
+  const itemKey = String(await button.getAttribute("data-player-purchase"));`;
+  if (!source.includes(oldBlock)) return source;
+
+  const newBlock = `  const databaseUrl = String(process.env.DATABASE_URL || "").trim();
+  if (!databaseUrl) throw new Error("DATABASE_URL is required to resolve the connected canonical Store fixture.");
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const execFileAsync = promisify(execFile);
+  const escapedCurrency = String(currencyCode).replace(/'/g, "''");
+  const query = \`select si.item_key
+from public.store_items si
+join public.game_items gi
+  on gi.id = si.game_item_id
+ and gi.game_session_id = si.game_session_id
+where si.currency_code = '\${escapedCurrency}'
+  and si.status = 'active'
+  and si.visibility = 'visible'
+  and coalesce(si.stock_quantity, 0) > 0
+  and gi.status = 'active'
+order by si.sort_order asc, si.item_key asc
+limit 1\`;
+  const { stdout } = await execFileAsync("psql", [
+    databaseUrl,
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-c",
+    query,
+  ], { timeout: 30_000, maxBuffer: 1_048_576 });
+  const itemKey = String(stdout || "").trim().split(/\\r?\\n/u).filter(Boolean)[0] || "";
+  if (!itemKey) throw new Error(\`No purchasable canonical Store offer exists for \${currencyCode}.\`);
+  const button = session.page.locator(\`[data-player-purchase="\${itemKey}"]:not([disabled])\`).first();
+  await button.waitFor({ state: "visible", timeout: 30_000 });`;
+
+  return replaceExactlyOnce(
+    source,
+    "Commerce canonical Store fixture",
+    oldBlock,
+    newBlock,
+  );
+}
+
+function adaptInventoryUsableHoldingFixture(source) {
+  if (!source.includes('page.locator("[data-player-inventory-use]:visible").first()')) {
+    return source;
+  }
+
+  const oldBlock = `  const fixture = await gameFixture();
+  browser = await chromium.launch({ headless: true });`;
+  const newBlock = `  const fixture = await gameFixture();
+  const databaseUrl = String(process.env.DATABASE_URL || "").trim();
+  if (!databaseUrl) throw new Error("DATABASE_URL is required to provision the connected Inventory fixture.");
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const execFileAsync = promisify(execFile);
+  const escapedGameName = String(GAME_NAME).replace(/'/g, "''");
+  const escapedPlayerId = String(PLAYER_ID).replace(/'/g, "''");
+  const query = \`with candidate as (
+  select gi.id as game_item_id
+  from public.inventory_holdings ih
+  join public.players p
+    on p.id = ih.player_id
+   and p.game_session_id = ih.game_session_id
+  join public.game_sessions g
+    on g.id = ih.game_session_id
+  join public.game_items gi
+    on gi.id = ih.game_item_id
+   and gi.game_session_id = ih.game_session_id
+  left join public.store_items si
+    on si.id = ih.store_item_id
+   and si.game_session_id = ih.game_session_id
+  where g.name = '\${escapedGameName}'
+    and p.player_identifier = '\${escapedPlayerId}'
+    and p.status = 'active'
+    and ih.quantity_owned > ih.quantity_reserved
+    and gi.status = 'active'
+    and (
+      ih.store_item_id is null
+      or (si.status = 'active' and si.visibility = 'visible')
+    )
+  order by ih.updated_at desc, ih.id asc
+  limit 1
+)
+update public.game_items gi
+set metadata = coalesce(gi.metadata, '{}'::jsonb) || '{"effectEnabled":true}'::jsonb
+from candidate c
+where gi.id = c.game_item_id
+returning gi.canonical_key;\`;
+  const { stdout } = await execFileAsync("psql", [
+    databaseUrl,
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-c",
+    query,
+  ], { timeout: 30_000, maxBuffer: 1_048_576 });
+  const canonicalKey = String(stdout || "").trim().split(/\\r?\\n/u).filter(Boolean)[0] || "";
+  if (!canonicalKey) {
+    throw new Error("Connected Inventory fixture could not resolve an owned active item with available quantity.");
+  }
+  browser = await chromium.launch({ headless: true });`;
+
+  return replaceExactlyOnce(
+    source,
+    "Inventory usable holding fixture",
+    oldBlock,
+    newBlock,
+  );
+}
+
 export async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
@@ -257,6 +372,8 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
   source = adaptMarketAuthenticatedReads(source);
   source = adaptMarketExpectedNegativeConsoleErrors(source);
   source = adaptBusinessFundedBalanceWait(source);
+  source = adaptCommerceUsableInventoryFixture(source);
+  source = adaptInventoryUsableHoldingFixture(source);
 
   if (source.includes("/functions/v1/classroom-api/players/login")) {
     throw new Error("Connected Player BFF loader retained the retired login route.");
