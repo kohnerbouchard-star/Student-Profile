@@ -1,69 +1,51 @@
 # Admin UI V2 Business evidence
 
 Branch: `refactor/admin-ui-v2-business-v1`
-Reconciled main: `4c17b942fcf4b2a6f60b629549f192d066053ba4`
-Disposition: draft PR only; not merged; not promoted.
-Stop status: `BUSINESS_SCOPE_CORRECTED_WAITING_FOR_503`.
+Accumulated base: `d7ee935a9832af3ffdc4138c4f6d02e4b0037eb8`
+Reconciled implementation: `874d0d8da833d69696c673a058b4ca678b7c9c1e`
+Accumulated-test alignment: `529d0bdb1c7d1e1d6697e4475ab8ecc0a79eb6b9`
+Status: `BUSINESS_RECONCILED_FINAL_CI`.
 
-## Scope-correction result
+## Final convergence result
 
-PR #520 has been corrected back to an Admin UI V2 migration boundary. The backend changes previously introduced solely to support this UI were reverted to exact `main`, and the PR-only backend contract test was removed.
+Business V2 remains an Admin UI migration only. The earlier PR-owned backend redesign is not reintroduced. The branch is rebuilt additively on the accumulated Admin V2 shell after Inventory #508 and Crafting #510, preserving every previously merged route.
 
-Backend files removed from the PR diff:
+Resolved external gates:
 
-- `backend/supabase/functions/admin-api/adminSecurityGuard.ts`;
-- `backend/supabase/functions/admin-api/businessBankingOperations.ts`;
-- `backend/supabase/functions/admin-api/businessAdminV2Contract.test.ts`.
+- PR #503 canonical economic asset ownership is merged.
+- PR #531 explicitly maps plural Admin `businesses` routes to `business.manage` and the bounded Business rate-limit family.
+- Generic `game.read` / `game.update` no longer supply the Business route's authority.
 
-No Crafting, Inventory, Store, Marketplace, warehouse, material-flow, production, COGS, or canonical economic-asset implementation is owned by this branch.
+## Authoritative Business contract
 
-## Current merged Business contract
-
-The Business V2 route uses only current merged Admin/BFF capabilities:
+The route consumes only the merged Admin/BFF capabilities:
 
 - `GET /games/:gameId/businesses`;
-- `POST /games/:gameId/businesses/:businessKey/compliance` backed by `set_business_compliance_v1`.
+- `POST /games/:gameId/businesses/:businessKey/compliance`.
 
-The merged directory supplies Business public identity, `owner_player_id`, legal/entity/industry/country/currency fields, status, capitalization, revenue/expense/profit totals, valuation, reputation, failure count, and `updated_at`.
+No Business settlement endpoint, product-review endpoint, raw canonical inventory-table access, warehouse reconstruction, employee reconstruction, or duplicate economic-asset model is added.
 
-The UI does not treat `owner_player_id` as presentable data. The normalized V2 model drops that field because merged `main` provides no privacy-safe owner presentation DTO. Owner therefore renders as **Owner unavailable**. The UI does not perform a Player lookup to reconstruct an owner name.
+## Privacy boundary
 
-Business-cycle settlement remains omitted because the current read contract does not provide the required economic settlement inputs. Business product review remains omitted because there is no merged Business Admin product read workflow. Accounts, materials, inventory, warehouse, production, COGS, transactions, sales, and employee views remain absent because no merged Business Admin read contract exposes them.
+The merged Business read includes `owner_player_id`, but the browser presentation model drops it. Because no privacy-safe owner presentation DTO is supplied by the authoritative Business contract, owner presentation remains **Owner unavailable**. Business V2 does not call `/players` to reconstruct an owner name and does not render ownership UUIDs in text, attributes, links, route state, or accessible labels.
 
-## Remaining backend blocker — plural Business permission mapping
+## Canonical asset boundary
 
-Current merged `adminSecurityGuard.ts` recognizes singular resource `business`, but the live routes use plural `businesses`.
+PR #503 remains the ownership authority for Store → Inventory → Crafting → Business → Marketplace. Business V2 does not duplicate BOM, material, warehouse, finished-goods, production, or COGS ownership state in browser code. Fields absent from the Admin Business projection remain unavailable rather than inferred from raw canonical tables.
 
-Observed current-main policy behavior:
+## Verification
 
-- `GET /games/:gameId/businesses` resolves to fallback `game.read`, not `business.manage`;
-- `/games/:gameId/businesses/**` mutations resolve to fallback `game.update`, not `business.manage`;
-- plural `businesses` is not an Admin rate-limit resource and therefore classifies as `unknown`.
+The reconciliation runner passed:
 
-PR #520 no longer fixes this. It is a separate backend security-contract correction that requires explicit authorization before Business convergence. The V2 route itself remains locally gated by `business.manage`.
+- `git diff --cached --check`;
+- syntax checks for the accumulated `app.js` and all Business V2 route modules;
+- `node --test scripts/admin-v2-business-api.test.mjs`.
 
-## PR #503 dependency
+The follow-up accumulated-test alignment runner passed:
 
-PR #503 remains the canonical economic-asset ownership authority across Store → Inventory → Crafting → Business → Marketplace. Its Business BOM/material/warehouse/production/finished-goods/COGS convergence is not copied into this PR.
+- `node --test scripts/admin-v2-business-api.test.mjs`;
+- `node --test scripts/admin-v2-unit.test.mjs`.
 
-Final Business merge requires reconciliation against #503 after its contract is stable enough to determine the authoritative Business ownership/material/production projection.
+The accumulated V2 unit registry now marks Business as native, leaves only Marketplace planned, and the standard `test:admin-v2` command includes the Business contract suite.
 
-## Targeted UI test inventory
-
-- `scripts/admin-v2-business-api.test.mjs`
-  - exact current-main Business BFF read and compliance mutation paths;
-  - safe error envelopes;
-  - 0/1/many Business normalization;
-  - Korean/long names and signed profit;
-  - raw `owner_player_id` is not mapped into the normalized V2 read model;
-  - owner presentation is unavailable without a safe DTO;
-  - local `business.manage` fail-closed behavior;
-  - ready → stale refresh lifecycle;
-  - compliance idempotency reuse after retryable failure;
-  - unsupported settlement/inventory methods remain absent from the Business V2 API adapter.
-
-## Review matrix
-
-Review should verify empty, one, and many Business rows; active/restructuring/distressed/closed presentation; Korean and long Business names; owner-unavailable behavior; search/status/country filters; detail drawer behavior; compliance validation/success/retryable failure; permission denial; narrow and desktop viewports; and Overview/Store/Market V2 regressions.
-
-CI and PR check results on the corrected head remain the execution source of truth. Known repository-wide legacy scroll/architecture failures are not owned or modified by this Business UI branch.
+Exact-head CI on the repository-owner evidence commit is the final merge gate.
