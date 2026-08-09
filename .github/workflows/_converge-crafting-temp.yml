@@ -18,12 +18,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-      - name: Replay bounded Crafting diff onto accumulated main
+      - name: Inspect bounded Crafting replay conflicts
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin backup/admin-ui-v2-crafting-preconvergence-20260810
           BASE=4c17b942fcf4b2a6f60b629549f192d066053ba4
           BACKUP=origin/backup/admin-ui-v2-crafting-preconvergence-20260810
@@ -43,9 +41,14 @@ jobs:
             scripts/admin-v2-crafting-api.test.mjs \
             scripts/admin-v2-crafting-browser-smoke.mjs \
             scripts/admin-v2-unit.test.mjs > /tmp/crafting.patch
+          set +e
           git apply --3way --index /tmp/crafting.patch
-          rm .github/workflows/_converge-crafting-temp.yml
-          git add -u -- .github/workflows/_converge-crafting-temp.yml
-          git diff --cached --check
-          git commit -m "refactor(admin-v2): reconcile Crafting onto accumulated main"
-          git push origin HEAD:refactor/admin-ui-v2-crafting-v1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            for file in admin/v2.html admin/v2/src/app.js package.json scripts/admin-v2-unit.test.mjs; do
+              echo "===== CONFLICT: $file ====="
+              git diff -- "$file" || true
+            done
+            exit "$status"
+          fi
