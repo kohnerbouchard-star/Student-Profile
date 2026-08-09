@@ -1,4 +1,4 @@
-name: Stock Market Runtime Scheduler
+name: Stock Market Runtime Scheduler Release
 
 on:
   push:
@@ -7,17 +7,16 @@ on:
       - main
     paths:
       - "backend/supabase/functions/stock-market-orchestrator/**"
+      - "backend/supabase/migrations/20260810073000_add_stock_market_runtime_scheduler_v1.sql"
       - ".github/workflows/stock-market-runtime-scheduler.yml"
       - "scripts/stock-market-runtime-scheduler-contract.test.mjs"
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: stock-market-runtime-${{ github.ref }}
+  group: stock-market-runtime-release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -28,7 +27,7 @@ env:
 
 jobs:
   staging-release:
-    name: Deploy and verify staging scheduler
+    name: Deploy and configure staging scheduler
     if: github.event_name == 'push' && github.ref == 'refs/heads/fix/stock-market-runtime-scheduler-v1'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -56,41 +55,31 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
-      - name: Deploy JWT-protected orchestrator to staging
+      - name: Deploy custom-auth orchestrator to staging
         shell: bash
         run: |
           set -euo pipefail
           supabase functions deploy "$FUNCTION_SLUG" \
             --workdir backend \
-            --project-ref "$STAGING_PROJECT_REF"
-      - name: Invoke staging orchestrator
+            --project-ref "$STAGING_PROJECT_REF" \
+            --no-verify-jwt
+      - name: Configure staging database clock
         shell: bash
         run: |
           set -euo pipefail
-          response="$RUNNER_TEMP/stock-orchestrator.json"
-          http_code="$(curl --silent --show-error \
-            --output "$response" \
-            --write-out '%{http_code}' \
+          function_url="https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}"
+          curl --fail --silent --show-error \
             --request POST \
-            "https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}" \
+            "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/configure_stock_market_runtime_scheduler_v1" \
             --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header 'content-type: application/json' \
-            --data '{}')"
-          test "$http_code" = "200"
-          RESPONSE_PATH="$response" node - <<'NODE'
-          const fs = require('node:fs');
-          const body = JSON.parse(fs.readFileSync(process.env.RESPONSE_PATH, 'utf8'));
-          if (body.ok !== true || Number(body.failed) !== 0) {
-            throw new Error(`Staging stock orchestrator failed: ${JSON.stringify(body)}`);
-          }
-          if (Number(body.initializedGames) < 1) {
-            throw new Error('Staging stock orchestrator found no initialized games.');
-          }
-          NODE
+            --data "{\"p_function_url\":\"${function_url}\"}" \
+            > "$RUNNER_TEMP/staging-stock-scheduler-job.json"
+          test -s "$RUNNER_TEMP/staging-stock-scheduler-job.json"
 
   production-release:
-    name: Deploy and verify production scheduler
+    name: Deploy and configure production scheduler
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -106,7 +95,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22.23.1
-      - name: Verify exact current main and scheduler contract
+      - name: Verify exact main and scheduler contract
         shell: bash
         run: |
           set -euo pipefail
@@ -123,66 +112,25 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
           test "$PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
-      - name: Deploy JWT-protected orchestrator to production
+      - name: Deploy custom-auth orchestrator to production
         shell: bash
         run: |
           set -euo pipefail
           supabase functions deploy "$FUNCTION_SLUG" \
             --workdir backend \
-            --project-ref "$PRODUCTION_PROJECT_REF"
-      - name: Invoke production orchestrator
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            --no-verify-jwt
+      - name: Configure production database clock
         shell: bash
         run: |
           set -euo pipefail
-          response="$RUNNER_TEMP/stock-orchestrator.json"
-          http_code="$(curl --silent --show-error \
-            --output "$response" \
-            --write-out '%{http_code}' \
+          function_url="https://${PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}"
+          curl --fail --silent --show-error \
             --request POST \
-            "https://${PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}" \
+            "https://${PRODUCTION_PROJECT_REF}.supabase.co/rest/v1/rpc/configure_stock_market_runtime_scheduler_v1" \
             --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header 'content-type: application/json' \
-            --data '{}')"
-          test "$http_code" = "200"
-          RESPONSE_PATH="$response" node - <<'NODE'
-          const fs = require('node:fs');
-          const body = JSON.parse(fs.readFileSync(process.env.RESPONSE_PATH, 'utf8'));
-          if (body.ok !== true || Number(body.failed) !== 0) {
-            throw new Error(`Production stock orchestrator failed: ${JSON.stringify(body)}`);
-          }
-          NODE
-
-  production-tick:
-    name: Advance production stock runtime
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: production
-    env:
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-    steps:
-      - name: Invoke production orchestrator
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          response="$RUNNER_TEMP/stock-orchestrator.json"
-          http_code="$(curl --silent --show-error \
-            --output "$response" \
-            --write-out '%{http_code}' \
-            --request POST \
-            "https://${PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}" \
-            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            --header 'content-type: application/json' \
-            --data '{}')"
-          cat "$response"
-          test "$http_code" = "200"
-          RESPONSE_PATH="$response" node - <<'NODE'
-          const fs = require('node:fs');
-          const body = JSON.parse(fs.readFileSync(process.env.RESPONSE_PATH, 'utf8'));
-          if (body.ok !== true || Number(body.failed) !== 0) {
-            throw new Error(`Production stock runtime tick failed: ${JSON.stringify(body)}`);
-          }
-          NODE
+            --data "{\"p_function_url\":\"${function_url}\"}" \
+            > "$RUNNER_TEMP/production-stock-scheduler-job.json"
+          test -s "$RUNNER_TEMP/production-stock-scheduler-job.json"
