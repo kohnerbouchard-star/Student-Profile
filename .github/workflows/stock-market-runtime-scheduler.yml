@@ -1,0 +1,136 @@
+name: Stock Market Runtime Scheduler Release
+
+on:
+  push:
+    branches:
+      - fix/stock-market-runtime-scheduler-v1
+      - main
+    paths:
+      - "backend/supabase/functions/stock-market-orchestrator/**"
+      - "backend/supabase/migrations/20260810073000_add_stock_market_runtime_scheduler_v1.sql"
+      - ".github/workflows/stock-market-runtime-scheduler.yml"
+      - "scripts/stock-market-runtime-scheduler-contract.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stock-market-runtime-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  FUNCTION_SLUG: stock-market-orchestrator
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  staging-release:
+    name: Deploy and configure staging scheduler
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/stock-market-runtime-scheduler-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - name: Verify scheduler contract
+        run: node --test scripts/stock-market-runtime-scheduler-contract.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Enforce staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+      - name: Deploy custom-auth orchestrator to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_SLUG" \
+            --workdir backend \
+            --project-ref "$STAGING_PROJECT_REF" \
+            --no-verify-jwt
+      - name: Configure staging database clock
+        shell: bash
+        run: |
+          set -euo pipefail
+          function_url="https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}"
+          curl --fail --silent --show-error \
+            --request POST \
+            "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/configure_stock_market_runtime_scheduler_v1" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header 'content-type: application/json' \
+            --data "{\"p_function_url\":\"${function_url}\"}" \
+            > "$RUNNER_TEMP/staging-stock-scheduler-job.json"
+          test -s "$RUNNER_TEMP/staging-stock-scheduler-job.json"
+
+  production-release:
+    name: Deploy and configure production scheduler
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - name: Verify exact main and scheduler contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node --test scripts/stock-market-runtime-scheduler-contract.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Enforce production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
+      - name: Deploy custom-auth orchestrator to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_SLUG" \
+            --workdir backend \
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            --no-verify-jwt
+      - name: Configure production database clock
+        shell: bash
+        run: |
+          set -euo pipefail
+          function_url="https://${PRODUCTION_PROJECT_REF}.supabase.co/functions/v1/${FUNCTION_SLUG}"
+          curl --fail --silent --show-error \
+            --request POST \
+            "https://${PRODUCTION_PROJECT_REF}.supabase.co/rest/v1/rpc/configure_stock_market_runtime_scheduler_v1" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header 'content-type: application/json' \
+            --data "{\"p_function_url\":\"${function_url}\"}" \
+            > "$RUNNER_TEMP/production-stock-scheduler-job.json"
+          test -s "$RUNNER_TEMP/production-stock-scheduler-job.json"
