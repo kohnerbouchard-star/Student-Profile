@@ -40,22 +40,38 @@ const HOLDING_SELECT = [
   "game_session_id",
   "player_id",
   "store_item_id",
+  "inventory_account_id",
+  "game_item_id",
   "quantity_owned",
   "quantity_reserved",
+  "average_unit_cost",
+  "cost_currency_code",
   "created_at",
   "updated_at",
+].join(",");
+
+const GAME_ITEM_SELECT = [
+  "id",
+  "game_session_id",
+  "canonical_key",
+  "name",
+  "description",
+  "item_class",
+  "subtype",
+  "status",
+  "metadata",
 ].join(",");
 
 const STORE_ITEM_SELECT = [
   "id",
   "game_session_id",
+  "game_item_id",
   "item_key",
   "name",
   "description",
   "category",
   "price",
   "currency_code",
-  "status",
   "visibility",
 ].join(",");
 
@@ -78,15 +94,10 @@ export class SupabasePlayerInventoryReadRepository
       .order("id", { ascending: true })
       .limit(input.limit + 1);
 
-    if (holdingResponse.error) {
-      throw mapPersistenceError(holdingResponse.error);
-    }
+    if (holdingResponse.error) throw mapPersistenceError(holdingResponse.error);
 
     const holdings = holdingResponse.data ?? [];
-    if (holdings.length > input.limit) {
-      throw readFailed();
-    }
-
+    if (holdings.length > input.limit) throw readFailed();
     if (holdings.length === 0) {
       return {
         gameId: input.gameId,
@@ -95,32 +106,50 @@ export class SupabasePlayerInventoryReadRepository
       };
     }
 
-    const storeItemUuids = [...new Set(
-      holdings.map((row) => requireUuid(row.store_item_id)),
+    const gameItemUuids = [...new Set(
+      holdings.map((row) => requireUuid(row.game_item_id)),
     )];
-    const itemResponse = await this.client
-      .from("store_items")
-      .select(STORE_ITEM_SELECT)
+    const gameItemResponse = await this.client
+      .from("game_items")
+      .select(GAME_ITEM_SELECT)
       .eq("game_session_id", input.gameId)
-      .in("id", storeItemUuids)
-      .order("item_key", { ascending: true })
+      .in("id", gameItemUuids)
+      .order("canonical_key", { ascending: true })
       .order("id", { ascending: true })
-      .limit(storeItemUuids.length + 1);
+      .limit(gameItemUuids.length + 1);
 
-    if (itemResponse.error) {
-      throw mapPersistenceError(itemResponse.error);
-    }
+    if (gameItemResponse.error) throw mapPersistenceError(gameItemResponse.error);
+    const gameItemRows = gameItemResponse.data ?? [];
+    if (gameItemRows.length !== gameItemUuids.length) throw metadataMissing();
 
-    const itemRows = itemResponse.data ?? [];
-    if (itemRows.length > storeItemUuids.length) {
-      throw readFailed();
-    }
+    const storeItemUuids = [...new Set(
+      holdings
+        .map((row) => optionalUuid(row.store_item_id))
+        .filter((value): value is string => Boolean(value)),
+    )];
+    const storeItemResponse: QueryResponse<readonly Record<string, unknown>[]> =
+      storeItemUuids.length
+        ? await this.client
+          .from("store_items")
+          .select(STORE_ITEM_SELECT)
+          .eq("game_session_id", input.gameId)
+          .in("id", storeItemUuids)
+          .order("id", { ascending: true })
+          .limit(storeItemUuids.length + 1)
+        : { data: [], error: null };
 
-    const itemByUuid = new Map(
-      itemRows.map((row) => [requireUuid(row.id), row]),
+    if (storeItemResponse.error) throw mapPersistenceError(storeItemResponse.error);
+    const storeItemRows = storeItemResponse.data ?? [];
+    if (storeItemRows.length !== storeItemUuids.length) throw metadataMissing();
+
+    const gameItemByUuid = new Map(
+      gameItemRows.map((row) => [requireUuid(row.id), row]),
+    );
+    const storeItemByUuid = new Map(
+      storeItemRows.map((row) => [requireUuid(row.id), row]),
     );
     const records = holdings.map((holding) =>
-      toInventoryRecord(input, holding, itemByUuid)
+      toInventoryRecord(input, holding, gameItemByUuid, storeItemByUuid)
     );
 
     return {
@@ -134,31 +163,68 @@ export class SupabasePlayerInventoryReadRepository
 function toInventoryRecord(
   input: { readonly gameId: string; readonly playerUuid: string },
   holding: Record<string, unknown>,
-  itemByUuid: ReadonlyMap<string, Record<string, unknown>>,
+  gameItemByUuid: ReadonlyMap<string, Record<string, unknown>>,
+  storeItemByUuid: ReadonlyMap<string, Record<string, unknown>>,
 ): PlayerInventoryRecord {
   const internalHoldingUuid = requireUuid(holding.id);
-  const internalStoreItemUuid = requireUuid(holding.store_item_id);
+  const internalGameItemUuid = requireUuid(holding.game_item_id);
+  const internalStoreItemUuid = optionalUuid(holding.store_item_id);
   const gameId = requireUuid(holding.game_session_id);
   const playerUuid = requireUuid(holding.player_id);
-  const item = itemByUuid.get(internalStoreItemUuid);
+  const item = gameItemByUuid.get(internalGameItemUuid);
+  const storeItem = internalStoreItemUuid
+    ? storeItemByUuid.get(internalStoreItemUuid)
+    : undefined;
 
   if (!item) throw metadataMissing();
   if (gameId !== input.gameId || playerUuid !== input.playerUuid) throw readFailed();
   if (requireUuid(item.game_session_id) !== input.gameId) throw metadataMissing();
+  if (storeItem && requireUuid(storeItem.game_session_id) !== input.gameId) {
+    throw metadataMissing();
+  }
+  if (
+    storeItem && optionalUuid(storeItem.game_item_id) !== internalGameItemUuid
+  ) {
+    throw metadataMissing();
+  }
+
+  const metadata = object(item.metadata);
+  const canonicalItemKey = requireItemKey(item.canonical_key);
+  const publicItemKey = storeItem
+    ? requireItemKey(storeItem.item_key)
+    : canonicalItemKey;
+  const averageUnitCost = requireNonNegativeNumber(holding.average_unit_cost ?? 0);
+  const storeUnitValue = storeItem
+    ? requireNonNegativeNumber(storeItem.price)
+    : 0;
 
   return {
     internalHoldingUuid,
+    internalGameItemUuid,
     internalStoreItemUuid,
     gameId,
     playerUuid,
-    itemKey: requireItemKey(item.item_key),
-    name: requireText(item.name),
-    description: optionalText(item.description),
-    category: requireText(item.category),
-    unitValue: requireNonNegativeNumber(item.price),
-    currencyCode: requireCurrencyCode(item.currency_code),
-    itemStatus: requireStatus(item.status),
-    itemVisibility: requireVisibility(item.visibility),
+    itemKey: publicItemKey,
+    name: storeItem ? requireText(storeItem.name) : requireText(item.name),
+    description: storeItem
+      ? optionalText(storeItem.description)
+      : optionalText(item.description),
+    category: storeItem
+      ? requireText(storeItem.category)
+      : requireText(item.item_class),
+    unitValue: storeItem ? storeUnitValue : averageUnitCost,
+    currencyCode: storeItem
+      ? requireCurrencyCode(storeItem.currency_code)
+      : firstCurrencyCode(
+        holding.cost_currency_code,
+        metadata.currencyCode,
+        "ECO",
+      ),
+    itemStatus: requireGameItemStatus(item.status),
+    itemVisibility: storeItem
+      ? requireStoreItemVisibility(storeItem.visibility)
+      : "visible",
+    usable: metadata.effectEnabled === true,
     quantityOwned: requireNonNegativeInteger(holding.quantity_owned),
     quantityReserved: requireNonNegativeInteger(holding.quantity_reserved),
     createdAt: requireIsoDateTime(holding.created_at),
@@ -197,6 +263,12 @@ function readFailed(): PlayerInventoryReadPersistenceError {
   );
 }
 
+function object(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 function requireText(value: unknown): string {
   if (typeof value === "string" && value.trim()) return value.trim();
   throw readFailed();
@@ -214,9 +286,14 @@ function requireUuid(value: unknown): string {
   return text;
 }
 
+function optionalUuid(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  return requireUuid(value);
+}
+
 function requireItemKey(value: unknown): string {
   const text = requireText(value).toLowerCase();
-  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(text)) throw readFailed();
+  if (!/^[a-z0-9][a-z0-9._-]{0,159}$/.test(text)) throw readFailed();
   return text;
 }
 
@@ -226,19 +303,29 @@ function requireCurrencyCode(value: unknown): string {
   return text;
 }
 
-function requireStatus(value: unknown): "active" | "disabled" | "archived" {
-  const status = requireText(value).toLowerCase();
-  if (status === "active" || status === "disabled" || status === "archived") {
-    return status;
+function firstCurrencyCode(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value !== "string" || !value.trim()) continue;
+    const text = value.trim().toUpperCase();
+    if (/^[A-Z0-9_]{3,16}$/.test(text)) return text;
   }
   throw readFailed();
 }
 
-function requireVisibility(value: unknown): "visible" | "hidden" {
+function requireGameItemStatus(
+  value: unknown,
+): "active" | "disabled" | "archived" {
+  const status = requireText(value).toLowerCase();
+  if (status === "active" || status === "disabled") return status;
+  if (status === "retired") return "archived";
+  throw readFailed();
+}
+
+function requireStoreItemVisibility(
+  value: unknown,
+): "visible" | "hidden" {
   const visibility = requireText(value).toLowerCase();
-  if (visibility === "visible" || visibility === "hidden") {
-    return visibility;
-  }
+  if (visibility === "visible" || visibility === "hidden") return visibility;
   throw readFailed();
 }
 

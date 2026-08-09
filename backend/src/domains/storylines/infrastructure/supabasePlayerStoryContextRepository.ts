@@ -69,12 +69,14 @@ interface CountryAssignmentRow {
 interface CountryProfileRow {
   readonly id: string;
   readonly country_code: string;
+  readonly currency_code?: string | null;
 }
 
 interface AccountBalanceRow {
   readonly player_id: string;
   readonly account_type: string;
   readonly balance: number | string;
+  readonly currency_code: string;
 }
 
 interface StockHoldingRow {
@@ -112,12 +114,13 @@ interface StoryFlagRow {
 interface CountryInfo {
   readonly countryId: string | null;
   readonly countryCode: string | null;
+  readonly currencyCode: string | null;
 }
 
 const PLAYER_SELECT = "id";
 const COUNTRY_ASSIGNMENT_SELECT = "player_id,country_profile_id,assigned_at";
-const COUNTRY_PROFILE_SELECT = "id,country_code";
-const CASH_SELECT = "player_id,account_type,balance";
+const COUNTRY_PROFILE_SELECT = "id,country_code,currency_code";
+const CASH_SELECT = "player_id,account_type,balance,currency_code";
 const HOLDING_SELECT = "player_id,stock_asset_id,quantity";
 const STOCK_ASSET_SELECT = "id,sector_key,country_code,current_price";
 const CONTRACT_SELECT = "id,contract_key,status,visibility";
@@ -178,6 +181,7 @@ export class SupabasePlayerStoryContextRepository
       const country = countryByPlayerId.get(player.id) ?? {
         countryId: null,
         countryCode: null,
+        currencyCode: null,
       };
       const playerProgress = progressByPlayerId.get(player.id) ?? [];
 
@@ -188,9 +192,9 @@ export class SupabasePlayerStoryContextRepository
         homeCountryCode: country.countryCode,
         currentCountryId: country.countryId,
         currentCountryCode: country.countryCode,
-        cashBalance: sum(
+        cashBalance: balanceInValuationCurrency(
           cashByPlayerId.get(player.id) ?? [],
-          (balance) => toNumber(balance.balance),
+          country.currencyCode,
         ),
         resources: {},
         sectorExposurePct: calculateExposurePct(
@@ -283,6 +287,7 @@ export class SupabasePlayerStoryContextRepository
       countryByPlayerId.set(assignment.player_id, {
         countryId: assignment.country_profile_id,
         countryCode: country?.country_code ?? null,
+        currencyCode: normalizeCurrencyCode(country?.currency_code),
       });
     }
 
@@ -296,7 +301,7 @@ export class SupabasePlayerStoryContextRepository
       .from("account_balances")
       .select(CASH_SELECT)
       .eq("game_session_id", gameSessionId)
-      .eq("account_type", "cash");
+      .eq("account_type", "checking");
 
     assertNoError(response, "account_balances", "select");
 
@@ -375,6 +380,28 @@ export class SupabasePlayerStoryContextRepository
 
     return flags;
   }
+}
+
+function balanceInValuationCurrency(
+  rows: readonly AccountBalanceRow[],
+  preferredCurrencyCode: string | null,
+): number {
+  const availableCurrencies = uniqueSorted(
+    rows.map((row) => normalizeCurrencyCode(row.currency_code)).filter(isString),
+  );
+  const valuationCurrencyCode = normalizeCurrencyCode(preferredCurrencyCode) ??
+    (availableCurrencies.length === 1 ? availableCurrencies[0] : null);
+
+  if (!valuationCurrencyCode) {
+    return 0;
+  }
+
+  return sum(
+    rows.filter((row) =>
+      normalizeCurrencyCode(row.currency_code) === valuationCurrencyCode
+    ),
+    (row) => toNumber(row.balance),
+  );
 }
 
 function calculateExposurePct(
@@ -457,6 +484,13 @@ function groupBy<T>(
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort();
+}
+
+function normalizeCurrencyCode(
+  value: string | null | undefined,
+): string | null {
+  const normalized = value?.trim().toUpperCase();
+  return normalized && /^[A-Z0-9]{3,16}$/.test(normalized) ? normalized : null;
 }
 
 function normalizeKey(value: string | null | undefined): string | null {

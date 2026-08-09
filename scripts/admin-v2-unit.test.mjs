@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import "./admin-v2-banking.test.mjs";
+import "./admin-v2-loans-api.test.mjs";
+
 import {
   ADMIN_OVERVIEW_RESOURCE_KEYS,
   createAdminApiClient,
@@ -52,7 +55,7 @@ function fulfilled(value) {
   return Object.freeze({ status: "fulfilled", value });
 }
 
-test("Admin v2 navigation is canonical, unique, permission-bound, and migrates only Overview, Store, and Market", () => {
+test("Admin v2 navigation is canonical, unique, permission-bound, and migrates source-owned routes", () => {
   const expectedRouteIds = [
     "overview",
     "players",
@@ -136,19 +139,29 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates o
   );
 
   const migratedRoutes = ADMIN_NAVIGATION_ROUTES.filter((route) => route.migrated);
-  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "market", "store"]);
+  assert.deepEqual(migratedRoutes.map((route) => route.id), ["overview", "players", "attendance", "market", "banking", "loans", "contracts", "store", "world-management", "news-events", "messages", "progression", "settings", "logs"]);
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "legacy").map((route) => route.id),
-    ["players", "attendance", "contracts", "settings", "logs"],
+    [],
   );
   assert.deepEqual(
     ADMIN_NAVIGATION_ROUTES.filter((route) => route.migration === "planned").map((route) => route.id),
-    ["banking", "loans", "business", "crafting", "marketplace", "inventory", "world-management", "news-events", "messages", "progression"],
+    ["business", "crafting", "marketplace", "inventory"],
   );
   assert.equal(isMigratedAdminRoute("overview"), true);
+  assert.equal(isMigratedAdminRoute("players"), true);
+  assert.equal(isMigratedAdminRoute("attendance"), true);
+  assert.equal(isMigratedAdminRoute("contracts"), true);
   assert.equal(isMigratedAdminRoute("store"), true);
   assert.equal(isMigratedAdminRoute("market"), true);
-  assert.equal(isMigratedAdminRoute("world-management"), false);
+  assert.equal(isMigratedAdminRoute("banking"), true);
+  assert.equal(isMigratedAdminRoute("loans"), true);
+  assert.equal(isMigratedAdminRoute("world-management"), true);
+  assert.equal(isMigratedAdminRoute("news-events"), true);
+  assert.equal(isMigratedAdminRoute("messages"), true);
+  assert.equal(isMigratedAdminRoute("progression"), true);
+  assert.equal(isMigratedAdminRoute("settings"), true);
+  assert.equal(isMigratedAdminRoute("logs"), true);
 
   const market = getAdminNavigationRoute("market");
   const marketplace = getAdminNavigationRoute("marketplace");
@@ -161,12 +174,52 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates o
   assert.equal(marketplace.migration, "planned");
   assert.equal(marketplace.legacyDestination, null);
 
+  const banking = getAdminNavigationRoute("banking");
+  assert.equal(banking.groupId, "finance");
+  assert.deepEqual(banking.permission.allOf, ["economy.adjust"]);
+  assert.equal(banking.migration, "v2");
+  assert.equal(banking.legacyDestination, null);
+
+  const loans = getAdminNavigationRoute("loans");
+  assert.equal(loans.groupId, "finance");
+  assert.deepEqual(loans.permission.allOf, ["economy.adjust"]);
+  assert.equal(loans.migration, "v2");
+  assert.equal(loans.legacyDestination, null);
+
   const world = getAdminNavigationRoute("world-management");
   assert.equal(world.label, "World Management");
   assert.equal(world.groupId, "world");
   assert.deepEqual(world.permission.allOf, ["world.manage"]);
-  assert.equal(world.migration, "planned");
+  assert.equal(world.migration, "v2");
   assert.equal(world.legacySection, null);
+
+  const newsEvents = getAdminNavigationRoute("news-events");
+  assert.equal(newsEvents.label, "News & Events");
+  assert.equal(newsEvents.groupId, "world");
+  assert.deepEqual(newsEvents.permission.allOf, ["world.manage"]);
+  assert.equal(newsEvents.migration, "v2");
+  assert.equal(newsEvents.legacyDestination, null);
+
+  const messages = getAdminNavigationRoute("messages");
+  assert.equal(messages.label, "Messages");
+  assert.equal(messages.groupId, "engagement");
+  assert.deepEqual(messages.permission.allOf, ["messaging.moderate"]);
+  assert.equal(messages.migration, "v2");
+  assert.equal(messages.legacyDestination, null);
+
+  const progression = getAdminNavigationRoute("progression");
+  assert.equal(progression.label, "Progression");
+  assert.equal(progression.groupId, "engagement");
+  assert.deepEqual(progression.permission.allOf, ["progression.review"]);
+  assert.equal(progression.migration, "v2");
+  assert.equal(progression.legacyDestination, null);
+
+  const logs = getAdminNavigationRoute("logs");
+  assert.equal(logs.label, "Logs");
+  assert.equal(logs.groupId, "system");
+  assert.deepEqual(logs.permission.allOf, ["audit.read"]);
+  assert.equal(logs.migration, "v2");
+  assert.equal(logs.legacyDestination, null);
 
   const routeIds = ADMIN_NAVIGATION_ROUTES.map((route) => route.id);
   const routeHrefs = ADMIN_NAVIGATION_ROUTES.map((route) => route.href);
@@ -213,26 +266,31 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   };
 
   assert.equal(readCurrentAdminV2Route(locationLike), "players");
-  assert.equal(
-    createLegacyAdminHandoffUrl("players", locationLike),
-    `./?game=${GAME_ID}#players`,
-  );
+  assert.equal(createLegacyAdminHandoffUrl("players", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("attendance", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("contracts", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("market", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("banking", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("loans", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("overview", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("messages", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("marketplace", locationLike), null);
   assert.equal(createLegacyAdminHandoffUrl("world-management", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("news-events", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("progression", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("settings", locationLike), null);
+  assert.equal(createLegacyAdminHandoffUrl("logs", locationLike), null);
   assert.deepEqual(
     resolveAdminRouteBoundary({ routeId: "players", locationLike }),
     {
-      kind: "legacy",
+      kind: "migrated",
       route: getAdminNavigationRoute("players"),
-      legacySection: "Players",
-      href: `./?game=${GAME_ID}#players`,
+      moduleKey: "players",
     },
   );
   assert.equal(
-    createLegacyAdminHandoffUrl("players", { search: "?game=../../etc/passwd" }),
-    "./#players",
+    createLegacyAdminHandoffUrl("players", { search: "?game=../../another-game" }),
+    null,
   );
   assert.deepEqual(
     resolveAdminRouteBoundary({ routeId: "marketplace", locationLike }),
@@ -244,14 +302,66 @@ test("Admin v2 route resolution fails closed and preserves only a validated game
   assert.deepEqual(
     resolveAdminRouteBoundary({ routeId: "world-management", locationLike }),
     {
-      kind: "planned",
+      kind: "migrated",
       route: getAdminNavigationRoute("world-management"),
+      moduleKey: "world-management",
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "news-events", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("news-events"),
+      moduleKey: "news-events",
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "messages", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("messages"),
+      moduleKey: "messages",
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "progression", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("progression"),
+      moduleKey: "progression",
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "settings", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("settings"),
+      moduleKey: "settings",
+    },
+  );
+  assert.deepEqual(
+    resolveAdminRouteBoundary({ routeId: "logs", locationLike }),
+    {
+      kind: "migrated",
+      route: getAdminNavigationRoute("logs"),
+      moduleKey: "logs",
     },
   );
   assert.equal(readCurrentAdminV2Route({ hash: "#<script>" }), "overview");
   assert.equal(resolveAdminRouteBoundary({ routeId: "overview" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "players" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "attendance" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "contracts" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "store" }).kind, "migrated");
   assert.equal(resolveAdminRouteBoundary({ routeId: "market" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "banking" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "loans" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "world-management" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "news-events" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "messages" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "progression" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "settings" }).kind, "migrated");
+  assert.equal(resolveAdminRouteBoundary({ routeId: "logs" }).kind, "migrated");
 });
 
 test("Admin data states retain resolved content for refresh failures and ignore old responses", () => {

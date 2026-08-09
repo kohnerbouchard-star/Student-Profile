@@ -234,7 +234,7 @@ async function adjustPlayerLedger(service: any, input: any): Promise<any> {
   const rpc = await service.rpc("record_player_ledger_entry", {
     p_game_session_id: input.gameSessionId,
     p_player_id: input.playerId,
-    p_account_type: text(body.accountType, "cash"),
+    p_account_type: text(body.accountType, "checking"),
     p_amount: amount,
     p_currency_code: currency.currencyCode,
     p_entry_type: amount > 0 ? "credit" : "debit",

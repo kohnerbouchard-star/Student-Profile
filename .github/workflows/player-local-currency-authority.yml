@@ -3,22 +3,62 @@ name: Player Local Currency Authority
 on:
   pull_request:
     paths:
+      - "admin/classroom-write-fallback.js"
+      - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
+      - "admin/player-identity-wiring.js"
+      - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
+      - "backend/src/domains/contracts/application/adminContractMutation.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
+      - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
+      - "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts"
+      - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
+      - "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts"
+      - "backend/src/domains/players/contracts/playerBrowserSessionContracts.ts"
+      - "backend/supabase/functions/admin-api/attendanceOperations.ts"
+      - "backend/supabase/functions/admin-api/gameRoutes.ts"
+      - "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts"
       - "backend/supabase/functions/admin-api/playerOperations.ts"
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
+      - "backend/supabase/functions/admin-api/readExtensions.ts"
+      - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
+      - "player-terminal/src/integrations/student-profile-api-call.js"
       - "player-terminal/src/pages/store-page.js"
+      - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
+      - "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
       - ".github/workflows/player-local-currency-authority.yml"
   push:
     branches:
       - main
     paths:
+      - "admin/classroom-write-fallback.js"
+      - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
+      - "admin/player-identity-wiring.js"
+      - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
+      - "backend/src/domains/contracts/application/adminContractMutation.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
+      - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
+      - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
+      - "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts"
+      - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
+      - "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts"
+      - "backend/src/domains/players/contracts/playerBrowserSessionContracts.ts"
+      - "backend/supabase/functions/admin-api/attendanceOperations.ts"
+      - "backend/supabase/functions/admin-api/gameRoutes.ts"
+      - "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts"
       - "backend/supabase/functions/admin-api/playerOperations.ts"
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
+      - "backend/supabase/functions/admin-api/readExtensions.ts"
+      - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
+      - "player-terminal/src/integrations/student-profile-api-call.js"
       - "player-terminal/src/pages/store-page.js"
+      - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
+      - "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
       - ".github/workflows/player-local-currency-authority.yml"
 
@@ -31,9 +71,9 @@ concurrency:
 
 jobs:
   contract:
-    name: Local wallet and Store settlement contract
+    name: Checking, Savings, and local-currency contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -47,8 +87,60 @@ jobs:
         with:
           node-version: "22.23.1"
 
-      - name: Validate currency authority source contract
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Validate currency, identity, and targeting authority
         run: node --test scripts/player-local-currency-authority-contract.test.mjs
 
-      - name: Validate Player Store local-wallet rendering
+      - name: Validate Admin Contract targeting behavior
+        run: |
+          deno test --config backend/supabase/functions/admin-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/contracts/application/adminContractMutation.test.ts
+
+      - name: Validate browser-safe Player session currency authority
+        run: |
+          deno test --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts
+          node player-terminal/tests/browser-safe-session-bootstrap.mjs
+
+      - name: Validate Player Store alias aggregation
         run: node player-terminal/tests/store-local-currency.mjs
+
+      - name: Validate Player Banking alias aggregation
+        run: npm --prefix backend run test:player-banking-public
+
+      - name: Check browser adapter syntax
+        run: |
+          node --check admin/classroom-write-fallback.js
+          node --check admin/create-action-adapter.js
+          node --check admin/player-identity-wiring.js
+          node --check player-terminal/src/integrations/student-profile-api-call.js
+          node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
+
+      - name: Check focused TypeScript formatting and types
+        run: |
+          deno fmt --check \
+            backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts \
+            backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts \
+            backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts \
+            backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts \
+            backend/src/domains/players/contracts/playerBrowserSessionContracts.ts
+          deno check --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts \
+            backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts \
+            backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts \
+            backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts \
+            backend/src/domains/players/contracts/playerBrowserSessionContracts.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/contracts/application/adminContractMutation.ts \
+            backend/supabase/functions/admin-api/attendanceOperations.ts \
+            backend/supabase/functions/admin-api/idempotentLedgerOperations.ts \
+            backend/supabase/functions/admin-api/readExtensions.ts \
+            backend/supabase/functions/admin-api/gameRoutes.ts

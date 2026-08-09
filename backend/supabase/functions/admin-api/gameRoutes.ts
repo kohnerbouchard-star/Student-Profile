@@ -79,6 +79,44 @@ async function readPlayerFlags(
   return result.data || [];
 }
 
+function leaderboardCurrencyCode(player: any): string | null {
+  const value = String(
+    player?.netWorthValuation?.currencyCode || player?.currencyCode || "",
+  ).trim().toUpperCase();
+  return /^[A-Z0-9]{3,16}$/.test(value) ? value : null;
+}
+
+function currencyScopedLeaderboard(players: any[]): any[] {
+  const entries = players.map((player) => ({
+    ...player,
+    valuationCurrencyCode: leaderboardCurrencyCode(player),
+    rankScope: "currency",
+    leaderboardBasis: "net_worth",
+  })).sort((left, right) => {
+    const currencyOrder = (left.valuationCurrencyCode || "~").localeCompare(
+      right.valuationCurrencyCode || "~",
+    );
+    if (currencyOrder !== 0) return currencyOrder;
+    const wealthOrder = number(right.netWorth) - number(left.netWorth);
+    if (wealthOrder !== 0) return wealthOrder;
+    const nameOrder = String(left.displayName || left.name || "").localeCompare(
+      String(right.displayName || right.name || ""),
+    );
+    if (nameOrder !== 0) return nameOrder;
+    return String(left.id || left.playerId || "").localeCompare(
+      String(right.id || right.playerId || ""),
+    );
+  });
+
+  const rankByCurrency = new Map<string, number>();
+  return entries.map((entry) => {
+    const scopeKey = entry.valuationCurrencyCode || "unvalued";
+    const rank = (rankByCurrency.get(scopeKey) || 0) + 1;
+    rankByCurrency.set(scopeKey, rank);
+    return { ...entry, rank };
+  });
+}
+
 export async function handleGameRead(
   request: Request,
   context: any,
@@ -115,18 +153,14 @@ export async function handleGameRead(
       loadAttendanceEnhanced(context.service, gameId, players),
       loadContracts(context.service, gameId),
     ]);
-    const leaderboard = [...players]
-      .sort((a, b) => number(b.netWorth) - number(a.netWorth))
-      .map((player, index) => ({
-        ...player,
-        rank: index + 1,
-        leaderboardBasis: "net_worth",
-      }));
+    const leaderboard = currencyScopedLeaderboard(players);
     return json(request, 200, {
       data: {
         game: gameDto(game),
         leaderboard,
         leaderboardBasis: "net_worth",
+        leaderboardRankScope: "currency",
+        leaderboardComparison: "same_currency_only",
         overallScoreStatus: "not_configured",
         contracts: contracts.filter((item: any) =>
           ["active", "scheduled", "draft"].includes(item.status)

@@ -1,0 +1,329 @@
+name: Economic Asset Core Staging Release
+
+on:
+  push:
+    branches: [feat/economic-asset-ownership-core-v2]
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/economic-asset-core-staging-release.yml"
+      - ".github/workflows/economic-asset-core-v2.yml"
+      - "backend/supabase/migrations/2026080612*.sql"
+      - "backend/src/domains/inventory/**"
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/crafting/**"
+      - "backend/src/domains/store/**"
+      - "backend/src/domains/marketplace/**"
+      - "backend/supabase/functions/classroom-api/**"
+      - "scripts/economic-asset-core-*.mjs"
+      - "scripts/economic-asset-core-*.sql"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: economic-asset-core-staging-release
+  cancel-in-progress: true
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+  MIGRATION_PREFIX: "2026080612"
+  EXPECTED_FINAL_MIGRATION: "20260806120460"
+  EXPECTED_MIGRATION_COUNT: "27"
+
+jobs:
+  release:
+    name: Apply exact migrations and run rollback acceptance
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.pull_request.number == 503
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Check out exact economic-core candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test -f scripts/economic-asset-core-staging-acceptance.sql
+          test -f scripts/build-economic-asset-migration-bundle.mjs
+          mapfile -t migrations < <(find backend/supabase/migrations -maxdepth 1 -type f -name "${MIGRATION_PREFIX}*.sql" -printf '%f\n' | sort)
+          test "${#migrations[@]}" = "$EXPECTED_MIGRATION_COUNT"
+          test "${migrations[-1]%%_*}" = "$EXPECTED_FINAL_MIGRATION"
+          printf '%s\n' "${migrations[@]}" > /tmp/economic-asset-migration-manifest.txt
+          echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned repository tooling
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+          npm ci --prefix backend --ignore-scripts
+          node --check scripts/build-economic-asset-migration-bundle.mjs
+          node --test scripts/economic-asset-core-v2-contract.test.mjs
+          node --test scripts/economic-asset-migration-bundle.test.mjs
+          npm run test:player-inventory --prefix backend
+          npm run test:player-store-public --prefix backend
+          npm run test:player-crafting --prefix backend
+          npm run test:player-marketplace --prefix backend
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Resolve protected staging service credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$service" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > /tmp/economic-asset-project-api-keys.json
+            node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/economic-asset-project-api-keys.json', 'utf8'));
+          const service = rows.find((row) => row.name === 'service_role' && row.api_key)?.api_key || '';
+          fs.writeFileSync('/tmp/economic-asset-service-role-key', service);
+          NODE
+            service="$(cat /tmp/economic-asset-service-role-key)"
+          fi
+          test -n "$service"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f /tmp/economic-asset-project-api-keys.json /tmp/economic-asset-service-role-key
+
+      - name: Link exact staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+
+      - name: Verify existing economic migration prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$MIGRATION_PREFIX" \
+            --mode verify-prefix \
+            --output /tmp/economic-asset-prefix-verify.sql
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file /tmp/economic-asset-prefix-verify.sql \
+            | tee /tmp/economic-asset-prefix-verify.log
+          applied_through="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(max(version), '') from supabase_migrations.schema_migrations where version like '${MIGRATION_PREFIX}%'")"
+          if [ -n "$applied_through" ]; then
+            [[ "$applied_through" =~ ^[0-9]{14}$ ]]
+          fi
+          printf 'ECONOMIC_ASSET_APPLIED_THROUGH=%s\n' "$applied_through" >> "$GITHUB_ENV"
+
+      - name: Execute atomic rollback migration rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ECONOMIC_ASSET_APPLIED_THROUGH" = "$EXPECTED_FINAL_MIGRATION" ]; then
+            echo 'All economic-core migrations already applied; rollback migration rehearsal not required.' | tee /tmp/economic-asset-migration-rollback.log
+            printf '{"skipped":true,"reason":"fully_applied"}\n' > /tmp/economic-asset-migration-rollback-build.json
+            exit 0
+          fi
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$MIGRATION_PREFIX" \
+            --mode rollback \
+            --after-version "$ECONOMIC_ASSET_APPLIED_THROUGH" \
+            --output /tmp/economic-asset-migration-rollback.sql \
+            | tee /tmp/economic-asset-migration-rollback-build.json
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file /tmp/economic-asset-migration-rollback.sql \
+            2>&1 | tee /tmp/economic-asset-migration-rollback.log
+
+      - name: Apply atomic exact-source migration tail
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ECONOMIC_ASSET_APPLIED_THROUGH" = "$EXPECTED_FINAL_MIGRATION" ]; then
+            echo 'All economic-core migrations already applied; no migration tail to commit.' | tee /tmp/economic-asset-migration-commit.log
+            printf '{"skipped":true,"reason":"fully_applied"}\n' > /tmp/economic-asset-migration-commit-build.json
+            exit 0
+          fi
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$MIGRATION_PREFIX" \
+            --mode commit \
+            --after-version "$ECONOMIC_ASSET_APPLIED_THROUGH" \
+            --output /tmp/economic-asset-migration-commit.sql \
+            | tee /tmp/economic-asset-migration-commit-build.json
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file /tmp/economic-asset-migration-commit.sql \
+            2>&1 | tee /tmp/economic-asset-migration-commit.log
+
+      - name: Verify exact migration ledger sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$MIGRATION_PREFIX" \
+            --mode verify-full \
+            --output /tmp/economic-asset-full-verify.sql
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file /tmp/economic-asset-full-verify.sql \
+            2>&1 | tee /tmp/economic-asset-full-verify.log
+
+      - name: Deploy matching classroom API
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy classroom-api \
+            --workdir backend \
+            --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Validate every staging game
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL' \
+            | tee /tmp/economic-asset-validator.log
+          do $validation$
+          declare
+            game_row record;
+            result jsonb;
+          begin
+            for game_row in select id from public.game_sessions order by id
+            loop
+              result := public.validate_economic_asset_core_v2(game_row.id);
+              if coalesce((result ->> 'valid')::boolean, false) is not true then
+                raise exception 'ECONOMIC_ASSET_CORE_VALIDATION_FAILED:%', result;
+              end if;
+            end loop;
+          end
+          $validation$;
+          SQL
+
+      - name: Run rollback-scoped end-to-end acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file scripts/economic-asset-core-staging-acceptance.sql \
+            2>&1 | tee /tmp/economic-asset-staging-acceptance.log
+          grep -F 'ECONOMIC_ASSET_CORE_STAGING_ACCEPTANCE_PASS' /tmp/economic-asset-staging-acceptance.log
+
+      - name: Verify hosted API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            "$SUPABASE_URL/functions/v1/classroom-api/health" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            > /tmp/economic-asset-classroom-health.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/economic-asset-classroom-health.json', 'utf8'));
+          if (body.ok !== true || body.service !== 'classroom-api' || body.status !== 'ready') {
+            throw new Error(`classroom-api health failed: ${JSON.stringify(body)}`);
+          }
+          NODE
+
+      - name: Verify rollback left no probe residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.business_entities where legal_name='Rollback Economic Asset Probe'")" = "0"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.inventory_transactions where source_domain='validation' or idempotency_key like 'economic-asset-probe-%'")" = "0"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.ledger_entries where source_domain='validation' and source_action='economic_asset_probe_funding'")" = "0"
+
+      - name: Upload sanitized staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: economic-asset-core-staging-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/economic-asset-migration-manifest.txt
+            /tmp/economic-asset-prefix-verify.log
+            /tmp/economic-asset-migration-rollback-build.json
+            /tmp/economic-asset-migration-rollback.log
+            /tmp/economic-asset-migration-commit-build.json
+            /tmp/economic-asset-migration-commit.log
+            /tmp/economic-asset-full-verify.log
+            /tmp/economic-asset-validator.log
+            /tmp/economic-asset-staging-acceptance.log
+            /tmp/economic-asset-classroom-health.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Record staging result
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo '## Economic Asset Core V2 staging release'
+            echo "- Exact source commit: \`$RELEASE_COMMIT\`"
+            echo "- Staging project: \`$EXPECTED_STAGING_PROJECT_REF\`"
+            echo '- Existing staging-only history preserved: `true`'
+            echo '- Atomic migration tail guard: `pass`'
+            echo '- Exact migration ledger source verification: `pass`'
+            echo '- Matching classroom-api deployed: `true`'
+            echo '- All staging games valid: `true`'
+            echo '- Store → Inventory → Crafting acceptance: `pass`'
+            echo '- Inventory → Business → Production → Sale/COGS acceptance: `pass`'
+            echo '- Probe transaction rolled back: `true`'
+            echo '- Production selected: `false`'
+            echo '- Production modified: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -149,7 +149,7 @@ Deno.test("player bootstrap derives scope from token and returns no token or UUI
       status: "active",
     })],
     account_balances: [rowList([
-      { account_type: "cash", balance: "125.50", currency_code: "ECO" },
+      { account_type: "checking", balance: "125.50", currency_code: "ECO" },
     ])],
   });
 

@@ -190,10 +190,16 @@
 
     const reason = first(source, ["reason", "note", "ledgerNote", "memo"]);
     if (reason !== undefined) normalized.reason = reason;
-    normalized.accountType = text(first(source, ["accountType", "account"])) || "cash";
-    normalized.currencyCode = (
-      text(first(source, ["currencyCode", "currency"])) || "ECO"
+    normalized.accountType = text(first(source, ["accountType", "account"])) || "checking";
+    const explicitCurrencyCode = text(
+      first(source, ["currencyCode", "currency"]),
     ).toUpperCase();
+    if (explicitCurrencyCode) {
+      normalized.currencyCode = explicitCurrencyCode;
+    } else {
+      delete normalized.currencyCode;
+      delete normalized.currency;
+    }
 
     if (/\/attendance\/reward-adjustments$/.test(pathname)) {
       const playerId = first(source, ["playerId", "studentId", "id"]);

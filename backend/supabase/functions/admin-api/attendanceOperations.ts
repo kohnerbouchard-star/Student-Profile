@@ -1,3 +1,5 @@
+import { resolvePlayerLedgerCurrencyAuthority } from "./playerOperations.ts";
+
 function text(value: unknown, fallback = ""): string {
   const normalized = String(value ?? "").trim();
   return normalized || fallback;
@@ -245,13 +247,25 @@ async function adjustAttendanceReward(service: any, input: any): Promise<any> {
     .maybeSingle();
   if (attendance.error) throw attendance.error;
 
+  const currency = await resolvePlayerLedgerCurrencyAuthority(service, {
+    gameSessionId: input.gameSessionId,
+    playerId,
+    body,
+  });
+  if (currency.ok === false) {
+    return {
+      handled: true,
+      status: currency.status,
+      body: currency.body,
+    };
+  }
+
   const rpc = await service.rpc("record_player_ledger_entry", {
     p_game_session_id: input.gameSessionId,
     p_player_id: playerId,
-    p_account_type: text(body.accountType, "cash"),
+    p_account_type: text(body.accountType, "checking"),
     p_amount: amount,
-    p_currency_code: text(body.currencyCode || body.currency, "ECO")
-      .toUpperCase(),
+    p_currency_code: currency.currencyCode,
     p_entry_type: amount > 0 ? "credit" : "debit",
     p_source_domain: "attendance",
     p_source_action: "staff_reward_adjustment",
@@ -262,6 +276,8 @@ async function adjustAttendanceReward(service: any, input: any): Promise<any> {
       attendanceDate,
       attendanceStatus: attendance.data?.status || "missing",
       note: text(body.note || body.ledgerNote || body.reason) || null,
+      currencyMode: currency.currencyMode,
+      resolvedCurrencyCode: currency.currencyCode,
     },
   });
   if (rpc.error) throw rpc.error;
@@ -275,6 +291,8 @@ async function adjustAttendanceReward(service: any, input: any): Promise<any> {
         playerId,
         attendanceDate,
         amount,
+        currencyMode: currency.currencyMode,
+        currencyCode: currency.currencyCode,
         ledger: Array.isArray(rpc.data) ? rpc.data[0] : rpc.data,
       },
     },

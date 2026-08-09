@@ -82,12 +82,13 @@ Deno.test("browser payload privacy: bootstrap exposes no raw token or internal U
       rosterLabel: "Table 4",
       playerIdentifier: "CARD-200",
       status: "active",
+      currencyCode: "ECO",
     },
     session: {
       status: "active",
       expiresAt: "2026-07-19T00:00:00.000Z",
     },
-    balances: [{ accountType: "cash", balance: 100, currencyCode: "ECO" }],
+    balances: [{ accountType: "checking", balance: 100, currencyCode: "ECO" }],
     attendance: { status: "not_configured" },
     availableActions: ["dashboard.view"],
   };

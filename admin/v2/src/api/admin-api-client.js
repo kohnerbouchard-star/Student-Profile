@@ -35,6 +35,22 @@ const STORE_CREATE_FIELDS = Object.freeze([
   "sortOrder",
 ]);
 const STORE_UPDATE_FIELDS = Object.freeze(STORE_CREATE_FIELDS.filter((field) => field !== "itemKey"));
+const PLAYER_CREATE_FIELDS = Object.freeze([
+  "displayName",
+  "rosterLabel",
+  "playerIdentifier",
+  "accessCode",
+]);
+const PLAYER_PROFILE_SETTING_FIELDS = Object.freeze([
+  "displayName",
+  "status",
+  "countryAssignment",
+  "adminNote",
+]);
+const PLAYER_CREDENTIAL_FIELDS = Object.freeze([
+  "playerIdentifier",
+  "accessCode",
+]);
 
 class AdminTransportDiagnostic extends Error {
   constructor({
@@ -79,6 +95,14 @@ function requireItemToken(value) {
   return encodeURIComponent(token);
 }
 
+function requirePlayerToken(value) {
+  const token = String(value || "").trim();
+  if (!UUID_PATTERN.test(token)) {
+    throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
+  }
+  return encodeURIComponent(token);
+}
+
 function requireIdempotencyKey(value) {
   const key = String(value || "").trim();
   if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
@@ -94,6 +118,22 @@ function storeCollectionPath(gameId, { includeReadProjection = false } = {}) {
 
 function storeItemPath(gameId, itemId) {
   return `${storeCollectionPath(gameId)}/${requireItemToken(itemId)}`;
+}
+
+function playersCollectionPath(gameId) {
+  return `/games/${requireGameToken(gameId)}/players`;
+}
+
+function playerPath(gameId, playerId) {
+  return `${playersCollectionPath(gameId)}/${requirePlayerToken(playerId)}`;
+}
+
+function playerSettingsPath(gameId, playerId) {
+  return `${playerPath(gameId, playerId)}/settings`;
+}
+
+function playerCredentialPath(gameId, playerId) {
+  return `${playerPath(gameId, playerId)}/access-code/reset`;
 }
 
 function marketBasePath(gameId) {
@@ -284,6 +324,22 @@ function storeMutationBody(value, allowedFields) {
   return body;
 }
 
+function playerMutationBody(value, allowedFields) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
+  }
+  const body = {};
+  allowedFields.forEach((field) => {
+    if (Object.hasOwn(value, field) && value[field] !== undefined) {
+      body[field] = value[field];
+    }
+  });
+  if (Object.keys(body).length === 0) {
+    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
+  }
+  return body;
+}
+
 function validateStoreRead(payload, response) {
   const data = payload?.data;
   if (
@@ -311,6 +367,35 @@ function validateStoreMutation(payload, response) {
 
 function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function validatePlayersRead(payload, response) {
+  const data = payload?.data;
+  if (!isRecord(data) || (!Array.isArray(data.players) && !Array.isArray(data.roster))) {
+    throw invalidResponse(response);
+  }
+  return payload;
+}
+
+function validatePlayerCreate(payload, response) {
+  if (payload?.ok !== true || !isRecord(payload.player) || !isRecord(payload.accessCode)) {
+    throw invalidResponse(response);
+  }
+  return payload;
+}
+
+function validatePlayerSettings(payload, response) {
+  if (!isRecord(payload?.data) || payload.data.saved !== true || !isRecord(payload.data.settings)) {
+    throw invalidResponse(response);
+  }
+  return payload;
+}
+
+function validatePlayerCredentials(payload, response) {
+  if (payload?.ok !== true || !isRecord(payload.player) || !isRecord(payload.accessCode)) {
+    throw invalidResponse(response);
+  }
+  return payload;
 }
 
 function validateMarketArray(payload, response, keys) {
@@ -392,6 +477,7 @@ export function createAdminApiClient({
   let activeRequestVersion = 0;
   let activeController = null;
   let activeStoreController = null;
+  let activePlayersController = null;
   let activeMarketRequestVersion = 0;
   let activeMarketController = null;
   let activeMarketDetailRequestVersion = 0;
@@ -465,6 +551,34 @@ export function createAdminApiClient({
     if (!activeStoreController) return false;
     activeStoreController.abort();
     activeStoreController = null;
+    return true;
+  }
+
+  function readPlayers({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
+    try {
+      const path = playersCollectionPath(gameId);
+      activePlayersController?.abort();
+      const playersController = new AbortController();
+      activePlayersController = playersController;
+      const unlinkAbort = linkAbortSignal(signal, playersController);
+      const request = requestAdminJson(fetchImpl, path, {
+        signal: playersController.signal,
+        timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
+        validate: validatePlayersRead,
+      });
+      return request.finally(() => {
+        unlinkAbort();
+        if (activePlayersController === playersController) activePlayersController = null;
+      });
+    } catch (error) {
+      return asSafeRejection(error);
+    }
+  }
+
+  function cancelPlayersRequest() {
+    if (!activePlayersController) return false;
+    activePlayersController.abort();
+    activePlayersController = null;
     return true;
   }
 
@@ -591,6 +705,47 @@ export function createAdminApiClient({
     return promise;
   }
 
+  function playerMutation({
+    method,
+    path,
+    body,
+    idempotencyKey,
+    signal,
+    timeoutMs: requestTimeoutMs,
+    validate,
+  }) {
+    const key = requireIdempotencyKey(idempotencyKey);
+    const fingerprint = serializeJsonBody({ method, path, body });
+    const existing = inFlightMutations.get(key);
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) {
+        return asSafeRejection(
+          new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" }),
+        );
+      }
+      return existing.promise;
+    }
+
+    const promise = requestAdminJson(fetchImpl, path, {
+      method,
+      body,
+      headers: {
+        "Idempotency-Key": key,
+        "Content-Type": "application/json",
+      },
+      signal,
+      timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
+      validate,
+    });
+    const entry = { fingerprint, promise };
+    inFlightMutations.set(key, entry);
+    const clear = () => {
+      if (inFlightMutations.get(key) === entry) inFlightMutations.delete(key);
+    };
+    promise.then(clear, clear);
+    return promise;
+  }
+
   function createStoreItem({
     gameId,
     item,
@@ -657,11 +812,85 @@ export function createAdminApiClient({
     }
   }
 
+  function createPlayer({
+    gameId,
+    player,
+    input,
+    idempotencyKey,
+    signal,
+    timeoutMs: requestTimeoutMs,
+  } = {}) {
+    try {
+      return playerMutation({
+        method: "POST",
+        path: playersCollectionPath(gameId),
+        body: playerMutationBody(player ?? input, PLAYER_CREATE_FIELDS),
+        idempotencyKey,
+        signal,
+        timeoutMs: requestTimeoutMs,
+        validate: validatePlayerCreate,
+      });
+    } catch (error) {
+      return asSafeRejection(error);
+    }
+  }
+
+  function updatePlayerSettings({
+    gameId,
+    playerId,
+    settings,
+    input,
+    idempotencyKey,
+    signal,
+    timeoutMs: requestTimeoutMs,
+  } = {}) {
+    try {
+      const normalized = playerMutationBody(settings ?? input, PLAYER_PROFILE_SETTING_FIELDS);
+      return playerMutation({
+        method: "PATCH",
+        path: playerSettingsPath(gameId, playerId),
+        body: { settings: normalized },
+        idempotencyKey,
+        signal,
+        timeoutMs: requestTimeoutMs,
+        validate: validatePlayerSettings,
+      });
+    } catch (error) {
+      return asSafeRejection(error);
+    }
+  }
+
+  function updatePlayerCredentials({
+    gameId,
+    playerId,
+    credentials,
+    input,
+    idempotencyKey,
+    signal,
+    timeoutMs: requestTimeoutMs,
+  } = {}) {
+    try {
+      return playerMutation({
+        method: "POST",
+        path: playerCredentialPath(gameId, playerId),
+        body: playerMutationBody(credentials ?? input, PLAYER_CREDENTIAL_FIELDS),
+        idempotencyKey,
+        signal,
+        timeoutMs: requestTimeoutMs,
+        validate: validatePlayerCredentials,
+      });
+    } catch (error) {
+      return asSafeRejection(error);
+    }
+  }
+
   return Object.freeze({
     readOverview,
     cancelOverviewRequest,
     readStore,
     cancelStoreRequest,
+    readPlayers,
+    cancelPlayersRequest,
     readMarket,
     cancelMarketRequest,
     readMarketDetail,
@@ -669,6 +898,9 @@ export function createAdminApiClient({
     createStoreItem,
     updateStoreItem,
     archiveStoreItem,
+    createPlayer,
+    updatePlayerSettings,
+    updatePlayerCredentials,
     getRequestVersion: () => activeRequestVersion,
     isCurrentRequestVersion: (version) => Number(version) === activeRequestVersion,
   });

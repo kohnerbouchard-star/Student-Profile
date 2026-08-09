@@ -143,6 +143,14 @@ export interface PlayerGameDashboardLeaderboardEntryDto
   extends PlayerGameDashboardPublicPlayerDto {
   readonly rank: number;
   readonly netWorth: number;
+  readonly valuationCurrencyCode?: string | null;
+  readonly rankScope?: "currency";
+}
+
+export interface PlayerGameDashboardNetWorthValuationDto {
+  readonly currencyCode: string | null;
+  readonly status: "complete" | "partial_unconverted";
+  readonly excludedStockMarketValue: number;
 }
 
 export interface PlayerGameDashboardPublicStoreListingDto {
@@ -195,6 +203,7 @@ export interface PlayerGameDashboardSnapshot {
     readonly rosterLabel: string | null;
     readonly countryCode: string | null;
     readonly netWorth: number;
+    readonly netWorthValuation?: PlayerGameDashboardNetWorthValuationDto;
     readonly cash: PlayerGameDashboardCashDto;
     readonly stocks: {
       readonly portfolio: StockMarketPlayerPortfolioSummaryDto;

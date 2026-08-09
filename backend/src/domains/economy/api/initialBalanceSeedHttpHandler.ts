@@ -212,7 +212,7 @@ async function readInitialBalanceSeedRequestBody(
   return {
     amount: parseInitialBalanceSeedAmount(value.amount),
     reason: parseOptionalText(value.reason) ?? "Initial balance seed",
-    accountType: normalizeAccountType(parseOptionalText(value.accountType) ?? "cash"),
+    accountType: normalizeAccountType(parseOptionalText(value.accountType) ?? "checking"),
     currencyCode: normalizeCurrencyCode(parseOptionalText(value.currencyCode) ?? "ECO"),
   };
 }

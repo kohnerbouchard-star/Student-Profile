@@ -10,6 +10,7 @@ import {
   SUPABASE_URL,
 } from "./common.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
+import { handlePersonalBankingAdminOperation } from "./bankingOperations.ts";
 import { handleGameProvisioningOperation } from "./gameProvisioningOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleLocalAdminGameMutation } from "./localGameMutations.ts";
@@ -327,6 +328,23 @@ Deno.serve(async (request: Request) => {
     });
     if (mutationGuard.handled) {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
+    }
+
+    const bankingOperation = await handlePersonalBankingAdminOperation(
+      securedContext.service,
+      {
+        request,
+        gameId,
+        staffUserId: securedContext.staff.id,
+        suffix,
+      },
+    );
+    if (bankingOperation.handled) {
+      return json(
+        request,
+        bankingOperation.status || 500,
+        bankingOperation.body,
+      );
     }
 
     const worldOperation = await handleWorldRuntimeAdminOperation(

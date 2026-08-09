@@ -34,6 +34,12 @@ interface LedgerRow {
   readonly created_at: string;
 }
 
+interface PublicBalanceRow {
+  accountType: string;
+  balance: number;
+  currencyCode: string;
+}
+
 export class SupabasePlayerBankingPublicRepository
   implements PlayerBankingPublicRepository {
   constructor(private readonly client: PublicBankingClient) {}
@@ -50,7 +56,9 @@ export class SupabasePlayerBankingPublicRepository
       .eq("game_session_id", input.gameSessionId)
       .eq("player_id", input.playerId)
       .order("account_type", { ascending: true })
-      .order("currency_code", { ascending: true }) as QueryResponse<BalanceRow[]>;
+      .order("currency_code", { ascending: true }) as QueryResponse<
+        BalanceRow[]
+      >;
 
     if (balancesResponse.error) {
       throw unavailable("Player Banking balances could not be loaded.");
@@ -65,7 +73,9 @@ export class SupabasePlayerBankingPublicRepository
       .eq("player_id", input.playerId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
-      .range(input.offset, input.offset + input.limit) as QueryResponse<LedgerRow[]>;
+      .range(input.offset, input.offset + input.limit) as QueryResponse<
+        LedgerRow[]
+      >;
 
     if (ledgerResponse.error) {
       throw unavailable("Player Banking activity could not be loaded.");
@@ -73,11 +83,7 @@ export class SupabasePlayerBankingPublicRepository
 
     const rows = ledgerResponse.data ?? [];
     return {
-      balances: (balancesResponse.data ?? []).map((row) => ({
-        accountType: publicAccountType(row.account_type),
-        balance: readBalanceNumber(row.balance),
-        currencyCode: String(row.currency_code),
-      })),
+      balances: aggregatePublicBalances(balancesResponse.data ?? []),
       entries: rows.slice(0, input.limit).map((row) => ({
         accountType: publicAccountType(row.account_type),
         amount: readBalanceNumber(row.amount),
@@ -92,10 +98,36 @@ export class SupabasePlayerBankingPublicRepository
   }
 }
 
+function aggregatePublicBalances(
+  rows: readonly BalanceRow[],
+): PublicBalanceRow[] {
+  const aggregated = new Map<string, PublicBalanceRow>();
+  for (const row of rows) {
+    const accountType = publicAccountType(row.account_type);
+    const currencyCode = String(row.currency_code).trim().toUpperCase();
+    const key = `${accountType}\u0000${currencyCode}`;
+    const balance = readBalanceNumber(row.balance);
+    const current = aggregated.get(key);
+    if (current) {
+      current.balance = roundMoney(current.balance + balance);
+      continue;
+    }
+    aggregated.set(key, { accountType, balance, currencyCode });
+  }
+  return [...aggregated.values()].sort((left, right) =>
+    left.accountType.localeCompare(right.accountType) ||
+    left.currencyCode.localeCompare(right.currencyCode)
+  );
+}
+
 function publicAccountType(value: string): string {
   const normalized = String(value).trim().toLowerCase();
-  if (normalized === "cash" || normalized === "checking") return "checking";
+  if (normalized === "checking") return "checking";
   return normalized;
+}
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function unavailable(message: string): PlayerBankingPublicError {

@@ -12,6 +12,7 @@ import {
 import { createElement } from "./components/dom.js";
 import { createAdminApiClient } from "./api/admin-api-client.js";
 import { createAdminBffTransport } from "./api/admin-bff-transport.js";
+import { createContractsApiClient } from "./api/contracts-api-client.js";
 import {
   ADMIN_DEFAULT_ROUTE_ID,
   ADMIN_NAVIGATION_GROUPS,
@@ -22,10 +23,29 @@ import {
   resolveCurrentAdminRouteBoundary,
 } from "./core/route-boundary.js";
 import { createAdminInventoryRedemptionQueueClient } from "../../inventory-redemption-queue-client.js";
-import { createOverviewController } from "./routes/overview/OverviewController.js";
-import { createMarketController } from "./routes/market/MarketController.js";
-import { createStoreController } from "./routes/store/StoreController.js";
+import { createAttendanceApi } from "./routes/attendance/AttendanceApi.js";
+import { createAttendanceController } from "./routes/attendance/AttendanceController.js";
+import { createBankingApiClient } from "./routes/banking/BankingApi.js";
+import { createBankingController } from "./routes/banking/BankingController.js";
+import { createContractsController } from "./routes/contracts/ContractsController.js";
 import { createInventoryController } from "./routes/inventory/InventoryController.js";
+import { createLoansApiClient } from "./routes/loans/LoansApiClient.js";
+import { createLoansController } from "./routes/loans/LoansController.js";
+import { createLogsApiClient } from "./routes/logs/LogsApi.js";
+import { createLogsController } from "./routes/logs/LogsController.js";
+import { createMarketController } from "./routes/market/MarketController.js";
+import { createMessagesAdminClient } from "./routes/messages/MessagesApi.js";
+import { createMessagesController } from "./routes/messages/MessagesController.js";
+import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
+import { createNewsEventsController } from "./routes/news-events/NewsEventsController.js";
+import { createOverviewController } from "./routes/overview/OverviewController.js";
+import { createPlayersController } from "./routes/players/PlayersController.js";
+import { createProgressionApiClient } from "./routes/progression/ProgressionClient.js";
+import { createProgressionController } from "./routes/progression/ProgressionController.js";
+import { createSettingsApi } from "./routes/settings/SettingsApi.js";
+import { createSettingsController } from "./routes/settings/SettingsController.js";
+import { createStoreController } from "./routes/store/StoreController.js";
+import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
 
 const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
 
@@ -155,7 +175,16 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     session: () => window.EconovariaAdminAuthSession?.read?.(),
   });
   const api = createAdminApiClient({ fetchImpl: transport });
+  const attendanceApi = createAttendanceApi({ fetchImpl: transport });
+  const bankingApi = createBankingApiClient({ fetchImpl: transport });
+  const contractsApi = createContractsApiClient({ fetchImpl: transport });
   const inventoryApi = createAdminInventoryRedemptionQueueClient({ fetchImpl: transport });
+  const loansApi = createLoansApiClient({ fetchImpl: transport });
+  const logsApi = createLogsApiClient({ fetchImpl: transport });
+  const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
+  const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
+  const progressionApi = createProgressionApiClient({ fetchImpl: transport });
+  const settingsApi = createSettingsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let destroyed = false;
@@ -167,18 +196,19 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: renderOverviewChange,
     onResolved: updateOverviewShell,
   });
+  const attendance = createAttendanceController({
+    api: attendanceApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("attendance"),
+    notify: (notification) => toast?.push(notification),
+  });
   const store = createStoreController({
     api,
     selectedGameId,
     hasPermission,
     onChange: () => renderControllerChange("store"),
     notify: (notification) => toast?.push(notification),
-  });
-  const market = createMarketController({
-    api,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("market"),
   });
   const inventory = createInventoryController({
     api: inventoryApi,
@@ -187,22 +217,139 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     onChange: () => renderControllerChange("inventory"),
     notify: (notification) => toast?.push(notification),
   });
+  const market = createMarketController({
+    api,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("market"),
+  });
+  const banking = createBankingController({
+    api: bankingApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("banking"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const loans = createLoansController({
+    api: loansApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("loans"),
+  });
+  const players = createPlayersController({
+    api,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("players"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const contracts = createContractsController({
+    api: contractsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("contracts"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const worldManagement = createWorldManagementController({
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("world-management"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const newsEvents = createNewsEventsController({
+    api: newsEventsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("news-events"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const messages = createMessagesController({
+    api: messagesApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("messages"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const progression = createProgressionController({
+    api: progressionApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("progression"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const settings = createSettingsController({
+    api: settingsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("settings"),
+    notify: (notification) => toast?.push(notification),
+  });
+  const logs = createLogsController({
+    api: logsApi,
+    selectedGameId,
+    hasPermission,
+    onChange: () => renderControllerChange("logs"),
+  });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
       render: () => overview.render({ onOpenLegacy: navigate }),
     }),
+    attendance: Object.freeze({
+      controller: attendance,
+      render: () => attendance.render(),
+    }),
     store: Object.freeze({
       controller: store,
       render: () => store.render(),
+    }),
+    inventory: Object.freeze({
+      controller: inventory,
+      render: () => inventory.render(),
     }),
     market: Object.freeze({
       controller: market,
       render: () => market.render(),
     }),
-    inventory: Object.freeze({
-      controller: inventory,
-      render: () => inventory.render(),
+    banking: Object.freeze({
+      controller: banking,
+      render: () => banking.render(),
+    }),
+    loans: Object.freeze({
+      controller: loans,
+      render: () => loans.render(),
+    }),
+    players: Object.freeze({
+      controller: players,
+      render: () => players.render(),
+    }),
+    contracts: Object.freeze({
+      controller: contracts,
+      render: () => contracts.render(),
+    }),
+    "world-management": Object.freeze({
+      controller: worldManagement,
+      render: () => worldManagement.render(),
+    }),
+    "news-events": Object.freeze({
+      controller: newsEvents,
+      render: () => newsEvents.render(),
+    }),
+    messages: Object.freeze({
+      controller: messages,
+      render: () => messages.render(),
+    }),
+    progression: Object.freeze({
+      controller: progression,
+      render: () => progression.render(),
+    }),
+    settings: Object.freeze({
+      controller: settings,
+      render: () => settings.render(),
+    }),
+    logs: Object.freeze({
+      controller: logs,
+      render: () => logs.render(),
     }),
   });
 
@@ -313,7 +460,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
         icon: boundary.route.icon,
         legacyHref: createLegacyAdminHandoffUrl(boundary.route.id),
         legacyTitle: `${boundary.route.label} remains in the existing Admin`,
-        legacyMessage: "Overview, Store, Market, and Inventory are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
+        legacyMessage: "Overview, Players, Attendance, Contracts, Store, Market, Inventory, Banking, Loans, World Management, News & Events, Messages, Progression, Settings, and Logs are native Admin v2 routes. Continue to the existing Admin for this destination without importing its generated UI into the v2 shell.",
       }).element;
       shell.element.dataset.adminV2State = "legacy-boundary";
     } else {
@@ -392,9 +539,20 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     destroy() {
       destroyed = true;
       overview.destroy();
+      attendance.destroy();
       store.destroy();
-      market.destroy();
       inventory.destroy();
+      market.destroy();
+      banking.destroy();
+      loans.destroy();
+      players.destroy();
+      contracts.destroy();
+      worldManagement.destroy();
+      newsEvents.destroy();
+      messages.destroy();
+      progression.destroy();
+      settings.destroy();
+      logs.destroy();
       window.removeEventListener("hashchange", handleHashChange);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();

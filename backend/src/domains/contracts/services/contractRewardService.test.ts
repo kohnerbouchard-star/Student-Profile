@@ -40,7 +40,7 @@ Deno.test("contract reward service issues cash through ledger dependency", async
     rewardType: "cash",
     ledgerEntryId: "ledger-1",
     amount: 250.13,
-    accountType: "cash",
+    accountType: "checking",
     currencyCode: "ECO",
     balance: 1250,
   });
@@ -50,7 +50,7 @@ Deno.test("contract reward service issues cash through ledger dependency", async
     progressId: PROGRESS_ID,
     playerId: PLAYER_ID,
     amount: 250.13,
-    accountType: "cash",
+    accountType: "checking",
     currencyCode: "ECO",
     staffId: STAFF_ID,
     requestId: "request-1",

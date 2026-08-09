@@ -1,0 +1,438 @@
+.admin-contracts-route,
+.admin-contracts-route__resolved,
+.admin-contracts-route__catalog,
+.admin-contracts-detail,
+.admin-contract-form {
+  min-inline-size: 0;
+}
+
+.admin-contracts-route__resolved,
+.admin-contracts-route__skeleton,
+.admin-contracts-detail {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-contracts-route__summary,
+.admin-contracts-detail__progress-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.admin-contracts-route__metric {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  border-block-start: 2px solid var(--admin-color-cyan);
+  background: linear-gradient(145deg, var(--admin-color-surface-2), var(--admin-color-surface-1));
+}
+
+.admin-contracts-route__metric:nth-child(2) { border-block-start-color: var(--admin-color-orange); }
+.admin-contracts-route__metric:nth-child(3) { border-block-start-color: var(--admin-color-red); }
+.admin-contracts-route__metric:nth-child(4) { border-block-start-color: var(--admin-color-green); }
+
+.admin-contracts-route__metric span,
+.admin-contracts-route__metric small {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-contracts-route__metric span {
+  font-family: var(--admin-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-contracts-route__metric output {
+  color: var(--admin-color-text);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xl);
+  font-weight: var(--admin-weight-bold);
+  line-height: var(--admin-leading-tight);
+}
+
+.admin-contracts-route__controls {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(10rem, 1fr));
+  align-items: end;
+  gap: var(--admin-space-4);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-contracts-route__page-actions,
+.admin-contracts-route__row-actions,
+.admin-contracts-detail__participant-actions,
+.admin-contracts-review__footer,
+.admin-contract-form__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--admin-space-2);
+}
+
+.admin-contracts-route__row-actions {
+  min-inline-size: max-content;
+}
+
+.admin-contracts-route__row-actions .admin-button,
+.admin-contracts-detail__participant-actions .admin-button {
+  min-block-size: 2.25rem;
+  padding: var(--admin-space-1) var(--admin-space-3);
+}
+
+.admin-contracts-route__row-actions .admin-button[data-tone="danger"],
+.admin-contracts-detail__participant-actions .admin-button[data-tone="danger"] {
+  border-color: var(--admin-color-red);
+  color: var(--admin-color-red);
+}
+
+.admin-contracts-route__contract-copy,
+.admin-contracts-route__progress,
+.admin-contracts-route__dates,
+.admin-contracts-detail__participant,
+.admin-contracts-detail__evidence {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--admin-space-1);
+}
+
+.admin-contracts-route__contract-copy {
+  inline-size: min(29rem, 38vw);
+}
+
+.admin-contracts-route__contract-copy strong,
+.admin-contracts-route__contract-copy small,
+.admin-contracts-detail__evidence,
+.admin-contracts-detail__long-copy,
+.admin-contracts-detail__note p {
+  overflow-wrap: anywhere;
+}
+
+.admin-contracts-route__contract-copy small,
+.admin-contracts-route__contract-copy span,
+.admin-contracts-route__progress small,
+.admin-contracts-route__dates small,
+.admin-contracts-detail__participant small,
+.admin-contracts-detail__evidence small,
+.admin-contracts-detail__action-note {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-contracts-route__status {
+  display: inline-flex;
+  inline-size: fit-content;
+  align-items: center;
+  padding: var(--admin-space-1) var(--admin-space-2);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: 999px;
+  background: var(--admin-color-surface-2);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  white-space: nowrap;
+}
+
+.admin-contracts-route__status[data-status="active"],
+.admin-contracts-route__status[data-status="completed"] {
+  border-color: var(--admin-color-green);
+  background: var(--admin-color-green-soft);
+  color: var(--admin-color-green);
+}
+
+.admin-contracts-route__status[data-status="draft"],
+.admin-contracts-route__status[data-status="scheduled"],
+.admin-contracts-route__status[data-status="in_progress"],
+.admin-contracts-route__status[data-status="available"] {
+  border-color: var(--admin-color-cyan);
+  background: var(--admin-color-cyan-soft);
+  color: var(--admin-color-cyan);
+}
+
+.admin-contracts-route__status[data-status="submitted"] {
+  border-color: var(--admin-color-orange);
+  background: var(--admin-color-orange-soft);
+  color: var(--admin-color-orange);
+}
+
+.admin-contracts-route__status[data-status="failed"],
+.admin-contracts-route__status[data-status="expired"],
+.admin-contracts-route__status[data-status="archived"] {
+  border-color: var(--admin-color-red);
+  background: var(--admin-color-red-soft);
+  color: var(--admin-color-red);
+}
+
+.admin-contracts-detail__overview,
+.admin-contracts-detail__participants,
+.admin-contracts-review__evidence,
+.admin-contracts-route__loading-table {
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-contracts-detail__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--admin-space-2);
+  margin-block-end: var(--admin-space-4);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-contracts-detail__definitions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+  margin: 0;
+}
+
+.admin-contracts-detail__definition {
+  min-inline-size: 0;
+  padding-block-end: var(--admin-space-3);
+  border-block-end: 1px solid var(--admin-color-line);
+}
+
+.admin-contracts-detail__definition dt {
+  margin-block-end: var(--admin-space-1);
+  color: var(--admin-color-text-faint);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-contracts-detail__definition dd {
+  margin: 0;
+  color: var(--admin-color-text);
+}
+
+.admin-contracts-detail__long-copy {
+  white-space: pre-wrap;
+}
+
+.admin-contracts-detail__note {
+  margin-block-start: var(--admin-space-4);
+  padding: var(--admin-space-3);
+  border-inline-start: 2px solid var(--admin-color-orange);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-contracts-detail__note p {
+  margin-block: var(--admin-space-1) 0;
+  color: var(--admin-color-text-muted);
+}
+
+.admin-contracts-detail__loading {
+  display: grid;
+  gap: var(--admin-space-4);
+}
+
+.admin-contracts-detail__loading > p {
+  margin: 0;
+  color: var(--admin-color-text-muted);
+}
+
+.admin-contracts-review,
+.admin-contract-form {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-contracts-review__evidence strong {
+  display: block;
+  margin-block-end: var(--admin-space-2);
+}
+
+.admin-contracts-review__evidence p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-contract-form__group {
+  display: grid;
+  gap: var(--admin-space-4);
+  margin: 0;
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+}
+
+.admin-contract-form__group legend {
+  padding-inline: var(--admin-space-2);
+  color: var(--admin-color-cyan);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-contract-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--admin-space-4);
+}
+
+.admin-contract-form__grid .admin-field:has(textarea),
+.admin-contract-form__grid .admin-field:first-child:nth-last-child(1) {
+  grid-column: 1 / -1;
+}
+
+.admin-contracts-route__skeleton .admin-contracts-route__metric {
+  min-block-size: 7rem;
+}
+
+.admin-contracts-route__loading-table {
+  display: grid;
+  gap: var(--admin-space-3);
+}
+
+@media (max-width: 1100px) {
+  .admin-contracts-route__summary,
+  .admin-contracts-detail__progress-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-contracts-route__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-contracts-route__controls > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-contracts-route__catalog .admin-data-table__scroll,
+  .admin-contracts-detail__participants .admin-data-table__scroll {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__table,
+  .admin-contracts-route__catalog .admin-data-table__table tbody,
+  .admin-contracts-detail__participants .admin-data-table__table,
+  .admin-contracts-detail__participants .admin-data-table__table tbody {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__table thead,
+  .admin-contracts-detail__participants .admin-data-table__table thead {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__row,
+  .admin-contracts-detail__participants .admin-data-table__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-block-end: var(--admin-space-4);
+    padding: var(--admin-space-4);
+    border: 1px solid var(--admin-color-line);
+    border-block-start: 2px solid var(--admin-color-cyan);
+    background: var(--admin-color-surface-1);
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__cell,
+  .admin-contracts-detail__participants .admin-data-table__cell {
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 0.48fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--admin-space-3);
+    max-inline-size: none;
+    padding: var(--admin-space-3) 0;
+    border-block-end: 1px solid var(--admin-color-line);
+    text-align: start;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__cell::before,
+  .admin-contracts-detail__participants .admin-data-table__cell::before {
+    color: var(--admin-color-text-faint);
+    font-family: var(--admin-font-mono);
+    font-size: var(--admin-text-xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="title"]::before { content: "Contract"; }
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="category"]::before { content: "Category"; }
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="status"]::before { content: "Status"; }
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="deadlineAt"]::before { content: "Due / term"; }
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="progressCount"]::before { content: "Progress"; }
+  .admin-contracts-route__catalog .admin-data-table__cell[data-column="actions"]::before { content: "Actions"; }
+  .admin-contracts-detail__participants .admin-data-table__cell[data-column="playerName"]::before { content: "Participant"; }
+  .admin-contracts-detail__participants .admin-data-table__cell[data-column="status"]::before { content: "Status"; }
+  .admin-contracts-detail__participants .admin-data-table__cell[data-column="evidence"]::before { content: "Evidence"; }
+  .admin-contracts-detail__participants .admin-data-table__cell[data-column="submittedAt"]::before { content: "Submitted"; }
+  .admin-contracts-detail__participants .admin-data-table__cell[data-column="actions"]::before { content: "Actions"; }
+
+  .admin-contracts-route__contract-copy {
+    inline-size: 100%;
+  }
+
+  .admin-contracts-route__row-actions,
+  .admin-contracts-detail__participant-actions {
+    min-inline-size: 0;
+    justify-content: flex-start;
+  }
+
+  .admin-contracts-detail__definitions,
+  .admin-contract-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-contract-form__grid .admin-field:has(textarea) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-contracts-route__summary,
+  .admin-contracts-detail__progress-summary,
+  .admin-contracts-route__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-contracts-route__controls > :first-child {
+    grid-column: auto;
+  }
+
+  .admin-contracts-route__page-actions .admin-button,
+  .admin-contract-form__footer .admin-button,
+  .admin-contracts-review__footer .admin-button {
+    flex: 1 1 9rem;
+  }
+
+  .admin-contracts-route__catalog .admin-data-table__cell,
+  .admin-contracts-detail__participants .admin-data-table__cell {
+    grid-template-columns: minmax(6.5rem, 0.5fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-contracts-route__catalog .admin-data-table__row,
+  .admin-contracts-detail__participants .admin-data-table__row,
+  .admin-contracts-detail__overview,
+  .admin-contract-form__group {
+    padding: var(--admin-space-3);
+  }
+
+  .admin-contracts-route__status {
+    white-space: normal;
+  }
+}

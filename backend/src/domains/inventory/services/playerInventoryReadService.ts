@@ -84,9 +84,7 @@ function toItemDto(record: PlayerInventoryRecord): PlayerInventoryItemDto {
   const quantityAvailable = record.quantityOwned - record.quantityReserved;
   const publicItemId = record.itemKey;
   const availableActions =
-    record.itemStatus === "active" &&
-      record.itemVisibility === "visible" &&
-      quantityAvailable > 0
+    record.itemStatus === "active" && record.usable && quantityAvailable > 0
       ? ["inventory.use"] as const
       : [] as const;
 

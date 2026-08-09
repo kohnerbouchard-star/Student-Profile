@@ -2,19 +2,9 @@
   "use strict";
 
   const ACTION = "confirm-player-balance-adjustment";
+  // Checking is the canonical personal transaction account.
+  const CHECKING_LEDGER_ACCOUNT_TYPE = "checking";
   const inFlight = new WeakSet();
-  const COUNTRY_CURRENCY_BY_CODE = Object.freeze({
-    NORTHREACH: "NRC",
-    YRETHIA: "YRC",
-    THALORIS: "THD",
-    SOLVEND: "SLV",
-    ELDORAN: "ELD",
-    VALERION: "VAL",
-    LUMENOR: "LUM",
-    XALVORIA: "XAL",
-    DRAVENLOK: "DRV",
-    SYNDALIS: "SYN",
-  });
 
   function text(value) {
     return String(value ?? "").trim();
@@ -79,28 +69,6 @@
     );
   }
 
-  function playerLocalCurrencyCode(player) {
-    const countryCode = text(
-      player.countryCode ||
-      record(player.country).countryCode ||
-      record(player.country).code,
-    ).toUpperCase();
-    const mapped = COUNTRY_CURRENCY_BY_CODE[countryCode];
-    if (mapped) return mapped;
-
-    const candidates = [
-      player.countryCurrencyCode,
-      player.localCurrencyCode,
-      record(player.country).currencyCode,
-      player.currencyCode,
-    ];
-    for (const candidate of candidates) {
-      const code = text(candidate).toUpperCase();
-      if (/^[A-Z]{3,16}$/.test(code) && code !== "ECO") return code;
-    }
-    return "";
-  }
-
   function balanceRows(player) {
     const candidates = [
       player.balances,
@@ -113,22 +81,45 @@
     return [];
   }
 
+  function playerLocalCurrencyCode(player) {
+    const candidates = [
+      player.countryCurrencyCode,
+      player.localCurrencyCode,
+      record(player.country).currencyCode,
+      player.currencyCode,
+    ];
+    for (const candidate of candidates) {
+      const code = text(candidate).toUpperCase();
+      if (/^[A-Z]{3,16}$/.test(code) && code !== "ECO") return code;
+    }
+
+    const checkingCurrencies = [...new Set(
+      balanceRows(player)
+        .filter((entry) => text(entry?.accountType || entry?.account_type).toLowerCase() === CHECKING_LEDGER_ACCOUNT_TYPE)
+        .map((entry) => text(entry?.currencyCode || entry?.currency_code).toUpperCase())
+        .filter((code) => /^[A-Z]{3,16}$/.test(code) && code !== "ECO"),
+    )];
+    return checkingCurrencies.length === 1 ? checkingCurrencies[0] : "";
+  }
+
   function numericBalance(player, currencyCode) {
     const normalizedCurrency = text(currencyCode).toUpperCase();
-    const row = balanceRows(player).find((entry) => {
+    const matchingRows = balanceRows(player).filter((entry) => {
       const accountType = text(entry?.accountType || entry?.account_type).toLowerCase();
       const code = text(entry?.currencyCode || entry?.currency_code).toUpperCase();
-      return ["cash", "checking"].includes(accountType) && code === normalizedCurrency;
+      return accountType === CHECKING_LEDGER_ACCOUNT_TYPE && code === normalizedCurrency;
     });
-    if (row) {
-      const amount = Number(row.balance);
-      if (Number.isFinite(amount)) return amount;
+    if (matchingRows.length) {
+      const total = matchingRows.reduce((sum, entry) => {
+        const amount = Number(entry?.balance);
+        return Number.isFinite(amount) ? sum + amount : sum;
+      }, 0);
+      return Math.round(total * 100) / 100;
     }
 
     if (text(player.currencyCode).toUpperCase() !== normalizedCurrency) return 0;
     const candidates = [
       player.checkingBalance,
-      player.cashBalance,
       record(player.balances).checking,
       record(player.accountBalances).checking,
       record(player.accounts).checking,
@@ -241,7 +232,7 @@
           action: ACTION,
           amount,
           reason,
-          accountType: "checking",
+          accountType: CHECKING_LEDGER_ACCOUNT_TYPE,
           currencyMode: currency.currencyMode,
           currencyCode: currency.currencyCode,
         }),
@@ -280,21 +271,17 @@
     root.querySelectorAll?.('[role="dialog"]').forEach(preferLocalCurrency);
   }
 
+  function onMountedModalBound(event) {
+    const root = event.target instanceof Element ? event.target : document;
+    applyLocalDefaults(root);
+  }
+
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onCurrencyChoice, true);
+  document.addEventListener("econovaria:admin-mounted-modal-bound", onMountedModalBound);
   applyLocalDefaults();
-
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node instanceof Element) applyLocalDefaults(node);
-      }
-    }
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
 
   window.EconovariaLedgerAdjustmentWiring = Object.freeze({
     action: ACTION,
-    countryCurrencyByCode: COUNTRY_CURRENCY_BY_CODE,
   });
 })();
