@@ -1,0 +1,51 @@
+name: Temporary Crafting V2 convergence
+
+on:
+  push:
+    branches: [refactor/admin-ui-v2-crafting-v1]
+    paths:
+      - ".github/workflows/_converge-crafting-temp.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Replay bounded Crafting diff onto accumulated main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin backup/admin-ui-v2-crafting-preconvergence-20260810
+          BASE=4c17b942fcf4b2a6f60b629549f192d066053ba4
+          BACKUP=origin/backup/admin-ui-v2-crafting-preconvergence-20260810
+          git diff --binary "$BASE...$BACKUP" -- \
+            .github/workflows/admin-v2-crafting.yml \
+            admin/v2.html \
+            admin/v2/src/app.js \
+            admin/v2/src/core/navigation-registry.js \
+            admin/v2/src/routes/crafting/CraftingApi.js \
+            admin/v2/src/routes/crafting/CraftingController.js \
+            admin/v2/src/routes/crafting/CraftingRoute.js \
+            admin/v2/src/routes/crafting/CraftingSkeleton.js \
+            admin/v2/styles/routes/crafting.css \
+            docs/architecture/admin-ui-v2-crafting.md \
+            docs/operations/evidence/admin-ui-v2-crafting/README.md \
+            package.json \
+            scripts/admin-v2-crafting-api.test.mjs \
+            scripts/admin-v2-crafting-browser-smoke.mjs \
+            scripts/admin-v2-unit.test.mjs > /tmp/crafting.patch
+          git apply --3way --index /tmp/crafting.patch
+          rm .github/workflows/_converge-crafting-temp.yml
+          git add -u -- .github/workflows/_converge-crafting-temp.yml
+          git diff --cached --check
+          git commit -m "refactor(admin-v2): reconcile Crafting onto accumulated main"
+          git push origin HEAD:refactor/admin-ui-v2-crafting-v1
