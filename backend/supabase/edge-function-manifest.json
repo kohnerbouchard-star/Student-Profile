@@ -129,11 +129,6 @@
       "slug": "staff-api",
       "entrypoint": "backend/supabase/functions/staff-api/index.ts",
       "reason": "browser direct access is retired; current hosted runtime has no caller and neither environment deploys it"
-    },
-    {
-      "slug": "notification-worker",
-      "entrypoint": "backend/supabase/functions/notification-worker/index.ts",
-      "reason": "source-owned future worker; not part of the current deployed runtime inventory"
     }
   ],
   "retiredFunctions": [
