@@ -1,0 +1,184 @@
+name: Story Narrative S1 Bootstrap
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s1-bootstrap.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-narrative-s1-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify branch boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/story-narrative-convergence-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          test "$(git merge-base HEAD 8394595b898957676869fb3c692e96969ad0e09e)" = "8394595b898957676869fb3c692e96969ad0e09e"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+
+      - name: Reassemble and verify S1 implementation bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part* > "$RUNNER_TEMP/story-character-messaging-v1.zip.b64"
+          base64 --decode "$RUNNER_TEMP/story-character-messaging-v1.zip.b64" > "$RUNNER_TEMP/story-character-messaging-v1.zip"
+          echo "eaa79bef24256ffd09b25b9e36c493ee23f7b6d4f8d81df71dace46d6d5ce9ca  $RUNNER_TEMP/story-character-messaging-v1.zip" | sha256sum --check --status
+          mkdir -p "$RUNNER_TEMP/story-character-messaging-v1"
+          unzip -q "$RUNNER_TEMP/story-character-messaging-v1.zip" -d "$RUNNER_TEMP/story-character-messaging-v1"
+          BUNDLE_DIR="$(find "$RUNNER_TEMP/story-character-messaging-v1" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$BUNDLE_DIR"
+          python3 "$BUNDLE_DIR/validate_bundle.py"
+          echo "BUNDLE_DIR=$BUNDLE_DIR" >> "$GITHUB_ENV"
+
+      - name: Generate authoritative migration filename
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --version
+          test "$(supabase --version)" = "2.109.1"
+          find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-before.txt"
+          (
+            cd backend
+            supabase migration new --help > "$RUNNER_TEMP/supabase-migration-new-help.txt"
+            supabase migration new add_story_character_messaging_v1
+          )
+          find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-after.txt"
+          MIGRATION_NAME="$(comm -13 "$RUNNER_TEMP/migrations-before.txt" "$RUNNER_TEMP/migrations-after.txt" | grep '_add_story_character_messaging_v1.sql$')"
+          test -n "$MIGRATION_NAME"
+          test "$(printf '%s\n' "$MIGRATION_NAME" | wc -l)" = "1"
+          MIGRATION="backend/supabase/migrations/$MIGRATION_NAME"
+          test -f "$MIGRATION"
+          echo "MIGRATION=$MIGRATION" >> "$GITHUB_ENV"
+          echo "MIGRATION_NAME=$MIGRATION_NAME" >> "$GITHUB_ENV"
+
+      - name: Apply guarded S1 transformation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$BUNDLE_DIR/apply_story_character_messaging_v1.py" \
+            --repo "$GITHUB_WORKSPACE" \
+            --migration "$MIGRATION"
+          git diff --check
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify backend and Edge type contracts
+        working-directory: backend
+        run: npm run typecheck:all
+
+      - name: Verify Player Messaging and story contracts
+        working-directory: backend
+        run: npm run test:player-messaging
+
+      - name: Verify story scheduler integration
+        working-directory: backend
+        run: npm run test:stock-market-calendar
+
+      - name: Verify Admin Messaging moderation boundary
+        working-directory: backend
+        run: npm run test:admin-api
+
+      - name: Verify Admin V2 Messages read model
+        run: node --test scripts/admin-v2-messages.test.mjs
+
+      - name: Update persistent story roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          old = "### S1 — Recurring character messaging foundation\n\nStatus: DESIGNED / NOT YET LANDED ON THIS BRANCH"
+          new = "### S1 — Recurring character messaging foundation\n\nStatus: COMPLETE ON BRANCH / CONNECTED STAGING PENDING"
+          if old not in text:
+              raise SystemExit("roadmap S1 status anchor not found")
+          text = text.replace(old, new, 1)
+          marker = "\n## Run-completion rule\n"
+          entry = f'''\n### Run 2026-08-10 — S1 recurring character messaging implementation\n\nSource branch: `feat/story-narrative-convergence-v1`\nMigration: `{os.environ["MIGRATION_NAME"]}`\n\nImplemented:\n\n- first-class read-only `story` Messaging thread subtype;\n- one persistent private conversation per game + Player + recurring character;\n- immutable per-message storyline/event provenance;\n- server-owned idempotent `character_message` story effect delivery;\n- Player character-name projection without ownership/event UUID exposure;\n- Admin moderation visibility without character impersonation;\n- immutable story-thread membership through generic Admin participant controls;\n- moderation-suppressed delivery does not stall the global story runner.\n\nVerification completed in the branch bootstrap runner:\n\n- `npm run typecheck:all`;\n- `npm run test:player-messaging`;\n- `npm run test:stock-market-calendar`;\n- `npm run test:admin-api`;\n- `node --test scripts/admin-v2-messages.test.mjs`;\n- `git diff --check`.\n\nRemaining S1 acceptance:\n\n- connected staging database replay/acceptance before merge.\n\nNext: S2 structured narrative response windows.\n'''
+          if marker not in text:
+              raise SystemExit("roadmap run-completion marker not found")
+          text = text.replace(marker, entry + marker, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+          git diff --check
+
+      - name: Commit verified S1 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          git add -- \
+            "$MIGRATION" \
+            backend/package.json \
+            backend/src/domains/storylines/infrastructure/supabaseStoryMessageWriter.ts \
+            backend/src/domains/storylines/contracts/storyEffectContracts.ts \
+            backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts \
+            backend/src/domains/storylines/services/storyEffectEngine.ts \
+            backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts \
+            backend/src/domains/messaging/api/playerMessagingHttpHandler.ts \
+            player-terminal/src/pages/messages-page.js \
+            backend/supabase/functions/admin-api/messagingOperationsCore.ts \
+            backend/supabase/functions/admin-api/messagingParticipantOperations.ts \
+            admin/v2/src/routes/messages/MessagesController.js \
+            admin/v2/src/routes/messages/MessagesRoute.js \
+            backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts \
+            backend/supabase/functions/admin-api/messagingOperations.test.ts \
+            backend/supabase/functions/admin-api/messagingParticipantOperations.test.ts \
+            scripts/admin-v2-messages.test.mjs \
+            backend/src/domains/storylines/contracts/storyCharacterMessageContract.test.ts \
+            backend/src/domains/storylines/services/storyCharacterMessageEffect.test.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryMessageWriter.test.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryMessageWriter.repo.test.ts \
+            backend/src/domains/messaging/tests/storyCharacterMessagingMigrationContract.test.ts \
+            docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(story): add recurring character messaging foundation"
+          git push origin HEAD:feat/story-narrative-convergence-v1
