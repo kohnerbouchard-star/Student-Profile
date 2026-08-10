@@ -1,0 +1,76 @@
+name: Story Narrative S2 Attempt 2 Log
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-attempt2-log.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  persist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Persist failed-run evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          lines = [
+              "",
+              "### Run 2026-08-10 — S2 verification attempt 2",
+              "",
+              "Workflow run: `31372150461`",
+              "Workflow head: `6d7d86f1d6664d2bc6d7e602ce9048ce7adac870`",
+              "",
+              "Result: FAILED BEFORE MIGRATION GENERATION OR SOURCE APPLICATION.",
+              "",
+              "Passed before failure:",
+              "",
+              "- exact branch/S1 boundary;",
+              "- pinned Node, Deno, and Supabase CLI setup.",
+              "",
+              "Failure:",
+              "",
+              "- temporary per-chunk SHA expectations still disagreed with checkout bytes;",
+              "- the runner stopped before archive decode, migration generation, source changes, dependency install, or tests.",
+              "",
+              "Decision:",
+              "",
+              "- remove brittle individual chunk hash assertions;",
+              "- retain the independently diagnosed full reconstructed archive SHA-256 plus mandatory per-member MANIFEST byte-count/SHA-256 checks;",
+              "- this is a stronger content-integrity boundary because no payload can be applied unless the complete archive and every implementation member are verified.",
+              "",
+              "### Run 2026-08-10 — S2 attempt-2 roadmap persistence",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Logging source head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Next: rerun the complete S2 landing sequence from archive verification onward; do not skip any source or regression step.",
+              "",
+          ]
+          if marker not in text:
+              raise SystemExit("roadmap marker not found")
+          path.write_text(text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-attempt2-log.yml
+          git add -A -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-attempt2-log.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(story): record S2 verification attempt 2"
+          git push origin HEAD:feat/story-narrative-convergence-v1
