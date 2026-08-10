@@ -278,10 +278,10 @@ export function parseStoryRevealPayload(
 
     path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
     replace_once(path,
-'''  | { readonly kind: "markRead"; readonly threadId: string }
+'''  | { readonly kind: "markRead"; readonly threadId: string | null }
   | { readonly kind: "malformed" };
 ''',
-'''  | { readonly kind: "markRead"; readonly threadId: string }
+'''  | { readonly kind: "markRead"; readonly threadId: string | null }
   | {
     readonly kind: "selectStoryChoice";
     readonly threadId: string;
@@ -290,32 +290,47 @@ export function parseStoryRevealPayload(
   | { readonly kind: "malformed" };
 ''')
     replace_once(path,
-'''  const read = normalized.match(
-    /^\/messages\/threads\/(thr_[0-9a-f]{32})\/read$/,
-  );
-  if (read) return { kind: "markRead", threadId: read[1] };
-
-  return { kind: "malformed" };
-}
+'''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
 ''',
-'''  const read = normalized.match(
-    /^\/messages\/threads\/(thr_[0-9a-f]{32})\/read$/,
-  );
-  if (read) return { kind: "markRead", threadId: read[1] };
-
-  const storyChoice = normalized.match(
-    /^\/messages\/threads\/(thr_[0-9a-f]{32})\/story-interactions\/([A-Za-z0-9][A-Za-z0-9._:-]{0,159})\/select$/,
-  );
-  if (storyChoice) {
+'''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
+const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+''')
+    replace_once(path,
+'''  if (
+    segments.length >= 3 &&
+    segments[0] === "players" &&
+    segments[1] === "me" &&
+    segments[2] === "messages"
+  ) {
+    return { kind: "malformed" };
+  }
+''',
+'''  if (
+    segments.length === 8 &&
+    segments[0] === "players" &&
+    segments[1] === "me" &&
+    segments[2] === "messages" &&
+    segments[3] === "threads" &&
+    THREAD_ID_PATTERN.test(segments[4]) &&
+    segments[5] === "story-interactions" &&
+    STORY_INTERACTION_KEY_PATTERN.test(segments[6]) &&
+    segments[7] === "select"
+  ) {
     return {
       kind: "selectStoryChoice",
-      threadId: storyChoice[1],
-      interactionKey: storyChoice[2],
+      threadId: segments[4],
+      interactionKey: segments[6],
     };
   }
 
-  return { kind: "malformed" };
-}
+  if (
+    segments.length >= 3 &&
+    segments[0] === "players" &&
+    segments[1] === "me" &&
+    segments[2] === "messages"
+  ) {
+    return { kind: "malformed" };
+  }
 ''')
 
     path = repo / "backend/supabase/functions/classroom-api/messagingDispatch.ts"

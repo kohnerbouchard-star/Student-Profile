@@ -621,6 +621,38 @@ Exact staged patcher references containing Player Messaging / handler-anchor ter
 
 Next: inspect the listed call-site neighborhood(s) against current S1 Player Messaging source, normalize only the exact incompatible S1 formatting/anchor, and rerun the entire S2 landing pipeline.
 
+### Run 2026-08-11 — S2 route-parser compatibility attempts
+
+Workflow run `31433730927`: FAILED BEFORE PATCHER OR ROADMAP MUTATION because the helper Python embedded nested triple-quoted patch literals and raised `SyntaxError`.
+
+Workflow run `31433798416`: FAILED BEFORE PATCHER OR ROADMAP MUTATION because the replacement block still nested the patcher triple quotes inside a Python triple-quoted string.
+
+Neither failed compatibility run generated a migration, mutated S2 implementation source, or changed the staged patcher.
+
+### Run 2026-08-11 — S2 canonical route-parser compatibility repair
+
+Workflow run: `31433866663`
+Source head: `cfb9743109f014be4a23339ec1f579062b387e8d`
+
+Result: PATCHER COMPATIBILITY REPAIRED; NO S2 IMPLEMENTATION SOURCE APPLIED IN THIS RUN.
+
+Finding:
+
+- current Player Messaging routing is the canonical segment-based `readPlayerApiRouteSegments` implementation;
+- the prepared S2 primary patcher incorrectly expected an obsolete regex-normalized router and a non-null-only `markRead` route;
+- changing production routing to satisfy that stale patcher would be an architectural regression.
+
+Correction:
+
+- repaired only the temporary S2 primary patcher;
+- preserved nullable global/thread read-receipt routing;
+- S2 choice selection is expressed as the eight-segment `/players/me/messages/threads/:threadId/story-interactions/:interactionKey/select` route inside the existing segment parser;
+- added a bounded public `interactionKey` route pattern;
+- compiled the corrected patcher before publication;
+- removed the temporary replacement section and compatibility workflow before commit.
+
+Next: trigger the complete S2 verify-and-land workflow from this corrected patcher and continue fail-closed through any subsequent exact compatibility or test failure.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
