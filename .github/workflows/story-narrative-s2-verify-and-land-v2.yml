@@ -1,0 +1,259 @@
+name: Story Narrative S2 Verify And Land V2
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-verify-and-land-v2.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-narrative-s2-verify-and-land
+  cancel-in-progress: false
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify branch and S1 boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/story-narrative-convergence-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          test -f backend/supabase/migrations/20260810081110_add_story_character_messaging_v1.sql
+          git merge-base --is-ancestor 3d9c150d224fdc1252554e05c6614148c3027b65 HEAD
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+
+      - name: Verify S2 SQL payload and repaired branch patchers
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/story-narrative/s2/bootstrap.part* > "$RUNNER_TEMP/s2bundle.b64"
+          base64 --decode "$RUNNER_TEMP/s2bundle.b64" > "$RUNNER_TEMP/s2bundle.tar.gz"
+          echo '9487a4fc4cf35ce580e6c6f53257ca7520c0954353736d709aca1c354e9690d4  '"$RUNNER_TEMP/s2bundle.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/s2payload"
+          tar -xzf "$RUNNER_TEMP/s2bundle.tar.gz" -C "$RUNNER_TEMP/s2payload"
+          BUNDLE_DIR="$(find "$RUNNER_TEMP/s2payload" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$BUNDLE_DIR"
+          export BUNDLE_DIR
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["BUNDLE_DIR"])
+          manifest = json.loads((root / "MANIFEST.json").read_text(encoding="utf-8"))
+          for item in manifest["files"]:
+              path = root / item["path"]
+              if not path.is_file():
+                  raise SystemExit(f"missing S2 payload file: {item['path']}")
+              data = path.read_bytes()
+              if len(data) != item["bytes"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
+                  raise SystemExit(f"S2 payload integrity mismatch: {item['path']}")
+          print(f"Manifest-verified {len(manifest['files'])} S2 payload members.")
+          PY
+          test "$(git hash-object scripts/story-narrative/s2/diagnostic-primary.py)" = "bdbe19e9a0b8f6fb793defdfe94da9a91ab8d471"
+          test "$(git hash-object scripts/story-narrative/s2/diagnostic-followup.py)" = "d17cb11dc0f05e52cd78f09ab7c41a07c9f3a64e"
+          python3 -m py_compile scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/diagnostic-followup.py
+          echo "BUNDLE_DIR=$BUNDLE_DIR" >> "$GITHUB_ENV"
+
+      - name: Generate S2 migration with pinned Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "2.109.1"
+          find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-before.txt"
+          (
+            cd backend
+            supabase migration new --help > "$RUNNER_TEMP/supabase-migration-new-help.txt"
+            supabase migration new add_story_structured_response_windows_v1
+          )
+          find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-after.txt"
+          MIGRATION_NAME="$(comm -13 "$RUNNER_TEMP/migrations-before.txt" "$RUNNER_TEMP/migrations-after.txt" | grep '_add_story_structured_response_windows_v1.sql$')"
+          test -n "$MIGRATION_NAME"
+          test "$(printf '%s\n' "$MIGRATION_NAME" | wc -l)" = "1"
+          MIGRATION="backend/supabase/migrations/$MIGRATION_NAME"
+          test -f "$MIGRATION"
+          echo "MIGRATION=$MIGRATION" >> "$GITHUB_ENV"
+          echo "MIGRATION_NAME=$MIGRATION_NAME" >> "$GITHUB_ENV"
+
+      - name: Normalize exact S1 parser formatting for guarded S2 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("backend/src/domains/storylines/contracts/storyEffectContracts.ts")
+          text = path.read_text(encoding="utf-8")
+          old = '  if (type === "character_message") {\n    return {\n      type,\n      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),\n      characterName: readRequiredText(record.characterName, "effect.characterName"),\n      interactionKey: readOptionalText(record.interactionKey, "effect.interactionKey"),\n      messagePurpose: readOptionalEnum(\n        record.messagePurpose,\n        "effect.messagePurpose",\n        STORY_CHARACTER_MESSAGE_PURPOSES,\n        "relationship",\n      ),\n      body: readRequiredText(record.body, "effect.body"),\n    };\n  }\n'
+          new = '  if (type === "character_message") {\n    return {\n      type,\n      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),\n      characterName: readRequiredText(\n        record.characterName,\n        "effect.characterName",\n      ),\n      interactionKey: readOptionalText(\n        record.interactionKey,\n        "effect.interactionKey",\n      ),\n      messagePurpose: readOptionalEnum(\n        record.messagePurpose,\n        "effect.messagePurpose",\n        STORY_CHARACTER_MESSAGE_PURPOSES,\n        "relationship",\n      ),\n      body: readRequiredText(record.body, "effect.body"),\n    };\n  }\n'
+          if text.count(old) != 1:
+              raise SystemExit("current S1 character_message parser block did not match exactly once")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          git diff --check
+
+      - name: Apply guarded S2 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/story-narrative/s2/diagnostic-primary.py \
+            --repo "$GITHUB_WORKSPACE" \
+            --migration "$MIGRATION" \
+            --sql-body "$BUNDLE_DIR/structured_response_windows_v1.sql.body"
+          python3 scripts/story-narrative/s2/diagnostic-followup.py --repo "$GITHUB_WORKSPACE"
+          git diff --check
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify backend and Edge types
+        working-directory: backend
+        run: npm run typecheck:all
+
+      - name: Verify Player Messaging including S1 and S2
+        working-directory: backend
+        run: npm run test:player-messaging
+
+      - name: Verify Player request security and rate limits
+        working-directory: backend
+        run: npm run test:player-security
+
+      - name: Verify Player capability manifest
+        working-directory: backend
+        run: npm run test:player-capabilities
+
+      - name: Verify story scheduler remains integrated
+        working-directory: backend
+        run: npm run test:stock-market-calendar
+
+      - name: Verify Admin Messaging remains moderation-only
+        working-directory: backend
+        run: npm run test:admin-api
+
+      - name: Verify Admin V2 story interaction projection
+        run: node --test scripts/admin-v2-messages.test.mjs
+
+      - name: Verify Player terminal authored choice UI
+        run: node --test player-terminal/tests/story-message-choice-ui.mjs
+
+      - name: Update persistent roadmap for S2 success
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          old = "### S2 — Structured narrative response windows\n\nStatus: IN PROGRESS"
+          new = "### S2 — Structured narrative response windows\n\nStatus: COMPLETE ON BRANCH / CONNECTED STAGING PENDING"
+          if old not in text:
+              raise SystemExit("S2 roadmap status anchor not found")
+          text = text.replace(old, new, 1)
+          marker = "\n## Run-completion rule\n"
+          lines = [
+              "",
+              "### Run 2026-08-11 — S2 structured response windows landed",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Source head verified by runner: `{os.environ['GITHUB_SHA']}`",
+              f"Migration: `{os.environ['MIGRATION_NAME']}`",
+              "",
+              "Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.",
+              "",
+              "Implemented:",
+              "",
+              "- optional authored response windows on `character_message` story effects;",
+              "- 2–5 stable authored choices with prompt, open/close lifecycle, and optional deterministic default;",
+              "- private immutable interaction and Player-selection records attached to the S1 story message;",
+              "- one session-derived Player selection with exact idempotent replay and divergent-key conflict;",
+              "- before-open, expired, invalid-option, hidden-message, non-story-thread, and cross-scope paths fail closed;",
+              "- effective choice is derived from explicit selection or authored default after expiry without adding a scheduler;",
+              "- Player and Admin Messaging hydrate safe response state by public message ID through sidecar RPCs;",
+              "- Player terminal renders authored choice controls only while open and read-only resolved/expired state afterward;",
+              "- Admin sees response state read-only and has no choose-for-Player mutation;",
+              "- Player capability and rate-limit registries contain the explicit `messageStoryChoice` / `storyChoiceSelect` boundary;",
+              "- S1 character-message behavior remains covered when no response window is authored;",
+              "- Player Messaging routing remains on the canonical segment parser.",
+              "",
+              "Verification completed:",
+              "",
+              "- reconstructed payload archive SHA-256 and per-member MANIFEST SHA-256 checks;",
+              "- repaired branch patchers pinned by Git blob hash and compiled before application;",
+              "- exact current-S1 parser compatibility guard;",
+              "- `git diff --check`;",
+              "- `npm run typecheck:all`;",
+              "- `npm run test:player-messaging`;",
+              "- `npm run test:player-security`;",
+              "- `npm run test:player-capabilities`;",
+              "- `npm run test:stock-market-calendar`;",
+              "- `npm run test:admin-api`;",
+              "- `node --test scripts/admin-v2-messages.test.mjs`;",
+              "- `node --test player-terminal/tests/story-message-choice-ui.mjs`.",
+              "",
+              "Remaining S2 acceptance:",
+              "",
+              "- connected staging database replay and end-to-end Player selection acceptance before merge.",
+              "",
+              "Next: S3 recurring-character relationship state, consuming only authoritative S2 effective choices and existing story effects.",
+              "",
+          ]
+          if marker not in text:
+              raise SystemExit("roadmap run-completion marker not found")
+          path.write_text(text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+
+      - name: Remove temporary S2 transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/story-narrative-s2-verify-and-land.yml
+          rm -f .github/workflows/story-narrative-s2-verify-and-land-v2.yml
+          rm -f scripts/story-narrative/s2/bootstrap.part00 scripts/story-narrative/s2/bootstrap.part01 scripts/story-narrative/s2/bootstrap.part02 scripts/story-narrative/s2/bootstrap.part03 scripts/story-narrative/s2/bootstrap.part04
+          rm -f scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/diagnostic-followup.py
+          rmdir scripts/story-narrative/s2 2>/dev/null || true
+          rmdir scripts/story-narrative 2>/dev/null || true
+
+      - name: Commit verified S2 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(story): add structured response windows"
+          git push origin HEAD:feat/story-narrative-convergence-v1
