@@ -129,6 +129,7 @@ export type StockMarketRunnerErrorCode =
   | "no_active_stock_assets"
   | "stock_tick_already_exists"
   | "stock_market_closed"
+  | "stock_market_clock_invalid"
   | "stock_market_schema_not_applied"
   | "stock_market_state_load_failed"
   | "stock_market_tick_apply_failed"

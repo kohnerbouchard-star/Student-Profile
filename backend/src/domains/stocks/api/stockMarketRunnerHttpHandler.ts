@@ -213,11 +213,20 @@ export async function handleStockMarketRunnerRequest(
       });
     }
 
+    const tickOccurredAt = (dependencies.now ?? (() => new Date()))();
+    if (!Number.isFinite(tickOccurredAt.getTime())) {
+      throw new StockMarketRunnerError(
+        "stock_market_clock_invalid",
+        "Stock market runner clock returned an invalid timestamp.",
+        500,
+      );
+    }
+
     const marketOpen = await (dependencies.readMarketOpenState ??
       readStockMarketOpenState)(
         serviceClient,
         body.gameSessionId,
-        (dependencies.now ?? (() => new Date()))(),
+        tickOccurredAt,
       );
 
     if (!marketOpen) {
@@ -245,6 +254,7 @@ export async function handleStockMarketRunnerRequest(
     await runStorylineEventsAfterStockTickBestEffort({
       hook: storylineRunnerAfterTick ?? undefined,
       result,
+      occurredAt: tickOccurredAt.toISOString(),
       onFailure: dependencies.logStorylineRunnerFailure ??
         logStorylineRunnerFailure,
     });
@@ -569,6 +579,7 @@ async function runStorylineEventsAfterStockTickBestEffort(args: {
     input: StockMarketRunnerStorylineTickHookInput,
   ) => Promise<void>;
   readonly result: StockMarketRunnerResult;
+  readonly occurredAt: string;
   readonly onFailure: (
     failure: StockMarketRunnerStorylineTickHookFailure,
   ) => void;
@@ -581,7 +592,7 @@ async function runStorylineEventsAfterStockTickBestEffort(args: {
     await args.hook({
       gameSessionId: args.result.gameSessionId,
       currentMarketTick: args.result.tickIndex,
-      generatedAt: args.result.generatedAt,
+      generatedAt: args.occurredAt,
     });
   } catch (error) {
     args.onFailure({

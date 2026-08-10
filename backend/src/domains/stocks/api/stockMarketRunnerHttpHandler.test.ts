@@ -28,6 +28,7 @@ declare const Deno: {
 const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 const ASSET_ID = "00000000-0000-4000-8000-000000000101";
 const SECRET = "runner-secret";
+const WALL_CLOCK_TIME = "2026-07-20T00:00:00.000Z";
 
 Deno.test("stock market runner rejects non-POST requests", async () => {
   const response = await handleStockMarketRunnerRequest(
@@ -286,16 +287,17 @@ Deno.test("stock market runner creates storyline hook from factory after success
     input: {
       gameSessionId: GAME_SESSION_ID,
       currentMarketTick: 4,
-      generatedAt: "tick-4",
+      generatedAt: WALL_CLOCK_TIME,
     },
   }]);
 });
 
-Deno.test("stock market runner invokes storyline hook after successful tick", async () => {
+Deno.test("stock market runner invokes storyline hook with wall-clock time after successful tick", async () => {
   const calls: unknown[] = [];
   const response = await handleStockMarketRunnerRequest(
     request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
     dependencies({
+      now: () => new Date("2026-08-10T00:15:00.000Z"),
       runStorylineEventsAfterTick: async (input) => {
         calls.push(input);
       },
@@ -305,11 +307,23 @@ Deno.test("stock market runner invokes storyline hook after successful tick", as
 
   assertEquals(response.status, 200);
   assertEquals(body.ok, true);
+  assertEquals(body.generatedAt, "tick-4");
   assertEquals(calls, [{
     gameSessionId: GAME_SESSION_ID,
     currentMarketTick: 4,
-    generatedAt: "tick-4",
+    generatedAt: "2026-08-10T00:15:00.000Z",
   }]);
+});
+
+Deno.test("stock market runner rejects invalid wall-clock timestamps", async () => {
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({ now: () => new Date(Number.NaN) }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 500);
+  assertEquals(body.error.code, "stock_market_clock_invalid");
 });
 
 Deno.test("stock market runner keeps successful tick response when storyline hook fails", async () => {
@@ -412,7 +426,7 @@ function dependencies(options: {
       },
     }),
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
-    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),
+    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),
     readMarketOpenState: options.readMarketOpenState ?? (async () => true),
     createRepository: () => repository,
     createNewsRepository: () =>
