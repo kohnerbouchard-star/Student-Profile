@@ -53,7 +53,7 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Verify S2 SQL payload and exact-checkout branch patchers
+      - name: Verify S2 payload after Player terminal compatibility reconciliation
         shell: bash
         run: |
           set -euo pipefail
