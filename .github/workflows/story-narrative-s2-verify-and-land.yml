@@ -109,6 +109,22 @@ jobs:
           echo "MIGRATION=$MIGRATION" >> "$GITHUB_ENV"
           echo "MIGRATION_NAME=$MIGRATION_NAME" >> "$GITHUB_ENV"
 
+      - name: Normalize exact S1 parser formatting for guarded S2 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("backend/src/domains/storylines/contracts/storyEffectContracts.ts")
+          text = path.read_text(encoding="utf-8")
+          old = '  if (type === "character_message") {\n    return {\n      type,\n      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),\n      characterName: readRequiredText(record.characterName, "effect.characterName"),\n      interactionKey: readOptionalText(record.interactionKey, "effect.interactionKey"),\n      messagePurpose: readOptionalEnum(\n        record.messagePurpose,\n        "effect.messagePurpose",\n        STORY_CHARACTER_MESSAGE_PURPOSES,\n        "relationship",\n      ),\n      body: readRequiredText(record.body, "effect.body"),\n    };\n  }\n'
+          new = '  if (type === "character_message") {\n    return {\n      type,\n      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),\n      characterName: readRequiredText(\n        record.characterName,\n        "effect.characterName",\n      ),\n      interactionKey: readOptionalText(\n        record.interactionKey,\n        "effect.interactionKey",\n      ),\n      messagePurpose: readOptionalEnum(\n        record.messagePurpose,\n        "effect.messagePurpose",\n        STORY_CHARACTER_MESSAGE_PURPOSES,\n        "relationship",\n      ),\n      body: readRequiredText(record.body, "effect.body"),\n    };\n  }\n'
+          if text.count(old) != 1:
+              raise SystemExit("current S1 character_message parser block did not match exactly once")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          git diff --check
+
       - name: Apply guarded S2 implementation
         shell: bash
         run: |
@@ -197,6 +213,7 @@ jobs:
               "Verification completed:",
               "",
               "- reconstructed payload archive SHA-256 and per-member MANIFEST SHA-256 checks;",
+              "- exact current-S1 parser compatibility guard;",
               "- `git diff --check`;",
               "- `npm run typecheck:all`;",
               "- `npm run test:player-messaging`;",
