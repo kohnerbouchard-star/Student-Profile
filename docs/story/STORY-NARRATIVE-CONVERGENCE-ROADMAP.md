@@ -892,6 +892,38 @@ Correction in this run:
 
 Next: the V2 verification workflow now watches patcher changes and will rerun automatically from this correction; proceed into Player Messaging/security/capability/story/Admin/terminal regressions if typecheck clears.
 
+### Run 2026-08-11 — S2 verification attempt 12
+
+Workflow run: `31436016503`
+Source head: `8efd570f46dc92850c97a3902a355cdce3654040`
+Ephemeral generated migration: `20260810215510_add_story_structured_response_windows_v1.sql`
+
+Result: FULL S2 TRANSFORMATION APPLIED EPHEMERALLY; FAILED IN ADMIN EDGE TYPECHECK; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch/S1 boundary, toolchain, S2 payload integrity, migration generation, parser normalization, and full primary/followup application;
+- `git diff --check`;
+- `npm ci` with zero reported vulnerabilities;
+- backend TypeScript `tsc --noEmit`;
+- classroom Edge Deno check;
+- stock Edge Deno checks.
+
+Admin Edge typecheck failure:
+
+- `messagingOperationsCore.ts` receives an explicitly typed union from `hydrateAdminStoryInteractions`: success has `ok: true` + `threads`, failure has `ok: false` + `error`;
+- Deno Admin Edge checking did not narrow `hydration` sufficiently through `if (!hydration.ok)` and reported `TS2339` on `hydration.error`;
+- this is a type-narrowing issue in the newly injected Admin hydration call site, not a database/runtime contract failure.
+
+Correction in this run:
+
+- preserve the explicit success/failure return union;
+- change only the temporary followup patcher call-site guard to structural narrowing: `if ("error" in hydration) return rpcError(hydration.error);`;
+- do not weaken or cast away the Admin hydration result type;
+- compile the corrected followup patcher before publication.
+
+Next: trigger the complete S2 V2 landing suite; if all typechecks clear, continue directly into Player Messaging, security, capability, story, Admin, and Player-terminal regressions.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:

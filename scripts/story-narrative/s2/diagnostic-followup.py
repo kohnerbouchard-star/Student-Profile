@@ -504,7 +504,7 @@ function optionalStoryChoiceKey(value: unknown): string {
 ''',
 '''    const raw = normalizeThreadRead(response.data);
     const hydration = await hydrateAdminStoryInteractions(service, input, raw.threads);
-    if (!hydration.ok) return rpcError(hydration.error);
+    if ("error" in hydration) return rpcError(hydration.error);
     const normalized = hydration.threads.map(normalizeThread);
 ''')
     insert_before_once(path,
