@@ -75,6 +75,8 @@ test("login connectivity indicator consumes only the same-origin health route", 
     new URL("../frontend/src/core/constants.js", import.meta.url),
     "utf8",
   );
+  assert.match(source, /runtimeConfig\.apiProxyUrl/u);
+  assert.match(source, /GATEWAY MODE/u);
   assert.match(source, /window\.fetch\("\/api\/health"/u);
   assert.match(source, /CHECKING CONNECTION/u);
   assert.match(source, /RUNTIME READY/u);

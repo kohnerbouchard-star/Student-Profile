@@ -55,6 +55,11 @@ function installRuntimeHealthIndicator() {
     dot?.classList.toggle("green", state === "ready");
   };
 
+  if (runtimeConfig.apiProxyUrl) {
+    setState("gateway", "GATEWAY MODE");
+    return;
+  }
+
   setState("checking", "CHECKING CONNECTION");
   const controller = new AbortController();
   const timeout = window.setTimeout(
