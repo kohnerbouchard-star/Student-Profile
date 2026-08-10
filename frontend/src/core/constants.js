@@ -21,6 +21,7 @@ const ADMIN_SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ADMIN_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const LOGIN_LOGO_ASSET_URL = "assets/brand/Econovaria%20Logo.png?v=20260729.4";
 const PLAYER_GAME_CODE_MAX_LENGTH = 64;
+const RUNTIME_HEALTH_TIMEOUT_MS = 5_000;
 
 function installPublishableBearerGuard() {
   const nativeFetch = window.fetch.bind(window);
@@ -39,6 +40,52 @@ function installPublishableBearerGuard() {
 }
 
 installPublishableBearerGuard();
+
+function installRuntimeHealthIndicator() {
+  const indicator = Array.from(
+    window.document.querySelectorAll(".panel-footer > span"),
+  ).find((element) => /SUPABASE CONNECTED/iu.test(element.textContent || ""));
+  if (!(indicator instanceof HTMLElement)) return;
+
+  const dot = indicator.querySelector(".status-dot");
+  const setState = (state, label) => {
+    indicator.dataset.runtimeHealth = state;
+    indicator.setAttribute("aria-live", "polite");
+    if (indicator.lastChild) indicator.lastChild.textContent = ` ${label}`;
+    dot?.classList.toggle("green", state === "ready");
+  };
+
+  if (runtimeConfig.apiProxyUrl) {
+    setState("gateway", "GATEWAY MODE");
+    return;
+  }
+
+  setState("checking", "CHECKING CONNECTION");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    RUNTIME_HEALTH_TIMEOUT_MS,
+  );
+  window.fetch("/api/health", {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+    signal: controller.signal,
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => null);
+    if (response.ok && payload?.ok === true && payload?.status === "ready") {
+      setState("ready", "RUNTIME READY");
+      return;
+    }
+    setState("degraded", "RUNTIME DEGRADED");
+  }).catch(() => {
+    setState("unavailable", "RUNTIME UNAVAILABLE");
+  }).finally(() => {
+    window.clearTimeout(timeout);
+  });
+}
+
+installRuntimeHealthIndicator();
 
 const loginLogo = document.querySelector("[data-econovaria-brand-image]");
 const loginLogoMark = loginLogo?.closest(".logo-mark");

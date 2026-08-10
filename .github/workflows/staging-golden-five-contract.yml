@@ -45,7 +45,8 @@ jobs:
         run: node --check scripts/staging/codespace-preview.mjs
 
       - name: Validate package command contract
-        run: node -e "const p=require('./package.json'); for (const name of ['staging:golden:verify','test:staging','preview:staging:codespace']) { if (!p.scripts[name]) throw new Error('Missing script: '+name); }"
+        run: |
+          node -e "const p=require('./package.json'); for (const name of ['staging:golden:verify','test:staging','preview:staging:codespace']) { if (!p.scripts[name]) throw new Error('Missing script: '+name); }"
 
       - name: Reject committed fixture secrets
         shell: bash
