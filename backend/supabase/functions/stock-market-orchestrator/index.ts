@@ -72,6 +72,7 @@ Deno.serve(async (request: Request) => {
 
   for (const gameSessionId of gameSessionIds) {
     const internalSecret = crypto.randomUUID();
+    const storylineFailures: Array<Record<string, unknown>> = [];
     try {
       const runnerRequest = new Request(
         "https://scheduler.internal/stock-market-runner",
@@ -99,6 +100,19 @@ Deno.serve(async (request: Request) => {
           },
         ) as any,
         readRunnerSecret: () => internalSecret,
+        logStorylineRunnerFailure: (failure) => {
+          storylineFailures.push({
+            code: failure.code,
+            message: failure.message,
+            retryable: failure.retryable,
+          });
+          console.warn("stock_market_orchestrator_storyline_after_tick_failed", {
+            gameSessionId,
+            code: failure.code,
+            message: failure.message,
+            retryable: failure.retryable,
+          });
+        },
       });
       const payload = await readJson(runnerResponse);
 
@@ -117,7 +131,7 @@ Deno.serve(async (request: Request) => {
           gameSessionId,
           code: payload?.error?.code || `http_${runnerResponse.status}`,
         });
-        results.push({ gameSessionId, outcome: "failed" });
+        results.push({ gameSessionId, outcome: "failed", storylineFailures });
         continue;
       }
 
@@ -127,6 +141,7 @@ Deno.serve(async (request: Request) => {
         outcome: "ticked",
         tickIndex: Number(payload.tickIndex || 0),
         ticksInserted: Number(payload.ticksInserted || 0),
+        storylineFailures,
       });
     } catch (error) {
       failed += 1;
@@ -134,7 +149,7 @@ Deno.serve(async (request: Request) => {
         gameSessionId,
         message: error instanceof Error ? error.message : String(error),
       });
-      results.push({ gameSessionId, outcome: "failed" });
+      results.push({ gameSessionId, outcome: "failed", storylineFailures });
     }
   }
 
