@@ -21,6 +21,7 @@
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/edge-function-inventory/validate.test.mjs",
     "scripts/local-edge-runtime-contract.test.mjs",
+    "scripts/local-staging-gateway-contract-core.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/runtime-config-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -37,6 +38,7 @@
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/edge-function-inventory/validate.test.mjs",
     "scripts/local-edge-runtime-contract.test.mjs",
+    "scripts/local-staging-gateway-contract-core.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/runtime-config-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
