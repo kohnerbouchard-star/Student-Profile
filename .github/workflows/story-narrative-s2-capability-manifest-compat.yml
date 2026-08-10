@@ -1,0 +1,98 @@
+name: Story Narrative S2 Capability Manifest Compatibility
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-capability-manifest-compat.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Repair capability manifest patch anchor and persist run evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          patcher = Path('scripts/story-narrative/s2/diagnostic-primary.py')
+          text = patcher.read_text(encoding='utf-8')
+          old = "    replace_once(path, '  \"messageRead\",\\n  \"progression\",', '  \"messageRead\",\\n  \"messageStoryChoice\",\\n  \"progression\",')"
+          new = "    replace_once(path, '  \"messageRead\",\\n  \"news\",', '  \"messageRead\",\\n  \"messageStoryChoice\",\\n  \"news\",')"
+          if text.count(old) != 1:
+              raise SystemExit('stale PlayerCapabilityEndpointKey anchor did not match exactly once')
+          updated = text.replace(old, new, 1)
+          compile(updated, str(patcher), 'exec')
+          patcher.write_text(updated, encoding='utf-8')
+
+          roadmap = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          roadmap_text = roadmap.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          if marker not in roadmap_text:
+              raise SystemExit('roadmap marker missing')
+          lines = [
+              '',
+              '### Run 2026-08-11 — S2 primary-patcher repin helper',
+              '',
+              'Workflow run: `31434211006`',
+              '',
+              'Result: FAILED AT PUSH AFTER LOCAL COMMIT; NO REMOTE BRANCH MUTATION.',
+              '',
+              '- the helper correctly changed the local V2 workflow pin and committed it in the ephemeral runner checkout;',
+              '- GitHub rejected the push because the Actions token may not update another workflow file without `workflows` permission;',
+              '- the V2 workflow was subsequently repinned directly through the connected GitHub workflow-file API instead.',
+              '',
+              '### Run 2026-08-11 — S2 verification attempt 6',
+              '',
+              'Workflow run: `31434316926`',
+              'Source head: `984d1657c2153ca367ccf694d99f25bdb2892676`',
+              'Ephemeral generated migration: `20260810213252_add_story_structured_response_windows_v1.sql`',
+              '',
+              'Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.',
+              '',
+              'Passed before failure:',
+              '',
+              '- branch/S1 boundary, toolchain setup, archive/member integrity, patcher blob pins, Supabase migration generation, and S1 parser normalization;',
+              '- canonical segment-route patcher repair;',
+              '- current classroom Messaging dispatcher patcher repair.',
+              '',
+              'Failure:',
+              '',
+              '- the temporary primary patcher expected `messageRead` immediately before `progression` in `PlayerCapabilityEndpointKey`;',
+              '- current authoritative manifest places `news`, `notifications`, `portfolio`, and other endpoint keys between Messaging and Progression;',
+              '- dependencies and regression tests did not run because the guarded patch stopped on that stale adjacency assumption.',
+              '',
+              'Correction in this run:',
+              '',
+              '- preserve current manifest ordering;',
+              '- insert `messageStoryChoice` immediately after `messageRead` by anchoring the existing `messageRead -> news` adjacency;',
+              '- do not reorder or delete unrelated reviewed endpoint keys;',
+              '- compile the corrected temporary patcher before publication.',
+              '',
+              'Next: repin the V2 workflow directly through the GitHub connector and rerun the complete S2 landing suite.',
+              '',
+          ]
+          roadmap.write_text(roadmap_text.replace(marker, '\n'.join(lines) + marker, 1), encoding='utf-8')
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-capability-manifest-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-capability-manifest-compat.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): align S2 capability manifest patcher"
+          git push origin HEAD:feat/story-narrative-convergence-v1
