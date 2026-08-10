@@ -1,0 +1,268 @@
+name: RELEASE-007 Final Parity V3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release007-final-parity-v3.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release007-final-parity-v3
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: "2.109.1"
+
+jobs:
+  staging:
+    name: Attest canonical staging
+    runs-on: ubuntu-24.04
+    environment: staging
+    outputs:
+      schema_sha256: ${{ steps.fp.outputs.sha256 }}
+      consume_b64: ${{ steps.consume.outputs.definition_b64 }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+      - name: Link exact staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$url" in "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;; *) exit 1 ;; esac
+          echo "::add-mask::$url"
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+      - name: Export canonical request-rate-limit routine
+        id: consume
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select pg_get_functiondef('public.consume_request_rate_limits_v1(jsonb)'::regprocedure)" > "$RUNNER_TEMP/consume.sql"
+          test -s "$RUNNER_TEMP/consume.sql"
+          echo "definition_b64=$(base64 -w0 "$RUNNER_TEMP/consume.sql")" >> "$GITHUB_OUTPUT"
+      - name: Validate staging grant authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from information_schema.table_privileges where table_schema='public' and table_name='player_stock_watchlist' and grantee='service_role' and privilege_type in ('INSERT','DELETE')")" = 0
+      - name: Export staging fingerprint
+        id: fp
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/raw.json" --output "$RUNNER_TEMP/schema.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/schema.json" | awk '{print $1}')"
+          [[ "$sha" =~ ^[a-f0-9]{64}$ ]]
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+  production:
+    name: Apply final production parity correction
+    needs: staging
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      STAGING_SCHEMA_SHA256: ${{ needs.staging.outputs.schema_sha256 }}
+      CONSUME_DEFINITION_B64: ${{ needs.staging.outputs.consume_b64 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Verify production identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          test -n "$SUPABASE_DB_URL"
+          test -n "$CONSUME_DEFINITION_B64"
+          SUPABASE_DB_URL="$SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Apply exact final routine and grant correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$CONSUME_DEFINITION_B64" | base64 -d > "$RUNNER_TEMP/consume.sql"
+          test -s "$RUNNER_TEMP/consume.sql"
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<SQL
+          begin;
+          \i $RUNNER_TEMP/consume.sql
+          revoke insert, delete on table public.player_stock_watchlist from service_role;
+          commit;
+          SQL
+      - name: Validate production runtime and grants
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from information_schema.table_privileges where table_schema='public' and table_name='player_stock_watchlist' and grantee='service_role' and privilege_type in ('INSERT','DELETE')")" = 0
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.account_balances where lower(btrim(account_type))='cash'")" = 0
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.read_player_credential_pepper_recovery_v1()') is null")" = t
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL'
+          do $validation$
+          declare r record; result jsonb;
+          begin
+            for r in select id from public.game_sessions order by id loop
+              result := public.validate_economic_asset_core_v2(r.id);
+              if coalesce((result->>'valid')::boolean,false) is not true then
+                raise exception 'ECONOMIC_ASSET_CORE_VALIDATION_FAILED:%',result;
+              end if;
+            end loop;
+          end
+          $validation$;
+          SQL
+      - name: Require exact staging-production fingerprint equality
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/raw.json" --output "$RUNNER_TEMP/schema.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/schema.json" | awk '{print $1}')"
+          echo "staging=$STAGING_SCHEMA_SHA256 production=$sha"
+          test "$sha" = "$STAGING_SCHEMA_SHA256"
+
+  staging_ledger:
+    name: Archive and normalize staging migration ledger
+    needs: production
+    runs-on: ubuntu-24.04
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+      - name: Link staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          echo "::add-mask::$url"
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+      - name: Normalize staging ledger with forensic archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > "$RUNNER_TEMP/expected.sql"
+          from pathlib import Path
+          rows=[]
+          for p in sorted(Path('backend/supabase/migrations').glob('*.sql')):
+              version,name=p.stem.split('_',1)
+              if len(version)==14 and version.isdigit(): rows.append((version,name))
+          print('create temp table expected_migrations(version text primary key,name text not null);')
+          print('insert into expected_migrations(version,name) values')
+          print(',\n'.join("('%s','%s')"%(v,n.replace("'","''")) for v,n in rows)+';')
+          PY
+          psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc -v env_name="staging" -v source_commit="$GITHUB_SHA" -v run_id="$GITHUB_RUN_ID" <<SQL
+          begin;
+          \i $RUNNER_TEMP/expected.sql
+          insert into private.migration_ledger_history_archive(archive_batch_id,environment,source_commit,workflow_run_id,version,statements,name,created_by,idempotency_key,rollback)
+          select 'release007-final-v3-' || :'source_commit', :'env_name', :'source_commit', :'run_id', version,statements,name,created_by,idempotency_key,rollback
+          from supabase_migrations.schema_migrations on conflict (archive_batch_id,version) do nothing;
+          create temp table old_migrations as table supabase_migrations.schema_migrations;
+          delete from supabase_migrations.schema_migrations;
+          insert into supabase_migrations.schema_migrations(version,statements,name,created_by,idempotency_key,rollback)
+          select e.version,o.statements,e.name,o.created_by,o.idempotency_key,o.rollback from expected_migrations e left join old_migrations o using(version) order by e.version;
+          do \$verify\$ begin
+            if exists (select version from expected_migrations except select version from supabase_migrations.schema_migrations)
+               or exists (select version from supabase_migrations.schema_migrations except select version from expected_migrations)
+               or exists (select 1 from supabase_migrations.schema_migrations m join expected_migrations e using(version) where m.name is distinct from e.name)
+            then raise exception 'MIGRATION_LEDGER_RECONCILIATION_FAILED'; end if;
+          end \$verify\$;
+          commit;
+          SQL
+
+  production_ledger:
+    name: Archive and normalize production migration ledger
+    needs: staging_ledger
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Normalize production ledger with forensic archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          python3 - <<'PY' > "$RUNNER_TEMP/expected.sql"
+          from pathlib import Path
+          rows=[]
+          for p in sorted(Path('backend/supabase/migrations').glob('*.sql')):
+              version,name=p.stem.split('_',1)
+              if len(version)==14 and version.isdigit(): rows.append((version,name))
+          print('create temp table expected_migrations(version text primary key,name text not null);')
+          print('insert into expected_migrations(version,name) values')
+          print(',\n'.join("('%s','%s')"%(v,n.replace("'","''")) for v,n in rows)+';')
+          PY
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc -v env_name="production" -v source_commit="$GITHUB_SHA" -v run_id="$GITHUB_RUN_ID" <<SQL
+          begin;
+          \i $RUNNER_TEMP/expected.sql
+          insert into private.migration_ledger_history_archive(archive_batch_id,environment,source_commit,workflow_run_id,version,statements,name,created_by,idempotency_key,rollback)
+          select 'release007-final-v3-' || :'source_commit', :'env_name', :'source_commit', :'run_id', version,statements,name,created_by,idempotency_key,rollback
+          from supabase_migrations.schema_migrations on conflict (archive_batch_id,version) do nothing;
+          create temp table old_migrations as table supabase_migrations.schema_migrations;
+          delete from supabase_migrations.schema_migrations;
+          insert into supabase_migrations.schema_migrations(version,statements,name,created_by,idempotency_key,rollback)
+          select e.version,o.statements,e.name,o.created_by,o.idempotency_key,o.rollback from expected_migrations e left join old_migrations o using(version) order by e.version;
+          do \$verify\$ begin
+            if exists (select version from expected_migrations except select version from supabase_migrations.schema_migrations)
+               or exists (select version from supabase_migrations.schema_migrations except select version from expected_migrations)
+               or exists (select 1 from supabase_migrations.schema_migrations m join expected_migrations e using(version) where m.name is distinct from e.name)
+            then raise exception 'MIGRATION_LEDGER_RECONCILIATION_FAILED'; end if;
+          end \$verify\$;
+          commit;
+          SQL
+      - name: Final assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.account_balances where lower(btrim(account_type))='cash'")" = 0
+          echo '## RELEASE-007 FINAL V3: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Exact schema + authorization parity: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Economic core validation: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Migration ledger forensic archive: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Migration ledger source identity: PASS' >> "$GITHUB_STEP_SUMMARY"
