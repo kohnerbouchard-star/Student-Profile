@@ -5,11 +5,11 @@ from pathlib import Path
 
 patcher = Path("scripts/story-narrative/s2/diagnostic-primary.py")
 text = patcher.read_text(encoding="utf-8")
-old = '''    write(repo / "backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts", f'''declare const Deno: {{ readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void }};
-'''
-new = '''    write(repo / "backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts", f'''export {{}};
+old = """    write(repo / \"backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts\", f'''declare const Deno: {{ readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void }};
+"""
+new = """    write(repo / \"backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts\", f'''export {{}};
 declare const Deno: {{ readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void }};
-'''
+"""
 if text.count(old) != 1:
     raise SystemExit(f"migration contract test write anchor matched {text.count(old)} times")
 updated = text.replace(old, new, 1)
