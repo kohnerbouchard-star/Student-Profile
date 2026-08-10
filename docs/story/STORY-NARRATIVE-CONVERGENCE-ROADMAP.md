@@ -466,6 +466,20 @@ Actual GitHub-stored chunk evidence:
 
 Next: update only the temporary runner's expected transport hashes to these stored values, then require archive SHA-256 plus per-member manifest SHA-256 verification before migration generation or source application.
 
+### Run 2026-08-10 — S2 reconstructed archive diagnostic
+
+Workflow run: `31371908365`
+Diagnostic source head: `f7ba49a4e328f3300f0bd0d6a95671fa28b64ad8`
+
+Reconstructed archive SHA-256: `9487a4fc4cf35ce580e6c6f53257ca7520c0954353736d709aca1c354e9690d4`
+gzip/tar readable: `true`
+per-member MANIFEST verification: `false`
+
+
+Archive diagnostic error: `KeyError: "filename 'MANIFEST.json' not found"`
+
+Next: if archive/member verification is green, update the temporary S2 verification runner to the actual stored chunk hashes plus this reconstructed archive hash; retain per-member manifest verification before migration generation.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
