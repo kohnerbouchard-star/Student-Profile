@@ -130,6 +130,30 @@ jobs:
             --migration "$MIGRATION"
           git diff --check
 
+      - name: Narrow character-message contract test discriminant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/src/domains/storylines/contracts/storyCharacterMessageContract.test.ts")
+          text = path.read_text(encoding="utf-8")
+          old = '''  assertEquals(effect.messagePurpose, "relationship");
+          assertEquals(effect.interactionKey, null);
+'''
+          new = '''  if (effect.type !== "character_message") {
+            throw new Error("Expected character_message effect.");
+          }
+          assertEquals(effect.messagePurpose, "relationship");
+          assertEquals(effect.interactionKey, null);
+'''
+          if old not in text:
+              raise SystemExit("character-message type-narrowing anchor not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          git diff --check
+
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
