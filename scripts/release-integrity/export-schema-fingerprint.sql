@@ -55,7 +55,6 @@ select jsonb_build_object(
       select coalesce(jsonb_agg(jsonb_build_object(
         'schema', table_schema,
         'table', table_name,
-        'ordinal', ordinal_position,
         'name', column_name,
         'dataType', data_type,
         'udtSchema', udt_schema,
@@ -64,7 +63,7 @@ select jsonb_build_object(
         'default', column_default,
         'identity', is_identity,
         'generated', is_generated
-      ) order by table_schema, table_name, ordinal_position), '[]'::jsonb)
+      ) order by table_schema, table_name, column_name), '[]'::jsonb)
       from information_schema.columns
       where table_schema in ('public', 'private')
     ),
