@@ -527,6 +527,43 @@ Logging source head: `0239839f5c91396895ede96630c883791cba66d2`
 
 Next: rerun the complete S2 landing sequence from archive verification onward; do not skip any source or regression step.
 
+### Run 2026-08-10 — S2 verification attempt 3
+
+Workflow run: `31372413808`
+Workflow head: `c77355f4c6850847349c576b549427bd71ac6c16`
+Generated migration during ephemeral verification: `20260810094310_add_story_structured_response_windows_v1.sql`
+
+Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 SOURCE COMMIT PUBLISHED.
+
+Passed before failure:
+
+- exact story branch and S1 ancestor boundary;
+- pinned Node, Deno, and Supabase CLI setup;
+- reconstructed S2 archive SHA-256 verification;
+- per-member MANIFEST byte-count/SHA-256 verification for all S2 implementation members;
+- Python patch-script compilation;
+- Supabase CLI migration generation.
+
+Failure:
+
+- the primary guarded patch expected the S1 `character_message` parser block with wrapped `characterName` / `interactionKey` calls;
+- current S1 source keeps those two calls on single lines;
+- the guard aborted at `storyEffectContracts.ts` before applying S2 source changes;
+- dependency install and all S2 tests were skipped.
+
+Correction:
+
+- add an exact pre-application compatibility normalization that accepts only the current verified S1 parser block and rewrites it to the patcher's expected formatting;
+- keep the S2 semantic patch, archive/member integrity gates, and full regression sequence unchanged;
+- rerun from migration generation through every focused S1+S2 test.
+
+### Run 2026-08-10 — S2 attempt-3 roadmap persistence
+
+Workflow run: `31372621765`
+Logging source head: `98ab76b494b86745df20931dc38bd994ba3b6bc8`
+
+Next: rerun S2 with the exact S1 formatting compatibility guard, then surface the first semantic/type/test failure if one remains.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
