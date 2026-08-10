@@ -861,6 +861,37 @@ Correction in this run:
 
 Next: retrigger the complete S2 V2 landing suite and continue into regression verification once guarded application completes.
 
+### Run 2026-08-11 — S2 verification attempt 11
+
+Workflow run: `31435803912`
+Source head: `80e0fcf6ccf15f40c95bf2125ade49b960833bd6`
+Ephemeral generated migration: `20260810215226_add_story_structured_response_windows_v1.sql`
+
+Result: FULL S2 TRANSFORMATION APPLIED EPHEMERALLY; FAILED AT BACKEND TYPECHECK; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch/S1 boundary, pinned toolchain, archive/member integrity, migration generation, and S1 parser normalization;
+- complete primary S2 transformation;
+- complete followup S2 transformation, including Player hydration/selection and Admin read-only response projection;
+- `git diff --check`;
+- `npm ci` with zero reported vulnerabilities.
+
+Typecheck failure:
+
+- `storyResponseWindowMigrationContract.test.ts` declared `Deno` in script/global scope;
+- existing `stockExchangeCalendarMigrationContract.test.ts` also declares `Deno` in script/global scope;
+- TypeScript reported `TS2451: Cannot redeclare block-scoped variable 'Deno'` for both files;
+- no runtime implementation file produced the reported type error.
+
+Correction in this run:
+
+- make the new S2 migration contract test an explicit module with `export {}` before its `Deno` declaration;
+- preserve the existing stock migration test unchanged;
+- compile the corrected primary patcher before publication.
+
+Next: the V2 verification workflow now watches patcher changes and will rerun automatically from this correction; proceed into Player Messaging/security/capability/story/Admin/terminal regressions if typecheck clears.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:

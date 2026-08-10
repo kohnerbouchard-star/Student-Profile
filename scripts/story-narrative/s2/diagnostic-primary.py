@@ -657,7 +657,8 @@ function assertEquals(actual: unknown, expected: unknown): void {
 }
 ''')
 
-    write(repo / "backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts", f'''declare const Deno: {{ readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void }};
+    write(repo / "backend/src/domains/messaging/tests/storyResponseWindowMigrationContract.test.ts", f'''export {{}};
+declare const Deno: {{ readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void }};
 const migrationPath = "supabase/migrations/{migration.name}";
 Deno.test("S2 Story response migration is private, immutable, and replay-safe", async () => {{
   const sql = await Deno.readTextFile(migrationPath);
