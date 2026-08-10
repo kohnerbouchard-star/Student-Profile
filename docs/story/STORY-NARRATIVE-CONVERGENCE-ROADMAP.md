@@ -304,6 +304,25 @@ Correction:
 - narrow the parsed effect to `character_message` in the test before reading character-message-specific fields;
 - rerun the entire S1 verification sequence, not just the failing test.
 
+### Run 2026-08-10 — S1 verification attempt 4
+
+Workflow run: `31368435905`  
+Workflow head: `bfc2b7ac7f7b39112ce87f6eb5f665a9fceabbf9`
+
+Result: FAILED BEFORE JOB CREATION.
+
+Evidence:
+
+- GitHub reported zero jobs for the run;
+- no repository checkout, migration generation, source transformation, or tests executed;
+- failure was a temporary workflow YAML parse error caused by an outdented Python triple-quoted replacement literal.
+
+Correction:
+
+- replace the temporary multiline Python literals with escaped single-line strings that remain inside the YAML block scalar;
+- retain the discriminated-union test correction;
+- rerun the full S1 sequence.
+
 Next:
 
 - complete S1 green verification and branch commit;
