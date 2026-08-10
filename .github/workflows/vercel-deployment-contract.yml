@@ -4,26 +4,34 @@ on:
   pull_request:
     paths:
       - "api/**"
+      - "frontend/src/core/constants.js"
       - "frontend/src/core/runtime-config.js"
       - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
+      - "scripts/live-runtime-attestation-contract.test.mjs"
       - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-health-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
       - "scripts/vercel-deployment-contract.test.mjs"
       - "vercel.json"
+      - ".github/workflows/vercel-attested-production-promote.yml"
       - ".github/workflows/vercel-deployment-contract.yml"
   push:
     branches:
       - main
     paths:
       - "api/**"
+      - "frontend/src/core/constants.js"
       - "frontend/src/core/runtime-config.js"
       - "scripts/admin-vercel-namespace-routing-contract.test.mjs"
       - "scripts/build-vercel-runtime-config.mjs"
+      - "scripts/live-runtime-attestation-contract.test.mjs"
       - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/runtime-health-contract.test.mjs"
       - "scripts/runtime-trusted-types-contract.test.mjs"
       - "scripts/vercel-deployment-contract.test.mjs"
       - "vercel.json"
+      - ".github/workflows/vercel-attested-production-promote.yml"
       - ".github/workflows/vercel-deployment-contract.yml"
   workflow_dispatch:
 
@@ -50,14 +58,18 @@ jobs:
 
       - name: Validate deployment source syntax
         run: |
+          node --check api/_runtime-health.js
+          node --check api/player-session-proxy.js
+          node --check frontend/src/core/constants.js
           node --check scripts/build-vercel-runtime-config.mjs
-          node --check frontend/src/core/runtime-config.js
           node -e 'JSON.parse(require("node:fs").readFileSync("vercel.json", "utf8"))'
 
       - name: Validate runtime and deployment contracts
         run: |
           node --test \
             scripts/admin-vercel-namespace-routing-contract.test.mjs \
+            scripts/live-runtime-attestation-contract.test.mjs \
             scripts/runtime-config-contract.test.mjs \
+            scripts/runtime-health-contract.test.mjs \
             scripts/runtime-trusted-types-contract.test.mjs \
             scripts/vercel-deployment-contract.test.mjs

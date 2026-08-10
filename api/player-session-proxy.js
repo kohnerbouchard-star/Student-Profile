@@ -1,8 +1,13 @@
 "use strict";
 
 const { proxyPlayerBff } = require("./_player-bff-proxy.js");
+const runtimeHealthRoute = require("./_runtime-health.js");
 
 module.exports = function playerSessionNamespaceProxy(request, response) {
+  if (String(request.query?.runtimeHealth || "") === "1") {
+    return runtimeHealthRoute(request, response);
+  }
+
   const path = request.query?.path;
   if (typeof path !== "string" || !path.trim()) {
     response.statusCode = 400;
