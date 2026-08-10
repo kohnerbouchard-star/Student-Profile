@@ -1,0 +1,90 @@
+name: Story Narrative S2 Extract Patcher Diagnostic
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-extract-patcher-diagnostic.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Extract exact staged patchers and log attempt 4
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/story-narrative/s2/bootstrap.part* > "$RUNNER_TEMP/s2bundle.b64"
+          base64 --decode "$RUNNER_TEMP/s2bundle.b64" > "$RUNNER_TEMP/s2bundle.tar.gz"
+          echo '9487a4fc4cf35ce580e6c6f53257ca7520c0954353736d709aca1c354e9690d4  '"$RUNNER_TEMP/s2bundle.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/s2payload"
+          tar -xzf "$RUNNER_TEMP/s2bundle.tar.gz" -C "$RUNNER_TEMP/s2payload"
+          BUNDLE_DIR="$(find "$RUNNER_TEMP/s2payload" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$BUNDLE_DIR"
+          cp "$BUNDLE_DIR/apply_structured_response_windows_v1.py" scripts/story-narrative/s2/diagnostic-primary.py
+          cp "$BUNDLE_DIR/apply_structured_response_windows_v1_followup.py" scripts/story-narrative/s2/diagnostic-followup.py
+          sha256sum scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/diagnostic-followup.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          lines = [
+              "",
+              "### Run 2026-08-10 — S2 verification attempt 4",
+              "",
+              "Workflow run: `31372723818`",
+              "",
+              "Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 SOURCE COMMIT PUBLISHED.",
+              "",
+              "Passed before failure:",
+              "",
+              "- branch/S1 boundary;",
+              "- pinned Node, Deno, and Supabase CLI setup;",
+              "- reconstructed archive and per-member manifest verification;",
+              "- CLI-generated S2 migration;",
+              "- exact S1 parser formatting compatibility guard.",
+              "",
+              "Failure:",
+              "",
+              "- staged primary S2 patcher aborted because none of its expected Player Messaging handler anchors matched current S1 source;",
+              "- no dependency install or tests executed;",
+              "- no S2 source was committed.",
+              "",
+              "Action: extract the exact GitHub-stored primary/follow-up patch scripts into temporary branch diagnostic files, inspect their real anchors, then correct the compatibility layer rather than guessing.",
+              "",
+              "### Run 2026-08-10 — S2 staged-patcher extraction diagnostic",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Diagnostic source head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Temporary diagnostic files committed for exact source inspection:",
+              "",
+              "- `scripts/story-narrative/s2/diagnostic-primary.py`;",
+              "- `scripts/story-narrative/s2/diagnostic-followup.py`.",
+              "",
+              "These are temporary transport/diagnostic files and must be removed by the successful S2 landing commit.",
+              "",
+          ]
+          if marker not in text:
+              raise SystemExit("roadmap marker not found")
+          path.write_text(text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-extract-patcher-diagnostic.yml
+          git add -A -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/diagnostic-followup.py .github/workflows/story-narrative-s2-extract-patcher-diagnostic.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(story): diagnose S2 staged patch anchors"
+          git push origin HEAD:feat/story-narrative-convergence-v1
