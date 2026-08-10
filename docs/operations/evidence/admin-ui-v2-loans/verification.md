@@ -1,69 +1,27 @@
-# Loans Scope-Correction Verification
-
-## Reconciled state
-
-Base: `cfe51cb1b22077a4b1341bde9d6aa790d16a0d7b`
-
-PR #516 remains an Admin UI V2-only migration. The previously invented supervisory backend adapter and all supporting backend/security/workflow changes remain removed.
+# Loans Completion Verification
 
 ## Scope
 
-Expected PR diff is limited to 11 files:
+The completion is bounded to the existing Loans/Admin Business Banking authority:
 
-- `admin/v2/src/app.js`
-- `admin/v2/src/core/navigation-registry.js`
-- `admin/v2/src/routes/loans/LoansApiClient.js`
-- `admin/v2/src/routes/loans/LoansController.js`
-- `admin/v2/src/routes/loans/LoansRoute.js`
-- four Loans architecture/evidence documents
-- `scripts/admin-v2-loans-api.test.mjs`
-- `scripts/admin-v2-unit.test.mjs`
+- add a privacy-safe supervisory Loans snapshot to the current Admin Business Banking handler;
+- replace the zero-network Loans V2 placeholder with real BFF reads and existing authoritative mutations;
+- add focused backend/privacy, V2 contract, and CI coverage;
+- update stale Loans architecture/evidence documents.
 
-There is no Loans CSS file, Backend/Supabase file, migration, workflow, security-map change, or package-script change.
+No migration, schema change, new loan table, new ledger authority, repayment rewrite, Banking redesign, or generic Admin architecture threshold change is included.
 
-## Authoritative contract result
+## Required invariants
 
-Current-main Admin/BFF loan reads remain limited to loan applications and loan products. No authoritative browser-safe GET contract exists for outstanding loans plus repayment history. The existing applications response includes internal ownership UUID fields and is not consumed as a portfolio feed.
+1. `economy.adjust` remains the Loans permission.
+2. V2 uses the HttpOnly Admin BFF transport only.
+3. Internal player, loan, payment, application, product and business UUIDs never appear in the Loans supervisory response.
+4. Currency totals stay currency-scoped and are never cross-summed.
+5. Application review, product upsert, restructure and servicing reuse existing authoritative RPCs.
+6. Repayment remains a player-owned operation.
+7. Failed or stale reads use the standard Admin V2 data-state/error envelope.
+8. Exact-head focused Loans CI and accumulated Admin V2 regression must pass before merge.
 
-Loans therefore resolves locally to `not_configured` and performs zero loan network requests.
+## Acceptance
 
-## Focused verification
-
-`scripts/admin-v2-loans-api.test.mjs` asserts:
-
-- Loans is V2 under `economy.adjust`;
-- already-merged Banking remains V2 under `economy.adjust`;
-- the Loans client contains no fetch call, Admin endpoint, read method, or mutation transport;
-- the controller resolves locally to `not-configured`;
-- the route names the missing outstanding-loan/repayment-history contract;
-- current-main `loan-applications` and `loan-products` reads remain present;
-- no GET `/loans` handler exists;
-- no dedicated `loanOperations.ts` exists;
-- no Loans-specific Business Banking workflow additions exist.
-
-The focused Loans test is imported by `scripts/admin-v2-unit.test.mjs`, so it runs inside the standard Admin V2 regression suite.
-
-## Shared-route preservation
-
-`admin/v2/src/app.js`, navigation registry, and unit expectations are reconstructed from current `main`, not from the stale Loans branch base. This preserves Banking and every previously merged Admin V2 route while adding only Loans.
-
-## Security and privacy
-
-- Loans makes zero network calls, so no partial application DTO is exposed through this route.
-- No internal borrower, business, product, loan, payment, or ownership UUID is copied into Loans V2 presentation state.
-- No browser Authorization header or direct Supabase/table access is introduced.
-- Permission remains `economy.adjust` at the Admin V2 route boundary.
-
-## Guardrails
-
-PR #516 does not modify generic Admin architecture or scroll guardrails. No allowed-debt threshold is increased and no inherited assertion is weakened.
-
-## Final merge gate
-
-PR #501 dependency: cleared.
-
-Banking serial dependency: cleared by merged PR #512.
-
-Authoritative Loans portfolio contract: still absent; represented explicitly as `not_configured`, not treated as a merge blocker for this zero-network source-owned route.
-
-Before merge, the normalized exact head must pass the accumulated Admin V2 regression, Repository Quality, Admin Scroll Integrity, Admin Shell Smoke, and Admin Browser E2E.
+The route is considered complete when the exact PR head passes focused Loans CI plus the repository's applicable backend typecheck, Admin Browser E2E, Repository Quality, security, release-integrity and runtime checks, and the merge lands cleanly on current `main`.
