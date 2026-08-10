@@ -1,0 +1,102 @@
+name: Story Narrative S2 Anchor Diagnose And Log
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-anchor-diagnose-and-log.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Locate exact staged anchor failure and persist roadmap evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          targets = [
+              Path("scripts/story-narrative/s2/diagnostic-primary.py"),
+              Path("scripts/story-narrative/s2/diagnostic-followup.py"),
+          ]
+          needles = [
+              "none of the expected Player Messaging handler anchors matched",
+              "Player Messaging handler anchors",
+              "playerMessagingHttpHandler.ts",
+          ]
+          findings = []
+          for target in targets:
+              lines = target.read_text(encoding="utf-8").splitlines()
+              for index, line in enumerate(lines, start=1):
+                  if any(needle in line for needle in needles):
+                      start = max(1, index - 12)
+                      end = min(len(lines), index + 18)
+                      context = "\n".join(
+                          f"{line_no:04d}: {lines[line_no - 1]}"
+                          for line_no in range(start, end + 1)
+                      )
+                      findings.append((str(target), index, context))
+
+          if not findings:
+              raise SystemExit("No Player Messaging patch anchors found in staged patchers.")
+
+          print("Exact staged Player Messaging anchor findings:")
+          for file_name, line_number, context in findings:
+              print(f"--- {file_name}:{line_number} ---")
+              print(context)
+
+          roadmap = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = roadmap.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          if marker not in text:
+              raise SystemExit("roadmap marker not found")
+
+          lines = [
+              "",
+              "### Run 2026-08-10 — S2 exact Player Messaging anchor diagnostic",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Diagnostic source head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Purpose: locate the exact staged patcher branch that produced the attempt-4 Player Messaging anchor failure before another source-application retry.",
+              "",
+              "Findings:",
+              "",
+          ]
+          for file_name, line_number, context in findings:
+              lines += [
+                  f"- staged patcher `{file_name}` contains a relevant anchor/error at line `{line_number}`;",
+                  "",
+                  "```text",
+                  context,
+                  "```",
+                  "",
+              ]
+          lines += [
+              "Next: compare the exact anchor candidate(s) above against current S1 `backend/src/domains/messaging/api/playerMessagingHttpHandler.ts`, add only the minimum exact compatibility normalization required, then rerun the complete S2 landing sequence.",
+              "",
+          ]
+          text = text.replace(marker, "\n".join(lines) + marker, 1)
+          roadmap.write_text(text, encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-anchor-diagnose-and-log.yml
+          git add -A -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-anchor-diagnose-and-log.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(story): record exact S2 Player Messaging anchor diagnostic"
+          git push origin HEAD:feat/story-narrative-convergence-v1
