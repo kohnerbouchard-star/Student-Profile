@@ -6,7 +6,7 @@ from pathlib import Path
 
 patcher = Path("scripts/story-narrative/s2/diagnostic-followup.py")
 text = patcher.read_text(encoding="utf-8")
-old = '''    replace_once(path,
+old = """    replace_once(path,
 '''  client: EdgeSupabaseClient,
   gameId: string,
   playerId: string,
@@ -18,8 +18,8 @@ old = '''    replace_once(path,
   now: Date,
 ): Promise<Response> {
 ''')
-'''
-new = '''    replace_once(path,
+"""
+new = """    replace_once(path,
 '''async function handleRead(
   request: Request,
   route: ReadRoute,
@@ -37,7 +37,7 @@ new = '''    replace_once(path,
   now: Date,
 ): Promise<Response> {
 ''')
-'''
+"""
 if text.count(old) != 1:
     raise SystemExit(f"generic handleRead signature patch block matched {text.count(old)} times")
 updated = text.replace(old, new, 1)
