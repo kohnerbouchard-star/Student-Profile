@@ -598,6 +598,29 @@ Temporary diagnostic files committed for exact source inspection:
 
 These are temporary transport/diagnostic files and must be removed by the successful S2 landing commit.
 
+### Run 2026-08-10 — S2 exact-anchor diagnostic attempt 1
+
+Workflow run: `31373328626`
+
+Result: DIAGNOSTIC WORKFLOW FAILED; NO S2 SOURCE APPLICATION OCCURRED.
+
+The failed diagnostic was intended only to capture staged patcher context. It did not generate a migration, mutate S2 implementation source, or run tests. Its failure is superseded by the sanitized diagnostic below.
+
+### Run 2026-08-10 — S2 sanitized exact-anchor diagnostic
+
+Workflow run: `31373455302`
+Diagnostic source head: `84e2c495372d11c07388c17034e593913b8fd04e`
+
+Exact staged patcher references containing Player Messaging / handler-anchor terms:
+
+- `scripts/story-narrative/s2/diagnostic-primary.py:419` — `contract: "Mark one Player Messaging thread read."`
+- `scripts/story-narrative/s2/diagnostic-primary.py:425` — `contract: "Mark one Player Messaging thread read."`
+- `scripts/story-narrative/s2/diagnostic-followup.py:31` — `# Player Messaging HTTP: hydrate response windows and select choices.`
+- `scripts/story-narrative/s2/diagnostic-followup.py:32` — `path = repo / 'backend/src/domains/messaging/api/playerMessagingHttpHandler.ts'`
+- `scripts/story-narrative/s2/diagnostic-followup.py:836` — `path = repo / 'backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts'`
+
+Next: inspect the listed call-site neighborhood(s) against current S1 Player Messaging source, normalize only the exact incompatible S1 formatting/anchor, and rerun the entire S2 landing pipeline.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
