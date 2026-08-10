@@ -8,8 +8,8 @@ on:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
       - "api/_canonical-bff-path.js"
       - "api/_admin-bff-proxy.js"
-      - "api/admin-session/[...path].js"
-      - "api/admin/[...path].js"
+      - "api/admin-session/**"
+      - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
   push:
     branches:
@@ -18,8 +18,8 @@ on:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
       - "api/_canonical-bff-path.js"
       - "api/_admin-bff-proxy.js"
-      - "api/admin-session/[...path].js"
-      - "api/admin/[...path].js"
+      - "api/admin-session/**"
+      - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
 
 permissions:
@@ -35,9 +35,9 @@ env:
   STATUS_CONTEXT: econovaria/vercel-admin-session-route
 
 jobs:
-  publish-pending:
+  publish_pending:
     name: Publish production route verification location
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -74,14 +74,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out reviewed source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -111,9 +111,13 @@ jobs:
           for (const required of [
             'statuses: write',
             'econovaria/vercel-admin-session-route',
+            'api/admin-session/**',
+            'api/admin/**',
             'Publish pending commit status',
             'Publish terminal commit status',
-            "if: always() && github.event_name == 'push'",
+            'publish_pending',
+            'verify_production',
+            'publish_final',
           ]) {
             if (!workflow.includes(required)) {
               throw new Error(`Observable production verification contract missing: ${required}`);
@@ -121,11 +125,11 @@ jobs:
           }
           NODE
 
-  verify-production:
+  verify_production:
     name: Verify deployed Vercel Admin session route
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs:
-      - publish-pending
+      - publish_pending
       - validate
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -185,13 +189,13 @@ jobs:
             echo '- Secret or database mutation performed: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  publish-final:
+  publish_final:
     name: Publish production route verification result
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs:
-      - publish-pending
+      - publish_pending
       - validate
-      - verify-production
+      - verify_production
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -201,9 +205,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PAYLOAD_PATH: ${{ runner.temp }}/status.json
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          PENDING_RESULT: ${{ needs['publish-pending'].result }}
+          PENDING_RESULT: ${{ needs.publish_pending.result }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
-          VERIFY_RESULT: ${{ needs['verify-production'].result }}
+          VERIFY_RESULT: ${{ needs.verify_production.result }}
         run: |
           set -euo pipefail
           node - <<'NODE'
