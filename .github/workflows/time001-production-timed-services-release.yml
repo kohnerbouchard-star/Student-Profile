@@ -1,0 +1,168 @@
+name: TIME-001 Production Timed Services Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/time001-production-timed-services-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: time001-production-timed-services-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: dfea026f32b5448103aa0ba861c0a82f48a8c72b
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  MIGRATION_PATH: backend/supabase/migrations/20260810123500_add_autonomous_timed_services_runtime_v1.sql
+  MIGRATION_VERSION: "20260810123500"
+  MIGRATION_NAME: add_autonomous_timed_services_runtime_v1
+  EXPECTED_MIGRATION_BLOB: 0ba06dc144033892466bdddc6f0caeadf3095c7e
+
+jobs:
+  release:
+    name: Apply exact TIME-001 timed-services migration to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_MIGRATION_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_PRODUCTION_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$MIGRATION_VERSION" = "20260810123500"
+          test "$MIGRATION_NAME" = "add_autonomous_timed_services_runtime_v1"
+          command -v psql >/dev/null
+
+      - name: Check out exact merged TIME-001 source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact source and migration identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+          test -f "$MIGRATION_PATH"
+          test "$(git hash-object "$MIGRATION_PATH")" = "$EXPECTED_MIGRATION_BLOB"
+          grep -Eq '^begin;[[:space:]]*$' "$MIGRATION_PATH"
+          grep -Eq '^commit;[[:space:]]*$' "$MIGRATION_PATH"
+          grep -q 'run_due_autonomous_timed_services_v1' "$MIGRATION_PATH"
+          grep -q 'expire_marketplace_listings_v1' "$MIGRATION_PATH"
+          grep -q 'service_player_loan_status_v1' "$MIGRATION_PATH"
+          grep -q 'econovaria-autonomous-timed-services-v1' "$MIGRATION_PATH"
+          grep -q "'\* \* \* \* \*'" "$MIGRATION_PATH"
+          if grep -Eiq '\b(drop[[:space:]]+(table|schema|database)|truncate|alter[[:space:]]+table[^;]+drop[[:space:]]+(column|constraint))\b' "$MIGRATION_PATH"; then
+            echo 'Destructive SQL rejected.' >&2
+            exit 1
+          fi
+
+      - name: Build one atomic forward migration with ledger record
+        shell: bash
+        run: |
+          set -euo pipefail
+          MIGRATION_PATH="$MIGRATION_PATH" OUTPUT_PATH="$RUNNER_TEMP/time001-production.sql" node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.MIGRATION_PATH, 'utf8').trim();
+          if (!/^begin;\s*/iu.test(source) || !/\s*commit;$/iu.test(source)) {
+            throw new Error('Migration is not transaction-bounded.');
+          }
+          const body = source.replace(/^begin;\s*/iu, '').replace(/\s*commit;$/iu, '').trim();
+          if (!body) throw new Error('Migration body is empty.');
+          const version = process.env.MIGRATION_VERSION;
+          const name = process.env.MIGRATION_NAME;
+          const blob = process.env.EXPECTED_MIGRATION_BLOB;
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const sql = [
+            'begin;',
+            `do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and coalesce(name, '') <> ${literal(name)}) then raise exception 'Migration ledger conflict for ${version}'; end if; end $$;`,
+            body,
+            `insert into supabase_migrations.schema_migrations (version, name, statements) values (${literal(version)}, ${literal(name)}, array[${literal(`${process.env.MIGRATION_PATH}@${blob}`)}]) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and name = ${literal(name)}) then raise exception 'Migration ledger verification failed for ${version}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            'commit;',
+            '',
+          ].join('\n\n');
+          fs.writeFileSync(process.env.OUTPUT_PATH, sql, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/time001-production.sql"
+
+      - name: Apply bounded production migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/time001-production.sql"
+          rm -f "$RUNNER_TEMP/time001-production.sql"
+
+      - name: Verify production timed-service postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/postconditions.json"
+          select json_build_object(
+            'runnerFunction', to_regprocedure('public.run_due_autonomous_timed_services_v1(timestamp with time zone)') is not null,
+            'serviceRunner', has_function_privilege('service_role', 'public.run_due_autonomous_timed_services_v1(timestamp with time zone)', 'execute'),
+            'anonDenied', not has_function_privilege('anon', 'public.run_due_autonomous_timed_services_v1(timestamp with time zone)', 'execute'),
+            'authenticatedDenied', not has_function_privilege('authenticated', 'public.run_due_autonomous_timed_services_v1(timestamp with time zone)', 'execute'),
+            'singleCron', (select count(*) = 1 from cron.job where jobname = 'econovaria-autonomous-timed-services-v1'),
+            'cronSchedule', (select schedule = '* * * * *' from cron.job where jobname = 'econovaria-autonomous-timed-services-v1' limit 1),
+            'cronCommand', (select command = 'select * from public.run_due_autonomous_timed_services_v1(clock_timestamp());' from cron.job where jobname = 'econovaria-autonomous-timed-services-v1' limit 1),
+            'stockCronPreserved', (select count(*) = 1 from cron.job where jobname = 'econovaria-stock-runtime-scheduler-v1' and active),
+            'macroCronPreserved', (select count(*) = 1 from cron.job where jobname = 'econovaria-daily-macro-progression-v1' and active),
+            'signupCleanupCronPreserved', (select count(*) = 1 from cron.job where jobname = 'econovaria-expired-staff-signup-cleanup-v1' and active),
+            'ledgerRecordedOnce', (select count(*) = 1 from supabase_migrations.schema_migrations where version = '20260810123500' and name = 'add_autonomous_timed_services_runtime_v1')
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim());
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Production timed-service postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/postconditions.json"
+
+      - name: Record bounded production result
+        shell: bash
+        run: |
+          {
+            echo '## TIME-001 production timed services released'
+            echo "- Exact TIME-001 source SHA: \`$EXPECTED_SOURCE_SHA\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo '- Staging project denied: `true`'
+            echo "- Migration: \`$MIGRATION_VERSION $MIGRATION_NAME\`"
+            echo "- Migration blob: \`$EXPECTED_MIGRATION_BLOB\`"
+            echo '- Atomic forward migration: `true`'
+            echo '- Migration ledger: `recorded once`'
+            echo '- Runner access: `service_role only`'
+            echo '- Cron count: `1`'
+            echo '- Cron schedule: `* * * * *`'
+            echo '- Existing stock/macro/signup-cleanup clocks preserved: `true`'
+            echo '- Destructive SQL allowed: `false`'
+            echo '- Secret values recorded: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
