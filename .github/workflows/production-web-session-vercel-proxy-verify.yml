@@ -35,7 +35,7 @@ env:
   STATUS_CONTEXT: econovaria/vercel-admin-session-route
 
 jobs:
-  publish-pending:
+  publish_pending:
     name: Publish production route verification location
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -121,11 +121,11 @@ jobs:
           }
           NODE
 
-  verify-production:
+  verify_production:
     name: Verify deployed Vercel Admin session route
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
-      - publish-pending
+      - publish_pending
       - validate
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -185,13 +185,13 @@ jobs:
             echo '- Secret or database mutation performed: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  publish-final:
+  publish_final:
     name: Publish production route verification result
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
-      - publish-pending
+      - publish_pending
       - validate
-      - verify-production
+      - verify_production
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -201,9 +201,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PAYLOAD_PATH: ${{ runner.temp }}/status.json
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          PENDING_RESULT: ${{ needs['publish-pending'].result }}
+          PENDING_RESULT: ${{ needs.publish_pending.result }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
-          VERIFY_RESULT: ${{ needs['verify-production'].result }}
+          VERIFY_RESULT: ${{ needs.verify_production.result }}
         run: |
           set -euo pipefail
           node - <<'NODE'
