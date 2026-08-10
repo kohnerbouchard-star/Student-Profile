@@ -81,7 +81,7 @@ jobs:
                   raise SystemExit(f"S2 payload integrity mismatch: {item['path']}")
           print(f"Manifest-verified {len(manifest['files'])} S2 payload members.")
           PY
-          test "$(git hash-object scripts/story-narrative/s2/diagnostic-primary.py)" = "bdbe19e9a0b8f6fb793defdfe94da9a91ab8d471"
+          test "$(git hash-object scripts/story-narrative/s2/diagnostic-primary.py)" = "f44a0fad07243a30f4922bda4fc055a54fc65da0"
           test "$(git hash-object scripts/story-narrative/s2/diagnostic-followup.py)" = "d17cb11dc0f05e52cd78f09ab7c41a07c9f3a64e"
           python3 -m py_compile scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/diagnostic-followup.py
           echo "BUNDLE_DIR=$BUNDLE_DIR" >> "$GITHUB_ENV"
