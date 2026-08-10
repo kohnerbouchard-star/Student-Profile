@@ -1,3 +1,5 @@
+const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
+
 function positiveInteger(value, fallback, minimum = 0, maximum = 60000) {
   const number = Number(value);
   return Number.isFinite(number)
@@ -158,6 +160,17 @@ export function installPlayerSessionSafeExit({
       notifyExpiry();
       return;
     }
+
+    // Browsers represent timeout delays with a signed 32-bit integer. Passing a
+    // larger delay can overflow/clamp to an immediate timeout and falsely expire
+    // an otherwise valid long-lived session. The existing watch interval will
+    // keep re-evaluating the authoritative expiry until it is timer-safe.
+    if (delay > MAX_BROWSER_TIMEOUT_MS) {
+      clearTimer("expiry");
+      scheduledExpiry = expiresAt;
+      return;
+    }
+
     if (expiresAt === scheduledExpiry && expiryTimer) return;
 
     clearTimer("expiry");
