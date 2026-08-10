@@ -1,0 +1,368 @@
+name: Edge Function Inventory Convergence
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/edge-function-inventory-converge.yml"
+
+permissions:
+  contents: read
+
+env:
+  MANIFEST_PATH: backend/supabase/edge-function-manifest.json
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+
+concurrency:
+  group: edge-function-inventory-convergence
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Converge staging Edge Function inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce staging release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact main source and static contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/local-edge-runtime-contract.test.mjs
+          node --test scripts/runtime-config-contract.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Verify CLI identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+
+      - name: Deploy exact staging canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          true_functions=(
+            admin-api
+            password-reset-api
+            staff-mfa-api
+            classroom-api
+          )
+          custom_auth_functions=(
+            admin-email-verification
+            admin-password-recovery
+            bootstrap-api
+            player-api
+            player-web-session-api
+            stock-market-player-read
+            stock-market-read
+            stock-market-runner
+            stock-market-seed-copy
+            stock-market-trading
+            stock-market-orchestrator
+            web-session-api
+          )
+          for slug in "${true_functions[@]}"; do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$STAGING_PROJECT_REF"
+          done
+          for slug in "${custom_auth_functions[@]}"; do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$STAGING_PROJECT_REF" \
+              --no-verify-jwt
+          done
+
+      - name: Remove only manifest-retired staging functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-before-retirement.json"
+          INVENTORY="$RUNNER_TEMP/staging-before-retirement.json" MANIFEST="$MANIFEST_PATH" node - <<'NODE' > "$RUNNER_TEMP/staging-retire.txt"
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.INVENTORY, 'utf8'));
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const present = new Set(rows.map((row) => String(row.slug || '')));
+          for (const slug of manifest.retiredFunctions) {
+            if (present.has(slug)) process.stdout.write(`${slug}\n`);
+          }
+          NODE
+          while IFS= read -r slug; do
+            test -n "$slug" || continue
+            echo "Retiring staging Edge Function: $slug"
+            curl --fail --silent --show-error \
+              --request DELETE \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions/$slug" \
+              >/dev/null
+          done < "$RUNNER_TEMP/staging-retire.txt"
+
+      - name: Validate exact staging inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          node scripts/edge-function-inventory/validate.mjs \
+            --manifest "$MANIFEST_PATH" \
+            --environment staging \
+            --inventory "$RUNNER_TEMP/staging-functions.json" \
+            | tee "$RUNNER_TEMP/staging-attestation.json"
+
+      - name: Run staging security-boundary smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          function status_for() {
+            local method="$1"
+            local slug="$2"
+            curl --silent --show-error \
+              --request "$method" \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://$STAGING_PROJECT_REF.supabase.co/functions/v1/$slug"
+          }
+          for spec in \
+            'GET admin-email-verification' \
+            'POST password-reset-api' \
+            'POST stock-market-orchestrator' \
+            'POST web-session-api/logout'; do
+            read -r method slug <<< "$spec"
+            status="$(status_for "$method" "$slug")"
+            case "$status" in
+              400|401|403|405|422) ;;
+              *) echo "Unexpected unauthenticated staging response for $slug: $status" >&2; exit 1 ;;
+            esac
+          done
+
+      - name: Upload staging inventory evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: edge-function-staging-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/staging-functions.json
+            ${{ runner.temp }}/staging-attestation.json
+
+  production:
+    name: Converge production Edge Function inventory
+    needs: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Verify CLI identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+
+      - name: Deploy exact production canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          true_functions=(
+            admin-api
+            password-reset-api
+            staff-mfa-api
+            classroom-api
+          )
+          custom_auth_functions=(
+            admin-email-verification
+            admin-password-recovery
+            bootstrap-api
+            player-api
+            player-web-session-api
+            stock-market-player-read
+            stock-market-read
+            stock-market-runner
+            stock-market-seed-copy
+            stock-market-trading
+            stock-market-orchestrator
+            web-session-api
+          )
+          for slug in "${true_functions[@]}"; do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$PRODUCTION_PROJECT_REF"
+          done
+          for slug in "${custom_auth_functions[@]}"; do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$PRODUCTION_PROJECT_REF" \
+              --no-verify-jwt
+          done
+
+      - name: Remove only manifest-retired production functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-before-retirement.json"
+          INVENTORY="$RUNNER_TEMP/production-before-retirement.json" MANIFEST="$MANIFEST_PATH" node - <<'NODE' > "$RUNNER_TEMP/production-retire.txt"
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.INVENTORY, 'utf8'));
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const present = new Set(rows.map((row) => String(row.slug || '')));
+          for (const slug of manifest.retiredFunctions) {
+            if (present.has(slug)) process.stdout.write(`${slug}\n`);
+          }
+          NODE
+          while IFS= read -r slug; do
+            test -n "$slug" || continue
+            echo "Retiring production Edge Function: $slug"
+            curl --fail --silent --show-error \
+              --request DELETE \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions/$slug" \
+              >/dev/null
+          done < "$RUNNER_TEMP/production-retire.txt"
+
+      - name: Fetch final staging and production inventories
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/production-functions.json"
+
+      - name: Require exact cross-environment canonical convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/edge-function-inventory/validate.mjs \
+            --manifest "$MANIFEST_PATH" \
+            --staging "$RUNNER_TEMP/staging-functions.json" \
+            --production "$RUNNER_TEMP/production-functions.json" \
+            --source-commit "$GITHUB_SHA" \
+            | tee "$RUNNER_TEMP/final-attestation.json"
+
+      - name: Run production security-boundary smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          function status_for() {
+            local method="$1"
+            local slug="$2"
+            curl --silent --show-error \
+              --request "$method" \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/$slug"
+          }
+          for spec in \
+            'GET admin-email-verification' \
+            'POST password-reset-api' \
+            'POST stock-market-orchestrator' \
+            'POST web-session-api/logout'; do
+            read -r method slug <<< "$spec"
+            status="$(status_for "$method" "$slug")"
+            case "$status" in
+              400|401|403|405|422) ;;
+              *) echo "Unexpected unauthenticated production response for $slug: $status" >&2; exit 1 ;;
+            esac
+          done
+
+      - name: Upload final inventory evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: edge-function-convergence-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/staging-functions.json
+            ${{ runner.temp }}/production-functions.json
+            ${{ runner.temp }}/final-attestation.json
+
+      - name: Record bounded convergence result
+        shell: bash
+        run: |
+          {
+            echo '## Edge Function inventory converged'
+            echo "- Exact source SHA: \`$GITHUB_SHA\`"
+            echo '- Staging promoted first: `true`'
+            echo '- Production gated on staging: `true`'
+            echo '- Canonical/compat deployed functions: `16`'
+            echo '- Allowed staging temporary functions: `3`'
+            echo '- Unexpected production functions: `0`'
+            echo '- Retired functions present: `0`'
+            echo '- verify_jwt exact match: `true`'
+            echo '- Cross-environment canonical bundle digest match: `true`'
+            echo '- Production secrets recorded: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
