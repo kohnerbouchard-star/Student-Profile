@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { checkRuntimeHealth, readConfiguration } = require("../api/health.js").__test;
+const { checkRuntimeHealth, readConfiguration } = require("../api/_runtime-health.js").__test;
 
 const productionEnvironment = Object.freeze({
   ECONOVARIA_ENVIRONMENT: "production",

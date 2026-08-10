@@ -15,6 +15,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "/api/player-session-proxy?runtimeHealth=1"
+    },
+    {
       "source": "/api/admin/:path*",
       "destination": "/api/admin-proxy?path=:path*"
     },

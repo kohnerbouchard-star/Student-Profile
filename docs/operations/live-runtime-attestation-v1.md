@@ -56,7 +56,7 @@ The workflow never uses an unverified Git-generated production deployment.
 
 ## Runtime health contract
 
-`/api/health` validates the configured environment, exact Supabase project ref, exact project URL, and available deployment source identity. It then probes:
+`/api/health` is rewritten into the existing Player-session Vercel function so the Hobby deployment remains within its 12-function budget. The underscore-prefixed health helper validates the configured environment, exact Supabase project ref, exact project URL, and available deployment source identity. It then probes:
 
 - `web-session-api/health`
 - `player-web-session-api/health`
@@ -72,3 +72,7 @@ Browser network and form destinations are restricted to the exact production and
 ## Rollback
 
 Vercel promotion is atomic at the routing layer. If post-promotion health fails, restore the previously verified Vercel deployment rather than rebuilding from another source. Supabase and database changes are controlled by their own candidate/promotion workflows and are not rolled back by Vercel deployment movement.
+
+## Vercel function budget
+
+The repository intentionally stays at no more than 12 deployable Vercel Node functions on the connected Hobby project. Runtime health reuses the existing `player-session-proxy` function; `_runtime-health.js` is a bundled helper rather than a separately discovered Serverless Function. The release contract fails if the deployable API surface grows beyond that budget.

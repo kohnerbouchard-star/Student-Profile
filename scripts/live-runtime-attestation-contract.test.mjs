@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const repositoryRoot = new URL("../", import.meta.url);
@@ -9,9 +9,26 @@ const [vercelConfigText, workflow, healthRoute] = await Promise.all([
     new URL(".github/workflows/vercel-attested-production-promote.yml", repositoryRoot),
     "utf8",
   ),
-  readFile(new URL("api/health.js", repositoryRoot), "utf8"),
+  readFile(new URL("api/_runtime-health.js", repositoryRoot), "utf8"),
 ]);
 const vercelConfig = JSON.parse(vercelConfigText);
+
+test("Hobby deployment stays within the 12 Serverless Function budget", async () => {
+  const entries = await readdir(new URL("api/", repositoryRoot), {
+    recursive: true,
+    withFileTypes: true,
+  });
+  const deployable = entries.filter((entry) =>
+    entry.isFile() &&
+    entry.name.endsWith(".js") &&
+    !entry.name.startsWith("_")
+  );
+  assert.ok(
+    deployable.length <= 12,
+    `Expected at most 12 deployable Vercel functions, found ${deployable.length}.`,
+  );
+  assert.equal(deployable.some((entry) => entry.name === "health.js"), false);
+});
 
 test("automatic main deployment is disabled before attested promotion", () => {
   assert.equal(vercelConfig.git?.deploymentEnabled?.main, false);
