@@ -1,0 +1,406 @@
+begin;
+
+create table public.story_character_relationships (
+  id uuid primary key default gen_random_uuid(),
+  game_session_id uuid not null references public.game_sessions(id) on delete cascade,
+  player_id uuid not null,
+  character_key text not null,
+  character_name text not null,
+  standing smallint not null default 0,
+  trust smallint not null default 0,
+  respect smallint not null default 0,
+  affinity smallint not null default 0,
+  obligation smallint not null default 0,
+  suspicion smallint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint story_character_relationships_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players(game_session_id, id)
+    on delete cascade,
+  constraint story_character_relationships_character_key_valid check (
+    length(character_key) between 1 and 160
+    and character_key = btrim(character_key)
+    and character_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
+    and character_key !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  ),
+  constraint story_character_relationships_character_name_valid check (
+    length(character_name) between 1 and 160
+    and character_name = btrim(character_name)
+    and character_name !~ '[[:cntrl:]]'
+  ),
+  constraint story_character_relationships_scores_bounded check (
+    standing between -100 and 100
+    and trust between -100 and 100
+    and respect between -100 and 100
+    and affinity between -100 and 100
+    and obligation between -100 and 100
+    and suspicion between -100 and 100
+  ),
+  constraint story_character_relationships_character_unique
+    unique (game_session_id, player_id, character_key)
+);
+
+create index story_character_relationships_player_idx
+  on public.story_character_relationships (game_session_id, player_id, character_key);
+
+create table public.story_character_relationship_adjustments (
+  id uuid primary key default gen_random_uuid(),
+  game_session_id uuid not null references public.game_sessions(id) on delete cascade,
+  player_id uuid not null,
+  source_storyline_event_id uuid not null references public.storyline_events(id) on delete restrict,
+  source_effect_index integer not null,
+  character_key text not null,
+  character_name text not null,
+  deltas jsonb not null,
+  before_state jsonb not null,
+  after_state jsonb not null,
+  idempotency_key text not null,
+  idempotency_fingerprint text not null,
+  created_at timestamptz not null default now(),
+  constraint story_character_relationship_adjustments_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players(game_session_id, id)
+    on delete cascade,
+  constraint story_character_relationship_adjustments_effect_index_valid
+    check (source_effect_index between 0 and 10000),
+  constraint story_character_relationship_adjustments_key_valid check (
+    length(character_key) between 1 and 160
+    and character_key = btrim(character_key)
+    and character_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
+  ),
+  constraint story_character_relationship_adjustments_idempotency_valid check (
+    idempotency_key ~ '^story_rel:[0-9a-f]{32}$'
+    and idempotency_fingerprint ~ '^[0-9a-f]{32}$'
+  ),
+  constraint story_character_relationship_adjustments_effect_once
+    unique (game_session_id, player_id, source_storyline_event_id, source_effect_index, character_key),
+  constraint story_character_relationship_adjustments_idempotency_once
+    unique (game_session_id, player_id, idempotency_key)
+);
+
+create index story_character_relationship_adjustments_event_idx
+  on public.story_character_relationship_adjustments
+    (game_session_id, source_storyline_event_id, source_effect_index, player_id);
+
+alter table public.story_character_relationships enable row level security;
+alter table public.story_character_relationships force row level security;
+alter table public.story_character_relationship_adjustments enable row level security;
+alter table public.story_character_relationship_adjustments force row level security;
+
+revoke all privileges on table public.story_character_relationships
+  from public, anon, authenticated;
+revoke all privileges on table public.story_character_relationship_adjustments
+  from public, anon, authenticated;
+grant select, insert, update on table public.story_character_relationships to service_role;
+grant select, insert on table public.story_character_relationship_adjustments to service_role;
+
+create or replace function public.story_character_relationship_tier_v1(p_standing integer)
+returns text
+language sql
+immutable
+set search_path = public, pg_temp
+as $function$
+  select case
+    when p_standing <= -61 then 'hostile'
+    when p_standing <= -21 then 'wary'
+    when p_standing <= 20 then 'neutral'
+    when p_standing <= 60 then 'cooperative'
+    else 'trusted'
+  end;
+$function$;
+
+revoke all on function public.story_character_relationship_tier_v1(integer)
+  from public, anon, authenticated;
+grant execute on function public.story_character_relationship_tier_v1(integer)
+  to service_role;
+
+create or replace function public.protect_story_character_relationship_adjustment_v1()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $function$
+begin
+  raise exception 'STORY_CHARACTER_RELATIONSHIP_ADJUSTMENT_IMMUTABLE' using errcode = 'P0001';
+end;
+$function$;
+
+create trigger protect_story_character_relationship_adjustment_update_v1
+before update or delete on public.story_character_relationship_adjustments
+for each row execute function public.protect_story_character_relationship_adjustment_v1();
+
+create or replace function public.initialize_story_character_relationship_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+begin
+  insert into public.story_character_relationships (
+    game_session_id, player_id, character_key, character_name
+  ) values (
+    new.game_session_id, new.player_id, new.character_key, new.character_name
+  ) on conflict (game_session_id, player_id, character_key) do nothing;
+  return new;
+end;
+$function$;
+
+revoke all on function public.initialize_story_character_relationship_v1()
+  from public, anon, authenticated;
+
+drop trigger if exists initialize_story_character_relationship_v1 on public.story_message_threads;
+create trigger initialize_story_character_relationship_v1
+after insert on public.story_message_threads
+for each row execute function public.initialize_story_character_relationship_v1();
+
+insert into public.story_character_relationships (
+  game_session_id, player_id, character_key, character_name, created_at, updated_at
+)
+select
+  game_session_id,
+  player_id,
+  character_key,
+  character_name,
+  min(created_at),
+  min(created_at)
+from public.story_message_threads
+group by game_session_id, player_id, character_key, character_name
+on conflict (game_session_id, player_id, character_key) do nothing;
+
+create or replace function public.apply_story_character_relationship_adjustment_v1(
+  p_game_session_id uuid,
+  p_player_id uuid,
+  p_source_storyline_event_id uuid,
+  p_source_effect_index integer,
+  p_character_key text,
+  p_character_name text,
+  p_deltas jsonb
+)
+returns table (
+  adjustment_outcome text,
+  relationship_id uuid,
+  adjustment_id uuid,
+  standing smallint,
+  trust smallint,
+  respect smallint,
+  affinity smallint,
+  obligation smallint,
+  suspicion smallint,
+  tier text,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_relationship public.story_character_relationships%rowtype;
+  v_adjustment public.story_character_relationship_adjustments%rowtype;
+  v_character_key text := btrim(coalesce(p_character_key, ''));
+  v_character_name text := btrim(coalesce(p_character_name, ''));
+  v_standing_delta integer := 0;
+  v_trust_delta integer := 0;
+  v_respect_delta integer := 0;
+  v_affinity_delta integer := 0;
+  v_obligation_delta integer := 0;
+  v_suspicion_delta integer := 0;
+  v_deltas jsonb;
+  v_before jsonb;
+  v_after jsonb;
+  v_idempotency_key text;
+  v_fingerprint text;
+begin
+  if p_game_session_id is null
+    or p_player_id is null
+    or p_source_storyline_event_id is null
+    or p_source_effect_index not between 0 and 10000
+    or v_character_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
+    or length(v_character_name) not between 1 and 160
+    or v_character_name ~ '[[:cntrl:]]'
+    or jsonb_typeof(p_deltas) <> 'object'
+  then
+    raise exception 'STORY_CHARACTER_RELATIONSHIP_ADJUSTMENT_INVALID' using errcode = 'P0001';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_object_keys(p_deltas) as delta_key
+    where delta_key not in ('standing','trust','respect','affinity','obligation','suspicion')
+  ) or exists (
+    select 1
+    from jsonb_each(p_deltas) as delta_entry
+    where jsonb_typeof(delta_entry.value) <> 'number'
+      or delta_entry.value::text !~ '^-?[0-9]+$'
+      or (delta_entry.value::text)::integer not between -100 and 100
+  ) then
+    raise exception 'STORY_CHARACTER_RELATIONSHIP_ADJUSTMENT_INVALID' using errcode = 'P0001';
+  end if;
+
+  v_standing_delta := coalesce((p_deltas ->> 'standing')::integer, 0);
+  v_trust_delta := coalesce((p_deltas ->> 'trust')::integer, 0);
+  v_respect_delta := coalesce((p_deltas ->> 'respect')::integer, 0);
+  v_affinity_delta := coalesce((p_deltas ->> 'affinity')::integer, 0);
+  v_obligation_delta := coalesce((p_deltas ->> 'obligation')::integer, 0);
+  v_suspicion_delta := coalesce((p_deltas ->> 'suspicion')::integer, 0);
+
+  if v_standing_delta = 0 and v_trust_delta = 0 and v_respect_delta = 0
+    and v_affinity_delta = 0 and v_obligation_delta = 0 and v_suspicion_delta = 0
+  then
+    raise exception 'STORY_CHARACTER_RELATIONSHIP_ADJUSTMENT_EMPTY' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.storyline_events
+    where id = p_source_storyline_event_id
+      and game_session_id = p_game_session_id
+  ) then
+    raise exception 'STORY_CHARACTER_RELATIONSHIP_EVENT_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.players
+    where id = p_player_id
+      and game_session_id = p_game_session_id
+      and status = 'active'
+  ) then
+    raise exception 'STORY_CHARACTER_RELATIONSHIP_PLAYER_NOT_ACTIVE' using errcode = 'P0001';
+  end if;
+
+  v_deltas := jsonb_build_object(
+    'standing', v_standing_delta,
+    'trust', v_trust_delta,
+    'respect', v_respect_delta,
+    'affinity', v_affinity_delta,
+    'obligation', v_obligation_delta,
+    'suspicion', v_suspicion_delta
+  );
+  v_idempotency_key := 'story_rel:' || md5(
+    p_game_session_id::text || '|' || p_player_id::text || '|' ||
+    p_source_storyline_event_id::text || '|' || p_source_effect_index::text || '|' || v_character_key
+  );
+  v_fingerprint := md5(
+    p_game_session_id::text || '|' || p_player_id::text || '|' ||
+    p_source_storyline_event_id::text || '|' || p_source_effect_index::text || '|' ||
+    v_character_key || '|' || v_character_name || '|' || v_deltas::text
+  );
+
+  insert into public.story_character_relationships (
+    game_session_id, player_id, character_key, character_name
+  ) values (
+    p_game_session_id, p_player_id, v_character_key, v_character_name
+  ) on conflict (game_session_id, player_id, character_key) do nothing;
+
+  select * into v_relationship
+  from public.story_character_relationships
+  where game_session_id = p_game_session_id
+    and player_id = p_player_id
+    and character_key = v_character_key
+  for update;
+
+  select * into v_adjustment
+  from public.story_character_relationship_adjustments
+  where game_session_id = p_game_session_id
+    and player_id = p_player_id
+    and source_storyline_event_id = p_source_storyline_event_id
+    and source_effect_index = p_source_effect_index
+    and character_key = v_character_key;
+
+  if found then
+    if v_adjustment.idempotency_fingerprint <> v_fingerprint then
+      raise exception 'STORY_CHARACTER_RELATIONSHIP_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+    return query select
+      'replayed'::text,
+      v_relationship.id,
+      v_adjustment.id,
+      v_relationship.standing,
+      v_relationship.trust,
+      v_relationship.respect,
+      v_relationship.affinity,
+      v_relationship.obligation,
+      v_relationship.suspicion,
+      public.story_character_relationship_tier_v1(v_relationship.standing),
+      v_relationship.updated_at;
+    return;
+  end if;
+
+  v_before := jsonb_build_object(
+    'standing', v_relationship.standing,
+    'trust', v_relationship.trust,
+    'respect', v_relationship.respect,
+    'affinity', v_relationship.affinity,
+    'obligation', v_relationship.obligation,
+    'suspicion', v_relationship.suspicion
+  );
+
+  update public.story_character_relationships
+  set
+    character_name = v_character_name,
+    standing = greatest(-100, least(100, standing + v_standing_delta)),
+    trust = greatest(-100, least(100, trust + v_trust_delta)),
+    respect = greatest(-100, least(100, respect + v_respect_delta)),
+    affinity = greatest(-100, least(100, affinity + v_affinity_delta)),
+    obligation = greatest(-100, least(100, obligation + v_obligation_delta)),
+    suspicion = greatest(-100, least(100, suspicion + v_suspicion_delta)),
+    updated_at = now()
+  where id = v_relationship.id
+  returning * into v_relationship;
+
+  v_after := jsonb_build_object(
+    'standing', v_relationship.standing,
+    'trust', v_relationship.trust,
+    'respect', v_relationship.respect,
+    'affinity', v_relationship.affinity,
+    'obligation', v_relationship.obligation,
+    'suspicion', v_relationship.suspicion
+  );
+
+  insert into public.story_character_relationship_adjustments (
+    game_session_id,
+    player_id,
+    source_storyline_event_id,
+    source_effect_index,
+    character_key,
+    character_name,
+    deltas,
+    before_state,
+    after_state,
+    idempotency_key,
+    idempotency_fingerprint
+  ) values (
+    p_game_session_id,
+    p_player_id,
+    p_source_storyline_event_id,
+    p_source_effect_index,
+    v_character_key,
+    v_character_name,
+    v_deltas,
+    v_before,
+    v_after,
+    v_idempotency_key,
+    v_fingerprint
+  ) returning * into v_adjustment;
+
+  return query select
+    'applied'::text,
+    v_relationship.id,
+    v_adjustment.id,
+    v_relationship.standing,
+    v_relationship.trust,
+    v_relationship.respect,
+    v_relationship.affinity,
+    v_relationship.obligation,
+    v_relationship.suspicion,
+    public.story_character_relationship_tier_v1(v_relationship.standing),
+    v_relationship.updated_at;
+end;
+$function$;
+
+revoke all on function public.apply_story_character_relationship_adjustment_v1(
+  uuid, uuid, uuid, integer, text, text, jsonb
+) from public, anon, authenticated;
+grant execute on function public.apply_story_character_relationship_adjustment_v1(
+  uuid, uuid, uuid, integer, text, text, jsonb
+) to service_role;
+
+commit;
