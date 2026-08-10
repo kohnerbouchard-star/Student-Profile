@@ -26,28 +26,32 @@ env:
   ARCHIVE_CREATED_BY: release007-schema-convergence-v1
   EXPECTED_LEGACY_KV_ROWS: "93"
   EXPECTED_LEGACY_KV_DIGEST: 34426d578ba56f50a56e90334ac063c28a0fca91fba31a7b2d2e4348e5ae3f19
+  SUPABASE_CLI_VERSION: "2.109.1"
 
 jobs:
-  converge:
-    name: Rehearse and converge staging/production schema
+  staging:
+    name: Verify and archive staging schema
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    environment: production
+    timeout-minutes: 45
+    environment: staging
+    outputs:
+      schema_sha256: ${{ steps.schema.outputs.sha256 }}
     env:
-      STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
-      PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
-      - name: Enforce protected release boundary
+      - name: Enforce protected staging boundary
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = "push"
           test "$GITHUB_REF" = "refs/heads/main"
-          test -n "$STAGING_SUPABASE_DB_URL"
-          test -n "$PRODUCTION_SUPABASE_DB_URL"
-          test -n "$SUPABASE_DB_CA_CERT"
-          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
           [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
           command -v psql >/dev/null
 
@@ -81,18 +85,32 @@ jobs:
           test "${#economic[@]}" = "$EXPECTED_ECONOMIC_COUNT"
           test "${economic[-1]%%_*}" = "$EXPECTED_ECONOMIC_FINAL"
 
-      - name: Configure certificate-verified database TLS and bindings
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Link protected staging database
         shell: bash
         run: |
           set -euo pipefail
-          cert_path="$RUNNER_TEMP/supabase-db-ca.crt"
-          umask 077
-          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
-          test -s "$cert_path"
-          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
-          echo 'PGSSLMODE=verify-full' >> "$GITHUB_ENV"
-          STAGING_SUPABASE_DB_URL="$STAGING_SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url --url-env STAGING_SUPABASE_DB_URL --expected-project-ref "$EXPECTED_STAGING_PROJECT_REF"
-          PRODUCTION_SUPABASE_DB_URL="$PRODUCTION_SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url --url-env PRODUCTION_SUPABASE_DB_URL --expected-project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          database_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$database_url" in
+            "postgresql://postgres.${EXPECTED_STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging database identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$database_url"
+          printf 'DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
 
       - name: Verify staging economic asset source identity
         shell: bash
@@ -104,81 +122,61 @@ jobs:
             --mode verify-full \
             --output "$RUNNER_TEMP/staging-economic-verify.sql" \
             > "$RUNNER_TEMP/staging-economic-build.json"
-          psql "$STAGING_SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/staging-economic-verify.sql" \
+          psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file "$RUNNER_TEMP/staging-economic-verify.sql" \
             > "$RUNNER_TEMP/staging-economic-verify.log"
 
-      - name: Rehearse exact production economic asset migration pack
+      - name: Rehearse and apply staging forensic archive migration
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/build-economic-asset-migration-bundle.mjs \
-            --migrations-dir backend/supabase/migrations \
-            --prefix "$ECONOMIC_PREFIX" \
-            --mode verify-prefix \
-            --output "$RUNNER_TEMP/production-economic-prefix.sql" \
-            > "$RUNNER_TEMP/production-economic-prefix-build.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/production-economic-prefix.sql" \
-            > "$RUNNER_TEMP/production-economic-prefix.log"
-          applied_through="$(psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(max(version), '') from supabase_migrations.schema_migrations where version like '${ECONOMIC_PREFIX}%'")"
-          if [ -n "$applied_through" ]; then [[ "$applied_through" =~ ^[0-9]{14}$ ]]; fi
-          args=(--migrations-dir backend/supabase/migrations --prefix "$ECONOMIC_PREFIX" --mode rollback --output "$RUNNER_TEMP/production-economic-rollback.sql")
-          if [ -n "$applied_through" ]; then args+=(--after-version "$applied_through"); fi
-          node scripts/build-economic-asset-migration-bundle.mjs "${args[@]}" > "$RUNNER_TEMP/production-economic-rollback-build.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/production-economic-rollback.sql" \
-            > "$RUNNER_TEMP/production-economic-rollback.log"
-          printf 'ECONOMIC_APPLIED_THROUGH=%s\n' "$applied_through" >> "$GITHUB_ENV"
-
-      - name: Commit exact production economic asset migration pack
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=(--migrations-dir backend/supabase/migrations --prefix "$ECONOMIC_PREFIX" --mode commit --output "$RUNNER_TEMP/production-economic-commit.sql")
-          if [ -n "$ECONOMIC_APPLIED_THROUGH" ]; then args+=(--after-version "$ECONOMIC_APPLIED_THROUGH"); fi
-          node scripts/build-economic-asset-migration-bundle.mjs "${args[@]}" > "$RUNNER_TEMP/production-economic-commit-build.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/production-economic-commit.sql" \
-            > "$RUNNER_TEMP/production-economic-commit.log"
-          node scripts/build-economic-asset-migration-bundle.mjs \
-            --migrations-dir backend/supabase/migrations \
-            --prefix "$ECONOMIC_PREFIX" \
-            --mode verify-full \
-            --output "$RUNNER_TEMP/production-economic-verify.sql" \
-            > "$RUNNER_TEMP/production-economic-verify-build.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/production-economic-verify.sql" \
-            > "$RUNNER_TEMP/production-economic-verify.log"
-
-      - name: Rehearse and apply canonical forensic archive migration
-        shell: bash
-        run: |
-          set -euo pipefail
-          apply_exact() {
-            local label="$1"
-            local url="$2"
-            local count
-            count="$(psql "$url" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='${ARCHIVE_VERSION}'")"
-            if [ "$count" = "1" ]; then
-              node scripts/build-exact-migration-bundle.mjs --migration "$ARCHIVE_MIGRATION" --output "$RUNNER_TEMP/${label}-archive-verify.sql" --mode verify --created-by "$ARCHIVE_CREATED_BY" > "$RUNNER_TEMP/${label}-archive-verify-build.json"
-              psql "$url" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/${label}-archive-verify.sql" > "$RUNNER_TEMP/${label}-archive-verify.log"
-              return
-            fi
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='${ARCHIVE_VERSION}'")"
+          if [ "$count" = "1" ]; then
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/staging-archive-verify.sql" \
+              --mode verify \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/staging-archive-verify-build.json"
+            psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/staging-archive-verify.sql" \
+              > "$RUNNER_TEMP/staging-archive-verify.log"
+          else
             test "$count" = "0"
-            node scripts/build-exact-migration-bundle.mjs --migration "$ARCHIVE_MIGRATION" --output "$RUNNER_TEMP/${label}-archive-rollback.sql" --mode rollback --created-by "$ARCHIVE_CREATED_BY" > "$RUNNER_TEMP/${label}-archive-rollback-build.json"
-            psql "$url" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/${label}-archive-rollback.sql" > "$RUNNER_TEMP/${label}-archive-rollback.log"
-            node scripts/build-exact-migration-bundle.mjs --migration "$ARCHIVE_MIGRATION" --output "$RUNNER_TEMP/${label}-archive-commit.sql" --mode commit --created-by "$ARCHIVE_CREATED_BY" > "$RUNNER_TEMP/${label}-archive-commit-build.json"
-            psql "$url" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/${label}-archive-commit.sql" > "$RUNNER_TEMP/${label}-archive-commit.log"
-            node scripts/build-exact-migration-bundle.mjs --migration "$ARCHIVE_MIGRATION" --output "$RUNNER_TEMP/${label}-archive-verify.sql" --mode verify --created-by "$ARCHIVE_CREATED_BY" > "$RUNNER_TEMP/${label}-archive-verify-build.json"
-            psql "$url" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$RUNNER_TEMP/${label}-archive-verify.sql" > "$RUNNER_TEMP/${label}-archive-verify.log"
-          }
-          apply_exact staging "$STAGING_SUPABASE_DB_URL"
-          apply_exact production "$PRODUCTION_SUPABASE_DB_URL"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/staging-archive-rollback.sql" \
+              --mode rollback \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/staging-archive-rollback-build.json"
+            psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/staging-archive-rollback.sql" \
+              > "$RUNNER_TEMP/staging-archive-rollback.log"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/staging-archive-commit.sql" \
+              --mode commit \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/staging-archive-commit-build.json"
+            psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/staging-archive-commit.sql" \
+              > "$RUNNER_TEMP/staging-archive-commit.log"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/staging-archive-verify.sql" \
+              --mode verify \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/staging-archive-verify-build.json"
+            psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/staging-archive-verify.sql" \
+              > "$RUNNER_TEMP/staging-archive-verify.log"
+          fi
 
-      - name: Validate every live economic asset context and archive boundary
+      - name: Validate staging economic assets and archive boundary
         shell: bash
         run: |
           set -euo pipefail
-          validate_games() {
-            local label="$1"
-            local url="$2"
-            psql "$url" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL' > "$RUNNER_TEMP/${label}-economic-validator.log"
+          psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL' > "$RUNNER_TEMP/staging-economic-validator.log"
           do $validation$
           declare
             game_row record;
@@ -194,36 +192,237 @@ jobs:
           end
           $validation$;
           SQL
-          }
-          validate_games staging "$STAGING_SUPABASE_DB_URL"
-          validate_games production "$PRODUCTION_SUPABASE_DB_URL"
-          test "$(psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from private.legacy_shadow_kv_archive")" = "0"
-          test "$(psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from private.legacy_shadow_kv_archive")" = "$EXPECTED_LEGACY_KV_ROWS"
-          test "$(psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regclass('public.kv_store_0dbf686f') is null")" = "t"
-          test "$(psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regclass('public.kv_store_0dbf686f') is null")" = "t"
-          digest="$(psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select encode(sha256(convert_to(string_agg(key||E'\\n'||value::text,E'\\n---\\n' order by key),'UTF8')),'hex') from private.legacy_shadow_kv_archive")"
-          test "$digest" = "$EXPECTED_LEGACY_KV_DIGEST"
-          printf '{"productionLegacyKvRows":%s,"productionLegacyKvDigest":"%s","publicLegacyRelationRemoved":true}\n' "$EXPECTED_LEGACY_KV_ROWS" "$digest" > "$RUNNER_TEMP/archive-evidence.json"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from private.legacy_shadow_kv_archive")" = "0"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regclass('public.kv_store_0dbf686f') is null")" = "t"
 
-      - name: Require exact staging/production schema and authorization parity
+      - name: Export deterministic staging schema fingerprint
+        id: schema
         shell: bash
         run: |
           set -euo pipefail
-          psql "$STAGING_SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-schema-raw.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-schema-raw.json"
-          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/staging-schema-raw.json" --output "$RUNNER_TEMP/staging-schema.json" > /dev/null
-          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/production-schema-raw.json" --output "$RUNNER_TEMP/production-schema.json" > /dev/null
-          node scripts/release-integrity/cli.mjs compare-schema --staging "$RUNNER_TEMP/staging-schema.json" --production "$RUNNER_TEMP/production-schema.json" --output "$RUNNER_TEMP/schema-comparison.json"
-          rm -f "$RUNNER_TEMP/staging-schema-raw.json" "$RUNNER_TEMP/production-schema-raw.json"
+          psql "$DATABASE_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file scripts/release-integrity/export-schema-fingerprint.sql \
+            > "$RUNNER_TEMP/staging-schema-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema \
+            --input "$RUNNER_TEMP/staging-schema-raw.json" \
+            --output "$RUNNER_TEMP/staging-schema.json" \
+            > /dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/staging-schema.json" | awk '{print $1}')"
+          [[ "$sha" =~ ^[a-f0-9]{64}$ ]]
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          printf '{"environment":"staging","schemaSha256":"%s"}\n' "$sha" > "$RUNNER_TEMP/staging-parity-evidence.json"
+          rm -f "$RUNNER_TEMP/staging-schema-raw.json" "$RUNNER_TEMP/staging-schema.json"
 
-      - name: Upload sanitized convergence evidence
+      - name: Upload sanitized staging convergence evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release007-schema-convergence-${{ github.sha }}
+          name: release007-staging-${{ github.sha }}
           path: |
             ${{ runner.temp }}/staging-economic-build.json
             ${{ runner.temp }}/staging-economic-verify.log
+            ${{ runner.temp }}/staging-archive-*-build.json
+            ${{ runner.temp }}/staging-archive-*.log
+            ${{ runner.temp }}/staging-economic-validator.log
+            ${{ runner.temp }}/staging-parity-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  production:
+    name: Rehearse and converge production schema
+    needs: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      STAGING_SCHEMA_SHA256: ${{ needs.staging.outputs.schema_sha256 }}
+    steps:
+      - name: Enforce protected production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$STAGING_SCHEMA_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          test "$EXPECTED_STAGING_PROJECT_REF" != "$EXPECTED_PRODUCTION_PROJECT_REF"
+          command -v psql >/dev/null
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up exact validation runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install locked dependencies and verify source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          npm install --global npm@10.9.8
+          npm ci
+          node --test scripts/build-exact-migration-bundle.test.mjs
+          node --test scripts/economic-asset-core-v2-contract.test.mjs
+          node --test scripts/economic-asset-migration-bundle.test.mjs
+          SUPABASE_DB_URL="$SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env SUPABASE_DB_URL \
+            --expected-project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+
+      - name: Rehearse exact production economic asset migration pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$ECONOMIC_PREFIX" \
+            --mode verify-prefix \
+            --output "$RUNNER_TEMP/production-economic-prefix.sql" \
+            > "$RUNNER_TEMP/production-economic-prefix-build.json"
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file "$RUNNER_TEMP/production-economic-prefix.sql" \
+            > "$RUNNER_TEMP/production-economic-prefix.log"
+          applied_through="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(max(version), '') from supabase_migrations.schema_migrations where version like '${ECONOMIC_PREFIX}%'")"
+          if [ -n "$applied_through" ]; then [[ "$applied_through" =~ ^[0-9]{14}$ ]]; fi
+          args=(--migrations-dir backend/supabase/migrations --prefix "$ECONOMIC_PREFIX" --mode rollback --output "$RUNNER_TEMP/production-economic-rollback.sql")
+          if [ -n "$applied_through" ]; then args+=(--after-version "$applied_through"); fi
+          node scripts/build-economic-asset-migration-bundle.mjs "${args[@]}" \
+            > "$RUNNER_TEMP/production-economic-rollback-build.json"
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file "$RUNNER_TEMP/production-economic-rollback.sql" \
+            > "$RUNNER_TEMP/production-economic-rollback.log"
+          printf 'ECONOMIC_APPLIED_THROUGH=%s\n' "$applied_through" >> "$GITHUB_ENV"
+
+      - name: Commit exact production economic asset migration pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--migrations-dir backend/supabase/migrations --prefix "$ECONOMIC_PREFIX" --mode commit --output "$RUNNER_TEMP/production-economic-commit.sql")
+          if [ -n "$ECONOMIC_APPLIED_THROUGH" ]; then args+=(--after-version "$ECONOMIC_APPLIED_THROUGH"); fi
+          node scripts/build-economic-asset-migration-bundle.mjs "${args[@]}" \
+            > "$RUNNER_TEMP/production-economic-commit-build.json"
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file "$RUNNER_TEMP/production-economic-commit.sql" \
+            > "$RUNNER_TEMP/production-economic-commit.log"
+          node scripts/build-economic-asset-migration-bundle.mjs \
+            --migrations-dir backend/supabase/migrations \
+            --prefix "$ECONOMIC_PREFIX" \
+            --mode verify-full \
+            --output "$RUNNER_TEMP/production-economic-verify.sql" \
+            > "$RUNNER_TEMP/production-economic-verify-build.json"
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file "$RUNNER_TEMP/production-economic-verify.sql" \
+            > "$RUNNER_TEMP/production-economic-verify.log"
+
+      - name: Rehearse and apply production forensic archive migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          count="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='${ARCHIVE_VERSION}'")"
+          if [ "$count" = "1" ]; then
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/production-archive-verify.sql" \
+              --mode verify \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/production-archive-verify-build.json"
+            psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/production-archive-verify.sql" \
+              > "$RUNNER_TEMP/production-archive-verify.log"
+          else
+            test "$count" = "0"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/production-archive-rollback.sql" \
+              --mode rollback \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/production-archive-rollback-build.json"
+            psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/production-archive-rollback.sql" \
+              > "$RUNNER_TEMP/production-archive-rollback.log"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/production-archive-commit.sql" \
+              --mode commit \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/production-archive-commit-build.json"
+            psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/production-archive-commit.sql" \
+              > "$RUNNER_TEMP/production-archive-commit.log"
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$ARCHIVE_MIGRATION" \
+              --output "$RUNNER_TEMP/production-archive-verify.sql" \
+              --mode verify \
+              --created-by "$ARCHIVE_CREATED_BY" \
+              > "$RUNNER_TEMP/production-archive-verify-build.json"
+            psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+              --file "$RUNNER_TEMP/production-archive-verify.sql" \
+              > "$RUNNER_TEMP/production-archive-verify.log"
+          fi
+
+      - name: Validate production economic assets and archive boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL' > "$RUNNER_TEMP/production-economic-validator.log"
+          do $validation$
+          declare
+            game_row record;
+            result jsonb;
+          begin
+            for game_row in select id from public.game_sessions order by id
+            loop
+              result := public.validate_economic_asset_core_v2(game_row.id);
+              if coalesce((result ->> 'valid')::boolean, false) is not true then
+                raise exception 'ECONOMIC_ASSET_CORE_VALIDATION_FAILED:%', result;
+              end if;
+            end loop;
+          end
+          $validation$;
+          SQL
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from private.legacy_shadow_kv_archive")" = "$EXPECTED_LEGACY_KV_ROWS"
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regclass('public.kv_store_0dbf686f') is null")" = "t"
+          digest="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select encode(sha256(convert_to(string_agg(key||E'\\n'||value::text,E'\\n---\\n' order by key),'UTF8')),'hex') from private.legacy_shadow_kv_archive")"
+          test "$digest" = "$EXPECTED_LEGACY_KV_DIGEST"
+          printf '{"productionLegacyKvRows":%s,"productionLegacyKvDigest":"%s","publicLegacyRelationRemoved":true}\n' \
+            "$EXPECTED_LEGACY_KV_ROWS" "$digest" \
+            > "$RUNNER_TEMP/archive-evidence.json"
+
+      - name: Require exact staging and production schema parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file scripts/release-integrity/export-schema-fingerprint.sql \
+            > "$RUNNER_TEMP/production-schema-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema \
+            --input "$RUNNER_TEMP/production-schema-raw.json" \
+            --output "$RUNNER_TEMP/production-schema.json" \
+            > /dev/null
+          production_sha="$(sha256sum "$RUNNER_TEMP/production-schema.json" | awk '{print $1}')"
+          [[ "$production_sha" =~ ^[a-f0-9]{64}$ ]]
+          test "$production_sha" = "$STAGING_SCHEMA_SHA256"
+          printf '{"stagingSchemaSha256":"%s","productionSchemaSha256":"%s","equal":true}\n' \
+            "$STAGING_SCHEMA_SHA256" "$production_sha" \
+            > "$RUNNER_TEMP/schema-comparison.json"
+          rm -f "$RUNNER_TEMP/production-schema-raw.json" "$RUNNER_TEMP/production-schema.json"
+
+      - name: Upload sanitized production convergence evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release007-production-${{ github.sha }}
+          path: |
             ${{ runner.temp }}/production-economic-prefix-build.json
             ${{ runner.temp }}/production-economic-prefix.log
             ${{ runner.temp }}/production-economic-rollback-build.json
@@ -232,11 +431,8 @@ jobs:
             ${{ runner.temp }}/production-economic-commit.log
             ${{ runner.temp }}/production-economic-verify-build.json
             ${{ runner.temp }}/production-economic-verify.log
-            ${{ runner.temp }}/staging-archive-*-build.json
-            ${{ runner.temp }}/staging-archive-*.log
             ${{ runner.temp }}/production-archive-*-build.json
             ${{ runner.temp }}/production-archive-*.log
-            ${{ runner.temp }}/staging-economic-validator.log
             ${{ runner.temp }}/production-economic-validator.log
             ${{ runner.temp }}/archive-evidence.json
             ${{ runner.temp }}/schema-comparison.json
@@ -244,18 +440,19 @@ jobs:
           retention-days: 30
 
       - name: Record convergence result
-        if: success()
         shell: bash
         run: |
           {
             echo '## RELEASE-007 structural convergence'
             echo "- Exact source SHA: \`$GITHUB_SHA\`"
+            echo '- Staging gate: `passed before production`'
             echo '- Production #503 migration pack: `rehearsed + committed`'
-            echo '- Production economic migrations: `27/27 exact source`'
-            echo '- Legacy shadow KV: `archived privately + public table removed`'
-            echo '- Raw legacy values uploaded: `false`'
-            echo '- All live game asset validators: `pass`'
-            echo '- Staging/production structural parity: `pass`'
-            echo '- Staging/production authorization parity: `pass`'
-            echo '- Migration ledger identity reconciliation: `not performed by this workflow`'
+            echo '- Production economic migrations: `27/27 exact source identities verified`'
+            echo '- Forensic archive migration: `verified on staging and production`'
+            echo '- Legacy public KV relation: `removed`'
+            echo "- Production legacy KV rows archived: \`$EXPECTED_LEGACY_KV_ROWS\`"
+            echo "- Production legacy KV digest: \`$EXPECTED_LEGACY_KV_DIGEST\`"
+            echo "- Staging/production normalized schema SHA-256: \`$STAGING_SCHEMA_SHA256\`"
+            echo '- Structural and authorization parity: `exact`'
+            echo '- Historical migration-ledger identity rewrite: `not performed`'
           } >> "$GITHUB_STEP_SUMMARY"
