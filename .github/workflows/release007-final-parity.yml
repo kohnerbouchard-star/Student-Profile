@@ -1,0 +1,208 @@
+name: RELEASE-007 Final Parity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release007-final-parity.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release007-final-parity
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: "2.109.1"
+
+jobs:
+  staging:
+    name: Converge staging to canonical migration chain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    outputs:
+      schema_sha256: ${{ steps.fingerprint.outputs.sha256 }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Enforce staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+
+      - name: Link protected staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$url" in "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;; *) exit 1 ;; esac
+          echo "::add-mask::$url"
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+
+      - name: Apply repository migrations missing from staging runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file backend/supabase/migrations/20260726194500_initialize_complete_game_fx_matrix_v1.sql
+          psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file backend/supabase/migrations/20260727091000_reconcile_arrival_residency_eligibility_v1.sql
+
+      - name: Export canonical staging fingerprint
+        id: fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/staging-raw.json" --output "$RUNNER_TEMP/staging.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/staging.json" | awk '{print $1}')"
+          [[ "$sha" =~ ^[a-f0-9]{64}$ ]]
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+  production:
+    name: Converge production to canonical migration chain
+    needs: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      STAGING_SCHEMA_SHA256: ${{ needs.staging.outputs.schema_sha256 }}
+    steps:
+      - name: Enforce production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/main
+          test -n "$SUPABASE_DB_URL"
+          [[ "$STAGING_SCHEMA_SHA256" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Verify production identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUPABASE_DB_URL="$SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+
+      - name: Apply canonical Checking Savings migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file backend/supabase/migrations/20260806093000_provision_player_banking_and_credit_v1.sql
+
+      - name: Reconcile bounded legacy structural residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL'
+          begin;
+          do $$
+          begin
+            if exists (select 1 from public.currencies where country_code is null) then
+              raise exception 'CURRENCY_COUNTRY_NULL_BLOCKER';
+            end if;
+            if exists (select 1 from public.currencies where is_base_currency) then
+              raise exception 'LEGACY_BASE_CURRENCY_TRUE_BLOCKER';
+            end if;
+          end $$;
+          alter table public.currencies drop column if exists is_base_currency;
+          alter table public.currencies alter column country_code set not null;
+          alter table public.currencies drop constraint if exists currencies_country_code_format_check;
+          alter table public.currencies add constraint currencies_country_code_format_check check (country_code = upper(country_code));
+          create index if not exists request_rate_limit_buckets_last_request_idx on public.request_rate_limit_buckets (last_request_at desc, dimension, window_seconds, limit_count);
+          drop trigger if exists set_inventory_holdings_updated_at on public.inventory_holdings;
+          create trigger set_inventory_holdings_updated_at before update on public.inventory_holdings for each row execute function public.set_current_timestamp_updated_at();
+          commit;
+          SQL
+
+      - name: Validate production economic core and Checking cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.account_balances where lower(btrim(account_type))='cash'")" = 0
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.ledger_entries where lower(btrim(account_type))='cash'")" = 0
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL'
+          do $validation$
+          declare r record; result jsonb;
+          begin
+            for r in select id from public.game_sessions order by id loop
+              result := public.validate_economic_asset_core_v2(r.id);
+              if coalesce((result->>'valid')::boolean,false) is not true then
+                raise exception 'ECONOMIC_ASSET_CORE_VALIDATION_FAILED:%', result;
+              end if;
+            end loop;
+          end
+          $validation$;
+          SQL
+
+      - name: Require semantic structural and authorization parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/production-raw.json" --output "$RUNNER_TEMP/production.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/production.json" | awk '{print $1}')"
+          echo "staging=$STAGING_SCHEMA_SHA256 production=$sha"
+          test "$sha" = "$STAGING_SCHEMA_SHA256"
+
+      - name: Record success
+        if: success()
+        run: |
+          echo '## RELEASE-007 final schema parity: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '- Checking/Savings canonicalization: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Economic-core validation: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Structural + authorization parity: PASS' >> "$GITHUB_STEP_SUMMARY"
