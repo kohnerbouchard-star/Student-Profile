@@ -1,0 +1,86 @@
+name: Story Narrative S3 Bootstrap
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s3-bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Lock S3 design in persistent roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          old = "### S3 — Relationship state\n\nStatus: PLANNED"
+          new = "### S3 — Relationship state\n\nStatus: IN PROGRESS"
+          if text.count(old) != 1:
+              raise SystemExit("S3 status anchor did not match exactly once")
+          text = text.replace(old, new, 1)
+          marker = "\n## Run-completion rule\n"
+          if marker not in text:
+              raise SystemExit("roadmap run-completion marker missing")
+          lines = [
+              "",
+              "### Run 2026-08-11 — S3 relationship-state bootstrap",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Starting branch head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Design locked before implementation:",
+              "",
+              "- one private canonical relationship snapshot per `(game, Player, characterKey)`;",
+              "- bounded integer metrics `standing`, `trust`, `respect`, `affinity`, `obligation`, and `suspicion`, each clamped to `[-100, 100]`;",
+              "- `standing` is the only canonical overall-tier source, avoiding an implicit weighted composite of unrelated metrics;",
+              "- stable tiers are `hostile`, `wary`, `neutral`, `cooperative`, and `trusted`;",
+              "- relationship changes occur only through a deterministic authored `character_relationship_adjust` Story effect;",
+              "- one effect may carry explicit non-zero deltas for one or more supported metrics;",
+              "- every adjustment records immutable source Story event/effect index, before/after state, exact deltas, and replay identity;",
+              "- exact replay returns the existing adjustment without applying deltas twice;",
+              "- divergent replay identity/fingerprint fails closed;",
+              "- relationship snapshots are loaded into `PlayerStoryContext` so Story rules can branch on metric thresholds and overall tier;",
+              "- new conditions will support metric-at-least, metric-at-most, and overall-tier equality;",
+              "- no browser inserts/updates/deletes and no generic Admin correction endpoint are introduced in S3;",
+              "- internal numeric metrics are not exposed to the Player UI in S3; a later authored presentation may expose an intentional tier/label without leaking internal scoring;",
+              "- S3 does not interpret S2 choices itself; S4 will map authoritative effective choices to relationship/economic/story consequences using these proven S3 effects.",
+              "",
+              "Planned implementation surfaces:",
+              "",
+              "- new Supabase relationship snapshot + immutable adjustment tables and one atomic service-side RPC;",
+              "- Story effect/parser/execution contracts;",
+              "- Story condition/parser/evaluator contracts;",
+              "- `PlayerStoryContext` relationship hydration;",
+              "- Supabase relationship writer wired into the existing post-stock-tick Story runner;",
+              "- migration replay/privacy/idempotency, parser, condition, effect, repository, writer, runner, and existing S1/S2 regression coverage.",
+              "",
+              "Next: generate the S3 migration with pinned Supabase CLI, apply the bounded relationship domain changes, and run the complete Story + Messaging + stock-runner regression set before marking S3 complete on branch.",
+              "",
+          ]
+          path.write_text(text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s3-bootstrap.yml
+          git add -A -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s3-bootstrap.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(story): lock S3 relationship-state design"
+          git push origin HEAD:feat/story-narrative-convergence-v1
