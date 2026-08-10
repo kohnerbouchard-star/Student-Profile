@@ -36,7 +36,7 @@ test("orchestrator uses vault-token authentication and the canonical stock HTTP 
   assert.doesNotMatch(orchestrator, /SUPABASE_PUBLISHABLE_KEY/u);
 });
 
-test("scheduled ticks preserve market-calendar, realtime, and storyline-after-tick semantics", () => {
+test("scheduled ticks preserve market-calendar, realtime, storyline, and wall-clock semantics", () => {
   assert.match(orchestrator, /\.eq\("status", "active"\)/u);
   assert.match(orchestrator, /\.eq\("lifecycle_state", "active"\)/u);
   assert.match(orchestrator, /\.eq\("provisioning_status", "ready"\)/u);
@@ -46,6 +46,13 @@ test("scheduled ticks preserve market-calendar, realtime, and storyline-after-ti
   assert.match(runnerHandler, /createDefaultStorylineRunnerAfterTick/u);
   assert.match(runnerHandler, /runStorylineEventsAfterStockTickBestEffort/u);
   assert.match(runnerHandler, /runDueStorylineEvents/u);
+  assert.match(runnerHandler, /const tickOccurredAt =/u);
+  assert.match(runnerHandler, /occurredAt: tickOccurredAt\.toISOString\(\)/u);
+  assert.match(runnerHandler, /generatedAt: args\.occurredAt/u);
+  assert.doesNotMatch(
+    runnerHandler,
+    /runStorylineEventsAfterStockTickBestEffort\(\{[\s\S]{0,300}generatedAt:\s*args\.result\.generatedAt/u,
+  );
 });
 
 test("database owns the scheduler and the forward migration makes cadence one minute", () => {
