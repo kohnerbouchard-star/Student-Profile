@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Repair staged S2 patcher for canonical segment router and update roadmap
+      - name: Splice canonical segment-router patcher section and update roadmap
         shell: bash
         run: |
           set -euo pipefail
@@ -38,65 +38,7 @@ jobs:
           end = text.find(end_marker, start + 1)
           if start < 0 or end < 0 or end <= start:
               raise SystemExit("S2 route patcher section boundaries were not found")
-
-          replacement = r'''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
-              replace_once(path,
-          '''  | { readonly kind: "markRead"; readonly threadId: string | null }
-            | { readonly kind: "malformed" };
-          ''',
-          '''  | { readonly kind: "markRead"; readonly threadId: string | null }
-            | {
-              readonly kind: "selectStoryChoice";
-              readonly threadId: string;
-              readonly interactionKey: string;
-            }
-            | { readonly kind: "malformed" };
-          ''')
-              replace_once(path,
-          '''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
-          ''',
-          '''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
-          const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
-          ''')
-              replace_once(path,
-          '''  if (
-              segments.length >= 3 &&
-              segments[0] === "players" &&
-              segments[1] === "me" &&
-              segments[2] === "messages"
-            ) {
-              return { kind: "malformed" };
-            }
-          ''',
-          '''  if (
-              segments.length === 8 &&
-              segments[0] === "players" &&
-              segments[1] === "me" &&
-              segments[2] === "messages" &&
-              segments[3] === "threads" &&
-              THREAD_ID_PATTERN.test(segments[4]) &&
-              segments[5] === "story-interactions" &&
-              STORY_INTERACTION_KEY_PATTERN.test(segments[6]) &&
-              segments[7] === "select"
-            ) {
-              return {
-                kind: "selectStoryChoice",
-                threadId: segments[4],
-                interactionKey: segments[6],
-              };
-            }
-
-            if (
-              segments.length >= 3 &&
-              segments[0] === "players" &&
-              segments[1] === "me" &&
-              segments[2] === "messages"
-            ) {
-              return { kind: "malformed" };
-            }
-          ''')
-
-          '''
+          replacement = Path("scripts/story-narrative/s2/route-parser-patch-section.txt").read_text(encoding="utf-8")
           updated = text[:start] + replacement + text[end:]
           compile(updated, str(patcher), "exec")
           patcher.write_text(updated, encoding="utf-8")
@@ -108,13 +50,13 @@ jobs:
               raise SystemExit("roadmap run-completion marker missing")
           lines = [
               "",
-              "### Run 2026-08-11 — S2 route-parser compatibility attempt 1",
+              "### Run 2026-08-11 — S2 route-parser compatibility attempts",
               "",
-              "Workflow run: `31433730927`",
+              "Workflow run `31433730927`: FAILED BEFORE PATCHER OR ROADMAP MUTATION because the helper Python embedded nested triple-quoted patch literals and raised `SyntaxError`.",
               "",
-              "Result: FAILED BEFORE PATCHER OR ROADMAP MUTATION.",
+              "Workflow run `31433798416`: FAILED BEFORE PATCHER OR ROADMAP MUTATION because the replacement block still nested the patcher triple quotes inside a Python triple-quoted string.",
               "",
-              "Failure: the temporary compatibility workflow embedded nested triple-quoted patch literals inside another Python triple-quoted literal, producing a helper-script `SyntaxError`. No S2 implementation source or patcher source changed in that run.",
+              "Neither failed compatibility run generated a migration, mutated S2 implementation source, or changed the staged patcher.",
               "",
               "### Run 2026-08-11 — S2 canonical route-parser compatibility repair",
               "",
@@ -127,15 +69,16 @@ jobs:
               "",
               "- current Player Messaging routing is the canonical segment-based `readPlayerApiRouteSegments` implementation;",
               "- the prepared S2 primary patcher incorrectly expected an obsolete regex-normalized router and a non-null-only `markRead` route;",
-              "- changing production routing to match that stale patcher would be an architectural regression.",
+              "- changing production routing to satisfy that stale patcher would be an architectural regression.",
               "",
               "Correction:",
               "",
-              "- repaired only the temporary S2 patcher using explicit section boundaries;",
+              "- repaired only the temporary S2 primary patcher;",
               "- preserved nullable global/thread read-receipt routing;",
-              "- S2 choice selection will be added as an eight-segment route under the existing Player API parser;",
-              "- added a bounded public `interactionKey` route pattern without replacing the authoritative routing architecture;",
-              "- compiled the corrected patcher before publication.",
+              "- S2 choice selection is expressed as the eight-segment `/players/me/messages/threads/:threadId/story-interactions/:interactionKey/select` route inside the existing segment parser;",
+              "- added a bounded public `interactionKey` route pattern;",
+              "- compiled the corrected patcher before publication;",
+              "- removed the temporary replacement section and compatibility workflow before commit.",
               "",
               "Next: trigger the complete S2 verify-and-land workflow from this corrected patcher and continue fail-closed through any subsequent exact compatibility or test failure.",
               "",
@@ -143,8 +86,9 @@ jobs:
           roadmap.write_text(roadmap_text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
           PY
           git diff --check
+          rm -f scripts/story-narrative/s2/route-parser-patch-section.txt
           rm -f .github/workflows/story-narrative-s2-route-parser-compat.yml
-          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-route-parser-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/route-parser-patch-section.txt docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-route-parser-compat.yml
           git diff --cached --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
