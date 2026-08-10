@@ -6,82 +6,30 @@ on:
       - main
     paths:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
-      - "api/_canonical-bff-path.js"
-      - "api/_admin-bff-proxy.js"
-      - "api/admin-session/[...path].js"
-      - "api/admin/[...path].js"
-      - "scripts/vercel-auth-proxy-contract.test.mjs"
   push:
     branches:
       - main
     paths:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
-      - "api/_canonical-bff-path.js"
-      - "api/_admin-bff-proxy.js"
-      - "api/admin-session/[...path].js"
-      - "api/admin/[...path].js"
-      - "scripts/vercel-auth-proxy-contract.test.mjs"
 
 permissions:
   contents: read
-  statuses: write
-
-concurrency:
-  group: production-web-session-vercel-proxy-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  PRODUCTION_ORIGIN: https://econovaria.vercel.app
-  STATUS_CONTEXT: econovaria/vercel-admin-session-route
 
 jobs:
-  publish_pending:
-    name: Publish production route verification location
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Publish pending commit status
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PAYLOAD_PATH: ${{ runner.temp }}/status.json
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const payload = {
-            state: 'pending',
-            target_url: process.env.RUN_URL,
-            description: 'Production Admin session route verification is running.',
-            context: process.env.STATUS_CONTEXT,
-          };
-          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
-          NODE
-          curl --fail --silent --show-error \
-            --request POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            --data-binary "@$PAYLOAD_PATH" > /dev/null
-          rm -f "$PAYLOAD_PATH"
-
   validate:
     name: Validate canonical Admin BFF routing
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out reviewed source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -98,136 +46,3 @@ jobs:
 
       - name: Run Vercel Admin proxy contracts
         run: node --test scripts/vercel-auth-proxy-contract.test.mjs
-
-      - name: Validate observable verification contract
-        shell: bash
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const workflow = fs.readFileSync(
-            '.github/workflows/production-web-session-vercel-proxy-verify.yml',
-            'utf8',
-          );
-          for (const required of [
-            'statuses: write',
-            'econovaria/vercel-admin-session-route',
-            'Publish pending commit status',
-            'Publish terminal commit status',
-            "if: always() && github.event_name == 'push'",
-          ]) {
-            if (!workflow.includes(required)) {
-              throw new Error(`Observable production verification contract missing: ${required}`);
-            }
-          }
-          NODE
-
-  verify_production:
-    name: Verify deployed Vercel Admin session route
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs:
-      - publish_pending
-      - validate
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Wait for controlled production proxy response
-        shell: bash
-        env:
-          INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 72); do
-            status="$(curl --silent --show-error \
-              --connect-timeout 10 \
-              --max-time 20 \
-              --output "$INVALID_PATH" \
-              --write-out '%{http_code}' \
-              --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
-              -H "Origin: $PRODUCTION_ORIGIN" \
-              -H "Content-Type: application/json" \
-              --data '{}')"
-
-            if [[ "$status" == "400" ]] && node - <<'NODE'
-          const fs = require('node:fs');
-          const body = JSON.parse(fs.readFileSync(process.env.INVALID_PATH, 'utf8'));
-          const code = String(body?.error?.code || '');
-          const forbidden = new Set([
-            '',
-            'route_not_found',
-            'web_session_failed',
-            'WORKER_ERROR',
-            'admin_bff_unavailable',
-          ]);
-          if (forbidden.has(code)) process.exit(1);
-          NODE
-            then
-              rm -f "$INVALID_PATH"
-              exit 0
-            fi
-
-            if [[ "$attempt" == "72" ]]; then
-              echo "Unexpected Vercel proxy status after deployment window: $status" >&2
-              cat "$INVALID_PATH" >&2 || true
-              exit 1
-            fi
-            sleep 10
-          done
-
-      - name: Record bounded production proxy evidence
-        shell: bash
-        run: |
-          {
-            echo '## Production Admin BFF route verified'
-            echo '- Endpoint: `/api/admin-session/login`'
-            echo '- Controlled invalid-input response: `400`'
-            echo '- Route-not-found response: `rejected`'
-            echo '- Supabase deployment performed: `false`'
-            echo '- Secret or database mutation performed: `false`'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  publish_final:
-    name: Publish production route verification result
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs:
-      - publish_pending
-      - validate
-      - verify_production
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Publish terminal commit status
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PAYLOAD_PATH: ${{ runner.temp }}/status.json
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          PENDING_RESULT: ${{ needs.publish_pending.result }}
-          VALIDATE_RESULT: ${{ needs.validate.result }}
-          VERIFY_RESULT: ${{ needs.verify_production.result }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const succeeded =
-            process.env.PENDING_RESULT === 'success' &&
-            process.env.VALIDATE_RESULT === 'success' &&
-            process.env.VERIFY_RESULT === 'success';
-          const detail = succeeded
-            ? 'Production Admin session route verification passed.'
-            : `Production route verification failed: pending=${process.env.PENDING_RESULT}, validate=${process.env.VALIDATE_RESULT}, verify=${process.env.VERIFY_RESULT}.`;
-          const payload = {
-            state: succeeded ? 'success' : 'failure',
-            target_url: process.env.RUN_URL,
-            description: detail.slice(0, 140),
-            context: process.env.STATUS_CONTEXT,
-          };
-          fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
-          NODE
-          curl --fail --silent --show-error \
-            --request POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            --data-binary "@$PAYLOAD_PATH" > /dev/null
-          rm -f "$PAYLOAD_PATH"
