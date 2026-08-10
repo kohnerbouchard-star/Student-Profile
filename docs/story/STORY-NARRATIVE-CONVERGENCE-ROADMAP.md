@@ -91,7 +91,7 @@ Prepared implementation package from the prior run is being reconciled and verif
 
 ### S2 — Structured narrative response windows
 
-Status: NEXT
+Status: IN PROGRESS
 
 Goal: give Players explicit authored choices without making free-form text authoritative.
 
@@ -399,6 +399,36 @@ Remaining S1 acceptance:
 - connected staging database replay/acceptance before merge.
 
 Next: S2 structured narrative response windows.
+
+### Run 2026-08-10 — S2 structured response window bootstrap
+
+Workflow run: `31369710126`
+Starting branch head: `f89d05c41c6662791f0759b2f965de0a26f1fc99`
+
+Design locked before implementation:
+
+- a response window is an immutable private extension of one S1 `story_messages` row;
+- `character_message` may carry an optional authored response window, but only when it has a stable `interactionKey`;
+- every window has 2–5 stable `choiceKey` options, an authored prompt, optional close duration, and optional default choice;
+- Player identity comes only from the authenticated Player session; browser payloads never supply ownership UUIDs;
+- selection is one immutable authoritative row per Player interaction with exact idempotent replay and conflict on divergent reuse;
+- expired windows are derived from `closesAt`; if a default choice exists, `effectiveChoiceKey` becomes that default after expiry without a second scheduler;
+- open/selected/expired state and safe option data are projected through existing Player/Admin Messaging reads;
+- Player UI shows authored choice buttons only while a window is open; resolved/expired windows are read-only;
+- Admin receives read-only decision visibility through Messages moderation and no endpoint for choosing on behalf of a Player;
+- S3 relationship state and S4 consequence callbacks will consume the authoritative effective choice later; S2 itself does not invent relationship or consequence mechanics.
+
+Planned implementation surfaces:
+
+- new CLI-generated Supabase migration for interaction/selection tables, RLS, immutable audit constraints, V2 character delivery, Player selection RPC, and Messaging projections;
+- story effect contracts + Supabase story-message writer;
+- Player Messaging route/handler and reviewed rate-limit dispatch;
+- Player capability manifest and terminal endpoint/capability/resource plan;
+- Player Messages UI choice rendering/submission;
+- Admin Messages read model projection only;
+- migration, handler, rate-limit, capability, UI, replay, expiry/default, and privacy regression tests.
+
+Next in this run: generate S2 migration with pinned Supabase CLI, implement the bounded interaction lifecycle, run the full S1+S2 focused regression set, and update this roadmap with every failure or successful landing.
 
 ## Run-completion rule
 
