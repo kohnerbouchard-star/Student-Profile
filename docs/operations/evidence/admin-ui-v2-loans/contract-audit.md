@@ -1,56 +1,32 @@
 # Loans Contract Recheck
 
-## Boundary
+## Result
 
-This is the narrow final contract recheck for PR #516 after Checking/Savings and Banking convergence. It does not repeat the broader loan audit and does not authorize backend redesign inside the UI PR.
+The previous `not_configured` disposition is resolved without a new loan ledger, repayment engine, schema, or parallel domain.
 
-Rechecked base: `cfe51cb1b22077a4b1341bde9d6aa790d16a0d7b`.
+The authoritative runtime already contained `player_loans`, `loan_payments`, loan products, applications, application review, product upsert, restructure, repayment and servicing behavior. The missing capability was a browser-safe Admin supervisory projection.
 
-## Existing Admin/BFF loan contracts on current main
+## Final Admin/BFF contract
 
-`backend/supabase/functions/admin-api/businessBankingOperations.ts` currently owns:
+`GET /games/:gameId/economy/loans` now projects the existing runtime into a privacy-safe DTO containing portfolio, repayment history, applications, products, safe borrower presentation, public business references, and per-currency exposure.
 
-- `GET /games/:gameId/loan-applications`
-- `GET /games/:gameId/loan-products`
-- existing mutation/service RPC bindings for application review, loan-product upsert, loan restructure, and loan servicing.
+The route intentionally does not publish internal table relationships. Internal UUIDs are used only inside the server to join records. The response omits ownership UUIDs, ledger IDs, request hashes, idempotency keys and repayment-source internals.
 
-It does **not** expose `GET /games/:gameId/loans` or another browser-safe supervisory portfolio read that combines authoritative outstanding `player_loans` with `loan_payments` repayment history.
+## Existing write authority retained
 
-## Why the existing reads are not used as the Loans portfolio
+Loans V2 calls economy-scoped aliases that dispatch to the existing RPCs:
 
-The supervisory Loans surface needs authoritative borrower presentation, original principal, current principal/interest balance, repayment state/history, term/payment state, and delinquent/default/paid lifecycle data.
+- `review_player_loan_application_v1`
+- `upsert_loan_product_v1`
+- `restructure_player_loan_v1`
+- `service_player_loan_status_v1`
 
-The product read supplies catalog terms only.
+No repayment or balance mutation was added. Player loan repayment remains controlled by the existing player runtime and authoritative ledger.
 
-The application read supplies applications, not current portfolio state, and includes internal ownership UUID fields (`player_id`, `business_id`, `loan_product_id`) plus repayment-source data. Forwarding it directly would violate the Admin V2 browser privacy boundary and still would not provide the required portfolio/repayment model.
+## Security conclusion
 
-Using either read as a substitute would therefore be incomplete and semantically wrong.
+Using the `/economy/...` resource family keeps read and mutation requests under the existing `economy.adjust` permission and rate-limit policy. No security threshold or generic Admin guardrail is weakened.
 
-## Corrected disposition
+## Completion conclusion
 
-Loans remains a source-owned V2 route under `economy.adjust`, but its runtime state is `not_configured`.
-
-The route performs zero loan network requests. It does not create an endpoint, call a table directly, consume the partial application feed, or expose existing write operations as if a supervisory portfolio were available.
-
-## Backend scope verification
-
-The earlier PR-created backend additions remain absent:
-
-- no `backend/supabase/functions/admin-api/loanOperations.ts`;
-- no Loans-specific Admin security mapping added by PR #516;
-- no Loans-specific Business Banking workflow additions;
-- no new migration, RPC, schema, or Supabase contract.
-
-Current `main` backend files are inherited without modification by PR #516.
-
-## Banking / Checking-Savings reconciliation
-
-PR #501 is merged and canonical personal accounts are Checking/Savings.
-
-PR #529 and PR #512 are merged and provide the separate `economy.adjust` Banking authority and V2 Banking route.
-
-Those changes do not add the missing Loans portfolio/repayment GET contract and do not change this route's zero-network disposition.
-
-## Final conclusion
-
-The authoritative implementation available to PR #516 is an explicit source-owned V2 `not_configured` Loans page, not a partial portfolio and not a fabricated backend adapter.
+Loans is now a configured native Admin V2 route rather than a placeholder. Its remaining release gate is exact-head CI and merge, not a missing product contract.
