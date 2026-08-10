@@ -564,6 +564,40 @@ Logging source head: `98ab76b494b86745df20931dc38bd994ba3b6bc8`
 
 Next: rerun S2 with the exact S1 formatting compatibility guard, then surface the first semantic/type/test failure if one remains.
 
+### Run 2026-08-10 — S2 verification attempt 4
+
+Workflow run: `31372723818`
+
+Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 SOURCE COMMIT PUBLISHED.
+
+Passed before failure:
+
+- branch/S1 boundary;
+- pinned Node, Deno, and Supabase CLI setup;
+- reconstructed archive and per-member manifest verification;
+- CLI-generated S2 migration;
+- exact S1 parser formatting compatibility guard.
+
+Failure:
+
+- staged primary S2 patcher aborted because none of its expected Player Messaging handler anchors matched current S1 source;
+- no dependency install or tests executed;
+- no S2 source was committed.
+
+Action: extract the exact GitHub-stored primary/follow-up patch scripts into temporary branch diagnostic files, inspect their real anchors, then correct the compatibility layer rather than guessing.
+
+### Run 2026-08-10 — S2 staged-patcher extraction diagnostic
+
+Workflow run: `31372888586`
+Diagnostic source head: `c55e7be625b6c8045b5a16a4e6eea737b35d39db`
+
+Temporary diagnostic files committed for exact source inspection:
+
+- `scripts/story-narrative/s2/diagnostic-primary.py`;
+- `scripts/story-narrative/s2/diagnostic-followup.py`.
+
+These are temporary transport/diagnostic files and must be removed by the successful S2 landing commit.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
