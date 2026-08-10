@@ -714,11 +714,9 @@ function optionalStoryChoice(value: unknown): string {
 ''')
     replace_once(path,
 '''      createElement("p", { className: "admin-messages-route__body", text: message.body || "Message body unavailable." }),
-      message.hidden ? createElement("p", {
 ''',
 '''      createElement("p", { className: "admin-messages-route__body", text: message.body || "Message body unavailable." }),
       storyInteractionSummary(message),
-      message.hidden ? createElement("p", {
 ''')
 
     # S1 tests carried forward to V2 writer/responseWindow contract.
