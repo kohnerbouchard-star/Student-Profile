@@ -53,12 +53,6 @@
       "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-resolution"
     },
     {
-      "slug": "staff-api",
-      "entrypoint": "backend/supabase/functions/staff-api/index.ts",
-      "verifyJwt": true,
-      "authorizationModel": "platform-jwt-plus-auth-get-user-plus-staff-policy"
-    },
-    {
       "slug": "staff-mfa-api",
       "entrypoint": "backend/supabase/functions/staff-mfa-api/index.ts",
       "verifyJwt": true,
@@ -131,6 +125,11 @@
     }
   ],
   "sourceOnlyFunctions": [
+    {
+      "slug": "staff-api",
+      "entrypoint": "backend/supabase/functions/staff-api/index.ts",
+      "reason": "browser direct access is retired; current hosted runtime has no caller and neither environment deploys it"
+    },
     {
       "slug": "notification-worker",
       "entrypoint": "backend/supabase/functions/notification-worker/index.ts",
