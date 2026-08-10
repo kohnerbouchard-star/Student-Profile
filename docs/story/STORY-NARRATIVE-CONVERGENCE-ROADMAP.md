@@ -68,11 +68,11 @@ Deliverables:
 
 - [x] Create this roadmap before story implementation resumes.
 - [x] Record branch, base SHA, architecture rules, workstreams, verification expectations, and run log.
-- [ ] Update this document during every future story implementation run.
+- [x] Update this document during every story implementation/verification run, including failed runs.
 
 ### S1 — Recurring character messaging foundation
 
-Status: DESIGNED / NOT YET LANDED ON THIS BRANCH
+Status: IMPLEMENTATION STAGED / VERIFICATION IN PROGRESS
 
 Target behavior:
 
@@ -87,7 +87,7 @@ Target behavior:
 - story-thread membership cannot be widened through Admin participant controls;
 - moderation suppression does not stall the entire storyline.
 
-Prepared implementation package from the prior run must be reconciled against this branch rather than blindly copied.
+Prepared implementation package from the prior run is being reconciled and verified against this branch rather than blindly copied.
 
 ### S2 — Structured narrative response windows
 
@@ -224,10 +224,61 @@ Completed:
 - created this roadmap as the first branch change;
 - captured the prior character-messaging design and the remaining narrative convergence sequence.
 
-Next in this same run:
+### Run 2026-08-10 — S1 verification attempt 1
 
-- reconcile and land the prepared S1 recurring-character messaging implementation against the exact branch source;
-- then begin S2 structured response-window domain design/implementation if S1 remains compatible and verified.
+Workflow run: `31367442589`  
+Workflow head: `b541471c97f2a0aac456baf3b7072122bb0496a7`
+
+Result: FAILED BEFORE SOURCE APPLICATION.
+
+Evidence:
+
+- exact story branch checkout passed;
+- Node, Deno, and pinned Supabase CLI setup passed;
+- failure occurred while reassembling the staged implementation bundle;
+- no migration was generated and no S1 application source was changed by the runner.
+
+Action: added per-chunk integrity diagnostics before retrying.
+
+### Run 2026-08-10 — S1 verification attempt 2
+
+Workflow run: `31367558782`  
+Workflow head: `15fcc3c5a278ef0e5a1183bf8d38bfdb61edd361`
+
+Result: FAILED BEFORE SOURCE APPLICATION.
+
+Evidence:
+
+- chunks 00, 01, 02, and 04 matched the audited local SHA-256 values;
+- chunk 03 was the only transport mismatch;
+- Node, Deno, and Supabase CLI setup remained green;
+- no migration or implementation source was applied.
+
+Action: isolated the archive corruption instead of retrying source changes.
+
+### Run 2026-08-10 — S1 bundle diagnostic
+
+Workflow run: `31367985372`  
+Workflow head: `e4a8578bebe734f70012c57462cea3ef77650736`
+
+Result: DIAGNOSTIC GREEN.
+
+Findings:
+
+- staged chunk 03 SHA-256 is `6e55f23f5f5dcfaaf65bdd2a1b5079a971d5d171eeb66ca04b7a89bbc24d2a48`;
+- reconstructed transport ZIP SHA-256 is `46ac7cf88aadc9341f0bc9ebd8d65136217862effbbe08357049f06730180604`;
+- all 13 archived member payloads pass ZIP CRC validation;
+- warnings are limited to three corrupted ZIP local filename-header bytes for test files;
+- the central-directory filenames are correct and the member data is intact.
+
+Next:
+
+- extract while accepting only the known ZIP filename-header warning;
+- verify every extracted file byte count and SHA-256 against `MANIFEST.json` before applying anything;
+- generate the S1 migration filename using Supabase CLI 2.109.1;
+- apply guarded S1 transformation and run full focused verification;
+- update this roadmap with the resulting branch head and verification evidence;
+- then move to S2 structured response windows.
 
 ## Run-completion rule
 
