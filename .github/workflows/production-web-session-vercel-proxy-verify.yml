@@ -6,14 +6,31 @@ on:
       - main
     paths:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
+      - "api/_canonical-bff-path.js"
+      - "api/_admin-bff-proxy.js"
+      - "api/admin-session/[...path].js"
+      - "api/admin/[...path].js"
+      - "scripts/vercel-auth-proxy-contract.test.mjs"
   push:
     branches:
       - main
     paths:
       - ".github/workflows/production-web-session-vercel-proxy-verify.yml"
+      - "api/_canonical-bff-path.js"
+      - "api/_admin-bff-proxy.js"
+      - "api/admin-session/[...path].js"
+      - "api/admin/[...path].js"
+      - "scripts/vercel-auth-proxy-contract.test.mjs"
 
 permissions:
   contents: read
+
+concurrency:
+  group: production-web-session-vercel-proxy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRODUCTION_ORIGIN: https://econovaria.vercel.app
 
 jobs:
   validate:
@@ -46,3 +63,65 @@ jobs:
 
       - name: Run Vercel Admin proxy contracts
         run: node --test scripts/vercel-auth-proxy-contract.test.mjs
+
+  verify_production:
+    name: Verify deployed Vercel Admin session route
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Wait for controlled production proxy response
+        shell: bash
+        env:
+          INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 72); do
+            status="$(curl --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$INVALID_PATH" \
+              --write-out '%{http_code}' \
+              --request POST "$PRODUCTION_ORIGIN/api/admin-session/login" \
+              -H "Origin: $PRODUCTION_ORIGIN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+
+            if [[ "$status" == "400" ]] && node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync(process.env.INVALID_PATH, 'utf8'));
+          const code = String(body?.error?.code || '');
+          const forbidden = new Set([
+            '',
+            'route_not_found',
+            'web_session_failed',
+            'WORKER_ERROR',
+            'admin_bff_unavailable',
+          ]);
+          if (forbidden.has(code)) process.exit(1);
+          NODE
+            then
+              rm -f "$INVALID_PATH"
+              exit 0
+            fi
+
+            if [[ "$attempt" == "72" ]]; then
+              echo "Unexpected Vercel proxy status after deployment window: $status" >&2
+              cat "$INVALID_PATH" >&2 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Record bounded production proxy evidence
+        shell: bash
+        run: |
+          {
+            echo '## Production Admin BFF route verified'
+            echo '- Endpoint: `/api/admin-session/login`'
+            echo '- Controlled invalid-input response: `400`'
+            echo '- Route-not-found response: `rejected`'
+            echo '- Supabase deployment performed: `false`'
+            echo '- Secret or database mutation performed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
