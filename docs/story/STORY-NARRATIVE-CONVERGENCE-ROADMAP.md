@@ -430,6 +430,42 @@ Planned implementation surfaces:
 
 Next in this run: generate S2 migration with pinned Supabase CLI, implement the bounded interaction lifecycle, run the full S1+S2 focused regression set, and update this roadmap with every failure or successful landing.
 
+### Run 2026-08-10 — S2 verification attempt 1
+
+Workflow run: `31371662557`
+Workflow head: `e53aef1af12d460ee414c40555f9a39f4b4c87ad`
+
+Result: FAILED BEFORE MIGRATION GENERATION OR SOURCE APPLICATION.
+
+Passed before failure:
+
+- exact story branch checkout and S1 ancestor boundary;
+- pinned Node 22.23.1, Deno 2.9.3, and Supabase CLI 2.109.1 setup.
+
+Failure:
+
+- all five staged S2 transport chunks differed from the local pre-stage SHA-256 values;
+- the runner stopped at per-chunk integrity verification;
+- no S2 migration was generated;
+- no S2 source transformation or tests executed.
+
+Immediate action: diagnose the exact GitHub-stored chunk bytes before retrying; do not weaken manifest verification.
+
+### Run 2026-08-10 — S2 transport diagnostic and roadmap persistence
+
+Workflow run: `31371796042`
+Diagnostic source head: `56f559e4432b82dbe23c8d6570028ee5c1aa8fa4`
+
+Actual GitHub-stored chunk evidence:
+
+- `bootstrap.part00`: 6000 bytes, SHA-256 `9fce911a7aaa21ef3092a37e43f0e8c7b544334045a9dc34b279ccafa02e3ad4`, trailing-newline `false`;
+- `bootstrap.part01`: 6000 bytes, SHA-256 `7817e848203cdd55eff7c4b4fecf4ae0f6423bafba60ec35bc69898ebb860c9b`, trailing-newline `false`;
+- `bootstrap.part02`: 6000 bytes, SHA-256 `2d38ca8c87745c81014c20b21161fd6f32d43f81ce0676e146d843048c25ec31`, trailing-newline `false`;
+- `bootstrap.part03`: 6000 bytes, SHA-256 `7c7be9623d3f0193a0534ad653242cdea6c99fe8a6ba9b78fc4dc55193ed6614`, trailing-newline `false`;
+- `bootstrap.part04`: 220 bytes, SHA-256 `078f6b92de937efbab6e94e6931d7097ad2dd7e90f2f8362405f1604c388f9cd`, trailing-newline `false`;
+
+Next: update only the temporary runner's expected transport hashes to these stored values, then require archive SHA-256 plus per-member manifest SHA-256 verification before migration generation or source application.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
