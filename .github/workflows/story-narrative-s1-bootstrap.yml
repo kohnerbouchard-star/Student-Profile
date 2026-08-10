@@ -60,9 +60,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          printf '%s  %s\n' \
+            '09fa666dfb46eb719bd805242e37213cbf605a0697e290f8ab830b9199e9dc5e' 'scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part00' \
+            'aeea20eccf8c790ddbb03506d9ba1103d6e39c4b7f92948ada3e410d52f7b18c' 'scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part01' \
+            '7f6c4735ac7db8d6890ce004b6272a25ac13147c56f1b190ebac13af1dc4ca1a' 'scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part02' \
+            'eb0a581b8d12ddd695bf98c2d5c960b019d136d5e32df0ea1aacb1339811b602' 'scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part03' \
+            '5e136c149096ba24d55a69f73a0369e2d3ae1f181a2866384114c09d3ac6115c' 'scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part04' \
+            | sha256sum --check
+          wc -c scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part*
           cat scripts/story-narrative/bootstrap/story-character-messaging-v1.zip.b64.part* > "$RUNNER_TEMP/story-character-messaging-v1.zip.b64"
           base64 --decode "$RUNNER_TEMP/story-character-messaging-v1.zip.b64" > "$RUNNER_TEMP/story-character-messaging-v1.zip"
-          echo "eaa79bef24256ffd09b25b9e36c493ee23f7b6d4f8d81df71dace46d6d5ce9ca  $RUNNER_TEMP/story-character-messaging-v1.zip" | sha256sum --check --status
+          sha256sum "$RUNNER_TEMP/story-character-messaging-v1.zip"
+          echo "eaa79bef24256ffd09b25b9e36c493ee23f7b6d4f8d81df71dace46d6d5ce9ca  $RUNNER_TEMP/story-character-messaging-v1.zip" | sha256sum --check
           mkdir -p "$RUNNER_TEMP/story-character-messaging-v1"
           unzip -q "$RUNNER_TEMP/story-character-messaging-v1.zip" -d "$RUNNER_TEMP/story-character-messaging-v1"
           BUNDLE_DIR="$(find "$RUNNER_TEMP/story-character-messaging-v1" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
