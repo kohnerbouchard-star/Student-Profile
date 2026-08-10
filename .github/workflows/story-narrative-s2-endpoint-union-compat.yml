@@ -1,0 +1,86 @@
+name: Story Narrative S2 Endpoint Union Compatibility
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-endpoint-union-compat.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Repair endpoint-key union anchor and persist attempt 7
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          patcher = Path('scripts/story-narrative/s2/diagnostic-primary.py')
+          text = patcher.read_text(encoding='utf-8')
+          old = "    replace_once(path, '  \"messageRead\",\\n  \"news\",', '  \"messageRead\",\\n  \"messageStoryChoice\",\\n  \"news\",')"
+          new = "    replace_once(path, '  | \"messageRead\"\\n  | \"news\"', '  | \"messageRead\"\\n  | \"messageStoryChoice\"\\n  | \"news\"')"
+          if text.count(old) != 1:
+              raise SystemExit('comma-form endpoint key anchor did not match exactly once')
+          updated = text.replace(old, new, 1)
+          compile(updated, str(patcher), 'exec')
+          patcher.write_text(updated, encoding='utf-8')
+
+          roadmap = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          roadmap_text = roadmap.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          if marker not in roadmap_text:
+              raise SystemExit('roadmap marker missing')
+          lines = [
+              '',
+              '### Run 2026-08-11 — S2 verification attempt 7',
+              '',
+              'Workflow run: `31434485863`',
+              'Source head: `9afa1eb16df3a37e221e8496c8b253075f3e0e07`',
+              'Ephemeral generated migration: `20260810213459_add_story_structured_response_windows_v1.sql`',
+              '',
+              'Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.',
+              '',
+              'Passed before failure:',
+              '',
+              '- all prior integrity/toolchain/migration/parser checks;',
+              '- canonical segment-route patcher compatibility;',
+              '- current classroom Messaging dispatcher compatibility.',
+              '',
+              'Failure:',
+              '',
+              '- the temporary patcher correctly targeted `messageRead -> news` ordering but represented `PlayerCapabilityEndpointKey` as comma-separated array entries;',
+              '- current authoritative contract is a TypeScript string-literal union using `|` prefixes;',
+              '- guarded application stopped before dependencies or tests ran.',
+              '',
+              'Correction:',
+              '',
+              '- change only the temporary patcher to insert `| "messageStoryChoice"` between the existing `| "messageRead"` and `| "news"` union members;',
+              '- preserve all existing endpoint order and unrelated capability definitions;',
+              '- compile the corrected patcher before publication.',
+              '',
+              'Next: direct-repin the V2 workflow and rerun the complete S2 landing sequence.',
+              '',
+          ]
+          roadmap.write_text(roadmap_text.replace(marker, '\n'.join(lines) + marker, 1), encoding='utf-8')
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-endpoint-union-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-endpoint-union-compat.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): align S2 endpoint union patcher"
+          git push origin HEAD:feat/story-narrative-convergence-v1
