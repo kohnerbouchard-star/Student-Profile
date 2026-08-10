@@ -59,18 +59,19 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s  %s\n' \
-            '9cb5febf4058be97b2c3ac422163bbe66a9d13b6e47050dc29586fc3fb5fae5b' 'scripts/story-narrative/s2/bootstrap.part00' \
-            '62485c44379362e5afc80bb0110cdb452d7b321720caf235230ade96af032b93' 'scripts/story-narrative/s2/bootstrap.part01' \
-            'fd4f7b8da4cd5639caebb82476582a8a74dcdb5eb7c1f89ec85416fd5ed4a498' 'scripts/story-narrative/s2/bootstrap.part02' \
-            'a89cdfd6062450954228826fd8b47c5e63f171d1091733e544a79afd4c596895' 'scripts/story-narrative/s2/bootstrap.part03' \
-            '96faf0f21c1c5983a0a3a888c6f38a439cd5ee4f686b1317ba97087918f5b104' 'scripts/story-narrative/s2/bootstrap.part04' \
+            '0c1c999e67cdff7a224978a4f010cc902a8e35db63b5753d575051fd6d54c78e' 'scripts/story-narrative/s2/bootstrap.part00' \
+            '7cbc0f6f73d966a520048557eebda1cb24a3388056937078dfd95be7ec371a9e' 'scripts/story-narrative/s2/bootstrap.part01' \
+            '6563740168e2c99d58da59e109380c3d08b45e328b213725261665864870968f' 'scripts/story-narrative/s2/bootstrap.part02' \
+            '824bdfc64a1432348c26a0c2c36fe59077fa13a6045f0f07b4768a95de88769c' 'scripts/story-narrative/s2/bootstrap.part03' \
+            'b2a79f641a4c8e66e6b5154f1991bbf550f2069a7ea57cbe01a61ca5a4745791' 'scripts/story-narrative/s2/bootstrap.part04' \
             | sha256sum --check
           cat scripts/story-narrative/s2/bootstrap.part* > "$RUNNER_TEMP/s2bundle.b64"
           base64 --decode "$RUNNER_TEMP/s2bundle.b64" > "$RUNNER_TEMP/s2bundle.tar.gz"
-          echo '18fdaaa5e5e0a8cd327e54a2dded037ec95c09f8317cf366bcdae481a2323994  '"$RUNNER_TEMP/s2bundle.tar.gz" | sha256sum --check
-          mkdir -p "$RUNNER_TEMP/s2bundle"
-          tar -xzf "$RUNNER_TEMP/s2bundle.tar.gz" -C "$RUNNER_TEMP/s2bundle"
-          BUNDLE_DIR="$RUNNER_TEMP/s2bundle"
+          echo '9487a4fc4cf35ce580e6c6f53257ca7520c0954353736d709aca1c354e9690d4  '"$RUNNER_TEMP/s2bundle.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/s2payload"
+          tar -xzf "$RUNNER_TEMP/s2bundle.tar.gz" -C "$RUNNER_TEMP/s2payload"
+          BUNDLE_DIR="$(find "$RUNNER_TEMP/s2payload" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$BUNDLE_DIR"
           export BUNDLE_DIR
           python3 - <<'PY'
           import hashlib
