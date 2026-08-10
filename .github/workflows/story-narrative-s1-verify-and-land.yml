@@ -83,7 +83,6 @@ jobs:
           import json
           import os
           from pathlib import Path
-
           root = Path(os.environ["BUNDLE_DIR"])
           manifest = json.loads((root / "MANIFEST.json").read_text(encoding="utf-8"))
           for item in manifest["files"]:
@@ -93,8 +92,7 @@ jobs:
               data = path.read_bytes()
               if len(data) != item["bytes"]:
                   raise SystemExit(f"bundle size mismatch: {item['path']}")
-              digest = hashlib.sha256(data).hexdigest()
-              if digest != item["sha256"]:
+              if hashlib.sha256(data).hexdigest() != item["sha256"]:
                   raise SystemExit(f"bundle sha mismatch: {item['path']}")
           print(f"Manifest-verified {len(manifest['files'])} S1 payload files.")
           PY
@@ -136,18 +134,10 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           path = Path("backend/src/domains/storylines/contracts/storyCharacterMessageContract.test.ts")
           text = path.read_text(encoding="utf-8")
-          old = '''  assertEquals(effect.messagePurpose, "relationship");
-          assertEquals(effect.interactionKey, null);
-'''
-          new = '''  if (effect.type !== "character_message") {
-            throw new Error("Expected character_message effect.");
-          }
-          assertEquals(effect.messagePurpose, "relationship");
-          assertEquals(effect.interactionKey, null);
-'''
+          old = '  assertEquals(effect.messagePurpose, "relationship");\n  assertEquals(effect.interactionKey, null);\n'
+          new = '  if (effect.type !== "character_message") {\n    throw new Error("Expected character_message effect.");\n  }\n  assertEquals(effect.messagePurpose, "relationship");\n  assertEquals(effect.interactionKey, null);\n'
           if old not in text:
               raise SystemExit("character-message type-narrowing anchor not found")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -184,7 +174,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import os
-
           path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
           text = path.read_text(encoding="utf-8")
           old = "### S1 — Recurring character messaging foundation\n\nStatus: IMPLEMENTATION STAGED / VERIFICATION IN PROGRESS"
@@ -193,7 +182,45 @@ jobs:
               raise SystemExit("roadmap S1 status anchor not found")
           text = text.replace(old, new, 1)
           marker = "\n## Run-completion rule\n"
-          entry = f'''\n### Run 2026-08-10 — S1 recurring character messaging landed\n\nWorkflow run: `{os.environ["GITHUB_RUN_ID"]}`  \nSource head verified by runner: `{os.environ["GITHUB_SHA"]}`  \nMigration: `{os.environ["MIGRATION_NAME"]}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented:\n\n- first-class read-only `story` Messaging thread subtype;\n- one persistent private conversation per game + Player + recurring character;\n- immutable per-message storyline/event provenance;\n- server-owned idempotent `character_message` story-effect delivery;\n- Player character-name projection without ownership/event UUID exposure;\n- Admin moderation visibility without character impersonation;\n- immutable story-thread membership through generic Admin participant controls;\n- moderation-suppressed character delivery does not stall global story progression.\n\nVerification completed:\n\n- manifest SHA-256 verification of the staged S1 payload;\n- `git diff --check`;\n- `npm run typecheck:all`;\n- `npm run test:player-messaging`;\n- `npm run test:stock-market-calendar`;\n- `npm run test:admin-api`;\n- `node --test scripts/admin-v2-messages.test.mjs`.\n\nRemaining S1 acceptance:\n\n- connected staging database replay/acceptance before merge.\n\nNext: S2 structured narrative response windows.\n'''
+          lines = [
+              "",
+              "### Run 2026-08-10 — S1 recurring character messaging landed",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`  ",
+              f"Source head verified by runner: `{os.environ['GITHUB_SHA']}`  ",
+              f"Migration: `{os.environ['MIGRATION_NAME']}`",
+              "",
+              "Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.",
+              "",
+              "Implemented:",
+              "",
+              "- first-class read-only `story` Messaging thread subtype;",
+              "- one persistent private conversation per game + Player + recurring character;",
+              "- immutable per-message storyline/event provenance;",
+              "- server-owned idempotent `character_message` story-effect delivery;",
+              "- Player character-name projection without ownership/event UUID exposure;",
+              "- Admin moderation visibility without character impersonation;",
+              "- immutable story-thread membership through generic Admin participant controls;",
+              "- moderation-suppressed character delivery does not stall global story progression.",
+              "",
+              "Verification completed:",
+              "",
+              "- manifest SHA-256 verification of the staged S1 payload;",
+              "- `git diff --check`;",
+              "- `npm run typecheck:all`;",
+              "- `npm run test:player-messaging`;",
+              "- `npm run test:stock-market-calendar`;",
+              "- `npm run test:admin-api`;",
+              "- `node --test scripts/admin-v2-messages.test.mjs`.",
+              "",
+              "Remaining S1 acceptance:",
+              "",
+              "- connected staging database replay/acceptance before merge.",
+              "",
+              "Next: S2 structured narrative response windows.",
+              "",
+          ]
+          entry = "\n".join(lines)
           if marker not in text:
               raise SystemExit("roadmap run-completion marker not found")
           text = text.replace(marker, entry + marker, 1)
