@@ -1,0 +1,276 @@
+name: RELEASE-007 Routine Convergence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release007-routine-convergence.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release007-routine-convergence
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: "2.109.1"
+
+jobs:
+  staging:
+    name: Converge staging canonical routines
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: staging
+    outputs:
+      schema_sha256: ${{ steps.fingerprint.outputs.sha256 }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Enforce staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.109.1
+
+      - name: Link protected staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$url" in "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;; *) exit 1 ;; esac
+          echo "::add-mask::$url"
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+
+      - name: Replay newer canonical staging-missing routine sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            backend/supabase/migrations/20260726084000_add_player_stock_watchlist_mutation_rpc_v1.sql \
+            backend/supabase/migrations/20260726093000_create_single_active_player_session_v2.sql \
+            backend/supabase/migrations/20260726096000_add_staff_password_reset_security_transition_v2.sql \
+            backend/supabase/migrations/20260727102000_fix_player_travel_checking_account_v1.sql \
+            backend/supabase/migrations/20260728054000_replay_marketplace_purchase_before_resource_checks_v1.sql \
+            backend/supabase/migrations/20260731131000_harden_onboarding_cleanup_and_license_replay_v1.sql \
+            backend/supabase/migrations/20260805023228_admin_local_application_mutations_v1.sql
+          do
+            test -f "$migration"
+            psql "$DATABASE_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$migration"
+          done
+
+      - name: Validate staging runtime after routine replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          for signature in \
+            'public.set_player_stock_watchlist_v1(uuid,uuid,text,boolean)' \
+            'public.create_player_session_v2(uuid,uuid,text,timestamp with time zone)' \
+            'public.complete_staff_password_reset_security_v2(uuid)' \
+            'public.execute_player_travel_v1(uuid,uuid,text,text,timestamp with time zone,jsonb)' \
+            'public.create_provisioned_game_v2(uuid,text,jsonb,text,text)' \
+            'public.issue_game_join_code_v1(uuid,uuid)' \
+            'public.reserve_marketplace_purchase_public_v1(uuid,uuid,text,integer,bigint,text)' \
+            'public.settle_marketplace_purchase_public_v1(uuid,uuid,text)'
+          do
+            test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('$signature') is not null")" = t
+          done
+
+      - name: Export staging semantic fingerprint
+        id: fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/staging-raw.json" --output "$RUNNER_TEMP/staging.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/staging.json" | awk '{print $1}')"
+          [[ "$sha" =~ ^[a-f0-9]{64}$ ]]
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+  production:
+    name: Converge production canonical routines
+    needs: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      STAGING_SCHEMA_SHA256: ${{ needs.staging.outputs.schema_sha256 }}
+    steps:
+      - name: Enforce production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/main
+          test -n "$SUPABASE_DB_URL"
+          [[ "$STAGING_SCHEMA_SHA256" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling and verify production identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          SUPABASE_DB_URL="$SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+
+      - name: Replay newer canonical production-missing routine sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql \
+            backend/supabase/migrations/20260725091000_restore_rate_limit_json_compat_and_grants_v1.sql \
+            backend/supabase/migrations/20260726095100_exempt_default_staff_grants_from_version_bump_v2.sql \
+            backend/supabase/migrations/20260727090000_bound_arrival_class_grant_idempotency_v1.sql
+          do
+            test -f "$migration"
+            psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc --file "$migration"
+          done
+
+      - name: Restore canonical default-store seeder and retire orphan recovery helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL'
+          begin;
+          create or replace function public.seed_default_store_items(p_game_session_id uuid)
+          returns table(seeded_count integer, existing_count integer)
+          language plpgsql
+          security definer
+          set search_path = public, pg_temp
+          as $function$
+          declare
+            v_existing_count integer := 0;
+            v_seeded_count integer := 0;
+          begin
+            if p_game_session_id is null then
+              raise exception 'GAME_SESSION_REQUIRED' using errcode = 'P0001';
+            end if;
+            if not exists (select 1 from public.game_sessions where id = p_game_session_id) then
+              raise exception 'GAME_SESSION_NOT_FOUND' using errcode = 'P0001';
+            end if;
+            select count(*) into v_existing_count from public.store_items where game_session_id = p_game_session_id;
+            with seed_items(item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order) as (
+              values
+                ('homework_pass','Homework Pass','Use once to skip a small homework assignment with teacher approval.','privilege',100.00,'ECO',10,'active','visible',10),
+                ('late_pass','Late Pass','Use once for a small extension on an eligible assignment.','privilege',75.00,'ECO',10,'active','visible',20),
+                ('seat_swap','Seat Swap','Request a one-class seat change with teacher approval.','privilege',50.00,'ECO',10,'active','visible',30),
+                ('music_request','Class Music Request','Request one appropriate background song during approved work time.','privilege',40.00,'ECO',20,'active','visible',40),
+                ('bonus_hint','Bonus Hint','Receive one extra teacher hint during an eligible activity.','academic',60.00,'ECO',20,'active','visible',50),
+                ('quiz_reroll','Quiz Reroll','Reroll one low-stakes quiz question if the activity allows it.','academic',150.00,'ECO',5,'active','visible',60),
+                ('supply_pack','Supply Pack','Basic classroom supplies for activities that require materials.','supply',25.00,'ECO',50,'active','visible',70),
+                ('team_bonus','Team Bonus Token','Give your group a small approved advantage during a team activity.','team',125.00,'ECO',5,'active','visible',80),
+                ('market_tip','Market Tip','Receive one general market clue for the classroom economy.','market',90.00,'ECO',10,'active','visible',90),
+                ('mystery_box','Mystery Box','Buy a surprise reward or challenge chosen by the teacher.','special',80.00,'ECO',10,'active','visible',100)
+            ), inserted as (
+              insert into public.store_items(game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order)
+              select p_game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order from seed_items
+              on conflict on constraint store_items_game_item_key_unique do nothing
+              returning id
+            )
+            select count(*) into v_seeded_count from inserted;
+            return query select v_seeded_count, v_existing_count;
+          end;
+          $function$;
+          alter function public.seed_default_store_items(uuid) owner to postgres;
+          revoke all on function public.seed_default_store_items(uuid) from public, anon, authenticated;
+          grant execute on function public.seed_default_store_items(uuid) to service_role;
+          drop function if exists public.read_player_credential_pepper_recovery_v1();
+          commit;
+          SQL
+
+      - name: Validate production runtime after routine replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          for signature in \
+            'public.prune_request_rate_limit_buckets_v1(integer)' \
+            'public.read_request_rate_limit_telemetry_v1(integer,integer)' \
+            'public.seed_default_store_items(uuid)' \
+            'public.assign_arrival_class_atomic_v2(uuid,uuid,text,text,text,text,jsonb,text,text,text,text,timestamp with time zone)'
+          do
+            test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('$signature') is not null")" = t
+          done
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.read_player_credential_pepper_recovery_v1()') is null")" = t
+          test "$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.account_balances where lower(btrim(account_type))='cash'")" = 0
+          psql "$SUPABASE_DB_URL" -X --set=ON_ERROR_STOP=1 --no-psqlrc <<'SQL'
+          do $validation$
+          declare r record; result jsonb;
+          begin
+            for r in select id from public.game_sessions order by id loop
+              result := public.validate_economic_asset_core_v2(r.id);
+              if coalesce((result->>'valid')::boolean,false) is not true then
+                raise exception 'ECONOMIC_ASSET_CORE_VALIDATION_FAILED:%', result;
+              end if;
+            end loop;
+          end
+          $validation$;
+          SQL
+
+      - name: Require exact semantic schema and authorization parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt --set=ON_ERROR_STOP=1 --no-psqlrc --file scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-raw.json"
+          node scripts/release-integrity/cli.mjs normalize-schema --input "$RUNNER_TEMP/production-raw.json" --output "$RUNNER_TEMP/production.json" >/dev/null
+          sha="$(sha256sum "$RUNNER_TEMP/production.json" | awk '{print $1}')"
+          echo "staging=$STAGING_SCHEMA_SHA256 production=$sha"
+          test "$sha" = "$STAGING_SCHEMA_SHA256"
+
+      - name: Record success
+        if: success()
+        run: |
+          echo '## RELEASE-007 routine convergence: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Exact source: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '- Canonical routine union: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Orphan recovery helper: REMOVED' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Economic-core validation: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Structural + authorization parity: PASS' >> "$GITHUB_STEP_SUMMARY"
