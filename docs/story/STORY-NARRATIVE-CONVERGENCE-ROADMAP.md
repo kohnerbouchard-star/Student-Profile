@@ -323,11 +323,47 @@ Correction:
 - retain the discriminated-union test correction;
 - rerun the full S1 sequence.
 
+### Run 2026-08-10 — S1 verification attempt 5
+
+Workflow run: `31368684311`
+Workflow head: `5e7968c9bc0e633ca07a9769bc2d5e37530b9a1d`
+Generated migration during ephemeral verification: `20260810080746_add_story_character_messaging_v1.sql`
+
+Result: ALL S1 SOURCE AND FOCUSED REGRESSIONS GREEN; FAILED ONLY IN ROADMAP BOOKKEEPING.
+
+Passed:
+
+- exact branch/base boundary;
+- pinned Node/Deno/Supabase setup;
+- staged chunk and reconstructed ZIP integrity checks;
+- manifest byte-count and SHA-256 verification for all listed payload files;
+- Supabase CLI migration generation;
+- guarded S1 source transformation;
+- discriminated-union test correction;
+- `git diff --check` before roadmap mutation;
+- `npm ci`;
+- `npm run typecheck:all`;
+- `npm run test:player-messaging` — 41 passed, 0 failed;
+- `npm run test:stock-market-calendar` — 38 passed, 0 failed;
+- `npm run test:admin-api` — 159 passed, 0 failed;
+- `node --test scripts/admin-v2-messages.test.mjs` — 7 passed, 0 failed.
+
+Failure:
+
+- the generated roadmap success entry used Markdown hard-break trailing spaces on the workflow/head lines;
+- `git diff --check` correctly rejected those two newly added trailing-whitespace lines;
+- cleanup and branch commit were skipped, so no unverified implementation source was published.
+
+Correction:
+
+- remove Markdown hard-break spaces from generated roadmap lines;
+- rerun the complete verification sequence once more and publish S1 only after the roadmap update also passes `git diff --check`.
+
 Next:
 
-- complete S1 green verification and branch commit;
-- update this roadmap with the final S1 branch head and generated migration;
-- then move to S2 structured response windows.
+- complete S1 branch commit with all temporary bootstrap transport removed;
+- confirm roadmap and branch head;
+- then move to S2 structured narrative response windows.
 
 ## Run-completion rule
 
