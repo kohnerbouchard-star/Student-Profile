@@ -25,10 +25,12 @@ const FUNCTION_POLICIES = Object.freeze({
   "stock-market-seed-copy": false,
   "stock-market-player-read": false,
   "stock-market-trading": false,
+  "stock-market-orchestrator": false,
 });
 const CUSTOM_AUTH_FUNCTIONS = new Set([
   "admin-password-recovery",
   "admin-email-verification",
+  "stock-market-orchestrator",
 ]);
 const WRAPPED_RUNTIME_FUNCTIONS = new Set([
   "player-api",
@@ -119,7 +121,9 @@ test("local Supabase starts every declared split Edge security boundary", async 
     /dispatchRateLimitedReviewedPlayerRequest/,
   );
   assert.match(functionSources["bootstrap-api"], /handleStaffSignupRequest/);
-  for (const name of expectedFalse.filter((value) => value.startsWith("stock-market-"))) {
+  assert.match(functionSources["stock-market-orchestrator"], /verify_runtime_scheduler_token_v1/);
+  assert.match(functionSources["stock-market-orchestrator"], /handleStockMarketRunnerRequest/);
+  for (const name of expectedFalse.filter((value) => value.startsWith("stock-market-") && value !== "stock-market-orchestrator")) {
     assert.match(functionSources[name], /handleStockMarket/);
   }
 

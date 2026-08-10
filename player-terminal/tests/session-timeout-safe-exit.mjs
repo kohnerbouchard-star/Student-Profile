@@ -5,6 +5,8 @@ import {
   resolvePlayerLoginUrl
 } from "../src/session-timeout-safe-exit.js";
 
+const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
+
 class FakeCustomEvent {
   constructor(type, options = {}) {
     this.type = type;
@@ -101,6 +103,9 @@ function createHarness(sessionExpiresAt) {
     documentListeners,
     listeners,
     mount,
+    pendingTimeoutDelays() {
+      return [...timers.values()].map((timer) => timer.timeout);
+    },
     replaced,
     runRedirectTimers,
     runtime,
@@ -155,6 +160,24 @@ function createHarness(sessionExpiresAt) {
     "a resumed terminal must exit even when the original timer ID is still pending"
   );
   assert.deepEqual(harness.replaced, ["https://example.test/?mode=player&reason=session-expired"]);
+  controller.destroy();
+}
+
+{
+  const farFutureExpiry = new Date(Date.now() + MAX_BROWSER_TIMEOUT_MS + 60_000).toISOString();
+  const harness = createHarness(farFutureExpiry);
+  const controller = installPlayerSessionSafeExit(harness);
+
+  controller.check();
+  const unsafeDelay = harness.pendingTimeoutDelays().find((timeout) => timeout > MAX_BROWSER_TIMEOUT_MS);
+  assert.equal(
+    unsafeDelay,
+    undefined,
+    "far-future authoritative expiries must never be scheduled with an overflowing browser timeout"
+  );
+  assert.equal(harness.mount.attributes.has("data-player-session-exiting"), false);
+  assert.deepEqual(harness.replaced, []);
+
   controller.destroy();
 }
 

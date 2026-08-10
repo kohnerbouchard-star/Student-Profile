@@ -118,6 +118,13 @@ verify_jwt = false
 [functions.stock-market-trading]
 verify_jwt = false
 
+# Database-owned stock clock endpoint. It authenticates the Vault-held scheduler
+# token against the private hash verifier before delegating to the canonical stock
+# runner handler. Platform JWT verification must remain disabled for this internal
+# custom-auth boundary.
+[functions.stock-market-orchestrator]
+verify_jwt = false
+
 # Deployed compatibility surface. Browser runtime must not target this function.
 # admin-api still forwards a bounded set of authenticated Staff operations here
 # server-side. Keep platform JWT verification enabled and retire the function only
