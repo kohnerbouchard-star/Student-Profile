@@ -57,7 +57,7 @@ test("accepts an isolated staging publishable configuration", () => {
   assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
   assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
   assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
-  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
+  assert.equal(runtime.adminLogoutApiUrl, `${functions}/web-session-api/logout`);
   assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
   assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
@@ -84,7 +84,7 @@ test("routes reviewed browser APIs through an approved loopback proxy", () => {
   assert.equal(runtime.bootstrapApiUrl, `${functions}/bootstrap-api`);
   assert.equal(runtime.adminApiUrl, `${functions}/admin-api`);
   assert.equal(runtime.webSessionApiUrl, `${functions}/web-session-api`);
-  assert.equal(runtime.adminLogoutApiUrl, `${functions}/admin-logout-api`);
+  assert.equal(runtime.adminLogoutApiUrl, `${functions}/web-session-api/logout`);
   assert.equal(runtime.adminBffApiUrl, `${functions}/web-session-api/proxy`);
   assert.equal(runtime.passwordResetApiUrl, `${functions}/password-reset-api`);
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
