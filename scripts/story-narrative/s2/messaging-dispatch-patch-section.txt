@@ -1,0 +1,13 @@
+    path = repo / "backend/supabase/functions/classroom-api/messagingDispatch.ts"
+    replace_once(path,
+'''    : route.kind === "send"
+    ? "messageSend"
+    : "messageRead";
+''',
+'''    : route.kind === "send"
+    ? "messageSend"
+    : route.kind === "selectStoryChoice"
+    ? "messageStoryChoice"
+    : "messageRead";
+''')
+
