@@ -32,49 +32,14 @@ jobs:
 
           patcher = Path("scripts/story-narrative/s2/diagnostic-primary.py")
           text = patcher.read_text(encoding="utf-8")
-          old = '''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
-              replace_once(path,
-          '''  | { readonly kind: "markRead"; readonly threadId: string }
-            | { readonly kind: "malformed" };
-          ''',
-          '''  | { readonly kind: "markRead"; readonly threadId: string }
-            | {
-              readonly kind: "selectStoryChoice";
-              readonly threadId: string;
-              readonly interactionKey: string;
-            }
-            | { readonly kind: "malformed" };
-          ''')
-              replace_once(path,
-          '''  const read = normalized.match(
-              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/read$/,
-            );
-            if (read) return { kind: "markRead", threadId: read[1] };
+          start_marker = '    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"\n'
+          end_marker = '    path = repo / "backend/supabase/functions/classroom-api/messagingDispatch.ts"\n'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start + 1)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit("S2 route patcher section boundaries were not found")
 
-            return { kind: "malformed" };
-          }
-          ''',
-          '''  const read = normalized.match(
-              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/read$/,
-            );
-            if (read) return { kind: "markRead", threadId: read[1] };
-
-            const storyChoice = normalized.match(
-              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/story-interactions\\/([A-Za-z0-9][A-Za-z0-9._:-]{0,159})\\/select$/,
-            );
-            if (storyChoice) {
-              return {
-                kind: "selectStoryChoice",
-                threadId: storyChoice[1],
-                interactionKey: storyChoice[2],
-              };
-            }
-
-            return { kind: "malformed" };
-          }
-          ''')
-          '''
-          new = '''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
+          replacement = r'''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
               replace_once(path,
           '''  | { readonly kind: "markRead"; readonly threadId: string | null }
             | { readonly kind: "malformed" };
@@ -130,10 +95,11 @@ jobs:
               return { kind: "malformed" };
             }
           ''')
+
           '''
-          if text.count(old) != 1:
-              raise SystemExit("obsolete regex-route S2 patch block did not match exactly once")
-          patcher.write_text(text.replace(old, new, 1), encoding="utf-8")
+          updated = text[:start] + replacement + text[end:]
+          compile(updated, str(patcher), "exec")
+          patcher.write_text(updated, encoding="utf-8")
 
           roadmap = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
           roadmap_text = roadmap.read_text(encoding="utf-8")
@@ -141,6 +107,14 @@ jobs:
           if marker not in roadmap_text:
               raise SystemExit("roadmap run-completion marker missing")
           lines = [
+              "",
+              "### Run 2026-08-11 — S2 route-parser compatibility attempt 1",
+              "",
+              "Workflow run: `31433730927`",
+              "",
+              "Result: FAILED BEFORE PATCHER OR ROADMAP MUTATION.",
+              "",
+              "Failure: the temporary compatibility workflow embedded nested triple-quoted patch literals inside another Python triple-quoted literal, producing a helper-script `SyntaxError`. No S2 implementation source or patcher source changed in that run.",
               "",
               "### Run 2026-08-11 — S2 canonical route-parser compatibility repair",
               "",
@@ -157,10 +131,11 @@ jobs:
               "",
               "Correction:",
               "",
-              "- repaired only the temporary S2 patcher;",
+              "- repaired only the temporary S2 patcher using explicit section boundaries;",
               "- preserved nullable global/thread read-receipt routing;",
               "- S2 choice selection will be added as an eight-segment route under the existing Player API parser;",
-              "- added a bounded public `interactionKey` route pattern without replacing the authoritative routing architecture.",
+              "- added a bounded public `interactionKey` route pattern without replacing the authoritative routing architecture;",
+              "- compiled the corrected patcher before publication.",
               "",
               "Next: trigger the complete S2 verify-and-land workflow from this corrected patcher and continue fail-closed through any subsequent exact compatibility or test failure.",
               "",
