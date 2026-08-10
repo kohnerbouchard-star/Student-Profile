@@ -480,6 +480,23 @@ Archive diagnostic error: `KeyError: "filename 'MANIFEST.json' not found"`
 
 Next: if archive/member verification is green, update the temporary S2 verification runner to the actual stored chunk hashes plus this reconstructed archive hash; retain per-member manifest verification before migration generation.
 
+### Run 2026-08-10 — S2 prefixed archive member diagnostic
+
+Workflow run: `31371996395`
+Diagnostic source head: `a47817dd67c4d7964fb2ce792c0473688d5b56cb`
+
+Correction to prior diagnostic: the tar archive intentionally stores payloads under top-level `s2bundle/`; the prior check looked for the manifest at archive root.
+
+Reconstructed archive SHA-256: `9487a4fc4cf35ce580e6c6f53257ca7520c0954353736d709aca1c354e9690d4`
+Resolved archive prefix: `s2bundle/`
+per-member MANIFEST verification: `true`
+
+- `apply_structured_response_windows_v1.py`: verified `true` (24428 bytes sha256=027d6770c36a952be1a2c4eb4a480094fb84eb82d5c7cc5150b90e5900848d51);
+- `apply_structured_response_windows_v1_followup.py`: verified `true` (41247 bytes sha256=a186835f15687d9a47fcce190d09cd293630fdd7c3ca8774f35b28d818d95f00);
+- `structured_response_windows_v1.sql.body`: verified `true` (27857 bytes sha256=52faae72fece6ab83c949119b5a1bf89735556c46c833dca9e9a24ddfe3e1a28);
+
+Next: if every member verifies, correct the temporary S2 landing workflow to use the actual stored chunk hashes, reconstructed archive hash, and resolved top-level payload directory; keep all manifest checks before migration generation.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
