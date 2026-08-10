@@ -1,0 +1,177 @@
+name: Story Narrative S2 Route Parser Compatibility
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-route-parser-compat.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Repair staged S2 patcher for canonical segment router and update roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          patcher = Path("scripts/story-narrative/s2/diagnostic-primary.py")
+          text = patcher.read_text(encoding="utf-8")
+          old = '''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
+              replace_once(path,
+          '''  | { readonly kind: "markRead"; readonly threadId: string }
+            | { readonly kind: "malformed" };
+          ''',
+          '''  | { readonly kind: "markRead"; readonly threadId: string }
+            | {
+              readonly kind: "selectStoryChoice";
+              readonly threadId: string;
+              readonly interactionKey: string;
+            }
+            | { readonly kind: "malformed" };
+          ''')
+              replace_once(path,
+          '''  const read = normalized.match(
+              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/read$/,
+            );
+            if (read) return { kind: "markRead", threadId: read[1] };
+
+            return { kind: "malformed" };
+          }
+          ''',
+          '''  const read = normalized.match(
+              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/read$/,
+            );
+            if (read) return { kind: "markRead", threadId: read[1] };
+
+            const storyChoice = normalized.match(
+              /^\\/messages\\/threads\\/(thr_[0-9a-f]{32})\\/story-interactions\\/([A-Za-z0-9][A-Za-z0-9._:-]{0,159})\\/select$/,
+            );
+            if (storyChoice) {
+              return {
+                kind: "selectStoryChoice",
+                threadId: storyChoice[1],
+                interactionKey: storyChoice[2],
+              };
+            }
+
+            return { kind: "malformed" };
+          }
+          ''')
+          '''
+          new = '''    path = repo / "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts"
+              replace_once(path,
+          '''  | { readonly kind: "markRead"; readonly threadId: string | null }
+            | { readonly kind: "malformed" };
+          ''',
+          '''  | { readonly kind: "markRead"; readonly threadId: string | null }
+            | {
+              readonly kind: "selectStoryChoice";
+              readonly threadId: string;
+              readonly interactionKey: string;
+            }
+            | { readonly kind: "malformed" };
+          ''')
+              replace_once(path,
+          '''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
+          ''',
+          '''const THREAD_ID_PATTERN = /^thr_[0-9a-f]{32}$/;
+          const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+          ''')
+              replace_once(path,
+          '''  if (
+              segments.length >= 3 &&
+              segments[0] === "players" &&
+              segments[1] === "me" &&
+              segments[2] === "messages"
+            ) {
+              return { kind: "malformed" };
+            }
+          ''',
+          '''  if (
+              segments.length === 8 &&
+              segments[0] === "players" &&
+              segments[1] === "me" &&
+              segments[2] === "messages" &&
+              segments[3] === "threads" &&
+              THREAD_ID_PATTERN.test(segments[4]) &&
+              segments[5] === "story-interactions" &&
+              STORY_INTERACTION_KEY_PATTERN.test(segments[6]) &&
+              segments[7] === "select"
+            ) {
+              return {
+                kind: "selectStoryChoice",
+                threadId: segments[4],
+                interactionKey: segments[6],
+              };
+            }
+
+            if (
+              segments.length >= 3 &&
+              segments[0] === "players" &&
+              segments[1] === "me" &&
+              segments[2] === "messages"
+            ) {
+              return { kind: "malformed" };
+            }
+          ''')
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("obsolete regex-route S2 patch block did not match exactly once")
+          patcher.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          roadmap = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          roadmap_text = roadmap.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          if marker not in roadmap_text:
+              raise SystemExit("roadmap run-completion marker missing")
+          lines = [
+              "",
+              "### Run 2026-08-11 — S2 canonical route-parser compatibility repair",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Source head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Result: PATCHER COMPATIBILITY REPAIRED; NO S2 IMPLEMENTATION SOURCE APPLIED IN THIS RUN.",
+              "",
+              "Finding:",
+              "",
+              "- current Player Messaging routing is the canonical segment-based `readPlayerApiRouteSegments` implementation;",
+              "- the prepared S2 primary patcher incorrectly expected an obsolete regex-normalized router and a non-null-only `markRead` route;",
+              "- changing production routing to match that stale patcher would be an architectural regression.",
+              "",
+              "Correction:",
+              "",
+              "- repaired only the temporary S2 patcher;",
+              "- preserved nullable global/thread read-receipt routing;",
+              "- S2 choice selection will be added as an eight-segment route under the existing Player API parser;",
+              "- added a bounded public `interactionKey` route pattern without replacing the authoritative routing architecture.",
+              "",
+              "Next: trigger the complete S2 verify-and-land workflow from this corrected patcher and continue fail-closed through any subsequent exact compatibility or test failure.",
+              "",
+          ]
+          roadmap.write_text(roadmap_text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-route-parser-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-route-parser-compat.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): align S2 patcher with segment message routes"
+          git push origin HEAD:feat/story-narrative-convergence-v1
