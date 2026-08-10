@@ -497,6 +497,36 @@ per-member MANIFEST verification: `true`
 
 Next: if every member verifies, correct the temporary S2 landing workflow to use the actual stored chunk hashes, reconstructed archive hash, and resolved top-level payload directory; keep all manifest checks before migration generation.
 
+### Run 2026-08-10 — S2 verification attempt 2
+
+Workflow run: `31372150461`
+Workflow head: `6d7d86f1d6664d2bc6d7e602ce9048ce7adac870`
+
+Result: FAILED BEFORE MIGRATION GENERATION OR SOURCE APPLICATION.
+
+Passed before failure:
+
+- exact branch/S1 boundary;
+- pinned Node, Deno, and Supabase CLI setup.
+
+Failure:
+
+- temporary per-chunk SHA expectations still disagreed with checkout bytes;
+- the runner stopped before archive decode, migration generation, source changes, dependency install, or tests.
+
+Decision:
+
+- remove brittle individual chunk hash assertions;
+- retain the independently diagnosed full reconstructed archive SHA-256 plus mandatory per-member MANIFEST byte-count/SHA-256 checks;
+- this is a stronger content-integrity boundary because no payload can be applied unless the complete archive and every implementation member are verified.
+
+### Run 2026-08-10 — S2 attempt-2 roadmap persistence
+
+Workflow run: `31372236884`
+Logging source head: `0239839f5c91396895ede96630c883791cba66d2`
+
+Next: rerun the complete S2 landing sequence from archive verification onward; do not skip any source or regression step.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
