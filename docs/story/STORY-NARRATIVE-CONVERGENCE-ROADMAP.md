@@ -115,7 +115,7 @@ Safety boundary:
 
 ### S3 — Relationship state
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Goal: make recurring characters remember how the Player has treated them across the campaign.
 
@@ -967,6 +967,39 @@ Remaining S2 acceptance:
 - connected staging database replay and end-to-end Player selection acceptance before merge.
 
 Next: S3 recurring-character relationship state, consuming only authoritative S2 effective choices and existing story effects.
+
+### Run 2026-08-11 — S3 relationship-state bootstrap
+
+Workflow run: `31436690614`
+Starting branch head: `0028d51e3b85bb89a945e76e6d25741e78b8ccea`
+
+Design locked before implementation:
+
+- one private canonical relationship snapshot per `(game, Player, characterKey)`;
+- bounded integer metrics `standing`, `trust`, `respect`, `affinity`, `obligation`, and `suspicion`, each clamped to `[-100, 100]`;
+- `standing` is the only canonical overall-tier source, avoiding an implicit weighted composite of unrelated metrics;
+- stable tiers are `hostile`, `wary`, `neutral`, `cooperative`, and `trusted`;
+- relationship changes occur only through a deterministic authored `character_relationship_adjust` Story effect;
+- one effect may carry explicit non-zero deltas for one or more supported metrics;
+- every adjustment records immutable source Story event/effect index, before/after state, exact deltas, and replay identity;
+- exact replay returns the existing adjustment without applying deltas twice;
+- divergent replay identity/fingerprint fails closed;
+- relationship snapshots are loaded into `PlayerStoryContext` so Story rules can branch on metric thresholds and overall tier;
+- new conditions will support metric-at-least, metric-at-most, and overall-tier equality;
+- no browser inserts/updates/deletes and no generic Admin correction endpoint are introduced in S3;
+- internal numeric metrics are not exposed to the Player UI in S3; a later authored presentation may expose an intentional tier/label without leaking internal scoring;
+- S3 does not interpret S2 choices itself; S4 will map authoritative effective choices to relationship/economic/story consequences using these proven S3 effects.
+
+Planned implementation surfaces:
+
+- new Supabase relationship snapshot + immutable adjustment tables and one atomic service-side RPC;
+- Story effect/parser/execution contracts;
+- Story condition/parser/evaluator contracts;
+- `PlayerStoryContext` relationship hydration;
+- Supabase relationship writer wired into the existing post-stock-tick Story runner;
+- migration replay/privacy/idempotency, parser, condition, effect, repository, writer, runner, and existing S1/S2 regression coverage.
+
+Next: generate the S3 migration with pinned Supabase CLI, apply the bounded relationship domain changes, and run the complete Story + Messaging + stock-runner regression set before marking S3 complete on branch.
 
 ## Run-completion rule
 
