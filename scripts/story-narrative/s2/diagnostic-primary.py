@@ -372,7 +372,7 @@ const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 
     path = repo / "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
     replace_once(path, '  "messageSearch",\n  "messageSend",', '  "messageSearch",\n  "messageSend",\n  "storyChoiceSelect",')
-    replace_once(path, '  "messageRead",\n  "news",', '  "messageRead",\n  "messageStoryChoice",\n  "news",')
+    replace_once(path, '  | "messageRead"\n  | "news"', '  | "messageRead"\n  | "messageStoryChoice"\n  | "news"')
     replace_once(path, 'export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;', 'export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-10.1" as const;')
     replace_once(path,
 '''  {

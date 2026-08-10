@@ -725,6 +725,34 @@ Correction in this run:
 
 Next: repin the V2 workflow directly through the GitHub connector and rerun the complete S2 landing suite.
 
+### Run 2026-08-11 — S2 verification attempt 7
+
+Workflow run: `31434485863`
+Source head: `9afa1eb16df3a37e221e8496c8b253075f3e0e07`
+Ephemeral generated migration: `20260810213459_add_story_structured_response_windows_v1.sql`
+
+Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- all prior integrity/toolchain/migration/parser checks;
+- canonical segment-route patcher compatibility;
+- current classroom Messaging dispatcher compatibility.
+
+Failure:
+
+- the temporary patcher correctly targeted `messageRead -> news` ordering but represented `PlayerCapabilityEndpointKey` as comma-separated array entries;
+- current authoritative contract is a TypeScript string-literal union using `|` prefixes;
+- guarded application stopped before dependencies or tests ran.
+
+Correction:
+
+- change only the temporary patcher to insert `| "messageStoryChoice"` between the existing `| "messageRead"` and `| "news"` union members;
+- preserve all existing endpoint order and unrelated capability definitions;
+- compile the corrected patcher before publication.
+
+Next: direct-repin the V2 workflow and rerun the complete S2 landing sequence.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
