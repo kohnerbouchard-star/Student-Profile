@@ -653,6 +653,39 @@ Correction:
 
 Next: trigger the complete S2 verify-and-land workflow from this corrected patcher and continue fail-closed through any subsequent exact compatibility or test failure.
 
+### Run 2026-08-11 — S2 verification attempt 5
+
+Workflow run: `31433998357`
+Source head: `8a2dc62d9ec2e9b9fa17651111285918ac8b2db9`
+Ephemeral generated migration: `20260810212832_add_story_structured_response_windows_v1.sql`
+
+Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch and S1 ancestry boundary;
+- pinned Node, Deno, and Supabase CLI setup;
+- reconstructed S2 archive SHA-256 and every embedded MANIFEST member check;
+- repaired branch primary/followup patcher Git-blob pins and Python compilation;
+- Supabase CLI migration generation;
+- exact S1 `character_message` parser-format compatibility normalization;
+- previously repaired canonical segment-route patch section.
+
+Failure:
+
+- the temporary primary patcher expected an obsolete `case "markRead"` switch in `classroom-api/messagingDispatch.ts`;
+- current authoritative source uses a `route.kind` ternary to map the Player Messaging route to a reviewed rate-limit endpoint key;
+- dependencies and regression tests did not run because the guarded patch stopped at this mismatch.
+
+Correction in this run:
+
+- repair only the temporary primary S2 patcher;
+- preserve the current dispatcher architecture;
+- add `selectStoryChoice -> messageStoryChoice` as one additional ternary branch before the existing `messageRead` fallback;
+- compile the corrected patcher before publication.
+
+Next: rerun the complete S2 V2 landing sequence from the repaired patcher and continue fail-closed at the next exact boundary, if any.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:

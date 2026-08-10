@@ -335,13 +335,15 @@ const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 
     path = repo / "backend/supabase/functions/classroom-api/messagingDispatch.ts"
     replace_once(path,
-'''    case "markRead":
-      return "messageRead";
+'''    : route.kind === "send"
+    ? "messageSend"
+    : "messageRead";
 ''',
-'''    case "markRead":
-      return "messageRead";
-    case "selectStoryChoice":
-      return "messageStoryChoice";
+'''    : route.kind === "send"
+    ? "messageSend"
+    : route.kind === "selectStoryChoice"
+    ? "messageStoryChoice"
+    : "messageRead";
 ''')
 
     path = repo / "backend/src/security/playerRateLimitDispatch.ts"
