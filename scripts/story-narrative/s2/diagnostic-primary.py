@@ -410,55 +410,151 @@ const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 ''')
 
     path = repo / "player-terminal/src/api/messaging-backend-routes.js"
-    replace_once(path, '  "messageRead"\n]);', '  "messageRead",\n  "messageStoryChoice"\n]);')
     replace_once(path,
-'''  if (key === "messageRead") {
-    return `/players/me/messages/threads/${requireThreadId(params.threadId)}/read`;
-  }
+'''const THREAD_ID = /^thr_[0-9a-f]{32}$/;
+const PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 ''',
-'''  if (key === "messageRead") {
-    return `/players/me/messages/threads/${requireThreadId(params.threadId)}/read`;
+'''const THREAD_ID = /^thr_[0-9a-f]{32}$/;
+const STORY_INTERACTION_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+const STORY_CHOICE_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/;
+const PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+''')
+    replace_once(path,
+'''  "messageSend",
+  "messageRead",
+]);
+''',
+'''  "messageSend",
+  "messageRead",
+  "messageStoryChoice",
+]);
+''')
+    replace_once(path,
+'''  if (endpointKey === "messageRead") {
+    const source = params.threadId || payload.threadId;
+    const id = threadId(source, endpointKey);
+    return {
+      method: "POST",
+      path: `/players/me/messages/threads/${encodeURIComponent(id)}/read`,
+      payload: undefined,
+    };
   }
-  if (key === "messageStoryChoice") {
-    const interactionKey = String(params.interactionKey || "").trim();
-    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(interactionKey)) {
-      throw new TypeError("messageStoryChoice requires a valid interactionKey.");
+  return null;
+}
+''',
+'''  if (endpointKey === "messageRead") {
+    const source = params.threadId || payload.threadId;
+    const id = threadId(source, endpointKey);
+    return {
+      method: "POST",
+      path: `/players/me/messages/threads/${encodeURIComponent(id)}/read`,
+      payload: undefined,
+    };
+  }
+  if (endpointKey === "messageStoryChoice") {
+    const id = threadId(params.threadId || payload.threadId, endpointKey);
+    const interactionKey = required(
+      params.interactionKey || payload.interactionKey,
+      "interactionKey",
+      endpointKey,
+    );
+    const choiceKey = required(payload.choiceKey, "choiceKey", endpointKey);
+    if (!STORY_INTERACTION_KEY.test(interactionKey)) {
+      return invalid("A valid Story interaction key is required.", endpointKey);
     }
-    return `/players/me/messages/threads/${requireThreadId(params.threadId)}/story-interactions/${interactionKey}/select`;
+    if (!STORY_CHOICE_KEY.test(choiceKey)) {
+      return invalid("A valid Story choice key is required.", endpointKey);
+    }
+    return {
+      method: "POST",
+      path: `/players/me/messages/threads/${encodeURIComponent(id)}/story-interactions/${encodeURIComponent(interactionKey)}/select`,
+      payload: {
+        choiceKey,
+        idempotencyKey: idempotency(payload, endpointKey),
+      },
+    };
   }
+  return null;
+}
 ''')
 
     path = repo / "player-terminal/src/api/endpoints.js"
     replace_once(path,
-'''  messageRead: Object.freeze({
-    method: "POST",
-    path: ({ threadId } = {}) => resolveMessagingBackendRoute("messageRead", { threadId }),
-    contract: "Mark one Player Messaging thread read."
-  }),
+'''  messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
+  messageRead: { method: "POST", path: "/messages/threads/:threadId/read" },
+  progression: { method: "GET", path: "/progression" },
 ''',
-'''  messageRead: Object.freeze({
+'''  messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
+  messageRead: { method: "POST", path: "/messages/threads/:threadId/read" },
+  messageStoryChoice: {
     method: "POST",
-    path: ({ threadId } = {}) => resolveMessagingBackendRoute("messageRead", { threadId }),
-    contract: "Mark one Player Messaging thread read."
-  }),
-  messageStoryChoice: Object.freeze({
-    method: "POST",
-    path: ({ threadId, interactionKey } = {}) =>
-      resolveMessagingBackendRoute("messageStoryChoice", { threadId, interactionKey }),
-    contract: "Select one authored Story response choice in a private character conversation."
-  }),
+    path: "/messages/threads/:threadId/story-interactions/:interactionKey/select",
+  },
+  progression: { method: "GET", path: "/progression" },
 ''')
 
     path = repo / "player-terminal/src/api/capabilities.js"
-    replace_once(path, '  "messageSearch",\n  "messageSend",', '  "messageSearch",\n  "messageSend",\n  "storyChoiceSelect",')
-    replace_once(path, '  messageSearch: "messageSearch",\n  messageSend: "messageSend",', '  messageSearch: "messageSearch",\n  messageSend: "messageSend",\n  storyChoiceSelect: "messageStoryChoice",')
+    replace_once(path,
+'''  "messageSearch",
+  "messageSend",
+  "notificationsRead",
+''',
+'''  "messageSearch",
+  "messageSend",
+  "storyChoiceSelect",
+  "notificationsRead",
+''')
+    replace_once(path,
+'''      .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
+''',
+'''      .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch", "storyChoiceSelect"].includes(key))
+''')
+    replace_once(path,
+'''  messageThreadCreate: "messageSend",
+  messageRead: "messageSend",
+  storeQuote: "storePurchase",
+''',
+'''  messageThreadCreate: "messageSend",
+  messageRead: "messageSend",
+  messageStoryChoice: "storyChoiceSelect",
+  storeQuote: "storePurchase",
+''')
 
     path = repo / "player-terminal/src/integrations/student-profile-capability-manifest.js"
-    replace_once(path, '  messageSend: Object.freeze(["messageSend"]),\n  messageRead: Object.freeze(["messageRead"]),', '  messageSend: Object.freeze(["messageSend"]),\n  messageRead: Object.freeze(["messageRead"]),\n  messageStoryChoice: Object.freeze(["messageStoryChoice"]),')
-    replace_once(path, '  messageSearch: "messageSearch",\n  messageSend: "messageSend",', '  messageSearch: "messageSearch",\n  messageSend: "messageSend",\n  storyChoiceSelect: "messageStoryChoice",')
+    replace_once(path,
+'''  messageSend: Object.freeze(["messageSend"]),
+  messageRead: Object.freeze(["messageRead"]),
+  news: Object.freeze(["news"]),
+''',
+'''  messageSend: Object.freeze(["messageSend"]),
+  messageRead: Object.freeze(["messageRead"]),
+  messageStoryChoice: Object.freeze(["messageStoryChoice"]),
+  news: Object.freeze(["news"]),
+''')
+    replace_once(path,
+'''  messageSearch: "messageSearch",
+  messageSend: "messageSend",
+  notificationsRead: "notificationsRead",
+''',
+'''  messageSearch: "messageSearch",
+  messageSend: "messageSend",
+  storyChoiceSelect: "messageStoryChoice",
+  notificationsRead: "notificationsRead",
+''')
 
     path = repo / "player-terminal/src/api/resource-plan.js"
-    replace_once(path, '  messageRead: Object.freeze(["dashboard", "messages", "notifications"]),\n  progressionUnlock:', '  messageRead: Object.freeze(["dashboard", "messages", "notifications"]),\n  messageStoryChoice: Object.freeze(["dashboard", "messages", "notifications"]),\n  progressionUnlock:')
+    replace_once(path,
+'''  messageThreadCreate: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageSend: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageRead: Object.freeze(["dashboard", "messages", "notifications"]),
+  progressionUnlock: Object.freeze(["dashboard", "progression"]),
+''',
+'''  messageThreadCreate: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageSend: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageRead: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageStoryChoice: Object.freeze(["dashboard", "messages", "notifications"]),
+  progressionUnlock: Object.freeze(["dashboard", "progression"]),
+''')
 
     path = repo / "player-terminal/src/api/payload-normalizer.js"
     replace_once(path,
@@ -475,6 +571,11 @@ const STORY_INTERACTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 ''')
 
     path = repo / "player-terminal/src/app.js"
+    replace_once(path,
+'''      "data-player-marketplace-cancel", "data-player-message-thread", "data-player-loan-offer",
+''',
+'''      "data-player-marketplace-cancel", "data-player-message-thread", "data-player-story-choice", "data-player-loan-offer",
+''')
     replace_once(path,
 '''    const messageThread = event.target.closest("[data-player-message-thread]");
 ''',
@@ -571,7 +672,8 @@ Deno.test("S2 Story response migration is private, immutable, and replay-safe", 
 import test from "node:test";
 import { renderMessagesPage } from "../src/pages/messages-page.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
-import { PLAYER_ENDPOINTS } from "../src/api/endpoints.js";
+import { PLAYER_ENDPOINTS, resolveEndpoint } from "../src/api/endpoints.js";
+import { resolveMessagingBackendRequest } from "../src/api/messaging-backend-routes.js";
 test("Story interaction renders choices only while open", () => {
   const data = { capabilities: { actions: { storyChoiceSelect: true } }, messages: { unread: 1, threads: [{
     id: `thr_${"a".repeat(32)}`, title: "Jonis Hale", type: "Character conversation", tone: "amber", initials: "JH",
@@ -589,9 +691,25 @@ test("Story interaction renders choices only while open", () => {
   assert.match(resolved, /Response recorded/);
 });
 test("Story choice endpoint and payload are bounded", () => {
-  assert.equal(PLAYER_ENDPOINTS.messageStoryChoice.path({ threadId: `thr_${"a".repeat(32)}`, interactionKey: "jonis.arrival.offer" }),
-    `/players/me/messages/threads/thr_${"a".repeat(32)}/story-interactions/jonis.arrival.offer/select`);
+  const threadId = `thr_${"a".repeat(32)}`;
+  const interactionKey = "jonis.arrival.offer";
+  assert.equal(
+    resolveEndpoint(PLAYER_ENDPOINTS.messageStoryChoice, { threadId, interactionKey }),
+    `/messages/threads/${threadId}/story-interactions/jonis.arrival.offer/select`,
+  );
   assert.deepEqual(normalizeWritePayload("messageStoryChoice", { choiceKey: "accept" }), { choiceKey: "accept" });
+  assert.deepEqual(
+    resolveMessagingBackendRequest({
+      endpointKey: "messageStoryChoice",
+      payload: { choiceKey: "accept", idempotencyKey: "story-choice:1" },
+      params: { threadId, interactionKey },
+    }),
+    {
+      method: "POST",
+      path: `/players/me/messages/threads/${threadId}/story-interactions/jonis.arrival.offer/select`,
+      payload: { choiceKey: "accept", idempotencyKey: "story-choice:1" },
+    },
+  );
 });
 ''')
 
