@@ -1,0 +1,131 @@
+name: Story Narrative S2 Player Terminal Compatibility
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-player-terminal-compat.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Reconcile remaining Player terminal S2 patcher and update roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          patcher = Path('scripts/story-narrative/s2/diagnostic-primary.py')
+          text = patcher.read_text(encoding='utf-8')
+          start_marker = '    path = repo / "player-terminal/src/api/messaging-backend-routes.js"\n'
+          end_marker = '    write(repo / "backend/src/domains/storylines/contracts/storyCharacterResponseWindowContract.test.ts"'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start + 1)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit('Player terminal patcher section boundaries were not found')
+          replacement = Path('scripts/story-narrative/s2/player-terminal-patch-section.txt').read_text(encoding='utf-8')
+          text = text[:start] + replacement + text[end:]
+
+          old_import = 'import { PLAYER_ENDPOINTS } from "../src/api/endpoints.js";\n'
+          new_import = 'import { PLAYER_ENDPOINTS, resolveEndpoint } from "../src/api/endpoints.js";\nimport { resolveMessagingBackendRequest } from "../src/api/messaging-backend-routes.js";\n'
+          if text.count(old_import) != 1:
+              raise SystemExit('terminal S2 test import anchor did not match exactly once')
+          text = text.replace(old_import, new_import, 1)
+
+          old_test = '''  assert.equal(PLAYER_ENDPOINTS.messageStoryChoice.path({ threadId: `thr_${"a".repeat(32)}`, interactionKey: "jonis.arrival.offer" }),
+    `/players/me/messages/threads/thr_${"a".repeat(32)}/story-interactions/jonis.arrival.offer/select`);
+  assert.deepEqual(normalizeWritePayload("messageStoryChoice", { choiceKey: "accept" }), { choiceKey: "accept" });
+'''
+          new_test = '''  const threadId = `thr_${"a".repeat(32)}`;
+  const interactionKey = "jonis.arrival.offer";
+  assert.equal(
+    resolveEndpoint(PLAYER_ENDPOINTS.messageStoryChoice, { threadId, interactionKey }),
+    `/messages/threads/${threadId}/story-interactions/jonis.arrival.offer/select`,
+  );
+  assert.deepEqual(normalizeWritePayload("messageStoryChoice", { choiceKey: "accept" }), { choiceKey: "accept" });
+  assert.deepEqual(
+    resolveMessagingBackendRequest({
+      endpointKey: "messageStoryChoice",
+      payload: { choiceKey: "accept", idempotencyKey: "story-choice:1" },
+      params: { threadId, interactionKey },
+    }),
+    {
+      method: "POST",
+      path: `/players/me/messages/threads/${threadId}/story-interactions/jonis.arrival.offer/select`,
+      payload: { choiceKey: "accept", idempotencyKey: "story-choice:1" },
+    },
+  );
+'''
+          if text.count(old_test) != 1:
+              raise SystemExit('terminal S2 endpoint assertion anchor did not match exactly once')
+          text = text.replace(old_test, new_test, 1)
+          compile(text, str(patcher), 'exec')
+          patcher.write_text(text, encoding='utf-8')
+
+          roadmap = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          roadmap_text = roadmap.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          if marker not in roadmap_text:
+              raise SystemExit('roadmap marker missing')
+          lines = [
+              '',
+              '### Run 2026-08-11 — S2 verification attempt 8',
+              '',
+              'Workflow run: `31434648108`',
+              'Source head: `0e4d64cff4a8fb34deb2424fcb22d80ce68f4501`',
+              'Ephemeral generated migration: `20260810213706_add_story_structured_response_windows_v1.sql`',
+              '',
+              'Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.',
+              '',
+              'Passed before failure:',
+              '',
+              '- exact branch/S1 boundary, toolchain setup, S2 archive/member integrity, exact-checkout patcher compilation, migration generation, and S1 parser normalization;',
+              '- canonical segment Player API route compatibility;',
+              '- current classroom Messaging dispatcher compatibility;',
+              '- current TypeScript `PlayerCapabilityEndpointKey` union compatibility.',
+              '',
+              'Failure:',
+              '',
+              '- the temporary primary patcher expected an older Player-terminal Messaging route registry without the current trailing comma and expected a deprecated `resolveMessagingBackendRoute` helper shape;',
+              '- current terminal uses static `PLAYER_ENDPOINTS`, specialized `resolveMessagingBackendRequest`, capability-manifest coverage, shared idempotency injection, and generic `resolveEndpoint` path substitution;',
+              '- guarded application stopped before dependencies or tests ran.',
+              '',
+              'Correction in this run:',
+              '',
+              '- reconciled the entire remaining Player-terminal S2 patch section against current source instead of fixing one stale anchor at a time;',
+              '- add `messageStoryChoice` to the specialized Messaging backend route registry with bounded thread, interaction, choice, and idempotency handling;',
+              '- add the static Player endpoint path and `storyChoiceSelect` capability mapping without replacing current endpoint architecture;',
+              '- add capability-manifest endpoint coverage/action requirement and write invalidations;',
+              '- add bounded choice payload normalization, click handling, focus restoration selector support, and authored response-window rendering;',
+              '- update the S2 terminal test to validate both generic endpoint resolution and the authoritative Messaging backend adapter path;',
+              '- compile the reconciled primary patcher before publication.',
+              '',
+              'Next: retrigger the complete S2 V2 landing suite and continue fail-closed through the followup/backend test boundary.',
+              '',
+          ]
+          roadmap.write_text(roadmap_text.replace(marker, '\n'.join(lines) + marker, 1), encoding='utf-8')
+          PY
+          git diff --check
+          rm -f scripts/story-narrative/s2/player-terminal-patch-section.txt
+          rm -f .github/workflows/story-narrative-s2-player-terminal-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/player-terminal-patch-section.txt docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-player-terminal-compat.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): reconcile S2 Player terminal patcher"
+          git push origin HEAD:feat/story-narrative-convergence-v1
