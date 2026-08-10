@@ -86,6 +86,37 @@ export async function executeStoryEffect(
       );
     }
 
+    if (input.effect.type === "character_message") {
+      if (!input.playerContext) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "missing_player_context",
+        );
+      }
+      if (!input.dependencies.messages) {
+        throw new Error("story_message_writer_unavailable");
+      }
+      const result = await input.dependencies.messages.deliverCharacterMessage({
+        gameSessionId: input.gameSessionId,
+        playerId: input.playerContext.playerId,
+        storylineEventId: input.storylineEventId,
+        effectIndex,
+        characterKey: input.effect.characterKey,
+        characterName: input.effect.characterName,
+        interactionKey: input.effect.interactionKey,
+        messagePurpose: input.effect.messagePurpose,
+        body: input.effect.body,
+      });
+      return applied(
+        input.effect,
+        effectIndex,
+        input.playerContext.playerId,
+        collectWriteIds(result),
+      );
+    }
+
     if (input.effect.type === "story_flag_set") {
       return applied(
         input.effect,

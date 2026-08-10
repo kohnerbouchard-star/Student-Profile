@@ -175,6 +175,33 @@ test("Messages model preserves Korean and long text while redacting private UUID
   assert.match(serialized, /private identifier hidden/);
 });
 
+
+
+test("Messages model preserves story character and provenance metadata", () => {
+  const model = normalizeMessagesReadModel(readPayload([thread(0, {
+    type: "story",
+    title: "Jonis Hale",
+    allowPlayerReplies: false,
+    storyCharacterKey: "character.northreach.jonis-hale.v1",
+    storyCharacterName: "Jonis Hale",
+    messages: [message(0, {
+      senderType: "system",
+      senderName: "Jonis Hale",
+      senderCharacterKey: "character.northreach.jonis-hale.v1",
+      storylineKey: "econovaria_meridian_v1",
+      storyEventKey: "northreach_production_pressure",
+      interactionKey: "interaction.jonis.production-pressure.v1",
+      messagePurpose: "warning",
+    })],
+  })]));
+  const story = model.threads[0];
+  assert.equal(story.type, "story");
+  assert.equal(story.storyCharacterName, "Jonis Hale");
+  assert.equal(story.allowPlayerReplies, false);
+  assert.equal(story.messages[0].storyEventKey, "northreach_production_pressure");
+  assert.equal(story.messages[0].messagePurpose, "warning");
+});
+
 test("Messages model handles zero threads and high-volume authoritative pages", () => {
   const empty = normalizeMessagesReadModel(readPayload([]));
   assert.equal(empty.isEmpty, true);
@@ -262,6 +289,8 @@ test("Messages route registration is V2-owned and presentation source excludes p
   assert.match(route, /participants/);
   assert.match(route, /moderationReason/);
   assert.match(route, /hiddenReason/);
+  assert.match(route, /Story character/);
+  assert.match(route, /Story provenance/);
   assert.doesNotMatch(route, /text:\s*(?:thread|message)\.id/);
   assert.doesNotMatch(`${route}\n${controller}`, /playerUuid|ownerUuid|rawToken|serviceRole|authorization|Bearer/i);
   assert.doesNotMatch(route, /Create thread|New message|Send message|targetAllPlayers|allowPlayerReplies.*checkbox/i);

@@ -50,12 +50,12 @@ export function renderMessagesPage(data, ui) {
   const messages = data.messages || { unread: 0, threads: [] };
   const threads = Array.isArray(messages.threads) ? messages.threads : [];
   const thread = threads.find((item) => item.id === ui.messageThreadId) || threads[0];
-  const heading = `<div class="player-terminal-page-heading"><div><small>PLAYER COMMUNICATIONS</small><h2>Messages</h2><p>Auditable Player, Contract, system, and administrator communication.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`${Number(messages.unread || 0)} UNREAD`, messages.unread ? "amber" : "green")}</div></div>`;
+  const heading = `<div class="player-terminal-page-heading"><div><small>PLAYER COMMUNICATIONS</small><h2>Messages</h2><p>Player, Contract, character, system, and administrator communication.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`${Number(messages.unread || 0)} UNREAD`, messages.unread ? "amber" : "green")}</div></div>`;
   if (!thread) {
     return `<section class="player-terminal-page player-terminal-messages-page">
       ${heading}
       ${createThreadPanel()}
-      <section class="player-terminal-panel">${renderEmptyState({ title: "No conversations yet", detail: "Start a same-game Player thread or wait for a Contract, system, or administrator message.", iconName: "messages" })}</section>
+      <section class="player-terminal-panel">${renderEmptyState({ title: "No conversations yet", detail: "Start a same-game Player thread or wait for a Contract, character, system, or administrator message.", iconName: "messages" })}</section>
     </section>`;
   }
   return `<section class="player-terminal-page player-terminal-messages-page">

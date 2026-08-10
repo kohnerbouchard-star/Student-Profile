@@ -26,6 +26,7 @@ export const STORY_EFFECT_TYPES = [
   "market_news_post",
   "market_status_change",
   "story_flag_set",
+  "character_message",
 ] as const;
 
 export const STORY_POLICY_TYPES = [
@@ -62,12 +63,25 @@ export const STORY_NOTIFICATION_DISPLAY_MODES = [
   "modal_on_next_login",
 ] as const;
 
+export const STORY_CHARACTER_MESSAGE_PURPOSES = [
+  "relationship",
+  "briefing",
+  "warning",
+  "request",
+  "offer",
+  "follow_up",
+  "crisis",
+  "reflection",
+] as const;
+
 export type StoryEffectType = typeof STORY_EFFECT_TYPES[number];
 export type StoryPolicyType = typeof STORY_POLICY_TYPES[number];
 export type StoryPolicyScopeType = typeof STORY_POLICY_SCOPE_TYPES[number];
 export type StoryNotificationType = typeof STORY_NOTIFICATION_TYPES[number];
 export type StoryNotificationDisplayMode =
   typeof STORY_NOTIFICATION_DISPLAY_MODES[number];
+export type StoryCharacterMessagePurpose =
+  typeof STORY_CHARACTER_MESSAGE_PURPOSES[number];
 
 export type StoryEffect =
   | StoryCashEffect
@@ -76,7 +90,8 @@ export type StoryEffect =
   | StoryNotificationEffect
   | StoryMarketNewsPostEffect
   | StoryMarketStatusChangeEffect
-  | StoryFlagSetEffect;
+  | StoryFlagSetEffect
+  | StoryCharacterMessageEffect;
 
 export interface StoryCashEffect {
   readonly type: "cash_credit" | "cash_debit";
@@ -127,6 +142,15 @@ export interface StoryFlagSetEffect {
   readonly type: "story_flag_set";
   readonly flagKey: string;
   readonly value: JsonValue;
+}
+
+export interface StoryCharacterMessageEffect {
+  readonly type: "character_message";
+  readonly characterKey: string;
+  readonly characterName: string;
+  readonly interactionKey: string | null;
+  readonly messagePurpose: StoryCharacterMessagePurpose;
+  readonly body: string;
 }
 
 export interface StoryRevealPayload {
@@ -222,6 +246,22 @@ export function parseStoryEffect(value: unknown): StoryEffect {
       status: readRequiredText(record.status, "effect.status"),
       reason: readOptionalText(record.reason, "effect.reason"),
       payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
+    };
+  }
+
+  if (type === "character_message") {
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),
+      characterName: readRequiredText(record.characterName, "effect.characterName"),
+      interactionKey: readOptionalText(record.interactionKey, "effect.interactionKey"),
+      messagePurpose: readOptionalEnum(
+        record.messagePurpose,
+        "effect.messagePurpose",
+        STORY_CHARACTER_MESSAGE_PURPOSES,
+        "relationship",
+      ),
+      body: readRequiredText(record.body, "effect.body"),
     };
   }
 

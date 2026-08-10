@@ -57,6 +57,59 @@ Deno.test("Admin Messaging creates typed Contract threads with public Player IDs
   assertNoUuid(JSON.stringify(result.body));
 });
 
+
+
+Deno.test("Admin Messaging reads story conversations but cannot author them", async () => {
+  const readService = new FakeService({
+    threads: [{
+      ...thread(),
+      type: "story",
+      title: "Jonis Hale",
+      allowPlayerReplies: false,
+      storyCharacterKey: "character.northreach.jonis-hale.v1",
+      storyCharacterName: "Jonis Hale",
+      messages: [{
+        id: MESSAGE,
+        senderType: "system",
+        senderName: "Jonis Hale",
+        senderCharacterKey: "character.northreach.jonis-hale.v1",
+        storylineKey: "econovaria_meridian_v1",
+        storyEventKey: "northreach_production_pressure",
+        interactionKey: "interaction.jonis.production-pressure.v1",
+        messagePurpose: "warning",
+        body: "They are asking us to skip a second inspection cycle.",
+        hidden: false,
+        hiddenReason: null,
+        createdAt: NOW,
+      }],
+    }],
+    returned: 1,
+  });
+  const readResult = await operation(readService, { method: "GET" });
+  assertEquals(readResult.status, 200);
+  const story = (readResult.body as any).data.threads[0];
+  assertEquals(story.type, "story");
+  assertEquals(story.storyCharacterName, "Jonis Hale");
+  assertEquals(story.messages[0].storyEventKey, "northreach_production_pressure");
+
+  const createService = new FakeService(null);
+  const createResult = await operation(createService, {
+    method: "POST",
+    suffix: "/messages/threads",
+    body: {
+      type: "story",
+      title: "Jonis Hale",
+      allowPlayerReplies: false,
+      playerIds: ["PLAYER-001"],
+      targetAllPlayers: false,
+      body: "Fake character message.",
+      idempotencyKey: "story:create:forbidden",
+    },
+  });
+  assertEquals(createResult.status, 400);
+  assertEquals(createService.calls.length, 0);
+});
+
 Deno.test("Admin Messaging policy keeps attachments disabled", async () => {
   const readService = new FakeService({
     playerThreadsEnabled: true,

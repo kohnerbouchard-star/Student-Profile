@@ -21,6 +21,11 @@ interface RawMessage {
   readonly senderType?: unknown;
   readonly senderName?: unknown;
   readonly senderReference?: unknown;
+  readonly senderCharacterKey?: unknown;
+  readonly storylineKey?: unknown;
+  readonly storyEventKey?: unknown;
+  readonly interactionKey?: unknown;
+  readonly messagePurpose?: unknown;
   readonly body?: unknown;
   readonly moderated?: unknown;
   readonly self?: unknown;
@@ -31,6 +36,8 @@ interface RawThread {
   readonly type?: unknown;
   readonly title?: unknown;
   readonly contractKey?: unknown;
+  readonly storyCharacterKey?: unknown;
+  readonly storyCharacterName?: unknown;
   readonly status?: unknown;
   readonly allowPlayerReplies?: unknown;
   readonly participantCount?: unknown;
@@ -344,7 +351,7 @@ function normalizeInbox(value: RawInbox | null) {
 function normalizeThread(value: unknown) {
   if (!isRecord(value)) throw new Error("invalid thread");
   const id = publicId(value.id, /^thr_[0-9a-f]{32}$/);
-  const type = enumText(value.type, ["announcement", "system", "player", "contract"]);
+  const type = enumText(value.type, ["announcement", "system", "player", "contract", "story"]);
   const title = requiredText(value.title, 160);
   const status = enumText(value.status, ["active", "disabled", "closed"]);
   const unread = safeInteger(value.unreadCount, 0, 100000);
@@ -355,17 +362,29 @@ function normalizeThread(value: unknown) {
   if (unread === null || participantCount === null || !rawMessages || rawMessages.length > 100) throw new Error("invalid thread");
   const messages = rawMessages.map(normalizeMessage);
   const last = messages.at(-1);
-  const tone = type === "announcement" ? "amber" : type === "system" ? "cyan" : type === "contract" ? "purple" : "green";
+  const tone = type === "announcement" ? "amber" : type === "system" || type === "story" ? "cyan" : type === "contract" ? "purple" : "green";
   return Object.freeze({
     id,
-    type: type === "announcement" ? "Administrator announcement" : type === "system" ? "System message" : type === "contract" ? "Contract thread" : "Player thread",
+    type: type === "announcement"
+      ? "Administrator announcement"
+      : type === "system"
+      ? "System message"
+      : type === "contract"
+      ? "Contract thread"
+      : type === "story"
+      ? "Character conversation"
+      : "Player thread",
     threadType: type,
     title,
     contractKey: optionalText(value.contractKey, 160),
+    storyCharacterKey: optionalText(value.storyCharacterKey, 160),
+    storyCharacterName: optionalText(value.storyCharacterName, 160),
     status: status === "active" ? "Online" : status === "disabled" ? "Disabled" : "Closed",
     rawStatus: status,
     allowPlayerReplies: value.allowPlayerReplies === true,
-    members: `${participantCount} participant${participantCount === 1 ? "" : "s"}`,
+    members: type === "story"
+      ? "Private character thread"
+      : `${participantCount} participant${participantCount === 1 ? "" : "s"}`,
     participantCount,
     unread,
     preview: last?.body ?? "No messages yet.",
@@ -387,6 +406,11 @@ function normalizeMessage(value: unknown) {
     senderType: enumText(value.senderType, ["player", "staff_user", "system"]),
     sender,
     senderReference: optionalText(value.senderReference, 160),
+    senderCharacterKey: optionalText(value.senderCharacterKey, 160),
+    storylineKey: optionalText(value.storylineKey, 160),
+    storyEventKey: optionalText(value.storyEventKey, 160),
+    interactionKey: optionalText(value.interactionKey, 160),
+    messagePurpose: optionalText(value.messagePurpose, 40),
     initials: initials(sender),
     body: requiredText(value.body, 1000),
     time,

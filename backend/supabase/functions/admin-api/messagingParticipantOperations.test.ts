@@ -52,6 +52,21 @@ Deno.test("Admin Messaging participant commands fail closed before RPC", async (
   }
 });
 
+
+
+Deno.test("Admin Messaging cannot change story conversation membership", async () => {
+  const service = new FakeService(null, {
+    code: "P0001",
+    message: "STORY_MESSAGE_PARTICIPANTS_IMMUTABLE",
+  });
+  const result = await operation(service, "add", {
+    playerId: "PLAYER-002",
+    idempotencyKey: "participant:story:locked",
+  });
+  assertEquals(result?.status, 409);
+  assertEquals((result?.body as any).code, "admin_message_story_participants_locked");
+});
+
 Deno.test("Admin Messaging participant errors do not enumerate cross-game or removed players", async () => {
   for (const [message, status, code] of [
     ["ADMIN_MESSAGE_PARTICIPANT_NOT_FOUND", 404, "admin_message_participant_not_found"],

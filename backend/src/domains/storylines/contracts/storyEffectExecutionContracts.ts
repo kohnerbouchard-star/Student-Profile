@@ -3,6 +3,7 @@ import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "./playerStoryContext.ts";
 import type {
   StoryEffect,
+  StoryCharacterMessagePurpose,
   StoryEffectType,
   StoryPolicyScopeType,
   StoryPolicyType,
@@ -54,6 +55,7 @@ export interface StoryEffectExecutionDependencies {
   readonly flags: StoryEffectFlagWriter;
   readonly impacts: StoryEffectImpactWriter;
   readonly contracts?: StoryEffectContractWriter;
+  readonly messages?: StoryEffectMessageWriter;
 }
 
 export interface StoryEffectLedgerWriter {
@@ -82,6 +84,24 @@ export interface StoryEffectContractWriter {
   createGameSessionContract(
     input: StoryContractCreateWriteInput,
   ): Promise<StoryWriteResult>;
+}
+
+export interface StoryEffectMessageWriter {
+  deliverCharacterMessage(
+    input: StoryCharacterMessageWriteInput,
+  ): Promise<StoryWriteResult>;
+}
+
+export interface StoryCharacterMessageWriteInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly storylineEventId: string;
+  readonly effectIndex: number;
+  readonly characterKey: string;
+  readonly characterName: string;
+  readonly interactionKey: string | null;
+  readonly messagePurpose: StoryCharacterMessagePurpose;
+  readonly body: string;
 }
 
 export interface StoryWriteResult {

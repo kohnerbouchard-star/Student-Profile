@@ -133,6 +133,13 @@ function messageCard({ thread, message, onRequestAction }) {
         ],
       }),
       createElement("p", { className: "admin-messages-route__body", text: message.body || "Message body unavailable." }),
+      message.storyEventKey || message.storylineKey || message.messagePurpose ? createElement("p", {
+        className: "admin-messages-route__contract",
+        children: [
+          createElement("strong", { text: "Story provenance" }),
+          [message.messagePurpose, message.storylineKey, message.storyEventKey, message.interactionKey].filter(Boolean).join(" · "),
+        ],
+      }) : null,
       message.hidden ? createElement("p", {
         className: "admin-messages-route__moderation-note",
         children: [
@@ -289,6 +296,10 @@ function threadCard({ thread, onRequestAction }) {
           createElement("div", { children: [createElement("dt", { text: "Replies" }), createElement("dd", { text: thread.allowPlayerReplies ? "Player replies allowed" : "Read-only for players" })] }),
         ],
       }),
+      thread.storyCharacterName ? createElement("p", {
+        className: "admin-messages-route__contract",
+        children: [createElement("strong", { text: "Story character" }), thread.storyCharacterName],
+      }) : null,
       thread.contractKey ? createElement("p", {
         className: "admin-messages-route__contract",
         children: [createElement("strong", { text: "Contract context" }), thread.contractKey],

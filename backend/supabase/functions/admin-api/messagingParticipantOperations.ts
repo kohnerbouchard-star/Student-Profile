@@ -141,6 +141,9 @@ function rpcError(error: RpcError): MessagingOperationResult {
   if (source.includes("LAST_PARTICIPANT")) {
     return response(409, "admin_message_last_participant", "A Messaging thread must retain at least one participant.");
   }
+  if (source.includes("STORY_MESSAGE_PARTICIPANTS_IMMUTABLE")) {
+    return response(409, "admin_message_story_participants_locked", "Story conversation membership is managed by the story system.");
+  }
   if (source.includes("PARTICIPANT_LIMIT")) {
     return response(409, "admin_message_participant_limit", "The Messaging participant limit has been reached.");
   }

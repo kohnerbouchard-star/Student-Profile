@@ -17,7 +17,7 @@ const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-
 const THREAD_PATTERN = /^thr_[0-9a-f]{32}$/;
 const MESSAGE_PATTERN = /^msg_[0-9a-f]{32}$/;
 const THREAD_STATUSES = new Set(["active", "disabled", "closed"]);
-const THREAD_TYPES = new Set(["announcement", "system", "player", "contract"]);
+const THREAD_TYPES = new Set(["announcement", "system", "player", "contract", "story"]);
 
 function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -54,6 +54,11 @@ function normalizeMessage(value) {
     id,
     senderType: cleanText(value.senderType, 40),
     senderName: cleanText(value.senderName, 160) || "Unknown sender",
+    senderCharacterKey: cleanText(value.senderCharacterKey, 160),
+    storylineKey: cleanText(value.storylineKey, 160),
+    storyEventKey: cleanText(value.storyEventKey, 160),
+    interactionKey: cleanText(value.interactionKey, 160),
+    messagePurpose: cleanText(value.messagePurpose, 40),
     body: cleanText(value.body, 1000),
     hidden: value.hidden === true,
     hiddenReason: cleanText(value.hiddenReason, 1000),
@@ -79,6 +84,8 @@ function normalizeThread(value, index) {
     type,
     title: cleanText(value.title, 160) || "Untitled conversation",
     contractKey: cleanText(value.contractKey, 160),
+    storyCharacterKey: cleanText(value.storyCharacterKey, 160),
+    storyCharacterName: cleanText(value.storyCharacterName, 160),
     allowPlayerReplies: value.allowPlayerReplies === true,
     status,
     moderationReason: cleanText(value.moderationReason, 1000),

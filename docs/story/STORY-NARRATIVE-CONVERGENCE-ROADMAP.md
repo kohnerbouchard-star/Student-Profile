@@ -72,7 +72,7 @@ Deliverables:
 
 ### S1 — Recurring character messaging foundation
 
-Status: IMPLEMENTATION STAGED / VERIFICATION IN PROGRESS
+Status: COMPLETE ON BRANCH / CONNECTED STAGING PENDING
 
 Target behavior:
 
@@ -364,6 +364,41 @@ Next:
 - complete S1 branch commit with all temporary bootstrap transport removed;
 - confirm roadmap and branch head;
 - then move to S2 structured narrative response windows.
+
+### Run 2026-08-10 — S1 recurring character messaging landed
+
+Workflow run: `31368924799`
+Source head verified by runner: `ddda96d58a1018a7dfce937d9fa241a31f34d0d0`
+Migration: `20260810081110_add_story_character_messaging_v1.sql`
+
+Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.
+
+Implemented:
+
+- first-class read-only `story` Messaging thread subtype;
+- one persistent private conversation per game + Player + recurring character;
+- immutable per-message storyline/event provenance;
+- server-owned idempotent `character_message` story-effect delivery;
+- Player character-name projection without ownership/event UUID exposure;
+- Admin moderation visibility without character impersonation;
+- immutable story-thread membership through generic Admin participant controls;
+- moderation-suppressed character delivery does not stall global story progression.
+
+Verification completed:
+
+- manifest SHA-256 verification of the staged S1 payload;
+- `git diff --check`;
+- `npm run typecheck:all`;
+- `npm run test:player-messaging`;
+- `npm run test:stock-market-calendar`;
+- `npm run test:admin-api`;
+- `node --test scripts/admin-v2-messages.test.mjs`.
+
+Remaining S1 acceptance:
+
+- connected staging database replay/acceptance before merge.
+
+Next: S2 structured narrative response windows.
 
 ## Run-completion rule
 

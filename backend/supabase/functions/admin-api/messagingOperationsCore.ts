@@ -1,5 +1,5 @@
 type ThreadStatus = "active" | "disabled" | "closed";
-type ThreadType = "announcement" | "system" | "player" | "contract";
+type ThreadType = "announcement" | "system" | "player" | "contract" | "story";
 type ModerationAction =
   | "disable_thread"
   | "enable_thread"
@@ -62,6 +62,13 @@ const ACTION_ID_PATTERN = /^mda_[0-9a-f]{32}$/;
 const PLAYER_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const THREAD_TYPES = new Set<ThreadType>([
+  "announcement",
+  "system",
+  "player",
+  "contract",
+  "story",
+]);
+const CREATABLE_THREAD_TYPES = new Set<ThreadType>([
   "announcement",
   "system",
   "player",
@@ -257,7 +264,7 @@ async function createThread(
     const retentionUntil = optionalTimestamp(value.retentionUntil);
     const idempotencyKey = readIdempotencyKey(input.request, value.idempotencyKey);
     if (
-      !THREAD_TYPES.has(type) || !title ||
+      !CREATABLE_THREAD_TYPES.has(type) || !title ||
       (type === "contract" && !contractKey) ||
       (type !== "contract" && contractKey) ||
       (["announcement", "system"].includes(type) && allowPlayerReplies) ||
@@ -407,6 +414,11 @@ function normalizeThread(value: unknown) {
       id: identifier(item.id, MESSAGE_ID_PATTERN),
       senderType: text(item.senderType),
       senderName: outputText(item.senderName, 160) || "Unknown sender",
+      senderCharacterKey: optionalOutputText(item.senderCharacterKey, 160),
+      storylineKey: optionalOutputText(item.storylineKey, 160),
+      storyEventKey: optionalOutputText(item.storyEventKey, 160),
+      interactionKey: optionalOutputText(item.interactionKey, 160),
+      messagePurpose: optionalOutputText(item.messagePurpose, 40),
       body: outputText(item.body, 1000),
       hidden: item.hidden === true,
       hiddenReason: optionalOutputText(item.hiddenReason, 1000),
@@ -418,6 +430,8 @@ function normalizeThread(value: unknown) {
     type,
     title: outputText(value.title, 160),
     contractKey: optionalOutputText(value.contractKey, 160),
+    storyCharacterKey: optionalOutputText(value.storyCharacterKey, 160),
+    storyCharacterName: optionalOutputText(value.storyCharacterName, 160),
     allowPlayerReplies: value.allowPlayerReplies === true,
     status,
     moderationReason: optionalOutputText(value.moderationReason, 1000),
@@ -499,9 +513,19 @@ function threadMatches(thread: ReturnType<typeof normalizeThread>, query: string
   return [
     thread.title,
     thread.contractKey,
+    thread.storyCharacterKey,
+    thread.storyCharacterName,
     thread.type,
     ...thread.participants.flatMap((participant) => [participant.reference, participant.displayName, participant.rosterLabel]),
-    ...thread.messages.flatMap((message) => [message.senderName, message.body]),
+    ...thread.messages.flatMap((message) => [
+      message.senderName,
+      message.senderCharacterKey,
+      message.storylineKey,
+      message.storyEventKey,
+      message.interactionKey,
+      message.messagePurpose,
+      message.body,
+    ]),
   ].some((value) => String(value || "").toLocaleLowerCase().includes(needle));
 }
 

@@ -58,6 +58,63 @@ Deno.test("player messaging handler returns UUID-private inbox data", async () =
   assertNoUuid(JSON.stringify(body));
 });
 
+
+
+Deno.test("player messaging handler projects story character conversations without private identifiers", async () => {
+  const response = await handlePlayerMessagingRequest(
+    request("/players/me/messages"),
+    { kind: "list" },
+    dependencies({
+      read_player_messages_v2: {
+        unreadCount: 1,
+        pageUnreadCount: 1,
+        nextCursor: null,
+        threads: [{
+          id: THREAD,
+          type: "story",
+          title: "Jonis Hale",
+          contractKey: null,
+          storyCharacterKey: "character.northreach.jonis-hale.v1",
+          storyCharacterName: "Jonis Hale",
+          status: "active",
+          allowPlayerReplies: false,
+          participantCount: 1,
+          unreadCount: 1,
+          updatedAt: NOW.toISOString(),
+          retentionUntil: "2027-07-20T04:00:00.000Z",
+          messages: [{
+            id: MESSAGE,
+            senderType: "system",
+            senderName: "Jonis Hale",
+            senderReference: null,
+            senderCharacterKey: "character.northreach.jonis-hale.v1",
+            storylineKey: "econovaria_meridian_v1",
+            storyEventKey: "northreach_production_pressure",
+            interactionKey: "interaction.jonis.production-pressure.v1",
+            messagePurpose: "warning",
+            body: "They are asking us to skip a second inspection cycle.",
+            moderated: false,
+            self: false,
+            createdAt: NOW.toISOString(),
+          }],
+        }],
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  const thread = body.data.threads[0];
+  assertEquals(thread.type, "Character conversation");
+  assertEquals(thread.threadType, "story");
+  assertEquals(thread.storyCharacterName, "Jonis Hale");
+  assertEquals(thread.allowPlayerReplies, false);
+  assertEquals(thread.messages[0].sender, "Jonis Hale");
+  assertEquals(thread.messages[0].senderType, "system");
+  assertEquals(thread.messages[0].storyEventKey, "northreach_production_pressure");
+  assertNoUuid(JSON.stringify(body));
+});
+
 Deno.test("player messaging search filters private results and rejects unsafe or repeated queries", async () => {
   const response = await handlePlayerMessagingRequest(
     request("/players/me/messages/search?q=attendance&threadLimit=10&messageLimit=20"),
