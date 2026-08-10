@@ -1,0 +1,97 @@
+name: Story Narrative S2 Messaging Dispatch Compatibility
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-messaging-dispatch-compat.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Repair current messaging-dispatch patcher section and persist failed-run evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          patcher = Path("scripts/story-narrative/s2/diagnostic-primary.py")
+          text = patcher.read_text(encoding="utf-8")
+          start_marker = '    path = repo / "backend/supabase/functions/classroom-api/messagingDispatch.ts"\n'
+          end_marker = '    path = repo / "backend/src/security/playerRateLimitDispatch.ts"\n'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start + 1)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit("S2 messaging dispatch patcher section boundaries were not found")
+          replacement = Path("scripts/story-narrative/s2/messaging-dispatch-patch-section.txt").read_text(encoding="utf-8")
+          updated = text[:start] + replacement + text[end:]
+          compile(updated, str(patcher), "exec")
+          patcher.write_text(updated, encoding="utf-8")
+
+          roadmap = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          roadmap_text = roadmap.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          if marker not in roadmap_text:
+              raise SystemExit("roadmap run-completion marker missing")
+          lines = [
+              "",
+              "### Run 2026-08-11 — S2 verification attempt 5",
+              "",
+              "Workflow run: `31433998357`",
+              "Source head: `8a2dc62d9ec2e9b9fa17651111285918ac8b2db9`",
+              "Ephemeral generated migration: `20260810212832_add_story_structured_response_windows_v1.sql`",
+              "",
+              "Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.",
+              "",
+              "Passed before failure:",
+              "",
+              "- exact branch and S1 ancestry boundary;",
+              "- pinned Node, Deno, and Supabase CLI setup;",
+              "- reconstructed S2 archive SHA-256 and every embedded MANIFEST member check;",
+              "- repaired branch primary/followup patcher Git-blob pins and Python compilation;",
+              "- Supabase CLI migration generation;",
+              "- exact S1 `character_message` parser-format compatibility normalization;",
+              "- previously repaired canonical segment-route patch section.",
+              "",
+              "Failure:",
+              "",
+              "- the temporary primary patcher expected an obsolete `case \"markRead\"` switch in `classroom-api/messagingDispatch.ts`;",
+              "- current authoritative source uses a `route.kind` ternary to map the Player Messaging route to a reviewed rate-limit endpoint key;",
+              "- dependencies and regression tests did not run because the guarded patch stopped at this mismatch.",
+              "",
+              "Correction in this run:",
+              "",
+              "- repair only the temporary primary S2 patcher;",
+              "- preserve the current dispatcher architecture;",
+              "- add `selectStoryChoice -> messageStoryChoice` as one additional ternary branch before the existing `messageRead` fallback;",
+              "- compile the corrected patcher before publication.",
+              "",
+              "Next: rerun the complete S2 V2 landing sequence from the repaired patcher and continue fail-closed at the next exact boundary, if any.",
+              "",
+          ]
+          roadmap.write_text(roadmap_text.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          rm -f scripts/story-narrative/s2/messaging-dispatch-patch-section.txt
+          rm -f .github/workflows/story-narrative-s2-messaging-dispatch-compat.yml
+          git add -A -- scripts/story-narrative/s2/diagnostic-primary.py scripts/story-narrative/s2/messaging-dispatch-patch-section.txt docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-messaging-dispatch-compat.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): align S2 messaging dispatch patcher"
+          git push origin HEAD:feat/story-narrative-convergence-v1
