@@ -201,9 +201,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PAYLOAD_PATH: ${{ runner.temp }}/status.json
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          PENDING_RESULT: ${{ needs.publish-pending.result }}
+          PENDING_RESULT: ${{ needs['publish-pending'].result }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
-          VERIFY_RESULT: ${{ needs.verify-production.result }}
+          VERIFY_RESULT: ${{ needs['verify-production'].result }}
         run: |
           set -euo pipefail
           node - <<'NODE'
