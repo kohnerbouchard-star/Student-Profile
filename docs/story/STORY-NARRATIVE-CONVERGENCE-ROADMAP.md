@@ -271,13 +271,43 @@ Findings:
 - warnings are limited to three corrupted ZIP local filename-header bytes for test files;
 - the central-directory filenames are correct and the member data is intact.
 
+Action: changed the runner to verify every extracted file byte count and SHA-256 against `MANIFEST.json` before source application.
+
+### Run 2026-08-10 — S1 verification attempt 3
+
+Workflow run: `31368221103`  
+Workflow head: `20490b04a26382b3e5f9c9b7dd9ee821ea89e627`  
+Generated migration during ephemeral verification: `20260810080120_add_story_character_messaging_v1.sql`
+
+Result: FAILED AT TYPECHECK AFTER CLEAN SOURCE APPLICATION.
+
+Passed before failure:
+
+- exact branch/base boundary;
+- pinned Node/Deno/Supabase setup;
+- all staged chunk checks;
+- reconstructed ZIP check;
+- manifest byte-count and SHA-256 verification for all listed payload files;
+- bundle structural validation;
+- Supabase CLI migration generation;
+- guarded S1 source transformation;
+- `git diff --check`;
+- `npm ci`.
+
+Failure:
+
+- TypeScript rejected `storyCharacterMessageContract.test.ts` because the test accessed `messagePurpose` and `interactionKey` on the full `StoryEffect` union before narrowing the discriminant to `type === "character_message"`.
+- Runtime implementation files did not produce the reported type error.
+
+Correction:
+
+- narrow the parsed effect to `character_message` in the test before reading character-message-specific fields;
+- rerun the entire S1 verification sequence, not just the failing test.
+
 Next:
 
-- extract while accepting only the known ZIP filename-header warning;
-- verify every extracted file byte count and SHA-256 against `MANIFEST.json` before applying anything;
-- generate the S1 migration filename using Supabase CLI 2.109.1;
-- apply guarded S1 transformation and run full focused verification;
-- update this roadmap with the resulting branch head and verification evidence;
+- complete S1 green verification and branch commit;
+- update this roadmap with the final S1 branch head and generated migration;
 - then move to S2 structured response windows.
 
 ## Run-completion rule
