@@ -686,6 +686,45 @@ Correction in this run:
 
 Next: rerun the complete S2 V2 landing sequence from the repaired patcher and continue fail-closed at the next exact boundary, if any.
 
+### Run 2026-08-11 — S2 primary-patcher repin helper
+
+Workflow run: `31434211006`
+
+Result: FAILED AT PUSH AFTER LOCAL COMMIT; NO REMOTE BRANCH MUTATION.
+
+- the helper correctly changed the local V2 workflow pin and committed it in the ephemeral runner checkout;
+- GitHub rejected the push because the Actions token may not update another workflow file without `workflows` permission;
+- the V2 workflow was subsequently repinned directly through the connected GitHub workflow-file API instead.
+
+### Run 2026-08-11 — S2 verification attempt 6
+
+Workflow run: `31434316926`
+Source head: `984d1657c2153ca367ccf694d99f25bdb2892676`
+Ephemeral generated migration: `20260810213252_add_story_structured_response_windows_v1.sql`
+
+Result: FAILED DURING GUARDED SOURCE APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- branch/S1 boundary, toolchain setup, archive/member integrity, patcher blob pins, Supabase migration generation, and S1 parser normalization;
+- canonical segment-route patcher repair;
+- current classroom Messaging dispatcher patcher repair.
+
+Failure:
+
+- the temporary primary patcher expected `messageRead` immediately before `progression` in `PlayerCapabilityEndpointKey`;
+- current authoritative manifest places `news`, `notifications`, `portfolio`, and other endpoint keys between Messaging and Progression;
+- dependencies and regression tests did not run because the guarded patch stopped on that stale adjacency assumption.
+
+Correction in this run:
+
+- preserve current manifest ordering;
+- insert `messageStoryChoice` immediately after `messageRead` by anchoring the existing `messageRead -> news` adjacency;
+- do not reorder or delete unrelated reviewed endpoint keys;
+- compile the corrected temporary patcher before publication.
+
+Next: repin the V2 workflow directly through the GitHub connector and rerun the complete S2 landing suite.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:
