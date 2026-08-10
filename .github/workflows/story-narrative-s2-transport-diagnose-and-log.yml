@@ -1,0 +1,92 @@
+name: Story Narrative S2 Transport Diagnose And Log
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s2-transport-diagnose-and-log.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose-and-log:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Diagnose actual stored chunks and update roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import os
+
+          files = [Path(f"scripts/story-narrative/s2/bootstrap.part{i:02d}") for i in range(5)]
+          facts = []
+          for path in files:
+              data = path.read_bytes()
+              facts.append((path.name, len(data), hashlib.sha256(data).hexdigest(), data.endswith(b"\n")))
+
+          roadmap = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = roadmap.read_text(encoding="utf-8")
+          marker = "\n## Run-completion rule\n"
+          if marker not in text:
+              raise SystemExit("roadmap marker not found")
+
+          lines = [
+              "",
+              "### Run 2026-08-10 — S2 verification attempt 1",
+              "",
+              "Workflow run: `31371662557`",
+              "Workflow head: `e53aef1af12d460ee414c40555f9a39f4b4c87ad`",
+              "",
+              "Result: FAILED BEFORE MIGRATION GENERATION OR SOURCE APPLICATION.",
+              "",
+              "Passed before failure:",
+              "",
+              "- exact story branch checkout and S1 ancestor boundary;",
+              "- pinned Node 22.23.1, Deno 2.9.3, and Supabase CLI 2.109.1 setup.",
+              "",
+              "Failure:",
+              "",
+              "- all five staged S2 transport chunks differed from the local pre-stage SHA-256 values;",
+              "- the runner stopped at per-chunk integrity verification;",
+              "- no S2 migration was generated;",
+              "- no S2 source transformation or tests executed.",
+              "",
+              "Immediate action: diagnose the exact GitHub-stored chunk bytes before retrying; do not weaken manifest verification.",
+              "",
+              "### Run 2026-08-10 — S2 transport diagnostic and roadmap persistence",
+              "",
+              f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`",
+              f"Diagnostic source head: `{os.environ['GITHUB_SHA']}`",
+              "",
+              "Actual GitHub-stored chunk evidence:",
+              "",
+          ]
+          for name, size, digest, newline in facts:
+              lines.append(f"- `{name}`: {size} bytes, SHA-256 `{digest}`, trailing-newline `{str(newline).lower()}`;")
+          lines += [
+              "",
+              "Next: update only the temporary runner's expected transport hashes to these stored values, then require archive SHA-256 plus per-member manifest SHA-256 verification before migration generation or source application.",
+              "",
+          ]
+          text = text.replace(marker, "\n".join(lines) + marker, 1)
+          roadmap.write_text(text, encoding="utf-8")
+          PY
+          git diff --check
+          rm -f .github/workflows/story-narrative-s2-transport-diagnose-and-log.yml
+          git add -A -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md .github/workflows/story-narrative-s2-transport-diagnose-and-log.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(story): record S2 transport verification failure"
+          git push origin HEAD:feat/story-narrative-convergence-v1
