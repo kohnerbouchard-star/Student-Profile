@@ -803,6 +803,34 @@ Corrections:
 
 Next: retrigger the complete S2 V2 landing suite and continue fail-closed through the followup/backend test boundary.
 
+### Run 2026-08-11 — S2 verification attempt 9
+
+Workflow run: `31435292286`
+Source head: `ff4e7b96f1f2e26240fd86f6d5e915d5919c7f28`
+Ephemeral generated migration: `20260810214532_add_story_structured_response_windows_v1.sql`
+
+Result: FAILED DURING GUARDED FOLLOWUP APPLICATION; NO S2 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch/S1 boundary, pinned toolchain, S2 archive/member integrity, exact-checkout patcher compilation, migration generation, and S1 parser normalization;
+- the complete reconciled primary S2 transformation, including current Player routing, dispatcher, capability manifest, and Player-terminal compatibility, reached the followup layer.
+
+Failure:
+
+- `diagnostic-followup.py` used a generic function-signature fragment to add `now: Date`;
+- that fragment appears in both `handleRead` and `handleSend` in current `playerMessagingHttpHandler.ts`;
+- `replace_once` correctly failed closed because the anchor matched twice;
+- `npm ci`, typecheck, and focused regressions did not run.
+
+Correction in this run:
+
+- narrow the temporary followup patch to the complete `async function handleRead(...)` signature;
+- leave `handleSend` unchanged;
+- compile the corrected followup patcher before publication.
+
+Next: retrigger the complete S2 V2 landing suite; if guarded application completes, proceed immediately into dependency/type/regression verification.
+
 ## Run-completion rule
 
 A story-development run is incomplete until this file is updated with:

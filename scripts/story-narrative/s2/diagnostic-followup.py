@@ -109,12 +109,18 @@ interface StoryChoiceRow {
       case "markRead":
 ''')
     replace_once(path,
-'''  client: EdgeSupabaseClient,
+'''async function handleRead(
+  request: Request,
+  route: ReadRoute,
+  client: EdgeSupabaseClient,
   gameId: string,
   playerId: string,
 ): Promise<Response> {
 ''',
-'''  client: EdgeSupabaseClient,
+'''async function handleRead(
+  request: Request,
+  route: ReadRoute,
+  client: EdgeSupabaseClient,
   gameId: string,
   playerId: string,
   now: Date,
