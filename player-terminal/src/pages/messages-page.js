@@ -33,6 +33,28 @@ function composer(thread) {
   </form>`;
 }
 
+function storyInteraction(thread, message, data) {
+  const interaction = message.interaction;
+  if (!interaction) return "";
+  const options = Array.isArray(interaction.options) ? interaction.options : [];
+  const actionEnabled = data.capabilities?.actions?.storyChoiceSelect === true;
+  const status = String(interaction.status || "open");
+  const selected = String(interaction.selectedChoiceKey || interaction.effectiveChoiceKey || "");
+  const optionMarkup = options.map((option) => {
+    const chosen = selected && option.choiceKey === selected;
+    if (status !== "open" || !actionEnabled) {
+      return `<li${chosen ? ' data-selected="true"' : ""}><strong>${escapeHtml(option.label)}</strong>${option.description ? `<small>${escapeHtml(option.description)}</small>` : ""}${chosen ? "<em>Selected</em>" : ""}</li>`;
+    }
+    return `<li><button class="player-terminal-secondary-button" type="button" data-player-story-choice data-thread-id="${escapeHtml(thread.id)}" data-interaction-key="${escapeHtml(interaction.interactionKey)}" data-choice-key="${escapeHtml(option.choiceKey)}"><strong>${escapeHtml(option.label)}</strong>${option.description ? `<small>${escapeHtml(option.description)}</small>` : ""}</button></li>`;
+  }).join("");
+  const statusText = status === "selected"
+    ? "Response recorded."
+    : status === "expired"
+    ? (interaction.effectiveChoiceKey ? "Response window expired; the authored default now applies." : "Response window expired.")
+    : actionEnabled ? "Choose one response." : "Response selection is unavailable.";
+  return `<section class="player-terminal-story-interaction" data-story-interaction-status="${escapeHtml(status)}"><header><strong>${escapeHtml(interaction.prompt)}</strong><small>${escapeHtml(statusText)}</small></header><ul>${optionMarkup}</ul></section>`;
+}
+
 function createThreadPanel() {
   return `<details class="player-terminal-disclosure player-terminal-message-create">
     <summary><span>${icon("messages")}</span><div><strong>Start a Player thread</strong><small>Same-game public Player IDs only</small></div>${icon("chevronRight")}</summary>
@@ -68,7 +90,7 @@ export function renderMessagesPage(data, ui) {
       </section>
       <section class="player-terminal-panel player-terminal-message-thread">
         <header class="player-terminal-message-thread-head"><div><span class="player-terminal-thread-avatar is-${escapeHtml(thread.tone)}">${escapeHtml(thread.initials)}</span><div><small>${escapeHtml(thread.type)}</small><strong>${escapeHtml(thread.title)}</strong><span>${escapeHtml(thread.members)} · ${escapeHtml(thread.status)}</span></div></div>${renderStatusPill(thread.status, thread.status === "Online" ? "green" : "cyan")}</header>
-        <div class="player-terminal-message-log">${thread.messages.map((message) => `<article class="${message.self ? "is-self" : ""}"><span>${escapeHtml(message.initials)}</span><div><header><strong>${escapeHtml(message.sender)}</strong><small>${escapeHtml(message.time)}</small></header><p>${escapeHtml(message.body)}</p></div></article>`).join("")}</div>
+        <div class="player-terminal-message-log">${thread.messages.map((message) => `<article class="${message.self ? "is-self" : ""}"><span>${escapeHtml(message.initials)}</span><div><header><strong>${escapeHtml(message.sender)}</strong><small>${escapeHtml(message.time)}</small></header><p>${escapeHtml(message.body)}</p>${storyInteraction(thread, message, data)}</div></article>`).join("")}</div>
         ${composer(thread)}
       </section>
     </div>

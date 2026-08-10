@@ -25,6 +25,16 @@ Deno.test("player messaging routes accept exact inbox, thread, search, send, and
     readPlayerMessagingRoutePath(`/players/me/messages/threads/${THREAD}/read`),
     { kind: "markRead", threadId: THREAD },
   );
+  assertEquals(
+    readPlayerMessagingRoutePath(
+      `/players/me/messages/threads/${THREAD}/story-interactions/interaction.jonis.offer.v1/select`,
+    ),
+    {
+      kind: "selectStoryChoice",
+      threadId: THREAD,
+      interactionKey: "interaction.jonis.offer.v1",
+    },
+  );
 });
 
 Deno.test("player messaging routes fail closed for malformed or spoofed paths", () => {

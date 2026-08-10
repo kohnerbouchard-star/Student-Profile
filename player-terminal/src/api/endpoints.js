@@ -80,6 +80,10 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   messageThreadCreate: { method: "POST", path: "/messages/threads" },
   messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
   messageRead: { method: "POST", path: "/messages/threads/:threadId/read" },
+  messageStoryChoice: {
+    method: "POST",
+    path: "/messages/threads/:threadId/story-interactions/:interactionKey/select",
+  },
   progression: { method: "GET", path: "/progression" },
   progressionUnlock: {
     method: "POST",

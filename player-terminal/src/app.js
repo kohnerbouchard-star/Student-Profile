@@ -89,7 +89,7 @@ export function createPlayerTerminal({ mount, config }) {
       "data-player-market-link", "data-player-market-select", "data-player-market-sector",
       "data-player-store-category", "data-player-contract-tab", "data-player-contract-select",
       "data-player-inventory-category", "data-player-marketplace-category", "data-player-marketplace-select",
-      "data-player-marketplace-cancel", "data-player-message-thread", "data-player-loan-offer",
+      "data-player-marketplace-cancel", "data-player-message-thread", "data-player-story-choice", "data-player-loan-offer",
       "data-player-crafting-recipe", "data-player-progression-tab", "data-player-skill-unlock",
       "data-player-reward-claim", "data-player-market-watchlist", "data-player-purchase",
       "data-player-contract-accept", "data-player-inventory-use"
@@ -598,6 +598,23 @@ export function createPlayerTerminal({ mount, config }) {
     if (marketplaceCancel) {
       const listingId = marketplaceCancel.dataset.playerMarketplaceCancel;
       await executeEndpoint("marketplaceCancel", { gameSessionId: store.getState().data.session.gameSessionId }, { listingId }, marketplaceCancel);
+      return;
+    }
+
+    const storyChoice = event.target.closest("[data-player-story-choice]");
+    if (storyChoice) {
+      await executeEndpoint(
+        "messageStoryChoice",
+        {
+          choiceKey: storyChoice.dataset.choiceKey,
+          gameSessionId: store.getState().data.session.gameSessionId,
+        },
+        {
+          threadId: storyChoice.dataset.threadId,
+          interactionKey: storyChoice.dataset.interactionKey,
+        },
+        storyChoice,
+      );
       return;
     }
 

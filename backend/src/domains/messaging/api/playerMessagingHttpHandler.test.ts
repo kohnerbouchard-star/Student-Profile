@@ -115,6 +115,113 @@ Deno.test("player messaging handler projects story character conversations witho
   assertNoUuid(JSON.stringify(body));
 });
 
+Deno.test("player messaging hydrates structured Story responses and selects one choice", async () => {
+  const responses: Record<string, unknown> = {
+    read_player_messages_v2: {
+      unreadCount: 1,
+      pageUnreadCount: 1,
+      nextCursor: null,
+      threads: [{
+        id: THREAD,
+        type: "story",
+        title: "Jonis Hale",
+        storyCharacterKey: "character.northreach.jonis-hale.v1",
+        storyCharacterName: "Jonis Hale",
+        status: "active",
+        allowPlayerReplies: false,
+        participantCount: 1,
+        unreadCount: 1,
+        updatedAt: NOW.toISOString(),
+        retentionUntil: "2027-07-20T04:00:00.000Z",
+        messages: [{
+          id: MESSAGE,
+          senderType: "system",
+          senderName: "Jonis Hale",
+          senderCharacterKey: "character.northreach.jonis-hale.v1",
+          storylineKey: "econovaria_meridian_v1",
+          storyEventKey: "northreach_production_pressure",
+          interactionKey: "interaction.jonis.offer.v1",
+          messagePurpose: "offer",
+          body: "I can move your application to the top of the list.",
+          moderated: false,
+          self: false,
+          createdAt: NOW.toISOString(),
+        }],
+      }],
+    },
+    read_player_story_message_interactions_v1: {
+      [MESSAGE]: {
+        interactionKey: "interaction.jonis.offer.v1",
+        prompt: "How do you answer?",
+        status: "open",
+        opensAt: NOW.toISOString(),
+        closesAt: "2026-07-20T05:00:00.000Z",
+        selectedChoiceKey: null,
+        effectiveChoiceKey: null,
+        selectedAt: null,
+        options: [
+          { choiceKey: "accept", label: "Accept his help", description: "You owe Jonis a favor." },
+          { choiceKey: "decline", label: "Decline", description: "Keep your independence." },
+        ],
+      },
+    },
+    select_player_story_message_interaction_v1: [{
+      selection_outcome: "applied",
+      thread_id: THREAD,
+      interaction_key: "interaction.jonis.offer.v1",
+      choice_key: "decline",
+      interaction_status: "selected",
+      selected_at: NOW.toISOString(),
+      effective_choice_key: "decline",
+    }],
+  };
+  const inboxResponse = await handlePlayerMessagingRequest(
+    request("/players/me/messages"),
+    { kind: "list" },
+    dependencies(responses),
+  );
+  assertEquals(inboxResponse.status, 200);
+  const inbox = await inboxResponse.json();
+  assertEquals(inbox.data.threads[0].messages[0].interaction.status, "open");
+  assertEquals(inbox.data.threads[0].messages[0].interaction.options[1].choiceKey, "decline");
+  assertNoUuid(JSON.stringify(inbox));
+
+  const selectionResponse = await handlePlayerMessagingRequest(
+    request(`/players/me/messages/threads/${THREAD}/story-interactions/interaction.jonis.offer.v1/select`, {
+      method: "POST",
+      headers: { "idempotency-key": "story-choice:1" },
+      body: { choiceKey: "decline", idempotencyKey: "story-choice:1" },
+    }),
+    { kind: "selectStoryChoice", threadId: THREAD, interactionKey: "interaction.jonis.offer.v1" },
+    dependencies(responses),
+  );
+  assertEquals(selectionResponse.status, 201);
+  const selection = await selectionResponse.json();
+  assertEquals(selection.data.choiceKey, "decline");
+  assertEquals(selection.data.effectiveChoiceKey, "decline");
+  assertNoUuid(JSON.stringify(selection));
+});
+
+Deno.test("player Story choice maps expiry and invalid options without leaking interaction existence", async () => {
+  for (const [message, status, code] of [
+    ["PLAYER_STORY_CHOICE_EXPIRED", 409, "player_story_choice_expired"],
+    ["PLAYER_STORY_CHOICE_INVALID_OPTION", 422, "player_story_choice_invalid_option"],
+    ["PLAYER_STORY_CHOICE_NOT_FOUND", 404, "player_story_choice_not_found"],
+  ] as const) {
+    const response = await handlePlayerMessagingRequest(
+      request(`/players/me/messages/threads/${THREAD}/story-interactions/interaction.jonis.offer.v1/select`, {
+        method: "POST",
+        headers: { "idempotency-key": `story-choice:${code}` },
+        body: { choiceKey: "decline", idempotencyKey: `story-choice:${code}` },
+      }),
+      { kind: "selectStoryChoice", threadId: THREAD, interactionKey: "interaction.jonis.offer.v1" },
+      dependencies({}, { message }),
+    );
+    assertEquals(response.status, status);
+    assertEquals((await response.json()).error.code, code);
+  }
+});
+
 Deno.test("player messaging search filters private results and rejects unsafe or repeated queries", async () => {
   const response = await handlePlayerMessagingRequest(
     request("/players/me/messages/search?q=attendance&threadLimit=10&messageLimit=20"),
@@ -316,12 +423,15 @@ Deno.test("player messaging handler rejects missing sessions, identity injection
   }
 });
 
-function dependencies(responses: Record<string, unknown>) {
+function dependencies(
+  responses: Record<string, unknown>,
+  rpcError: { readonly message: string; readonly code?: string } | null = null,
+) {
   return {
     createServiceClient: () => ({
       rpc: (name: string) => Promise.resolve({
-        data: Object.hasOwn(responses, name) ? responses[name] : null,
-        error: null,
+        data: rpcError ? null : Object.hasOwn(responses, name) ? responses[name] : null,
+        error: rpcError,
       }),
     }) as never,
     readSupabaseEnv: () => ({

@@ -36,6 +36,7 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "messageAttachment",
   "messageSearch",
   "messageSend",
+  "storyChoiceSelect",
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
@@ -57,13 +58,14 @@ const LOCAL_ACTION_CAPABILITIES = new Set([
 const ENDPOINT_ACTIONS = Object.freeze({
   ...Object.fromEntries(
     PLAYER_ACTION_CAPABILITIES
-      .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
+      .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch", "storyChoiceSelect"].includes(key))
       .map((key) => [key, key])
   ),
   arrivalClass: "arrivalClassSubmit",
   businessTerminate: "businessEmployeeTerminate",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
+  messageStoryChoice: "storyChoiceSelect",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });

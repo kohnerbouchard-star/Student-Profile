@@ -46,6 +46,39 @@ function normalizeParticipant(value) {
   return Object.freeze({ displayName, reference, rosterLabel, lastReadAt: timestamp(value.lastReadAt) });
 }
 
+function normalizeStoryInteraction(value) {
+  if (!isRecord(value)) return null;
+  const interactionKey = cleanText(value.interactionKey, 160);
+  const prompt = cleanText(value.prompt, 1000);
+  const status = cleanText(value.status, 40);
+  if (!interactionKey || !prompt || !["open", "selected", "expired"].includes(status)) return null;
+  const options = Array.isArray(value.options)
+    ? value.options.slice(0, 5).map((option) => {
+      if (!isRecord(option)) return null;
+      const choiceKey = cleanText(option.choiceKey, 96);
+      const label = cleanText(option.label, 240);
+      if (!choiceKey || !label) return null;
+      return Object.freeze({
+        choiceKey,
+        label,
+        description: cleanText(option.description, 500),
+      });
+    }).filter(Boolean)
+    : [];
+  if (options.length < 2) return null;
+  return Object.freeze({
+    interactionKey,
+    prompt,
+    status,
+    opensAt: timestamp(value.opensAt),
+    closesAt: timestamp(value.closesAt),
+    selectedChoiceKey: cleanText(value.selectedChoiceKey, 96),
+    effectiveChoiceKey: cleanText(value.effectiveChoiceKey, 96),
+    selectedAt: timestamp(value.selectedAt),
+    options: Object.freeze(options),
+  });
+}
+
 function normalizeMessage(value) {
   if (!isRecord(value)) return null;
   const id = publicId(value.id, MESSAGE_PATTERN);
@@ -59,6 +92,7 @@ function normalizeMessage(value) {
     storyEventKey: cleanText(value.storyEventKey, 160),
     interactionKey: cleanText(value.interactionKey, 160),
     messagePurpose: cleanText(value.messagePurpose, 40),
+    interaction: normalizeStoryInteraction(value.interaction),
     body: cleanText(value.body, 1000),
     hidden: value.hidden === true,
     hiddenReason: cleanText(value.hiddenReason, 1000),

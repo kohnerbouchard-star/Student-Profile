@@ -202,6 +202,37 @@ test("Messages model preserves story character and provenance metadata", () => {
   assert.equal(story.messages[0].messagePurpose, "warning");
 });
 
+test("Messages model preserves read-only Story response state", () => {
+  const input = thread(0, {
+    type: "story",
+    title: "Jonis Hale",
+    storyCharacterKey: "character.northreach.jonis-hale.v1",
+    storyCharacterName: "Jonis Hale",
+    allowPlayerReplies: false,
+    messages: [message(0, {
+      senderType: "system",
+      senderName: "Jonis Hale",
+      interaction: {
+        interactionKey: "interaction.jonis.offer.v1",
+        prompt: "How do you answer?",
+        status: "selected",
+        opensAt: "2026-08-07T01:00:00.000Z",
+        closesAt: "2026-08-07T03:00:00.000Z",
+        selectedChoiceKey: "decline",
+        effectiveChoiceKey: "decline",
+        selectedAt: "2026-08-07T02:00:00.000Z",
+        options: [
+          { choiceKey: "accept", label: "Accept his help", description: "Owe a favor." },
+          { choiceKey: "decline", label: "Decline", description: "Stay independent." },
+        ],
+      },
+    })],
+  });
+  const model = normalizeMessagesReadModel(readPayload([input]));
+  assert.equal(model.threads[0].messages[0].interaction.status, "selected");
+  assert.equal(model.threads[0].messages[0].interaction.effectiveChoiceKey, "decline");
+});
+
 test("Messages model handles zero threads and high-volume authoritative pages", () => {
   const empty = normalizeMessagesReadModel(readPayload([]));
   assert.equal(empty.isEmpty, true);
@@ -289,9 +320,11 @@ test("Messages route registration is V2-owned and presentation source excludes p
   assert.match(route, /participants/);
   assert.match(route, /moderationReason/);
   assert.match(route, /hiddenReason/);
+  assert.match(route, /Story response window/);
   assert.match(route, /Story character/);
   assert.match(route, /Story provenance/);
   assert.doesNotMatch(route, /text:\s*(?:thread|message)\.id/);
   assert.doesNotMatch(`${route}\n${controller}`, /playerUuid|ownerUuid|rawToken|serviceRole|authorization|Bearer/i);
   assert.doesNotMatch(route, /Create thread|New message|Send message|targetAllPlayers|allowPlayerReplies.*checkbox/i);
+  assert.doesNotMatch(route, /data-player-story-choice|Select Story choice|Choose for Player/i);
 });

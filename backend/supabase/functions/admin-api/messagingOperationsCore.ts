@@ -194,7 +194,9 @@ async function readThreads(
     );
     if (response.error) return rpcError(response.error);
     const raw = normalizeThreadRead(response.data);
-    const normalized = raw.threads.map(normalizeThread);
+    const hydration = await hydrateAdminStoryInteractions(service, input, raw.threads);
+    if ("error" in hydration) return rpcError(hydration.error);
+    const normalized = hydration.threads.map(normalizeThread);
     const filtered = query
       ? normalized.filter((thread) => threadMatches(thread, query))
       : normalized;
@@ -386,6 +388,54 @@ async function deleteExpiredThread(
   }
 }
 
+async function hydrateAdminStoryInteractions(
+  service: AdminService,
+  input: Parameters<typeof handleMessagingOperation>[1],
+  threads: readonly unknown[],
+): Promise<
+  | { readonly ok: true; readonly threads: readonly unknown[] }
+  | { readonly ok: false; readonly error: RpcError }
+> {
+  const threadIds = threads.flatMap((thread) => {
+    if (!isRecord(thread) || text(thread.type).toLowerCase() !== "story") return [];
+    const id = text(thread.id);
+    return THREAD_ID_PATTERN.test(id) ? [id] : [];
+  });
+  const uniqueThreadIds = [...new Set(threadIds)].slice(0, 51);
+  if (uniqueThreadIds.length === 0) return { ok: true, threads };
+  const response = await service.rpc<Record<string, unknown>>(
+    "read_admin_story_message_interactions_v1",
+    {
+      p_game_session_id: input.gameId,
+      p_staff_user_id: input.staffUserId,
+      p_thread_public_ids: uniqueThreadIds,
+    },
+  );
+  if (response.error) return { ok: false, error: response.error };
+  const interactions = isRecord(response.data) ? response.data : {};
+  return {
+    ok: true,
+    threads: threads.map((thread) => hydrateAdminStoryThread(thread, interactions)),
+  };
+}
+
+function hydrateAdminStoryThread(
+  value: unknown,
+  interactions: Readonly<Record<string, unknown>>,
+): unknown {
+  if (!isRecord(value) || text(value.type).toLowerCase() !== "story") return value;
+  const messages = Array.isArray(value.messages)
+    ? value.messages.map((message) => {
+      if (!isRecord(message)) return message;
+      const id = text(message.id);
+      return Object.prototype.hasOwnProperty.call(interactions, id)
+        ? { ...message, interaction: interactions[id] }
+        : message;
+    })
+    : value.messages;
+  return { ...value, messages };
+}
+
 function normalizeThreadRead(value: unknown): { readonly threads: readonly unknown[] } {
   if (!isRecord(value) || !Array.isArray(value.threads) || value.threads.length > 51) {
     throw new Error("invalid thread read");
@@ -419,6 +469,9 @@ function normalizeThread(value: unknown) {
       storyEventKey: optionalOutputText(item.storyEventKey, 160),
       interactionKey: optionalOutputText(item.interactionKey, 160),
       messagePurpose: optionalOutputText(item.messagePurpose, 40),
+      interaction: item.interaction === null || item.interaction === undefined
+        ? null
+        : normalizeAdminStoryInteraction(item.interaction),
       body: outputText(item.body, 1000),
       hidden: item.hidden === true,
       hiddenReason: optionalOutputText(item.hiddenReason, 1000),
@@ -442,6 +495,62 @@ function normalizeThread(value: unknown) {
     participants: Object.freeze(participants),
     messages: Object.freeze(messages),
   });
+}
+
+function normalizeAdminStoryInteraction(value: unknown) {
+  if (!isRecord(value)) throw new Error("invalid story interaction");
+  const interactionKey = outputStoryKey(value.interactionKey, 160);
+  const prompt = outputText(value.prompt, 1000);
+  const status = enumValue(value.status, ["open", "selected", "expired"]);
+  const opensAt = timestamp(value.opensAt);
+  const closesAt = optionalTimestamp(value.closesAt);
+  const selectedChoiceKey = optionalStoryChoice(value.selectedChoiceKey);
+  const effectiveChoiceKey = optionalStoryChoice(value.effectiveChoiceKey);
+  const selectedAt = optionalTimestamp(value.selectedAt);
+  if (!Array.isArray(value.options) || value.options.length < 2 || value.options.length > 5) {
+    throw new Error("invalid story interaction options");
+  }
+  const options = value.options.map((option) => {
+    if (!isRecord(option)) throw new Error("invalid story interaction option");
+    return Object.freeze({
+      choiceKey: outputStoryChoice(option.choiceKey),
+      label: outputText(option.label, 240),
+      description: optionalOutputText(option.description, 500),
+    });
+  });
+  return Object.freeze({
+    interactionKey,
+    prompt,
+    status,
+    opensAt,
+    closesAt,
+    selectedChoiceKey,
+    effectiveChoiceKey,
+    selectedAt,
+    options: Object.freeze(options),
+  });
+}
+
+function outputStoryKey(value: unknown, maximum: number): string {
+  const result = outputText(value, maximum);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(result) || UUID_OUTPUT_PATTERN.test(result)) {
+    throw new Error("invalid story key");
+  }
+  return result;
+}
+
+function outputStoryChoice(value: unknown): string {
+  const result = outputStoryKey(value, 96);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result)) {
+    throw new Error("invalid story choice");
+  }
+  return result;
+}
+
+function optionalStoryChoice(value: unknown): string {
+  return value === null || value === undefined || value === ""
+    ? ""
+    : outputStoryChoice(value);
 }
 
 function normalizeCreateRow(value: CreateRow | undefined) {
@@ -579,6 +688,8 @@ function boundedInteger(value: string | null, fallback: number, minimum: number,
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
 }
+const UUID_OUTPUT_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }

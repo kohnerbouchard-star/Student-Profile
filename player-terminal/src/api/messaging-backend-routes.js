@@ -1,6 +1,8 @@
 import { ApiRequestError } from "./errors.js";
 
 const THREAD_ID = /^thr_[0-9a-f]{32}$/;
+const STORY_INTERACTION_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+const STORY_CHOICE_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/;
 const PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -12,6 +14,7 @@ export const MESSAGING_BACKEND_ROUTE_KEYS = Object.freeze([
   "messageThreadCreate",
   "messageSend",
   "messageRead",
+  "messageStoryChoice",
 ]);
 const KEYS = new Set(MESSAGING_BACKEND_ROUTE_KEYS);
 
@@ -131,6 +134,29 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
       method: "POST",
       path: `/players/me/messages/threads/${encodeURIComponent(id)}/read`,
       payload: undefined,
+    };
+  }
+  if (endpointKey === "messageStoryChoice") {
+    const id = threadId(params.threadId || payload.threadId, endpointKey);
+    const interactionKey = required(
+      params.interactionKey || payload.interactionKey,
+      "interactionKey",
+      endpointKey,
+    );
+    const choiceKey = required(payload.choiceKey, "choiceKey", endpointKey);
+    if (!STORY_INTERACTION_KEY.test(interactionKey)) {
+      return invalid("A valid Story interaction key is required.", endpointKey);
+    }
+    if (!STORY_CHOICE_KEY.test(choiceKey)) {
+      return invalid("A valid Story choice key is required.", endpointKey);
+    }
+    return {
+      method: "POST",
+      path: `/players/me/messages/threads/${encodeURIComponent(id)}/story-interactions/${encodeURIComponent(interactionKey)}/select`,
+      payload: {
+        choiceKey,
+        idempotencyKey: idempotency(payload, endpointKey),
+      },
     };
   }
   return null;

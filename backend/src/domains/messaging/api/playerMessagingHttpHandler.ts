@@ -16,6 +16,22 @@ import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.
 import type { PlayerMessagingRoute } from "./playerMessagingRoutePaths.ts";
 
 interface RpcError { readonly code?: string; readonly message: string }
+interface RawStoryInteractionOption {
+  readonly choiceKey?: unknown;
+  readonly label?: unknown;
+  readonly description?: unknown;
+}
+interface RawStoryInteraction {
+  readonly interactionKey?: unknown;
+  readonly prompt?: unknown;
+  readonly status?: unknown;
+  readonly opensAt?: unknown;
+  readonly closesAt?: unknown;
+  readonly selectedChoiceKey?: unknown;
+  readonly effectiveChoiceKey?: unknown;
+  readonly selectedAt?: unknown;
+  readonly options?: unknown;
+}
 interface RawMessage {
   readonly id?: unknown;
   readonly senderType?: unknown;
@@ -26,6 +42,7 @@ interface RawMessage {
   readonly storyEventKey?: unknown;
   readonly interactionKey?: unknown;
   readonly messagePurpose?: unknown;
+  readonly interaction?: unknown;
   readonly body?: unknown;
   readonly moderated?: unknown;
   readonly self?: unknown;
@@ -64,6 +81,15 @@ interface ReadRow {
   readonly thread_id?: unknown;
   readonly read_at?: unknown;
   readonly unread_count?: unknown;
+}
+interface StoryChoiceRow {
+  readonly selection_outcome?: unknown;
+  readonly thread_id?: unknown;
+  readonly interaction_key?: unknown;
+  readonly choice_key?: unknown;
+  readonly interaction_status?: unknown;
+  readonly selected_at?: unknown;
+  readonly effective_choice_key?: unknown;
 }
 interface InboxLimits { readonly threadLimit: number; readonly messageLimit: number }
 interface InboxCursor { readonly beforeUpdatedAt: string; readonly beforeThreadId: string }
@@ -113,9 +139,19 @@ export async function handlePlayerMessagingRequest(
       case "list":
       case "search":
       case "thread":
-        return await handleRead(request, route, client, scope.gameId, scope.playerUuid);
+        return await handleRead(request, route, client, scope.gameId, scope.playerUuid, now);
       case "send":
         return await handleSend(request, route.threadId, client, scope.gameId, scope.playerUuid);
+      case "selectStoryChoice":
+        return await handleStoryChoice(
+          request,
+          route.threadId,
+          route.interactionKey,
+          client,
+          scope.gameId,
+          scope.playerUuid,
+          now,
+        );
       case "markRead":
         if (!route.threadId) {
           return messagingError(400, "invalid_player_message_request", "A valid public message thread ID is required.");
@@ -142,6 +178,7 @@ async function handleRead(
   client: EdgeSupabaseClient,
   gameId: string,
   playerId: string,
+  now: Date,
 ): Promise<Response> {
   const readRequest = parseReadRequest(request, route);
   if (!readRequest.ok) return readRequest.response;
@@ -154,9 +191,17 @@ async function handleRead(
       p_message_limit: readRequest.limits.messageLimit,
     });
     if (response.error) return mapRpcError(response.error);
+    const hydration = await hydrateStoryThreadInteractions(
+      client,
+      gameId,
+      playerId,
+      response.data,
+      now,
+    );
+    if (!hydration.ok) return mapRpcError(hydration.error);
     return privateJsonResponse(200, {
       ok: true,
-      data: { thread: normalizeThread(response.data) },
+      data: { thread: normalizeThread(hydration.thread) },
     });
   }
 
@@ -170,7 +215,15 @@ async function handleRead(
     p_before_thread_public_id: readRequest.cursor?.beforeThreadId ?? null,
   });
   if (response.error) return mapRpcError(response.error);
-  const inbox = normalizeInbox(response.data);
+  const hydration = await hydrateStoryInboxInteractions(
+    client,
+    gameId,
+    playerId,
+    response.data,
+    now,
+  );
+  if (!hydration.ok) return mapRpcError(hydration.error);
+  const inbox = normalizeInbox(hydration.inbox);
 
   if (route.kind === "search") {
     return privateJsonResponse(200, {
@@ -202,6 +255,44 @@ async function handleSend(
   return privateJsonResponse(result.outcome === "applied" ? 201 : 200, { ok: true, data: result });
 }
 
+async function handleStoryChoice(
+  request: Request,
+  threadId: string,
+  interactionKey: string,
+  client: EdgeSupabaseClient,
+  gameId: string,
+  playerId: string,
+  now: Date,
+): Promise<Response> {
+  if (new URL(request.url).searchParams.size) {
+    return invalidResult("Story choice selection does not accept query parameters.").response;
+  }
+  const command = await parseStoryChoiceCommand(request);
+  if (!command.ok) return command.response;
+  const response = await client.rpc<readonly StoryChoiceRow[]>(
+    "select_player_story_message_interaction_v1",
+    {
+      p_game_session_id: gameId,
+      p_player_id: playerId,
+      p_thread_public_id: threadId,
+      p_interaction_key: interactionKey,
+      p_choice_key: command.choiceKey,
+      p_idempotency_key: command.idempotencyKey,
+      p_selected_at: now.toISOString(),
+    },
+  );
+  if (response.error) return mapRpcError(response.error);
+  const result = normalizeStoryChoiceRow(
+    response.data?.[0],
+    threadId,
+    interactionKey,
+  );
+  return privateJsonResponse(result.outcome === "applied" ? 201 : 200, {
+    ok: true,
+    data: result,
+  });
+}
+
 async function handleReadReceipt(
   request: Request,
   threadId: string,
@@ -230,7 +321,7 @@ function validateMethod(method: string, kind: PlayerMessagingRoute["kind"]): Res
   if ((kind === "list" || kind === "search" || kind === "thread") && method !== "GET") {
     return messagingError(405, "method_not_allowed", "Use GET to load player messages.");
   }
-  if ((kind === "send" || kind === "markRead") && method !== "POST") {
+  if ((kind === "send" || kind === "markRead" || kind === "selectStoryChoice") && method !== "POST") {
     return messagingError(405, "method_not_allowed", "Use POST for this player messaging action.");
   }
   return null;
@@ -322,6 +413,153 @@ async function parseSendCommand(request: Request): Promise<
   return { ok: true, body, idempotencyKey };
 }
 
+async function parseStoryChoiceCommand(request: Request): Promise<
+  | { readonly ok: true; readonly choiceKey: string; readonly idempotencyKey: string }
+  | { readonly ok: false; readonly response: Response }
+> {
+  const value = await request.clone().json().catch(() => null);
+  if (!isRecord(value) || Object.keys(value).some((key) => !["choiceKey", "idempotencyKey"].includes(key))) {
+    return invalidResult("Provide a valid Story choice JSON object.");
+  }
+  const choiceKey = typeof value.choiceKey === "string" ? value.choiceKey.trim() : "";
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(choiceKey)) {
+    return invalidResult("Story choiceKey is invalid.");
+  }
+  const bodyKey = typeof value.idempotencyKey === "string" ? value.idempotencyKey.trim() : "";
+  const headerKey = request.headers.get("idempotency-key")?.trim() ??
+    request.headers.get("x-idempotency-key")?.trim() ??
+    request.headers.get("x-request-id")?.trim() ?? "";
+  if (bodyKey && headerKey && bodyKey !== headerKey) {
+    return invalidResult("Request and header idempotency keys must match.");
+  }
+  const idempotencyKey = bodyKey || headerKey;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(idempotencyKey)) {
+    return invalidResult("A safe idempotency key is required.");
+  }
+  return { ok: true, choiceKey, idempotencyKey };
+}
+
+async function hydrateStoryInboxInteractions(
+  client: EdgeSupabaseClient,
+  gameId: string,
+  playerId: string,
+  inbox: RawInbox | null,
+  now: Date,
+): Promise<
+  | { readonly ok: true; readonly inbox: RawInbox | null }
+  | { readonly ok: false; readonly error: RpcError }
+> {
+  if (!isRecord(inbox) || !Array.isArray(inbox.threads)) {
+    return { ok: true, inbox };
+  }
+  const threadIds = storyThreadPublicIds(inbox.threads);
+  if (threadIds.length === 0) return { ok: true, inbox };
+  const interactionRead = await readStoryInteractionMap(
+    client,
+    gameId,
+    playerId,
+    threadIds,
+    now,
+  );
+  if (!interactionRead.ok) return interactionRead;
+  return {
+    ok: true,
+    inbox: {
+      ...inbox,
+      threads: inbox.threads.map((thread) =>
+        hydrateRawStoryThread(thread, interactionRead.interactions)
+      ),
+    },
+  };
+}
+
+async function hydrateStoryThreadInteractions(
+  client: EdgeSupabaseClient,
+  gameId: string,
+  playerId: string,
+  thread: RawThread | null,
+  now: Date,
+): Promise<
+  | { readonly ok: true; readonly thread: RawThread | null }
+  | { readonly ok: false; readonly error: RpcError }
+> {
+  if (!isRecord(thread) || String(thread.type || "").trim().toLowerCase() !== "story") {
+    return { ok: true, thread };
+  }
+  const threadId = String(thread.id || "").trim();
+  if (!/^thr_[0-9a-f]{32}$/.test(threadId)) {
+    return { ok: true, thread };
+  }
+  const interactionRead = await readStoryInteractionMap(
+    client,
+    gameId,
+    playerId,
+    [threadId],
+    now,
+  );
+  if (!interactionRead.ok) return interactionRead;
+  return {
+    ok: true,
+    thread: hydrateRawStoryThread(thread, interactionRead.interactions) as RawThread,
+  };
+}
+
+async function readStoryInteractionMap(
+  client: EdgeSupabaseClient,
+  gameId: string,
+  playerId: string,
+  threadIds: readonly string[],
+  now: Date,
+): Promise<
+  | { readonly ok: true; readonly interactions: Readonly<Record<string, unknown>> }
+  | { readonly ok: false; readonly error: RpcError }
+> {
+  const response = await client.rpc<Record<string, unknown>>(
+    "read_player_story_message_interactions_v1",
+    {
+      p_game_session_id: gameId,
+      p_player_id: playerId,
+      p_thread_public_ids: [...threadIds],
+      p_at: now.toISOString(),
+    },
+  );
+  if (response.error) return { ok: false, error: response.error };
+  return {
+    ok: true,
+    interactions: isRecord(response.data) ? response.data : Object.freeze({}),
+  };
+}
+
+function storyThreadPublicIds(values: readonly unknown[]): readonly string[] {
+  const ids = values.flatMap((value) => {
+    if (!isRecord(value) || String(value.type || "").trim().toLowerCase() !== "story") {
+      return [];
+    }
+    const id = String(value.id || "").trim();
+    return /^thr_[0-9a-f]{32}$/.test(id) ? [id] : [];
+  });
+  return [...new Set(ids)].slice(0, 50);
+}
+
+function hydrateRawStoryThread(
+  value: unknown,
+  interactions: Readonly<Record<string, unknown>>,
+): unknown {
+  if (!isRecord(value) || String(value.type || "").trim().toLowerCase() !== "story") {
+    return value;
+  }
+  const messages = Array.isArray(value.messages)
+    ? value.messages.map((message) => {
+      if (!isRecord(message)) return message;
+      const messageId = String(message.id || "").trim();
+      return Object.prototype.hasOwnProperty.call(interactions, messageId)
+        ? { ...message, interaction: interactions[messageId] }
+        : message;
+    })
+    : value.messages;
+  return { ...value, messages };
+}
+
 function normalizeInbox(value: RawInbox | null) {
   if (!isRecord(value)) throw new Error("invalid inbox response");
   const rawThreads = Array.isArray(value.threads) ? value.threads : null;
@@ -411,6 +649,9 @@ function normalizeMessage(value: unknown) {
     storyEventKey: optionalText(value.storyEventKey, 160),
     interactionKey: optionalText(value.interactionKey, 160),
     messagePurpose: optionalText(value.messagePurpose, 40),
+    interaction: value.interaction === null || value.interaction === undefined
+      ? null
+      : normalizeStoryInteraction(value.interaction),
     initials: initials(sender),
     body: requiredText(value.body, 1000),
     time,
@@ -419,6 +660,95 @@ function normalizeMessage(value: unknown) {
     self: value.self === true,
     attachment: "",
   });
+}
+
+function normalizeStoryInteraction(value: unknown) {
+  if (!isRecord(value)) throw new Error("invalid story interaction");
+  const interactionKey = storyPublicKey(value.interactionKey, 160);
+  const prompt = requiredText(value.prompt, 1000);
+  const status = enumText(value.status, ["open", "selected", "expired"]);
+  const opensAt = isoTimestamp(value.opensAt);
+  const closesAt = value.closesAt === null || value.closesAt === undefined
+    ? ""
+    : isoTimestamp(value.closesAt);
+  const selectedChoiceKey = optionalStoryChoiceKey(value.selectedChoiceKey);
+  const effectiveChoiceKey = optionalStoryChoiceKey(value.effectiveChoiceKey);
+  const selectedAt = value.selectedAt === null || value.selectedAt === undefined
+    ? ""
+    : isoTimestamp(value.selectedAt);
+  if (!Array.isArray(value.options) || value.options.length < 2 || value.options.length > 5) {
+    throw new Error("invalid story interaction options");
+  }
+  const options = value.options.map((option) => {
+    if (!isRecord(option)) throw new Error("invalid story interaction option");
+    return Object.freeze({
+      choiceKey: storyChoiceKey(option.choiceKey),
+      label: requiredText(option.label, 240),
+      description: optionalText(option.description, 500),
+    });
+  });
+  if (new Set(options.map((option) => option.choiceKey)).size !== options.length) {
+    throw new Error("duplicate story interaction options");
+  }
+  return Object.freeze({
+    interactionKey,
+    prompt,
+    status,
+    opensAt,
+    closesAt,
+    selectedChoiceKey,
+    effectiveChoiceKey,
+    selectedAt,
+    options: Object.freeze(options),
+  });
+}
+
+function normalizeStoryChoiceRow(
+  value: StoryChoiceRow | undefined,
+  expectedThreadId: string,
+  expectedInteractionKey: string,
+) {
+  if (!isRecord(value)) throw new Error("invalid story choice response");
+  const outcome = enumText(value.selection_outcome, ["applied", "replayed"]);
+  const threadId = publicId(value.thread_id, /^thr_[0-9a-f]{32}$/);
+  const interactionKey = storyPublicKey(value.interaction_key, 160);
+  const choiceKey = storyChoiceKey(value.choice_key);
+  const status = enumText(value.interaction_status, ["selected"]);
+  const effectiveChoiceKey = storyChoiceKey(value.effective_choice_key);
+  if (threadId !== expectedThreadId || interactionKey !== expectedInteractionKey) {
+    throw new Error("story choice identity mismatch");
+  }
+  return Object.freeze({
+    outcome,
+    threadId,
+    interactionKey,
+    choiceKey,
+    status,
+    selectedAt: isoTimestamp(value.selected_at),
+    effectiveChoiceKey,
+  });
+}
+
+function storyPublicKey(value: unknown, maximum: number): string {
+  const result = requiredText(value, maximum);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(result) || UUID_SHAPED.test(result)) {
+    throw new Error("invalid story public key");
+  }
+  return result;
+}
+
+function storyChoiceKey(value: unknown): string {
+  const result = storyPublicKey(value, 96);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result)) {
+    throw new Error("invalid story choice key");
+  }
+  return result;
+}
+
+function optionalStoryChoiceKey(value: unknown): string {
+  return value === null || value === undefined || value === ""
+    ? ""
+    : storyChoiceKey(value);
 }
 
 function normalizeSendRow(value: SendRow | undefined, expectedThreadId: string) {
@@ -451,6 +781,21 @@ function mapRpcError(error: RpcError): Response {
   const lower = error.message.toLowerCase();
   if (error.code === "42P01" || error.code === "42703" || error.code === "42883" || lower.includes("does not exist") || lower.includes("schema cache")) {
     return messagingError(503, "player_messaging_schema_not_applied", "Messaging is unavailable in this runtime.", true);
+  }
+  if (message.includes("PLAYER_STORY_CHOICE_IDEMPOTENCY_CONFLICT")) {
+    return messagingError(409, "player_story_choice_idempotency_conflict", "This idempotency key was already used for another Story choice.");
+  }
+  if (message.includes("PLAYER_STORY_CHOICE_EXPIRED")) {
+    return messagingError(409, "player_story_choice_expired", "This Story response window is closed.");
+  }
+  if (message.includes("PLAYER_STORY_CHOICE_INVALID_OPTION")) {
+    return messagingError(422, "player_story_choice_invalid_option", "That Story response option is not available.");
+  }
+  if (message.includes("PLAYER_STORY_CHOICE_GAME_NOT_ACTIVE")) {
+    return messagingError(409, "game_not_active", "Story choices cannot be selected while the game is not active.");
+  }
+  if (message.includes("PLAYER_STORY_CHOICE_NOT_FOUND") || message.includes("PLAYER_STORY_CHOICE_SCOPE_FORBIDDEN")) {
+    return messagingError(404, "player_story_choice_not_found", "Story response window was not found.");
   }
   if (message.includes("PLAYER_MESSAGE_THREAD_NOT_FOUND") || message.includes("PLAYER_MESSAGES_SCOPE_FORBIDDEN")) {
     return messagingError(404, "player_message_thread_not_found", "Message thread was not found.");
@@ -495,6 +840,8 @@ function countHttpLinks(value: string): number {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
+const UUID_SHAPED = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function requiredText(value: unknown, maximum: number): string {
   if (typeof value !== "string") throw new Error("invalid text");
   const result = value.trim();

@@ -39,6 +39,7 @@ Deno.test("character_message executes through the story message writer with effe
     interactionKey: "interaction.jonis.production-pressure.v1",
     messagePurpose: "warning",
     body: "They are asking us to skip a second inspection cycle.",
+    responseWindow: null,
   }]);
 });
 
@@ -81,6 +82,7 @@ function effect() {
     interactionKey: "interaction.jonis.production-pressure.v1",
     messagePurpose: "warning" as const,
     body: "They are asking us to skip a second inspection cycle.",
+    responseWindow: null,
   };
 }
 

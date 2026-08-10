@@ -63,6 +63,8 @@ export async function dispatchClassroomMessagingRequest(
     ? "messageSearch"
     : route.kind === "send"
     ? "messageSend"
+    : route.kind === "selectStoryChoice"
+    ? "messageStoryChoice"
     : "messageRead";
 
   return dispatchRateLimitedReviewedPlayerRequest(

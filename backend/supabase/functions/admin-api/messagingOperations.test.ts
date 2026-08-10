@@ -26,6 +26,36 @@ Deno.test("Admin Messaging reads UUID-private threads with bounded pagination", 
   assertNoUuid(JSON.stringify(result.body));
 });
 
+Deno.test("Admin Messaging projects Story response windows read-only", async () => {
+  const service = new FakeSequenceService([
+    { data: { threads: [storyThread()], returned: 1 }, error: null },
+    { data: {
+      [MESSAGE]: {
+        interactionKey: "interaction.jonis.offer.v1",
+        prompt: "How do you answer?",
+        status: "selected",
+        opensAt: NOW,
+        closesAt: "2026-07-21T05:00:00.000Z",
+        selectedChoiceKey: "decline",
+        effectiveChoiceKey: "decline",
+        selectedAt: NOW,
+        options: [
+          { choiceKey: "accept", label: "Accept his help", description: "Owe a favor." },
+          { choiceKey: "decline", label: "Decline", description: "Stay independent." },
+        ],
+      },
+    }, error: null },
+  ]);
+  const result = await operation(service as never, { method: "GET" });
+  assertEquals(result.status, 200);
+  assertEquals(service.calls.map((call) => call.name), [
+    "read_admin_message_threads_v1",
+    "read_admin_story_message_interactions_v1",
+  ]);
+  assertEquals((result.body as any).data.threads[0].messages[0].interaction.effectiveChoiceKey, "decline");
+  assertNoUuid(JSON.stringify(result.body));
+});
+
 Deno.test("Admin Messaging creates typed Contract threads with public Player IDs", async () => {
   const service = new FakeService([{
     create_outcome: "applied",
@@ -208,6 +238,16 @@ Deno.test("Admin Messaging maps strict conflicts and leaves unrelated routes unt
   }
 });
 
+class FakeSequenceService {
+  readonly calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  constructor(private readonly responses: Array<{ data: unknown; error: { readonly message: string; readonly code?: string } | null }>) {}
+  rpc<T>(name: string, args: unknown): Promise<{ data: T | null; error: { readonly message: string; readonly code?: string } | null }> {
+    this.calls.push({ name, args: args as Record<string, unknown> });
+    const response = this.responses.shift() ?? { data: null, error: null };
+    return Promise.resolve({ data: response.data as T | null, error: response.error });
+  }
+}
+
 class FakeService {
   readonly calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   constructor(private readonly data: unknown, private readonly error: { readonly message: string; readonly code?: string } | null = null) {}
@@ -252,6 +292,38 @@ function thread() {
     messages: [{ id: MESSAGE, senderType: "player", senderName: "Student", body: "Ready.", hidden: false, hiddenReason: null, createdAt: NOW }],
   };
 }
+function storyThread() {
+  return {
+    id: THREAD,
+    type: "story",
+    title: "Jonis Hale",
+    contractKey: null,
+    storyCharacterKey: "character.northreach.jonis-hale.v1",
+    storyCharacterName: "Jonis Hale",
+    allowPlayerReplies: false,
+    status: "active",
+    moderationReason: null,
+    retentionUntil: "2027-07-20T00:00:00.000Z",
+    createdAt: NOW,
+    updatedAt: NOW,
+    participants: [{ reference: "PLAYER-001", displayName: "Student", rosterLabel: null, lastReadAt: null }],
+    messages: [{
+      id: MESSAGE,
+      senderType: "system",
+      senderName: "Jonis Hale",
+      senderCharacterKey: "character.northreach.jonis-hale.v1",
+      storylineKey: "econovaria_meridian_v1",
+      storyEventKey: "northreach_production_pressure",
+      interactionKey: "interaction.jonis.offer.v1",
+      messagePurpose: "offer",
+      body: "I can move your application to the top of the list.",
+      hidden: false,
+      hiddenReason: null,
+      createdAt: NOW,
+    }],
+  };
+}
+
 function assertNoUuid(value: string): void {
   if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(value)) throw new Error(`UUID leaked: ${value}`);
 }

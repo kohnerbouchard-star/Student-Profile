@@ -91,7 +91,7 @@ Prepared implementation package from the prior run is being reconciled and verif
 
 ### S2 — Structured narrative response windows
 
-Status: IN PROGRESS
+Status: COMPLETE ON BRANCH / CONNECTED STAGING PENDING
 
 Goal: give Players explicit authored choices without making free-form text authoritative.
 
@@ -923,6 +923,50 @@ Correction in this run:
 - compile the corrected followup patcher before publication.
 
 Next: trigger the complete S2 V2 landing suite; if all typechecks clear, continue directly into Player Messaging, security, capability, story, Admin, and Player-terminal regressions.
+
+### Run 2026-08-11 — S2 structured response windows landed
+
+Workflow run: `31436272469`
+Source head verified by runner: `0bdccc4c561272ceba94a9b1876c78a0e0eb6626`
+Migration: `20260810215844_add_story_structured_response_windows_v1.sql`
+
+Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.
+
+Implemented:
+
+- optional authored response windows on `character_message` story effects;
+- 2–5 stable authored choices with prompt, open/close lifecycle, and optional deterministic default;
+- private immutable interaction and Player-selection records attached to the S1 story message;
+- one session-derived Player selection with exact idempotent replay and divergent-key conflict;
+- before-open, expired, invalid-option, hidden-message, non-story-thread, and cross-scope paths fail closed;
+- effective choice is derived from explicit selection or authored default after expiry without adding a scheduler;
+- Player and Admin Messaging hydrate safe response state by public message ID through sidecar RPCs;
+- Player terminal renders authored choice controls only while open and read-only resolved/expired state afterward;
+- Admin sees response state read-only and has no choose-for-Player mutation;
+- Player capability and rate-limit registries contain the explicit `messageStoryChoice` / `storyChoiceSelect` boundary;
+- S1 character-message behavior remains covered when no response window is authored;
+- Player Messaging routing remains on the canonical segment parser.
+
+Verification completed:
+
+- reconstructed payload archive SHA-256 and per-member MANIFEST SHA-256 checks;
+- branch patchers loaded from the exact checked-out source SHA and Python-compiled before application;
+- exact current-S1 parser compatibility guard;
+- `git diff --check`;
+- `npm run typecheck:all`;
+- `npm run test:player-messaging`;
+- `npm run test:player-security`;
+- `npm run test:player-capabilities`;
+- `npm run test:stock-market-calendar`;
+- `npm run test:admin-api`;
+- `node --test scripts/admin-v2-messages.test.mjs`;
+- `node --test player-terminal/tests/story-message-choice-ui.mjs`.
+
+Remaining S2 acceptance:
+
+- connected staging database replay and end-to-end Player selection acceptance before merge.
+
+Next: S3 recurring-character relationship state, consuming only authoritative S2 effective choices and existing story effects.
 
 ## Run-completion rule
 

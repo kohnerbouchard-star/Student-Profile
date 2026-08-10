@@ -197,6 +197,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   messageRead: byMethod({
     POST: operation("player.messages.receipt", "write"),
   }),
+  messageStoryChoice: byMethod({
+    POST: operation("player.messages.story.choice", "sensitive"),
+  }),
   marketplace: byMethod({
     GET: operation("player.marketplace.read", "read"),
   }),
@@ -314,6 +317,7 @@ function threadScopedMessagingAction(
     "messageThread",
     "messageSend",
     "messageRead",
+    "messageStoryChoice",
   ]).has(endpointKey)) return null;
   const match = new URL(request.url).pathname.match(
     /\/messages\/threads\/thr_([0-9a-f]{32})(?:\/|$)/,

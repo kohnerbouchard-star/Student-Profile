@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-10.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -51,6 +51,7 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "messageAttachment",
   "messageSearch",
   "messageSend",
+  "storyChoiceSelect",
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
@@ -112,6 +113,7 @@ export type PlayerCapabilityEndpointKey =
   | "messageThreadCreate"
   | "messageSend"
   | "messageRead"
+  | "messageStoryChoice"
   | "news"
   | "notifications"
   | "notificationsRead"
@@ -572,6 +574,15 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       },
     ],
     routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageStoryChoice",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads/:threadId/story-interactions/:interactionKey/select",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["storyChoiceSelect"],
   },
   {
     key: "notifications",

@@ -108,6 +108,7 @@ export async function executeStoryEffect(
         interactionKey: input.effect.interactionKey,
         messagePurpose: input.effect.messagePurpose,
         body: input.effect.body,
+        responseWindow: input.effect.responseWindow,
       });
       return applied(
         input.effect,

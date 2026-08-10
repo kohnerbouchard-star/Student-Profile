@@ -61,6 +61,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   messageThreadCreate: Object.freeze(["dashboard", "messages", "notifications"]),
   messageSend: Object.freeze(["dashboard", "messages", "notifications"]),
   messageRead: Object.freeze(["dashboard", "messages", "notifications"]),
+  messageStoryChoice: Object.freeze(["dashboard", "messages", "notifications"]),
   progressionUnlock: Object.freeze(["dashboard", "progression"]),
   progressionClaim: Object.freeze(["dashboard", "progression", "inventory", "banking"]),
   notificationsRead: Object.freeze(["dashboard", "notifications"]),

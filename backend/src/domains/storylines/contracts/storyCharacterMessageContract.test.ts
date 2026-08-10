@@ -22,6 +22,7 @@ Deno.test("story effect parser accepts authored character messages", () => {
     interactionKey: "interaction.jonis.production-pressure.v1",
     messagePurpose: "warning",
     body: "They are asking us to skip a second inspection cycle.",
+    responseWindow: null,
   });
   assertEquals(STORY_CHARACTER_MESSAGE_PURPOSES.includes("crisis"), true);
 });
@@ -38,6 +39,7 @@ Deno.test("story effect parser defaults message purpose and rejects unsupported 
   }
   assertEquals(effect.messagePurpose, "relationship");
   assertEquals(effect.interactionKey, null);
+  assertEquals(effect.responseWindow, null);
 
   assertThrows(() => parseStoryEffect({
     type: "character_message",

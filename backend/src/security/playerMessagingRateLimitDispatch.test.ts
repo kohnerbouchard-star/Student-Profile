@@ -24,6 +24,7 @@ Deno.test("Messaging operations have distinct central rate-limit actions", () =>
     "messageThreadCreate:POST": ["player.messages.thread.create", "sensitive"],
     "messageSend:POST": ["player.messages.send", "sensitive"],
     "messageRead:POST": ["player.messages.receipt", "write"],
+    "messageStoryChoice:POST": ["player.messages.story.choice", "sensitive"],
   } as const;
   for (const [key, value] of Object.entries(expected)) {
     const [endpoint, method] = key.split(":");
@@ -41,6 +42,7 @@ Deno.test("explicit Messaging endpoint keys derive bounded per-thread actions", 
     ["GET", `/players/me/messages/threads/${THREAD}`, "messageThread", THREAD_ACTION],
     ["POST", `/players/me/messages/threads/${THREAD}/messages`, "messageSend", THREAD_ACTION],
     ["POST", `/players/me/messages/threads/${THREAD}/read`, "messageRead", THREAD_ACTION],
+    ["POST", `/players/me/messages/threads/${THREAD}/story-interactions/interaction.jonis.offer.v1/select`, "messageStoryChoice", THREAD_ACTION],
   ] as const;
 
   for (const [method, path, endpointKey, expectedAction] of scenarios) {

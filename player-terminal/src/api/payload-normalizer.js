@@ -117,6 +117,13 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
   if (endpointKey === "messageSend") {
     return { body: messageText(raw.body, endpointKey) };
   }
+  if (endpointKey === "messageStoryChoice") {
+    const choiceKey = normalizeString("choiceKey", raw.choiceKey, endpointKey);
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(choiceKey)) {
+      throw invalidPayload(endpointKey, "choiceKey");
+    }
+    return { choiceKey };
+  }
   if (endpointKey === "messageRead") {
     const threadId = normalizeString("threadId", raw.threadId, endpointKey).toLowerCase();
     if (!PUBLIC_THREAD_ID.test(threadId)) throw invalidPayload(endpointKey, "threadId");

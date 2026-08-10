@@ -107,6 +107,28 @@ function reasonField(label, hint) {
   return field;
 }
 
+function storyInteractionSummary(message) {
+  const interaction = message.interaction;
+  if (!interaction) return null;
+  const effective = interaction.effectiveChoiceKey
+    ? interaction.options.find((option) => option.choiceKey === interaction.effectiveChoiceKey)?.label || interaction.effectiveChoiceKey
+    : "No effective choice";
+  return createElement("section", {
+    className: "admin-messages-route__story-interaction",
+    attrs: { "aria-label": "Structured Story response" },
+    children: [
+      createElement("strong", { text: "Story response window" }),
+      createElement("p", { text: interaction.prompt }),
+      createElement("small", { text: `${titleCase(interaction.status)} · ${effective}` }),
+      createElement("ul", {
+        children: interaction.options.map((option) => createElement("li", {
+          text: `${option.label}${option.description ? ` — ${option.description}` : ""}`,
+        })),
+      }),
+    ],
+  });
+}
+
 function messageCard({ thread, message, onRequestAction }) {
   const action = message.hidden ? "unhide" : "hide";
   const restrictive = action === "hide";
@@ -133,6 +155,7 @@ function messageCard({ thread, message, onRequestAction }) {
         ],
       }),
       createElement("p", { className: "admin-messages-route__body", text: message.body || "Message body unavailable." }),
+      storyInteractionSummary(message),
       message.storyEventKey || message.storylineKey || message.messagePurpose ? createElement("p", {
         className: "admin-messages-route__contract",
         children: [

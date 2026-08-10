@@ -1,10 +1,12 @@
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
+import { invalidStorylineContract } from "./storylineContractErrors.ts";
 import {
   isEmptyRecord,
   readBooleanWithDefault,
   readEnum,
   readJsonObjectWithDefault,
   readJsonValue,
+  readOptionalArray,
   readOptionalEnum,
   readOptionalIsoDateTimeText,
   readOptionalPositiveInteger,
@@ -83,6 +85,19 @@ export type StoryNotificationDisplayMode =
 export type StoryCharacterMessagePurpose =
   typeof STORY_CHARACTER_MESSAGE_PURPOSES[number];
 
+export interface StoryCharacterResponseOption {
+  readonly choiceKey: string;
+  readonly label: string;
+  readonly description: string | null;
+}
+
+export interface StoryCharacterResponseWindow {
+  readonly prompt: string;
+  readonly options: readonly StoryCharacterResponseOption[];
+  readonly durationSeconds: number | null;
+  readonly defaultChoiceKey: string | null;
+}
+
 export type StoryEffect =
   | StoryCashEffect
   | StoryPolicyEffect
@@ -151,6 +166,7 @@ export interface StoryCharacterMessageEffect {
   readonly interactionKey: string | null;
   readonly messagePurpose: StoryCharacterMessagePurpose;
   readonly body: string;
+  readonly responseWindow: StoryCharacterResponseWindow | null;
 }
 
 export interface StoryRevealPayload {
@@ -250,11 +266,26 @@ export function parseStoryEffect(value: unknown): StoryEffect {
   }
 
   if (type === "character_message") {
+    const interactionKey = readOptionalText(
+      record.interactionKey,
+      "effect.interactionKey",
+    );
+    const responseWindow = parseStoryCharacterResponseWindow(
+      record.responseWindow,
+    );
+    if (responseWindow && !interactionKey) {
+      throw invalidStorylineContract(
+        "effect.interactionKey is required when effect.responseWindow is configured.",
+      );
+    }
     return {
       type,
       characterKey: readRequiredText(record.characterKey, "effect.characterKey"),
-      characterName: readRequiredText(record.characterName, "effect.characterName"),
-      interactionKey: readOptionalText(record.interactionKey, "effect.interactionKey"),
+      characterName: readRequiredText(
+        record.characterName,
+        "effect.characterName",
+      ),
+      interactionKey,
       messagePurpose: readOptionalEnum(
         record.messagePurpose,
         "effect.messagePurpose",
@@ -262,6 +293,7 @@ export function parseStoryEffect(value: unknown): StoryEffect {
         "relationship",
       ),
       body: readRequiredText(record.body, "effect.body"),
+      responseWindow,
     };
   }
 
@@ -269,6 +301,86 @@ export function parseStoryEffect(value: unknown): StoryEffect {
     type,
     flagKey: readRequiredText(record.flagKey, "effect.flagKey"),
     value: readJsonValue(record.value, "effect.value"),
+  };
+}
+
+export function parseStoryCharacterResponseWindow(
+  value: unknown,
+): StoryCharacterResponseWindow | null {
+  const record = readOptionalRecord(value, "effect.responseWindow");
+  if (record === null) return null;
+
+  const prompt = readRequiredText(record.prompt, "effect.responseWindow.prompt");
+  if (prompt.length > 1000) {
+    throw invalidStorylineContract(
+      "effect.responseWindow.prompt must be 1000 characters or fewer.",
+    );
+  }
+
+  const optionValues = readOptionalArray(
+    record.options,
+    "effect.responseWindow.options",
+  );
+  if (optionValues.length < 2 || optionValues.length > 5) {
+    throw invalidStorylineContract(
+      "effect.responseWindow.options must contain 2 to 5 choices.",
+    );
+  }
+
+  const seen = new Set<string>();
+  const options = optionValues.map((optionValue, index) => {
+    const option = readRecord(
+      optionValue,
+      `effect.responseWindow.options[${index}]`,
+    );
+    const choiceKey = readRequiredText(
+      option.choiceKey,
+      `effect.responseWindow.options[${index}].choiceKey`,
+    );
+    const label = readRequiredText(
+      option.label,
+      `effect.responseWindow.options[${index}].label`,
+    );
+    const description = readOptionalText(
+      option.description,
+      `effect.responseWindow.options[${index}].description`,
+    );
+    if (
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(choiceKey) ||
+      label.length > 240 ||
+      (description?.length ?? 0) > 500 ||
+      seen.has(choiceKey)
+    ) {
+      throw invalidStorylineContract(
+        "effect.responseWindow contains an invalid or duplicate choice.",
+      );
+    }
+    seen.add(choiceKey);
+    return { choiceKey, label, description };
+  });
+
+  const durationSeconds = readOptionalPositiveInteger(
+    record.durationSeconds,
+    "effect.responseWindow.durationSeconds",
+  );
+  const defaultChoiceKey = readOptionalText(
+    record.defaultChoiceKey,
+    "effect.responseWindow.defaultChoiceKey",
+  );
+  if (
+    (durationSeconds !== null && durationSeconds > 31536000) ||
+    (defaultChoiceKey !== null && !seen.has(defaultChoiceKey))
+  ) {
+    throw invalidStorylineContract(
+      "effect.responseWindow default or duration is invalid.",
+    );
+  }
+
+  return {
+    prompt,
+    options,
+    durationSeconds,
+    defaultChoiceKey,
   };
 }
 

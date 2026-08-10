@@ -29,8 +29,9 @@ Deno.test("Supabase story message writer preserves exact public identity across 
       },
     } as never);
     assertEquals(await writer.deliverCharacterMessage(input()), { id: MESSAGE });
-    assertEquals(calls[0].name, "deliver_story_character_message_v1");
+    assertEquals(calls[0].name, "deliver_story_character_message_v2");
     assertEquals((calls[0].args as any).p_effect_index, 4);
+    assertEquals((calls[0].args as any).p_response_window, null);
   }
 });
 
@@ -81,6 +82,7 @@ function input() {
     interactionKey: "interaction.jonis.production-pressure.v1",
     messagePurpose: "warning" as const,
     body: "They are asking us to skip a second inspection cycle.",
+    responseWindow: null,
   };
 }
 

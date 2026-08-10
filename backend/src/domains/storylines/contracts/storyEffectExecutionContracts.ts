@@ -4,6 +4,7 @@ import type { PlayerStoryContext } from "./playerStoryContext.ts";
 import type {
   StoryEffect,
   StoryCharacterMessagePurpose,
+  StoryCharacterResponseWindow,
   StoryEffectType,
   StoryPolicyScopeType,
   StoryPolicyType,
@@ -102,6 +103,7 @@ export interface StoryCharacterMessageWriteInput {
   readonly interactionKey: string | null;
   readonly messagePurpose: StoryCharacterMessagePurpose;
   readonly body: string;
+  readonly responseWindow: StoryCharacterResponseWindow | null;
 }
 
 export interface StoryWriteResult {

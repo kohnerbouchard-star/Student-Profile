@@ -71,7 +71,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute",
-    "messageSearch", "messageSend", "progressionUnlock", "progressionClaim",
+    "messageSearch", "messageSend", "storyChoiceSelect", "progressionUnlock", "progressionClaim",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
 
   assertEquals(manifest.capabilities.actions.messageAttachment, false);
@@ -87,7 +87,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
     "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
-    "messageRead", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_BANKING_ENDPOINTS,
+    "messageRead", "messageStoryChoice", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -114,6 +114,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":listingId", `lst_${"b".repeat(32)}`)
         .replace(":orderId", `ord_${"c".repeat(32)}`)
         .replace(":threadId", `thr_${"a".repeat(32)}`)
+        .replace(":interactionKey", "interaction.jonis.offer.v1")
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
@@ -167,7 +168,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       ? readPlayerMessageThreadLifecycleRoutePath(operation.path)
       : operation.key === "messages" || operation.key === "messageThread" ||
           operation.key === "messageSearch" || operation.key === "messageSend" ||
-          operation.key === "messageRead"
+          operation.key === "messageRead" || operation.key === "messageStoryChoice"
       ? readPlayerMessagingRoutePath(operation.path)
       : operation.key === "progression" ||
           operation.key === "progressionUnlock" ||

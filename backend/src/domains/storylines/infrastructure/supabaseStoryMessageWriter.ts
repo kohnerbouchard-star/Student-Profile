@@ -33,7 +33,7 @@ export class SupabaseStoryMessageWriter implements StoryEffectMessageWriter {
     input: StoryCharacterMessageWriteInput,
   ): Promise<StoryWriteResult> {
     const response = await this.client.rpc<readonly DeliveryRow[]>(
-      "deliver_story_character_message_v1",
+      "deliver_story_character_message_v2",
       {
         p_game_session_id: input.gameSessionId,
         p_player_id: input.playerId,
@@ -44,6 +44,18 @@ export class SupabaseStoryMessageWriter implements StoryEffectMessageWriter {
         p_interaction_key: input.interactionKey,
         p_message_purpose: input.messagePurpose,
         p_body: input.body,
+        p_response_window: input.responseWindow
+          ? {
+            prompt: input.responseWindow.prompt,
+            options: input.responseWindow.options.map((option) => ({
+              choiceKey: option.choiceKey,
+              label: option.label,
+              description: option.description,
+            })),
+            durationSeconds: input.responseWindow.durationSeconds,
+            defaultChoiceKey: input.responseWindow.defaultChoiceKey,
+          }
+          : null,
       },
     );
 
