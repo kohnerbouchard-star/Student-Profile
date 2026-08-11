@@ -1,0 +1,182 @@
+name: Player Dashboard Stock Tick Production Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/player-dashboard-stock-tick-production-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: player-dashboard-stock-tick-production-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: 5dd34c08d0152bf3feef3257547eb268c6274c5c
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  MIGRATION_PATH: backend/supabase/migrations/20260811231144_optimize_latest_stock_market_ticks_read_v2.sql
+  MIGRATION_VERSION: "20260811231144"
+  MIGRATION_NAME: optimize_latest_stock_market_ticks_read_v2
+  EXPECTED_MIGRATION_BLOB: a7c7e201a75e2ff8701ad26568d7f3313463551f
+
+jobs:
+  release:
+    name: Apply bounded latest-tick RPC migration to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_MIGRATION_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$MIGRATION_VERSION" = "20260811231144"
+          test "$MIGRATION_NAME" = "optimize_latest_stock_market_ticks_read_v2"
+          command -v psql >/dev/null
+
+      - name: Check out exact merged migration source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact migration source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+          test -f "$MIGRATION_PATH"
+          test "$(git hash-object "$MIGRATION_PATH")" = "$EXPECTED_MIGRATION_BLOB"
+          grep -q 'create or replace function public.read_latest_stock_market_ticks_for_game' "$MIGRATION_PATH"
+          grep -q 'cross join lateral' "$MIGRATION_PATH"
+          grep -q 'order by tick.tick_index desc, tick.created_at desc' "$MIGRATION_PATH"
+          grep -q 'limit 1' "$MIGRATION_PATH"
+          grep -q 'grant execute on function public.read_latest_stock_market_ticks_for_game(uuid, text) to service_role' "$MIGRATION_PATH"
+          if grep -Eiq '\b(drop[[:space:]]+(table|schema|database)|truncate|alter[[:space:]]+table[^;]+drop[[:space:]]+(column|constraint))\b' "$MIGRATION_PATH"; then
+            echo 'Destructive SQL rejected.' >&2
+            exit 1
+          fi
+
+      - name: Build atomic forward migration with exact ledger identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          MIGRATION_PATH="$MIGRATION_PATH" OUTPUT_PATH="$RUNNER_TEMP/player-dashboard-stock-tick-production.sql" node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.MIGRATION_PATH, 'utf8').trim();
+          if (!source || /(^|\n)\s*(begin|commit)\s*;/iu.test(source)) {
+            throw new Error('Migration source must be a non-empty unwrapped forward body.');
+          }
+          const version = process.env.MIGRATION_VERSION;
+          const name = process.env.MIGRATION_NAME;
+          const blob = process.env.EXPECTED_MIGRATION_BLOB;
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const statement = `${process.env.MIGRATION_PATH}@${blob}`;
+          const sql = [
+            'begin;',
+            `do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and coalesce(name, '') <> ${literal(name)}) then raise exception 'Migration ledger conflict for ${version}'; end if; end $$;`,
+            source,
+            `insert into supabase_migrations.schema_migrations (version, name, statements) values (${literal(version)}, ${literal(name)}, array[${literal(statement)}]) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and name = ${literal(name)} and statements = array[${literal(statement)}]) then raise exception 'Migration ledger verification failed for ${version}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            'commit;',
+            '',
+          ].join('\n\n');
+          fs.writeFileSync(process.env.OUTPUT_PATH, sql, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/player-dashboard-stock-tick-production.sql"
+
+      - name: Apply production migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/player-dashboard-stock-tick-production.sql"
+          rm -f "$RUNNER_TEMP/player-dashboard-stock-tick-production.sql"
+
+      - name: Verify production postconditions and bounded read
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/postconditions.json"
+          set statement_timeout = '2000ms';
+          with target_game as (
+            select tick.game_session_id
+            from public.stock_price_ticks tick
+            group by tick.game_session_id
+            order by count(*) desc
+            limit 1
+          ), expected as (
+            select count(*)::bigint as row_count
+            from public.game_session_stock_assets asset
+            join target_game target on target.game_session_id = asset.game_session_id
+            where asset.is_active = true
+              and exists (
+                select 1
+                from public.stock_price_ticks tick
+                where tick.game_session_id = asset.game_session_id
+                  and tick.stock_asset_id = asset.id
+              )
+          ), actual as (
+            select count(*)::bigint as row_count
+            from target_game target
+            cross join lateral public.read_latest_stock_market_ticks_for_game(target.game_session_id, null)
+          )
+          select json_build_object(
+            'functionExists', to_regprocedure('public.read_latest_stock_market_ticks_for_game(uuid,text)') is not null,
+            'usesLateral', position('cross join lateral' in lower(pg_get_functiondef('public.read_latest_stock_market_ticks_for_game(uuid,text)'::regprocedure))) > 0,
+            'usesLimitOne', position('limit 1' in lower(pg_get_functiondef('public.read_latest_stock_market_ticks_for_game(uuid,text)'::regprocedure))) > 0,
+            'distinctOnRetired', position('distinct on' in lower(pg_get_functiondef('public.read_latest_stock_market_ticks_for_game(uuid,text)'::regprocedure))) = 0,
+            'serviceRoleExecute', has_function_privilege('service_role', 'public.read_latest_stock_market_ticks_for_game(uuid,text)', 'execute'),
+            'anonDenied', not has_function_privilege('anon', 'public.read_latest_stock_market_ticks_for_game(uuid,text)', 'execute'),
+            'authenticatedDenied', not has_function_privilege('authenticated', 'public.read_latest_stock_market_ticks_for_game(uuid,text)', 'execute'),
+            'boundedReadMatchesActiveAssets', (select actual.row_count = expected.row_count and actual.row_count > 0 from actual, expected),
+            'ledgerRecordedOnce', (select count(*) = 1 from supabase_migrations.schema_migrations where version = '20260811231144' and name = 'optimize_latest_stock_market_ticks_read_v2')
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const lines = fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim().split(/\r?\n/).filter(Boolean);
+          const result = JSON.parse(lines.at(-1));
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Production postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/postconditions.json"
+
+      - name: Record release result
+        shell: bash
+        run: |
+          {
+            echo '## Player dashboard latest-tick production fix released'
+            echo "- Exact source SHA: \`$EXPECTED_SOURCE_SHA\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Migration: \`$MIGRATION_VERSION $MIGRATION_NAME\`"
+            echo "- Migration blob: \`$EXPECTED_MIGRATION_BLOB\`"
+            echo '- Atomic migration + exact ledger identity: `true`'
+            echo '- Bounded production read under 2s: `true`'
+            echo '- Browser-role execution denied: `true`'
+            echo '- Destructive SQL allowed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
