@@ -51,7 +51,7 @@ function defineRoute({
 const ROUTES = Object.freeze([
   defineRoute({
     id: "overview",
-    label: "Overview",
+    label: "Dashboard",
     groupId: "overview",
     icon: "overview",
     permission: "game.read",
@@ -59,7 +59,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "players",
-    label: "Players",
+    label: "Students",
     groupId: "operations",
     icon: "players",
     permission: "players.manage",
@@ -75,7 +75,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "market",
-    label: "Market",
+    label: "Stock Market",
     groupId: "finance",
     icon: "market",
     permission: "market.manage",
@@ -83,7 +83,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "banking",
-    label: "Banking",
+    label: "Student Banking",
     groupId: "finance",
     icon: "banking",
     permission: "economy.adjust",
@@ -91,7 +91,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "loans",
-    label: "Loans",
+    label: "Student Loans",
     groupId: "finance",
     icon: "loans",
     permission: "economy.adjust",
@@ -107,7 +107,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "business",
-    label: "Business",
+    label: "Student Businesses",
     groupId: "work",
     icon: "business",
     permission: "business.manage",
@@ -131,7 +131,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "marketplace",
-    label: "Marketplace",
+    label: "Marketplace Review",
     groupId: "trade",
     icon: "marketplace",
     permission: "marketplace.moderate",
@@ -139,7 +139,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "inventory",
-    label: "Inventory",
+    label: "Redemption Requests",
     groupId: "trade",
     icon: "inventory",
     permission: "inventory.redeem",
@@ -147,7 +147,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "world-management",
-    label: "World Management",
+    label: "World & Simulation",
     groupId: "world",
     icon: "world",
     permission: "world.manage",
@@ -171,7 +171,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "progression",
-    label: "Progression",
+    label: "Student Progress",
     groupId: "engagement",
     icon: "progression",
     permission: "progression.review",
@@ -179,7 +179,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "settings",
-    label: "Settings",
+    label: "Simulation Settings",
     groupId: "system",
     icon: "settings",
     permission: "settings.manage",
@@ -187,7 +187,7 @@ const ROUTES = Object.freeze([
   }),
   defineRoute({
     id: "logs",
-    label: "Logs",
+    label: "Activity History",
     groupId: "system",
     icon: "logs",
     permission: "audit.read",
@@ -207,14 +207,14 @@ function defineGroup(id, label) {
 
 /** Canonical Admin v2 left-navigation taxonomy and order. */
 export const ADMIN_NAVIGATION_GROUPS = Object.freeze([
-  defineGroup("overview", "Overview"),
-  defineGroup("operations", "Operations"),
-  defineGroup("finance", "Finance"),
-  defineGroup("work", "Work"),
-  defineGroup("trade", "Trade"),
-  defineGroup("world", "World"),
-  defineGroup("engagement", "Engagement"),
-  defineGroup("system", "System"),
+  defineGroup("overview", "Home"),
+  defineGroup("operations", "Classroom"),
+  defineGroup("finance", "Economy"),
+  defineGroup("work", "Business & Contracts"),
+  defineGroup("trade", "Store & Inventory"),
+  defineGroup("world", "World & Simulation"),
+  defineGroup("engagement", "Communication & Progress"),
+  defineGroup("system", "Settings & Activity"),
 ]);
 
 export const ADMIN_NAVIGATION_ROUTES = ROUTES;
