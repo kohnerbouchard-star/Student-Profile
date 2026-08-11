@@ -3,7 +3,7 @@ import { appendContent, createElement, setText } from "./dom.js";
 
 export function AdminTopbar({
   title = "Overview",
-  context = "Global administration",
+  context = "Game administration",
   navigationId,
   actions,
   notificationCount = 0,
@@ -86,7 +86,7 @@ export function AdminTopbar({
     navigationToggle,
     actionSlot,
     setTitle(nextTitle) { setText(titleElement, nextTitle, "Overview"); },
-    setContext(nextContext) { setText(contextElement, nextContext, "Global administration"); },
+    setContext(nextContext) { setText(contextElement, nextContext, "Game administration"); },
     setNotificationCount,
     setIdentity,
     setNavigationExpanded(expanded) {
