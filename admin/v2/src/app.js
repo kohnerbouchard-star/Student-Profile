@@ -415,7 +415,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
 
   const topbar = AdminTopbar({
     title: getAdminNavigationRoute(activeRouteId)?.label || "Overview",
-    context: "Teacher administration",
+    context: "Global administration",
     navigationId: navigation.id,
     notificationCount: 0,
     identity: {
