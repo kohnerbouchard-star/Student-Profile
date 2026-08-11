@@ -5,7 +5,6 @@ import {
 import { createElement } from "../../components/dom.js";
 
 const COUNTRY_CODE_PATTERN = /^[A-Z0-9_-]{2,24}$/;
-const CURRENCY_PATTERN = /^[A-Z0-9]{2,12}$/;
 
 function field(options) {
   return AdminField({ autocomplete: "off", ...options });
@@ -45,55 +44,61 @@ export function ContractForm({
 } = {}) {
   const fields = {
     title: field({ name: "title", label: "Title", required: true, placeholder: "e.g. Market Evidence Review" }),
-    description: field({ name: "description", label: "Objective", type: "textarea", required: true, hint: "What the player is expected to accomplish." }),
-    instructions: field({ name: "instructions", label: "Instructions", type: "textarea", required: true, hint: "What the player must do." }),
+    description: field({ name: "description", label: "Objective", type: "textarea", required: true, hint: "What the student is expected to accomplish." }),
+    instructions: field({ name: "instructions", label: "Instructions", type: "textarea", required: true, hint: "What the student must do." }),
     category: field({ name: "category", label: "Category", value: "general", placeholder: "general" }),
     status: field({
       name: "status",
-      label: "Initial lifecycle state",
+      label: "When should students see it?",
       type: "select",
       value: "draft",
       options: [
-        { value: "draft", label: "Draft" },
+        { value: "draft", label: "Keep as draft" },
         { value: "active", label: "Publish now" },
-        { value: "scheduled", label: "Scheduled" },
+        { value: "scheduled", label: "Schedule publication" },
       ],
     }),
-    scheduledAt: field({ name: "scheduledAt", label: "Scheduled publish time", type: "datetime-local", disabled: true, hint: "Required only for Scheduled." }),
+    scheduledAt: field({ name: "scheduledAt", label: "Scheduled publish time", type: "datetime-local", disabled: true, hint: "Required only when scheduling publication." }),
     visibility: field({
       name: "visibility",
-      label: "Visibility",
+      label: "Who can see it?",
       type: "select",
       value: "public",
       options: [
-        { value: "public", label: "Public · all players" },
-        { value: "targeted", label: "Targeted" },
+        { value: "public", label: "All students" },
+        { value: "targeted", label: "Selected countries" },
         { value: "hidden", label: "Hidden" },
       ],
     }),
-    countryCodes: field({ name: "countryCodes", label: "Target country codes", placeholder: "NORTHREACH, YRETHIA", disabled: true, hint: "For Targeted visibility. Separate codes with commas." }),
+    countryCodes: field({ name: "countryCodes", label: "Target countries", placeholder: "NORTHREACH, YRETHIA", disabled: true, hint: "Separate country codes with commas." }),
     completionMode: field({
       name: "completionMode",
-      label: "Completion mode",
+      label: "How is completion checked?",
       type: "select",
       value: "manual_review",
       options: [
-        { value: "manual_review", label: "Manual review" },
+        { value: "manual_review", label: "Teacher review" },
         { value: "auto_check", label: "Automatic check" },
-        { value: "attendance_scan", label: "Attendance scan" },
-        { value: "purchase_check", label: "Purchase check" },
-        { value: "stock_trade_check", label: "Stock trade check" },
-        { value: "story_flag_check", label: "Story flag check" },
+        { value: "attendance_scan", label: "Attendance check" },
+        { value: "purchase_check", label: "Store purchase" },
+        { value: "stock_trade_check", label: "Stock trade" },
+        { value: "story_flag_check", label: "Story milestone" },
       ],
     }),
     deadlineAt: field({ name: "deadlineAt", label: "Due time", type: "datetime-local" }),
-    expiresAt: field({ name: "expiresAt", label: "Expiration time", type: "datetime-local", hint: "Optional hard expiration after the due time." }),
-    requirementsText: field({ name: "requirementsText", label: "Evidence / submission requirements", type: "textarea", required: true, hint: "What evidence the player must submit or satisfy." }),
-    rewardAmount: field({ name: "rewardAmount", label: "Cash reward", type: "number", value: "", placeholder: "0" }),
-    rewardCurrency: field({ name: "rewardCurrency", label: "Reward currency", value: "ECO", placeholder: "ECO" }),
+    expiresAt: field({ name: "expiresAt", label: "Expiration time", type: "datetime-local", hint: "Optional. Students can no longer complete it after this time." }),
+    requirementsText: field({ name: "requirementsText", label: "Evidence / submission requirements", type: "textarea", required: true, hint: "What students must submit or satisfy." }),
+    rewardAmount: field({
+      name: "rewardAmount",
+      label: "Money reward",
+      type: "number",
+      value: "",
+      placeholder: "0",
+      hint: "Paid to each student's Checking account in that student's active-country currency.",
+    }),
     difficulty: field({
       name: "difficulty",
-      label: "Difficulty metadata",
+      label: "Difficulty",
       type: "select",
       value: "",
       options: [
@@ -103,7 +108,7 @@ export function ContractForm({
         { value: "Advanced", label: "Advanced" },
       ],
     }),
-    reviewNote: field({ name: "reviewNote", label: "Reviewer note", type: "textarea", hint: "Staff-facing guidance stored in contract metadata." }),
+    reviewNote: field({ name: "reviewNote", label: "Teacher note", type: "textarea", hint: "Private guidance for teachers reviewing this contract." }),
   };
 
   const validation = AdminValidationSummary({
@@ -133,7 +138,6 @@ export function ContractForm({
     const expiresAt = localDateTimeToIso(fields.expiresAt.getValue());
     const rewardText = fields.rewardAmount.getValue().trim();
     const rewardAmount = rewardText === "" ? 0 : Number(rewardText);
-    const rewardCurrency = fields.rewardCurrency.getValue().trim().toUpperCase();
 
     if (!title) {
       fields.title.setError("Enter a contract title.");
@@ -157,11 +161,11 @@ export function ContractForm({
     }
     if (visibility === "targeted" && codes.length === 0) {
       fields.countryCodes.setError("Enter at least one target country code.");
-      errors.push({ field: "countryCodes", fieldId: fields.countryCodes.control.id, label: "Target country codes", message: "Targeted contracts need at least one target country." });
+      errors.push({ field: "countryCodes", fieldId: fields.countryCodes.control.id, label: "Target countries", message: "Targeted contracts need at least one target country." });
     }
     if (codes.some((code) => !COUNTRY_CODE_PATTERN.test(code))) {
       fields.countryCodes.setError("Use letters, numbers, underscores, or hyphens only.");
-      errors.push({ field: "countryCodes", fieldId: fields.countryCodes.control.id, label: "Target country codes", message: "One or more target country codes are invalid." });
+      errors.push({ field: "countryCodes", fieldId: fields.countryCodes.control.id, label: "Target countries", message: "One or more target country codes are invalid." });
     }
     if (fields.deadlineAt.getValue() && !deadlineAt) {
       fields.deadlineAt.setError("Choose a valid due time.");
@@ -177,11 +181,7 @@ export function ContractForm({
     }
     if (!Number.isFinite(rewardAmount) || rewardAmount < 0) {
       fields.rewardAmount.setError("Enter zero or a positive reward amount.");
-      errors.push({ field: "rewardAmount", fieldId: fields.rewardAmount.control.id, label: "Cash reward", message: "Cash reward must be zero or greater." });
-    }
-    if (rewardAmount > 0 && !CURRENCY_PATTERN.test(rewardCurrency)) {
-      fields.rewardCurrency.setError("Enter a valid currency code.");
-      errors.push({ field: "rewardCurrency", fieldId: fields.rewardCurrency.control.id, label: "Reward currency", message: "Reward currency is invalid." });
+      errors.push({ field: "rewardAmount", fieldId: fields.rewardAmount.control.id, label: "Money reward", message: "Money reward must be zero or greater." });
     }
 
     if (errors.length) {
@@ -204,8 +204,12 @@ export function ContractForm({
         ? { allPlayers: true }
         : { allPlayers: false, ...(codes.length ? { countryCodes: codes } : {}) },
       requirementsPayload: requirementsText ? { manualText: requirementsText } : {},
+      // `cash` remains the Admin API compatibility input key for now. The
+      // canonical reward issuer normalizes it to Checking and resolves the
+      // receiving student's local currency. Do not expose account/currency
+      // routing choices in the teacher form.
       rewardPayload: rewardAmount > 0
-        ? { cash: { amount: Math.round(rewardAmount * 100) / 100, currencyCode: rewardCurrency || "ECO" } }
+        ? { cash: { amount: Math.round(rewardAmount * 100) / 100 } }
         : {},
       metadata: {
         ...(difficulty ? { difficulty } : {}),
@@ -230,10 +234,10 @@ export function ContractForm({
   });
 
   const groups = [
-    ["Core", fields.title, fields.description, fields.instructions, fields.category],
-    ["Lifecycle", fields.status, fields.scheduledAt, fields.visibility, fields.countryCodes, fields.completionMode, fields.deadlineAt, fields.expiresAt],
-    ["Requirements & reward", fields.requirementsText, fields.rewardAmount, fields.rewardCurrency],
-    ["Metadata", fields.difficulty, fields.reviewNote],
+    ["Basics", fields.title, fields.description, fields.instructions, fields.category],
+    ["Availability", fields.status, fields.scheduledAt, fields.visibility, fields.countryCodes, fields.completionMode, fields.deadlineAt, fields.expiresAt],
+    ["Requirements & reward", fields.requirementsText, fields.rewardAmount],
+    ["Teacher guidance", fields.difficulty, fields.reviewNote],
   ].map(([legend, ...entries]) => createElement("fieldset", {
     className: "admin-contract-form__group",
     children: [
