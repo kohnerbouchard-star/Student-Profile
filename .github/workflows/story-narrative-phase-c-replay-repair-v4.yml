@@ -1,0 +1,339 @@
+name: Story Narrative Phase C Replay Repair V4
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-phase-c-replay-repair-v4.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-narrative-phase-c-replay-repair-v4
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Check out exact Story branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/story-narrative-convergence-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Record complete S2 replay-escape retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin feat/story-narrative-convergence-v1
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          text = path.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          heading = '### Run 2026-08-11 — Phase C retry for all four S2 escape-string sites'
+          if heading not in text:
+              body = '\n'.join([
+                  '', heading, '',
+                  f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`", '',
+                  'V3 stopped safely because the unreleased S2 migration contains four instances of the same malformed control-character E-string, not one: the stored prompt check, runtime prompt validation, option-label validation, and option-description validation.', '',
+                  'This retry requires exactly four unsafe literals before correction and exactly four established replay-safe doubled-backslash literals after correction. No other historical S2 text is changed. The S2 `effect_index` and S3 activation-scope semantic fixes remain a generated forward migration.', '',
+                  'Connected staging remains untouched.', ''
+              ])
+              if marker not in text: raise SystemExit('roadmap marker missing')
+              text = text.replace(marker, body + marker, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): record complete S2 replay-escape retry"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Verify pinned Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node -p "require('./package.json').devDependencies.supabase")" = "2.109.1"
+          test "$(npx supabase --version)" = "2.109.1"
+
+      - name: Correct all four unreleased S2 escape-string replay typos
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql')
+          raw = path.read_bytes()
+          if b'\x00' in raw:
+              raise SystemExit('migration file contains a literal NUL byte before correction')
+          text = raw.decode('utf-8')
+          bad = r"E'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'"
+          good = r"E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'"
+          if text.count(bad) != 4:
+              raise SystemExit(f'unexpected unsafe S2 control-regexp count: {text.count(bad)}')
+          if text.count(good) != 0:
+              raise SystemExit(f'unexpected pre-existing safe S2 control-regexp count: {text.count(good)}')
+          text = text.replace(bad, good)
+          if text.count(bad) != 0:
+              raise SystemExit('unsafe S2 control regexp remains')
+          if text.count(good) != 4:
+              raise SystemExit(f'expected four safe S2 control regexps, found {text.count(good)}')
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check -- backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql
+
+      - name: Add S2 replay-escape regression contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scripts/story-s2-migration-replay-escape-contract.test.mjs <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          import test from 'node:test';
+
+          const s2 = fs.readFileSync('backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql', 'utf8');
+          const messaging = fs.readFileSync('backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql', 'utf8');
+          const safe = "E'[\\\\x00-\\\\x08\\\\x0B\\\\x0C\\\\x0E-\\\\x1F\\\\x7F]'";
+          const unsafe = "E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'";
+
+          test('S2 control-character regexps are replay-safe at every validation site', () => {
+            assert.equal(s2.split(safe).length - 1, 4, 'S2 must contain four replay-safe control-character regexps');
+            assert.equal(s2.split(unsafe).length - 1, 0, 'S2 must contain no one-layer E-string control regexps');
+            assert.ok(messaging.includes(safe), 'Messaging establishes the replay-safe escaping precedent');
+            assert.equal(Buffer.from(s2, 'utf8').includes(0), false, 'S2 source must contain no literal NUL byte');
+          });
+          JS
+          node --test scripts/story-s2-migration-replay-escape-contract.test.mjs
+          git diff --check -- scripts/story-s2-migration-replay-escape-contract.test.mjs
+
+      - name: Generate forward S2 S3 repair identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find backend/supabase/migrations -maxdepth 1 -type f -name '*_repair_story_s2_s3_replay_v1.sql' | wc -l | tr -d ' ')" = "0"
+          npx supabase migration new repair_story_s2_s3_replay_v1 --workdir backend
+          MIGRATION_PATH="$(find backend/supabase/migrations -maxdepth 1 -type f -name '*_repair_story_s2_s3_replay_v1.sql' | sort | tail -n 1)"
+          test -n "$MIGRATION_PATH"
+          test -f "$MIGRATION_PATH"
+          echo "MIGRATION_PATH=$MIGRATION_PATH" >> "$GITHUB_ENV"
+          echo "Generated $MIGRATION_PATH"
+
+      - name: Build forward-only S2 and S3 semantic repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          migration_path = Path(os.environ['MIGRATION_PATH'])
+          s2 = Path('backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql').read_text(encoding='utf-8')
+          s3 = Path('backend/supabase/migrations/20260811011033_add_story_relationship_state_v1.sql').read_text(encoding='utf-8')
+
+          s2_start = s2.index('create or replace function public.deliver_story_character_message_v2(')
+          s2_end = s2.index('\ncreate or replace function public.select_player_story_message_interaction_v1(', s2_start)
+          s2_block = s2[s2_start:s2_end].rstrip()
+          bad_row = 'story_row.source_effect_index = p_source_effect_index'
+          good_row = 'story_row.effect_index = p_source_effect_index'
+          if s2_block.count(bad_row) != 1: raise SystemExit('unexpected S2 row-field mismatch count')
+          s2_block = s2_block.replace(bad_row, good_row, 1)
+          if 'story_row.source_effect_index' in s2_block or good_row not in s2_block: raise SystemExit('S2 forward repair invalid')
+
+          s3_start = s3.index('create or replace function public.adjust_story_relationship_v1(')
+          s3_end = s3.index('\nrevoke all on function public.adjust_story_relationship_v1(', s3_start)
+          s3_block = s3[s3_start:s3_end].rstrip()
+          old_scope = '''  if not exists (\n    select 1 from public.storyline_events\n    where id = p_source_storyline_event_id\n      and game_session_id = p_game_session_id\n  ) then'''
+          new_scope = '''  if not exists (\n    select 1\n    from public.storyline_events as event_row\n    join public.game_session_storylines as activation_row\n      on activation_row.storyline_id = event_row.storyline_id\n    where event_row.id = p_source_storyline_event_id\n      and activation_row.game_session_id = p_game_session_id\n  ) then'''
+          if s3_block.count(old_scope) != 1: raise SystemExit('unexpected S3 event-scope mismatch count')
+          s3_block = s3_block.replace(old_scope, new_scope, 1)
+          if old_scope in s3_block or new_scope not in s3_block: raise SystemExit('S3 forward repair invalid')
+
+          migration = f'''-- Forward compatibility repair for Story S2/S3 replay semantics.\n-- Historical semantic behavior is preserved; this changes only invalid schema references.\n\nbegin;\n\n{s2_block}\n\nrevoke all on function public.deliver_story_character_message_v2(\n  uuid, uuid, uuid, integer, text, text, text, text, text, jsonb\n) from public, anon, authenticated;\ngrant execute on function public.deliver_story_character_message_v2(\n  uuid, uuid, uuid, integer, text, text, text, text, text, jsonb\n) to service_role;\n\n{s3_block}\n\nrevoke all on function public.adjust_story_relationship_v1(\n  uuid, uuid, uuid, integer, text, text, jsonb\n) from public, anon, authenticated;\ngrant execute on function public.adjust_story_relationship_v1(\n  uuid, uuid, uuid, integer, text, text, jsonb\n) to service_role;\n\ncomment on function public.deliver_story_character_message_v2(\n  uuid, uuid, uuid, integer, text, text, text, text, text, jsonb\n) is 'Story character message V2 delivery using the authoritative S1 story_messages.effect_index replay identity.';\ncomment on function public.adjust_story_relationship_v1(\n  uuid, uuid, uuid, integer, text, text, jsonb\n) is 'Story relationship adjustment scoped to a game through game_session_storylines activation of the global Story event definition.';\n\ncommit;\n'''
+          migration_path.write_text(migration, encoding='utf-8')
+          PY
+          git diff --check -- "$MIGRATION_PATH"
+
+      - name: Add forward semantic repair contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scripts/story-s2-s3-replay-repair-contract.test.mjs <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import test from 'node:test';
+
+          const root = process.cwd();
+          const migrationsDir = path.join(root, 'backend', 'supabase', 'migrations');
+          const repairFiles = fs.readdirSync(migrationsDir).filter((name) => name.endsWith('_repair_story_s2_s3_replay_v1.sql'));
+          const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+
+          test('Story S2/S3 semantic repair is forward-only and schema-correct', () => {
+            assert.equal(repairFiles.length, 1);
+            const repair = fs.readFileSync(path.join(migrationsDir, repairFiles[0]), 'utf8');
+            const historicalS2 = read('backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql');
+            const historicalS3 = read('backend/supabase/migrations/20260811011033_add_story_relationship_state_v1.sql');
+            const foundation = read('backend/supabase/migrations/20260625120000_add_storyline_schema_v1.sql');
+            assert.match(historicalS2, /story_row\.source_effect_index = p_source_effect_index/);
+            assert.match(historicalS3, /select 1 from public\.storyline_events\s+where id = p_source_storyline_event_id\s+and game_session_id = p_game_session_id/);
+            assert.match(repair, /story_row\.effect_index = p_source_effect_index/);
+            assert.doesNotMatch(repair, /story_row\.source_effect_index/);
+            assert.match(repair, /join public\.game_session_storylines as activation_row/);
+            assert.match(repair, /activation_row\.storyline_id = event_row\.storyline_id/);
+            assert.match(repair, /activation_row\.game_session_id = p_game_session_id/);
+            const eventTable = foundation.split('create table public.storyline_events (')[1].split(');')[0];
+            assert.doesNotMatch(eventTable, /game_session_id/);
+            assert.match(foundation, /The game_session_id is the isolation boundary/);
+          });
+          JS
+          node --test scripts/story-s2-s3-replay-repair-contract.test.mjs
+          git diff --check -- scripts/story-s2-s3-replay-repair-contract.test.mjs
+
+      - name: Audit migration source
+        run: npm run audit:migrations
+
+      - name: Start disposable local Supabase database
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase stop --workdir backend --no-backup || true
+          LOG="/tmp/story-phase-c-v4-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay all migrations twice from zero
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+
+      - name: Inspect installed repaired Story functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_CONTAINER="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -n 1)"
+          test -n "$DB_CONTAINER"
+          docker exec "$DB_CONTAINER" psql -U postgres -d postgres -Atc "select pg_get_functiondef('public.deliver_story_character_message_v2(uuid,uuid,uuid,integer,text,text,text,text,text,jsonb)'::regprocedure);" > /tmp/story-s2-v4.sql
+          docker exec "$DB_CONTAINER" psql -U postgres -d postgres -Atc "select pg_get_functiondef('public.adjust_story_relationship_v1(uuid,uuid,uuid,integer,text,text,jsonb)'::regprocedure);" > /tmp/story-s3-v4.sql
+          grep -q 'story_row.effect_index = p_source_effect_index' /tmp/story-s2-v4.sql
+          ! grep -q 'story_row.source_effect_index' /tmp/story-s2-v4.sql
+          grep -q 'game_session_storylines' /tmp/story-s3-v4.sql
+          grep -q 'activation_row.game_session_id = p_game_session_id' /tmp/story-s3-v4.sql
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify focused Story regressions
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:story-choice-callbacks
+          npm run test:player-messaging
+
+      - name: Publish verified Phase C repair
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          text = path.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          heading = f"### Run 2026-08-11 — Phase C S2/S3 database replay repair green `{os.environ['GITHUB_RUN_ID']}`"
+          if heading not in text:
+              body = '\n'.join([
+                  '', heading, '',
+                  f"Forward migration: `{os.environ['MIGRATION_PATH']}`", '',
+                  'Result: GREEN FOR THE LOCAL ZERO-STATE DATABASE-REPLAY BOUNDARY.', '',
+                  '- Corrected all four instances of the unreleased S2 control-character E-string escape defect required for first-ever clean replay; no S2 semantic function behavior was changed in that historical file.',
+                  '- Added a replay-escape regression contract tied to the established Messaging escaping precedent.',
+                  '- Generated the S2 `effect_index` and S3 activation-scope semantic repair as a new forward migration using Supabase CLI 2.109.1.',
+                  '- Migration source audit passed.',
+                  '- Full local migration replay passed twice from zero.',
+                  '- Installed Story function definitions were inspected after replay and contain the corrected contracts.',
+                  '- Database lint and focused S4/Player Messaging regressions passed.', '',
+                  'Connected staging remains unchanged. Phase C is locally replay-proven and ready for Story runner reliability hardening before staging deployment.', ''
+              ])
+              if marker not in text: raise SystemExit('roadmap marker missing')
+              text = text.replace(marker, body + marker, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git add backend/supabase/migrations/20260810215844_add_story_structured_response_windows_v1.sql "$MIGRATION_PATH" scripts/story-s2-migration-replay-escape-contract.test.mjs scripts/story-s2-s3-replay-repair-contract.test.mjs docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(story): restore clean S2 S3 database replay"
+          git push origin HEAD:feat/story-narrative-convergence-v1
+
+      - name: Record Phase C V4 failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
+          text = path.read_text(encoding='utf-8')
+          marker = '\n## Run-completion rule\n'
+          heading = f"### Run 2026-08-11 — Phase C V4 failure `{os.environ['GITHUB_RUN_ID']}`"
+          if heading not in text:
+              body = '\n'.join(['', heading, '', 'Result: FAILED; local syntax correction, generated forward migration, and regression contracts were discarded before publication.', '', 'Inspect the exact escape-contract, forward-generation, migration-audit, local startup, two-pass replay, installed-function, lint, or focused Story regression failure. Connected staging remains untouched.', ''])
+              if marker not in text: raise SystemExit('roadmap marker missing')
+              text = text.replace(marker, body + marker, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): record Phase C V4 failure"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
