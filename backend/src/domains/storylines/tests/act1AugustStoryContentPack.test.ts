@@ -85,7 +85,7 @@ Deno.test("August Story content pack is complete, parser-valid, and callback-rea
       const condition = parseStoryCondition(rule.condition);
       const country = countryCodeFromCondition(condition);
 
-      if (condition.type === "player_story_choice_is") {
+      if ("type" in condition && condition.type === "player_story_choice_is") {
         callbackConditions.push({
           day,
           interactionKey: condition.interactionKey,

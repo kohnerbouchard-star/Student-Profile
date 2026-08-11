@@ -231,6 +231,19 @@ def choice_event(events: list[dict], day: int, slug: str, role: str, purpose: st
     return deferred
 
 
+def materialize_cross_month_callback(events: list[dict], source_day: int, callback_day: int, slug: str, role: str, options: list[dict], callback_role: str | None = None) -> None:
+    callback_rules = []
+    for code, cfg in COUNTRIES.items():
+        interaction = f"interaction.story.{cfg['slug']}.d{source_day:03d}.{slug}.v1"
+        for option in options:
+            callback_rules.append({
+                "ruleKey": f"{cfg['slug']}.d{callback_day:03d}.{slug}.{option['choiceKey']}",
+                "condition": choice_condition(interaction, option["choiceKey"]),
+                "effects": [relationship(code, callback_role or role, f"Your earlier choice was {option['label'].lower()}.", **callback_deltas(option["choiceKey"]))],
+            })
+    events.append(event(callback_day, f"event.campaign.d{callback_day:03d}.{slug}-callback.v1", ["SYSTEM"], callback_rules, f"Executable S4 cross-month callback for Day {source_day} {slug} choice."))
+
+
 def message_event(events: list[dict], day: int, slug: str, role: str, purpose: str, body: str, delivery: list[str] | None = None) -> None:
     rules = []
     for code, cfg in COUNTRIES.items():
@@ -333,19 +346,20 @@ def build_december() -> dict:
     global_news(news,143,"news.campaign.d143.stockpiling-and-social-strain.v1","Stockpiling and labor strain rise together","Firms and households are increasing inventories while protests, overtime disputes, and affordability concerns appear in selected cities.")
     deferred += choice_event(events,145,"stockpiling-posture","rival","request","A larger inventory can protect you from shortage or make you part of the shortage others face.","How much buffer do you build?",STOCKPILE,147,153,"build-buffer")
     country_news(news,146,"stockpiling","Countries distinguish reserves from hoarding","Reserve needs, storage capacity, import dependence, and household affordability make the same inventory decision look different in each economy.")
-    global_news(news,148,"news.campaign.d148.false-calm.v1","Year-end measures produce a partial stabilization","Several stressed indicators improve and officials describe conditions as manageable, while structural dependencies remain unresolved.")
+    global_news(news,148,"news.campaign.d148.year-end-stabilization.v1","Year-end measures produce a partial stabilization","Several stressed indicators improve and officials describe conditions as manageable, while structural dependencies remain unresolved.")
     message_event(events,149,"ordinary-plans","friend","relationship","For the first time in weeks, people are talking about promotion, housing, savings, holidays, and next year instead of only shortages.")
-    country_news(news,152,"false-calm","Every country gets one improvement and one unresolved dependency","The calmer data is real but incomplete; local plans can resume without pretending the warnings disappeared.")
-    deferred += choice_event(events,153,"false-calm-posture","sponsor","reflection","A calmer moment is an opportunity too.","What do you do with the false calm?",CALM,155,153,"save-liquidity")
+    country_news(news,152,"year-end-stabilization","Every country gets one improvement and one unresolved dependency","The calmer data is real but incomplete; local plans can resume without pretending the warnings disappeared.")
+    deferred += choice_event(events,153,"year-end-stabilization-posture","sponsor","reflection","A calmer moment is an opportunity too.","What do you do with the false calm?",CALM,155,153,"save-liquidity")
     return base_pack("story.content.act3.december.v1",123,153,events,news,
         contract_plans([(133,"production-quality","Production safety, repair quality, or route-recognition work."),(138,"affordability-response","Essential-supply optimization or targeted affordability work."),(142,"inventory-buffer","Inventory, supplier, or reserve management with carrying-cost trade-offs.")]),
-        systems([(123,"debt-cyber-risk","Credit spreads and cyber/security demand shift as audits and anomalies continue."),(127,"structural-stress","Multi-sector risk becomes visible but remains manageable."),(129,"production-repair-strain","Machinery, steel, and repair capacity tighten."),(137,"household-budget-pressure","Household and discretionary demand respond to affordability pressure."),(144,"inventory-demand","Inventory demand raises carrying costs and short-run prices."),(150,"false-calm-recovery","Volatility falls and selected strained sectors partially recover.")]),
+        systems([(123,"debt-cyber-risk","Credit spreads and cyber/security demand shift as audits and anomalies continue."),(127,"structural-stress","Multi-sector risk becomes visible but remains manageable."),(129,"production-repair-strain","Machinery, steel, and repair capacity tighten."),(137,"household-budget-pressure","Household and discretionary demand respond to affordability pressure."),(144,"inventory-demand","Inventory demand raises carrying costs and short-run prices."),(150,"year-end-stabilization-recovery","Volatility falls and selected strained sectors partially recover.")]),
         [126,130,140,147,151], [124,132,139,145,153], 9, 50, 30, deferred)
 
 
 def build_january() -> dict:
     events=[]; news=[]; deferred=[]
-    incoming=[{"sourcePack":"story.content.act3.december.v1","sourceDay":153,"targetDay":155,"eventKey":"event.campaign.d155.false-calm-posture-callback.v1","notes":"Resolve December false-calm posture before cargo-record escalation."}]
+    incoming=[{"sourcePack":"story.content.act3.december.v1","sourceDay":153,"targetDay":155,"eventKey":"event.campaign.d155.year-end-stabilization-posture-callback.v1","notes":"Resolve December year-end-stabilization posture before cargo-record escalation."}]
+    materialize_cross_month_callback(events,153,155,"year-end-stabilization-posture","sponsor",CALM)
     country_news(news,155,"cargo-records","Cargo records begin disagreeing across systems","Yrethia, Syndalis, Thaloris, and logistics-dependent economies see the strongest immediate effects.")
     global_news(news,156,"news.campaign.d156.cargo-records-disagree.v1","Meridian cargo records disagree across verification systems","Firms and investigators report incompatible manifests and timestamps; no hostile actor is confirmed.")
     message_event(events,157,"preserve-records","gatekeeper","request","A record in your orbit does not match what another system says. Preserve what you have before anyone decides what it means.")
@@ -369,7 +383,7 @@ def build_january() -> dict:
     global_news(news,183,"news.campaign.d183.the-correction.v1","Early intrusion attribution claim partially disproven","Copied signatures and compromised credentials weaken one prominent early explanation without establishing the final cause.","correction")
     message_event(events,184,"correction-reaction","rival","reflection","One of the claims people were certain about just broke. Being early was not the same as being right.")
     return base_pack("story.content.act4.january.v1",154,184,events,news,
-        contract_plans([(154,"false-calm-opportunity","A small ordinary opportunity before the anomaly sequence intensifies."),(159,"records-verification","Limited cargo/records verification work."),(163,"intrusion-response","Emergency verification, cyber, logistics, or claims work."),(174,"working-capital","Emergency working-capital, substitute-supply, or verification work."),(180,"evidence-review","Public-record, evidence-comparison, or forensic review work.")]),
+        contract_plans([(154,"year-end-stabilization-opportunity","A small ordinary opportunity before the anomaly sequence intensifies."),(159,"records-verification","Limited cargo/records verification work."),(163,"intrusion-response","Emergency verification, cyber, logistics, or claims work."),(174,"working-capital","Emergency working-capital, substitute-supply, or verification work."),(180,"evidence-review","Public-record, evidence-comparison, or forensic review work.")]),
         systems([(158,"manual-cargo-checks","Selected shipments receive manual checks and insurance/payment delays."),(162,"customs-intrusion","Intrusion creates verification, payment, and cargo emergency state."),(165,"manual-verification","Manual verification and selected holds expand."),(170,"cashflow-stress","Small-firm cash flow stress and short-term finance demand rise.")]),
         [161,168,175,181], [160,166,173,182], 9, 40, 50, deferred, incoming)
 
@@ -377,14 +391,14 @@ def build_january() -> dict:
 def build_february() -> dict:
     events=[]; news=[]; deferred=[]
     country_news(news,185,"correction-reputation","Correction redistributes reputational pressure","Countries and institutions face different credibility effects after copied/compromised indicators are confirmed.")
-    deferred += choice_event(events,188,"correction-accountability","gatekeeper","reflection","A public claim you relied on was weaker than it looked.","How do you respond to the correction?",EVIDENCE,190,212,"report-privately")
+    deferred += choice_event(events,188,"correction-accountability","gatekeeper","reflection","A public claim you relied on was weaker than it looked.","How do you respond to the correction?",EVIDENCE,190,212,"share-privately")
     anchor_event(events,190,"event.campaign.d190.emergency-access-debate.v1",["NEWS","CHOICE"],"Formal emergency-access architecture debate.")
     deferred += choice_event(events,190,"emergency-access","lead","request","The intrusion proved that continuity needs a fallback. It did not prove which authority should own it.","Which emergency-access architecture should Meridian adopt?",ACCESS,197,212,"hybrid-expiring-access")
     global_news(news,190,"news.campaign.d190.emergency-access-debate.v1","Emergency access becomes a formal Meridian decision","Centralized access, federated verification, manual fallback, and expiring hybrid authority each carry different speed, audit, and control costs.")
     global_news(news,191,"news.campaign.d191.emergency-access-debate.v1","Governments publish emergency-access safeguards and objections","The debate remains unresolved; public records preserve proposed scope, expiry, and appeal rules.")
     country_news(news,194,"emergency-access","Countries frame emergency access through local vulnerabilities","Security, trade, privacy, due process, and operating continuity produce different national preferences.")
     message_event(events,196,"access-deadline","gatekeeper","warning","The emergency-access window is closing. If you leave the decision unanswered, the authored fallback will stand and later events will remember that it was a default, not an explicit endorsement.")
-    global_news(news,197,"news.campaign.d197.pre-attack-anomalies.v1","New authentication failures trigger additional manual review","Verification teams report a new anomaly cluster but no attack or culprit is known.","confirmed fact")
+    global_news(news,197,"news.campaign.d197.verification-anomalies.v1","New authentication failures trigger additional manual review","Verification teams report a new anomaly cluster but no attack or culprit is known.","confirmed fact")
     anchor_event(events,199,"event.meridian.attack.v1",["INTERRUPT","BREAKING NEWS","SYSTEM","INBOX"],"Physical sabotage at Eastgate coincides with digital strike on Syndalis Meridian Security Operations Center; attribution unconfirmed.")
     global_news(news,199,"news.meridian.attack.v1","Meridian Attack hits Eastgate and Syndalis security center","Civilian harm, cargo loss, payment failure, and communication disruption are confirmed. The attacker is not confirmed.")
     message_event(events,199,"attack-personal","friend","crisis","The attack has reached ordinary work, travel, payments, or somebody you know. Do not assume the person messaging you knows who did it.",["INBOX"])
@@ -440,6 +454,7 @@ def build_march() -> dict:
 def build_april() -> dict:
     events=[]; news=[]; deferred=[]
     incoming=[{"sourcePack":"story.content.act5.march.v1","sourceDay":243,"targetDay":245,"eventKey":"event.campaign.d245.wartime-evidence-disclosure-callback.v1","notes":"Resolve March evidence choice before war-economy expansion."}]
+    materialize_cross_month_callback(events,243,245,"wartime-evidence-disclosure","gatekeeper",DISCLOSURE)
     message_event(events,244,"evidence-decision-reminder","gatekeeper","follow_up","The evidence decision remains open from the end of March. The issue is not whether the truth matters; it is when and through which channel it can do the least avoidable harm.")
     message_event(events,246,"war-fortune-rival","rival","reflection","Our economic paths are separating fast now. One of us may look smart because the war created demand neither of us controlled.")
     global_news(news,248,"news.campaign.d248.war-economy.v1","Strategic production and continuity spending accelerate","Governments and firms prioritize repair, logistics, finance, food, energy, industry, and cyber continuity, creating large gains and civilian opportunity costs.")
@@ -500,6 +515,7 @@ def build_may() -> dict:
 def build_june() -> dict:
     events=[]; news=[]; deferred=[]
     incoming=[{"sourcePack":"story.content.act7.may.v1","sourceDay":302,"targetDay":306,"eventKey":"event.campaign.d306.peace-architecture-callback.v1","notes":"Resolve May settlement preference into June advocacy/opportunity access."}]
+    materialize_cross_month_callback(events,302,306,"peace-architecture","lead",PEACE)
     message_event(events,306,"settlement-opportunity","lead","follow_up","Your earlier settlement position is now affecting who asks for your help and which reconstruction or verification work treats you as credible.")
     country_news(news,307,"settlement-conditions","Countries publish the concessions they need from a settlement","No country receives every security, trade, ownership, migration, or institutional demand it entered the conference with.")
     anchor_event(events,309,"event.campaign.d309.ceasefire.v1",["INTERRUPT","BREAKING NEWS","SYSTEM"],"Starfall ceasefire conference produces provisional settlement.")
@@ -511,7 +527,6 @@ def build_june() -> dict:
     message_event(events,318,"accountability-rival","rival","reflection","What we did during the boom and war looks different now that the record is being audited in peacetime.")
     global_news(news,319,"news.campaign.d319.accountability.v1","Audits and hearings turn from wartime facts to responsibility","Procurement, claims, media corrections, security access, market conduct, and public decisions enter formal review.")
     deferred += choice_event(events,322,"accountability-record","gatekeeper","request","Your evidence history can strengthen accountability and still harm people who were not responsible for the wider crisis.","How do you handle the final accountability record?",ACCOUNTABILITY,324,334,"formal-route")
-    anchor_event(events,323,"event.campaign.d323.personal-future.v1",["INBOX","CHOICE"],"Personal future/ending lock begins.")
     deferred += choice_event(events,323,"personal-future","sponsor","reflection","The campaign is ending, but your economic and personal life is not.","What future do you choose after the crisis?",FUTURE,330,334,"stay-and-commit")
     message_event(events,324,"relationship-ending","friend","reflection","Whatever you choose next, the relationship between us has a history now. The ending depends on more than whether either of us became rich.")
     country_news(news,325,"personal-future","Postwar opportunity looks different in every adopted country","Each economy has a credible reason to stay and a credible unresolved cost that may make leaving rational.")

@@ -43,6 +43,7 @@ type InteractionRecord = {
 
 type CallbackRecord = {
   readonly day: number;
+  readonly eventKey: string;
   readonly interactionKey: string;
   readonly choiceKey: string;
 };
@@ -79,6 +80,10 @@ Deno.test("monthly Story content pack satisfies shared parser, callback, coverag
   const deferred = Array.isArray(pack.deferredCallbacks)
     ? arrayOfRecords(pack.deferredCallbacks, "deferredCallbacks")
     : [];
+  const incoming = Array.isArray(pack.incomingCallbackPlans)
+    ? arrayOfRecords(pack.incomingCallbackPlans, "incomingCallbackPlans")
+    : [];
+  const incomingEventKeys = new Set(incoming.map((item) => safePublicKey(item.eventKey, "incoming callback eventKey")));
 
   const interactions = new Map<string, InteractionRecord>();
   const callbacks: CallbackRecord[] = [];
@@ -89,14 +94,14 @@ Deno.test("monthly Story content pack satisfies shared parser, callback, coverag
     const day = integerField(event, "day");
     assertDayInRange(day, startDay, endDay, "Story event");
     coveredDays.add(day);
-    safePublicKey(event.eventKey, `Day ${day} eventKey`);
+    const eventKey = safePublicKey(event.eventKey, `Day ${day} eventKey`);
 
     for (const rule of arrayOfRecords(event.playerRules, `Day ${day} playerRules`)) {
       safePublicKey(rule.ruleKey, `Day ${day} ruleKey`);
       const condition = parseStoryCondition(rule.condition);
       const countryCode = countryCodeFromCondition(condition);
-      if (condition.type === "player_story_choice_is") {
-        callbacks.push({ day, interactionKey: condition.interactionKey, choiceKey: condition.choiceKey });
+      if ("type" in condition && condition.type === "player_story_choice_is") {
+        callbacks.push({ day, eventKey, interactionKey: condition.interactionKey, choiceKey: condition.choiceKey });
       }
 
       for (const rawEffect of arrayOfRecords(rule.effects, `Day ${day} effects`)) {
@@ -135,17 +140,18 @@ Deno.test("monthly Story content pack satisfies shared parser, callback, coverag
     if (day <= endDay || day > 334) {
       throw new Error(`Deferred callback Day ${day} must occur after this monthly pack.`);
     }
-    safePublicKey(item.eventKey, "deferred eventKey");
+    const eventKey = safePublicKey(item.eventKey, "deferred eventKey");
     const condition = parseStoryCondition(item.condition);
-    if (condition.type !== "player_story_choice_is") {
+    if (!("type" in condition) || condition.type !== "player_story_choice_is") {
       throw new Error("Deferred callback must use player_story_choice_is.");
     }
-    callbacks.push({ day, interactionKey: condition.interactionKey, choiceKey: condition.choiceKey });
+    callbacks.push({ day, eventKey, interactionKey: condition.interactionKey, choiceKey: condition.choiceKey });
   }
 
   for (const callback of callbacks) {
     const interaction = interactions.get(callback.interactionKey);
     if (!interaction) {
+      if (incomingEventKeys.has(callback.eventKey)) continue;
       throw new Error(`Callback references unknown interaction ${callback.interactionKey}.`);
     }
     if (callback.day <= interaction.day) {

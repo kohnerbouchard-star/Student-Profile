@@ -64,6 +64,18 @@ def model_message(code: str, model: str) -> str:
 
 def build_events() -> list[dict]:
     events: list[dict] = [event(64, "event.campaign.d064.competing-models-formal.v1", ["NEWS", "COUNTRY FEED"], [], "Formal competing-model anchor. September Day 61 callbacks are carried in incomingCallbackPlans for cross-pack seed reconciliation.")]
+    callback_rules = []
+    for code, cfg in COUNTRIES.items():
+        interaction = f"interaction.story.{cfg['slug']}.d061.boom-costs.v1"
+        for index, option in enumerate(SEPTEMBER_COST):
+            choice = option["choiceKey"]
+            effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", respect=4 + index)
+            if choice == "target-help":
+                effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", trust=6, respect=5)
+            if choice == "pass-through-cost":
+                effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", respect=5, suspicion=2)
+            callback_rules.append({"ruleKey": f"{cfg['slug']}.d064.boom-costs.{choice}", "condition": choice_condition(interaction, choice), "effects": [effect]})
+    events.append(event(64, "event.campaign.d064.boom-cost-callback.v1", ["SYSTEM"], callback_rules, "Executable S4 callback for the September Day 61 boom-cost choice."))
 
     rules = [{"ruleKey": f"{cfg['slug']}.finance-brief", "condition": country_condition(code), "effects": [message("lead", code, 65, "briefing", model_message(code, "finance-first"))]} for code, cfg in COUNTRIES.items()]
     events.append(event(65, "event.campaign.d065.finance-first-briefing.v1", ["INBOX"], rules, "Country-specific interpretation of finance-first proposal."))

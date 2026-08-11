@@ -160,7 +160,7 @@ Examples of supported consequence classes using existing systems:
 
 ### S5 — Narrative content saturation tranche
 
-Status: SOURCE RECOVERY IN PROGRESS / RUNTIME BINDING + CONNECTED STAGING PENDING
+Status: AUTHORED SOURCE RECOVERED / RUNTIME BINDING + CONNECTED STAGING PENDING
 
 Goal: fill dead periods and reduce repeated situations across a multi-week classroom campaign.
 
@@ -636,6 +636,19 @@ Source head: `dc8b5a4a8222c5c2221d61cefdf61f8ce3cfe730`
 Result: FAILED; generated packs and local recovery edits were discarded before publication.
 
 Inspect the exact failed job log. Preserve all parser, callback, privacy, coverage, hidden-canon, density, Messaging, and scheduler assertions.
+
+### Run 2026-08-11 — S5 authored source recovery green
+
+Workflow run: `31467919600`
+
+Result: GREEN FOR THE AUTHORED-SOURCE RECOVERY BOUNDARY.
+
+- All 11 monthly JSON packs were regenerated from deterministic builders and physically committed.
+- Monthly parser/coverage/privacy contracts and whole-campaign Day 1–334 integrity checks passed.
+- All four cross-month handoffs resolve to executable target Story rules with `player_story_choice_is` conditions and `relationship_adjust` effects.
+- Backend/Edge typecheck, S4 callbacks, Player Messaging, and stock/Story scheduler integration passed.
+
+S5 is not complete overall. `news`, `contractPlans`, and `systemBindingPlans` remain intentionally unbound until authoritative adapters are implemented. Forward S2/S3 replay repairs and Story runner retry/idempotency hardening remain next.
 
 ## Run-completion rule
 

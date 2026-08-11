@@ -155,6 +155,29 @@ for (const [sourcePackId, sourceDay, targetDay, targetPackId] of handoffs) {
   if (deferred.length === 0) throw new Error(`${sourcePackId} is missing deferred callback plans for Day ${targetDay}.`);
   const incoming = (target.incomingCallbackPlans ?? []).some((item) => item.sourceDay === sourceDay && (item.targetDay === targetDay || item.targetDay === undefined));
   if (!incoming) throw new Error(`${targetPackId} does not acknowledge the Day ${sourceDay} -> Day ${targetDay} callback handoff.`);
+
+  const eventKeys = new Set(deferred.map((item) => item.eventKey));
+  if (eventKeys.size !== 1) throw new Error(`${sourcePackId} Day ${sourceDay} callback handoff must resolve to one stable target eventKey.`);
+  const [callbackEventKey] = [...eventKeys];
+  const callbackEvent = (target.storyEvents ?? []).find((item) => item.day === targetDay && item.eventKey === callbackEventKey);
+  if (!callbackEvent) throw new Error(`${targetPackId} is missing executable callback event ${callbackEventKey} on Day ${targetDay}.`);
+  const expectedCallbacks = new Set(deferred.map((item) => `${item.condition?.interactionKey}::${item.condition?.choiceKey}`));
+  const actualCallbacks = new Set();
+  for (const rule of callbackEvent.playerRules ?? []) {
+    const condition = rule.condition ?? {};
+    if (condition.type !== "player_story_choice_is") continue;
+    const identity = `${condition.interactionKey}::${condition.choiceKey}`;
+    actualCallbacks.add(identity);
+    if (!Array.isArray(rule.effects) || rule.effects.length < 1) {
+      throw new Error(`${callbackEventKey} has a callback rule without an executable effect.`);
+    }
+    if (rule.effects.some((effect) => effect?.type !== "relationship_adjust")) {
+      throw new Error(`${callbackEventKey} cross-month callback must use the proven relationship_adjust effect contract.`);
+    }
+  }
+  if (actualCallbacks.size !== expectedCallbacks.size || [...expectedCallbacks].some((key) => !actualCallbacks.has(key))) {
+    throw new Error(`Cross-month callback executable coverage mismatch for ${sourcePackId} -> ${targetPackId}.`);
+  }
 }
 
 if (eventCount < 120) throw new Error(`Expected at least 120 Story event nodes, found ${eventCount}.`);
