@@ -331,7 +331,35 @@ Correction:
 - preserved service-role authority, forced RLS, immutable adjustment history, event/effect replay identity, and story-thread relationship initialization;
 - no S3 runtime source was weakened or partially committed.
 
-Next: rerun the same S3 implementation/verification path from the restored schema body.
+### Run 2026-08-11 — S3 verification attempt 2
+
+Workflow run: `31447702764`  
+Workflow head: `23ee4272a1d34bae98585c399cf2acc7e43e3842`  
+Ephemeral generated migration: `20260811005632_add_story_relationship_state_v1.sql`
+
+Result: FAILED DURING GUARDED SOURCE TRANSFORM; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch/S2 ancestry and staged-input guard;
+- pinned Node, Deno, and Supabase CLI setup;
+- CLI-generated S3 migration filename;
+- schema body placement;
+- pre-normalization of current fixture/source anchors.
+
+Failure:
+
+- the transform attempted to create `backend/src/domains/storylines/tests/storyRelationshipMigrationContract.test.ts`;
+- the parent `backend/src/domains/storylines/tests/` directory does not currently exist;
+- the transform helper used `Path.write_text()` without creating parent directories and failed with `FileNotFoundError`;
+- dependency install, typecheck, and focused tests did not run.
+
+Correction:
+
+- hardened the temporary transform `write()` helper to create parent directories with `mkdir(parents=True, exist_ok=True)`;
+- preserved the existing Story architecture and S3 behavioral contract unchanged.
+
+Next: run a fresh S3 verification from the corrected transform SHA; do not rerun the stale attempt-2 SHA.
 
 ## Run-completion rule
 
