@@ -311,6 +311,28 @@ State at launch:
 
 Bookkeeping correction: a transient roadmap update accidentally condensed the ledger; the ledger was restored immediately before S3 source verification. No story runtime source was affected by that bookkeeping error.
 
+### Run 2026-08-11 — S3 verification attempt 1
+
+Workflow run: `31447490566`  
+Workflow head: `2e3f6809a73a1982ee0752d2ef52dd84f6d453fa`
+
+Result: FAILED AT INPUT GUARD; NO S3 SOURCE OR MIGRATION WAS APPLIED.
+
+Findings:
+
+- exact branch/S2 ancestry guard passed;
+- the guarded S3 source-transform script was present;
+- the staged SQL body was missing from the checked-out head after temporary branch cleanup;
+- the workflow therefore failed before Node/Deno/Supabase setup, migration generation, source application, or tests.
+
+Correction:
+
+- restored a coherent S3 SQL body using the locked five-metric + derived-standing contract;
+- preserved service-role authority, forced RLS, immutable adjustment history, event/effect replay identity, and story-thread relationship initialization;
+- no S3 runtime source was weakened or partially committed.
+
+Next: rerun the same S3 implementation/verification path from the restored schema body.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
