@@ -141,7 +141,7 @@ Locked S3 design:
 
 ### S4 — Choice consequences and delayed callbacks
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Goal: ensure a Player response changes later events, access, economics, or relationships.
 
@@ -514,6 +514,24 @@ Verification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/co
 Remaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.
 
 Next: S4 authoritative choice consequences and delayed callbacks.
+
+### Run 2026-08-11 — S4 choice callback implementation launched
+
+Workflow run: `31448825105`
+Source head: `9e623a198bfe081496edecfda37d9e2d02d3d28b`
+
+Locked S4 design:
+
+- S2 remains the sole authority for Player selections and authored defaults;
+- `PlayerStoryContext` will hydrate only effective choices: an explicit selection at or before Story evaluation time, or the authored default after the response window closes;
+- effective choice state records whether it came from `selected` or `default`, so silence can have different consequences from an explicit answer;
+- Story rules gain `player_story_choice_is` with optional source matching;
+- consequential response windows should use a finite close time;
+- delayed callbacks are normal scheduled Story events placed after the response window closes, then branched per Player with `player_story_choice_is`;
+- callback branches reuse existing Story effects such as relationship adjustment, cash/ledger, contract unlock, policy, flags, messages, and later content variants;
+- no per-Player consequence timer, second scheduler, browser-written consequence state, or free-form interpretation is introduced.
+
+Acceptance target for this run: demonstrate a due Story event consuming an authoritative prior choice and applying an existing effect only to the matching Player branch.
 
 ## Run-completion rule
 
