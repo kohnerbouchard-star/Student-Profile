@@ -668,6 +668,25 @@ Current boundary:
 
 Next implementation tranche: forward-only S2/S3 database replay repairs. Historical migrations remain immutable.
 
+### Run 2026-08-11 — Phase C S2/S3 forward replay repair launched
+
+Workflow run: `31468881868`
+
+Authoritative defects being repaired:
+
+- S1 created `story_messages.effect_index`; S2 `deliver_story_character_message_v2()` incorrectly reads `story_row.source_effect_index`.
+- `storyline_events` is a reusable global definition table and has no `game_session_id`; S3 `adjust_story_relationship_v1()` incorrectly scopes the source event through that nonexistent column.
+- Correct game isolation is `storyline_events.storyline_id -> game_session_storylines.storyline_id`, with `game_session_storylines.game_session_id` as the isolation boundary.
+
+Repair discipline:
+
+- historical migrations remain immutable;
+- generate one forward migration with the repository-pinned Supabase CLI;
+- add a source regression contract;
+- replay the full database twice from zero;
+- inspect installed Postgres function definitions after replay;
+- do not apply anything to connected staging in this run.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
