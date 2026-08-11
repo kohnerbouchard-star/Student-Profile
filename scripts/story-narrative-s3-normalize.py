@@ -75,6 +75,20 @@ def post() -> None:
         raise SystemExit("relationship write delta type anchor missing")
     execution.write_text(text.replace(old, new, 1), encoding="utf-8")
 
+    context_test = Path("backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts")
+    replace_once(
+        context_test,
+        '  assertEquals(contexts[0]?.relationships["character.northreach.jonis-hale.v1"]?.standing, "trusted");\n',
+        '  assertEquals(contexts[0]?.relationships?.["character.northreach.jonis-hale.v1"]?.standing, "trusted");\n',
+    )
+
+    writer_test = Path("backend/src/domains/storylines/infrastructure/supabaseStoryRelationshipWriter.test.ts")
+    replace_once(
+        writer_test,
+        '  });\n  const result = await writer.adjustRelationship({\n',
+        '  } as never);\n  const result = await writer.adjustRelationship({\n',
+    )
+
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
