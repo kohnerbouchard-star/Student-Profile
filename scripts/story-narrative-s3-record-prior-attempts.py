@@ -80,8 +80,42 @@ Correction:
 - fixture country profiles now carry canonical NRC/YRC currency codes;
 - checking-balance rows now carry the matching currency codes;
 - no production cash/banking logic was changed.
+""")
 
-Next: rerun S3 from the corrected fixture normalization, then proceed through migration-contract and stock-story scheduler checks.
+if "### Run 2026-08-11 — S3 verification attempt 7" not in text:
+    entries.append("""
+### Run 2026-08-11 — S3 verification attempt 7
+
+Workflow run: `31448314256`
+Workflow head: `5e3104f3f70dd9d1820c1a9d78c0958fe8b21010`
+Ephemeral generated migration: `20260811010738_add_story_relationship_state_v1.sql`
+
+Result: TYPECHECK + ALL FOCUSED S3 RUNTIME TESTS GREEN; FAILED ONLY AT MIGRATION-CONTRACT FILE PATH; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- attempt 6 evidence persisted to the roadmap in commit `452acab1a14c84eb361daa414497ee22ac5503b2`;
+- exact branch/S2 guard and pinned Node/Deno/Supabase toolchain;
+- CLI migration generation and complete guarded S3 transform;
+- `git diff --check` and `npm ci`;
+- `npm run typecheck:all`;
+- `npm run test:story-relationships` (2/2 passed);
+- Player Story context repository tests (3/3 passed);
+- Story condition-engine tests (14/14 passed);
+- Story effect-engine tests (12/12 passed), for 29/29 in the combined focused step.
+
+Failure:
+
+- the migration-contract step runs with `working-directory: backend` but passed `$MIGRATION`, whose value already began with `backend/`;
+- the test therefore attempted to read `backend/backend/supabase/migrations/...` and failed with `NotFound` before checking migration contents;
+- the story-scheduler regression was skipped only because this path-only test step failed.
+
+Correction:
+
+- migration-contract invocation now passes `supabase/migrations/$MIGRATION_NAME` relative to the `backend` working directory;
+- no schema, Story runtime, relationship logic, or existing system behavior is changed by this correction.
+
+Next: rerun the complete S3 verification; if the migration contract and stock-story scheduler pass, land S3 and move to S4.
 """)
 
 if entries:
