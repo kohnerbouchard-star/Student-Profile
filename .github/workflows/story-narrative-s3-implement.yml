@@ -1,5 +1,5 @@
 name: Story Narrative S3 Implement And Verify
-# attempt 6: diff-clean run ledger and generated-test typing fixes
+# attempt 7: Player Story context currency fixture repair
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
             git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S3 verification attempts 3 through 5"
+            git commit -m "docs(story): record S3 verification attempt 6"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
 
