@@ -36,7 +36,8 @@ jobs:
           test -f docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
           test -f docs/story/relationship-state-v1.sql.body
           test -f scripts/story-narrative-s3-apply.py
-          python3 -m py_compile scripts/story-narrative-s3-apply.py
+          test -f scripts/story-narrative-s3-normalize.py
+          python3 -m py_compile scripts/story-narrative-s3-apply.py scripts/story-narrative-s3-normalize.py
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -69,7 +70,9 @@ jobs:
           cat docs/story/relationship-state-v1.sql.body > "$MIGRATION"
           echo "MIGRATION=$MIGRATION" >> "$GITHUB_ENV"
           echo "MIGRATION_NAME=$MIGRATION_NAME" >> "$GITHUB_ENV"
+          python3 scripts/story-narrative-s3-normalize.py --pre
           python3 scripts/story-narrative-s3-apply.py
+          python3 scripts/story-narrative-s3-normalize.py --post
           git diff --check
 
       - name: Install backend dependencies
@@ -127,6 +130,7 @@ jobs:
           rm -f .github/workflows/story-narrative-s3-bootstrap.yml
           rm -f docs/story/relationship-state-v1.sql.body
           rm -f scripts/story-narrative-s3-apply.py
+          rm -f scripts/story-narrative-s3-normalize.py
 
       - name: Commit verified S3 implementation
         shell: bash
