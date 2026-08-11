@@ -39,6 +39,21 @@ Deno.test("player story context repository builds contexts for active players", 
     northreach_border_closed: true,
     tariff_level: 2,
   });
+  assertEquals(contexts[0]?.relationships, {
+    "character.northreach.edda-veyr.v1": {
+      characterKey: "character.northreach.edda-veyr.v1",
+      characterName: "Edda Veyr",
+      countryCode: "NORTHREACH",
+      relationshipRole: "sponsor",
+      stage: "engaged",
+      contactCount: 2,
+      replyCount: 1,
+      trustScore: 12,
+      memory: {
+        lastConversationKey: "relationship.northreach.edda-veyr.v1",
+      },
+    },
+  });
 
   assertEquals(contexts[1]?.playerId, "player-2");
   assertEquals(contexts[1]?.currentCountryCode, "YRETHIA");
@@ -46,6 +61,19 @@ Deno.test("player story context repository builds contexts for active players", 
   assertEquals(contexts[1]?.sectorExposurePct, {});
   assertEquals(contexts[1]?.activeContractKeys, ["public-market-brief"]);
   assertEquals(contexts[1]?.completedContractKeys, []);
+  assertEquals(contexts[1]?.relationships, {
+    "character.yrethia.leva-orren.v1": {
+      characterKey: "character.yrethia.leva-orren.v1",
+      characterName: "Leva Orren",
+      countryCode: "YRETHIA",
+      relationshipRole: "sponsor",
+      stage: "contacted",
+      contactCount: 1,
+      replyCount: 0,
+      trustScore: 0,
+      memory: {},
+    },
+  });
 });
 
 Deno.test("player story context repository keeps safe defaults for sparse players", async () => {
@@ -54,6 +82,7 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   tables.account_balances = [];
   tables.stock_holdings = [];
   tables.player_contract_progress = [];
+  tables.player_story_relationships = [];
   tables.game_session_story_flags = [];
   const client = new FakeClient(tables);
   const repository = new SupabasePlayerStoryContextRepository(client as never);
@@ -71,6 +100,7 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   assertEquals(contexts[0]?.activeContractKeys, ["public-market-brief"]);
   assertEquals(contexts[0]?.completedContractKeys, []);
   assertEquals(contexts[0]?.storyFlags, {});
+  assertEquals(contexts[0]?.relationships, {});
 });
 
 Deno.test("player story context repository reports read failures", async () => {
@@ -102,6 +132,7 @@ type FakeTableName =
   | "game_session_stock_assets"
   | "game_session_contracts"
   | "player_contract_progress"
+  | "player_story_relationships"
   | "game_session_story_flags";
 
 type FakeTables = Record<FakeTableName, Record<string, unknown>[]>;
@@ -387,6 +418,38 @@ function baseTables(): FakeTables {
         game_session_id: "game-1",
         contract_id: "contract-completed",
         status: "completed",
+      },
+    ],
+    player_story_relationships: [
+      {
+        player_id: "player-1",
+        game_session_id: "game-1",
+        character_key: "character.northreach.edda-veyr.v1",
+        character_name: "Edda Veyr",
+        country_code: "NORTHREACH",
+        relationship_role: "sponsor",
+        stage: "engaged",
+        contact_count: 2,
+        reply_count: 1,
+        trust_score: 12,
+        memory: {
+          lastConversationKey: "relationship.northreach.edda-veyr.v1",
+        },
+        updated_at: "2026-06-25T12:02:00.000Z",
+      },
+      {
+        player_id: "player-2",
+        game_session_id: "game-1",
+        character_key: "character.yrethia.leva-orren.v1",
+        character_name: "Leva Orren",
+        country_code: "YRETHIA",
+        relationship_role: "sponsor",
+        stage: "contacted",
+        contact_count: 1,
+        reply_count: 0,
+        trust_score: 0,
+        memory: {},
+        updated_at: "2026-06-25T12:03:00.000Z",
       },
     ],
     game_session_story_flags: [
