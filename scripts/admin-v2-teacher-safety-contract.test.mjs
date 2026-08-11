@@ -32,10 +32,10 @@ const safetyMigration = fs.readFileSync(
 );
 
 test("Attendance reward adjustments cannot select global currency or savings", () => {
-  const functionSource = attendanceApi.match(
-    /function adjustAttendanceReward\([\s\S]*?\n  \}/,
-  )?.[0] ?? "";
-  assert.ok(functionSource, "Expected the Admin V2 Attendance reward adapter.");
+  const start = attendanceApi.indexOf("function adjustAttendanceReward");
+  const end = attendanceApi.indexOf("\n  function setAttendanceLock", start);
+  assert.ok(start >= 0 && end > start, "Expected the Admin V2 Attendance reward adapter.");
+  const functionSource = attendanceApi.slice(start, end);
   assert.match(functionSource, /currencyMode:\s*"player_country"/);
   assert.match(functionSource, /accountType:\s*"checking"/);
   assert.doesNotMatch(functionSource, /currencyCode/);
