@@ -701,6 +701,12 @@ Prior run `31468881868` correctly generated a forward migration filename with Su
 
 This retry narrows that guard to the actual invalid row-field token `story_row.source_effect_index`. Historical migrations remain immutable; no connected staging write occurs in this run.
 
+### Run 2026-08-11 — Phase C retry failure `31469373296`
+
+Result: FAILED; no generated migration or regression contract was published.
+
+Inspect the exact generation, source-contract, migration-audit, database-replay, installed-function, lint, or focused Story regression step. Historical migrations and connected staging remain untouched.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
