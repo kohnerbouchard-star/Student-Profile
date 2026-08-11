@@ -1,5 +1,5 @@
 name: Story Narrative S3 Implement And Verify
-# attempt 3: parent-directory-safe transform
+# attempt 4: generated-test typing fixes
 
 on:
   push:
@@ -39,6 +39,61 @@ jobs:
           test -f scripts/story-narrative-s3-apply.py
           test -f scripts/story-narrative-s3-normalize.py
           python3 -m py_compile scripts/story-narrative-s3-apply.py scripts/story-narrative-s3-normalize.py
+
+      - name: Persist S3 attempt 3 evidence before retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          heading = "### Run 2026-08-11 — S3 verification attempt 3"
+          if heading not in text:
+              marker = "\n## Run-completion rule\n"
+              entry = '''
+### Run 2026-08-11 — S3 verification attempt 3
+
+Workflow run: `31447867568`  
+Workflow head: `315de96898a68d04c3098427d87d1ae31dfb072e`  
+Ephemeral generated migration: `20260811005947_add_story_relationship_state_v1.sql`
+
+Result: FULL S3 SOURCE TRANSFORM APPLIED EPHEMERALLY; FAILED AT TYPECHECK; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- exact branch/S2 ancestry and staged-input guard;
+- pinned Node, Deno, and Supabase CLI setup;
+- CLI-generated migration placement;
+- guarded pre-normalization, complete S3 source transform, and post-normalization;
+- `git diff --check`;
+- `npm ci` with zero reported vulnerabilities.
+
+Typecheck failure was limited to generated tests:
+
+- `supabasePlayerStoryContextRepository.test.ts` accessed optional `relationships` without optional chaining;
+- `supabaseStoryRelationshipWriter.test.ts` used a concrete fake RPC function that did not satisfy the writer client's generic RPC signature;
+- no S3 runtime implementation file produced the reported compiler errors.
+
+Correction:
+
+- generated context test now uses optional chaining for the compatibility-optional relationship map;
+- generated writer test casts its intentionally minimal fake client at the test boundary while preserving the runtime generic client contract.
+
+Next: rerun full S3 verification and proceed to focused relationship/runtime tests if typecheck clears.
+'''
+              if marker not in text:
+                  raise SystemExit("roadmap run-completion marker missing")
+              path.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
+          PY
+          git diff --check
+          if ! git diff --quiet -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md; then
+            git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): record S3 verification attempt 3"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
