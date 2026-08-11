@@ -232,7 +232,7 @@ begin
       '[]'::jsonb,
       '[]'::jsonb,
       'normal',
-      true
+      false
     )
     on conflict (storyline_id, event_key) do update
     set title = excluded.title,
@@ -249,7 +249,7 @@ begin
         flag_payloads = excluded.flag_payloads,
         contract_unlock_payloads = excluded.contract_unlock_payloads,
         priority = excluded.priority,
-        is_active = true;
+        is_active = false;
 
     v_upserted := v_upserted + 1;
     v_sequence := v_sequence + 1;
@@ -386,7 +386,7 @@ begin
       '[]'::jsonb,
       '[]'::jsonb,
       'major',
-      true
+      false
     )
     on conflict (storyline_id, event_key) do update
     set title = excluded.title,
@@ -403,7 +403,7 @@ begin
         flag_payloads = excluded.flag_payloads,
         contract_unlock_payloads = excluded.contract_unlock_payloads,
         priority = excluded.priority,
-        is_active = true;
+        is_active = false;
 
     v_upserted := v_upserted + 1;
     v_sequence := v_sequence + 1;
@@ -444,6 +444,6 @@ grant execute on function public.initialize_relationship_followups_and_meridian_
   to service_role;
 
 comment on function public.initialize_relationship_followups_and_meridian_fracture_v1(uuid) is
-  'Attaches relationship-aware sponsor follow-ups and first Meridian fracture reactions to the single canonical Econovaria storyline. Branching uses persisted player reply, stage, and trust state.';
+  'Attaches relationship-aware sponsor follow-ups and first Meridian fracture reactions to the single canonical Econovaria storyline as globally dormant definitions. Per-game overrides are the only runtime enablement authority.';
 
 commit;

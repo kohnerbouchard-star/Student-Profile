@@ -30,36 +30,39 @@ grant select, insert, update, delete
   on table public.game_session_story_event_overrides
   to service_role;
 
-create or replace function public.defer_relationship_followups_after_full_game_activation_v1()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $function$
-begin
-  if new.story_status = 'active' then
-    update public.storyline_events as event_row
-    set is_active = false
-    from public.storylines as storyline_row
-    where event_row.storyline_id = storyline_row.id
-      and lower(storyline_row.key) = lower('econovaria_demo_act_1')
-      and (
-        event_row.event_key like 'relationship_%_sponsor_followup'
-        or event_row.event_key like 'meridian_fracture_%_sponsor_reaction'
-      );
-  end if;
-
-  return new;
-end;
-$function$;
-
+-- Remove the superseded design if this migration is replayed over an earlier
+-- development database. Per-game progress must never toggle shared definitions.
 drop trigger if exists zzz_defer_relationship_followups_after_full_game_activation_v1
   on public.game_feature_activation_evidence;
-create trigger zzz_defer_relationship_followups_after_full_game_activation_v1
-after insert or update of story_status on public.game_feature_activation_evidence
-for each row
-when (new.story_status = 'active')
-execute function public.defer_relationship_followups_after_full_game_activation_v1();
+drop function if exists public.defer_relationship_followups_after_full_game_activation_v1();
+
+-- Ensure the reusable definitions exist for games that were already active or
+-- already received an arrival contact before this migration was applied. The
+-- initializer is authoritative for content and always leaves the definitions
+-- globally dormant.
+do $seed_existing_games$
+declare
+  v_game_session_id uuid;
+begin
+  for v_game_session_id in
+    select distinct source.game_session_id
+    from (
+      select activation.game_session_id
+      from public.game_feature_activation_evidence as activation
+      where activation.story_status = 'active'
+      union
+      select impact.game_session_id
+      from public.player_story_impacts as impact
+      where impact.effect_type = 'character_message'
+        and coalesce(impact.payload -> 'payload' ->> 'phase', '') = 'arrival'
+    ) as source
+  loop
+    perform public.initialize_relationship_followups_and_meridian_fracture_v1(
+      v_game_session_id
+    );
+  end loop;
+end;
+$seed_existing_games$;
 
 create or replace function public.enable_relationship_followups_after_arrival_contact_v1()
 returns trigger
@@ -90,6 +93,7 @@ begin
     join public.storylines as storyline_row
       on storyline_row.id = event_row.storyline_id
     where lower(storyline_row.key) = lower('econovaria_demo_act_1')
+      and not event_row.is_active
       and (
         event_row.event_key like 'relationship_%_sponsor_followup'
         or event_row.event_key like 'meridian_fracture_%_sponsor_reaction'
@@ -116,11 +120,52 @@ for each row
 when (new.effect_type = 'character_message')
 execute function public.enable_relationship_followups_after_arrival_contact_v1();
 
+-- Backfill game-scoped enablement for arrival contacts that predate this
+-- migration. One earliest arrival impact is retained as provenance per game.
+insert into public.game_session_story_event_overrides (
+  game_session_id,
+  storyline_event_id,
+  enabled,
+  source_player_story_impact_id,
+  enabled_at,
+  updated_at
+)
+select
+  arrival.game_session_id,
+  event_row.id,
+  true,
+  arrival.id,
+  arrival.created_at,
+  now()
+from (
+  select distinct on (impact.game_session_id)
+    impact.id,
+    impact.game_session_id,
+    impact.created_at
+  from public.player_story_impacts as impact
+  where impact.effect_type = 'character_message'
+    and coalesce(impact.payload -> 'payload' ->> 'phase', '') = 'arrival'
+  order by impact.game_session_id, impact.created_at asc, impact.id asc
+) as arrival
+join public.storyline_events as event_row
+  on not event_row.is_active
+join public.storylines as storyline_row
+  on storyline_row.id = event_row.storyline_id
+ and lower(storyline_row.key) = lower('econovaria_demo_act_1')
+where event_row.event_key like 'relationship_%_sponsor_followup'
+   or event_row.event_key like 'meridian_fracture_%_sponsor_reaction'
+on conflict (game_session_id, storyline_event_id) do update
+set enabled = true,
+    source_player_story_impact_id = excluded.source_player_story_impact_id,
+    enabled_at = least(
+      public.game_session_story_event_overrides.enabled_at,
+      excluded.enabled_at
+    ),
+    updated_at = excluded.updated_at;
+
 comment on table public.game_session_story_event_overrides is
-  'Game-scoped enablement for reusable storyline events that must remain globally inactive until a specific game reaches the required player-story state.';
-comment on function public.defer_relationship_followups_after_full_game_activation_v1() is
-  'Keeps relationship-aware boom/fracture definitions globally inactive so provisioning counts and unrelated games remain isolated.';
+  'Game-scoped enablement for reusable storyline events that remain globally dormant until that game reaches the required player-story state.';
 comment on function public.enable_relationship_followups_after_arrival_contact_v1() is
-  'Enables relationship-aware Meridian follow-up events only for the game whose player received an arrival-character contact.';
+  'Enables relationship-aware Meridian follow-up events only for the game whose player received an arrival-character contact; shared storyline definitions remain unchanged.';
 
 commit;
