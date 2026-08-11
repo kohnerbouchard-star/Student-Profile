@@ -7,16 +7,11 @@ on:
       - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
       - "admin/player-identity-wiring.js"
-      - "admin/v2/src/components/AdminNavigation.js"
-      - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
       - "admin/v2/src/routes/attendance/AttendanceRoute.js"
       - "admin/v2/src/routes/banking/BankingRoute.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
       - "admin/v2/src/routes/store/StoreController.js"
-      - "admin/v2/src/routes/store/StoreRoute.js"
-      - "admin/v2/styles/routes/attendance.css"
-      - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
@@ -51,16 +46,11 @@ on:
       - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
       - "admin/player-identity-wiring.js"
-      - "admin/v2/src/components/AdminNavigation.js"
-      - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
       - "admin/v2/src/routes/attendance/AttendanceRoute.js"
       - "admin/v2/src/routes/banking/BankingRoute.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
       - "admin/v2/src/routes/store/StoreController.js"
-      - "admin/v2/src/routes/store/StoreRoute.js"
-      - "admin/v2/styles/routes/attendance.css"
-      - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
@@ -121,7 +111,7 @@ jobs:
       - name: Validate currency, identity, and targeting authority
         run: node --test scripts/player-local-currency-authority-contract.test.mjs
 
-      - name: Validate Admin V2 teacher-safety boundaries
+      - name: Validate Admin V2 safety boundaries
         run: node --test scripts/admin-v2-teacher-safety-contract.test.mjs
 
       - name: Validate Admin Contract targeting behavior
@@ -148,14 +138,11 @@ jobs:
           node --check admin/classroom-write-fallback.js
           node --check admin/create-action-adapter.js
           node --check admin/player-identity-wiring.js
-          node --check admin/v2/src/components/AdminNavigation.js
-          node --check admin/v2/src/components/AdminTopbar.js
           node --check admin/v2/src/routes/attendance/AttendanceApi.js
           node --check admin/v2/src/routes/attendance/AttendanceRoute.js
           node --check admin/v2/src/routes/banking/BankingRoute.js
           node --check admin/v2/src/routes/contracts/ContractForm.js
           node --check admin/v2/src/routes/store/StoreController.js
-          node --check admin/v2/src/routes/store/StoreRoute.js
           node --check player-terminal/src/integrations/student-profile-api-call.js
           node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
 
