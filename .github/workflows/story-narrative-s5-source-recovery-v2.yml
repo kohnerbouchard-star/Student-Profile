@@ -1,4 +1,4 @@
-name: Story Narrative S5 Recovery Cleanup
+name: Story Narrative S5 Cleanup Roadmap Finalizer
 
 on:
   push:
@@ -11,229 +11,26 @@ permissions:
   contents: write
 
 concurrency:
-  group: story-narrative-s5-recovery-cleanup
+  group: story-narrative-s5-cleanup-roadmap-finalizer
   cancel-in-progress: false
 
 jobs:
-  cleanup:
+  finalize:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 10
     steps:
-      - name: Check out exact recovered Story source
+      - name: Check out exact Story branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: feat/story-narrative-convergence-v1
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: "22.23.1"
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Set up Deno
-        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
-        with:
-          deno-version: v2.9.3
-
-      - name: Install permanent read-only S5 integrity workflow
+      - name: Record S5 cleanup verification and publication boundary
         shell: bash
         run: |
           set -euo pipefail
-          cat > .github/workflows/story-narrative-s5-source-integrity.yml <<'YAML'
-          name: Story Narrative S5 Source Integrity
-
-          on:
-            pull_request:
-              paths:
-                - "docs/seed-content/story/content/**"
-                - "scripts/story-content/build-act1-august-pack.py"
-                - "scripts/story-content/build-act2-september-pack.py"
-                - "scripts/story-content/build-act2-october-pack.py"
-                - "scripts/story-content/build-act3-act8-packs.py"
-                - "scripts/story-content-all-packs-contract.test.mjs"
-                - "backend/src/domains/storylines/tests/act1AugustStoryContentPack.test.ts"
-                - "backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts"
-                - "backend/src/domains/storylines/contracts/**"
-                - "backend/package.json"
-                - "backend/package-lock.json"
-                - ".github/workflows/story-narrative-s5-source-integrity.yml"
-            push:
-              branches:
-                - main
-                - feat/story-narrative-convergence-v1
-              paths:
-                - "docs/seed-content/story/content/**"
-                - "scripts/story-content/build-act1-august-pack.py"
-                - "scripts/story-content/build-act2-september-pack.py"
-                - "scripts/story-content/build-act2-october-pack.py"
-                - "scripts/story-content/build-act3-act8-packs.py"
-                - "scripts/story-content-all-packs-contract.test.mjs"
-                - "backend/src/domains/storylines/tests/act1AugustStoryContentPack.test.ts"
-                - "backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts"
-                - "backend/src/domains/storylines/contracts/**"
-                - "backend/package.json"
-                - "backend/package-lock.json"
-                - ".github/workflows/story-narrative-s5-source-integrity.yml"
-
-          permissions:
-            contents: read
-
-          concurrency:
-            group: story-narrative-s5-source-integrity-${{ github.ref }}
-            cancel-in-progress: true
-
-          jobs:
-            integrity:
-              runs-on: ubuntu-24.04
-              timeout-minutes: 90
-              steps:
-                - name: Check out exact source
-                  uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-                  with:
-                    ref: ${{ github.event.pull_request.head.sha || github.sha }}
-                    persist-credentials: false
-
-                - name: Set up Node
-                  uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-                  with:
-                    node-version: "22.23.1"
-                    cache: npm
-                    cache-dependency-path: backend/package-lock.json
-
-                - name: Set up Deno
-                  uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
-                  with:
-                    deno-version: v2.9.3
-
-                - name: Install backend dependencies
-                  working-directory: backend
-                  run: npm ci
-
-                - name: Verify deterministic builders and committed source parity
-                  shell: bash
-                  run: |
-                    set -euo pipefail
-                    python3 -m py_compile \
-                      scripts/story-content/build-act1-august-pack.py \
-                      scripts/story-content/build-act2-september-pack.py \
-                      scripts/story-content/build-act2-october-pack.py \
-                      scripts/story-content/build-act3-act8-packs.py
-                    python3 scripts/story-content/build-act1-august-pack.py
-                    python3 scripts/story-content/build-act2-september-pack.py
-                    python3 scripts/story-content/build-act2-october-pack.py
-                    python3 scripts/story-content/build-act3-act8-packs.py
-                    test "$(find docs/seed-content/story/content -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')" = "11"
-                    test -z "$(git status --porcelain --untracked-files=all -- docs/seed-content/story/content)"
-                    git diff --exit-code -- docs/seed-content/story/content
-
-                - name: Verify backend and Edge types
-                  working-directory: backend
-                  run: npm run typecheck:all
-
-                - name: Verify August Story pack
-                  working-directory: backend
-                  run: deno test --allow-read=../docs/seed-content/story/content/act1-august-content-pack-v1.json --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/act1AugustStoryContentPack.test.ts
-
-                - name: Verify September-June Story packs
-                  working-directory: backend
-                  shell: bash
-                  run: |
-                    set -euo pipefail
-                    for f in \
-                      act2-september-content-pack-v1.json \
-                      act2-october-content-pack-v1.json \
-                      act3-november-content-pack-v1.json \
-                      act3-december-content-pack-v1.json \
-                      act4-january-content-pack-v1.json \
-                      act4-february-content-pack-v1.json \
-                      act5-march-content-pack-v1.json \
-                      act6-april-content-pack-v1.json \
-                      act7-may-content-pack-v1.json \
-                      act8-june-content-pack-v1.json; do
-                      deno test --allow-read="../docs/seed-content/story/content/$f" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts -- "../docs/seed-content/story/content/$f"
-                    done
-
-                - name: Verify whole-campaign Story source
-                  run: node scripts/story-content-all-packs-contract.test.mjs
-
-                - name: Verify S4 choice callbacks
-                  working-directory: backend
-                  run: npm run test:story-choice-callbacks
-
-                - name: Verify Player Messaging
-                  working-directory: backend
-                  run: npm run test:player-messaging
-
-                - name: Verify stock Story scheduler integration
-                  working-directory: backend
-                  run: npm run test:stock-market-calendar
-          YAML
-
-      - name: Remove temporary S5 generation and recovery machinery
-        shell: bash
-        run: |
-          set -euo pipefail
-          git rm -f --ignore-unmatch -- \
-            .github/workflows/story-narrative-s5-august-pack.yml \
-            .github/workflows/story-narrative-s5-september-pack.yml \
-            .github/workflows/story-narrative-s5-october-pack.yml \
-            .github/workflows/story-narrative-s5-november-june-packs.yml \
-            .github/workflows/story-narrative-s5-planning-land.yml \
-            .github/workflows/story-narrative-s5-source-recovery-v2.yml \
-            scripts/story-content/fix-authored-key-spoilers.py \
-            scripts/story-content/fix-story-content-test-narrowing.py
-          git diff --check
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Prove permanent integrity boundary before publication
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m py_compile \
-            scripts/story-content/build-act1-august-pack.py \
-            scripts/story-content/build-act2-september-pack.py \
-            scripts/story-content/build-act2-october-pack.py \
-            scripts/story-content/build-act3-act8-packs.py
-          python3 scripts/story-content/build-act1-august-pack.py
-          python3 scripts/story-content/build-act2-september-pack.py
-          python3 scripts/story-content/build-act2-october-pack.py
-          python3 scripts/story-content/build-act3-act8-packs.py
-          test "$(find docs/seed-content/story/content -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')" = "11"
-          test -z "$(git status --porcelain --untracked-files=all -- docs/seed-content/story/content)"
-          git diff --exit-code -- docs/seed-content/story/content
-          cd backend
-          npm run typecheck:all
-          deno test --allow-read=../docs/seed-content/story/content/act1-august-content-pack-v1.json --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/act1AugustStoryContentPack.test.ts
-          for f in \
-            act2-september-content-pack-v1.json \
-            act2-october-content-pack-v1.json \
-            act3-november-content-pack-v1.json \
-            act3-december-content-pack-v1.json \
-            act4-january-content-pack-v1.json \
-            act4-february-content-pack-v1.json \
-            act5-march-content-pack-v1.json \
-            act6-april-content-pack-v1.json \
-            act7-may-content-pack-v1.json \
-            act8-june-content-pack-v1.json; do
-            deno test --allow-read="../docs/seed-content/story/content/$f" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts -- "../docs/seed-content/story/content/$f"
-          done
-          cd ..
-          node scripts/story-content-all-packs-contract.test.mjs
-          cd backend
-          npm run test:story-choice-callbacks
-          npm run test:player-messaging
-          npm run test:stock-market-calendar
-
-      - name: Record verified S5 cleanup in roadmap
-        shell: bash
-        run: |
-          set -euo pipefail
+          git pull --ff-only origin feat/story-narrative-convergence-v1
           python3 - <<'PY'
           from pathlib import Path
           import os
@@ -241,17 +38,20 @@ jobs:
           path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
           text = path.read_text(encoding='utf-8')
           marker = '\n## Run-completion rule\n'
-          heading = f"### Run 2026-08-11 — S5 recovery cleanup and permanent integrity `{os.environ['GITHUB_RUN_ID']}`"
+          heading = '### Run 2026-08-11 — S5 permanent source-integrity cleanup'
           if heading not in text:
               body = '\n'.join([
                   '', heading, '',
-                  f"Source head: `{os.environ['GITHUB_SHA']}`", '',
-                  'Result: GREEN.', '',
-                  '- Removed temporary S5 monthly/self-writing recovery workflows and one-time correction scripts.',
-                  '- Installed one permanent read-only deterministic Story source-integrity workflow; it regenerates all 11 packs and fails on source drift without committing changes.',
-                  '- Re-proved all 11 monthly parser contracts, whole-campaign Day 1–334 integrity, backend/Edge typecheck, S4 choice callbacks, Player Messaging, and stock/Story scheduler integration before publishing cleanup.',
-                  '- S5 authored source remains recovered; runtime binding and connected staging remain pending.', '',
-                  'Next implementation tranche: forward-only S2/S3 database replay repairs, followed by Story runner retry/idempotency hardening.', ''
+                  f"Roadmap finalizer workflow: `{os.environ['GITHUB_RUN_ID']}`", '',
+                  'Verification source:', '',
+                  '- S5 cleanup verification run `31468132122` regenerated all 11 committed monthly packs and proved deterministic source parity.',
+                  '- The same run passed backend/Edge typecheck, all monthly Story content contracts, whole-campaign Day 1–334 integrity, S4 choice callbacks, Player Messaging, and stock/Story scheduler integration.',
+                  '- Its local cleanup commit was rejected only because the GitHub Actions token lacked permission to update workflow files; no source or test assertion failed.',
+                  '- The connected GitHub authority then installed the permanent read-only S5 source-integrity workflow and removed the obsolete self-writing monthly generation/planning workflows plus the one-time recovery patch scripts.', '',
+                  'Current boundary:', '',
+                  '- S5 authored source is recovered and protected by deterministic read-only CI.',
+                  '- Runtime News/Contract/system binding, forward S2/S3 replay repairs, Story runner retry/idempotency hardening, connected staging, S6 reachability, and S7 acceptance remain pending.', '',
+                  'Next implementation tranche: forward-only S2/S3 database replay repairs. Historical migrations remain immutable.', ''
               ])
               if marker not in text:
                   raise SystemExit('roadmap marker missing')
@@ -259,49 +59,10 @@ jobs:
               path.write_text(text, encoding='utf-8')
           PY
           git diff --check
-
-      - name: Publish cleanup
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -A
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "ci(story): install permanent S5 source integrity"
-          git push origin HEAD:feat/story-narrative-convergence-v1
-
-      - name: Record cleanup failure
-        if: failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git reset --hard HEAD
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-
-          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
-          text = path.read_text(encoding='utf-8')
-          marker = '\n## Run-completion rule\n'
-          heading = f"### Run 2026-08-11 — S5 recovery cleanup failure `{os.environ['GITHUB_RUN_ID']}`"
-          if heading not in text:
-              body = '\n'.join([
-                  '', heading, '',
-                  f"Source head: `{os.environ['GITHUB_SHA']}`", '',
-                  'Result: FAILED. Temporary recovery machinery was not retired.', '',
-                  'Inspect the exact cleanup/integrity step. Do not remove or weaken deterministic source, parser, callback, privacy, hidden-canon, coverage, Messaging, or scheduler checks.', ''
-              ])
-              if marker not in text:
-                  raise SystemExit('roadmap marker missing')
-              text = text.replace(marker, body + marker, 1)
-              path.write_text(text, encoding='utf-8')
-          PY
           git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S5 cleanup failure"
+            git commit -m "docs(story): record permanent S5 source-integrity cleanup"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
