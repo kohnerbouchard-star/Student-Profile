@@ -231,6 +231,19 @@ async function copyBrowserRoot(repoRoot, outputRoot, relativePath) {
   });
 }
 
+async function canonicalizeAdminV2(outputRoot) {
+  const v2Path = path.join(outputRoot, "admin", "v2.html");
+  try {
+    const v2Source = await readFile(v2Path, "utf8");
+    await writeFile(path.join(outputRoot, "admin", "index.html"), v2Source, {
+      encoding: "utf8",
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return;
+    throw error;
+  }
+}
+
 export async function buildVercelDeployment({
   repoRoot = DEFAULT_REPO_ROOT,
   outputRoot = DEFAULT_OUTPUT_ROOT,
@@ -244,6 +257,7 @@ export async function buildVercelDeployment({
   for (const relativePath of BROWSER_ROOTS) {
     await copyBrowserRoot(repoRoot, outputRoot, relativePath);
   }
+  await canonicalizeAdminV2(outputRoot);
 
   const contents = `window.__ECONOVARIA_RUNTIME_CONFIG__ = ${JSON.stringify(
     configuration,

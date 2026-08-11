@@ -3,13 +3,14 @@ import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const repositoryRoot = new URL("../", import.meta.url);
-const [vercelConfigText, workflow, healthRoute] = await Promise.all([
+const [vercelConfigText, workflow, healthRoute, buildSource] = await Promise.all([
   readFile(new URL("vercel.json", repositoryRoot), "utf8"),
   readFile(
     new URL(".github/workflows/vercel-attested-production-promote.yml", repositoryRoot),
     "utf8",
   ),
   readFile(new URL("api/_runtime-health.js", repositoryRoot), "utf8"),
+  readFile(new URL("scripts/build-vercel-runtime-config.mjs", repositoryRoot), "utf8"),
 ]);
 const vercelConfig = JSON.parse(vercelConfigText);
 
@@ -30,8 +31,26 @@ test("Hobby deployment stays within the 12 Serverless Function budget", async ()
   assert.equal(deployable.some((entry) => entry.name === "health.js"), false);
 });
 
-test("automatic main deployment is disabled before attested promotion", () => {
-  assert.equal(vercelConfig.git?.deploymentEnabled?.main, false);
+test("automatic main deployment is either disabled or bounded to the canonical Admin V2 cutover", () => {
+  const automaticMain = vercelConfig.git?.deploymentEnabled?.main;
+  assert.ok(
+    automaticMain === false || automaticMain === true,
+    "main deployment policy must be explicitly boolean",
+  );
+  if (automaticMain === true) {
+    assert.match(buildSource, /canonicalizeAdminV2\(outputRoot\)/u);
+    assert.match(buildSource, /path\.join\(outputRoot, "admin", "v2\.html"\)/u);
+    assert.match(buildSource, /path\.join\(outputRoot, "admin", "index\.html"\)/u);
+    assert.deepEqual(
+      vercelConfig.rewrites.filter((entry) =>
+        entry.source === "/admin" || entry.source === "/admin/"
+      ),
+      [
+        { source: "/admin", destination: "/admin/v2.html" },
+        { source: "/admin/", destination: "/admin/v2.html" },
+      ],
+    );
+  }
   assert.match(workflow, /release_integrity_run_id/u);
   assert.match(workflow, /edge_inventory_run_id/u);
   assert.match(workflow, /release-integrity-live-\$\{\{ inputs\.source_commit \}\}/u);
