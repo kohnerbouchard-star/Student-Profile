@@ -1,5 +1,5 @@
 name: Story Narrative S3 Implement And Verify
-# attempt 5: standalone prior-run ledger helper
+# attempt 6: diff-clean run ledger and generated-test typing fixes
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
             git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S3 verification attempts 3 and 4"
+            git commit -m "docs(story): record S3 verification attempts 3 through 5"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
 
@@ -131,7 +131,7 @@ jobs:
               raise SystemExit("S3 roadmap status anchor missing")
           text = text.replace(old, new, 1)
           marker = "\n## Run-completion rule\n"
-          entry = f"\n### Run 2026-08-11 — S3 relationship state landed\n\nWorkflow run: `{os.environ['GITHUB_RUN_ID']}`  \nSource head verified by runner: `{os.environ['GITHUB_SHA']}`  \nMigration: `{os.environ['MIGRATION_NAME']}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented: private relationship state keyed by `(game, Player, characterKey)`; bounded trust/respect/affinity/obligation/suspicion metrics; derived standing tiers; immutable adjustment history; authored `relationship_adjust` Story effect; relationship metric/standing conditions; `PlayerStoryContext` hydration; existing Story runner wiring through `SupabaseStoryRelationshipWriter`; no browser write surface and no raw numeric Player relationship meter.\n\nVerification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.\n\nRemaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.\n\nNext: S4 authoritative choice consequences and delayed callbacks.\n"
+          entry = f"\n### Run 2026-08-11 — S3 relationship state landed\n\nWorkflow run: `{os.environ['GITHUB_RUN_ID']}`\nSource head verified by runner: `{os.environ['GITHUB_SHA']}`\nMigration: `{os.environ['MIGRATION_NAME']}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented: private relationship state keyed by `(game, Player, characterKey)`; bounded trust/respect/affinity/obligation/suspicion metrics; derived standing tiers; immutable adjustment history; authored `relationship_adjust` Story effect; relationship metric/standing conditions; `PlayerStoryContext` hydration; existing Story runner wiring through `SupabaseStoryRelationshipWriter`; no browser write surface and no raw numeric Player relationship meter.\n\nVerification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.\n\nRemaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.\n\nNext: S4 authoritative choice consequences and delayed callbacks.\n"
           if marker not in text:
               raise SystemExit("roadmap run-completion marker missing")
           path.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
