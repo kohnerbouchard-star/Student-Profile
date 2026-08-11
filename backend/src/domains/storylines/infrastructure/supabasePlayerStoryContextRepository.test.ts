@@ -39,6 +39,7 @@ Deno.test("player story context repository builds contexts for active players", 
     northreach_border_closed: true,
     tariff_level: 2,
   });
+  assertEquals(contexts[0]?.relationships?.["character.northreach.jonis-hale.v1"]?.standing, "trusted");
 
   assertEquals(contexts[1]?.playerId, "player-2");
   assertEquals(contexts[1]?.currentCountryCode, "YRETHIA");
@@ -55,6 +56,7 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   tables.stock_holdings = [];
   tables.player_contract_progress = [];
   tables.game_session_story_flags = [];
+  tables.story_relationships = [];
   const client = new FakeClient(tables);
   const repository = new SupabasePlayerStoryContextRepository(client as never);
 
@@ -71,6 +73,7 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   assertEquals(contexts[0]?.activeContractKeys, ["public-market-brief"]);
   assertEquals(contexts[0]?.completedContractKeys, []);
   assertEquals(contexts[0]?.storyFlags, {});
+  assertEquals(contexts[0]?.relationships, {});
 });
 
 Deno.test("player story context repository reports read failures", async () => {
@@ -102,7 +105,8 @@ type FakeTableName =
   | "game_session_stock_assets"
   | "game_session_contracts"
   | "player_contract_progress"
-  | "game_session_story_flags";
+  | "game_session_story_flags"
+  | "story_relationships";
 
 type FakeTables = Record<FakeTableName, Record<string, unknown>[]>;
 
@@ -263,10 +267,12 @@ function baseTables(): FakeTables {
       {
         id: "country-northreach",
         country_code: "NORTHREACH",
+        currency_code: "NRC",
       },
       {
         id: "country-yrethia",
         country_code: "YRETHIA",
+        currency_code: "YRC",
       },
       {
         id: "country-old",
@@ -279,12 +285,14 @@ function baseTables(): FakeTables {
         game_session_id: "game-1",
         account_type: "checking",
         balance: "1000",
+        currency_code: "NRC",
       },
       {
         player_id: "player-1",
         game_session_id: "game-1",
         account_type: "checking",
         balance: 250,
+        currency_code: "NRC",
       },
       {
         player_id: "player-1",
@@ -297,6 +305,7 @@ function baseTables(): FakeTables {
         game_session_id: "game-1",
         account_type: "checking",
         balance: 500,
+        currency_code: "YRC",
       },
     ],
     stock_holdings: [
@@ -388,6 +397,9 @@ function baseTables(): FakeTables {
         contract_id: "contract-completed",
         status: "completed",
       },
+    ],
+    story_relationships: [
+      { game_session_id: "game-1", player_id: "player-1", character_key: "character.northreach.jonis-hale.v1", trust: 42, respect: 30, affinity: 10, obligation: 5, suspicion: 0, standing: "trusted" },
     ],
     game_session_story_flags: [
       {

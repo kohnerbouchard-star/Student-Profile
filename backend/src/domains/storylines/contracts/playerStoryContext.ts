@@ -1,4 +1,5 @@
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
+import type { PlayerStoryRelationships } from "./storyRelationshipContracts.ts";
 
 export interface PlayerStoryContext {
   readonly playerId: string;
@@ -14,4 +15,5 @@ export interface PlayerStoryContext {
   readonly activeContractKeys: readonly string[];
   readonly completedContractKeys: readonly string[];
   readonly storyFlags: Readonly<Record<string, JsonValue>>;
+  readonly relationships?: PlayerStoryRelationships;
 }

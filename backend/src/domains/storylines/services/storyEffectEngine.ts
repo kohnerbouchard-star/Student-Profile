@@ -118,6 +118,25 @@ export async function executeStoryEffect(
       );
     }
 
+    if (input.effect.type === "relationship_adjust") {
+      if (!input.playerContext) {
+        return skipped(input.effect, effectIndex, null, "missing_player_context");
+      }
+      if (!input.dependencies.relationships) {
+        return skipped(input.effect, effectIndex, input.playerContext.playerId, "unsupported_effect_type");
+      }
+      const result = await input.dependencies.relationships.adjustRelationship({
+        gameSessionId: input.gameSessionId,
+        playerId: input.playerContext.playerId,
+        storylineEventId: input.storylineEventId,
+        effectIndex,
+        characterKey: input.effect.characterKey,
+        reason: input.effect.reason,
+        deltas: input.effect.deltas,
+      });
+      return applied(input.effect, effectIndex, input.playerContext.playerId, collectWriteIds(result));
+    }
+
     if (input.effect.type === "story_flag_set") {
       return applied(
         input.effect,

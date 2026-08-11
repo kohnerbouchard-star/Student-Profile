@@ -7,6 +7,12 @@ import {
   readRequiredText,
 } from "./storylineContractPrimitives.ts";
 import { invalidStorylineContract } from "./storylineContractErrors.ts";
+import {
+  STORY_RELATIONSHIP_METRICS,
+  STORY_RELATIONSHIP_STANDINGS,
+  type StoryRelationshipMetric,
+  type StoryRelationshipStanding,
+} from "./storyRelationshipContracts.ts";
 
 export const STORY_CONDITION_TYPES = [
   "player_current_country_is",
@@ -20,6 +26,9 @@ export const STORY_CONDITION_TYPES = [
   "player_cash_below",
   "player_cash_above",
   "story_flag_equals",
+  "player_relationship_metric_at_least",
+  "player_relationship_metric_at_most",
+  "player_relationship_standing_is",
 ] as const;
 
 export type StoryConditionType = typeof STORY_CONDITION_TYPES[number];
@@ -50,7 +59,9 @@ export type StoryLeafCondition =
   | StorySectorExposureCondition
   | StoryCountryExposureCondition
   | StoryCashThresholdCondition
-  | StoryFlagEqualsCondition;
+  | StoryFlagEqualsCondition
+  | StoryRelationshipMetricCondition
+  | StoryRelationshipStandingCondition;
 
 export interface StoryCountryIsCondition {
   readonly type: "player_current_country_is" | "player_home_country_is";
@@ -94,6 +105,19 @@ export interface StoryFlagEqualsCondition {
   readonly type: "story_flag_equals";
   readonly flagKey: string;
   readonly value: JsonValue;
+}
+
+export interface StoryRelationshipMetricCondition {
+  readonly type: "player_relationship_metric_at_least" | "player_relationship_metric_at_most";
+  readonly characterKey: string;
+  readonly metric: StoryRelationshipMetric;
+  readonly value: number;
+}
+
+export interface StoryRelationshipStandingCondition {
+  readonly type: "player_relationship_standing_is";
+  readonly characterKey: string;
+  readonly standing: StoryRelationshipStanding;
 }
 
 export function parseStoryCondition(value: unknown): StoryCondition {
@@ -177,6 +201,35 @@ export function parseStoryCondition(value: unknown): StoryCondition {
     return {
       type,
       amount: readNonNegativeNumberField(record.amount, "condition.amount"),
+    };
+  }
+
+  if (type === "player_relationship_metric_at_least" || type === "player_relationship_metric_at_most") {
+    const metric = readRequiredText(record.metric, "condition.metric");
+    if (!STORY_RELATIONSHIP_METRICS.includes(metric as StoryRelationshipMetric)) {
+      throw invalidStorylineContract("condition.metric is invalid.");
+    }
+    const relationValue = record.value;
+    if (typeof relationValue !== "number" || !Number.isFinite(relationValue) || relationValue < -100 || relationValue > 100) {
+      throw invalidStorylineContract("condition.value must be between -100 and 100.");
+    }
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
+      metric: metric as StoryRelationshipMetric,
+      value: relationValue,
+    };
+  }
+
+  if (type === "player_relationship_standing_is") {
+    const standing = readRequiredText(record.standing, "condition.standing");
+    if (!STORY_RELATIONSHIP_STANDINGS.includes(standing as StoryRelationshipStanding)) {
+      throw invalidStorylineContract("condition.standing is invalid.");
+    }
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
+      standing: standing as StoryRelationshipStanding,
     };
   }
 

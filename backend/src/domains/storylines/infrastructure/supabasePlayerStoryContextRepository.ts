@@ -1,4 +1,5 @@
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
+import type { StoryRelationshipState } from "../contracts/storyRelationshipContracts.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type {
   PlayerStoryContextRepository,
@@ -16,7 +17,8 @@ type PlayerStoryContextTableName =
   | "game_session_stock_assets"
   | "game_session_contracts"
   | "player_contract_progress"
-  | "game_session_story_flags";
+  | "game_session_story_flags"
+  | "story_relationships";
 
 interface SupabasePlayerStoryContextQueryError {
   readonly message: string;
@@ -111,6 +113,17 @@ interface StoryFlagRow {
   readonly created_at: string;
 }
 
+interface StoryRelationshipRow {
+  readonly player_id: string;
+  readonly character_key: string;
+  readonly trust: number | string;
+  readonly respect: number | string;
+  readonly affinity: number | string;
+  readonly obligation: number | string;
+  readonly suspicion: number | string;
+  readonly standing: "hostile" | "strained" | "neutral" | "trusted" | "allied";
+}
+
 interface CountryInfo {
   readonly countryId: string | null;
   readonly countryCode: string | null;
@@ -126,6 +139,7 @@ const STOCK_ASSET_SELECT = "id,sector_key,country_code,current_price";
 const CONTRACT_SELECT = "id,contract_key,status,visibility";
 const CONTRACT_PROGRESS_SELECT = "player_id,contract_id,status";
 const STORY_FLAG_SELECT = "flag_key,value,created_at";
+const RELATIONSHIP_SELECT = "player_id,character_key,trust,respect,affinity,obligation,suspicion,standing";
 
 export class SupabasePlayerStoryContextRepository
   implements PlayerStoryContextRepository {
@@ -143,6 +157,7 @@ export class SupabasePlayerStoryContextRepository
       contracts,
       progressRows,
       storyFlags,
+      relationshipRows,
     ] = await Promise.all([
       this.readActivePlayers(gameSessionId),
       this.readCountryAssignments(gameSessionId),
@@ -152,6 +167,7 @@ export class SupabasePlayerStoryContextRepository
       this.readGameSessionContracts(gameSessionId),
       this.readPlayerContractProgress(gameSessionId),
       this.readStoryFlags(gameSessionId),
+      this.readRelationships(gameSessionId),
     ]);
 
     const assetById = new Map(stockAssets.map((asset) => [asset.id, asset]));
@@ -166,6 +182,10 @@ export class SupabasePlayerStoryContextRepository
     const progressByPlayerId = groupBy(
       progressRows,
       (progress) => progress.player_id,
+    );
+    const relationshipsByPlayerId = groupBy(
+      relationshipRows,
+      (relationship) => relationship.player_id,
     );
     const contractById = new Map(
       contracts.map((contract) => [contract.id, contract]),
@@ -225,8 +245,26 @@ export class SupabasePlayerStoryContextRepository
             .filter(isString),
         ),
         storyFlags,
+        relationships: Object.fromEntries(
+          (relationshipsByPlayerId.get(player.id) ?? []).map((relationship) => [
+            relationship.character_key,
+            normalizeRelationshipRow(relationship),
+          ]),
+        ),
       };
     });
+  }
+
+  private async readRelationships(
+    gameSessionId: string,
+  ): Promise<readonly StoryRelationshipRow[]> {
+    const response = await this.client
+      .from("story_relationships")
+      .select(RELATIONSHIP_SELECT)
+      .eq("game_session_id", gameSessionId)
+      .order("character_key", { ascending: true });
+    assertNoError(response, "story_relationships", "select");
+    return (response.data ?? []) as StoryRelationshipRow[];
   }
 
   private async readActivePlayers(
@@ -497,6 +535,18 @@ function normalizeKey(value: string | null | undefined): string | null {
   const key = value?.trim();
 
   return key ? key : null;
+}
+
+function normalizeRelationshipRow(row: StoryRelationshipRow): StoryRelationshipState {
+  return {
+    characterKey: row.character_key,
+    trust: Number(row.trust),
+    respect: Number(row.respect),
+    affinity: Number(row.affinity),
+    obligation: Number(row.obligation),
+    suspicion: Number(row.suspicion),
+    standing: row.standing,
+  };
 }
 
 function isString(value: unknown): value is string {

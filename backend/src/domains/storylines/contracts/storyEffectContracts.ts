@@ -1,5 +1,6 @@
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import { invalidStorylineContract } from "./storylineContractErrors.ts";
+import { STORY_RELATIONSHIP_METRICS, type StoryRelationshipMetric } from "./storyRelationshipContracts.ts";
 import {
   isEmptyRecord,
   readBooleanWithDefault,
@@ -29,6 +30,7 @@ export const STORY_EFFECT_TYPES = [
   "market_status_change",
   "story_flag_set",
   "character_message",
+  "relationship_adjust",
 ] as const;
 
 export const STORY_POLICY_TYPES = [
@@ -106,7 +108,8 @@ export type StoryEffect =
   | StoryMarketNewsPostEffect
   | StoryMarketStatusChangeEffect
   | StoryFlagSetEffect
-  | StoryCharacterMessageEffect;
+  | StoryCharacterMessageEffect
+  | StoryRelationshipAdjustEffect;
 
 export interface StoryCashEffect {
   readonly type: "cash_credit" | "cash_debit";
@@ -167,6 +170,13 @@ export interface StoryCharacterMessageEffect {
   readonly messagePurpose: StoryCharacterMessagePurpose;
   readonly body: string;
   readonly responseWindow: StoryCharacterResponseWindow | null;
+}
+
+export interface StoryRelationshipAdjustEffect {
+  readonly type: "relationship_adjust";
+  readonly characterKey: string;
+  readonly reason: string;
+  readonly deltas: Readonly<Partial<Record<StoryRelationshipMetric, number>>>;
 }
 
 export interface StoryRevealPayload {
@@ -262,6 +272,29 @@ export function parseStoryEffect(value: unknown): StoryEffect {
       status: readRequiredText(record.status, "effect.status"),
       reason: readOptionalText(record.reason, "effect.reason"),
       payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
+    };
+  }
+
+  if (type === "relationship_adjust") {
+    const deltasRecord = readRecord(record.deltas, "effect.deltas");
+    const deltas: Partial<Record<StoryRelationshipMetric, number>> = {};
+    for (const [metric, rawValue] of Object.entries(deltasRecord)) {
+      if (!STORY_RELATIONSHIP_METRICS.includes(metric as StoryRelationshipMetric)) {
+        throw invalidStorylineContract("effect.deltas contains an invalid relationship metric.");
+      }
+      if (typeof rawValue !== "number" || !Number.isInteger(rawValue) || rawValue < -100 || rawValue > 100) {
+        throw invalidStorylineContract("effect.deltas values must be integers between -100 and 100.");
+      }
+      if (rawValue !== 0) deltas[metric as StoryRelationshipMetric] = rawValue;
+    }
+    if (Object.keys(deltas).length === 0) {
+      throw invalidStorylineContract("effect.deltas must include at least one non-zero relationship delta.");
+    }
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),
+      reason: readRequiredText(record.reason, "effect.reason"),
+      deltas,
     };
   }
 

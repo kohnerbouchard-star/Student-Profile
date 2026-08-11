@@ -1,6 +1,7 @@
 import type { CreateGameSessionContractInput } from "../../contracts/contracts/contractRepositoryContracts.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "./playerStoryContext.ts";
+import type { StoryRelationshipMetric } from "./storyRelationshipContracts.ts";
 import type {
   StoryEffect,
   StoryCharacterMessagePurpose,
@@ -57,6 +58,7 @@ export interface StoryEffectExecutionDependencies {
   readonly impacts: StoryEffectImpactWriter;
   readonly contracts?: StoryEffectContractWriter;
   readonly messages?: StoryEffectMessageWriter;
+  readonly relationships?: StoryEffectRelationshipWriter;
 }
 
 export interface StoryEffectLedgerWriter {
@@ -85,6 +87,20 @@ export interface StoryEffectContractWriter {
   createGameSessionContract(
     input: StoryContractCreateWriteInput,
   ): Promise<StoryWriteResult>;
+}
+
+export interface StoryEffectRelationshipWriter {
+  adjustRelationship(input: StoryRelationshipAdjustmentWriteInput): Promise<StoryWriteResult>;
+}
+
+export interface StoryRelationshipAdjustmentWriteInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly storylineEventId: string;
+  readonly effectIndex: number;
+  readonly characterKey: string;
+  readonly reason: string;
+  readonly deltas: Readonly<Partial<Record<StoryRelationshipMetric, number>>>;
 }
 
 export interface StoryEffectMessageWriter {

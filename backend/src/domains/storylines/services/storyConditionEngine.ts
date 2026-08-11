@@ -62,6 +62,16 @@ export function evaluateStoryCondition(
         condition.flagKey,
         condition.value,
       );
+    case "player_relationship_metric_at_least": {
+      const relationship = player.relationships?.[condition.characterKey];
+      return relationship ? relationship[condition.metric] >= condition.value : false;
+    }
+    case "player_relationship_metric_at_most": {
+      const relationship = player.relationships?.[condition.characterKey];
+      return relationship ? relationship[condition.metric] <= condition.value : false;
+    }
+    case "player_relationship_standing_is":
+      return player.relationships?.[condition.characterKey]?.standing === condition.standing;
   }
 }
 

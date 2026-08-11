@@ -75,6 +75,7 @@ import {
 import {
   SupabaseStoryMessageWriter,
 } from "../../storylines/infrastructure/supabaseStoryMessageWriter.ts";
+import { SupabaseStoryRelationshipWriter } from "../../storylines/infrastructure/supabaseStoryRelationshipWriter.ts";
 import {
   runDueStorylineEvents,
 } from "../../storylines/services/storylineRunner.ts";
@@ -553,6 +554,7 @@ function createDefaultStorylineRunnerAfterTick(
   const contractRepository = new SupabaseContractRepository(client as any);
   const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
   const messages = new SupabaseStoryMessageWriter(client as any);
+  const relationships = new SupabaseStoryRelationshipWriter(client as any);
 
   return async (input) => {
     const playerContexts = await playerContextRepository
@@ -574,6 +576,7 @@ function createDefaultStorylineRunnerAfterTick(
         impacts: storylineRepository,
         contracts: contractRepository,
         messages,
+        relationships,
       },
     });
   };

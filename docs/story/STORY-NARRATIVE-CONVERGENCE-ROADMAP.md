@@ -115,7 +115,7 @@ Safety boundary:
 
 ### S3 — Relationship state
 
-Status: IN PROGRESS
+Status: COMPLETE ON BRANCH / CONNECTED STAGING PENDING
 
 Goal: make recurring characters remember how the Player has treated them across the campaign.
 
@@ -498,6 +498,22 @@ Correction:
 - no schema, Story runtime, relationship logic, or existing system behavior is changed by this correction.
 
 Next: rerun the complete S3 verification; if the migration contract and stock-story scheduler pass, land S3 and move to S4.
+
+### Run 2026-08-11 — S3 relationship state landed
+
+Workflow run: `31448458526`
+Source head verified by runner: `6690a467b6b3c84b553cfca1eb12f8e5922aff27`
+Migration: `20260811011033_add_story_relationship_state_v1.sql`
+
+Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.
+
+Implemented: private relationship state keyed by `(game, Player, characterKey)`; bounded trust/respect/affinity/obligation/suspicion metrics; derived standing tiers; immutable adjustment history; authored `relationship_adjust` Story effect; relationship metric/standing conditions; `PlayerStoryContext` hydration; existing Story runner wiring through `SupabaseStoryRelationshipWriter`; no browser write surface and no raw numeric Player relationship meter.
+
+Verification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.
+
+Remaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.
+
+Next: S4 authoritative choice consequences and delayed callbacks.
 
 ## Run-completion rule
 
