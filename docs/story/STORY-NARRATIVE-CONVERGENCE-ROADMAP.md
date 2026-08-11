@@ -597,6 +597,14 @@ Prior recovery proved the deterministic correction script and all 11 pack builde
 
 This retry adds explicit leaf guards for `player_story_choice_is` and preserves the same parser, callback, privacy, coverage, and density assertions. No assertion is weakened.
 
+### Run 2026-08-11 — S5 source recovery retry failure `31467217818`
+
+Source head: `c2171d5b6ff8e206aa98858fe8286d0f1dec89c7`
+
+Result: FAILED; generated packs and local recovery edits were discarded before publication.
+
+Inspect the exact failed job log. Preserve all parser, callback, privacy, coverage, hidden-canon, density, Messaging, and scheduler assertions.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
