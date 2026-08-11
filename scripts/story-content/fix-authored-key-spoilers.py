@@ -81,8 +81,8 @@ save(consolidated_path, consolidated)
 # 3. Materialize September -> October rather than leaving Day 64 as metadata only.
 october_path = "scripts/story-content/build-act2-october-pack.py"
 october = load(october_path)
-callback_event_key = "event.campaign.d064.boom-cost-callback.v1"
-if callback_event_key not in october:
+materialized_event_marker = 'events.append(event(64, "event.campaign.d064.boom-cost-callback.v1"'
+if materialized_event_marker not in october:
     anchor = '    events: list[dict] = [event(64, "event.campaign.d064.competing-models-formal.v1", ["NEWS", "COUNTRY FEED"], [], "Formal competing-model anchor. September Day 61 callbacks are carried in incomingCallbackPlans for cross-pack seed reconciliation.")]\n'
     materialized = anchor + '''    callback_rules = []\n    for code, cfg in COUNTRIES.items():\n        interaction = f"interaction.story.{cfg['slug']}.d061.boom-costs.v1"\n        for index, option in enumerate(SEPTEMBER_COST):\n            choice = option["choiceKey"]\n            effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", respect=4 + index)\n            if choice == "target-help":\n                effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", trust=6, respect=5)\n            if choice == "pass-through-cost":\n                effect = relationship(code, "sponsor", f"Your September boom-cost choice was {option['label'].lower()}.", respect=5, suspicion=2)\n            callback_rules.append({"ruleKey": f"{cfg['slug']}.d064.boom-costs.{choice}", "condition": choice_condition(interaction, choice), "effects": [effect]})\n    events.append(event(64, "event.campaign.d064.boom-cost-callback.v1", ["SYSTEM"], callback_rules, "Executable S4 callback for the September Day 61 boom-cost choice."))\n'''
     october = replace_once(october, anchor, materialized, label="September to October callback")
