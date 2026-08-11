@@ -650,6 +650,24 @@ Result: GREEN FOR THE AUTHORED-SOURCE RECOVERY BOUNDARY.
 
 S5 is not complete overall. `news`, `contractPlans`, and `systemBindingPlans` remain intentionally unbound until authoritative adapters are implemented. Forward S2/S3 replay repairs and Story runner retry/idempotency hardening remain next.
 
+### Run 2026-08-11 — S5 permanent source-integrity cleanup
+
+Roadmap finalizer workflow: `31468494189`
+
+Verification source:
+
+- S5 cleanup verification run `31468132122` regenerated all 11 committed monthly packs and proved deterministic source parity.
+- The same run passed backend/Edge typecheck, all monthly Story content contracts, whole-campaign Day 1–334 integrity, S4 choice callbacks, Player Messaging, and stock/Story scheduler integration.
+- Its local cleanup commit was rejected only because the GitHub Actions token lacked permission to update workflow files; no source or test assertion failed.
+- The connected GitHub authority then installed the permanent read-only S5 source-integrity workflow and removed the obsolete self-writing monthly generation/planning workflows plus the one-time recovery patch scripts.
+
+Current boundary:
+
+- S5 authored source is recovered and protected by deterministic read-only CI.
+- Runtime News/Contract/system binding, forward S2/S3 replay repairs, Story runner retry/idempotency hardening, connected staging, S6 reachability, and S7 acceptance remain pending.
+
+Next implementation tranche: forward-only S2/S3 database replay repairs. Historical migrations remain immutable.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
