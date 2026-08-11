@@ -430,7 +430,7 @@ export function StoreRoute({
     route.append(StoreSkeleton());
   } else if (state.status === ADMIN_DATA_STATES.FAILED) {
     route.append(AdminErrorState({
-      title: "Store could not be loaded",
+      title: "Store Management could not be loaded",
       message: state.error?.userMessage,
       requestId: state.error?.requestId,
       retryAfterSeconds: state.error?.retryAfterSeconds,
@@ -465,7 +465,7 @@ export function StoreRoute({
 
   const pageFrame = AdminPageFrame({
     eyebrow: "Store & Inventory",
-    title: "Store",
+    title: "Store Management",
     description: "Manage custom Store items for this simulation. Included content stays locked while prices and availability remain governed by the simulation.",
     actions: [addButton, refreshButton],
     content: route,
