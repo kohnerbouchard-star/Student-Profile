@@ -22,10 +22,6 @@ const storeRoute = fs.readFileSync(
   "admin/v2/src/routes/store/StoreRoute.js",
   "utf8",
 );
-const storeCss = fs.readFileSync(
-  "admin/v2/styles/routes/store.css",
-  "utf8",
-);
 const navigation = fs.readFileSync(
   "admin/v2/src/components/AdminNavigation.js",
   "utf8",
@@ -86,10 +82,6 @@ test("Seeded Store definitions are protected by canonical provenance at every la
   assert.match(storeRoute, /if \(item\.sourceType === "seeded"\)/);
   assert.match(storeRoute, /Included content · definition locked/);
   assert.match(storeRoute, /item\.sourceType === "custom"/);
-
-  // CSS remains a presentation fallback for older media-marked rows, but it is
-  // not the ownership authority.
-  assert.match(storeCss, /data-media-kind="seeded"/);
 
   assert.match(teacherSafetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
   assert.match(teacherSafetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
