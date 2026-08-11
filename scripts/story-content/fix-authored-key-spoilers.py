@@ -36,6 +36,11 @@ consolidated = replace_once(
     label="February correction-accountability fallback",
 )
 
+# Day 323's structured personal-future choice already emits the canonical fixed
+# anchor event key. Remove the empty duplicate anchor that emitted the same key.
+redundant_day_323_anchor = '    anchor_event(events,323,"event.campaign.d323.personal-future.v1",["INBOX","CHOICE"],"Personal future/ending lock begins.")\n'
+consolidated = consolidated.replace(redundant_day_323_anchor, "", 1)
+
 # 2. Materialize every consolidated cross-month callback as a real Story event.
 helper_marker = "def materialize_cross_month_callback"
 if helper_marker not in consolidated:
