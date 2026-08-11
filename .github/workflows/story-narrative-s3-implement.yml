@@ -1,5 +1,5 @@
 name: Story Narrative S3 Implement And Verify
-# attempt 4: generated-test typing fixes
+# attempt 5: standalone prior-run ledger helper
 
 on:
   push:
@@ -38,60 +38,20 @@ jobs:
           test -f docs/story/relationship-state-v1.sql.body
           test -f scripts/story-narrative-s3-apply.py
           test -f scripts/story-narrative-s3-normalize.py
-          python3 -m py_compile scripts/story-narrative-s3-apply.py scripts/story-narrative-s3-normalize.py
+          test -f scripts/story-narrative-s3-record-prior-attempts.py
+          python3 -m py_compile scripts/story-narrative-s3-apply.py scripts/story-narrative-s3-normalize.py scripts/story-narrative-s3-record-prior-attempts.py
 
-      - name: Persist S3 attempt 3 evidence before retry
+      - name: Persist prior S3 run evidence before retry
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
-          text = path.read_text(encoding="utf-8")
-          heading = "### Run 2026-08-11 — S3 verification attempt 3"
-          if heading not in text:
-              marker = "\n## Run-completion rule\n"
-              entry = '''
-### Run 2026-08-11 — S3 verification attempt 3
-
-Workflow run: `31447867568`  
-Workflow head: `315de96898a68d04c3098427d87d1ae31dfb072e`  
-Ephemeral generated migration: `20260811005947_add_story_relationship_state_v1.sql`
-
-Result: FULL S3 SOURCE TRANSFORM APPLIED EPHEMERALLY; FAILED AT TYPECHECK; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
-
-Passed before failure:
-
-- exact branch/S2 ancestry and staged-input guard;
-- pinned Node, Deno, and Supabase CLI setup;
-- CLI-generated migration placement;
-- guarded pre-normalization, complete S3 source transform, and post-normalization;
-- `git diff --check`;
-- `npm ci` with zero reported vulnerabilities.
-
-Typecheck failure was limited to generated tests:
-
-- `supabasePlayerStoryContextRepository.test.ts` accessed optional `relationships` without optional chaining;
-- `supabaseStoryRelationshipWriter.test.ts` used a concrete fake RPC function that did not satisfy the writer client's generic RPC signature;
-- no S3 runtime implementation file produced the reported compiler errors.
-
-Correction:
-
-- generated context test now uses optional chaining for the compatibility-optional relationship map;
-- generated writer test casts its intentionally minimal fake client at the test boundary while preserving the runtime generic client contract.
-
-Next: rerun full S3 verification and proceed to focused relationship/runtime tests if typecheck clears.
-'''
-              if marker not in text:
-                  raise SystemExit("roadmap run-completion marker missing")
-              path.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
-          PY
+          python3 scripts/story-narrative-s3-record-prior-attempts.py
           git diff --check
           if ! git diff --quiet -- docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md; then
             git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S3 verification attempt 3"
+            git commit -m "docs(story): record S3 verification attempts 3 and 4"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
 
@@ -171,7 +131,7 @@ Next: rerun full S3 verification and proceed to focused relationship/runtime tes
               raise SystemExit("S3 roadmap status anchor missing")
           text = text.replace(old, new, 1)
           marker = "\n## Run-completion rule\n"
-          entry = f'''\n### Run 2026-08-11 — S3 relationship state landed\n\nWorkflow run: `{os.environ["GITHUB_RUN_ID"]}`  \nSource head verified by runner: `{os.environ["GITHUB_SHA"]}`  \nMigration: `{os.environ["MIGRATION_NAME"]}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented:\n\n- private relationship state keyed by `(game, Player, characterKey)`;\n- bounded trust/respect/affinity/obligation/suspicion metrics and derived standing tiers;\n- immutable adjustment history with exact Story event/effect replay authority;\n- authored `relationship_adjust` Story effect;\n- relationship metric/standing Story conditions;\n- relationship hydration into authoritative `PlayerStoryContext`;\n- existing Story runner wiring through `SupabaseStoryRelationshipWriter`;\n- no browser write surface and no raw numeric Player relationship meter.\n\nVerification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.\n\nRemaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.\n\nNext: S4 authoritative choice consequences and delayed callbacks.\n'''
+          entry = f"\n### Run 2026-08-11 — S3 relationship state landed\n\nWorkflow run: `{os.environ['GITHUB_RUN_ID']}`  \nSource head verified by runner: `{os.environ['GITHUB_SHA']}`  \nMigration: `{os.environ['MIGRATION_NAME']}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented: private relationship state keyed by `(game, Player, characterKey)`; bounded trust/respect/affinity/obligation/suspicion metrics; derived standing tiers; immutable adjustment history; authored `relationship_adjust` Story effect; relationship metric/standing conditions; `PlayerStoryContext` hydration; existing Story runner wiring through `SupabaseStoryRelationshipWriter`; no browser write surface and no raw numeric Player relationship meter.\n\nVerification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.\n\nRemaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.\n\nNext: S4 authoritative choice consequences and delayed callbacks.\n"
           if marker not in text:
               raise SystemExit("roadmap run-completion marker missing")
           path.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
@@ -187,6 +147,7 @@ Next: rerun full S3 verification and proceed to focused relationship/runtime tes
           rm -f docs/story/relationship-state-v1.sql.body
           rm -f scripts/story-narrative-s3-apply.py
           rm -f scripts/story-narrative-s3-normalize.py
+          rm -f scripts/story-narrative-s3-record-prior-attempts.py
 
       - name: Commit verified S3 implementation
         shell: bash
