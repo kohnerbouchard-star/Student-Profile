@@ -43,13 +43,13 @@ function navigationItem(item, currentId, onNavigate) {
 
 export function AdminNavigation({
   id = createId("admin-navigation"),
-  label = "Admin navigation",
+  label = "Teacher navigation",
   brand = "Econovaria",
-  environment = "Admin terminal",
+  environment = "Teacher Console",
   groups = [],
   currentId = "overview",
   collapsed = false,
-  gameName = "No game selected",
+  gameName = "No simulation selected",
   gameCode,
   status = "Selection required",
   onSelectGame,
@@ -87,7 +87,7 @@ export function AdminNavigation({
     attrs: { type: "button", "aria-label": collapsed ? "Expand navigation" : "Collapse navigation" },
     children: [
       AdminIcon({ name: collapsed ? "chevronRight" : "chevronLeft", size: 18 }),
-      createElement("span", { className: "admin-navigation__collapse-label", text: "Collapse rail" }),
+      createElement("span", { className: "admin-navigation__collapse-label", text: "Collapse menu" }),
     ],
   });
   footer.append(gameContext, collapseButton);
@@ -98,9 +98,9 @@ export function AdminNavigation({
     if (Object.hasOwn(nextContext, "gameCode")) gameCode = nextContext.gameCode;
     if (Object.hasOwn(nextContext, "status")) status = nextContext.status;
     const accessibleName = [
-      onSelectGame ? "Select game" : "Current game",
-      gameName || "No game selected",
-      gameCode ? `code ${gameCode}` : null,
+      onSelectGame ? "Select simulation" : "Current simulation",
+      gameName || "No simulation selected",
+      gameCode ? `class code ${gameCode}` : null,
       status || null,
     ].filter(Boolean).join(", ");
     gameContext.setAttribute("aria-label", accessibleName);
@@ -113,8 +113,8 @@ export function AdminNavigation({
       createElement("span", {
         className: "admin-navigation__game-copy",
         children: [
-          createElement("small", { text: "Current game" }),
-          createElement("strong", { text: gameName || "No game selected" }),
+          createElement("small", { text: "Current simulation" }),
+          createElement("strong", { text: gameName || "No simulation selected" }),
           createElement("span", {
             className: "admin-navigation__game-meta",
             children: [
