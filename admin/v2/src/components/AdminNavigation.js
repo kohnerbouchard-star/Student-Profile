@@ -1,8 +1,49 @@
 import { AdminIcon } from "./AdminIcon.js";
 import { createElement, createId, getFocusableElements, replaceContent } from "./dom.js";
 
+const TEACHER_ROUTE_LABELS = Object.freeze({
+  overview: "Dashboard",
+  players: "Students",
+  attendance: "Attendance",
+  market: "Stock Market",
+  banking: "Student Banking",
+  loans: "Student Loans",
+  contracts: "Contracts",
+  business: "Student Businesses",
+  crafting: "Crafting",
+  store: "Store",
+  marketplace: "Marketplace Review",
+  inventory: "Redemption Requests",
+  "world-management": "World & Simulation",
+  "news-events": "News & Events",
+  messages: "Messages",
+  progression: "Student Progress",
+  settings: "Simulation Settings",
+  logs: "Activity History",
+});
+
+const TEACHER_GROUP_LABELS = Object.freeze({
+  overview: "Home",
+  operations: "Classroom",
+  finance: "Economy",
+  work: "Business & Contracts",
+  trade: "Store & Inventory",
+  world: "World & Simulation",
+  engagement: "Communication & Progress",
+  system: "Settings & Activity",
+});
+
+function teacherRouteLabel(item) {
+  return TEACHER_ROUTE_LABELS[item?.id] || item?.label || "Destination";
+}
+
+function teacherGroupLabel(group) {
+  return TEACHER_GROUP_LABELS[group?.id] || group?.label || "";
+}
+
 function navigationItem(item, currentId, onNavigate) {
   const active = item.id === currentId;
+  const visibleLabel = teacherRouteLabel(item);
   const element = createElement(item.href ? "a" : "button", {
     className: "admin-navigation__link",
     dataset: { route: item.id, active },
@@ -10,8 +51,8 @@ function navigationItem(item, currentId, onNavigate) {
       href: item.href,
       type: item.href ? null : "button",
       "aria-current": active ? "page" : null,
-      "aria-label": item.label,
-      title: item.label,
+      "aria-label": visibleLabel,
+      title: visibleLabel,
       disabled: item.disabled,
     },
     children: [
@@ -19,7 +60,7 @@ function navigationItem(item, currentId, onNavigate) {
         className: "admin-navigation__icon",
         children: AdminIcon({ name: item.icon || item.id, size: 19 }),
       }),
-      createElement("span", { className: "admin-navigation__label", text: item.label }),
+      createElement("span", { className: "admin-navigation__label", text: visibleLabel }),
     ],
   });
 
@@ -131,17 +172,18 @@ export function AdminNavigation({
   function renderGroups(nextGroups = groups) {
     groups = nextGroups;
     replaceContent(groupContainer, groups.map((group) => {
+      const visibleGroupLabel = teacherGroupLabel(group);
       const labelId = `${id}-${group.id}-label`;
       const section = createElement("section", {
         className: "admin-navigation__group",
-        attrs: group.label
+        attrs: visibleGroupLabel
           ? { "aria-labelledby": labelId }
-          : { "aria-label": `${group.items?.[0]?.label || "Primary"} destination` },
+          : { "aria-label": `${teacherRouteLabel(group.items?.[0])} destination` },
       });
-      if (group.label) {
+      if (visibleGroupLabel) {
         section.append(createElement("h2", {
           className: "admin-navigation__group-label",
-          text: group.label,
+          text: visibleGroupLabel,
           attrs: { id: labelId },
         }));
       }
