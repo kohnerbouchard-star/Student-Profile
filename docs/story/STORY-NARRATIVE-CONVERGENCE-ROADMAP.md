@@ -556,6 +556,14 @@ Remaining S4 acceptance: connected staging proof across actual S2 selection/defa
 
 Next: S5 narrative content saturation using only S1–S4 proven mechanics.
 
+### Run 2026-08-11 — S5 planning landing failure `31450760922`
+
+Source head: `f53e62c4dacfc567b766a4187c991b09fcd9d287`
+
+Result: FAILED; NO S5 STORY-BIBLE/CALENDAR IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Review this workflow run and correct the exact failing guard, blob restore, calendar contract, roadmap update, or commit step. Do not bypass the 334-day calendar contract.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
