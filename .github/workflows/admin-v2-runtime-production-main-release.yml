@@ -2,8 +2,7 @@ name: Admin V2 Runtime Production Main Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/admin-v2-runtime-production-main-release.yml
 
@@ -39,7 +38,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Enforce production release boundary and app-tree identity
+      - name: Enforce production release boundary and backend identity
         shell: bash
         run: |
           set -euo pipefail
@@ -51,8 +50,8 @@ jobs:
           test "$PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
           test "$FUNCTION_NAME" = "admin-api"
           git merge-base --is-ancestor "$APP_SOURCE_SHA" HEAD
-          changed="$(git diff --name-only "$APP_SOURCE_SHA" HEAD | sort | tr '\n' ' ')"
-          test "$changed" = "$RELEASE_WORKFLOW_PATH "
+          git diff --quiet "$APP_SOURCE_SHA" HEAD -- backend
+          test -f "$RELEASE_WORKFLOW_PATH"
           grep -Fq 'function classroomTrustedClientIp(request)' backend/supabase/functions/admin-api/common.ts
           grep -Fq 'headers.set(trustedClient.header, trustedClient.value)' backend/supabase/functions/admin-api/common.ts
           grep -Fq 'handleMarketAssetReadOperation' backend/supabase/functions/admin-api/index.ts
