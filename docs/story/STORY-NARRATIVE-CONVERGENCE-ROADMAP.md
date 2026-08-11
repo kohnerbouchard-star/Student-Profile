@@ -693,6 +693,14 @@ Result: FAILED; no forward repair migration or regression test was published fro
 
 Inspect the exact CLI-generation, source-contract, migration-audit, database-replay, installed-function, lint, or focused Story regression failure. Do not edit historical migrations and do not apply partial repairs to connected staging.
 
+### Run 2026-08-11 — Phase C retry after S2 guard correction
+
+Workflow run: `31469373296`
+
+Prior run `31468881868` correctly generated a forward migration filename with Supabase CLI 2.109.1 and correctly replaced the invalid `story_row.source_effect_index` row-field reference. It then failed because its safety guard rejected the legitimate parameter/audit text `source_effect_index` as though it were still a schema-column reference.
+
+This retry narrows that guard to the actual invalid row-field token `story_row.source_effect_index`. Historical migrations remain immutable; no connected staging write occurs in this run.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
