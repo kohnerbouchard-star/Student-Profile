@@ -1,0 +1,156 @@
+name: Story Narrative S5 October Pack
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s5-october-pack.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-narrative-s5-october-pack
+  cancel-in-progress: false
+
+env:
+  STORY_MONTH_LABEL: October
+  STORY_MONTH_SLUG: october
+  STORY_PACK_PATH: docs/seed-content/story/content/act2-october-content-pack-v1.json
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Guard prior authored packs and October inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/story-narrative-convergence-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f docs/seed-content/story/content/act1-august-content-pack-v1.json
+          test -f docs/seed-content/story/content/act2-september-content-pack-v1.json
+          test -f scripts/story-content/build-act2-october-pack.py
+          test -f scripts/story-content/monthly-pack-roadmap.py
+          test -f backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts
+          python3 -m py_compile scripts/story-content/build-act2-october-pack.py scripts/story-content/monthly-pack-roadmap.py
+
+      - name: Record October content run launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/story-content/monthly-pack-roadmap.py --launch
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): launch October authored content verification"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+          echo "MONTH_RUN_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+
+      - name: Build deterministic October authored pack
+        id: builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/story-content/build-act2-october-pack.py
+          test -s "$STORY_PACK_PATH"
+          git diff --check
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify backend and Edge types
+        id: typecheck
+        working-directory: backend
+        run: npm run typecheck:all
+
+      - name: Verify shared monthly authored Story contract
+        id: content
+        working-directory: backend
+        run: deno test --allow-read=../$STORY_PACK_PATH --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts -- ../$STORY_PACK_PATH
+
+      - name: Verify S4 authoritative callback mechanics remain green
+        id: callbacks
+        working-directory: backend
+        run: npm run test:story-choice-callbacks
+
+      - name: Verify S1/S2 Player Messaging remains green
+        id: messaging
+        working-directory: backend
+        run: npm run test:player-messaging
+
+      - name: Verify stock/story scheduler integration remains green
+        id: scheduler
+        working-directory: backend
+        run: npm run test:stock-market-calendar
+
+      - name: Record October verification failure
+        if: failure()
+        env:
+          MONTH_BUILDER_OUTCOME: ${{ steps.builder.outcome }}
+          MONTH_TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          MONTH_CONTENT_TEST_OUTCOME: ${{ steps.content.outcome }}
+          MONTH_CALLBACK_OUTCOME: ${{ steps.callbacks.outcome }}
+          MONTH_MESSAGING_OUTCOME: ${{ steps.messaging.outcome }}
+          MONTH_SCHEDULER_OUTCOME: ${{ steps.scheduler.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard "$MONTH_RUN_BASE"
+          python3 scripts/story-content/monthly-pack-roadmap.py --failure
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): record October content verification failure"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+
+      - name: Record October authored source success
+        if: success()
+        run: |
+          python3 scripts/story-content/monthly-pack-roadmap.py --success
+          git diff --check
+
+      - name: Remove one-shot October verification workflow
+        if: success()
+        run: rm -f .github/workflows/story-narrative-s5-october-pack.yml
+
+      - name: Commit verified October authored content source
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(story): author October competing-model content pack"
+          git push origin HEAD:feat/story-narrative-convergence-v1
