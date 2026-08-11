@@ -21,6 +21,7 @@ export const STORY_EFFECT_TYPES = [
   "tax_modifier",
   "immigration_lock",
   "contract_unlock",
+  "character_message",
   "notification_cutscene",
   "notification_impact",
   "market_news_post",
@@ -73,6 +74,7 @@ export type StoryEffect =
   | StoryCashEffect
   | StoryPolicyEffect
   | StoryContractUnlockEffect
+  | StoryCharacterMessageEffect
   | StoryNotificationEffect
   | StoryMarketNewsPostEffect
   | StoryMarketStatusChangeEffect
@@ -100,6 +102,17 @@ export interface StoryContractUnlockEffect {
   readonly contractKey: string;
   readonly label: string | null;
   readonly reason: string | null;
+  readonly payload: JsonObject;
+}
+
+export interface StoryCharacterMessageEffect {
+  readonly type: "character_message";
+  readonly characterKey: string;
+  readonly characterName: string;
+  readonly conversationKey: string;
+  readonly title: string;
+  readonly body: string;
+  readonly allowPlayerReplies: boolean;
   readonly payload: JsonObject;
 }
 
@@ -190,6 +203,29 @@ export function parseStoryEffect(value: unknown): StoryEffect {
       contractKey: readRequiredText(record.contractKey, "effect.contractKey"),
       label: readOptionalText(record.label, "effect.label"),
       reason: readOptionalText(record.reason, "effect.reason"),
+      payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
+    };
+  }
+
+  if (type === "character_message") {
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),
+      characterName: readRequiredText(
+        record.characterName,
+        "effect.characterName",
+      ),
+      conversationKey: readRequiredText(
+        record.conversationKey,
+        "effect.conversationKey",
+      ),
+      title: readRequiredText(record.title, "effect.title"),
+      body: readRequiredText(record.body, "effect.body"),
+      allowPlayerReplies: readBooleanWithDefault(
+        record.allowPlayerReplies,
+        "effect.allowPlayerReplies",
+        true,
+      ),
       payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
     };
   }

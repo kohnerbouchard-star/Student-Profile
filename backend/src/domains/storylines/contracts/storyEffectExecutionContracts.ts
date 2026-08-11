@@ -14,6 +14,7 @@ export type SupportedStoryEffectExecutionType =
   | "tax_modifier"
   | "immigration_lock"
   | "contract_unlock"
+  | "character_message"
   | "story_flag_set";
 
 export type StoryEffectExecutionStatus = "applied" | "skipped" | "failed";
@@ -57,9 +58,7 @@ export interface StoryEffectExecutionDependencies {
 }
 
 export interface StoryEffectLedgerWriter {
-  recordCashAdjustment(
-    input: StoryCashAdjustmentWriteInput,
-  ): Promise<StoryWriteResult>;
+  recordCashAdjustment(input: StoryCashAdjustmentWriteInput): Promise<StoryWriteResult>;
 }
 
 export interface StoryEffectPolicyWriter {
@@ -71,17 +70,13 @@ export interface StoryEffectFlagWriter {
 }
 
 export interface StoryEffectImpactWriter {
-  createPlayerImpact(
-    input: StoryPlayerImpactWriteInput,
-  ): Promise<StoryWriteResult>;
+  createPlayerImpact(input: StoryPlayerImpactWriteInput): Promise<StoryWriteResult>;
 }
 
 export type StoryContractCreateWriteInput = CreateGameSessionContractInput;
 
 export interface StoryEffectContractWriter {
-  createGameSessionContract(
-    input: StoryContractCreateWriteInput,
-  ): Promise<StoryWriteResult>;
+  createGameSessionContract(input: StoryContractCreateWriteInput): Promise<StoryWriteResult>;
 }
 
 export interface StoryWriteResult {
@@ -147,20 +142,17 @@ export interface StoryEffectExecutionResultBase {
   readonly playerId: string | null;
 }
 
-export interface StoryEffectAppliedResult
-  extends StoryEffectExecutionResultBase {
+export interface StoryEffectAppliedResult extends StoryEffectExecutionResultBase {
   readonly status: "applied";
   readonly appliedWriteIds: readonly string[];
 }
 
-export interface StoryEffectSkippedResult
-  extends StoryEffectExecutionResultBase {
+export interface StoryEffectSkippedResult extends StoryEffectExecutionResultBase {
   readonly status: "skipped";
   readonly reason: StoryEffectSkipReason;
 }
 
-export interface StoryEffectFailedResult
-  extends StoryEffectExecutionResultBase {
+export interface StoryEffectFailedResult extends StoryEffectExecutionResultBase {
   readonly status: "failed";
   readonly errorMessage: string;
 }

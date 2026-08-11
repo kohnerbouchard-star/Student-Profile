@@ -86,6 +86,28 @@ export async function executeStoryEffect(
       );
     }
 
+    if (input.effect.type === "character_message") {
+      if (!input.playerContext) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "missing_player_context",
+        );
+      }
+
+      return applied(
+        input.effect,
+        effectIndex,
+        input.playerContext.playerId,
+        await executeCharacterMessageEffect(
+          input,
+          input.effect,
+          input.playerContext,
+        ),
+      );
+    }
+
     if (input.effect.type === "story_flag_set") {
       return applied(
         input.effect,
@@ -180,6 +202,36 @@ async function executeCashEffect(
   });
 
   return collectWriteIds(ledgerResult, impactResult);
+}
+
+async function executeCharacterMessageEffect(
+  input: StoryEffectExecutionInput,
+  effect: Extract<StoryEffect, { type: "character_message" }>,
+  playerContext: PlayerStoryContext,
+): Promise<readonly string[]> {
+  const baseKey = buildIdempotencyKey(input, playerContext.playerId);
+  const impactResult = await input.dependencies.impacts.createPlayerImpact({
+    gameSessionId: input.gameSessionId,
+    playerId: playerContext.playerId,
+    storylineEventId: input.storylineEventId,
+    effectType: "character_message",
+    impactLabel: `Message from ${effect.characterName}`,
+    impactReason: effect.body,
+    amount: null,
+    payload: {
+      ...effect.payload,
+      characterKey: effect.characterKey,
+      characterName: effect.characterName,
+      conversationKey: effect.conversationKey,
+      title: effect.title,
+      body: effect.body,
+      allowPlayerReplies: effect.allowPlayerReplies,
+      deliveryKey: `${baseKey}:message`,
+    },
+    idempotencyKey: `${baseKey}:impact`,
+  });
+
+  return collectWriteIds(impactResult);
 }
 
 async function executePolicyEffect(
