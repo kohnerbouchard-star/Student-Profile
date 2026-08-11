@@ -1,0 +1,197 @@
+name: Story Narrative S5 November June Packs
+
+on:
+  push:
+    branches:
+      - feat/story-narrative-convergence-v1
+    paths:
+      - ".github/workflows/story-narrative-s5-november-june-packs.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-narrative-s5-november-june-packs
+  cancel-in-progress: false
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact story branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Guard prior monthly packs and tranche inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/story-narrative-convergence-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f docs/seed-content/story/content/act1-august-content-pack-v1.json
+          test -f docs/seed-content/story/content/act2-september-content-pack-v1.json
+          test -f docs/seed-content/story/content/act2-october-content-pack-v1.json
+          test -f scripts/story-content/build-act3-act8-packs.py
+          test -f scripts/story-content/monthly-pack-roadmap.py
+          test -f backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts
+          python3 -m py_compile scripts/story-content/build-act3-act8-packs.py scripts/story-content/monthly-pack-roadmap.py
+
+      - name: Record back-half content tranche launch
+        env:
+          STORY_MONTH_LABEL: November-June-source-tranche
+          STORY_MONTH_SLUG: november-june-source-tranche
+          STORY_PACK_PATH: docs/seed-content/story/content/act3-november-content-pack-v1.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/story-content/monthly-pack-roadmap.py --launch
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): launch November-June authored content verification"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+          echo "MONTH_RUN_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+
+      - name: Build deterministic November-June authored packs
+        id: builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/story-content/build-act3-act8-packs.py
+          for f in \
+            act3-november-content-pack-v1.json \
+            act3-december-content-pack-v1.json \
+            act4-january-content-pack-v1.json \
+            act4-february-content-pack-v1.json \
+            act5-march-content-pack-v1.json \
+            act6-april-content-pack-v1.json \
+            act7-may-content-pack-v1.json \
+            act8-june-content-pack-v1.json; do
+            test -s "docs/seed-content/story/content/$f"
+          done
+          git diff --check
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify backend and Edge types
+        id: typecheck
+        working-directory: backend
+        run: npm run typecheck:all
+
+      - name: Verify all eight monthly Story content contracts
+        id: content
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            act3-november-content-pack-v1.json \
+            act3-december-content-pack-v1.json \
+            act4-january-content-pack-v1.json \
+            act4-february-content-pack-v1.json \
+            act5-march-content-pack-v1.json \
+            act6-april-content-pack-v1.json \
+            act7-may-content-pack-v1.json \
+            act8-june-content-pack-v1.json; do
+            deno test --allow-read="../docs/seed-content/story/content/$f" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts -- "../docs/seed-content/story/content/$f"
+          done
+
+      - name: Verify S4 authoritative callback mechanics remain green
+        id: callbacks
+        working-directory: backend
+        run: npm run test:story-choice-callbacks
+
+      - name: Verify S1/S2 Player Messaging remains green
+        id: messaging
+        working-directory: backend
+        run: npm run test:player-messaging
+
+      - name: Verify stock/story scheduler integration remains green
+        id: scheduler
+        working-directory: backend
+        run: npm run test:stock-market-calendar
+
+      - name: Record tranche verification failure
+        if: failure()
+        env:
+          STORY_MONTH_LABEL: November-June-source-tranche
+          STORY_MONTH_SLUG: november-june-source-tranche
+          STORY_PACK_PATH: docs/seed-content/story/content/act3-november-content-pack-v1.json
+          MONTH_BUILDER_OUTCOME: ${{ steps.builder.outcome }}
+          MONTH_TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          MONTH_CONTENT_TEST_OUTCOME: ${{ steps.content.outcome }}
+          MONTH_CALLBACK_OUTCOME: ${{ steps.callbacks.outcome }}
+          MONTH_MESSAGING_OUTCOME: ${{ steps.messaging.outcome }}
+          MONTH_SCHEDULER_OUTCOME: ${{ steps.scheduler.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard "$MONTH_RUN_BASE"
+          python3 scripts/story-content/monthly-pack-roadmap.py --failure
+          git diff --check
+          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(story): record November-June content verification failure"
+            git push origin HEAD:feat/story-narrative-convergence-v1
+          fi
+
+      - name: Record monthly authored source successes
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          record_month() {
+            export STORY_MONTH_LABEL="$1"
+            export STORY_MONTH_SLUG="$2"
+            export STORY_PACK_PATH="$3"
+            python3 scripts/story-content/monthly-pack-roadmap.py --success
+          }
+          record_month November november docs/seed-content/story/content/act3-november-content-pack-v1.json
+          record_month December december docs/seed-content/story/content/act3-december-content-pack-v1.json
+          record_month January january docs/seed-content/story/content/act4-january-content-pack-v1.json
+          record_month February february docs/seed-content/story/content/act4-february-content-pack-v1.json
+          record_month March march docs/seed-content/story/content/act5-march-content-pack-v1.json
+          record_month April april docs/seed-content/story/content/act6-april-content-pack-v1.json
+          record_month May may docs/seed-content/story/content/act7-may-content-pack-v1.json
+          record_month June june docs/seed-content/story/content/act8-june-content-pack-v1.json
+          git diff --check
+
+      - name: Remove one-shot back-half verification workflow
+        if: success()
+        run: rm -f .github/workflows/story-narrative-s5-november-june-packs.yml
+
+      - name: Commit verified November-June authored content source
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(story): author November-June campaign content packs"
+          git push origin HEAD:feat/story-narrative-convergence-v1
