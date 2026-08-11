@@ -32,12 +32,15 @@ test("Hobby deployment stays within the 12 Serverless Function budget", async ()
 });
 
 test("automatic main deployment is either disabled or bounded to the canonical Admin V2 cutover", () => {
-  const automaticMain = vercelConfig.git?.deploymentEnabled?.main;
+  const deploymentEnabled = vercelConfig.git?.deploymentEnabled;
+  const automaticMain = deploymentEnabled && typeof deploymentEnabled === "object"
+    ? deploymentEnabled.main
+    : deploymentEnabled;
   assert.ok(
-    automaticMain === false || automaticMain === true,
-    "main deployment policy must be explicitly boolean",
+    automaticMain === undefined || automaticMain === false || automaticMain === true,
+    "main deployment policy must be default-enabled, explicitly enabled, or explicitly disabled",
   );
-  if (automaticMain === true) {
+  if (automaticMain !== false) {
     assert.match(buildSource, /canonicalizeAdminV2\(outputRoot\)/u);
     assert.match(buildSource, /path\.join\(outputRoot, "admin", "v2\.html"\)/u);
     assert.match(buildSource, /path\.join\(outputRoot, "admin", "index\.html"\)/u);
