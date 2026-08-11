@@ -135,7 +135,7 @@ async function createFullGame() {
     worldLocations: 50,
     worldRoutes: 13,
     storylines: 1,
-    storyEvents: 7,
+    storyEvents: 3,
     arrivalPackages: 10,
     arrivalClassGrants: 8,
     craftingItems: 144,
