@@ -1,0 +1,194 @@
+name: Store Source Type Production Release Bootstrap
+
+on:
+  push:
+    branches:
+      - ops/store-source-type-production-release-v1
+    paths:
+      - .github/workflows/store-source-type-production-release-bootstrap.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: store-source-type-production-release-bootstrap
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: 85d66b6b977c096ef8cf46370dff7bda708cdbca
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  FUNCTION_NAME: admin-api
+  EXPECTED_BEFORE_VERSION: "39"
+  EXPECTED_BEFORE_DIGEST: f60f5dbd766761b0b83f4760c6399e609bb94d14cd1c89fc4728393c830794e8
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  release:
+    name: Deploy Store provenance Admin API to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "kohnerbouchard-star/Student-Profile"
+          test "$GITHUB_REF" = "refs/heads/ops/store-source-type-production-release-v1"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$FUNCTION_NAME" = "admin-api"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_BEFORE_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Check out exact merged production source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out release-control branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ops/store-source-type-production-release-v1
+          path: release-control
+          fetch-depth: 0
+
+      - name: Verify exact merged source and bounded hotfix markers
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse origin/main)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git diff --name-only HEAD^1 HEAD | sort | tr '\n' ' ')" = "backend/supabase/functions/admin-api/readModels.ts scripts/admin-v2-teacher-safety-contract.test.mjs "
+          grep -Fq 'game_item:game_items!store_items_game_item_scope_fk(source_kind)' backend/supabase/functions/admin-api/readModels.ts
+          grep -Fq 'sourceType: ["physical_pack", "system"].includes(row.game_item?.source_kind)' backend/supabase/functions/admin-api/readModels.ts
+          grep -Fq '["store_created", "admin_created"].includes(row.game_item?.source_kind)' backend/supabase/functions/admin-api/readModels.ts
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Re-run focused release contracts
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/admin-v2-teacher-safety-contract.test.mjs
+          node --test scripts/admin-v2-store-api.test.mjs
+          deno check --config backend/supabase/functions/admin-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/supabase/functions/admin-api/readModels.ts
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Capture and verify production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-before.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((entry) => entry.slug === process.env.FUNCTION_NAME);
+          if (!row) throw new Error('Production admin-api is missing.');
+          if (String(row.version) !== process.env.EXPECTED_BEFORE_VERSION) throw new Error(`Unexpected admin-api version: ${row.version}`);
+          if (row.ezbr_sha256 !== process.env.EXPECTED_BEFORE_DIGEST) throw new Error('Production admin-api digest drifted.');
+          if (row.status !== 'ACTIVE' || row.verify_jwt !== true) throw new Error('Production admin-api security metadata is invalid.');
+          NODE
+
+      - name: Deploy only production admin-api
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$FUNCTION_NAME" \
+            --workdir backend \
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            --use-api
+
+      - name: Verify deployment identity, provenance markers, and isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 20); do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" \
+              > "$RUNNER_TEMP/functions-after.json"
+            if FUNCTIONS_PATH="$RUNNER_TEMP/functions-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((entry) => entry.slug === process.env.FUNCTION_NAME);
+          if (!row) process.exit(1);
+          if (Number(row.version) <= Number(process.env.EXPECTED_BEFORE_VERSION)) process.exit(1);
+          if (row.ezbr_sha256 === process.env.EXPECTED_BEFORE_DIGEST) process.exit(1);
+          if (row.status !== 'ACTIVE' || row.verify_jwt !== true) process.exit(1);
+          process.exit(0);
+          NODE
+            then
+              ready=true
+              break
+            fi
+            sleep 3
+          done
+          test "$ready" = true
+
+          BEFORE="$RUNNER_TEMP/functions-before.json" AFTER="$RUNNER_TEMP/functions-after.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE, 'utf8'));
+          const after = JSON.parse(fs.readFileSync(process.env.AFTER, 'utf8'));
+          const afterBySlug = new Map(after.map((row) => [row.slug, row]));
+          for (const row of before) {
+            if (row.slug === process.env.FUNCTION_NAME) continue;
+            const next = afterBySlug.get(row.slug);
+            if (!next) throw new Error(`Unrelated function disappeared: ${row.slug}`);
+            if (String(next.version) !== String(row.version) || next.ezbr_sha256 !== row.ezbr_sha256 || next.verify_jwt !== row.verify_jwt) {
+              throw new Error(`Unrelated function changed: ${row.slug}`);
+            }
+          }
+          const admin = afterBySlug.get(process.env.FUNCTION_NAME);
+          console.log(`admin-api version ${admin.version}; digest ${admin.ezbr_sha256}; verify_jwt=${admin.verify_jwt}; status=${admin.status}`);
+          NODE
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions/$FUNCTION_NAME/body" \
+            > "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'store_items_game_item_scope_fk' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'physical_pack' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'store_created' "$RUNNER_TEMP/admin-api-body.json"
+          grep -q 'sourceType' "$RUNNER_TEMP/admin-api-body.json"
+
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/unauthorized.json" \
+            --write-out '%{http_code}' \
+            "https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME/session/bootstrap")"
+          test "$status" = "401"
+
+      - name: Remove temporary release workflow from branch
+        working-directory: release-control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -- .github/workflows/store-source-type-production-release-bootstrap.yml
+          git commit -m "chore: remove Store provenance release bootstrap"
+          git push origin HEAD:ops/store-source-type-production-release-v1
