@@ -17,18 +17,29 @@ begin
     raise exception 'NORTHREACH_STORY_GAME_NOT_FOUND' using errcode = 'P0001';
   end if;
 
-  insert into public.storylines (key, title, description, is_active)
-  values (
-    'northreach_immigrant_opening_v1',
-    'Northreach Immigrant Opening',
-    'Player-centered Frostgate arrival relationships for the standard immigrant fortune-and-war campaign.',
-    true
-  )
-  on conflict (key) do update
-    set title = excluded.title,
-        description = excluded.description,
-        is_active = true
-  returning id into v_storyline_id;
+  select storyline_row.id into v_storyline_id
+  from public.storylines as storyline_row
+  where lower(storyline_row.key) = lower('econovaria_demo_act_1')
+    and storyline_row.is_active
+  limit 1;
+
+  if v_storyline_id is null then
+    perform 1
+    from public.initialize_demo_storyline_for_game(
+      p_game_session_id,
+      'missing_only'
+    );
+
+    select storyline_row.id into v_storyline_id
+    from public.storylines as storyline_row
+    where lower(storyline_row.key) = lower('econovaria_demo_act_1')
+      and storyline_row.is_active
+    limit 1;
+  end if;
+
+  if v_storyline_id is null then
+    raise exception 'NORTHREACH_CANONICAL_STORYLINE_MISSING' using errcode = 'P0001';
+  end if;
 
   insert into public.storyline_events (
     storyline_id, event_key, title, description, act, sequence,
@@ -42,7 +53,7 @@ begin
     'arrival_edda_housing_window',
     'Edda Veyr: Housing Window',
     'The player sponsor establishes the immediate housing and reporting stake.',
-    1, 1, 'elapsed_time', 0, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+    1, 10, 'elapsed_time', 0, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
     jsonb_build_array(jsonb_build_object(
       'ruleKey', 'northreach_current_resident_edda_arrival',
       'condition', jsonb_build_object('type', 'player_current_country_is', 'countryCode', 'NORTHREACH'),
@@ -66,7 +77,7 @@ begin
     'arrival_jonis_first_shift',
     'Jonis Hale: First Shift Advice',
     'The local friend introduces worker conditions and a second view of the boom.',
-    1, 2, 'elapsed_time', 900, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+    1, 11, 'elapsed_time', 900, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
     jsonb_build_array(jsonb_build_object(
       'ruleKey', 'northreach_current_resident_jonis_arrival',
       'condition', jsonb_build_object('type', 'player_current_country_is', 'countryCode', 'NORTHREACH'),
@@ -88,7 +99,7 @@ begin
     'arrival_mares_fast_money',
     'Mares Kovan: Fast Money',
     'The rival peer introduces a risk-seeking wealth strategy without prescribing it.',
-    1, 3, 'elapsed_time', 1800, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+    1, 12, 'elapsed_time', 1800, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
     jsonb_build_array(jsonb_build_object(
       'ruleKey', 'northreach_current_resident_mares_arrival',
       'condition', jsonb_build_object('type', 'player_current_country_is', 'countryCode', 'NORTHREACH'),
@@ -110,7 +121,7 @@ begin
     'arrival_rian_worker_channel',
     'Rian Kest: Worker Channel',
     'The labor gatekeeper establishes a fair-employment path and future solidarity stake.',
-    1, 4, 'elapsed_time', 3600, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+    1, 13, 'elapsed_time', 3600, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
     jsonb_build_array(jsonb_build_object(
       'ruleKey', 'northreach_current_resident_rian_arrival',
       'condition', jsonb_build_object('type', 'player_current_country_is', 'countryCode', 'NORTHREACH'),
@@ -143,14 +154,6 @@ begin
         contract_unlock_payloads = excluded.contract_unlock_payloads,
         priority = excluded.priority,
         is_active = true;
-
-  insert into public.game_session_storylines (
-    game_session_id, storyline_id, status, story_started_at
-  ) values (
-    p_game_session_id, v_storyline_id, 'active', now()
-  )
-  on conflict (game_session_id, storyline_id) do update
-    set status = case when public.game_session_storylines.status = 'cancelled' then public.game_session_storylines.status else 'active' end;
 
   return v_storyline_id;
 end;
