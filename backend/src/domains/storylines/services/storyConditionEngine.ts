@@ -56,6 +56,38 @@ export function evaluateStoryCondition(
 
       return cashBalance !== null && cashBalance > condition.amount;
     }
+    case "player_relationship_stage_is": {
+      const relationship = readRelationship(
+        player.relationships,
+        condition.characterKey,
+      );
+
+      return readText(relationship?.stage) === condition.stage;
+    }
+    case "player_relationship_reply_count_at_least": {
+      const relationship = readRelationship(
+        player.relationships,
+        condition.characterKey,
+      );
+
+      return readFiniteNumber(relationship?.replyCount) !== null &&
+        (readFiniteNumber(relationship?.replyCount) ?? 0) >= condition.count;
+    }
+    case "player_relationship_trust_score": {
+      const relationship = readRelationship(
+        player.relationships,
+        condition.characterKey,
+      );
+      const trustScore = readFiniteNumber(relationship?.trustScore);
+
+      if (trustScore === null) {
+        return false;
+      }
+
+      return condition.operator === "at_least"
+        ? trustScore >= condition.score
+        : trustScore <= condition.score;
+    }
     case "story_flag_equals":
       return readStoryFlag(
         player.storyFlags,
@@ -84,6 +116,18 @@ function readNumberFromRecord(
 
 function readFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readRelationship(
+  relationships: unknown,
+  characterKey: string,
+): Record<string, unknown> | null {
+  if (!isRecord(relationships)) {
+    return null;
+  }
+
+  const relationship = relationships[characterKey];
+  return isRecord(relationship) ? relationship : null;
 }
 
 function readStoryFlag(

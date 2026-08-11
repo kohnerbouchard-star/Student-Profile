@@ -109,6 +109,50 @@ Deno.test("story condition engine evaluates player_cash_above", () => {
   assertCondition({ type: "player_cash_above", amount: 500 }, false);
 });
 
+Deno.test("story condition engine evaluates relationship stage and reply memory", () => {
+  assertCondition({
+    type: "player_relationship_stage_is",
+    characterKey: "character.northreach.edda-veyr.v1",
+    stage: "engaged",
+  }, true);
+  assertCondition({
+    type: "player_relationship_stage_is",
+    characterKey: "character.northreach.edda-veyr.v1",
+    stage: "contacted",
+  }, false);
+  assertCondition({
+    type: "player_relationship_reply_count_at_least",
+    characterKey: "character.northreach.edda-veyr.v1",
+    count: 1,
+  }, true);
+  assertCondition({
+    type: "player_relationship_reply_count_at_least",
+    characterKey: "character.northreach.edda-veyr.v1",
+    count: 2,
+  }, false);
+});
+
+Deno.test("story condition engine evaluates relationship trust thresholds", () => {
+  assertCondition({
+    type: "player_relationship_trust_score",
+    characterKey: "character.northreach.edda-veyr.v1",
+    operator: "at_least",
+    score: 10,
+  }, true);
+  assertCondition({
+    type: "player_relationship_trust_score",
+    characterKey: "character.northreach.edda-veyr.v1",
+    operator: "at_most",
+    score: 11,
+  }, false);
+  assertCondition({
+    type: "player_relationship_trust_score",
+    characterKey: "character.northreach.mares-kovan.v1",
+    operator: "at_most",
+    score: -10,
+  }, true);
+});
+
 Deno.test("story condition engine evaluates story_flag_equals", () => {
   assertCondition({
     type: "story_flag_equals",
@@ -169,6 +213,7 @@ Deno.test("story condition engine fails safely for null and missing player field
     sectorExposurePct: {},
     countryExposurePct: {},
     storyFlags: {},
+    relationships: {},
   };
 
   const partialRuntimeContext = {
@@ -199,6 +244,14 @@ Deno.test("story condition engine fails safely for null and missing player field
   );
   assertEquals(
     evaluate({
+      type: "player_relationship_reply_count_at_least",
+      characterKey: "character.northreach.edda-veyr.v1",
+      count: 1,
+    }, partialRuntimeContext),
+    false,
+  );
+  assertEquals(
+    evaluate({
       type: "story_flag_equals",
       flagKey: "northreach_border_closed",
       value: true,
@@ -217,6 +270,25 @@ Deno.test("story condition parser still rejects invalid condition shapes", () =>
       parseStoryCondition({
         type: "player_current_country_in",
         countryCodes: [],
+      }),
+    StorylineContractError,
+  );
+  assertThrows(
+    () =>
+      parseStoryCondition({
+        type: "player_relationship_stage_is",
+        characterKey: "character.northreach.edda-veyr.v1",
+        stage: "best_friend",
+      }),
+    StorylineContractError,
+  );
+  assertThrows(
+    () =>
+      parseStoryCondition({
+        type: "player_relationship_trust_score",
+        characterKey: "character.northreach.edda-veyr.v1",
+        operator: "at_least",
+        score: 101,
       }),
     StorylineContractError,
   );
@@ -249,6 +321,30 @@ const basePlayerStoryContext: PlayerStoryContext = {
     crisis_payload: {
       level: 2,
       phase: "warning",
+    },
+  },
+  relationships: {
+    "character.northreach.edda-veyr.v1": {
+      characterKey: "character.northreach.edda-veyr.v1",
+      characterName: "Edda Veyr",
+      countryCode: "NORTHREACH",
+      relationshipRole: "sponsor",
+      stage: "engaged",
+      contactCount: 2,
+      replyCount: 1,
+      trustScore: 12,
+      memory: {},
+    },
+    "character.northreach.mares-kovan.v1": {
+      characterKey: "character.northreach.mares-kovan.v1",
+      characterName: "Mares Kovan",
+      countryCode: "NORTHREACH",
+      relationshipRole: "rival_peer",
+      stage: "strained",
+      contactCount: 3,
+      replyCount: 2,
+      trustScore: -20,
+      memory: {},
     },
   },
 };

@@ -1,12 +1,26 @@
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
 import {
   readArray,
+  readEnum,
   readJsonValue,
   readPercentage,
   readRecord,
   readRequiredText,
 } from "./storylineContractPrimitives.ts";
 import { invalidStorylineContract } from "./storylineContractErrors.ts";
+
+export const STORY_RELATIONSHIP_STAGES = [
+  "contacted",
+  "engaged",
+  "trusted",
+  "strained",
+  "broken",
+] as const;
+
+export const STORY_RELATIONSHIP_TRUST_OPERATORS = [
+  "at_least",
+  "at_most",
+] as const;
 
 export const STORY_CONDITION_TYPES = [
   "player_current_country_is",
@@ -19,10 +33,16 @@ export const STORY_CONDITION_TYPES = [
   "player_portfolio_country_exposure_at_least",
   "player_cash_below",
   "player_cash_above",
+  "player_relationship_stage_is",
+  "player_relationship_reply_count_at_least",
+  "player_relationship_trust_score",
   "story_flag_equals",
 ] as const;
 
 export type StoryConditionType = typeof STORY_CONDITION_TYPES[number];
+export type StoryRelationshipStage = typeof STORY_RELATIONSHIP_STAGES[number];
+export type StoryRelationshipTrustOperator =
+  typeof STORY_RELATIONSHIP_TRUST_OPERATORS[number];
 
 export type StoryCondition =
   | StoryAllCondition
@@ -50,6 +70,9 @@ export type StoryLeafCondition =
   | StorySectorExposureCondition
   | StoryCountryExposureCondition
   | StoryCashThresholdCondition
+  | StoryRelationshipStageCondition
+  | StoryRelationshipReplyCountCondition
+  | StoryRelationshipTrustCondition
   | StoryFlagEqualsCondition;
 
 export interface StoryCountryIsCondition {
@@ -88,6 +111,25 @@ export interface StoryCountryExposureCondition {
 export interface StoryCashThresholdCondition {
   readonly type: "player_cash_below" | "player_cash_above";
   readonly amount: number;
+}
+
+export interface StoryRelationshipStageCondition {
+  readonly type: "player_relationship_stage_is";
+  readonly characterKey: string;
+  readonly stage: StoryRelationshipStage;
+}
+
+export interface StoryRelationshipReplyCountCondition {
+  readonly type: "player_relationship_reply_count_at_least";
+  readonly characterKey: string;
+  readonly count: number;
+}
+
+export interface StoryRelationshipTrustCondition {
+  readonly type: "player_relationship_trust_score";
+  readonly characterKey: string;
+  readonly operator: StoryRelationshipTrustOperator;
+  readonly score: number;
 }
 
 export interface StoryFlagEqualsCondition {
@@ -180,6 +222,39 @@ export function parseStoryCondition(value: unknown): StoryCondition {
     };
   }
 
+  if (type === "player_relationship_stage_is") {
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
+      stage: readEnum(
+        record.stage,
+        "condition.stage",
+        STORY_RELATIONSHIP_STAGES,
+      ),
+    };
+  }
+
+  if (type === "player_relationship_reply_count_at_least") {
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
+      count: readNonNegativeIntegerField(record.count, "condition.count"),
+    };
+  }
+
+  if (type === "player_relationship_trust_score") {
+    return {
+      type,
+      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
+      operator: readEnum(
+        record.operator,
+        "condition.operator",
+        STORY_RELATIONSHIP_TRUST_OPERATORS,
+      ),
+      score: readRelationshipTrustScore(record.score, "condition.score"),
+    };
+  }
+
   return {
     type,
     flagKey: readRequiredText(record.flagKey, "condition.flagKey"),
@@ -213,6 +288,35 @@ function readNonNegativeNumberField(value: unknown, fieldName: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
     throw invalidStorylineContract(
       `${fieldName} must be a non-negative number.`,
+    );
+  }
+
+  return value;
+}
+
+function readNonNegativeIntegerField(value: unknown, fieldName: string): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw invalidStorylineContract(
+      `${fieldName} must be a non-negative integer.`,
+    );
+  }
+
+  return value;
+}
+
+function readRelationshipTrustScore(value: unknown, fieldName: string): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < -100 ||
+    value > 100
+  ) {
+    throw invalidStorylineContract(
+      `${fieldName} must be an integer between -100 and 100.`,
     );
   }
 

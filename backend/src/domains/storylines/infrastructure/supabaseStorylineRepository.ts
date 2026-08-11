@@ -25,6 +25,7 @@ import type {
 type StorylineTableName =
   | "game_session_storylines"
   | "storyline_events"
+  | "game_session_story_event_overrides"
   | "story_event_resolutions"
   | "player_story_impacts"
   | "game_session_policies"
@@ -113,6 +114,11 @@ interface StorylineEventRow {
   readonly created_at: string;
 }
 
+interface StoryEventOverrideRow {
+  readonly storyline_event_id: string;
+  readonly enabled: boolean;
+}
+
 interface StoryEventResolutionRow {
   readonly id: string;
   readonly game_session_id: string;
@@ -168,6 +174,8 @@ const STORYLINE_EVENT_SELECT = [
   "is_active",
   "created_at",
 ].join(",");
+
+const STORY_EVENT_OVERRIDE_SELECT = "storyline_event_id,enabled";
 
 const STORY_EVENT_RESOLUTION_SELECT = [
   "id",
@@ -231,11 +239,28 @@ export class SupabaseStorylineRepository implements StorylineRepository {
       .from("storyline_events")
       .select(STORYLINE_EVENT_SELECT)
       .in("storyline_id", storylineIds)
-      .eq("is_active", true)
       .order("act", { ascending: true })
       .order("sequence", { ascending: true });
 
     assertNoError(eventResponse, "storyline_events", "select");
+
+    const overrideResponse = await this.client
+      .from("game_session_story_event_overrides")
+      .select(STORY_EVENT_OVERRIDE_SELECT)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("enabled", true);
+
+    assertNoError(
+      overrideResponse,
+      "game_session_story_event_overrides",
+      "select",
+    );
+
+    const enabledOverrideEventIds = new Set(
+      (overrideResponse.data ?? []).map((row) =>
+        String((row as StoryEventOverrideRow).storyline_event_id)
+      ),
+    );
 
     const resolutionResponse = await this.client
       .from("story_event_resolutions")
@@ -261,6 +286,7 @@ export class SupabaseStorylineRepository implements StorylineRepository {
 
     return (eventResponse.data ?? [])
       .map((row) => row as StorylineEventRow)
+      .filter((row) => row.is_active || enabledOverrideEventIds.has(row.id))
       .filter((row) => !resolvedEventIds.has(row.id))
       .flatMap((row) => {
         const activation = activationByStorylineId.get(row.storyline_id);

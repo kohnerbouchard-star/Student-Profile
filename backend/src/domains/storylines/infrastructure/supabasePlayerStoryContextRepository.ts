@@ -1,5 +1,10 @@
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
-import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
+import type {
+  PlayerStoryContext,
+  PlayerStoryRelationship,
+  PlayerStoryRelationshipRole,
+  PlayerStoryRelationshipStage,
+} from "../contracts/playerStoryContext.ts";
 import type {
   PlayerStoryContextRepository,
 } from "../contracts/playerStoryContextRepositoryContracts.ts";
@@ -16,6 +21,7 @@ type PlayerStoryContextTableName =
   | "game_session_stock_assets"
   | "game_session_contracts"
   | "player_contract_progress"
+  | "player_story_relationships"
   | "game_session_story_flags";
 
 interface SupabasePlayerStoryContextQueryError {
@@ -105,6 +111,20 @@ interface PlayerContractProgressRow {
   readonly status: string;
 }
 
+interface StoryRelationshipRow {
+  readonly player_id: string;
+  readonly character_key: string;
+  readonly character_name: string;
+  readonly country_code: string | null;
+  readonly relationship_role: string;
+  readonly stage: string;
+  readonly contact_count: number | string;
+  readonly reply_count: number | string;
+  readonly trust_score: number | string;
+  readonly memory: Record<string, JsonValue>;
+  readonly updated_at: string;
+}
+
 interface StoryFlagRow {
   readonly flag_key: string;
   readonly value: JsonValue;
@@ -125,6 +145,8 @@ const HOLDING_SELECT = "player_id,stock_asset_id,quantity";
 const STOCK_ASSET_SELECT = "id,sector_key,country_code,current_price";
 const CONTRACT_SELECT = "id,contract_key,status,visibility";
 const CONTRACT_PROGRESS_SELECT = "player_id,contract_id,status";
+const STORY_RELATIONSHIP_SELECT =
+  "player_id,character_key,character_name,country_code,relationship_role,stage,contact_count,reply_count,trust_score,memory,updated_at";
 const STORY_FLAG_SELECT = "flag_key,value,created_at";
 
 export class SupabasePlayerStoryContextRepository
@@ -142,6 +164,7 @@ export class SupabasePlayerStoryContextRepository
       holdings,
       contracts,
       progressRows,
+      relationshipRows,
       storyFlags,
     ] = await Promise.all([
       this.readActivePlayers(gameSessionId),
@@ -151,6 +174,7 @@ export class SupabasePlayerStoryContextRepository
       this.readStockHoldings(gameSessionId),
       this.readGameSessionContracts(gameSessionId),
       this.readPlayerContractProgress(gameSessionId),
+      this.readStoryRelationships(gameSessionId),
       this.readStoryFlags(gameSessionId),
     ]);
 
@@ -166,6 +190,10 @@ export class SupabasePlayerStoryContextRepository
     const progressByPlayerId = groupBy(
       progressRows,
       (progress) => progress.player_id,
+    );
+    const relationshipsByPlayerId = groupBy(
+      relationshipRows,
+      (relationship) => relationship.player_id,
     );
     const contractById = new Map(
       contracts.map((contract) => [contract.id, contract]),
@@ -225,6 +253,9 @@ export class SupabasePlayerStoryContextRepository
             .filter(isString),
         ),
         storyFlags,
+        relationships: buildRelationshipRecord(
+          relationshipsByPlayerId.get(player.id) ?? [],
+        ),
       };
     });
   }
@@ -361,6 +392,20 @@ export class SupabasePlayerStoryContextRepository
     return (response.data ?? []) as PlayerContractProgressRow[];
   }
 
+  private async readStoryRelationships(
+    gameSessionId: string,
+  ): Promise<readonly StoryRelationshipRow[]> {
+    const response = await this.client
+      .from("player_story_relationships")
+      .select(STORY_RELATIONSHIP_SELECT)
+      .eq("game_session_id", gameSessionId)
+      .order("updated_at", { ascending: true });
+
+    assertNoError(response, "player_story_relationships", "select");
+
+    return (response.data ?? []) as StoryRelationshipRow[];
+  }
+
   private async readStoryFlags(
     gameSessionId: string,
   ): Promise<Record<string, JsonValue>> {
@@ -380,6 +425,34 @@ export class SupabasePlayerStoryContextRepository
 
     return flags;
   }
+}
+
+function buildRelationshipRecord(
+  rows: readonly StoryRelationshipRow[],
+): Readonly<Record<string, PlayerStoryRelationship>> {
+  const relationships: Record<string, PlayerStoryRelationship> = {};
+
+  for (const row of rows) {
+    const characterKey = normalizeKey(row.character_key);
+
+    if (!characterKey) {
+      continue;
+    }
+
+    relationships[characterKey] = {
+      characterKey,
+      characterName: normalizeKey(row.character_name) ?? characterKey,
+      countryCode: normalizeKey(row.country_code),
+      relationshipRole: normalizeRelationshipRole(row.relationship_role),
+      stage: normalizeRelationshipStage(row.stage),
+      contactCount: toNonNegativeInteger(row.contact_count),
+      replyCount: toNonNegativeInteger(row.reply_count),
+      trustScore: clampRelationshipTrust(row.trust_score),
+      memory: isRecord(row.memory) ? row.memory : {},
+    };
+  }
+
+  return relationships;
 }
 
 function balanceInValuationCurrency(
@@ -499,8 +572,48 @@ function normalizeKey(value: string | null | undefined): string | null {
   return key ? key : null;
 }
 
+function normalizeRelationshipRole(value: string): PlayerStoryRelationshipRole {
+  if (
+    value === "sponsor" ||
+    value === "local_friend" ||
+    value === "rival_peer" ||
+    value === "gatekeeper" ||
+    value === "former_home"
+  ) {
+    return value;
+  }
+
+  return "other";
+}
+
+function normalizeRelationshipStage(value: string): PlayerStoryRelationshipStage {
+  if (
+    value === "contacted" ||
+    value === "engaged" ||
+    value === "trusted" ||
+    value === "strained" ||
+    value === "broken"
+  ) {
+    return value;
+  }
+
+  return "contacted";
+}
+
+function toNonNegativeInteger(value: number | string): number {
+  return Math.max(0, Math.trunc(toNumber(value)));
+}
+
+function clampRelationshipTrust(value: number | string): number {
+  return Math.max(-100, Math.min(100, Math.trunc(toNumber(value))));
+}
+
 function isString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, JsonValue> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function sum<T>(rows: readonly T[], valueForRow: (row: T) => number): number {

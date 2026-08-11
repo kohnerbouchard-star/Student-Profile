@@ -17,7 +17,7 @@ Deno.test("storyline repository lists active game session storyline activations"
   assertEquals(rows[0]?.status, "active");
 });
 
-Deno.test("storyline repository lists unresolved automatic active event candidates", async () => {
+Deno.test("storyline repository lists unresolved automatic active and game-overridden event candidates", async () => {
   const tables = baseTables();
   tables.storyline_events.push(
     storylineEvent({
@@ -66,11 +66,30 @@ Deno.test("storyline repository lists unresolved automatic active event candidat
       is_active: false,
     }),
     storylineEvent({
+      id: "inactive-overridden",
+      event_key: "inactive-overridden",
+      trigger_type: "elapsed_time",
+      scheduled_offset_seconds: 120,
+      is_active: false,
+    }),
+    storylineEvent({
       id: "resolved-event",
       event_key: "resolved-event",
       trigger_type: "elapsed_time",
       scheduled_offset_seconds: 1,
     }),
+  );
+  tables.game_session_story_event_overrides.push(
+    {
+      game_session_id: "game-1",
+      storyline_event_id: "inactive-overridden",
+      enabled: true,
+    },
+    {
+      game_session_id: "game-2",
+      storyline_event_id: "inactive-event",
+      enabled: true,
+    },
   );
   tables.story_event_resolutions.push({
     id: "resolution-1",
@@ -96,6 +115,7 @@ Deno.test("storyline repository lists unresolved automatic active event candidat
     "wall-clock-due",
     "market-tick-due",
     "condition-candidate",
+    "inactive-overridden",
   ]);
   assertEquals(rows[0]?.gameSessionId, "game-1");
   assertEquals(rows[0]?.gameSessionStorylineId, "activation-1");
@@ -237,6 +257,7 @@ Deno.test("storyline repository upserts and lists game session story flags", asy
 interface FakeTables {
   readonly game_session_storylines: Record<string, unknown>[];
   readonly storyline_events: Record<string, unknown>[];
+  readonly game_session_story_event_overrides: Record<string, unknown>[];
   readonly story_event_resolutions: Record<string, unknown>[];
   readonly player_story_impacts: Record<string, unknown>[];
   readonly game_session_policies: Record<string, unknown>[];
@@ -477,6 +498,7 @@ function baseTables(): FakeTables {
       },
     ],
     storyline_events: [],
+    game_session_story_event_overrides: [],
     story_event_resolutions: [],
     player_story_impacts: [],
     game_session_policies: [],
