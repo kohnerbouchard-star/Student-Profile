@@ -2,8 +2,8 @@ import { AdminIcon } from "./AdminIcon.js";
 import { appendContent, createElement, setText } from "./dom.js";
 
 export function AdminTopbar({
-  title = "Overview",
-  context = "Teacher administration",
+  title = "Dashboard",
+  context = "Teacher Console",
   navigationId,
   actions,
   notificationCount = 0,
@@ -63,14 +63,14 @@ export function AdminTopbar({
       createElement("span", {
         className: "admin-topbar__identity-copy",
         children: [
-          createElement("strong", { text: identity.name || "Administrator" }),
-          createElement("small", { text: identity.gameName || "No game selected" }),
+          createElement("strong", { text: identity.name || "Teacher" }),
+          createElement("small", { text: identity.gameName || "No simulation selected" }),
         ],
       }),
       AdminIcon({ name: "chevronDown", size: 16 }),
     );
-    identityButton.setAttribute("aria-label", `Open account menu for ${identity.name || "administrator"}`);
-    identityButton.title = identity.gameName || "No game selected";
+    identityButton.setAttribute("aria-label", `Open account menu for ${identity.name || "teacher"}`);
+    identityButton.title = identity.gameName || "No simulation selected";
   }
 
   navigationToggle.addEventListener("click", (event) => onToggleNavigation?.(event));
@@ -85,8 +85,8 @@ export function AdminTopbar({
     element: root,
     navigationToggle,
     actionSlot,
-    setTitle(nextTitle) { setText(titleElement, nextTitle, "Overview"); },
-    setContext(nextContext) { setText(contextElement, nextContext, "Teacher administration"); },
+    setTitle(nextTitle) { setText(titleElement, nextTitle, "Dashboard"); },
+    setContext(nextContext) { setText(contextElement, nextContext, "Teacher Console"); },
     setNotificationCount,
     setIdentity,
     setNavigationExpanded(expanded) {
