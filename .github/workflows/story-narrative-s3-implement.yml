@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Verify S2 boundary and S3 staged schema
+      - name: Guard S2 boundary and S3 inputs
         shell: bash
         run: |
           set -euo pipefail
@@ -35,6 +35,8 @@ jobs:
           git merge-base --is-ancestor 25aeb0bfdc7908180dcfe20e78589b7a3091a942 HEAD
           test -f docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
           test -f docs/story/relationship-state-v1.sql.body
+          test -f scripts/story-narrative-s3-apply.py
+          python3 -m py_compile scripts/story-narrative-s3-apply.py
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -53,692 +55,36 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Generate relationship migration
+      - name: Generate S3 migration and apply guarded source transform
         shell: bash
         run: |
           set -euo pipefail
           find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-before.txt"
-          (
-            cd backend
-            supabase migration new add_story_relationship_state_v1
-          )
+          (cd backend && supabase migration new add_story_relationship_state_v1)
           find backend/supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/migrations-after.txt"
           MIGRATION_NAME="$(comm -13 "$RUNNER_TEMP/migrations-before.txt" "$RUNNER_TEMP/migrations-after.txt" | grep '_add_story_relationship_state_v1.sql$')"
           test -n "$MIGRATION_NAME"
+          test "$(printf '%s\n' "$MIGRATION_NAME" | wc -l)" = "1"
           MIGRATION="backend/supabase/migrations/$MIGRATION_NAME"
           cat docs/story/relationship-state-v1.sql.body > "$MIGRATION"
           echo "MIGRATION=$MIGRATION" >> "$GITHUB_ENV"
           echo "MIGRATION_NAME=$MIGRATION_NAME" >> "$GITHUB_ENV"
-
-      - name: Apply S3 domain and runtime source
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          def read(path):
-              return Path(path).read_text(encoding='utf-8')
-          def write(path, text):
-              Path(path).write_text(text, encoding='utf-8')
-          def replace_once(path, old, new):
-              text = read(path)
-              if text.count(old) != 1:
-                  raise SystemExit(f'{path}: expected one anchor, found {text.count(old)}: {old[:100]!r}')
-              write(path, text.replace(old, new, 1))
-          def insert_before(path, marker, addition):
-              text = read(path)
-              if text.count(marker) != 1:
-                  raise SystemExit(f'{path}: expected one marker, found {text.count(marker)}: {marker[:100]!r}')
-              write(path, text.replace(marker, addition + marker, 1))
-
-          # New relationship contracts.
-          write('backend/src/domains/storylines/contracts/storyRelationshipContracts.ts', '''export const STORY_RELATIONSHIP_METRICS = [
-  "trust",
-  "respect",
-  "affinity",
-  "obligation",
-  "suspicion",
-] as const;
-
-export const STORY_RELATIONSHIP_STANDINGS = [
-  "hostile",
-  "strained",
-  "neutral",
-  "trusted",
-  "allied",
-] as const;
-
-export type StoryRelationshipMetric = typeof STORY_RELATIONSHIP_METRICS[number];
-export type StoryRelationshipStanding = typeof STORY_RELATIONSHIP_STANDINGS[number];
-
-export interface StoryRelationshipState {
-  readonly characterKey: string;
-  readonly trust: number;
-  readonly respect: number;
-  readonly affinity: number;
-  readonly obligation: number;
-  readonly suspicion: number;
-  readonly standing: StoryRelationshipStanding;
-}
-
-export type PlayerStoryRelationships = Readonly<Record<string, StoryRelationshipState>>;
-
-export function relationshipStandingForScore(score: number): StoryRelationshipStanding {
-  if (score <= -50) return "hostile";
-  if (score <= -15) return "strained";
-  if (score < 35) return "neutral";
-  if (score < 70) return "trusted";
-  return "allied";
-}
-
-export function relationshipStandingScore(state: StoryRelationshipState): number {
-  return Math.round(
-    state.trust * 0.35 +
-    state.respect * 0.25 +
-    state.affinity * 0.2 +
-    state.obligation * 0.1 -
-    state.suspicion * 0.35
-  );
-}
-''')
-
-          # PlayerStoryContext relationship projection.
-          path='backend/src/domains/storylines/contracts/playerStoryContext.ts'
-          replace_once(path,
-'''import type { JsonValue } from "../../../supabase/tableTypes.ts";
-''',
-'''import type { JsonValue } from "../../../supabase/tableTypes.ts";
-import type { PlayerStoryRelationships } from "./storyRelationshipContracts.ts";
-''')
-          replace_once(path,
-'''  readonly completedContractKeys: readonly string[];
-  readonly storyFlags: Readonly<Record<string, JsonValue>>;
-''',
-'''  readonly completedContractKeys: readonly string[];
-  readonly storyFlags: Readonly<Record<string, JsonValue>>;
-  readonly relationships: PlayerStoryRelationships;
-''')
-
-          # Story relationship conditions.
-          path='backend/src/domains/storylines/contracts/storyConditionContracts.ts'
-          replace_once(path,
-'''import { invalidStorylineContract } from "./storylineContractErrors.ts";
-''',
-'''import { invalidStorylineContract } from "./storylineContractErrors.ts";
-import {
-  STORY_RELATIONSHIP_METRICS,
-  STORY_RELATIONSHIP_STANDINGS,
-  type StoryRelationshipMetric,
-  type StoryRelationshipStanding,
-} from "./storyRelationshipContracts.ts";
-''')
-          replace_once(path,
-'''  "story_flag_equals",
-] as const;
-''',
-'''  "story_flag_equals",
-  "player_relationship_metric_at_least",
-  "player_relationship_metric_at_most",
-  "player_relationship_standing_is",
-] as const;
-''')
-          replace_once(path,
-'''  | StoryCashThresholdCondition
-  | StoryFlagEqualsCondition;
-''',
-'''  | StoryCashThresholdCondition
-  | StoryFlagEqualsCondition
-  | StoryRelationshipMetricCondition
-  | StoryRelationshipStandingCondition;
-''')
-          insert_before(path,
-'''export function parseStoryCondition(value: unknown): StoryCondition {
-''',
-'''export interface StoryRelationshipMetricCondition {
-  readonly type: "player_relationship_metric_at_least" | "player_relationship_metric_at_most";
-  readonly characterKey: string;
-  readonly metric: StoryRelationshipMetric;
-  readonly value: number;
-}
-
-export interface StoryRelationshipStandingCondition {
-  readonly type: "player_relationship_standing_is";
-  readonly characterKey: string;
-  readonly standing: StoryRelationshipStanding;
-}
-
-''')
-          replace_once(path,
-'''  if (type === "player_cash_below" || type === "player_cash_above") {
-    return {
-      type,
-      amount: readNonNegativeNumberField(record.amount, "condition.amount"),
-    };
-  }
-
-  return {
-''',
-'''  if (type === "player_cash_below" || type === "player_cash_above") {
-    return {
-      type,
-      amount: readNonNegativeNumberField(record.amount, "condition.amount"),
-    };
-  }
-
-  if (type === "player_relationship_metric_at_least" || type === "player_relationship_metric_at_most") {
-    const metric = readRequiredText(record.metric, "condition.metric");
-    if (!STORY_RELATIONSHIP_METRICS.includes(metric as StoryRelationshipMetric)) {
-      throw invalidStorylineContract("condition.metric is invalid.");
-    }
-    const relationValue = record.value;
-    if (typeof relationValue !== "number" || !Number.isFinite(relationValue) || relationValue < -100 || relationValue > 100) {
-      throw invalidStorylineContract("condition.value must be between -100 and 100.");
-    }
-    return {
-      type,
-      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
-      metric: metric as StoryRelationshipMetric,
-      value: relationValue,
-    };
-  }
-
-  if (type === "player_relationship_standing_is") {
-    const standing = readRequiredText(record.standing, "condition.standing");
-    if (!STORY_RELATIONSHIP_STANDINGS.includes(standing as StoryRelationshipStanding)) {
-      throw invalidStorylineContract("condition.standing is invalid.");
-    }
-    return {
-      type,
-      characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
-      standing: standing as StoryRelationshipStanding,
-    };
-  }
-
-  return {
-''')
-
-          # Story relationship effect.
-          path='backend/src/domains/storylines/contracts/storyEffectContracts.ts'
-          replace_once(path,
-'''import { invalidStorylineContract } from "./storylineContractErrors.ts";
-''',
-'''import { invalidStorylineContract } from "./storylineContractErrors.ts";
-import { STORY_RELATIONSHIP_METRICS, type StoryRelationshipMetric } from "./storyRelationshipContracts.ts";
-''')
-          replace_once(path,
-'''  "character_message",
-] as const;
-''',
-'''  "character_message",
-  "relationship_adjust",
-] as const;
-''')
-          replace_once(path,
-'''  | StoryFlagSetEffect
-  | StoryCharacterMessageEffect;
-''',
-'''  | StoryFlagSetEffect
-  | StoryCharacterMessageEffect
-  | StoryRelationshipAdjustEffect;
-''')
-          insert_before(path,
-'''export interface StoryRevealPayload {
-''',
-'''export interface StoryRelationshipAdjustEffect {
-  readonly type: "relationship_adjust";
-  readonly characterKey: string;
-  readonly reason: string;
-  readonly deltas: Readonly<Partial<Record<StoryRelationshipMetric, number>>>;
-}
-
-''')
-          replace_once(path,
-'''  if (type === "character_message") {
-''',
-'''  if (type === "relationship_adjust") {
-    const deltasRecord = readRecord(record.deltas, "effect.deltas");
-    const deltas: Partial<Record<StoryRelationshipMetric, number>> = {};
-    for (const [metric, rawValue] of Object.entries(deltasRecord)) {
-      if (!STORY_RELATIONSHIP_METRICS.includes(metric as StoryRelationshipMetric)) {
-        throw invalidStorylineContract("effect.deltas contains an invalid relationship metric.");
-      }
-      if (typeof rawValue !== "number" || !Number.isInteger(rawValue) || rawValue < -100 || rawValue > 100) {
-        throw invalidStorylineContract("effect.deltas values must be integers between -100 and 100.");
-      }
-      if (rawValue !== 0) deltas[metric as StoryRelationshipMetric] = rawValue;
-    }
-    if (Object.keys(deltas).length === 0) {
-      throw invalidStorylineContract("effect.deltas must include at least one non-zero relationship delta.");
-    }
-    return {
-      type,
-      characterKey: readRequiredText(record.characterKey, "effect.characterKey"),
-      reason: readRequiredText(record.reason, "effect.reason"),
-      deltas,
-    };
-  }
-
-  if (type === "character_message") {
-''')
-
-          # Effect execution writer contract.
-          path='backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts'
-          replace_once(path,
-'''  readonly messages?: StoryEffectMessageWriter;
-}
-''',
-'''  readonly messages?: StoryEffectMessageWriter;
-  readonly relationships?: StoryEffectRelationshipWriter;
-}
-''')
-          insert_before(path,
-'''export interface StoryEffectMessageWriter {
-''',
-'''export interface StoryEffectRelationshipWriter {
-  adjustRelationship(input: StoryRelationshipAdjustmentWriteInput): Promise<StoryWriteResult>;
-}
-
-export interface StoryRelationshipAdjustmentWriteInput {
-  readonly gameSessionId: string;
-  readonly playerId: string;
-  readonly storylineEventId: string;
-  readonly effectIndex: number;
-  readonly characterKey: string;
-  readonly reason: string;
-  readonly deltas: Readonly<Record<string, number>>;
-}
-
-''')
-
-          # Condition engine evaluation.
-          path='backend/src/domains/storylines/services/storyConditionEngine.ts'
-          replace_once(path,
-'''    case "story_flag_equals":
-      return readStoryFlag(
-        player.storyFlags,
-        condition.flagKey,
-        condition.value,
-      );
-''',
-'''    case "story_flag_equals":
-      return readStoryFlag(
-        player.storyFlags,
-        condition.flagKey,
-        condition.value,
-      );
-    case "player_relationship_metric_at_least": {
-      const relationship = player.relationships[condition.characterKey];
-      return relationship ? relationship[condition.metric] >= condition.value : false;
-    }
-    case "player_relationship_metric_at_most": {
-      const relationship = player.relationships[condition.characterKey];
-      return relationship ? relationship[condition.metric] <= condition.value : false;
-    }
-    case "player_relationship_standing_is":
-      return player.relationships[condition.characterKey]?.standing === condition.standing;
-''')
-
-          # Supabase relationship writer.
-          write('backend/src/domains/storylines/infrastructure/supabaseStoryRelationshipWriter.ts', '''import type {
-  StoryEffectRelationshipWriter,
-  StoryRelationshipAdjustmentWriteInput,
-  StoryWriteResult,
-} from "../contracts/storyEffectExecutionContracts.ts";
-
-interface RpcError { readonly message: string; readonly code?: string; }
-interface RpcResponse<T> { readonly data: T | null; readonly error: RpcError | null; }
-interface Client { rpc<T>(name: string, args: Record<string, unknown>): Promise<RpcResponse<T>>; }
-interface AdjustmentRow { readonly relationship_id?: unknown; }
-
-export class SupabaseStoryRelationshipWriter implements StoryEffectRelationshipWriter {
-  constructor(private readonly client: Client) {}
-
-  async adjustRelationship(input: StoryRelationshipAdjustmentWriteInput): Promise<StoryWriteResult> {
-    const response = await this.client.rpc<readonly AdjustmentRow[]>("adjust_story_relationship_v1", {
-      p_game_session_id: input.gameSessionId,
-      p_player_id: input.playerId,
-      p_source_storyline_event_id: input.storylineEventId,
-      p_effect_index: input.effectIndex,
-      p_character_key: input.characterKey,
-      p_reason: input.reason,
-      p_deltas: input.deltas,
-    });
-    if (response.error) throw new Error(response.error.message);
-    const id = typeof response.data?.[0]?.relationship_id === "string"
-      ? response.data[0].relationship_id
-      : undefined;
-    return id ? { id } : {};
-  }
-}
-''')
-
-          # Effect engine relationship branch.
-          path='backend/src/domains/storylines/services/storyEffectEngine.ts'
-          replace_once(path,
-'''    if (input.effect.type === "story_flag_set") {
-''',
-'''    if (input.effect.type === "relationship_adjust") {
-      if (!input.playerContext) {
-        return skipped(input.effect, effectIndex, null, "missing_player_context");
-      }
-      if (!input.dependencies.relationships) {
-        return skipped(input.effect, effectIndex, input.playerContext.playerId, "unsupported_effect_type");
-      }
-      const result = await input.dependencies.relationships.adjustRelationship({
-        gameSessionId: input.gameSessionId,
-        playerId: input.playerContext.playerId,
-        storylineEventId: input.storylineEventId,
-        effectIndex,
-        characterKey: input.effect.characterKey,
-        reason: input.effect.reason,
-        deltas: input.effect.deltas,
-      });
-      return applied(input.effect, effectIndex, input.playerContext.playerId, collectWriteIds(result));
-    }
-
-    if (input.effect.type === "story_flag_set") {
-''')
-
-          # Player context repository relationship reads.
-          path='backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts'
-          replace_once(path,
-'''import type { JsonValue } from "../../../supabase/tableTypes.ts";
-''',
-'''import type { JsonValue } from "../../../supabase/tableTypes.ts";
-import type { StoryRelationshipState } from "../contracts/storyRelationshipContracts.ts";
-''')
-          replace_once(path,
-'''  | "game_session_story_flags";
-''',
-'''  | "game_session_story_flags"
-  | "story_relationships";
-''')
-          insert_before(path,
-'''interface CountryInfo {
-''',
-'''interface StoryRelationshipRow {
-  readonly player_id: string;
-  readonly character_key: string;
-  readonly trust: number | string;
-  readonly respect: number | string;
-  readonly affinity: number | string;
-  readonly obligation: number | string;
-  readonly suspicion: number | string;
-  readonly standing: "hostile" | "strained" | "neutral" | "trusted" | "allied";
-}
-
-''')
-          replace_once(path,
-'''const STORY_FLAG_SELECT = "flag_key,value,created_at";
-''',
-'''const STORY_FLAG_SELECT = "flag_key,value,created_at";
-const RELATIONSHIP_SELECT = "player_id,character_key,trust,respect,affinity,obligation,suspicion,standing";
-''')
-          replace_once(path,
-'''      storyFlags,
-    ] = await Promise.all([
-''',
-'''      storyFlags,
-      relationshipRows,
-    ] = await Promise.all([
-''')
-          replace_once(path,
-'''      this.readStoryFlags(gameSessionId),
-    ]);
-''',
-'''      this.readStoryFlags(gameSessionId),
-      this.readRelationships(gameSessionId),
-    ]);
-''')
-          replace_once(path,
-'''    const progressByPlayerId = groupBy(
-      progressRows,
-      (progress) => progress.player_id,
-    );
-''',
-'''    const progressByPlayerId = groupBy(
-      progressRows,
-      (progress) => progress.player_id,
-    );
-    const relationshipsByPlayerId = groupBy(
-      relationshipRows,
-      (relationship) => relationship.player_id,
-    );
-''')
-          replace_once(path,
-'''        storyFlags,
-      };
-''',
-'''        storyFlags,
-        relationships: Object.fromEntries(
-          (relationshipsByPlayerId.get(player.id) ?? []).map((relationship) => [
-            relationship.character_key,
-            normalizeRelationshipRow(relationship),
-          ]),
-        ),
-      };
-''')
-          insert_before(path,
-'''  private async readActivePlayers(
-''',
-'''  private async readRelationships(
-    gameSessionId: string,
-  ): Promise<readonly StoryRelationshipRow[]> {
-    const response = await this.client
-      .from("story_relationships")
-      .select(RELATIONSHIP_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .order("character_key", { ascending: true });
-    assertNoError(response, "story_relationships", "select");
-    return (response.data ?? []) as StoryRelationshipRow[];
-  }
-
-''')
-          insert_before(path,
-'''function isString(value: unknown): value is string {
-''',
-'''function normalizeRelationshipRow(row: StoryRelationshipRow): StoryRelationshipState {
-  return {
-    characterKey: row.character_key,
-    trust: Number(row.trust),
-    respect: Number(row.respect),
-    affinity: Number(row.affinity),
-    obligation: Number(row.obligation),
-    suspicion: Number(row.suspicion),
-    standing: row.standing,
-  };
-}
-
-''')
-
-          # Stock runner dependency wiring.
-          path='backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts'
-          replace_once(path,
-'''import {
-  SupabaseStoryMessageWriter,
-} from "../../storylines/infrastructure/supabaseStoryMessageWriter.ts";
-''',
-'''import {
-  SupabaseStoryMessageWriter,
-} from "../../storylines/infrastructure/supabaseStoryMessageWriter.ts";
-import { SupabaseStoryRelationshipWriter } from "../../storylines/infrastructure/supabaseStoryRelationshipWriter.ts";
-''')
-          replace_once(path,
-'''  const messages = new SupabaseStoryMessageWriter(client as any);
-''',
-'''  const messages = new SupabaseStoryMessageWriter(client as any);
-  const relationships = new SupabaseStoryRelationshipWriter(client as any);
-''')
-          replace_once(path,
-'''        messages,
-      },
-''',
-'''        messages,
-        relationships,
-      },
-''')
-
-          # S3 tests.
-          write('backend/src/domains/storylines/contracts/storyRelationshipContract.test.ts', '''import { parseStoryCondition } from "./storyConditionContracts.ts";
-import { parseStoryEffect } from "./storyEffectContracts.ts";
-
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
-
-Deno.test("relationship effects and conditions parse deterministically", () => {
-  const effect = parseStoryEffect({
-    type: "relationship_adjust",
-    characterKey: "character.northreach.jonis-hale.v1",
-    reason: "Player documented the safety shortcut before escalating.",
-    deltas: { trust: 12, respect: 8, suspicion: -4 },
-  });
-  if (effect.type !== "relationship_adjust") throw new Error("wrong effect type");
-  assertEquals(effect.deltas, { trust: 12, respect: 8, suspicion: -4 });
-
-  const condition = parseStoryCondition({
-    type: "player_relationship_standing_is",
-    characterKey: "character.northreach.jonis-hale.v1",
-    standing: "trusted",
-  });
-  assertEquals(condition, {
-    type: "player_relationship_standing_is",
-    characterKey: "character.northreach.jonis-hale.v1",
-    standing: "trusted",
-  });
-});
-
-function assertEquals(actual: unknown, expected: unknown) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
-  }
-}
-''')
-          write('backend/src/domains/storylines/infrastructure/supabaseStoryRelationshipWriter.test.ts', '''import { SupabaseStoryRelationshipWriter } from "./supabaseStoryRelationshipWriter.ts";
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
-
-Deno.test("relationship writer uses server-owned atomic RPC", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const writer = new SupabaseStoryRelationshipWriter({
-    rpc(name: string, args: Record<string, unknown>) {
-      calls.push({ name, args });
-      return Promise.resolve({ data: [{ relationship_id: "rel_public_jonis" }], error: null });
-    },
-  });
-  const result = await writer.adjustRelationship({
-    gameSessionId: "game-1",
-    playerId: "player-1",
-    storylineEventId: "event-1",
-    effectIndex: 2,
-    characterKey: "character.northreach.jonis-hale.v1",
-    reason: "Documented the shortcut.",
-    deltas: { trust: 12, respect: 8 },
-  });
-  assertEquals(result.id, "rel_public_jonis");
-  assertEquals(calls[0]?.name, "adjust_story_relationship_v1");
-  assertEquals(calls[0]?.args.p_effect_index, 2);
-});
-
-function assertEquals(actual: unknown, expected: unknown) {
-  if (actual !== expected) throw new Error(`Expected ${String(expected)}, received ${String(actual)}`);
-}
-''')
-          write('backend/src/domains/storylines/tests/storyRelationshipMigrationContract.test.ts', '''export {};
-declare const Deno: { readTextFile(path: string): Promise<string>; test(name: string, run: () => void | Promise<void>): void };
-
-Deno.test("relationship migration keeps state private and idempotent", async () => {
-  const path = Deno.args?.[0] ?? "";
-  const sql = await Deno.readTextFile(path);
-  for (const fragment of [
-    "create table public.story_relationships",
-    "create table public.story_relationship_adjustments",
-    "force row level security",
-    "adjust_story_relationship_v1",
-    "unique (game_session_id, player_id, source_storyline_event_id, effect_index)",
-    "revoke all privileges",
-  ]) {
-    if (!sql.includes(fragment)) throw new Error(`missing migration contract: ${fragment}`);
-  }
-});
-''')
-
-          # Existing context fixtures default to no relationships.
-          path='backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts'
-          replace_once(path,
-'''  | "game_session_story_flags";
-''',
-'''  | "game_session_story_flags"
-  | "story_relationships";
-''')
-          replace_once(path,
-'''    game_session_story_flags: [],
-''',
-'''    game_session_story_flags: [],
-    story_relationships: [
-      {
-        game_session_id: "game-1",
-        player_id: "player-1",
-        character_key: "character.northreach.jonis-hale.v1",
-        trust: 42,
-        respect: 30,
-        affinity: 10,
-        obligation: 5,
-        suspicion: 0,
-        standing: "trusted",
-      },
-    ],
-''')
-          replace_once(path,
-'''  assertEquals(contexts[0]?.storyFlags, {
-    northreach_border_closed: true,
-    tariff_level: 2,
-  });
-''',
-'''  assertEquals(contexts[0]?.storyFlags, {
-    northreach_border_closed: true,
-    tariff_level: 2,
-  });
-  assertEquals(contexts[0]?.relationships["character.northreach.jonis-hale.v1"]?.standing, "trusted");
-''')
-          replace_once(path,
-'''  tables.game_session_story_flags = [];
-''',
-'''  tables.game_session_story_flags = [];
-  tables.story_relationships = [];
-''')
-          replace_once(path,
-'''  assertEquals(contexts[0]?.storyFlags, {});
-''',
-'''  assertEquals(contexts[0]?.storyFlags, {});
-  assertEquals(contexts[0]?.relationships, {});
-''')
-
-          # Package script includes S3 tests and migration file variable will be passed at workflow level.
-          path='backend/package.json'
-          text=read(path)
-          if '"test:story-relationships"' not in text:
-              anchor='    "test:player-messaging": '
-              idx=text.find(anchor)
-              if idx < 0: raise SystemExit('package player messaging anchor not found')
-              line_end=text.find('\n', idx)
-              addition='    "test:story-relationships": "deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/contracts/storyRelationshipContract.test.ts src/domains/storylines/infrastructure/supabaseStoryRelationshipWriter.test.ts",\n'
-              text=text[:idx]+addition+text[idx:]
-              write(path,text)
-          PY
+          python3 scripts/story-narrative-s3-apply.py
           git diff --check
 
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
 
-      - name: Verify type boundaries
+      - name: Verify backend and Edge types
         working-directory: backend
         run: npm run typecheck:all
 
-      - name: Verify relationship contracts and writer
+      - name: Verify S3 relationship contracts and writer
         working-directory: backend
         run: npm run test:story-relationships
 
-      - name: Verify Player story context and conditions
+      - name: Verify Player context, conditions, and effect engine
         working-directory: backend
         run: deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts src/domains/storylines/services/storyConditionEngine.test.ts src/domains/storylines/services/storyEffectEngine.test.ts
 
@@ -747,73 +93,40 @@ Deno.test("relationship migration keeps state private and idempotent", async () 
         shell: bash
         run: deno test --allow-read="$MIGRATION" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/storyRelationshipMigrationContract.test.ts -- "$MIGRATION"
 
-      - name: Verify scheduler integration remains green
+      - name: Verify story scheduler integration
         working-directory: backend
         run: npm run test:stock-market-calendar
 
-      - name: Update roadmap for S3 success
+      - name: Update persistent roadmap for S3 success
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import os
-          path=Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
-          text=path.read_text(encoding='utf-8')
-          old='### S3 — Relationship state\n\nStatus: IN PROGRESS'
-          new='### S3 — Relationship state\n\nStatus: COMPLETE ON BRANCH / CONNECTED STAGING PENDING'
-          if old not in text: raise SystemExit('S3 roadmap status anchor missing')
-          text=text.replace(old,new,1)
-          marker='\n## Run-completion rule\n'
-          lines=[
-            '',
-            '### Run 2026-08-11 — S3 relationship state landed',
-            '',
-            f'Workflow run: `{os.environ["GITHUB_RUN_ID"]}`',
-            f'Source head verified by runner: `{os.environ["GITHUB_SHA"]}`',
-            f'Migration: `{os.environ["MIGRATION_NAME"]}`',
-            '',
-            'Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.',
-            '',
-            'Implemented:',
-            '',
-            '- private relationship state keyed by `(game, Player, characterKey)`;',
-            '- bounded trust/respect/affinity/obligation/suspicion metrics and derived standing tiers;',
-            '- immutable relationship adjustment history with exact event/effect replay authority;',
-            '- authored `relationship_adjust` Story effect;',
-            '- relationship metric/standing Story conditions;',
-            '- relationship hydration into authoritative `PlayerStoryContext`;',
-            '- stock-tick Story runner wiring through `SupabaseStoryRelationshipWriter`;',
-            '- no browser write surface and no Player-facing raw numeric relationship meter;',
-            '- relationship tables forced behind RLS/service-role authority.',
-            '',
-            'Verification completed:',
-            '',
-            '- `git diff --check`;',
-            '- `npm run typecheck:all`;',
-            '- `npm run test:story-relationships`;',
-            '- Player Story context/condition/effect focused tests;',
-            '- migration contract test;',
-            '- `npm run test:stock-market-calendar`.',
-            '',
-            'Remaining S3 acceptance:',
-            '',
-            '- connected staging database replay and one end-to-end event -> relationship mutation -> later condition match before merge.',
-            '',
-            'Next: S4 authoritative choice consequences and delayed callbacks, consuming S2 effective choices and S3 relationship state.',
-            '',
-          ]
-          if marker not in text: raise SystemExit('roadmap marker missing')
-          path.write_text(text.replace(marker,'\n'.join(lines)+marker,1),encoding='utf-8')
+          path = Path("docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md")
+          text = path.read_text(encoding="utf-8")
+          old = "### S3 — Relationship state\n\nStatus: IN PROGRESS"
+          new = "### S3 — Relationship state\n\nStatus: COMPLETE ON BRANCH / CONNECTED STAGING PENDING"
+          if old not in text:
+              raise SystemExit("S3 roadmap status anchor missing")
+          text = text.replace(old, new, 1)
+          marker = "\n## Run-completion rule\n"
+          entry = f'''\n### Run 2026-08-11 — S3 relationship state landed\n\nWorkflow run: `{os.environ["GITHUB_RUN_ID"]}`  \nSource head verified by runner: `{os.environ["GITHUB_SHA"]}`  \nMigration: `{os.environ["MIGRATION_NAME"]}`\n\nResult: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.\n\nImplemented:\n\n- private relationship state keyed by `(game, Player, characterKey)`;\n- bounded trust/respect/affinity/obligation/suspicion metrics and derived standing tiers;\n- immutable adjustment history with exact Story event/effect replay authority;\n- authored `relationship_adjust` Story effect;\n- relationship metric/standing Story conditions;\n- relationship hydration into authoritative `PlayerStoryContext`;\n- existing Story runner wiring through `SupabaseStoryRelationshipWriter`;\n- no browser write surface and no raw numeric Player relationship meter.\n\nVerification: `git diff --check`, `npm run typecheck:all`, S3 contract/writer/context/condition/effect/migration tests, and `npm run test:stock-market-calendar`.\n\nRemaining S3 acceptance: connected staging database replay plus one event -> relationship mutation -> later condition match before merge.\n\nNext: S4 authoritative choice consequences and delayed callbacks.\n'''
+          if marker not in text:
+              raise SystemExit("roadmap run-completion marker missing")
+          path.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
           PY
           git diff --check
 
-      - name: Remove temporary S3 workflow/schema body
+      - name: Remove temporary S3 transport
         shell: bash
         run: |
           set -euo pipefail
           rm -f .github/workflows/story-narrative-s3-implement.yml
+          rm -f .github/workflows/story-narrative-s3-bootstrap.yml
           rm -f docs/story/relationship-state-v1.sql.body
+          rm -f scripts/story-narrative-s3-apply.py
 
       - name: Commit verified S3 implementation
         shell: bash
@@ -821,6 +134,7 @@ Deno.test("relationship migration keeps state private and idempotent", async () 
           set -euo pipefail
           git add -A
           git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "feat(story): add recurring character relationship state"
