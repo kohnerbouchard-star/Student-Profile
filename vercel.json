@@ -15,6 +15,14 @@
   },
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "/admin/v2.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/v2.html"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/player-session-proxy?runtimeHealth=1"
     },
