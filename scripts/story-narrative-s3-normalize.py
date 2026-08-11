@@ -15,6 +15,19 @@ def replace_once(path: Path, old: str, new: str) -> None:
 def pre() -> None:
     path = Path("scripts/story-narrative-s3-apply.py")
     text = path.read_text(encoding="utf-8")
+
+    write_old = '''def write(path, text):
+    Path(path).write_text(text, encoding='utf-8')
+'''
+    write_new = '''def write(path, text):
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding='utf-8')
+'''
+    if text.count(write_old) != 1:
+        raise SystemExit(f"S3 write helper anchor matched {text.count(write_old)} times")
+    text = text.replace(write_old, write_new, 1)
+
     old = '''replace_once(path,
 ''' + "'''    game_session_story_flags: [],\\n'''" + ''',
 ''' + "'''    game_session_story_flags: [],\\n    story_relationships: [\\n      { game_session_id: \"game-1\", player_id: \"player-1\", character_key: \"character.northreach.jonis-hale.v1\", trust: 42, respect: 30, affinity: 10, obligation: 5, suspicion: 0, standing: \"trusted\" },\\n    ],\\n'''" + ''')'''
