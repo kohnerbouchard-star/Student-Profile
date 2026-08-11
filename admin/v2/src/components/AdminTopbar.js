@@ -86,7 +86,7 @@ export function AdminTopbar({
     navigationToggle,
     actionSlot,
     setTitle(nextTitle) { setText(titleElement, nextTitle, "Overview"); },
-    setContext(nextContext) { setText(contextElement, nextContext, "Teacher administration"); },
+    setContext(nextContext) { setText(contextElement, nextContext, "Global administration"); },
     setNotificationCount,
     setIdentity,
     setNavigationExpanded(expanded) {
