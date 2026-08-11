@@ -18,6 +18,7 @@ const ITEM_KEY_PATTERN = /^[a-z0-9_-]{1,64}$/;
 const CATEGORY_PATTERN = /^[a-z0-9_-]{1,32}$/;
 const STORE_STATUSES = new Set(["active", "disabled", "archived"]);
 const STORE_VISIBILITIES = new Set(["visible", "hidden"]);
+const STORE_SOURCE_TYPES = new Set(["seeded", "custom"]);
 
 function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -83,6 +84,7 @@ function normalizeStoreItem(row, index) {
   const categoryValue = String(row.category || "").trim().toLowerCase();
   const statusValue = String(row.status || "").trim().toLowerCase();
   const visibilityValue = String(row.visibility || "").trim().toLowerCase();
+  const sourceTypeValue = String(row.sourceType || row.source_type || "").trim().toLowerCase();
   return Object.freeze({
     resourceId: safeResourceId(row),
     rowKey: itemKey || `store-item-${index + 1}`,
@@ -95,6 +97,7 @@ function normalizeStoreItem(row, index) {
     stockQuantity: safeInteger(row.stockQuantity ?? row.stock),
     status: STORE_STATUSES.has(statusValue) ? statusValue : "",
     visibility: STORE_VISIBILITIES.has(visibilityValue) ? visibilityValue : "",
+    sourceType: STORE_SOURCE_TYPES.has(sourceTypeValue) ? sourceTypeValue : "",
     sortOrder: Number.isSafeInteger(Number(row.sortOrder)) ? Number(row.sortOrder) : 0,
     purchaseStats: normalizePurchaseStats(row),
     createdAt: safeText(row.createdAt, 80),
@@ -144,6 +147,17 @@ function stableStringify(value) {
 function successfulMutation(result) {
   if (result?.ok === false) throw result;
   return result;
+}
+
+function seededItemProtection() {
+  return Promise.resolve({
+    ok: false,
+    error: createAdminErrorEnvelope({
+      code: "CONFLICT",
+      retryable: false,
+      userMessage: "Included Store items cannot be edited or archived. Create a custom item when you need a teacher-managed version.",
+    }),
+  });
 }
 
 /** Owns Store reads, mutations, idempotency, route view lifecycle, and cancellation. */
@@ -245,9 +259,6 @@ export function createStoreController({
       const result = successfulMutation(await request(idempotencyKey));
       pendingIdempotency.delete(fingerprint);
       if (!destroyed) notify({ tone: "success", title: successTitle, message: successMessage });
-      // Return the committed mutation outcome independently from the follow-up
-      // read: a failed refetch becomes stale Store data, never a false mutation
-      // failure or an invitation to submit the command again with a new key.
       if (!destroyed) scheduleAuthoritativeRefresh();
       return { ok: true, result, refreshScheduled: !destroyed };
     } catch (error) {
@@ -281,6 +292,7 @@ export function createStoreController({
   }
 
   function updateItem(item, input) {
+    if (item?.sourceType === "seeded") return seededItemProtection();
     if (!item?.resourceId) {
       return Promise.resolve({
         ok: false,
@@ -303,6 +315,7 @@ export function createStoreController({
   }
 
   function archiveItem(item) {
+    if (item?.sourceType === "seeded") return seededItemProtection();
     if (!item?.resourceId) {
       return Promise.resolve({
         ok: false,
