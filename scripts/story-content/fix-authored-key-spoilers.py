@@ -27,6 +27,15 @@ consolidated = consolidated.replace("pre-attack", "verification")
 if "false-calm" in consolidated or "pre-attack" in consolidated:
     raise SystemExit("author-only spoiler token remains in consolidated builder")
 
+# February Day 188 reuses EVIDENCE, whose private-share choiceKey is share-privately.
+# report-privately belongs to DISCLOSURE and is not a valid fallback for EVIDENCE.
+consolidated = replace_once(
+    consolidated,
+    'choice_event(events,188,"correction-accountability","gatekeeper","reflection","A public claim you relied on was weaker than it looked.","How do you respond to the correction?",EVIDENCE,190,212,"report-privately")',
+    'choice_event(events,188,"correction-accountability","gatekeeper","reflection","A public claim you relied on was weaker than it looked.","How do you respond to the correction?",EVIDENCE,190,212,"share-privately")',
+    label="February correction-accountability fallback",
+)
+
 # 2. Materialize every consolidated cross-month callback as a real Story event.
 helper_marker = "def materialize_cross_month_callback"
 if helper_marker not in consolidated:
