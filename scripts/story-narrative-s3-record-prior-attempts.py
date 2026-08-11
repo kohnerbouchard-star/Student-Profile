@@ -11,8 +11,8 @@ if "### Run 2026-08-11 — S3 verification attempt 3" not in text:
     entries.append("""
 ### Run 2026-08-11 — S3 verification attempt 3
 
-Workflow run: `31447867568`  
-Workflow head: `315de96898a68d04c3098427d87d1ae31dfb072e`  
+Workflow run: `31447867568`
+Workflow head: `315de96898a68d04c3098427d87d1ae31dfb072e`
 Ephemeral generated migration: `20260811005947_add_story_relationship_state_v1.sql`
 
 Result: FULL S3 SOURCE TRANSFORM APPLIED EPHEMERALLY; FAILED AT TYPECHECK; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
@@ -44,7 +44,7 @@ if "### Run 2026-08-11 — S3 verification attempt 4" not in text:
     entries.append("""
 ### Run 2026-08-11 — S3 verification attempt 4
 
-Workflow run: `31447994052`  
+Workflow run: `31447994052`
 Workflow head: `9564f87caa44ced64424da36fd2a9e857ce72ad3`
 
 Result: WORKFLOW PARSE FAILURE; ZERO JOBS CREATED; NO S3 SOURCE OR MIGRATION WAS APPLIED.
@@ -57,10 +57,33 @@ Failure:
 
 Correction:
 
-- moved prior-run roadmap text into this standalone Python helper;
-- the verification workflow now calls the helper instead of embedding multi-line Markdown inside YAML.
+- moved prior-run roadmap text into a standalone Python helper;
+- the verification workflow calls the helper instead of embedding multi-line Markdown inside YAML.
 
 Next: launch a fresh S3 workflow from the corrected YAML and generated-test typing fixes.
+""")
+
+if "### Run 2026-08-11 — S3 verification attempt 5" not in text:
+    entries.append("""
+### Run 2026-08-11 — S3 verification attempt 5
+
+Workflow run: `31448062461`
+Workflow head: `028227e3bd011a535625a29b676955a494f9e02e`
+
+Result: FAILED DURING PRIOR-RUN ROADMAP PERSISTENCE; NO S3 SOURCE OR MIGRATION WAS APPLIED.
+
+Failure:
+
+- the standalone ledger helper produced Markdown hard-break trailing spaces on run metadata lines;
+- `git diff --check` rejected those lines before the roadmap commit;
+- Node/Deno/Supabase setup and all S3 implementation/test steps were skipped.
+
+Correction:
+
+- removed trailing-space hard breaks from all helper-generated roadmap entries;
+- kept the standalone helper architecture so YAML remains simple and parse-safe.
+
+Next: persist attempts 3–5 cleanly, then execute S3 verification from the generated-test typing fixes.
 """)
 
 if entries:
