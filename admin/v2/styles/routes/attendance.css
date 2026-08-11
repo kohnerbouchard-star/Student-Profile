@@ -184,20 +184,6 @@
   gap: var(--admin-space-4);
 }
 
-/* Attendance money corrections always settle to Checking in the student's
-   active-country currency. Keep retired global-currency/account routing out of
-   the teacher surface even while the controller retains compatibility args. */
-.admin-attendance-route__action-grid > .admin-attendance-route__field:has([name="currency"]),
-.admin-attendance-route__action-grid > .admin-attendance-route__field:has([name="account"]) {
-  display: none;
-}
-
-.admin-attendance-route__action-grid > .admin-attendance-route__field:has([name="amount"]) > span::after {
-  content: " · local currency → Checking";
-  color: var(--admin-color-text-faint);
-  font-weight: var(--admin-weight-regular);
-}
-
 .admin-attendance-route__action-buttons {
   display: flex;
   flex-wrap: wrap;
