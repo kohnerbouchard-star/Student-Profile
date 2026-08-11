@@ -6,8 +6,12 @@ const attendanceApi = fs.readFileSync(
   "admin/v2/src/routes/attendance/AttendanceApi.js",
   "utf8",
 );
-const attendanceCss = fs.readFileSync(
-  "admin/v2/styles/routes/attendance.css",
+const attendanceRoute = fs.readFileSync(
+  "admin/v2/src/routes/attendance/AttendanceRoute.js",
+  "utf8",
+);
+const bankingRoute = fs.readFileSync(
+  "admin/v2/src/routes/banking/BankingRoute.js",
   "utf8",
 );
 const contractForm = fs.readFileSync(
@@ -47,9 +51,23 @@ test("Attendance teacher reward adjustments are local-currency Checking only", (
   assert.match(functionSource, /currencyMode:\s*"player_country"/);
   assert.match(functionSource, /accountType:\s*"checking"/);
   assert.doesNotMatch(functionSource, /currencyCode/);
-  assert.match(attendanceCss, /name="currency"/);
-  assert.match(attendanceCss, /name="account"/);
-  assert.match(attendanceCss, /local currency → Checking/);
+
+  assert.match(attendanceRoute, /Reward correction · local currency → Checking/);
+  assert.doesNotMatch(attendanceRoute, /name:\s*"currency"/);
+  assert.doesNotMatch(attendanceRoute, /name:\s*"account"/);
+  assert.match(attendanceRoute, /Confirm attendance reward correction/);
+  assert.match(attendanceRoute, /Lock attendance for today\?/);
+  assert.match(attendanceRoute, /AdminConfirmDialog/);
+});
+
+test("Banking balance corrections require consequence review before mutation", () => {
+  assert.match(bankingRoute, /Correct balance/);
+  assert.match(bankingRoute, /Review correction/);
+  assert.match(bankingRoute, /Confirm balance correction/);
+  assert.match(bankingRoute, /Apply correction/);
+  assert.match(bankingRoute, /currentBalance \+ numericAmount/);
+  assert.match(bankingRoute, /AdminConfirmDialog/);
+  assert.match(bankingRoute, /Teacher reason/);
 });
 
 test("Contract money rewards hide ledger routing and converge through the compatibility boundary", () => {
