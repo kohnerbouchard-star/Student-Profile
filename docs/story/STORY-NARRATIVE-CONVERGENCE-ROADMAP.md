@@ -707,6 +707,28 @@ Result: FAILED; no generated migration or regression contract was published.
 
 Inspect the exact generation, source-contract, migration-audit, database-replay, installed-function, lint, or focused Story regression step. Historical migrations and connected staging remain untouched.
 
+### Run 2026-08-11 — Phase C retry after unreleased S2 escape-string replay defect
+
+Workflow run: `31470051598`
+
+Phase C V2 passed forward-migration generation, the S2/S3 source contract, and migration audit, but local Supabase startup failed three times while applying the pre-existing S2 migration `20260810215844_add_story_structured_response_windows_v1.sql`.
+
+Exact replay defect:
+
+- the S2 prompt constraint used `E'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'` with only one SQL escape layer;
+- PostgreSQL therefore expands `\x00` inside the escape string to an actual NUL and rejects the statement with SQLSTATE `22021` before any later forward migration can run;
+- older Messaging migrations show the intended safe form with doubled SQL backslashes so the regexp engine receives the control-character escapes rather than PostgreSQL constructing a NUL.
+
+Narrow exception to the historical-migration immutability rule:
+
+- S2 remains unreleased/branch-only per the connected-state handoff;
+- change only this malformed escape-string literal from one SQL backslash layer to two;
+- add a regression contract for the safe literal;
+- keep the S2 `effect_index` and S3 activation-scope semantic repairs in a newly generated forward migration;
+- require two clean local zero-state database replays before publishing.
+
+No connected staging write occurs in this run.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
