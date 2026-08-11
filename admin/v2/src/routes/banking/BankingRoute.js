@@ -1,5 +1,4 @@
 import {
-  AdminConfirmDialog,
   AdminDataTable,
   AdminDialog,
   AdminEmptyState,
@@ -73,10 +72,10 @@ function summary(model) {
     className: "admin-banking-route__summary",
     attrs: { "aria-label": "Banking summary" },
     children: [
-      metric("Students", model.summary.playerCount, `${displayNumber(model.summary.playersWithAccounts)} with bank accounts`),
-      metric("Checking", model.summary.checkingAccountCount, "Checking accounts"),
-      metric("Savings", model.summary.savingsAccountCount, "Savings accounts"),
-      metric("Currencies", model.summary.currencyCount, "Displayed separately by currency"),
+      metric("Players", model.summary.playerCount, `${displayNumber(model.summary.playersWithAccounts)} with bank accounts`),
+      metric("Checking", model.summary.checkingAccountCount, "Provisioned account rows"),
+      metric("Savings", model.summary.savingsAccountCount, "Provisioned account rows"),
+      metric("Currencies", model.summary.currencyCount, "Kept separate; never cross-summed"),
     ],
   });
 }
@@ -85,7 +84,7 @@ function accountList(accounts, label) {
   if (!accounts.length) {
     return createElement("span", {
       className: "admin-banking-route__not-provisioned",
-      text: `${label} not available`,
+      text: `${label} not provisioned`,
     });
   }
   return createElement("div", {
@@ -121,11 +120,11 @@ function statusPill(status) {
 function capabilityNote() {
   return createElement("aside", {
     className: "admin-banking-route__contract-note",
-    attrs: { "aria-label": "Banking teacher note" },
+    attrs: { "aria-label": "Banking contract scope" },
     children: [
       AdminIcon({ name: "info", size: 18 }),
       createElement("p", {
-        text: "Checking and Savings transfers appear here after students complete them. Teacher corrections change an existing balance only and are recorded in Activity History.",
+        text: "Transfers appear here when they are posted to the authoritative player ledger. The current Admin contract does not expose a personal transfer mutation, so this surface does not initiate transfers.",
       }),
     ],
   });
@@ -133,7 +132,7 @@ function capabilityNote() {
 
 function activityTable(history) {
   const table = AdminDataTable({
-    caption: "Checking and Savings activity",
+    caption: "Posted Checking and Savings ledger activity",
     rowKey: (entry) => entry.rowKey,
     rows: history.entries,
     columns: [
@@ -146,7 +145,7 @@ function activityTable(history) {
           className: "admin-banking-route__activity-copy",
           children: [
             createElement("strong", { text: value }),
-            createElement("small", { text: entry.isTransfer ? "Account transfer" : entry.category }),
+            createElement("small", { text: entry.isTransfer ? "Posted account transfer" : entry.category }),
           ],
         }),
       },
@@ -161,11 +160,11 @@ function activityTable(history) {
           text: displayAmount(value, entry.currencyCode, { signed: true }),
         }),
       },
-      { key: "entryType", label: "Type", render: (value) => titleCase(value) },
+      { key: "entryType", label: "Entry", render: (value) => titleCase(value) },
     ],
     emptyState: AdminEmptyState({
-      title: "No banking activity yet",
-      message: "No Checking or Savings activity is available for this student.",
+      title: "No posted banking activity",
+      message: "No Checking or Savings ledger entries are available for this player.",
       compact: true,
     }),
   });
@@ -202,8 +201,8 @@ function activityPanel({ player, historyState, onClose, onRefresh }) {
     }));
   } else if (historyState.status === ADMIN_DATA_STATES.EMPTY) {
     body.append(AdminEmptyState({
-      title: "No banking activity yet",
-      message: "No Checking or Savings activity is available for this student.",
+      title: "No posted banking activity",
+      message: "No Checking or Savings ledger entries are available for this player.",
       compact: true,
     }));
   } else {
@@ -215,7 +214,7 @@ function activityPanel({ player, historyState, onClose, onRefresh }) {
           createElement("div", {
             className: "admin-banking-route__refresh-state",
             attrs: { role: "status" },
-            children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing activity…"],
+            children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing posted activity…"],
           }),
           table,
         ],
@@ -238,9 +237,9 @@ function activityPanel({ player, historyState, onClose, onRefresh }) {
         className: "admin-banking-route__activity-header",
         children: [
           createElement("div", { children: [
-            createElement("span", { text: "Account activity" }),
+            createElement("span", { text: "Posted ledger activity" }),
             createElement("h2", { text: player.displayName }),
-            createElement("p", { text: "Checking and Savings entries for this student." }),
+            createElement("p", { text: "Checking and Savings entries only. Private ownership identifiers are not displayed." }),
           ] }),
           actions,
         ],
@@ -258,7 +257,7 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
 
   const search = AdminField({
     name: "banking-search",
-    label: "Search students",
+    label: "Search players",
     type: "search",
     placeholder: "Name, roster label, or country",
     autocomplete: "off",
@@ -282,10 +281,10 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
   });
 
   const table = AdminDataTable({
-    caption: "Student Checking and Savings accounts",
+    caption: "Player Checking and Savings accounts",
     rowKey: (player) => player.rowKey,
     columns: [
-      { key: "displayName", label: "Student", rowHeader: true, render: (_value, player) => playerCopy(player) },
+      { key: "displayName", label: "Player", rowHeader: true, render: (_value, player) => playerCopy(player) },
       { key: "countryName", label: "Country", render: (value) => value || "Unassigned" },
       { key: "status", label: "Status", render: (value) => statusPill(value) },
       { key: "checking", label: "Checking", render: (value) => accountList(value, "Checking") },
@@ -307,7 +306,7 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
               onClick: () => onSelectPlayer(player),
             }),
             button({
-              label: "Correct balance",
+              label: "Adjust",
               icon: "banking",
               quiet: true,
               action: "adjust",
@@ -320,7 +319,7 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
       },
     ],
     emptyState: AdminEmptyState({
-      title: "No students match",
+      title: "No players match",
       message: "Try changing the search or currency filter.",
       compact: true,
     }),
@@ -352,7 +351,7 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
       controls,
       createElement("section", {
         className: "admin-banking-route__catalog",
-        attrs: { "aria-label": "Student bank accounts" },
+        attrs: { "aria-label": "Player bank accounts" },
         children: table.element,
       }),
     ],
@@ -378,7 +377,6 @@ export function BankingRoute({
   function destroyAdjustmentDialog() {
     const active = adjustmentDialog;
     adjustmentDialog = null;
-    active?.confirm?.destroy?.();
     active?.dialog.destroy();
   }
 
@@ -398,20 +396,20 @@ export function BankingRoute({
     });
     const amount = AdminField({
       name: "banking-adjustment-amount",
-      label: "Correction amount",
+      label: "Adjustment amount",
       type: "number",
       required: true,
-      placeholder: "Use a negative amount to subtract",
-      hint: "Positive adds to the balance; negative subtracts from it.",
+      placeholder: "Use a negative amount to debit",
+      hint: "A positive amount credits the account; a negative amount debits it.",
     });
     amount.control.setAttribute("step", "0.01");
     const reason = AdminField({
       name: "banking-adjustment-reason",
-      label: "Teacher reason",
+      label: "Reason",
       type: "textarea",
       required: true,
-      placeholder: "Why does this student's balance need to be corrected?",
-      hint: "This reason is recorded in Activity History.",
+      placeholder: "Why is this administrative correction required?",
+      hint: "Required for the authoritative ledger and audit trail.",
     });
     reason.control.setAttribute("maxlength", "300");
     const validation = AdminValidationSummary();
@@ -428,15 +426,15 @@ export function BankingRoute({
     const submit = createElement("button", {
       className: "admin-button",
       attrs: { type: "submit", form: "", "data-dialog-action": "submit" },
-      children: [AdminIcon({ name: "banking", size: 17 }), "Review correction"],
+      children: [AdminIcon({ name: "banking", size: 17 }), "Post adjustment"],
     });
     const footer = createElement("div", {
       className: "admin-banking-adjustment-form__actions",
       children: [cancel, submit],
     });
     const dialog = AdminDialog({
-      title: `Correct ${player.displayName}'s balance`,
-      description: "Use this only to correct an existing Checking or Savings balance. The correction is recorded in Activity History.",
+      title: `Adjust ${player.displayName}`,
+      description: "Post an administrative adjustment to an existing Checking or Savings account. This does not create accounts or initiate transfers.",
       content: form,
       footer,
       size: "medium",
@@ -451,9 +449,7 @@ export function BankingRoute({
     form.append(submit);
     submit.classList.add("admin-u-visually-hidden");
 
-    let footerSubmit;
-
-    async function reviewAdjustment() {
+    async function submitAdjustment() {
       const errors = [];
       const index = Number(account.getValue());
       const selectedAccount = Number.isSafeInteger(index) ? accounts[index] : null;
@@ -472,38 +468,18 @@ export function BankingRoute({
       validation.setErrors(errors, { focus: errors.length > 0 });
       if (errors.length > 0) return;
 
-      adjustmentDialog?.confirm?.destroy?.();
-      const currentBalance = Number(selectedAccount.balance);
-      const nextBalance = Number.isFinite(currentBalance) ? currentBalance + numericAmount : null;
-      const accountLabel = selectedAccount.accountType === "savings" ? "Savings" : "Checking";
-      const confirm = AdminConfirmDialog({
-        title: "Confirm balance correction",
-        message: `Apply ${displayAmount(numericAmount, selectedAccount.currencyCode, { signed: true })} to ${player.displayName}'s ${accountLabel}?`,
-        detail: Number.isFinite(nextBalance)
-          ? `${displayAmount(currentBalance, selectedAccount.currencyCode)} → ${displayAmount(nextBalance, selectedAccount.currencyCode)} · ${reasonText}`
-          : reasonText,
-        confirmLabel: "Apply correction",
-        tone: "danger",
-        failureMessage: "The balance correction could not be applied. Review the account and try again.",
-        async onConfirm() {
-          const result = await onAdjust(player, selectedAccount, { amount: numericAmount, reason: reasonText });
-          if (result?.ok === true) {
-            dialog.close("saved");
-            return true;
-          }
-          return false;
-        },
-      });
-      if (adjustmentDialog) adjustmentDialog.confirm = confirm;
-      void confirm.open(footerSubmit);
+      dialog.setBusy(true);
+      const result = await onAdjust(player, selectedAccount, { amount: numericAmount, reason: reasonText });
+      if (result?.ok === true) dialog.close("saved");
+      else dialog.setBusy(false);
     }
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      void reviewAdjustment();
+      void submitAdjustment();
     });
-    footerSubmit = button({
-      label: "Review correction",
+    const footerSubmit = button({
+      label: "Post adjustment",
       icon: "banking",
       action: "submit-adjustment",
       onClick: () => form.requestSubmit(),
@@ -511,7 +487,7 @@ export function BankingRoute({
     footerSubmit.dataset.dialogAction = "submit";
     cancel.addEventListener("click", () => dialog.close("cancelled"));
     footer.replaceChildren(cancel, footerSubmit);
-    adjustmentDialog = { dialog, form, confirm: null };
+    adjustmentDialog = { dialog, form };
     dialog.open(opener);
   }
 
@@ -534,7 +510,7 @@ export function BankingRoute({
       className: "admin-banking-route__loading-layout",
       children: [
         AdminSkeleton({ label: "Loading Banking summary", count: 4, shape: "card" }),
-        AdminSkeleton({ label: "Loading student bank accounts", count: 6, shape: "row" }),
+        AdminSkeleton({ label: "Loading player bank accounts", count: 6, shape: "row" }),
       ],
     }));
   } else if (state.status === ADMIN_DATA_STATES.FAILED) {
@@ -549,8 +525,8 @@ export function BankingRoute({
     content.append(
       capabilityNote(),
       AdminEmptyState({
-        title: "No students available",
-        message: "This simulation does not currently have students with Banking records.",
+        title: "No players available",
+        message: "This game does not currently have players with Banking records to supervise.",
       }),
     );
   } else {
@@ -593,9 +569,9 @@ export function BankingRoute({
   }
 
   const frame = AdminPageFrame({
-    eyebrow: "Economy",
+    eyebrow: "Finance",
     title: "Banking",
-    description: "Review student Checking and Savings balances and account activity. Balance corrections require a reason and confirmation before they are applied.",
+    description: "Supervise authoritative Checking and Savings balances and posted ledger activity. Administrative corrections use the existing ledger adjustment contract.",
     actions: refresh,
     content,
   });
