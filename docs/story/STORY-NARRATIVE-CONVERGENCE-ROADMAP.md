@@ -621,6 +621,14 @@ Result: FAILED; generated packs and local recovery edits were discarded before p
 
 Inspect the exact failed job log. Preserve all parser, callback, privacy, coverage, hidden-canon, density, Messaging, and scheduler assertions.
 
+### Run 2026-08-11 — S5 source recovery retry after Day 323 stable-key dedupe
+
+Source head: `dc8b5a4a8222c5c2221d61cefdf61f8ce3cfe730`
+
+The prior retry passed full backend/Edge typecheck and all eleven monthly parser contracts, then the whole-campaign uniqueness gate found Day 323 emitted `event.campaign.d323.personal-future.v1` twice: once as an empty anchor and once as the actual structured Player choice.
+
+This retry removes only the redundant empty anchor. The structured personal-future choice retains the canonical Day-323 key and all fixed-anchor, callback, privacy, coverage, and hidden-canon assertions remain unchanged.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
