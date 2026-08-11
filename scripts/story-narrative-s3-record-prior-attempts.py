@@ -17,27 +17,11 @@ Ephemeral generated migration: `20260811005947_add_story_relationship_state_v1.s
 
 Result: FULL S3 SOURCE TRANSFORM APPLIED EPHEMERALLY; FAILED AT TYPECHECK; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
 
-Passed before failure:
+Passed before failure: exact branch/S2 ancestry and staged-input guard; pinned Node/Deno/Supabase CLI; migration generation; full guarded transform; `git diff --check`; and `npm ci`.
 
-- exact branch/S2 ancestry and staged-input guard;
-- pinned Node, Deno, and Supabase CLI setup;
-- CLI-generated migration placement;
-- guarded pre-normalization, complete S3 source transform, and post-normalization;
-- `git diff --check`;
-- `npm ci` with zero reported vulnerabilities.
+Failure was limited to generated tests: optional relationship access and fake generic RPC typing. Runtime S3 files produced no reported compiler error.
 
-Typecheck failure was limited to generated tests:
-
-- `supabasePlayerStoryContextRepository.test.ts` accessed optional `relationships` without optional chaining;
-- `supabaseStoryRelationshipWriter.test.ts` used a concrete fake RPC function that did not satisfy the writer client's generic RPC signature;
-- no S3 runtime implementation file produced the reported compiler errors.
-
-Correction:
-
-- generated context test now uses optional chaining for the compatibility-optional relationship map;
-- generated writer test casts its intentionally minimal fake client at the test boundary while preserving the runtime generic client contract.
-
-Next: rerun full S3 verification and proceed to focused relationship/runtime tests if typecheck clears.
+Correction: generated context test uses optional chaining and generated writer test casts its intentionally minimal fake client at the test boundary.
 """)
 
 if "### Run 2026-08-11 — S3 verification attempt 4" not in text:
@@ -49,18 +33,7 @@ Workflow head: `9564f87caa44ced64424da36fd2a9e857ce72ad3`
 
 Result: WORKFLOW PARSE FAILURE; ZERO JOBS CREATED; NO S3 SOURCE OR MIGRATION WAS APPLIED.
 
-Failure:
-
-- the temporary workflow embedded a multi-line Python string whose contents escaped the YAML block indentation;
-- GitHub rejected the workflow before job creation (`jobs: []`);
-- the S3 source/test typing corrections were therefore not exercised by this run.
-
-Correction:
-
-- moved prior-run roadmap text into a standalone Python helper;
-- the verification workflow calls the helper instead of embedding multi-line Markdown inside YAML.
-
-Next: launch a fresh S3 workflow from the corrected YAML and generated-test typing fixes.
+Failure: embedded multi-line Python text escaped the YAML block indentation. Correction: prior-run roadmap text moved to a standalone Python helper.
 """)
 
 if "### Run 2026-08-11 — S3 verification attempt 5" not in text:
@@ -72,18 +45,43 @@ Workflow head: `028227e3bd011a535625a29b676955a494f9e02e`
 
 Result: FAILED DURING PRIOR-RUN ROADMAP PERSISTENCE; NO S3 SOURCE OR MIGRATION WAS APPLIED.
 
+Failure: Markdown hard-break trailing spaces from the ledger helper were rejected by `git diff --check`. Correction: helper output was made diff-clean.
+""")
+
+if "### Run 2026-08-11 — S3 verification attempt 6" not in text:
+    entries.append("""
+### Run 2026-08-11 — S3 verification attempt 6
+
+Workflow run: `31448141052`
+Workflow head: `1e0efc87596052be5b881b01150f85caafe8a160`
+Ephemeral generated migration: `20260811010438_add_story_relationship_state_v1.sql`
+
+Result: TYPECHECK + NEW S3 CONTRACT TESTS GREEN; FAILED IN EXISTING PLAYER STORY CONTEXT FIXTURE; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- prior attempts 3–5 were successfully persisted to the roadmap in commit `292e9846b60ba6524606002824f5cc74205a1ee4`;
+- exact branch/S2 guard and pinned toolchain;
+- CLI migration generation and complete guarded S3 transform;
+- `git diff --check` and `npm ci`;
+- `npm run typecheck:all`;
+- `npm run test:story-relationships` (2/2 passed);
+- all 14 existing Story condition-engine tests;
+- all 12 existing Story effect-engine tests.
+
 Failure:
 
-- the standalone ledger helper produced Markdown hard-break trailing spaces on run metadata lines;
-- `git diff --check` rejected those lines before the roadmap commit;
-- Node/Deno/Supabase setup and all S3 implementation/test steps were skipped.
+- one existing `supabasePlayerStoryContextRepository.test.ts` fixture expected checking cash `1250` but omitted the `currency_code` fields required by the current production repository contract;
+- the repository correctly returned `0` because no valuation currency could be resolved;
+- this was an inherited stale fixture exposed by the expanded S3 focused suite, not a relationship runtime defect.
 
 Correction:
 
-- removed trailing-space hard breaks from all helper-generated roadmap entries;
-- kept the standalone helper architecture so YAML remains simple and parse-safe.
+- fixture country profiles now carry canonical NRC/YRC currency codes;
+- checking-balance rows now carry the matching currency codes;
+- no production cash/banking logic was changed.
 
-Next: persist attempts 3–5 cleanly, then execute S3 verification from the generated-test typing fixes.
+Next: rerun S3 from the corrected fixture normalization, then proceed through migration-contract and stock-story scheduler checks.
 """)
 
 if entries:
