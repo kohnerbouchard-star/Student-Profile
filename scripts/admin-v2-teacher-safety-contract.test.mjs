@@ -14,6 +14,14 @@ const contractForm = fs.readFileSync(
   "admin/v2/src/routes/contracts/ContractForm.js",
   "utf8",
 );
+const storeController = fs.readFileSync(
+  "admin/v2/src/routes/store/StoreController.js",
+  "utf8",
+);
+const storeRoute = fs.readFileSync(
+  "admin/v2/src/routes/store/StoreRoute.js",
+  "utf8",
+);
 const storeCss = fs.readFileSync(
   "admin/v2/styles/routes/store.css",
   "utf8",
@@ -71,11 +79,17 @@ test("Contract money rewards hide ledger routing and converge through the compat
   assert.match(teacherSafetyMigration, /v_currency_mode := 'player_country'/);
 });
 
-test("Seeded Store definitions are protected in both presentation and persistence", () => {
+test("Seeded Store definitions are protected by canonical provenance at every layer", () => {
+  assert.match(storeController, /STORE_SOURCE_TYPES = new Set\(\["seeded", "custom"\]\)/);
+  assert.match(storeController, /sourceType:\s*STORE_SOURCE_TYPES\.has\(sourceTypeValue\)/);
+  assert.match(storeController, /item\?\.sourceType === "seeded"/);
+  assert.match(storeRoute, /if \(item\.sourceType === "seeded"\)/);
+  assert.match(storeRoute, /Included content · definition locked/);
+  assert.match(storeRoute, /item\.sourceType === "custom"/);
+
+  // CSS remains a presentation fallback for older media-marked rows, but it is
+  // not the ownership authority.
   assert.match(storeCss, /data-media-kind="seeded"/);
-  assert.match(storeCss, /data-store-action="edit"/);
-  assert.match(storeCss, /data-store-action="archive"/);
-  assert.match(storeCss, /Included content · definition locked/);
 
   assert.match(teacherSafetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
   assert.match(teacherSafetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
