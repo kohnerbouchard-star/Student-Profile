@@ -1,0 +1,116 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+
+const attendanceApi = fs.readFileSync(
+  "admin/v2/src/routes/attendance/AttendanceApi.js",
+  "utf8",
+);
+const attendanceCss = fs.readFileSync(
+  "admin/v2/styles/routes/attendance.css",
+  "utf8",
+);
+const contractForm = fs.readFileSync(
+  "admin/v2/src/routes/contracts/ContractForm.js",
+  "utf8",
+);
+const storeCss = fs.readFileSync(
+  "admin/v2/styles/routes/store.css",
+  "utf8",
+);
+const navigation = fs.readFileSync(
+  "admin/v2/src/components/AdminNavigation.js",
+  "utf8",
+);
+const topbar = fs.readFileSync(
+  "admin/v2/src/components/AdminTopbar.js",
+  "utf8",
+);
+const adminMutation = fs.readFileSync(
+  "backend/src/platform/supabase/adminMutation.ts",
+  "utf8",
+);
+const teacherSafetyMigration = fs.readFileSync(
+  "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql",
+  "utf8",
+);
+
+test("Attendance teacher reward adjustments are local-currency Checking only", () => {
+  const functionSource = attendanceApi.match(
+    /function adjustAttendanceReward\([\s\S]*?\n  \}/,
+  )?.[0] ?? "";
+  assert.ok(functionSource, "Expected the Admin V2 Attendance reward adapter.");
+  assert.match(functionSource, /currencyMode:\s*"player_country"/);
+  assert.match(functionSource, /accountType:\s*"checking"/);
+  assert.doesNotMatch(functionSource, /currencyCode/);
+  assert.match(attendanceCss, /name="currency"/);
+  assert.match(attendanceCss, /name="account"/);
+  assert.match(attendanceCss, /local currency → Checking/);
+});
+
+test("Contract money rewards hide ledger routing and converge through the compatibility boundary", () => {
+  assert.match(contractForm, /label:\s*"Money reward"/);
+  assert.match(contractForm, /active-country currency/);
+  assert.doesNotMatch(contractForm, /name:\s*"rewardCurrency"/);
+  assert.match(
+    contractForm,
+    /rewardPayload:\s*rewardAmount > 0[\s\S]*?\{ cash:\s*\{ amount:/,
+    "The current Admin API compatibility adapter still receives its bounded cash alias.",
+  );
+  assert.doesNotMatch(
+    contractForm,
+    /rewardPayload:[\s\S]{0,240}currencyCode/,
+    "The teacher Contract form must not choose a reward currency.",
+  );
+
+  assert.match(teacherSafetyMigration, /v_account_type text := 'checking'/);
+  assert.match(teacherSafetyMigration, /player_country_assignments/);
+  assert.match(teacherSafetyMigration, /country_profiles/);
+  assert.match(teacherSafetyMigration, /where key_name not in \('checking', 'cash', 'items'\)/);
+  assert.match(teacherSafetyMigration, /v_reward \? 'cash'/);
+  assert.match(teacherSafetyMigration, /v_currency_mode := 'player_country'/);
+});
+
+test("Seeded Store definitions are protected in both presentation and persistence", () => {
+  assert.match(storeCss, /data-media-kind="seeded"/);
+  assert.match(storeCss, /data-store-action="edit"/);
+  assert.match(storeCss, /data-store-action="archive"/);
+  assert.match(storeCss, /Included content · definition locked/);
+
+  assert.match(teacherSafetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
+  assert.match(teacherSafetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
+  assert.match(teacherSafetyMigration, /v_operation in \('update', 'archive'\)/);
+  assert.match(adminMutation, /seeded_store_item_protected/);
+  assert.match(adminMutation, /Included Store items cannot be edited or archived/);
+});
+
+test("Teacher presentation vocabulary does not alter internal route authority", () => {
+  for (const expected of [
+    "Teacher Console",
+    "Students",
+    "Stock Market",
+    "Student Banking",
+    "Student Loans",
+    "Student Businesses",
+    "Marketplace Review",
+    "Redemption Requests",
+    "World & Simulation",
+    "Student Progress",
+    "Simulation Settings",
+    "Activity History",
+  ]) {
+    assert.match(navigation, new RegExp(expected.replace(/[&]/g, "\\&")));
+  }
+  assert.match(topbar, /Teacher Console/);
+  assert.match(topbar, /administrator/);
+  assert.match(topbar, /return !text \|\| text\.toLowerCase\(\) === "administrator" \? "Teacher"/);
+
+  const registry = fs.readFileSync(
+    "admin/v2/src/core/navigation-registry.js",
+    "utf8",
+  );
+  assert.match(registry, /id:\s*"players"/);
+  assert.match(registry, /permission:\s*"players\.manage"/);
+  assert.match(registry, /id:\s*"world-management"/);
+  assert.match(registry, /permission:\s*"world\.manage"/);
+});
