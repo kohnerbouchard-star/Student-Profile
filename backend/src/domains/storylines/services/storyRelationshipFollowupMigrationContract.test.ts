@@ -14,7 +14,7 @@ const ACTIVATION = new URL(
   import.meta.url,
 );
 
-Deno.test("relationship follow-up seed covers ten countries and uses persisted relationship conditions", async () => {
+Deno.test("relationship follow-up seed covers ten countries, uses persisted relationship conditions, and stays globally dormant", async () => {
   const sql = await Deno.readTextFile(FOLLOWUPS);
 
   for (const contract of [
@@ -38,36 +38,43 @@ Deno.test("relationship follow-up seed covers ten countries and uses persisted r
     "character.xalvoria.elian-vor.v1",
     "character.dravenlok.orsa-bren.v1",
     "character.syndalis.aven-sorel.v1",
+    "'normal',\n      false",
+    "'major',\n      false",
+    "is_active = false",
   ]) {
     assertIncludes(sql, contract);
   }
 
   assertEquals(countOccurrences(sql, '"country":"'), 10);
+  assertNotIncludes(sql, "is_active = true");
   assertEquals(firstNonblank(sql), "begin;");
   assertEquals(lastNonblank(sql), "commit;");
 });
 
-Deno.test("relationship follow-ups remain globally dormant and enable per game after arrival contact", async () => {
+Deno.test("relationship follow-ups enable only through game-scoped overrides after arrival contact", async () => {
   const sql = await Deno.readTextFile(ACTIVATION);
 
   for (const contract of [
     "create table if not exists public.game_session_story_event_overrides",
     "primary key (game_session_id, storyline_event_id)",
-    "zzz_defer_relationship_followups_after_full_game_activation_v1",
-    "set is_active = false",
+    "force row level security",
     "enable_relationship_followups_after_arrival_contact_v1",
     "new.payload -> 'payload' ->> 'phase'",
     "= 'arrival'",
     "insert into public.game_session_story_event_overrides",
     "on conflict (game_session_id, storyline_event_id) do update",
+    "select distinct on (impact.game_session_id)",
     "relationship_%_sponsor_followup",
     "meridian_fracture_%_sponsor_reaction",
     "grant select, insert, update, delete",
+    "drop trigger if exists zzz_defer_relationship_followups_after_full_game_activation_v1",
   ]) {
     assertIncludes(sql, contract);
   }
 
+  assertNotIncludes(sql, "update public.storyline_events");
   assertNotIncludes(sql, "set is_active = true");
+  assertNotIncludes(sql, "create trigger zzz_defer_relationship_followups_after_full_game_activation_v1");
   assertEquals(firstNonblank(sql), "begin;");
   assertEquals(lastNonblank(sql), "commit;");
 });
