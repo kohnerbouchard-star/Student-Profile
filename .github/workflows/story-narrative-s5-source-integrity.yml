@@ -1,81 +1,55 @@
-name: Story Narrative S5 Source Recovery
+name: Story Narrative S5 Source Integrity
 
 on:
+  pull_request:
+    paths:
+      - "docs/seed-content/story/content/**"
+      - "scripts/story-content/build-act1-august-pack.py"
+      - "scripts/story-content/build-act2-september-pack.py"
+      - "scripts/story-content/build-act2-october-pack.py"
+      - "scripts/story-content/build-act3-act8-packs.py"
+      - "scripts/story-content-all-packs-contract.test.mjs"
+      - "backend/src/domains/storylines/tests/act1AugustStoryContentPack.test.ts"
+      - "backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts"
+      - "backend/src/domains/storylines/contracts/**"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - ".github/workflows/story-narrative-s5-source-integrity.yml"
   push:
     branches:
+      - main
       - feat/story-narrative-convergence-v1
     paths:
+      - "docs/seed-content/story/content/**"
+      - "scripts/story-content/build-act1-august-pack.py"
+      - "scripts/story-content/build-act2-september-pack.py"
+      - "scripts/story-content/build-act2-october-pack.py"
+      - "scripts/story-content/build-act3-act8-packs.py"
+      - "scripts/story-content-all-packs-contract.test.mjs"
+      - "backend/src/domains/storylines/tests/act1AugustStoryContentPack.test.ts"
+      - "backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts"
+      - "backend/src/domains/storylines/contracts/**"
+      - "backend/package.json"
+      - "backend/package-lock.json"
       - ".github/workflows/story-narrative-s5-source-integrity.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: story-narrative-s5-source-recovery
-  cancel-in-progress: false
+  group: story-narrative-s5-source-integrity-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  recover:
+  integrity:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - name: Check out exact story branch source
+      - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Record authoritative S5 recovery start
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/feat/story-narrative-convergence-v1"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-
-          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
-          text = path.read_text(encoding='utf-8')
-          s5 = text.index('### S5 — Narrative content saturation tranche')
-          s6 = text.index('### S6 — Campaign saturation/reachability audit', s5)
-          section = text[s5:s6]
-          if 'Status: PLANNED' in section:
-              section = section.replace('Status: PLANNED', 'Status: SOURCE RECOVERY IN PROGRESS / RUNTIME BINDING + CONNECTED STAGING PENDING', 1)
-              text = text[:s5] + section + text[s6:]
-          elif 'Status: SOURCE RECOVERY IN PROGRESS / RUNTIME BINDING + CONNECTED STAGING PENDING' not in section:
-              raise SystemExit('unexpected S5 status')
-
-          marker = '\n## Run-completion rule\n'
-          heading = '### Run 2026-08-11 — S5 authoritative source persistence recovery launched'
-          if heading not in text:
-              body = '\n'.join([
-                  '', heading, '',
-                  f"Source head: `{os.environ['GITHUB_SHA']}`", '',
-                  'Authoritative pre-run audit:', '',
-                  '- `docs/seed-content/story/content/` is absent at the verified branch source even though deterministic builders survive.',
-                  '- The prior S5 integrity workflow guarded for all 11 generated packs before running those builders, so it could not recover a missing source tree.',
-                  '- September -> October, December -> January, March -> April, and May -> June callbacks were represented as cross-pack plans rather than executable target Story rules.',
-                  '- S1 defines `story_messages.effect_index`, while S2 queries `story_messages.source_effect_index`.',
-                  '- S3 validates a global `storyline_events` definition through a nonexistent `game_session_id` column instead of activation through `game_session_storylines`.',
-                  '- The current Story runner writes final event resolution before effects and assigns `effectIndex` from flattened matched-Player order; both remain queued for the reliability tranche after source recovery.', '',
-                  'This run will regenerate all 11 packs before existence checks, remove spoiler-bearing stable keys, materialize all four cross-month callbacks, run per-pack and whole-campaign parser/coverage tests, and publish generated source only if the full source boundary is green.', '',
-                  'S5 is not complete at launch; News/Contract/system adapters, runner reliability, connected staging, S6 reachability, and S7 acceptance remain outstanding.', ''
-              ])
-              if marker not in text:
-                  raise SystemExit('roadmap marker missing')
-              text = text.replace(marker, body + marker, 1)
-          path.write_text(text, encoding='utf-8')
-          PY
-          git diff --check
-          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S5 source recovery start"
-            git push origin HEAD:feat/story-narrative-convergence-v1
-          fi
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -89,57 +63,36 @@ jobs:
         with:
           deno-version: v2.9.3
 
-      - name: Repair authored source and cross-month callback contracts
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify deterministic builders and committed source parity
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/story-content/fix-authored-key-spoilers.py
           python3 -m py_compile \
-            scripts/story-content/fix-authored-key-spoilers.py \
             scripts/story-content/build-act1-august-pack.py \
             scripts/story-content/build-act2-september-pack.py \
             scripts/story-content/build-act2-october-pack.py \
             scripts/story-content/build-act3-act8-packs.py
-          git diff --check
-
-      - name: Generate all 11 monthly packs before existence checks
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf docs/seed-content/story/content
           python3 scripts/story-content/build-act1-august-pack.py
           python3 scripts/story-content/build-act2-september-pack.py
           python3 scripts/story-content/build-act2-october-pack.py
           python3 scripts/story-content/build-act3-act8-packs.py
-          for f in \
-            act1-august-content-pack-v1.json \
-            act2-september-content-pack-v1.json \
-            act2-october-content-pack-v1.json \
-            act3-november-content-pack-v1.json \
-            act3-december-content-pack-v1.json \
-            act4-january-content-pack-v1.json \
-            act4-february-content-pack-v1.json \
-            act5-march-content-pack-v1.json \
-            act6-april-content-pack-v1.json \
-            act7-may-content-pack-v1.json \
-            act8-june-content-pack-v1.json; do
-            test -s "docs/seed-content/story/content/$f"
-          done
-          git diff --check
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
+          test "$(find docs/seed-content/story/content -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')" = "11"
+          test -z "$(git status --porcelain --untracked-files=all -- docs/seed-content/story/content)"
+          git diff --exit-code -- docs/seed-content/story/content
 
       - name: Verify backend and Edge types
         working-directory: backend
         run: npm run typecheck:all
 
-      - name: Verify August pack contract
+      - name: Verify August Story pack
         working-directory: backend
         run: deno test --allow-read=../docs/seed-content/story/content/act1-august-content-pack-v1.json --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/act1AugustStoryContentPack.test.ts
 
-      - name: Verify September-June monthly pack contracts
+      - name: Verify September-June Story packs
         working-directory: backend
         shell: bash
         run: |
@@ -158,105 +111,17 @@ jobs:
             deno test --allow-read="../docs/seed-content/story/content/$f" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts -- "../docs/seed-content/story/content/$f"
           done
 
-      - name: Verify whole-campaign authored source integrity
+      - name: Verify whole-campaign Story source
         run: node scripts/story-content-all-packs-contract.test.mjs
 
-      - name: Verify S4 authoritative callbacks remain green
+      - name: Verify S4 choice callbacks
         working-directory: backend
         run: npm run test:story-choice-callbacks
 
-      - name: Verify Player Messaging remains green
+      - name: Verify Player Messaging
         working-directory: backend
         run: npm run test:player-messaging
 
-      - name: Verify stock/story scheduler integration remains green
+      - name: Verify stock Story scheduler integration
         working-directory: backend
         run: npm run test:stock-market-calendar
-
-      - name: Publish recovered authored source
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-
-          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
-          text = path.read_text(encoding='utf-8')
-          s5 = text.index('### S5 — Narrative content saturation tranche')
-          s6 = text.index('### S6 — Campaign saturation/reachability audit', s5)
-          section = text[s5:s6]
-          section = section.replace(
-              'Status: SOURCE RECOVERY IN PROGRESS / RUNTIME BINDING + CONNECTED STAGING PENDING',
-              'Status: AUTHORED SOURCE RECOVERED / RUNTIME BINDING + CONNECTED STAGING PENDING',
-              1,
-          )
-          text = text[:s5] + section + text[s6:]
-          marker = '\n## Run-completion rule\n'
-          heading = '### Run 2026-08-11 — S5 authored source recovery green'
-          if heading not in text:
-              body = '\n'.join([
-                  '', heading, '',
-                  f"Workflow run: `{os.environ['GITHUB_RUN_ID']}`", '',
-                  'Result: GREEN FOR THE AUTHORED-SOURCE RECOVERY BOUNDARY.', '',
-                  '- All 11 monthly JSON packs were regenerated from deterministic builders and physically committed.',
-                  '- Days 1–334, fixed anchors, ten-country coverage, safe public keys, hidden-canon timing, parser validity, and authored content-density thresholds passed.',
-                  '- September -> October, December -> January, March -> April, and May -> June now resolve to executable `player_story_choice_is` callback rules with proven `relationship_adjust` effects.',
-                  '- Backend/Edge typecheck, S4 callbacks, Player Messaging, and stock/story scheduler integration remained green.', '',
-                  'S5 remains incomplete overall: News, Contract, and supported system bindings are still `PLANNED_BINDING`; forward S2/S3 replay repairs and Story runner retry/idempotency hardening are the next implementation tranche before CEE100 activation.', ''
-              ])
-              if marker not in text:
-                  raise SystemExit('roadmap marker missing')
-              text = text.replace(marker, body + marker, 1)
-          path.write_text(text, encoding='utf-8')
-          PY
-          git diff --check
-          git add \
-            docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md \
-            docs/seed-content/story/content \
-            scripts/story-content/build-act2-october-pack.py \
-            scripts/story-content/build-act3-act8-packs.py \
-            scripts/story-content-all-packs-contract.test.mjs \
-            backend/src/domains/storylines/tests/monthlyStoryContentPackContract.test.ts
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix(story): recover deterministic CEE100 authored source"
-          git push origin HEAD:feat/story-narrative-convergence-v1
-
-      - name: Record S5 recovery failure
-        if: failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git reset --hard HEAD
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-
-          path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
-          text = path.read_text(encoding='utf-8')
-          marker = '\n## Run-completion rule\n'
-          heading = f"### Run 2026-08-11 — S5 source recovery failure `{os.environ['GITHUB_RUN_ID']}`"
-          if heading not in text:
-              body = '\n'.join([
-                  '', heading, '',
-                  f"Source head: `{os.environ['GITHUB_SHA']}`", '',
-                  'Result: FAILED; no generated monthly source pack correction was published.', '',
-                  'Inspect the exact failed recovery, generation, parser, whole-campaign, callback, Messaging, typecheck, or scheduler step. Do not weaken coverage, callback, privacy, spoiler, hidden-canon, parser, or idempotency assertions to make this run pass.', ''
-              ])
-              if marker not in text:
-                  raise SystemExit('roadmap marker missing')
-              text = text.replace(marker, body + marker, 1)
-              path.write_text(text, encoding='utf-8')
-          PY
-          git diff --check
-          git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S5 source recovery failure"
-            git push origin HEAD:feat/story-narrative-convergence-v1
-          fi
