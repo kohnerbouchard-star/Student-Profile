@@ -178,7 +178,7 @@ jobs:
         run: |
           set -euo pipefail
           psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' \
-            | tee /tmp/story-staging-acceptance.log
+            2>&1 | tee /tmp/story-staging-acceptance.log
           begin;
           do $accept$
           declare
