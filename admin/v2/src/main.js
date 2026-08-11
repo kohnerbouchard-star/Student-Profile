@@ -1,7 +1,9 @@
 import { mountAdminV2 } from "./app.js";
+import { attachAdminShellUx } from "./shell-ux-enhancements.js";
 
 const mount = document.getElementById("adminPreview");
 let application = null;
+let shellUx = null;
 
 function showSafeBootFailure() {
   window.EconovariaAdminSessionGate?.showError(
@@ -48,9 +50,20 @@ async function attach() {
   try {
     application = mountAdminV2({ mount: compositionRoot, session, selectedGameId });
     mount.replaceChildren(compositionRoot);
+    try {
+      shellUx = attachAdminShellUx({ mount: compositionRoot, session, selectedGameId });
+    } catch (_error) {
+      // Shell affordance enhancements are progressive. A failure here must not
+      // take the authenticated administrator route surface offline.
+      shellUx = null;
+    }
     mount.hidden = false;
     window.EconovariaAdminSessionGate?.release({ route: "Overview", initial: true });
   } catch (_error) {
+    shellUx?.destroy?.();
+    shellUx = null;
+    application?.destroy?.();
+    application = null;
     compositionRoot.remove();
     showSafeBootFailure();
   }

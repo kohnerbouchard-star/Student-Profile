@@ -69,7 +69,7 @@ export function ProgressionCorrectionEditor({ selectedPlayer, onCorrect }) {
   });
   const reputationScope = createElement("input", {
     className: "progression-v2-control",
-    attrs: { name: "reputationScope", maxlength: "160", value: "general", pattern: "[A-Za-z0-9][A-Za-z0-9._:-]{0,159}" },
+    attrs: { name: "reputationScope", maxlength: "160", value: "general", pattern: "[A-Za-z0-9][A-Za-z0-9._:\\-]{0,159}" },
   });
   const reason = createElement("textarea", {
     className: "progression-v2-control progression-v2-control--textarea",

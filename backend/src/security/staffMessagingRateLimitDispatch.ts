@@ -1,4 +1,7 @@
 import {
+  bindGatewayTrustedClientIp,
+} from "./edgeGatewayClientIp.ts";
+import {
   buildAuthenticatedRateLimitBuckets,
   readTrustedClientIp,
   TRUSTED_IP_HEADERS,
@@ -144,7 +147,22 @@ async function enforceStaffMessagingRateLimit(
   readConfig?: StaffMessagingRateLimitDependencies["readConfig"],
 ): Promise<RateLimitDecision> {
   const config = (readConfig ?? readRuntimeConfig)();
-  const ipAddress = readTrustedClientIp(input.request, config.trustedIpHeader);
+  // The Browser -> Vercel BFF -> Supabase gateway path may expose the trusted
+  // client address under gateway metadata rather than the final configured
+  // header. Normalize only a bodyless metadata request so the application
+  // request remains untouched and the reviewed trust boundary stays intact.
+  const metadataRequest = new Request(input.request.url, {
+    method: input.request.method,
+    headers: input.request.headers,
+  });
+  const boundRequest = bindGatewayTrustedClientIp(
+    metadataRequest,
+    config.trustedIpHeader,
+  );
+  const ipAddress = readTrustedClientIp(
+    boundRequest,
+    config.trustedIpHeader,
+  );
   const buckets = await buildAuthenticatedRateLimitBuckets({
     action: input.action,
     gameUuid: input.gameUuid,

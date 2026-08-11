@@ -13,6 +13,7 @@ import { handleAccountOperation } from "./accountOperations.ts";
 import { handlePersonalBankingAdminOperation } from "./bankingOperations.ts";
 import { handleGameProvisioningOperation } from "./gameProvisioningOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
+import { handleMarketAssetReadOperation } from "./marketAssetOperations.ts";
 import { handleLocalAdminGameMutation } from "./localGameMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleProgressionOperation } from "./progressionOperations.ts";
@@ -363,6 +364,18 @@ Deno.serve(async (request: Request) => {
         request,
         worldOperation.status || 500,
         worldOperation.body,
+      );
+    }
+
+    const marketAssetOperation = await handleMarketAssetReadOperation(
+      securedContext.service,
+      { request, gameId, suffix },
+    );
+    if (marketAssetOperation.handled) {
+      return json(
+        request,
+        marketAssetOperation.status || 500,
+        marketAssetOperation.body,
       );
     }
 

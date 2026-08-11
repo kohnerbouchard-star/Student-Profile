@@ -1,5 +1,7 @@
 import { asControllerElement, createElement, replaceContent } from "./dom.js";
 
+const MOBILE_NAVIGATION_QUERY = "(max-width: 760px)";
+
 export function AdminShell({ navigation, topbar, content, mainId = "admin-main-content" } = {}) {
   const navigationElement = asControllerElement(navigation);
   const topbarElement = asControllerElement(topbar);
@@ -38,14 +40,33 @@ export function AdminShell({ navigation, topbar, content, mainId = "admin-main-c
   root.append(skipLink, navigationSlot, backdrop, workspace);
 
   const navigationToggle = topbarElement?.querySelector("[data-admin-navigation-toggle]");
+  const mobileQuery = typeof window.matchMedia === "function"
+    ? window.matchMedia(MOBILE_NAVIGATION_QUERY)
+    : null;
+
+  function isMobileViewport() {
+    return mobileQuery?.matches === true;
+  }
+
+  function syncNavigationToggle() {
+    if (!navigationToggle) return;
+    if (isMobileViewport()) {
+      const open = root.dataset.mobileNavigationOpen === "true";
+      navigationToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      navigationToggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+      return;
+    }
+    const collapsed = root.dataset.navCollapsed === "true";
+    navigationToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    navigationToggle.setAttribute("aria-label", collapsed ? "Expand navigation" : "Collapse navigation");
+  }
 
   function setMobileNavigationOpen(open, { focus = true } = {}) {
     const nextOpen = Boolean(open);
     root.dataset.mobileNavigationOpen = String(nextOpen);
     navigationElement?.setAttribute("data-mobile-open", String(nextOpen));
     backdrop.hidden = !nextOpen;
-    navigationToggle?.setAttribute("aria-expanded", nextOpen ? "true" : "false");
-    navigationToggle?.setAttribute("aria-label", nextOpen ? "Close navigation" : "Open navigation");
+    syncNavigationToggle();
     if (nextOpen && focus) {
       navigation?.focusFirstItem?.();
     } else if (!nextOpen && focus) {
@@ -55,10 +76,17 @@ export function AdminShell({ navigation, topbar, content, mainId = "admin-main-c
 
   function setNavigationCollapsed(collapsed) {
     root.dataset.navCollapsed = String(Boolean(collapsed));
+    syncNavigationToggle();
   }
 
   function handleToggle() {
-    setMobileNavigationOpen(root.dataset.mobileNavigationOpen !== "true");
+    if (isMobileViewport()) {
+      setMobileNavigationOpen(root.dataset.mobileNavigationOpen !== "true");
+      return;
+    }
+    const nextCollapsed = root.dataset.navCollapsed !== "true";
+    if (typeof navigation?.setCollapsed === "function") navigation.setCollapsed(nextCollapsed);
+    else setNavigationCollapsed(nextCollapsed);
   }
 
   function handleCollapse(event) {
@@ -66,21 +94,30 @@ export function AdminShell({ navigation, topbar, content, mainId = "admin-main-c
   }
 
   function handleSelection() {
-    if (window.matchMedia("(max-width: 760px)").matches) {
+    if (isMobileViewport()) {
       setMobileNavigationOpen(false, { focus: false });
     }
+  }
+
+  function handleViewportChange() {
+    if (!isMobileViewport() && root.dataset.mobileNavigationOpen === "true") {
+      setMobileNavigationOpen(false, { focus: false });
+    }
+    syncNavigationToggle();
   }
 
   navigationToggle?.addEventListener("click", handleToggle);
   backdrop.addEventListener("click", () => setMobileNavigationOpen(false));
   navigationElement?.addEventListener("admin-navigation-collapse", handleCollapse);
   navigationElement?.addEventListener("admin-navigation-select", handleSelection);
+  mobileQuery?.addEventListener?.("change", handleViewportChange);
   root.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && root.dataset.mobileNavigationOpen === "true") {
       event.preventDefault();
       setMobileNavigationOpen(false);
     }
   });
+  syncNavigationToggle();
 
   return {
     element: root,
@@ -94,6 +131,7 @@ export function AdminShell({ navigation, topbar, content, mainId = "admin-main-c
       navigationToggle?.removeEventListener("click", handleToggle);
       navigationElement?.removeEventListener("admin-navigation-collapse", handleCollapse);
       navigationElement?.removeEventListener("admin-navigation-select", handleSelection);
+      mobileQuery?.removeEventListener?.("change", handleViewportChange);
       root.remove();
     },
   };

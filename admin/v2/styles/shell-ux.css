@@ -1,0 +1,139 @@
+/* Admin V2 shell interaction and navigation affordance overrides. */
+
+body.admin-v2-modal-open {
+  overflow: hidden;
+}
+
+/* The top-left control is the single authoritative navigation toggle. */
+.admin-topbar__navigation-toggle {
+  display: inline-grid;
+}
+
+/* The old footer collapse control duplicated the top-level navigation action. */
+.admin-navigation__collapse {
+  display: none;
+}
+
+.admin-topbar__notification {
+  inline-size: auto;
+  min-inline-size: var(--admin-control-size);
+  padding-inline: var(--admin-space-3);
+  display: inline-flex;
+  gap: var(--admin-space-2);
+}
+
+.admin-topbar__action-label {
+  color: currentColor;
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-medium);
+  white-space: nowrap;
+}
+
+.admin-topbar__share {
+  min-block-size: var(--admin-control-size);
+  padding-inline: var(--admin-space-3);
+  white-space: nowrap;
+}
+
+.admin-topbar__share-code {
+  max-inline-size: 9rem;
+  overflow: hidden;
+  color: var(--admin-color-orange);
+  font-family: var(--admin-font-mono);
+  font-size: var(--admin-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-topbar__identity {
+  border-color: var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+  cursor: pointer;
+}
+
+.admin-topbar__identity:hover,
+.admin-topbar__identity:focus-visible {
+  border-color: var(--admin-color-cyan);
+  background: var(--admin-color-cyan-soft);
+}
+
+.admin-shell-share {
+  display: grid;
+  gap: var(--admin-space-5);
+}
+
+.admin-shell-share__code-panel {
+  display: grid;
+  gap: var(--admin-space-2);
+  padding: var(--admin-space-5);
+  border: 1px solid var(--admin-color-line-strong);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-surface-1);
+}
+
+.admin-shell-share__code-panel small {
+  color: var(--admin-color-text-muted);
+  font-family: var(--admin-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-shell-share__code {
+  overflow-wrap: anywhere;
+  color: var(--admin-color-orange);
+  font-family: var(--admin-font-mono);
+  font-size: clamp(1.5rem, 5vw, 2.35rem);
+  letter-spacing: 0.08em;
+}
+
+.admin-shell-share__actions,
+.admin-shell-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--admin-space-2);
+}
+
+.admin-shell-share__message {
+  min-block-size: 1.25rem;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-shell-share__message[data-tone="success"] {
+  color: var(--admin-color-green);
+}
+
+.admin-shell-share__message[data-tone="error"] {
+  color: var(--admin-color-red);
+}
+
+.admin-shell-account-actions {
+  margin-block-start: var(--admin-space-5);
+  padding-block-start: var(--admin-space-4);
+  border-block-start: 1px solid var(--admin-color-line);
+}
+
+@media (max-width: 1000px) {
+  .admin-topbar__notification {
+    inline-size: var(--admin-control-size);
+    padding-inline: 0;
+    display: inline-grid;
+  }
+
+  .admin-topbar__notification .admin-topbar__action-label,
+  .admin-topbar__share-label,
+  .admin-topbar__share-code {
+    display: none;
+  }
+
+  .admin-topbar__share {
+    inline-size: var(--admin-control-size);
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-topbar__actions {
+    gap: var(--admin-space-1);
+  }
+}

@@ -153,13 +153,13 @@ export function isolateModalLayer(layer) {
     record = {
       layers: [],
       baselines: new Map(),
-      bodyOverflow: documentRef.body.style.overflow,
+      hadModalOpenClass: documentRef.body.classList.contains("admin-v2-modal-open"),
     };
     modalDocuments.set(documentRef, record);
+    documentRef.body.classList.add("admin-v2-modal-open");
   }
 
   record.layers.push(layer);
-  documentRef.body.style.overflow = "hidden";
   refreshIsolation(documentRef, record);
 
   let released = false;
@@ -176,7 +176,7 @@ export function isolateModalLayer(layer) {
     }
 
     restoreIsolation(record);
-    documentRef.body.style.overflow = record.bodyOverflow;
+    if (!record.hadModalOpenClass) documentRef.body.classList.remove("admin-v2-modal-open");
     modalDocuments.delete(documentRef);
   };
 }
