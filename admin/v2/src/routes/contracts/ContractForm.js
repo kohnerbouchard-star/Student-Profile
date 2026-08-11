@@ -5,7 +5,6 @@ import {
 import { createElement } from "../../components/dom.js";
 
 const COUNTRY_CODE_PATTERN = /^[A-Z0-9_-]{2,24}$/;
-const CURRENCY_PATTERN = /^[A-Z0-9]{2,12}$/;
 
 function field(options) {
   return AdminField({ autocomplete: "off", ...options });
@@ -90,7 +89,6 @@ export function ContractForm({
     expiresAt: field({ name: "expiresAt", label: "Expiration time", type: "datetime-local", hint: "Optional hard expiration after the due time." }),
     requirementsText: field({ name: "requirementsText", label: "Evidence / submission requirements", type: "textarea", required: true, hint: "What evidence the player must submit or satisfy." }),
     rewardAmount: field({ name: "rewardAmount", label: "Cash reward", type: "number", value: "", placeholder: "0" }),
-    rewardCurrency: field({ name: "rewardCurrency", label: "Reward currency", value: "ECO", placeholder: "ECO" }),
     difficulty: field({
       name: "difficulty",
       label: "Difficulty metadata",
@@ -133,7 +131,6 @@ export function ContractForm({
     const expiresAt = localDateTimeToIso(fields.expiresAt.getValue());
     const rewardText = fields.rewardAmount.getValue().trim();
     const rewardAmount = rewardText === "" ? 0 : Number(rewardText);
-    const rewardCurrency = fields.rewardCurrency.getValue().trim().toUpperCase();
 
     if (!title) {
       fields.title.setError("Enter a contract title.");
@@ -179,10 +176,6 @@ export function ContractForm({
       fields.rewardAmount.setError("Enter zero or a positive reward amount.");
       errors.push({ field: "rewardAmount", fieldId: fields.rewardAmount.control.id, label: "Cash reward", message: "Cash reward must be zero or greater." });
     }
-    if (rewardAmount > 0 && !CURRENCY_PATTERN.test(rewardCurrency)) {
-      fields.rewardCurrency.setError("Enter a valid currency code.");
-      errors.push({ field: "rewardCurrency", fieldId: fields.rewardCurrency.control.id, label: "Reward currency", message: "Reward currency is invalid." });
-    }
 
     if (errors.length) {
       validation.setErrors(errors);
@@ -205,7 +198,7 @@ export function ContractForm({
         : { allPlayers: false, ...(codes.length ? { countryCodes: codes } : {}) },
       requirementsPayload: requirementsText ? { manualText: requirementsText } : {},
       rewardPayload: rewardAmount > 0
-        ? { cash: { amount: Math.round(rewardAmount * 100) / 100, currencyCode: rewardCurrency || "ECO" } }
+        ? { cash: { amount: Math.round(rewardAmount * 100) / 100 } }
         : {},
       metadata: {
         ...(difficulty ? { difficulty } : {}),
@@ -232,7 +225,7 @@ export function ContractForm({
   const groups = [
     ["Core", fields.title, fields.description, fields.instructions, fields.category],
     ["Lifecycle", fields.status, fields.scheduledAt, fields.visibility, fields.countryCodes, fields.completionMode, fields.deadlineAt, fields.expiresAt],
-    ["Requirements & reward", fields.requirementsText, fields.rewardAmount, fields.rewardCurrency],
+    ["Requirements & reward", fields.requirementsText, fields.rewardAmount],
     ["Metadata", fields.difficulty, fields.reviewNote],
   ].map(([legend, ...entries]) => createElement("fieldset", {
     className: "admin-contract-form__group",

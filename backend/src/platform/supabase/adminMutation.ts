@@ -284,6 +284,13 @@ function mapAdminMutationRpcError(
       404,
     );
   }
+  if (normalized.includes("ADMIN_STORE_SEEDED_ITEM_PROTECTED")) {
+    return new AdminMutationError(
+      "seeded_store_item_protected",
+      "Included Store items cannot be edited or archived. Create a custom item when you need a teacher-managed version.",
+      409,
+    );
+  }
   if (
     normalized.includes("ADMIN_STORE_ITEM_CONFLICT") ||
     normalized.includes("STORE_ITEMS_GAME_SESSION_ID_ITEM_KEY")
