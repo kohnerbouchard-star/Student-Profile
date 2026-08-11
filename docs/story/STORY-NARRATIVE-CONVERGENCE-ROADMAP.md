@@ -613,6 +613,14 @@ The prior retry cleared full backend/Edge typecheck, August, and September throu
 
 This retry changes only that authored fallback to the valid `EVIDENCE` choice `share-privately`; all parser, callback, privacy, coverage, hidden-canon, and density assertions remain intact.
 
+### Run 2026-08-11 — S5 source recovery V3 failure `31467499243`
+
+Source head: `a8876905010a0b8b88a687b509fea6af6e277ded`
+
+Result: FAILED; generated packs and local recovery edits were discarded before publication.
+
+Inspect the exact failed job log. Preserve all parser, callback, privacy, coverage, hidden-canon, density, Messaging, and scheduler assertions.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
