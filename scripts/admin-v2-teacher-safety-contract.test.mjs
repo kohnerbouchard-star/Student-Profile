@@ -22,6 +22,10 @@ const storeController = fs.readFileSync(
   "admin/v2/src/routes/store/StoreController.js",
   "utf8",
 );
+const adminReadModels = fs.readFileSync(
+  "backend/supabase/functions/admin-api/readModels.ts",
+  "utf8",
+);
 const adminMutation = fs.readFileSync(
   "backend/src/platform/supabase/adminMutation.ts",
   "utf8",
@@ -79,6 +83,17 @@ test("Seeded Store definitions cannot be updated or archived", () => {
   assert.match(storeController, /STORE_SOURCE_TYPES = new Set\(\["seeded", "custom"\]\)/);
   assert.match(storeController, /sourceType:/);
   assert.match(storeController, /item\?\.sourceType === "seeded"/);
+
+  assert.match(
+    adminReadModels,
+    /game_item:game_items!store_items_game_item_scope_fk\(source_kind\)/,
+    "Admin Store reads must include canonical game-item provenance.",
+  );
+  assert.match(
+    adminReadModels,
+    /sourceType:\s*\["physical_pack", "system"\]\.includes\(row\.game_item\?\.source_kind\)[\s\S]*?"seeded"[\s\S]*?\["store_created", "admin_created"\]\.includes\(row\.game_item\?\.source_kind\)[\s\S]*?"custom"/,
+    "Admin Store reads must expose the canonical seeded/custom sourceType mapping.",
+  );
 
   assert.match(safetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
   assert.match(safetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
