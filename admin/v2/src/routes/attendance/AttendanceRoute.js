@@ -1,4 +1,5 @@
 import {
+  AdminConfirmDialog,
   AdminDataTable,
   AdminEmptyState,
   AdminErrorState,
@@ -31,6 +32,13 @@ function displayTime(value, timezone) {
   } catch (_error) {
     return "—";
   }
+}
+
+function displaySigned(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  const formatted = Math.abs(number).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return `${number > 0 ? "+" : number < 0 ? "−" : ""}${formatted}`;
 }
 
 function button({ label, icon = null, quiet = false, disabled = false, tone = null, onClick, action }) {
@@ -126,7 +134,7 @@ function scannerPanel({ model, scanner, onScan }) {
         children: [
           createElement("div", { children: [
             createElement("h2", { text: "Scanner" }),
-            createElement("p", { text: model.lock.locked ? "This attendance day is locked." : "Scan or enter the existing player credential. Enter submits from the keyboard." }),
+            createElement("p", { text: model.lock.locked ? "Attendance is locked for today." : "Scan or enter the student's existing credential. Enter submits from the keyboard." }),
           ] }),
           createElement("span", { className: "admin-attendance-route__date", text: `${model.attendanceDate} · ${model.timezone}` }),
         ],
@@ -144,7 +152,7 @@ function rosterTable(model) {
     columns: [
       {
         key: "displayName",
-        label: "Player",
+        label: "Student",
         rowHeader: true,
         render: (_value, row) => createElement("div", {
           className: "admin-attendance-route__player",
@@ -165,15 +173,11 @@ function rosterTable(model) {
       },
       { key: "clockedInAt", label: "Check-in", render: (value) => displayTime(value, model.timezone) },
       { key: "source", label: "Source", render: (value) => titleCase(value) },
-      {
-        key: "note",
-        label: "Note",
-        render: (value) => value || "—",
-      },
+      { key: "note", label: "Note", render: (value) => value || "—" },
     ],
     emptyState: AdminEmptyState({
       title: "No attendance roster yet",
-      message: "There are no active players or attendance records for this game today.",
+      message: "There are no active students or attendance records for this simulation today.",
       compact: true,
     }),
   });
@@ -204,30 +208,30 @@ function field({ label, name, type = "text", value = "", options = null, placeho
   };
 }
 
+function selectedStudentLabel(select, fallback = "Student") {
+  return select.options?.[select.selectedIndex]?.textContent?.trim() || fallback;
+}
+
 function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
   const selectable = model.rows.map((row) => ({
     value: row.rowKey,
     label: `${row.displayName}${row.rosterLabel ? ` · ${row.rosterLabel}` : ""}`,
   }));
   const firstKey = selectable[0]?.value || "";
-  const player = field({ label: "Player", name: "player", value: firstKey, options: selectable });
+  const player = field({ label: "Student", name: "player", value: firstKey, options: selectable });
   const correction = field({
-    label: "Correction",
+    label: "Attendance status",
     name: "status",
     value: "present",
     options: CORRECTION_OPTIONS.map((value) => ({ value, label: titleCase(value) })),
   });
-  const note = field({ label: "Note", name: "note", placeholder: "Optional correction note / note text" });
-  const amount = field({ label: "Reward adjustment", name: "amount", type: "number", step: "0.01", placeholder: "e.g. 1 or -1" });
-  const currency = field({ label: "Currency", name: "currency", value: "ECO", placeholder: "ECO" });
-  const account = field({
-    label: "Account",
-    name: "account",
-    value: "checking",
-    options: [
-      { value: "checking", label: "Checking" },
-      { value: "savings", label: "Savings" },
-    ],
+  const note = field({ label: "Teacher note", name: "note", placeholder: "Optional note" });
+  const amount = field({
+    label: "Reward correction · local currency → Checking",
+    name: "amount",
+    type: "number",
+    step: "0.01",
+    placeholder: "e.g. 1 or -1",
   });
   const status = createElement("div", {
     className: "admin-attendance-route__action-status",
@@ -238,15 +242,16 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
     status.textContent = "Saving…";
     const result = await action();
     status.textContent = result?.ok === true ? successMessage : result?.error?.userMessage || "The action could not be completed.";
+    return result;
   }
 
   const correctionButton = button({
-    label: "Apply correction",
+    label: "Save attendance status",
     action: "correct",
     disabled: !firstKey || model.lock.locked,
     onClick: () => run(
       () => onCorrect(player.control.value, correction.control.value, note.control.value),
-      "Correction saved.",
+      "Attendance status saved.",
     ),
   });
   const noteButton = button({
@@ -257,16 +262,35 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
     onClick: () => run(() => onSaveNote(player.control.value, note.control.value), "Note saved."),
   });
   const rewardButton = button({
-    label: "Adjust reward",
+    label: "Review reward correction",
     quiet: true,
     action: "reward",
     disabled: !firstKey || model.lock.locked,
-    onClick: () => run(() => onAdjustReward(player.control.value, {
-      amount: amount.control.value,
-      currencyCode: currency.control.value,
-      accountType: account.control.value,
-      note: note.control.value,
-    }), "Reward adjustment saved."),
+    onClick: () => {
+      const numericAmount = Number(amount.control.value);
+      if (!Number.isFinite(numericAmount) || numericAmount === 0) {
+        status.textContent = "Enter a non-zero reward correction first.";
+        amount.control.focus();
+        return;
+      }
+      const student = selectedStudentLabel(player.control);
+      const confirm = AdminConfirmDialog({
+        title: "Confirm attendance reward correction",
+        message: `Apply ${displaySigned(numericAmount)} to ${student}'s Checking account?`,
+        detail: "The amount is posted in the student's active-country currency and recorded in Activity History.",
+        confirmLabel: "Apply reward correction",
+        tone: "danger",
+        failureMessage: "The reward correction could not be applied.",
+        async onConfirm() {
+          const result = await run(() => onAdjustReward(player.control.value, {
+            amount: amount.control.value,
+            note: note.control.value,
+          }), "Reward correction saved.");
+          return result?.ok === true;
+        },
+      });
+      void confirm.open(rewardButton).finally(() => confirm.destroy());
+    },
   });
 
   return createElement("section", {
@@ -276,13 +300,13 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
       createElement("div", {
         className: "admin-attendance-route__section-heading",
         children: [createElement("div", { children: [
-          createElement("h2", { text: "Record actions" }),
-          createElement("p", { text: "Use only the existing correction, note, and server-ledger reward operations." }),
+          createElement("h2", { text: "Attendance tools" }),
+          createElement("p", { text: "Update attendance, add a teacher note, or correct an attendance reward." }),
         ] })],
       }),
       createElement("div", {
         className: "admin-attendance-route__action-grid",
-        children: [player.element, correction.element, note.element, amount.element, currency.element, account.element],
+        children: [player.element, correction.element, note.element, amount.element],
       }),
       createElement("div", {
         className: "admin-attendance-route__action-buttons",
@@ -294,17 +318,40 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
 }
 
 function lockPanel({ model, onSetLocked }) {
-  const reason = field({ label: model.lock.locked ? "Unlock note" : "Lock reason", name: "lockReason", placeholder: "Optional reason" });
-  const status = createElement("div", { className: "admin-attendance-route__action-status", attrs: { role: "status", "aria-live": "polite" } });
+  const reason = field({
+    label: model.lock.locked ? "Unlock note" : "Lock reason",
+    name: "lockReason",
+    placeholder: "Optional teacher note",
+  });
+  const status = createElement("div", {
+    className: "admin-attendance-route__action-status",
+    attrs: { role: "status", "aria-live": "polite" },
+  });
   const toggle = button({
-    label: model.lock.locked ? "Unlock day" : "Lock day",
+    label: model.lock.locked ? "Unlock attendance" : "Lock attendance for today",
     icon: model.lock.locked ? "refresh" : "warning",
     tone: model.lock.locked ? null : "danger",
     action: model.lock.locked ? "unlock-day" : "lock-day",
-    onClick: async () => {
-      status.textContent = model.lock.locked ? "Unlocking…" : "Locking…";
-      const result = await onSetLocked(!model.lock.locked, reason.control.value);
-      status.textContent = result?.ok === true ? "Attendance day updated." : result?.error?.userMessage || "The day lock could not be changed.";
+    onClick: () => {
+      const locking = !model.lock.locked;
+      const note = reason.control.value.trim();
+      const confirm = AdminConfirmDialog({
+        title: locking ? "Lock attendance for today?" : "Unlock attendance?",
+        message: locking
+          ? "Locking prevents further attendance changes until a teacher unlocks the day."
+          : "Unlocking allows attendance changes again.",
+        detail: note || "No teacher note entered.",
+        confirmLabel: locking ? "Lock attendance" : "Unlock attendance",
+        tone: locking ? "danger" : null,
+        failureMessage: "The attendance lock could not be changed.",
+        async onConfirm() {
+          status.textContent = locking ? "Locking…" : "Unlocking…";
+          const result = await onSetLocked(locking, note);
+          status.textContent = result?.ok === true ? "Attendance lock updated." : result?.error?.userMessage || "The attendance lock could not be changed.";
+          return result?.ok === true;
+        },
+      });
+      void confirm.open(toggle).finally(() => confirm.destroy());
     },
   });
   return createElement("section", {
@@ -312,8 +359,8 @@ function lockPanel({ model, onSetLocked }) {
     attrs: { "aria-label": "Attendance day lock" },
     children: [
       createElement("div", { children: [
-        createElement("strong", { text: model.lock.locked ? "Day locked" : "Day open" }),
-        createElement("p", { text: model.lock.reason || (model.lock.locked ? "Mutations are blocked by the server until unlocked." : "Attendance changes are currently available.") }),
+        createElement("strong", { text: model.lock.locked ? "Attendance locked" : "Attendance open" }),
+        createElement("p", { text: model.lock.reason || (model.lock.locked ? "Attendance changes are paused until a teacher unlocks the day." : "Attendance changes are currently available.") }),
       ] }),
       reason.element,
       toggle,
@@ -330,7 +377,7 @@ function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdju
   if (model.isEmpty) {
     root.append(AdminEmptyState({
       title: "No attendance records or active roster",
-      message: "Attendance will appear here when the current game has active players or records for the day.",
+      message: "Attendance will appear here when the current simulation has active students or records for the day.",
     }));
   } else {
     root.append(
@@ -404,7 +451,7 @@ export function AttendanceRoute({
         route.append(createElement("div", {
           className: "admin-attendance-route__refresh-state",
           attrs: { role: "status" },
-          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing authoritative Attendance data…"],
+          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing attendance data…"],
         }));
       }
       route.append(content);
@@ -412,9 +459,9 @@ export function AttendanceRoute({
   }
 
   const pageFrame = AdminPageFrame({
-    eyebrow: "Game administration",
+    eyebrow: "Classroom",
     title: "Attendance",
-    description: "Manage the current game's server-authoritative attendance records, scanner check-ins, corrections, notes, rewards, and day lock.",
+    description: "Take attendance, correct attendance records, add teacher notes, and review attendance reward corrections for the current simulation.",
     actions: [refreshButton],
     content: route,
   });
