@@ -35,6 +35,25 @@ page.on("console", (message) => {
 });
 page.on("request", (request) => requests.push(`${request.method()} ${request.url()}`));
 
+// The real signed-out destination probes same-origin runtime health. This
+// browser fixture otherwise uses a static Python server, so model the real
+// health contract instead of allowing that expected probe to become a 404.
+await page.route("**/api/health", async (route) => {
+  const request = route.request();
+  assert(request.method() === "GET", `Runtime health used ${request.method()} instead of GET.`);
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    headers: { "cache-control": "private, no-store" },
+    body: JSON.stringify({
+      ok: true,
+      status: "ready",
+      environment: "development",
+      projectRef: "runtimefixture123456",
+    }),
+  });
+});
+
 await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
   if (window.__econovariaSidebarLogoutSnapshotInstalled) return;

@@ -201,7 +201,8 @@ async function correct(
     const reputationScope = optionalText(value.reputationScope);
     const reason = text(value.reason);
     const bodyKey = text(value.idempotencyKey);
-    const headerKey = input.request.headers.get("x-idempotency-key")?.trim() ??
+    const headerKey = input.request.headers.get("idempotency-key")?.trim() ??
+      input.request.headers.get("x-idempotency-key")?.trim() ??
       input.request.headers.get("x-request-id")?.trim() ?? "";
     if (bodyKey && headerKey && bodyKey !== headerKey) {
       return invalid("Header and body idempotency keys must match.");

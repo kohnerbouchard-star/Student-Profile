@@ -3,6 +3,14 @@ import { normalizeContractReview } from "./mutationAdapters.ts";
 import { issueContractRewardsAtomically } from "./contractRewards.ts";
 import { handleAttendancePlayerOperation } from "./attendancePlayerOperations.ts";
 import { corsHeaders } from "./cors.ts";
+import {
+  bindGatewayTrustedClientIp,
+} from "../../../src/security/edgeGatewayClientIp.ts";
+import {
+  readTrustedClientIp,
+  TRUSTED_IP_HEADERS,
+  type TrustedIpHeader,
+} from "../../../src/security/rateLimitKeying.ts";
 
 export { corsHeaders };
 
@@ -305,16 +313,47 @@ function atomicContractRewardPath(path, method) {
   };
 }
 
+function classroomTrustedClientIp(request) {
+  const configuredHeader = environmentValue("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER")
+    .trim().toLowerCase();
+  if (
+    configuredHeader === "x-forwarded-for" ||
+    !TRUSTED_IP_HEADERS.includes(configuredHeader as TrustedIpHeader)
+  ) return null;
+  const trustedHeader = configuredHeader as TrustedIpHeader;
+  const metadataRequest = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+  });
+  const boundRequest = bindGatewayTrustedClientIp(
+    metadataRequest,
+    trustedHeader,
+  );
+  try {
+    return {
+      header: trustedHeader,
+      value: readTrustedClientIp(boundRequest, trustedHeader),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchClassroom(request, context, path, method, body) {
   const headers = new Headers();
   headers.set("apikey", SUPABASE_ANON_KEY);
   headers.set("Authorization", `Bearer ${context.token}`);
+  const idempotencyKey = request.headers.get("idempotency-key") ||
+    request.headers.get("x-idempotency-key") || "";
   headers.set(
     "X-Request-Id",
     request.headers.get("x-request-id") ||
-      request.headers.get("x-idempotency-key") ||
+      idempotencyKey ||
       crypto.randomUUID(),
   );
+  if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
+  const trustedClient = classroomTrustedClientIp(request);
+  if (trustedClient) headers.set(trustedClient.header, trustedClient.value);
   headers.set("Content-Type", "application/json");
 
   const response = await fetch(`${CLASSROOM_API_URL}${path}`, {
@@ -373,6 +412,7 @@ export async function proxyClassroom(
       ...rewardRoute,
       staffUserId: context.staff.id,
       requestId: request.headers.get("x-request-id") ||
+        request.headers.get("idempotency-key") ||
         request.headers.get("x-idempotency-key") ||
         crypto.randomUUID(),
     });

@@ -53,7 +53,6 @@ test("Players remains native V2 without constraining later route migrations", ()
   for (const routeId of ["overview", "store", "market", "players"]) {
     assert.equal(getAdminNavigationRoute(routeId)?.migration, "v2", `${routeId} is not native V2`);
   }
-  assert.equal(getAdminNavigationRoute("marketplace")?.migration, "planned");
 });
 
 test("Players API uses only the same-origin Admin BFF paths and authoritative payload fields", async () => {

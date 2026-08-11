@@ -38,6 +38,26 @@ page.on("request", (request) => {
   requests.push(`${request.method()} ${request.url()}`);
 });
 
+// The post-logout destination is the real root login page. Its runtime health
+// indicator probes /api/health on load, so the static browser fixture must
+// model that same-origin production contract rather than letting Python's
+// static server turn the expected probe into an unrelated 404 console error.
+await page.route("**/api/health", async (route) => {
+  const request = route.request();
+  assert(request.method() === "GET", `Runtime health used ${request.method()} instead of GET.`);
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    headers: { "cache-control": "private, no-store" },
+    body: JSON.stringify({
+      ok: true,
+      status: "ready",
+      environment: "development",
+      projectRef: "runtimefixture123456",
+    }),
+  });
+});
+
 await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
   if (window.__econovariaLogoutSnapshotInstalled) return;
