@@ -167,21 +167,6 @@
   font-size: var(--admin-text-xs);
 }
 
-/* Seeded artwork corresponds to baseline physical-pack Store content. The
-   server independently rejects generic update/archive for those rows; hide the
-   same actions from the teacher surface so the UI does not invite a mutation
-   that is intentionally unavailable. */
-.admin-store-route__catalog .admin-data-table__row:has([data-media-kind="seeded"]) [data-store-action="edit"],
-.admin-store-route__catalog .admin-data-table__row:has([data-media-kind="seeded"]) [data-store-action="archive"] {
-  display: none;
-}
-
-.admin-store-route__catalog .admin-data-table__row:has([data-media-kind="seeded"]) .admin-store-route__row-actions::after {
-  content: "Included content · definition locked";
-  color: var(--admin-color-text-faint);
-  font-size: var(--admin-text-xs);
-}
-
 .admin-store-route__catalog--loading {
   padding: var(--admin-space-4);
   border: 1px solid var(--admin-color-line);
