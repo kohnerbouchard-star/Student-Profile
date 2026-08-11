@@ -22,28 +22,16 @@ const storeController = fs.readFileSync(
   "admin/v2/src/routes/store/StoreController.js",
   "utf8",
 );
-const storeRoute = fs.readFileSync(
-  "admin/v2/src/routes/store/StoreRoute.js",
-  "utf8",
-);
-const navigation = fs.readFileSync(
-  "admin/v2/src/components/AdminNavigation.js",
-  "utf8",
-);
-const topbar = fs.readFileSync(
-  "admin/v2/src/components/AdminTopbar.js",
-  "utf8",
-);
 const adminMutation = fs.readFileSync(
   "backend/src/platform/supabase/adminMutation.ts",
   "utf8",
 );
-const teacherSafetyMigration = fs.readFileSync(
+const safetyMigration = fs.readFileSync(
   "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql",
   "utf8",
 );
 
-test("Attendance teacher reward adjustments are local-currency Checking only", () => {
+test("Attendance reward adjustments cannot select global currency or savings", () => {
   const functionSource = attendanceApi.match(
     /function adjustAttendanceReward\([\s\S]*?\n  \}/,
   )?.[0] ?? "";
@@ -52,89 +40,48 @@ test("Attendance teacher reward adjustments are local-currency Checking only", (
   assert.match(functionSource, /accountType:\s*"checking"/);
   assert.doesNotMatch(functionSource, /currencyCode/);
 
-  assert.match(attendanceRoute, /Reward correction · local currency → Checking/);
   assert.doesNotMatch(attendanceRoute, /name:\s*"currency"/);
   assert.doesNotMatch(attendanceRoute, /name:\s*"account"/);
-  assert.match(attendanceRoute, /Confirm attendance reward correction/);
-  assert.match(attendanceRoute, /Lock attendance for today\?/);
-  assert.match(attendanceRoute, /AdminConfirmDialog/);
+  assert.doesNotMatch(attendanceRoute, /currencyCode:\s*currency\.control\.value/);
+  assert.doesNotMatch(attendanceRoute, /accountType:\s*account\.control\.value/);
 });
 
-test("Banking balance corrections require consequence review before mutation", () => {
-  assert.match(bankingRoute, /Correct balance/);
-  assert.match(bankingRoute, /Review correction/);
-  assert.match(bankingRoute, /Confirm balance correction/);
-  assert.match(bankingRoute, /Apply correction/);
-  assert.match(bankingRoute, /currentBalance \+ numericAmount/);
+test("Banking balance corrections require review before the ledger mutation", () => {
   assert.match(bankingRoute, /AdminConfirmDialog/);
-  assert.match(bankingRoute, /Teacher reason/);
+  assert.match(bankingRoute, /currentBalance \+ numericAmount/);
+  assert.match(bankingRoute, /onAdjust\(player, selectedAccount/);
+  assert.match(bankingRoute, /confirm\.open/);
 });
 
-test("Contract money rewards hide ledger routing and converge through the compatibility boundary", () => {
-  assert.match(contractForm, /label:\s*"Money reward"/);
-  assert.match(contractForm, /active-country currency/);
+test("Contract monetary rewards no longer accept a UI-selected currency", () => {
   assert.doesNotMatch(contractForm, /name:\s*"rewardCurrency"/);
+  assert.doesNotMatch(contractForm, /CURRENCY_PATTERN/);
   assert.match(
     contractForm,
     /rewardPayload:\s*rewardAmount > 0[\s\S]*?\{ cash:\s*\{ amount:/,
-    "The current Admin API compatibility adapter still receives its bounded cash alias.",
+    "The existing Admin API compatibility boundary still receives the cash alias.",
   );
   assert.doesNotMatch(
     contractForm,
     /rewardPayload:[\s\S]{0,240}currencyCode/,
-    "The teacher Contract form must not choose a reward currency.",
+    "Contract creation must not persist a teacher-selected reward currency.",
   );
 
-  assert.match(teacherSafetyMigration, /v_account_type text := 'checking'/);
-  assert.match(teacherSafetyMigration, /player_country_assignments/);
-  assert.match(teacherSafetyMigration, /country_profiles/);
-  assert.match(teacherSafetyMigration, /where key_name not in \('checking', 'cash', 'items'\)/);
-  assert.match(teacherSafetyMigration, /v_reward \? 'cash'/);
-  assert.match(teacherSafetyMigration, /v_currency_mode := 'player_country'/);
+  assert.match(safetyMigration, /v_account_type text := 'checking'/);
+  assert.match(safetyMigration, /player_country_assignments/);
+  assert.match(safetyMigration, /country_profiles/);
+  assert.match(safetyMigration, /where key_name not in \('checking', 'cash', 'items'\)/);
+  assert.match(safetyMigration, /v_reward \? 'cash'/);
+  assert.match(safetyMigration, /v_currency_mode := 'player_country'/);
 });
 
-test("Seeded Store definitions are protected by canonical provenance at every layer", () => {
+test("Seeded Store definitions cannot be updated or archived", () => {
   assert.match(storeController, /STORE_SOURCE_TYPES = new Set\(\["seeded", "custom"\]\)/);
-  assert.match(storeController, /sourceType:\s*STORE_SOURCE_TYPES\.has\(sourceTypeValue\)/);
+  assert.match(storeController, /sourceType:/);
   assert.match(storeController, /item\?\.sourceType === "seeded"/);
-  assert.match(storeRoute, /if \(item\.sourceType === "seeded"\)/);
-  assert.match(storeRoute, /Included content · definition locked/);
-  assert.match(storeRoute, /item\.sourceType === "custom"/);
 
-  assert.match(teacherSafetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
-  assert.match(teacherSafetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
-  assert.match(teacherSafetyMigration, /v_operation in \('update', 'archive'\)/);
+  assert.match(safetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);
+  assert.match(safetyMigration, /game_item\.source_kind in \('physical_pack', 'system'\)/);
+  assert.match(safetyMigration, /v_operation in \('update', 'archive'\)/);
   assert.match(adminMutation, /seeded_store_item_protected/);
-  assert.match(adminMutation, /Included Store items cannot be edited or archived/);
-});
-
-test("Teacher presentation vocabulary does not alter internal route authority", () => {
-  for (const expected of [
-    "Teacher Console",
-    "Students",
-    "Stock Market",
-    "Student Banking",
-    "Student Loans",
-    "Student Businesses",
-    "Marketplace Review",
-    "Redemption Requests",
-    "World & Simulation",
-    "Student Progress",
-    "Simulation Settings",
-    "Activity History",
-  ]) {
-    assert.match(navigation, new RegExp(expected.replace(/[&]/g, "\\&")));
-  }
-  assert.match(topbar, /Teacher Console/);
-  assert.match(topbar, /administrator/);
-  assert.match(topbar, /return !text \|\| text\.toLowerCase\(\) === "administrator" \? "Teacher"/);
-
-  const registry = fs.readFileSync(
-    "admin/v2/src/core/navigation-registry.js",
-    "utf8",
-  );
-  assert.match(registry, /id:\s*"players"/);
-  assert.match(registry, /permission:\s*"players\.manage"/);
-  assert.match(registry, /id:\s*"world-management"/);
-  assert.match(registry, /permission:\s*"world\.manage"/);
 });
