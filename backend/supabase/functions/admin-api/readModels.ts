@@ -623,7 +623,7 @@ export async function loadStore(
 ): Promise<any[]> {
   const [itemsResult, purchasesResult] = await Promise.all([
     service.from("store_items")
-      .select("*")
+      .select("*,game_item:game_items!store_items_game_item_scope_fk(source_kind)")
       .eq("game_session_id", gameId)
       .order("sort_order", { ascending: true }),
     service.from("store_purchases")
@@ -669,6 +669,11 @@ export async function loadStore(
     status: row.status,
     visibility: row.visibility,
     sortOrder: row.sort_order,
+    sourceType: ["physical_pack", "system"].includes(row.game_item?.source_kind)
+      ? "seeded"
+      : ["store_created", "admin_created"].includes(row.game_item?.source_kind)
+      ? "custom"
+      : undefined,
     purchaseStats: stats.get(String(row.id)) || {
       purchaseCount: 0,
       unitsSold: 0,
