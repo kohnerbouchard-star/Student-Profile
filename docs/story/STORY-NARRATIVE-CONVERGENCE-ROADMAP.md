@@ -160,7 +160,7 @@ Examples of supported consequence classes using existing systems:
 
 ### S5 — Narrative content saturation tranche
 
-Status: PLANNED
+Status: SOURCE RECOVERY IN PROGRESS / RUNTIME BINDING + CONNECTED STAGING PENDING
 
 Goal: fill dead periods and reduce repeated situations across a multi-week classroom campaign.
 
@@ -563,6 +563,23 @@ Source head: `f53e62c4dacfc567b766a4187c991b09fcd9d287`
 Result: FAILED; NO S5 STORY-BIBLE/CALENDAR IMPLEMENTATION COMMIT WAS PUBLISHED.
 
 Review this workflow run and correct the exact failing guard, blob restore, calendar contract, roadmap update, or commit step. Do not bypass the 334-day calendar contract.
+
+### Run 2026-08-11 — S5 authoritative source persistence recovery launched
+
+Source head: `819c70903cbeb347e515ea87c79546fd254a12db`
+
+Authoritative pre-run audit:
+
+- `docs/seed-content/story/content/` is absent at the verified branch source even though deterministic builders survive.
+- The prior S5 integrity workflow guarded for all 11 generated packs before running those builders, so it could not recover a missing source tree.
+- September -> October, December -> January, March -> April, and May -> June callbacks were represented as cross-pack plans rather than executable target Story rules.
+- S1 defines `story_messages.effect_index`, while S2 queries `story_messages.source_effect_index`.
+- S3 validates a global `storyline_events` definition through a nonexistent `game_session_id` column instead of activation through `game_session_storylines`.
+- The current Story runner writes final event resolution before effects and assigns `effectIndex` from flattened matched-Player order; both remain queued for the reliability tranche after source recovery.
+
+This run will regenerate all 11 packs before existence checks, remove spoiler-bearing stable keys, materialize all four cross-month callbacks, run per-pack and whole-campaign parser/coverage tests, and publish generated source only if the full source boundary is green.
+
+S5 is not complete at launch; News/Contract/system adapters, runner reliability, connected staging, S6 reachability, and S7 acceptance remain outstanding.
 
 ## Run-completion rule
 
