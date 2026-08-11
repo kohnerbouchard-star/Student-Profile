@@ -687,6 +687,12 @@ Repair discipline:
 - inspect installed Postgres function definitions after replay;
 - do not apply anything to connected staging in this run.
 
+### Run 2026-08-11 — Phase C S2/S3 forward replay repair failure `31468881868`
+
+Result: FAILED; no forward repair migration or regression test was published from this run.
+
+Inspect the exact CLI-generation, source-contract, migration-audit, database-replay, installed-function, lint, or focused Story regression failure. Do not edit historical migrations and do not apply partial repairs to connected staging.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
