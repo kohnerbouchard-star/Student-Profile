@@ -219,16 +219,6 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
   });
   const note = field({ label: "Note", name: "note", placeholder: "Optional correction note / note text" });
   const amount = field({ label: "Reward adjustment", name: "amount", type: "number", step: "0.01", placeholder: "e.g. 1 or -1" });
-  const currency = field({ label: "Currency", name: "currency", value: "ECO", placeholder: "ECO" });
-  const account = field({
-    label: "Account",
-    name: "account",
-    value: "checking",
-    options: [
-      { value: "checking", label: "Checking" },
-      { value: "savings", label: "Savings" },
-    ],
-  });
   const status = createElement("div", {
     className: "admin-attendance-route__action-status",
     attrs: { role: "status", "aria-live": "polite" },
@@ -263,8 +253,6 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
     disabled: !firstKey || model.lock.locked,
     onClick: () => run(() => onAdjustReward(player.control.value, {
       amount: amount.control.value,
-      currencyCode: currency.control.value,
-      accountType: account.control.value,
       note: note.control.value,
     }), "Reward adjustment saved."),
   });
@@ -282,7 +270,7 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
       }),
       createElement("div", {
         className: "admin-attendance-route__action-grid",
-        children: [player.element, correction.element, note.element, amount.element, currency.element, account.element],
+        children: [player.element, correction.element, note.element, amount.element],
       }),
       createElement("div", {
         className: "admin-attendance-route__action-buttons",
