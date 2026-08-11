@@ -729,6 +729,12 @@ Narrow exception to the historical-migration immutability rule:
 
 No connected staging write occurs in this run.
 
+### Run 2026-08-11 — Phase C V3 failure `31470051598`
+
+Result: FAILED; the local S2 syntax correction, generated forward migration, and regression contracts were discarded before publication.
+
+Inspect the exact escape-contract, forward-generation, migration-audit, local startup, two-pass database replay, installed-function, lint, or focused Story regression failure. Connected staging remains untouched.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
