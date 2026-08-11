@@ -79,7 +79,7 @@ function summary(model) {
     children: [
       metric("Active items", model.summary.activeCount, "Currently active"),
       metric("Out of stock", model.summary.outOfStockCount, "Available quantity is zero"),
-      metric("Finite stock", model.summary.finiteStockCount, "Items with tracked quantity"),
+      metric("Finite stock", model.summary.finiteStockCount, "Current Store contract"),
     ],
   });
 }
@@ -150,13 +150,6 @@ function catalog({ model, filters, onFiltersChange, onEdit, onArchive, onAdd }) 
 
   function itemActions(item) {
     const actions = createElement("div", { className: "admin-store-route__row-actions" });
-    if (item.sourceType === "seeded") {
-      actions.append(createElement("span", {
-        className: "admin-store-route__action-note",
-        text: "Included content · definition locked",
-      }));
-      return actions;
-    }
     if (!item.resourceId || item.status === "archived") {
       actions.append(createElement("span", {
         className: "admin-store-route__action-note",
@@ -185,7 +178,7 @@ function catalog({ model, filters, onFiltersChange, onEdit, onArchive, onAdd }) 
   }
 
   const table = AdminDataTable({
-    caption: "Store items for the current simulation",
+    caption: "Store Management items",
     rowKey: (item) => item.rowKey,
     columns: [
       {
@@ -204,13 +197,11 @@ function catalog({ model, filters, onFiltersChange, onEdit, onArchive, onAdd }) 
             item.description ? createElement("small", { text: item.description }) : null,
             createElement("span", {
               className: "admin-store-route__origin",
-              text: item.sourceType === "seeded"
-                ? "Included content"
-                : item.sourceType === "custom"
-                  ? "Teacher-created"
-                  : descriptorFor(item).kind === "catalog"
-                    ? "Catalog artwork"
-                    : "Store item",
+              text: descriptorFor(item).kind === "seeded"
+                ? "Seeded artwork"
+                : descriptorFor(item).kind === "catalog"
+                  ? "Catalog artwork"
+                  : "Store placeholder",
             }),
           ],
         }),
@@ -288,7 +279,7 @@ function catalog({ model, filters, onFiltersChange, onEdit, onArchive, onAdd }) 
   if (model.isEmpty) {
     root.append(AdminEmptyState({
       title: "No Store items yet",
-      message: "Add the first custom item to this simulation's Store.",
+      message: "Add the first item to this game's Store catalog.",
       action: { label: "Add Item", onClick: onAdd },
     }));
   } else {
@@ -347,8 +338,8 @@ export function StoreRoute({
     dialog = AdminDialog({
       title: mode === "edit" ? "Edit Store item" : "Add Store item",
       description: mode === "edit"
-        ? "Update this teacher-created Store item. Included simulation items are locked."
-        : "Create a custom Store item for this simulation. Included simulation content remains unchanged.",
+        ? "Change only fields persisted by the authoritative Store contract."
+        : "Create an item using the authoritative Store contract. Custom artwork is not currently persisted.",
       content: form.element,
       footer: form.footer,
       size: "large",
@@ -370,7 +361,6 @@ export function StoreRoute({
   }
 
   function editItem(item, opener) {
-    if (item?.sourceType === "seeded") return;
     openItemDialog("edit", item, opener);
   }
 
@@ -379,7 +369,7 @@ export function StoreRoute({
     archiveDialog = AdminConfirmDialog({
       title: "Archive Store item",
       message: "Archive this Store item?",
-      detail: "Archived custom items are hidden from the active Store catalog.",
+      detail: "Archived items are hidden from the active Store catalog.",
       confirmLabel: "Archive item",
       failureMessage: "The Store item could not be archived. Try again.",
       async onConfirm() {
@@ -393,12 +383,11 @@ export function StoreRoute({
   }
 
   function archiveItem(item, opener) {
-    if (item?.sourceType === "seeded") return;
     archiveTarget = item;
     const confirm = ensureArchiveDialog();
     confirm.setTitle("Archive Store item");
     confirm.setMessage(`Archive ${item.name}?`);
-    confirm.setDetail("The custom item will be hidden from the active Store catalog. Its history is preserved.");
+    confirm.setDetail("The item will be hidden from the active Store catalog. This operation uses the existing soft-archive contract.");
     void confirm.open(opener).then(() => {
       archiveTarget = null;
     });
@@ -447,7 +436,7 @@ export function StoreRoute({
     });
     if (state.status === ADMIN_DATA_STATES.STALE) {
       route.append(AdminStaleState({
-        message: state.error?.userMessage || "Showing the last loaded Store catalog while refresh is unavailable.",
+        message: state.error?.userMessage || "Showing the last successful Store catalog while the service recovers.",
         retry: { label: "Retry", onClick: onRefresh },
         content,
       }));
@@ -456,7 +445,7 @@ export function StoreRoute({
         route.append(createElement("div", {
           className: "admin-store-route__refresh-state",
           attrs: { role: "status" },
-          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing Store data…"],
+          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing authoritative Store data…"],
         }));
       }
       route.append(content);
@@ -464,9 +453,9 @@ export function StoreRoute({
   }
 
   const pageFrame = AdminPageFrame({
-    eyebrow: "Store & Inventory",
+    eyebrow: "Game administration",
     title: "Store Management",
-    description: "Manage custom Store items for this simulation. Included content stays locked while prices and availability remain governed by the simulation.",
+    description: "Manage the current game's authoritative Store catalog, stock, prices, and availability.",
     actions: [addButton, refreshButton],
     content: route,
   });
