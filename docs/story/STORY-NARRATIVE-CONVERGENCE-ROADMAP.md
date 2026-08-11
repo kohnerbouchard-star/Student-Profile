@@ -629,6 +629,14 @@ The prior retry passed full backend/Edge typecheck and all eleven monthly parser
 
 This retry removes only the redundant empty anchor. The structured personal-future choice retains the canonical Day-323 key and all fixed-anchor, callback, privacy, coverage, and hidden-canon assertions remain unchanged.
 
+### Run 2026-08-11 — S5 source recovery V4 failure `31467726251`
+
+Source head: `dc8b5a4a8222c5c2221d61cefdf61f8ce3cfe730`
+
+Result: FAILED; generated packs and local recovery edits were discarded before publication.
+
+Inspect the exact failed job log. Preserve all parser, callback, privacy, coverage, hidden-canon, density, Messaging, and scheduler assertions.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
