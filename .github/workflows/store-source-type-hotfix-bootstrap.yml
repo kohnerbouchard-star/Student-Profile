@@ -1,0 +1,140 @@
+name: Store Source Type Hotfix Bootstrap
+
+on:
+  push:
+    branches:
+      - fix/store-source-type-projection-v1
+    paths:
+      - .github/workflows/store-source-type-hotfix-bootstrap.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: store-source-type-hotfix-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    name: Apply bounded Store provenance fix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/store-source-type-projection-v1
+          fetch-depth: 0
+
+      - name: Apply exact Store read-model projection patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          read_models_path = Path('backend/supabase/functions/admin-api/readModels.ts')
+          source = read_models_path.read_text()
+
+          old_select = '''    service.from("store_items")
+                .select("*")
+                .eq("game_session_id", gameId)
+                .order("sort_order", { ascending: true }),'''
+          new_select = '''    service.from("store_items")
+                .select("*,game_item:game_items!store_items_game_item_scope_fk(source_kind)")
+                .eq("game_session_id", gameId)
+                .order("sort_order", { ascending: true }),'''
+          if source.count(old_select) != 1:
+              raise SystemExit('Expected loadStore Store query was not found exactly once.')
+          source = source.replace(old_select, new_select, 1)
+
+          old_projection = '''    sortOrder: row.sort_order,
+              purchaseStats: stats.get(String(row.id)) || {'''
+          new_projection = '''    sortOrder: row.sort_order,
+              sourceType: ["physical_pack", "system"].includes(row.game_item?.source_kind)
+                ? "seeded"
+                : ["store_created", "admin_created"].includes(row.game_item?.source_kind)
+                ? "custom"
+                : undefined,
+              purchaseStats: stats.get(String(row.id)) || {'''
+          if source.count(old_projection) != 1:
+              raise SystemExit('Expected loadStore DTO projection was not found exactly once.')
+          source = source.replace(old_projection, new_projection, 1)
+          read_models_path.write_text(source)
+
+          test_path = Path('scripts/admin-v2-teacher-safety-contract.test.mjs')
+          test_source = test_path.read_text()
+          old_fixture = '''const storeController = fs.readFileSync(
+            "admin/v2/src/routes/store/StoreController.js",
+            "utf8",
+          );
+          const adminMutation = fs.readFileSync('''
+          new_fixture = '''const storeController = fs.readFileSync(
+            "admin/v2/src/routes/store/StoreController.js",
+            "utf8",
+          );
+          const adminReadModels = fs.readFileSync(
+            "backend/supabase/functions/admin-api/readModels.ts",
+            "utf8",
+          );
+          const adminMutation = fs.readFileSync('''
+          if test_source.count(old_fixture) != 1:
+              raise SystemExit('Expected Store test fixture block was not found exactly once.')
+          test_source = test_source.replace(old_fixture, new_fixture, 1)
+
+          old_assertion = '''  assert.match(storeController, /item\\?\\.sourceType === "seeded"/);
+
+            assert.match(safetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);'''
+          new_assertion = '''  assert.match(storeController, /item\\?\\.sourceType === "seeded"/);
+
+            assert.match(
+              adminReadModels,
+              /game_item:game_items!store_items_game_item_scope_fk\\(source_kind\\)/,
+              "Admin Store reads must include canonical game-item provenance.",
+            );
+            assert.match(
+              adminReadModels,
+              /sourceType:\\s*\\["physical_pack", "system"\\]\\.includes\\(row\\.game_item\\?\\.source_kind\\)[\\s\\S]*?"seeded"[\\s\\S]*?\\["store_created", "admin_created"\\]\\.includes\\(row\\.game_item\\?\\.source_kind\\)[\\s\\S]*?"custom"/,
+              "Admin Store reads must expose the canonical seeded/custom sourceType mapping.",
+            );
+
+            assert.match(safetyMigration, /ADMIN_STORE_SEEDED_ITEM_PROTECTED/);'''
+          if test_source.count(old_assertion) != 1:
+              raise SystemExit('Expected Store provenance assertion insertion point was not found exactly once.')
+          test_source = test_source.replace(old_assertion, new_assertion, 1)
+          test_path.write_text(test_source)
+          PY
+
+          git diff --check
+          git diff -- backend/supabase/functions/admin-api/readModels.ts scripts/admin-v2-teacher-safety-contract.test.mjs
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Verify focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/admin-v2-teacher-safety-contract.test.mjs
+          node --test scripts/admin-v2-store-api.test.mjs
+          deno fmt --check backend/supabase/functions/admin-api/readModels.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/supabase/functions/admin-api/readModels.ts
+
+      - name: Commit bounded fix and remove bootstrap workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -- .github/workflows/store-source-type-hotfix-bootstrap.yml
+          git add -- \
+            backend/supabase/functions/admin-api/readModels.ts \
+            scripts/admin-v2-teacher-safety-contract.test.mjs
+          git diff --cached --check
+          test "$(git diff --cached --name-only | sort | tr '\n' ' ')" = ".github/workflows/store-source-type-hotfix-bootstrap.yml backend/supabase/functions/admin-api/readModels.ts scripts/admin-v2-teacher-safety-contract.test.mjs "
+          git commit -m "fix(admin): project Store source provenance"
+          git push origin HEAD:fix/store-source-type-projection-v1
