@@ -11,6 +11,8 @@ on:
       - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
+      - "admin/v2/src/routes/store/StoreController.js"
+      - "admin/v2/src/routes/store/StoreRoute.js"
       - "admin/v2/styles/routes/attendance.css"
       - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
@@ -51,6 +53,8 @@ on:
       - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
+      - "admin/v2/src/routes/store/StoreController.js"
+      - "admin/v2/src/routes/store/StoreRoute.js"
       - "admin/v2/styles/routes/attendance.css"
       - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
@@ -144,6 +148,8 @@ jobs:
           node --check admin/v2/src/components/AdminTopbar.js
           node --check admin/v2/src/routes/attendance/AttendanceApi.js
           node --check admin/v2/src/routes/contracts/ContractForm.js
+          node --check admin/v2/src/routes/store/StoreController.js
+          node --check admin/v2/src/routes/store/StoreRoute.js
           node --check player-terminal/src/integrations/student-profile-api-call.js
           node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
 
