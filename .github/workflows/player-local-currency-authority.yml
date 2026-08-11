@@ -10,6 +10,8 @@ on:
       - "admin/v2/src/components/AdminNavigation.js"
       - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
+      - "admin/v2/src/routes/attendance/AttendanceRoute.js"
+      - "admin/v2/src/routes/banking/BankingRoute.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
       - "admin/v2/src/routes/store/StoreController.js"
       - "admin/v2/src/routes/store/StoreRoute.js"
@@ -52,6 +54,8 @@ on:
       - "admin/v2/src/components/AdminNavigation.js"
       - "admin/v2/src/components/AdminTopbar.js"
       - "admin/v2/src/routes/attendance/AttendanceApi.js"
+      - "admin/v2/src/routes/attendance/AttendanceRoute.js"
+      - "admin/v2/src/routes/banking/BankingRoute.js"
       - "admin/v2/src/routes/contracts/ContractForm.js"
       - "admin/v2/src/routes/store/StoreController.js"
       - "admin/v2/src/routes/store/StoreRoute.js"
@@ -147,6 +151,8 @@ jobs:
           node --check admin/v2/src/components/AdminNavigation.js
           node --check admin/v2/src/components/AdminTopbar.js
           node --check admin/v2/src/routes/attendance/AttendanceApi.js
+          node --check admin/v2/src/routes/attendance/AttendanceRoute.js
+          node --check admin/v2/src/routes/banking/BankingRoute.js
           node --check admin/v2/src/routes/contracts/ContractForm.js
           node --check admin/v2/src/routes/store/StoreController.js
           node --check admin/v2/src/routes/store/StoreRoute.js
