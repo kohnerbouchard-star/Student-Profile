@@ -1,4 +1,5 @@
 name: Story Narrative S3 Implement And Verify
+# attempt 3: parent-directory-safe transform
 
 on:
   push:
