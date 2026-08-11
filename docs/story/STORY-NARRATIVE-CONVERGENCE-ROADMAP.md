@@ -589,6 +589,14 @@ Result: FAILED; no generated monthly source pack correction was published.
 
 Inspect the exact failed recovery, generation, parser, whole-campaign, callback, Messaging, typecheck, or scheduler step. Do not weaken coverage, callback, privacy, spoiler, hidden-canon, parser, or idempotency assertions to make this run pass.
 
+### Run 2026-08-11 — S5 source recovery retry after StoryCondition narrowing
+
+Source head: `c2171d5b6ff8e206aa98858fe8286d0f1dec89c7`
+
+Prior recovery proved the deterministic correction script and all 11 pack builders execute, then failed before content validation because Story content tests dereferenced the `StoryCondition` union as though every condition were a leaf.
+
+This retry adds explicit leaf guards for `player_story_choice_is` and preserves the same parser, callback, privacy, coverage, and density assertions. No assertion is weakened.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
