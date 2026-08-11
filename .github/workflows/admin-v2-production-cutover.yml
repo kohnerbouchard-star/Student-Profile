@@ -67,7 +67,8 @@ jobs:
             }
           }
           const v2 = fs.readFileSync('admin/v2.html', 'utf8');
-          if (!v2.includes('id="admin-v2-shell"')) throw new Error('Admin V2 shell marker is missing.');
+          if (!v2.includes('data-admin-ui-version="2"')) throw new Error('Admin V2 version marker is missing.');
+          if (!v2.includes('id="adminPreview"')) throw new Error('Admin V2 mount target is missing.');
           if (!v2.includes('./v2/src/main.js')) throw new Error('Admin V2 entrypoint is missing.');
           if (v2.includes('id="app-shell"') || v2.includes('./admin.js')) {
             throw new Error('Admin V2 shell contains a legacy bootstrap marker.');
@@ -200,7 +201,8 @@ jobs:
             npx --yes "vercel@$VERCEL_CLI_VERSION" curl "$path" \
               --deployment "$deployment_url" \
               --token="$VERCEL_TOKEN" > "$file"
-            grep -Fq 'id="admin-v2-shell"' "$file"
+            grep -Fq 'data-admin-ui-version="2"' "$file"
+            grep -Fq 'id="adminPreview"' "$file"
             grep -Fq './v2/src/main.js' "$file"
             if grep -Fq 'id="app-shell"' "$file" || grep -Fq './admin.js' "$file"; then
               echo "Legacy Admin bootstrap detected at $path" >&2
@@ -239,7 +241,8 @@ jobs:
             file="$RUNNER_TEMP/production-$(echo "$path" | tr '/.' '__').html"
             npx --yes "vercel@$VERCEL_CLI_VERSION" curl "$path" \
               --token="$VERCEL_TOKEN" > "$file"
-            grep -Fq 'id="admin-v2-shell"' "$file"
+            grep -Fq 'data-admin-ui-version="2"' "$file"
+            grep -Fq 'id="adminPreview"' "$file"
             grep -Fq './v2/src/main.js' "$file"
             if grep -Fq 'id="app-shell"' "$file" || grep -Fq './admin.js' "$file"; then
               echo "Legacy Admin bootstrap detected in promoted production at $path" >&2
