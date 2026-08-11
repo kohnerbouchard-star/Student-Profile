@@ -81,6 +81,31 @@ def post() -> None:
         '  assertEquals(contexts[0]?.relationships["character.northreach.jonis-hale.v1"]?.standing, "trusted");\n',
         '  assertEquals(contexts[0]?.relationships?.["character.northreach.jonis-hale.v1"]?.standing, "trusted");\n',
     )
+    replace_once(
+        context_test,
+        '        id: "country-northreach",\n        country_code: "NORTHREACH",\n',
+        '        id: "country-northreach",\n        country_code: "NORTHREACH",\n        currency_code: "NRC",\n',
+    )
+    replace_once(
+        context_test,
+        '        id: "country-yrethia",\n        country_code: "YRETHIA",\n',
+        '        id: "country-yrethia",\n        country_code: "YRETHIA",\n        currency_code: "YRC",\n',
+    )
+    replace_once(
+        context_test,
+        '        player_id: "player-1",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: "1000",\n',
+        '        player_id: "player-1",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: "1000",\n        currency_code: "NRC",\n',
+    )
+    replace_once(
+        context_test,
+        '        player_id: "player-1",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: 250,\n',
+        '        player_id: "player-1",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: 250,\n        currency_code: "NRC",\n',
+    )
+    replace_once(
+        context_test,
+        '        player_id: "player-2",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: 500,\n',
+        '        player_id: "player-2",\n        game_session_id: "game-1",\n        account_type: "checking",\n        balance: 500,\n        currency_code: "YRC",\n',
+    )
 
     writer_test = Path("backend/src/domains/storylines/infrastructure/supabaseStoryRelationshipWriter.test.ts")
     replace_once(
