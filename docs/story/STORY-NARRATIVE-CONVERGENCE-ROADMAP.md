@@ -433,6 +433,39 @@ Correction:
 
 Next: persist attempts 3–5 cleanly, then execute S3 verification from the generated-test typing fixes.
 
+### Run 2026-08-11 — S3 verification attempt 6
+
+Workflow run: `31448141052`
+Workflow head: `1e0efc87596052be5b881b01150f85caafe8a160`
+Ephemeral generated migration: `20260811010438_add_story_relationship_state_v1.sql`
+
+Result: TYPECHECK + NEW S3 CONTRACT TESTS GREEN; FAILED IN EXISTING PLAYER STORY CONTEXT FIXTURE; NO S3 IMPLEMENTATION COMMIT WAS PUBLISHED.
+
+Passed before failure:
+
+- prior attempts 3–5 were successfully persisted to the roadmap in commit `292e9846b60ba6524606002824f5cc74205a1ee4`;
+- exact branch/S2 guard and pinned toolchain;
+- CLI migration generation and complete guarded S3 transform;
+- `git diff --check` and `npm ci`;
+- `npm run typecheck:all`;
+- `npm run test:story-relationships` (2/2 passed);
+- all 14 existing Story condition-engine tests;
+- all 12 existing Story effect-engine tests.
+
+Failure:
+
+- one existing `supabasePlayerStoryContextRepository.test.ts` fixture expected checking cash `1250` but omitted the `currency_code` fields required by the current production repository contract;
+- the repository correctly returned `0` because no valuation currency could be resolved;
+- this was an inherited stale fixture exposed by the expanded S3 focused suite, not a relationship runtime defect.
+
+Correction:
+
+- fixture country profiles now carry canonical NRC/YRC currency codes;
+- checking-balance rows now carry the matching currency codes;
+- no production cash/banking logic was changed.
+
+Next: rerun S3 from the corrected fixture normalization, then proceed through migration-contract and stock-story scheduler checks.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
