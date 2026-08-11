@@ -3,7 +3,7 @@ import { appendContent, createElement, setText } from "./dom.js";
 
 export function AdminTopbar({
   title = "Overview",
-  context = "Teacher administration",
+  context = "Global administration",
   navigationId,
   actions,
   notificationCount = 0,
