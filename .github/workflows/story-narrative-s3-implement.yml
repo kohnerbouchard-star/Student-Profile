@@ -1,5 +1,5 @@
 name: Story Narrative S3 Implement And Verify
-# attempt 7: Player Story context currency fixture repair
+# attempt 8: migration-contract working-directory path fix
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
             git add docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S3 verification attempt 6"
+            git commit -m "docs(story): record S3 verification attempt 7"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
 
@@ -110,7 +110,11 @@ jobs:
       - name: Verify S3 migration contract
         working-directory: backend
         shell: bash
-        run: deno test --allow-read="$MIGRATION" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/storyRelationshipMigrationContract.test.ts -- "$MIGRATION"
+        run: |
+          set -euo pipefail
+          LOCAL_MIGRATION="supabase/migrations/$MIGRATION_NAME"
+          test -f "$LOCAL_MIGRATION"
+          deno test --allow-read="$LOCAL_MIGRATION" --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/storylines/tests/storyRelationshipMigrationContract.test.ts -- "$LOCAL_MIGRATION"
 
       - name: Verify story scheduler integration
         working-directory: backend
