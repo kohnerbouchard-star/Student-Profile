@@ -3,12 +3,6 @@
   "framework": null,
   "buildCommand": "node scripts/build-vercel-runtime-config.mjs",
   "outputDirectory": "dist",
-  "git": {
-    "deploymentEnabled": {
-      "main": true
-    }
-  },
-
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
