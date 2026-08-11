@@ -745,6 +745,12 @@ This retry requires exactly four unsafe literals before correction and exactly f
 
 Connected staging remains untouched.
 
+### Run 2026-08-11 — Phase C V4 failure `31470355439`
+
+Result: FAILED; local syntax correction, generated forward migration, and regression contracts were discarded before publication.
+
+Inspect the exact escape-contract, forward-generation, migration-audit, local startup, two-pass replay, installed-function, lint, or focused Story regression failure. Connected staging remains untouched.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
