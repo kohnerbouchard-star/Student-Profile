@@ -735,6 +735,16 @@ Result: FAILED; the local S2 syntax correction, generated forward migration, and
 
 Inspect the exact escape-contract, forward-generation, migration-audit, local startup, two-pass database replay, installed-function, lint, or focused Story regression failure. Connected staging remains untouched.
 
+### Run 2026-08-11 — Phase C retry for all four S2 escape-string sites
+
+Workflow run: `31470355439`
+
+V3 stopped safely because the unreleased S2 migration contains four instances of the same malformed control-character E-string, not one: the stored prompt check, runtime prompt validation, option-label validation, and option-description validation.
+
+This retry requires exactly four unsafe literals before correction and exactly four established replay-safe doubled-backslash literals after correction. No other historical S2 text is changed. The S2 `effect_index` and S3 activation-scope semantic fixes remain a generated forward migration.
+
+Connected staging remains untouched.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
