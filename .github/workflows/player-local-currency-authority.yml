@@ -7,6 +7,12 @@ on:
       - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
       - "admin/player-identity-wiring.js"
+      - "admin/v2/src/components/AdminNavigation.js"
+      - "admin/v2/src/components/AdminTopbar.js"
+      - "admin/v2/src/routes/attendance/AttendanceApi.js"
+      - "admin/v2/src/routes/contracts/ContractForm.js"
+      - "admin/v2/styles/routes/attendance.css"
+      - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
@@ -16,6 +22,7 @@ on:
       - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
       - "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts"
       - "backend/src/domains/players/contracts/playerBrowserSessionContracts.ts"
+      - "backend/src/platform/supabase/adminMutation.ts"
       - "backend/supabase/functions/admin-api/attendanceOperations.ts"
       - "backend/supabase/functions/admin-api/gameRoutes.ts"
       - "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts"
@@ -23,11 +30,13 @@ on:
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
       - "backend/supabase/functions/admin-api/readExtensions.ts"
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
+      - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
       - "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
+      - "scripts/admin-v2-teacher-safety-contract.test.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
       - ".github/workflows/player-local-currency-authority.yml"
   push:
@@ -38,6 +47,12 @@ on:
       - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"
       - "admin/player-identity-wiring.js"
+      - "admin/v2/src/components/AdminNavigation.js"
+      - "admin/v2/src/components/AdminTopbar.js"
+      - "admin/v2/src/routes/attendance/AttendanceApi.js"
+      - "admin/v2/src/routes/contracts/ContractForm.js"
+      - "admin/v2/styles/routes/attendance.css"
+      - "admin/v2/styles/routes/store.css"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
@@ -47,6 +62,7 @@ on:
       - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
       - "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts"
       - "backend/src/domains/players/contracts/playerBrowserSessionContracts.ts"
+      - "backend/src/platform/supabase/adminMutation.ts"
       - "backend/supabase/functions/admin-api/attendanceOperations.ts"
       - "backend/supabase/functions/admin-api/gameRoutes.ts"
       - "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts"
@@ -54,11 +70,13 @@ on:
       - "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts"
       - "backend/supabase/functions/admin-api/readExtensions.ts"
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
+      - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
       - "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
+      - "scripts/admin-v2-teacher-safety-contract.test.mjs"
       - "scripts/player-local-currency-authority-contract.test.mjs"
       - ".github/workflows/player-local-currency-authority.yml"
 
@@ -95,6 +113,9 @@ jobs:
       - name: Validate currency, identity, and targeting authority
         run: node --test scripts/player-local-currency-authority-contract.test.mjs
 
+      - name: Validate Admin V2 teacher-safety boundaries
+        run: node --test scripts/admin-v2-teacher-safety-contract.test.mjs
+
       - name: Validate Admin Contract targeting behavior
         run: |
           deno test --config backend/supabase/functions/admin-api/deno.json \
@@ -119,6 +140,10 @@ jobs:
           node --check admin/classroom-write-fallback.js
           node --check admin/create-action-adapter.js
           node --check admin/player-identity-wiring.js
+          node --check admin/v2/src/components/AdminNavigation.js
+          node --check admin/v2/src/components/AdminTopbar.js
+          node --check admin/v2/src/routes/attendance/AttendanceApi.js
+          node --check admin/v2/src/routes/contracts/ContractForm.js
           node --check player-terminal/src/integrations/student-profile-api-call.js
           node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
 
@@ -129,7 +154,8 @@ jobs:
             backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts \
             backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts \
             backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts \
-            backend/src/domains/players/contracts/playerBrowserSessionContracts.ts
+            backend/src/domains/players/contracts/playerBrowserSessionContracts.ts \
+            backend/src/platform/supabase/adminMutation.ts
           deno check --config backend/supabase/functions/classroom-api/deno.json \
             --lock=backend/supabase/functions/deno.lock --frozen \
             backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts \
@@ -140,6 +166,7 @@ jobs:
           deno check --config backend/supabase/functions/admin-api/deno.json \
             --lock=backend/supabase/functions/deno.lock --frozen \
             backend/src/domains/contracts/application/adminContractMutation.ts \
+            backend/src/platform/supabase/adminMutation.ts \
             backend/supabase/functions/admin-api/attendanceOperations.ts \
             backend/supabase/functions/admin-api/idempotentLedgerOperations.ts \
             backend/supabase/functions/admin-api/readExtensions.ts \
