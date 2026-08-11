@@ -1,4 +1,4 @@
-name: Story Narrative S5 Source Recovery V3
+name: Story Narrative S5 Source Recovery V4
 
 on:
   push:
@@ -6,12 +6,13 @@ on:
       - feat/story-narrative-convergence-v1
     paths:
       - ".github/workflows/story-narrative-s5-source-recovery-v2.yml"
+      - "scripts/story-content/fix-authored-key-spoilers.py"
 
 permissions:
   contents: write
 
 concurrency:
-  group: story-narrative-s5-source-recovery-v3
+  group: story-narrative-s5-source-recovery-v4
   cancel-in-progress: false
 
 jobs:
@@ -36,13 +37,13 @@ jobs:
           path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
           text = path.read_text(encoding='utf-8')
           marker = '\n## Run-completion rule\n'
-          heading = '### Run 2026-08-11 — S5 source recovery retry after February fallback repair'
+          heading = '### Run 2026-08-11 — S5 source recovery retry after Day 323 stable-key dedupe'
           if heading not in text:
               body = '\n'.join([
                   '', heading, '',
                   f"Source head: `{os.environ['GITHUB_SHA']}`", '',
-                  'The prior retry cleared full backend/Edge typecheck, August, and September through January monthly parser contracts. February then failed because Day 188 used the `EVIDENCE` option set with the foreign `DISCLOSURE` default key `report-privately`.', '',
-                  'This retry changes only that authored fallback to the valid `EVIDENCE` choice `share-privately`; all parser, callback, privacy, coverage, hidden-canon, and density assertions remain intact.', ''
+                  'The prior retry passed full backend/Edge typecheck and all eleven monthly parser contracts, then the whole-campaign uniqueness gate found Day 323 emitted `event.campaign.d323.personal-future.v1` twice: once as an empty anchor and once as the actual structured Player choice.', '',
+                  'This retry removes only the redundant empty anchor. The structured personal-future choice retains the canonical Day-323 key and all fixed-anchor, callback, privacy, coverage, and hidden-canon assertions remain unchanged.', ''
               ])
               if marker not in text:
                   raise SystemExit('roadmap marker missing')
@@ -54,7 +55,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record February fallback recovery retry"
+            git commit -m "docs(story): record Day 323 dedupe recovery retry"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
 
@@ -222,7 +223,7 @@ jobs:
           path = Path('docs/story/STORY-NARRATIVE-CONVERGENCE-ROADMAP.md')
           text = path.read_text(encoding='utf-8')
           marker = '\n## Run-completion rule\n'
-          heading = f"### Run 2026-08-11 — S5 source recovery V3 failure `{os.environ['GITHUB_RUN_ID']}`"
+          heading = f"### Run 2026-08-11 — S5 source recovery V4 failure `{os.environ['GITHUB_RUN_ID']}`"
           if heading not in text:
               body = '\n'.join([
                   '', heading, '',
@@ -240,6 +241,6 @@ jobs:
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "docs(story): record S5 recovery V3 failure"
+            git commit -m "docs(story): record S5 recovery V4 failure"
             git push origin HEAD:feat/story-narrative-convergence-v1
           fi
