@@ -55,7 +55,7 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
   const validationSummary = AdminValidationSummary();
   const fields = new Map();
 
-  const knownDifficultyPresets = ["easy", "moderate", "hard", "custom"];
+  const knownDifficultyPresets = ["easy", "moderate", "hard", "insane", "custom"];
   const difficultyOptions = knownDifficultyPresets.map((value) => ({
     value,
     label: value === "custom" ? "Custom" : value[0].toUpperCase() + value.slice(1),
