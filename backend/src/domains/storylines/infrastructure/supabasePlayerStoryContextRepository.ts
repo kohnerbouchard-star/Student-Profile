@@ -1,5 +1,6 @@
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
 import type { StoryRelationshipState } from "../contracts/storyRelationshipContracts.ts";
+import type { StoryEffectiveChoice } from "../contracts/storyChoiceContracts.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type {
   PlayerStoryContextRepository,
@@ -18,7 +19,9 @@ type PlayerStoryContextTableName =
   | "game_session_contracts"
   | "player_contract_progress"
   | "game_session_story_flags"
-  | "story_relationships";
+  | "story_relationships"
+  | "story_message_interactions"
+  | "story_message_interaction_selections";
 
 interface SupabasePlayerStoryContextQueryError {
   readonly message: string;
@@ -124,6 +127,21 @@ interface StoryRelationshipRow {
   readonly standing: "hostile" | "strained" | "neutral" | "trusted" | "allied";
 }
 
+interface StoryInteractionContextRow {
+  readonly id: string;
+  readonly player_id: string;
+  readonly character_key: string;
+  readonly interaction_key: string;
+  readonly closes_at: string | null;
+  readonly default_choice_key: string | null;
+}
+
+interface StoryInteractionSelectionContextRow {
+  readonly interaction_id: string;
+  readonly choice_key: string;
+  readonly selected_at: string;
+}
+
 interface CountryInfo {
   readonly countryId: string | null;
   readonly countryCode: string | null;
@@ -140,6 +158,8 @@ const CONTRACT_SELECT = "id,contract_key,status,visibility";
 const CONTRACT_PROGRESS_SELECT = "player_id,contract_id,status";
 const STORY_FLAG_SELECT = "flag_key,value,created_at";
 const RELATIONSHIP_SELECT = "player_id,character_key,trust,respect,affinity,obligation,suspicion,standing";
+const STORY_INTERACTION_SELECT = "id,player_id,character_key,interaction_key,closes_at,default_choice_key";
+const STORY_SELECTION_SELECT = "interaction_id,choice_key,selected_at";
 
 export class SupabasePlayerStoryContextRepository
   implements PlayerStoryContextRepository {
@@ -147,7 +167,9 @@ export class SupabasePlayerStoryContextRepository
 
   async listPlayerStoryContexts(
     gameSessionId: string,
+    at?: string,
   ): Promise<readonly PlayerStoryContext[]> {
+    const evaluationAt = readEvaluationTime(at);
     const [
       players,
       countryByPlayerId,
@@ -158,6 +180,8 @@ export class SupabasePlayerStoryContextRepository
       progressRows,
       storyFlags,
       relationshipRows,
+      storyInteractionRows,
+      storySelectionRows,
     ] = await Promise.all([
       this.readActivePlayers(gameSessionId),
       this.readCountryAssignments(gameSessionId),
@@ -168,6 +192,8 @@ export class SupabasePlayerStoryContextRepository
       this.readPlayerContractProgress(gameSessionId),
       this.readStoryFlags(gameSessionId),
       this.readRelationships(gameSessionId),
+      this.readStoryInteractions(gameSessionId),
+      this.readStorySelections(gameSessionId),
     ]);
 
     const assetById = new Map(stockAssets.map((asset) => [asset.id, asset]));
@@ -186,6 +212,13 @@ export class SupabasePlayerStoryContextRepository
     const relationshipsByPlayerId = groupBy(
       relationshipRows,
       (relationship) => relationship.player_id,
+    );
+    const storyInteractionsByPlayerId = groupBy(
+      storyInteractionRows,
+      (interaction) => interaction.player_id,
+    );
+    const selectionByInteractionId = new Map(
+      storySelectionRows.map((selection) => [selection.interaction_id, selection]),
     );
     const contractById = new Map(
       contracts.map((contract) => [contract.id, contract]),
@@ -251,8 +284,37 @@ export class SupabasePlayerStoryContextRepository
             normalizeRelationshipRow(relationship),
           ]),
         ),
+        storyChoices: buildEffectiveStoryChoices(
+          storyInteractionsByPlayerId.get(player.id) ?? [],
+          selectionByInteractionId,
+          evaluationAt,
+        ),
       };
     });
+  }
+
+  private async readStoryInteractions(
+    gameSessionId: string,
+  ): Promise<readonly StoryInteractionContextRow[]> {
+    const response = await this.client
+      .from("story_message_interactions")
+      .select(STORY_INTERACTION_SELECT)
+      .eq("game_session_id", gameSessionId)
+      .order("interaction_key", { ascending: true });
+    assertNoError(response, "story_message_interactions", "select");
+    return (response.data ?? []) as StoryInteractionContextRow[];
+  }
+
+  private async readStorySelections(
+    gameSessionId: string,
+  ): Promise<readonly StoryInteractionSelectionContextRow[]> {
+    const response = await this.client
+      .from("story_message_interaction_selections")
+      .select(STORY_SELECTION_SELECT)
+      .eq("game_session_id", gameSessionId)
+      .order("selected_at", { ascending: true });
+    assertNoError(response, "story_message_interaction_selections", "select");
+    return (response.data ?? []) as StoryInteractionSelectionContextRow[];
   }
 
   private async readRelationships(
@@ -535,6 +597,47 @@ function normalizeKey(value: string | null | undefined): string | null {
   const key = value?.trim();
 
   return key ? key : null;
+}
+
+function readEvaluationTime(value: string | undefined): number {
+  const parsed = value ? Date.parse(value) : Date.now();
+  if (!Number.isFinite(parsed)) {
+    throw new Error("player_story_context_evaluation_time_invalid");
+  }
+  return parsed;
+}
+
+function buildEffectiveStoryChoices(
+  interactions: readonly StoryInteractionContextRow[],
+  selectionByInteractionId: ReadonlyMap<string, StoryInteractionSelectionContextRow>,
+  evaluationAt: number,
+): Readonly<Record<string, StoryEffectiveChoice>> {
+  const choices: Record<string, StoryEffectiveChoice> = {};
+  for (const interaction of interactions) {
+    const selection = selectionByInteractionId.get(interaction.id);
+    if (selection && Date.parse(selection.selected_at) <= evaluationAt) {
+      choices[interaction.interaction_key] = {
+        interactionKey: interaction.interaction_key,
+        characterKey: interaction.character_key,
+        choiceKey: selection.choice_key,
+        source: "selected",
+      };
+      continue;
+    }
+    if (
+      interaction.default_choice_key &&
+      interaction.closes_at &&
+      Date.parse(interaction.closes_at) <= evaluationAt
+    ) {
+      choices[interaction.interaction_key] = {
+        interactionKey: interaction.interaction_key,
+        characterKey: interaction.character_key,
+        choiceKey: interaction.default_choice_key,
+        source: "default",
+      };
+    }
+  }
+  return choices;
 }
 
 function normalizeRelationshipRow(row: StoryRelationshipRow): StoryRelationshipState {

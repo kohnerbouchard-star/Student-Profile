@@ -40,6 +40,18 @@ Deno.test("player story context repository builds contexts for active players", 
     tariff_level: 2,
   });
   assertEquals(contexts[0]?.relationships?.["character.northreach.jonis-hale.v1"]?.standing, "trusted");
+  assertEquals(contexts[0]?.storyChoices?.["interaction.jonis.production-pressure.v1"], {
+    interactionKey: "interaction.jonis.production-pressure.v1",
+    characterKey: "character.northreach.jonis-hale.v1",
+    choiceKey: "document-first",
+    source: "selected",
+  });
+  assertEquals(contexts[0]?.storyChoices?.["interaction.edda.residency-review.v1"], {
+    interactionKey: "interaction.edda.residency-review.v1",
+    characterKey: "character.northreach.edda-veyr.v1",
+    choiceKey: "wait",
+    source: "default",
+  });
 
   assertEquals(contexts[1]?.playerId, "player-2");
   assertEquals(contexts[1]?.currentCountryCode, "YRETHIA");
@@ -57,6 +69,8 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   tables.player_contract_progress = [];
   tables.game_session_story_flags = [];
   tables.story_relationships = [];
+  tables.story_message_interactions = [];
+  tables.story_message_interaction_selections = [];
   const client = new FakeClient(tables);
   const repository = new SupabasePlayerStoryContextRepository(client as never);
 
@@ -74,6 +88,7 @@ Deno.test("player story context repository keeps safe defaults for sparse player
   assertEquals(contexts[0]?.completedContractKeys, []);
   assertEquals(contexts[0]?.storyFlags, {});
   assertEquals(contexts[0]?.relationships, {});
+  assertEquals(contexts[0]?.storyChoices, {});
 });
 
 Deno.test("player story context repository reports read failures", async () => {
@@ -106,7 +121,9 @@ type FakeTableName =
   | "game_session_contracts"
   | "player_contract_progress"
   | "game_session_story_flags"
-  | "story_relationships";
+  | "story_relationships"
+  | "story_message_interactions"
+  | "story_message_interaction_selections";
 
 type FakeTables = Record<FakeTableName, Record<string, unknown>[]>;
 
@@ -396,6 +413,35 @@ function baseTables(): FakeTables {
         game_session_id: "game-1",
         contract_id: "contract-completed",
         status: "completed",
+      },
+    ],
+    story_message_interactions: [
+      {
+        id: "interaction-selected",
+        game_session_id: "game-1",
+        player_id: "player-1",
+        character_key: "character.northreach.jonis-hale.v1",
+        interaction_key: "interaction.jonis.production-pressure.v1",
+        closes_at: "2026-06-25T14:00:00.000Z",
+        default_choice_key: "document-first",
+      },
+      {
+        id: "interaction-default",
+        game_session_id: "game-1",
+        player_id: "player-1",
+        character_key: "character.northreach.edda-veyr.v1",
+        interaction_key: "interaction.edda.residency-review.v1",
+        closes_at: "2026-06-25T12:45:00.000Z",
+        default_choice_key: "wait",
+      },
+    ],
+    story_message_interaction_selections: [
+      {
+        interaction_id: "interaction-selected",
+        game_session_id: "game-1",
+        player_id: "player-1",
+        choice_key: "document-first",
+        selected_at: "2026-06-25T12:30:00.000Z",
       },
     ],
     story_relationships: [

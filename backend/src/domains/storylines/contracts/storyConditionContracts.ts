@@ -7,6 +7,7 @@ import {
   readRequiredText,
 } from "./storylineContractPrimitives.ts";
 import { invalidStorylineContract } from "./storylineContractErrors.ts";
+import { STORY_CHOICE_SOURCES, type StoryChoiceSource } from "./storyChoiceContracts.ts";
 import {
   STORY_RELATIONSHIP_METRICS,
   STORY_RELATIONSHIP_STANDINGS,
@@ -29,6 +30,7 @@ export const STORY_CONDITION_TYPES = [
   "player_relationship_metric_at_least",
   "player_relationship_metric_at_most",
   "player_relationship_standing_is",
+  "player_story_choice_is",
 ] as const;
 
 export type StoryConditionType = typeof STORY_CONDITION_TYPES[number];
@@ -61,7 +63,8 @@ export type StoryLeafCondition =
   | StoryCashThresholdCondition
   | StoryFlagEqualsCondition
   | StoryRelationshipMetricCondition
-  | StoryRelationshipStandingCondition;
+  | StoryRelationshipStandingCondition
+  | StoryChoiceCondition;
 
 export interface StoryCountryIsCondition {
   readonly type: "player_current_country_is" | "player_home_country_is";
@@ -118,6 +121,13 @@ export interface StoryRelationshipStandingCondition {
   readonly type: "player_relationship_standing_is";
   readonly characterKey: string;
   readonly standing: StoryRelationshipStanding;
+}
+
+export interface StoryChoiceCondition {
+  readonly type: "player_story_choice_is";
+  readonly interactionKey: string;
+  readonly choiceKey: string;
+  readonly source: StoryChoiceSource | null;
 }
 
 export function parseStoryCondition(value: unknown): StoryCondition {
@@ -230,6 +240,27 @@ export function parseStoryCondition(value: unknown): StoryCondition {
       type,
       characterKey: readRequiredText(record.characterKey, "condition.characterKey"),
       standing: standing as StoryRelationshipStanding,
+    };
+  }
+
+  if (type === "player_story_choice_is") {
+    const interactionKey = readRequiredText(record.interactionKey, "condition.interactionKey");
+    const choiceKey = readRequiredText(record.choiceKey, "condition.choiceKey");
+    if (
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(interactionKey) ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(choiceKey)
+    ) {
+      throw invalidStorylineContract("condition Story choice key is invalid.");
+    }
+    const sourceText = typeof record.source === "string" ? record.source.trim() : "";
+    if (sourceText && !STORY_CHOICE_SOURCES.includes(sourceText as StoryChoiceSource)) {
+      throw invalidStorylineContract("condition.source is invalid.");
+    }
+    return {
+      type,
+      interactionKey,
+      choiceKey,
+      source: sourceText ? sourceText as StoryChoiceSource : null,
     };
   }
 

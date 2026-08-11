@@ -3,6 +3,7 @@ import type { PlayerStoryContext } from "./playerStoryContext.ts";
 export interface PlayerStoryContextRepository {
   listPlayerStoryContexts(
     gameSessionId: string,
+    at?: string,
   ): Promise<readonly PlayerStoryContext[]>;
 }
 

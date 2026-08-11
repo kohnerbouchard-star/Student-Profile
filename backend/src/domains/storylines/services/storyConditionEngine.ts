@@ -72,6 +72,11 @@ export function evaluateStoryCondition(
     }
     case "player_relationship_standing_is":
       return player.relationships?.[condition.characterKey]?.standing === condition.standing;
+    case "player_story_choice_is": {
+      const effectiveChoice = player.storyChoices?.[condition.interactionKey];
+      return effectiveChoice?.choiceKey === condition.choiceKey &&
+        (condition.source === null || effectiveChoice.source === condition.source);
+    }
   }
 }
 

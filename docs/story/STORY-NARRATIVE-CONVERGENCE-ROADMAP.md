@@ -141,7 +141,7 @@ Locked S3 design:
 
 ### S4 — Choice consequences and delayed callbacks
 
-Status: IN PROGRESS
+Status: COMPLETE ON BRANCH / CONNECTED STAGING PENDING
 
 Goal: ensure a Player response changes later events, access, economics, or relationships.
 
@@ -532,6 +532,29 @@ Locked S4 design:
 - no per-Player consequence timer, second scheduler, browser-written consequence state, or free-form interpretation is introduced.
 
 Acceptance target for this run: demonstrate a due Story event consuming an authoritative prior choice and applying an existing effect only to the matching Player branch.
+
+### Run 2026-08-11 — S4 authoritative choice callbacks landed
+
+Workflow run: `31448825105`
+Source head verified by runner: `9e623a198bfe081496edecfda37d9e2d02d3d28b`
+
+Result: SOURCE + FOCUSED REGRESSION GREEN ON BRANCH.
+
+Implemented:
+
+- server-side effective-choice projection in `PlayerStoryContext` using existing S2 interaction/selection tables;
+- deterministic evaluation at the Story runner's authoritative `generatedAt` timestamp;
+- explicit `selected` versus authored `default` choice provenance;
+- `player_story_choice_is` Story condition with optional source matching;
+- stock-tick Story runner passes its exact Story evaluation time into Player context construction;
+- runner-level delayed-callback proof: a scheduled event applies a consequence only to the Player whose earlier effective choice matches;
+- no new database table, scheduler, browser mutation, or duplicated decision authority.
+
+Verification completed: `git diff --check`, `npm run typecheck:all`, S4 choice/callback tests, Player Story-context tests, and `npm run test:stock-market-calendar`.
+
+Remaining S4 acceptance: connected staging proof across actual S2 selection/default rows -> later scheduled callback -> S3/existing consequence before merge.
+
+Next: S5 narrative content saturation using only S1–S4 proven mechanics.
 
 ## Run-completion rule
 

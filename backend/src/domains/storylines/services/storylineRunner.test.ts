@@ -97,6 +97,67 @@ Deno.test("storyline runner resolves eligible event and applies player rules onl
   assertEquals(result.events[0]?.status, "resolved");
 });
 
+Deno.test("storyline runner applies delayed callback effects from an authoritative prior choice", async () => {
+  const repository = new FakeStorylineRepository({
+    candidates: [storylineEventCandidate({
+      id: "choice-callback",
+      eventKey: "choice-callback",
+      scheduledOffsetSeconds: 600,
+      playerRules: [{
+        ruleKey: "document-first-callback",
+        condition: {
+          type: "player_story_choice_is",
+          interactionKey: "interaction.jonis.production-pressure.v1",
+          choiceKey: "document-first",
+          source: "selected",
+        },
+        effects: [{
+          type: "cash_credit",
+          amount: 40,
+          label: "Documented compliance bonus",
+          reason: "Your earlier documented response qualified for the follow-up payment.",
+        }],
+      }],
+    })],
+  });
+  const effectDependencies = createFakeEffectDependencies();
+  const matchingPlayer = {
+    ...playerContext("player-1", "NORTHREACH"),
+    storyChoices: {
+      "interaction.jonis.production-pressure.v1": {
+        interactionKey: "interaction.jonis.production-pressure.v1",
+        characterKey: "character.northreach.jonis-hale.v1",
+        choiceKey: "document-first",
+        source: "selected" as const,
+      },
+    },
+  };
+  const nonMatchingPlayer = {
+    ...playerContext("player-2", "NORTHREACH"),
+    storyChoices: {
+      "interaction.jonis.production-pressure.v1": {
+        interactionKey: "interaction.jonis.production-pressure.v1",
+        characterKey: "character.northreach.jonis-hale.v1",
+        choiceKey: "take-promotion",
+        source: "selected" as const,
+      },
+    },
+  };
+  const result = await runDueStorylineEvents({
+    gameSessionId: "game-1",
+    now: "2026-06-25T12:20:00.000Z",
+    currentMarketTick: 5,
+    playerContexts: [matchingPlayer, nonMatchingPlayer],
+    repository,
+    effectDependencies,
+  });
+  assertEquals(result.resolvedCount, 1);
+  assertEquals(result.effectAppliedCount, 1);
+  assertEquals(effectDependencies.writes.cashAdjustments.length, 1);
+  assertEquals(effectDependencies.writes.cashAdjustments[0]?.playerId, "player-1");
+  assertEquals(effectDependencies.writes.cashAdjustments[0]?.signedAmount, 40);
+});
+
 Deno.test("storyline runner does not create resolutions for ineligible events", async () => {
   const repository = new FakeStorylineRepository({
     candidates: [

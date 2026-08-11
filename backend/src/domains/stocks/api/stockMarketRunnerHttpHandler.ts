@@ -560,6 +560,7 @@ function createDefaultStorylineRunnerAfterTick(
     const playerContexts = await playerContextRepository
       .listPlayerStoryContexts(
         input.gameSessionId,
+        input.generatedAt,
       );
 
     await runDueStorylineEvents({
