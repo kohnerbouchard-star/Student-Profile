@@ -1,0 +1,278 @@
+name: Story Follow-ups Staging Release V1
+
+on:
+  push:
+    branches:
+      - ops/story-followups-staging-release-v1
+    paths:
+      - ".github/workflows/story-followups-staging-release-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-followups-staging-release-v1
+  cancel-in-progress: false
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: 1484af43aa93db837082c3ee36b9769baa2cbe68
+  CREATED_BY: story-followups-release-v1
+
+jobs:
+  release:
+    name: Rehearse and apply exact follow-up migrations to staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: Check out exact release candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce exact source and staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$SOURCE_BASE_SHA"...HEAD)
+          test "${#changed[@]}" = "1"
+          test "${changed[0]}" = ".github/workflows/story-followups-staging-release-v1.yml"
+          for path in \
+            backend/supabase/migrations/20260812092000_seed_relationship_followups_and_meridian_fracture_v1.sql \
+            backend/supabase/migrations/20260812092500_defer_relationship_followups_until_arrival_v1.sql \
+            scripts/build-exact-migration-bundle.mjs
+          do
+            test "$(git rev-parse "HEAD:$path")" = "$(git rev-parse "$SOURCE_BASE_SHA:$path")"
+          done
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate exact migration tooling
+        run: |
+          set -euo pipefail
+          node --check scripts/build-exact-migration-bundle.mjs
+          node --test scripts/build-exact-migration-bundle.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Link protected staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+
+      - name: Preflight prerequisite story schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          prerequisite_count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version in ('20260811110000','20260811111000','20260811112000','20260812090000','20260812091000')")"
+          test "$prerequisite_count" = "5"
+          target_count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version in ('20260812092000','20260812092500')")"
+          test "$target_count" = "0" -o "$target_count" = "2"
+
+      - name: Rehearse, apply, and verify exact follow-up migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          migrations=(
+            backend/supabase/migrations/20260812092000_seed_relationship_followups_and_meridian_fracture_v1.sql
+            backend/supabase/migrations/20260812092500_defer_relationship_followups_until_arrival_v1.sql
+          )
+          : > /tmp/story-followups-staging-release.log
+          for migration in "${migrations[@]}"; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            applied="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version = '$version'")"
+            if [ "$applied" = "0" ]; then
+              node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output "/tmp/${version}-rollback.sql" --mode rollback --created-by "$CREATED_BY"
+              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc --file "/tmp/${version}-rollback.sql" 2>&1 | tee -a /tmp/story-followups-staging-release.log
+              node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output "/tmp/${version}-commit.sql" --mode commit --created-by "$CREATED_BY"
+              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc --file "/tmp/${version}-commit.sql" 2>&1 | tee -a /tmp/story-followups-staging-release.log
+            elif [ "$applied" != "1" ]; then
+              echo "Unexpected ledger count for $version: $applied" >&2
+              exit 1
+            fi
+            node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output "/tmp/${version}-verify.sql" --mode verify --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc --file "/tmp/${version}-verify.sql" 2>&1 | tee -a /tmp/story-followups-staging-release.log
+          done
+
+      - name: Prove two-game isolation in rollback-scoped runtime acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/story-followups-staging-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game_a uuid;
+            v_game_b uuid;
+            v_player_a uuid;
+            v_storyline uuid;
+            v_arrival_event uuid;
+            v_global_count integer;
+            v_global_active integer;
+            v_a_overrides integer;
+            v_b_overrides integer;
+          begin
+            select game_session_id into v_game_a
+            from (
+              select distinct g.id as game_session_id
+              from public.game_sessions g
+              join public.players p on p.game_session_id = g.id and p.status = 'active'
+              where g.status = 'active'
+              order by g.id
+              limit 1
+            ) q;
+            select game_session_id into v_game_b
+            from (
+              select distinct g.id as game_session_id
+              from public.game_sessions g
+              join public.players p on p.game_session_id = g.id and p.status = 'active'
+              where g.status = 'active' and g.id <> v_game_a
+              order by g.id
+              limit 1
+            ) q;
+            if v_game_a is null or v_game_b is null then
+              raise exception 'STORY_FOLLOWUP_TWO_GAME_FIXTURE_MISSING';
+            end if;
+            select p.id into v_player_a
+            from public.players p
+            where p.game_session_id = v_game_a and p.status = 'active'
+            order by p.created_at, p.id
+            limit 1;
+
+            v_storyline := public.initialize_northreach_character_opening_v1(v_game_a);
+            perform public.initialize_relationship_followups_and_meridian_fracture_v1(v_game_a);
+            perform public.initialize_relationship_followups_and_meridian_fracture_v1(v_game_b);
+
+            select count(*)::integer,
+                   count(*) filter (where e.is_active)::integer
+            into v_global_count, v_global_active
+            from public.storyline_events e
+            where e.storyline_id = v_storyline
+              and (
+                e.event_key like 'relationship_%_sponsor_followup'
+                or e.event_key like 'meridian_fracture_%_sponsor_reaction'
+              );
+            if v_global_count <> 20 or v_global_active <> 0 then
+              raise exception 'STORY_FOLLOWUP_GLOBAL_DORMANCY_FAILED count=% active=%', v_global_count, v_global_active;
+            end if;
+
+            select e.id into v_arrival_event
+            from public.storyline_events e
+            where e.storyline_id = v_storyline
+              and e.event_key = 'arrival_edda_housing_window';
+            if v_arrival_event is null then
+              raise exception 'STORY_FOLLOWUP_ARRIVAL_EVENT_MISSING';
+            end if;
+
+            insert into public.player_story_impacts (
+              game_session_id, player_id, storyline_event_id, effect_type,
+              impact_label, impact_reason, payload
+            ) values (
+              v_game_a, v_player_a, v_arrival_event, 'character_message',
+              'staging_followup_isolation', 'rollback-only two-game isolation acceptance',
+              jsonb_build_object(
+                'characterKey', 'character.northreach.edda-veyr.v1',
+                'characterName', 'Edda Veyr',
+                'conversationKey', 'relationship.northreach.edda-veyr.v1',
+                'title', 'Staging isolation acceptance',
+                'body', 'Rollback-only story follow-up isolation acceptance.',
+                'allowPlayerReplies', true,
+                'payload', jsonb_build_object('phase', 'arrival', 'relationshipRole', 'sponsor')
+              )
+            );
+
+            select count(*)::integer into v_a_overrides
+            from public.game_session_story_event_overrides o
+            join public.storyline_events e on e.id = o.storyline_event_id
+            where o.game_session_id = v_game_a
+              and o.enabled
+              and (
+                e.event_key like 'relationship_%_sponsor_followup'
+                or e.event_key like 'meridian_fracture_%_sponsor_reaction'
+              );
+            select count(*)::integer into v_b_overrides
+            from public.game_session_story_event_overrides o
+            join public.storyline_events e on e.id = o.storyline_event_id
+            where o.game_session_id = v_game_b
+              and o.enabled
+              and (
+                e.event_key like 'relationship_%_sponsor_followup'
+                or e.event_key like 'meridian_fracture_%_sponsor_reaction'
+              );
+            select count(*)::integer into v_global_active
+            from public.storyline_events e
+            where e.storyline_id = v_storyline
+              and e.is_active
+              and (
+                e.event_key like 'relationship_%_sponsor_followup'
+                or e.event_key like 'meridian_fracture_%_sponsor_reaction'
+              );
+
+            if v_a_overrides <> 20 or v_b_overrides <> 0 or v_global_active <> 0 then
+              raise exception 'STORY_FOLLOWUP_GAME_SCOPE_FAILED a=% b=% global_active=%', v_a_overrides, v_b_overrides, v_global_active;
+            end if;
+            raise notice 'STORY_FOLLOWUP_STAGING_ACCEPTANCE_PASS game_a=% game_b=% a_overrides=% b_overrides=% global_active=%',
+              v_game_a, v_game_b, v_a_overrides, v_b_overrides, v_global_active;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'STORY_FOLLOWUP_STAGING_ACCEPTANCE_PASS' /tmp/story-followups-staging-acceptance.log
+
+      - name: Verify exact target ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version in ('20260812092000','20260812092500')")"
+          test "$count" = "2"
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -c "select version, name, created_by from supabase_migrations.schema_migrations where version in ('20260812092000','20260812092500') order by version;"
+
+      - name: Upload staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-followups-staging-release-${{ github.sha }}
+          path: |
+            /tmp/story-followups-staging-release.log
+            /tmp/story-followups-staging-acceptance.log
+            /tmp/*-verify.sql
+          if-no-files-found: warn
+          retention-days: 30
