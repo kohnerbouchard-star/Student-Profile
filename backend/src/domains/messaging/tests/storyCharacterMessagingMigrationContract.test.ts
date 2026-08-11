@@ -53,10 +53,11 @@ Deno.test("player message rendering exposes character identity without exposing 
   assertNotIncludes(sql, "story_player_id'\n");
 });
 
-Deno.test("Northreach opening seeds four authored relationship contacts through character_message effects", async () => {
+Deno.test("Northreach opening extends the canonical storyline with four authored relationship contacts", async () => {
   const sql = await Deno.readTextFile(NORTHREACH_SEED);
   for (const contract of [
-    "northreach_immigrant_opening_v1",
+    "econovaria_demo_act_1",
+    "initialize_demo_storyline_for_game",
     "character.northreach.edda-veyr.v1",
     "character.northreach.jonis-hale.v1",
     "character.northreach.mares-kovan.v1",
@@ -66,6 +67,7 @@ Deno.test("Northreach opening seeds four authored relationship contacts through 
     "'countryCode', 'NORTHREACH'",
     "activate_northreach_character_story_from_full_game_v1",
   ]) assertIncludes(sql, contract);
+  assertNotIncludes(sql, "insert into public.game_session_storylines");
 });
 
 function firstNonblank(value: string): string {
