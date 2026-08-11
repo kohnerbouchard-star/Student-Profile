@@ -86,7 +86,20 @@ jobs:
 
       - name: Verify backend and Edge types
         working-directory: backend
-        run: npm run typecheck:all
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npm run typecheck:all; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "typecheck:all failed after 3 attempts" >&2
+              exit 1
+            fi
+            echo "typecheck:all attempt $attempt failed; retrying transient dependency fetch" >&2
+            sleep $((attempt * 5))
+          done
 
       - name: Verify August Story pack
         working-directory: backend
