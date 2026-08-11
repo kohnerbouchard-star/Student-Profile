@@ -56,8 +56,7 @@ begin
           'body', 'You made it to Frostgate. Your temporary housing hold expires soon, so verify the address before you pay anyone. Send me a reply once you have the lease terms. I can check whether the employer paperwork matches what the settlement office has on file.',
           'allowPlayerReplies', true,
           'payload', jsonb_build_object('phase', 'arrival', 'relationshipRole', 'sponsor', 'messageStableId', 'message.arrival.northreach.welcome.v1')
-        ),
-        jsonb_build_object('type', 'story_flag_set', 'flagKey', 'northreach_arrival_edda_contacted', 'value', true)
+        )
       )
     )),
     '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'major', true
