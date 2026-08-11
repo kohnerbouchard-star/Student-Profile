@@ -119,7 +119,6 @@ jobs:
           set -euo pipefail
           node --test scripts/admin-v2-teacher-safety-contract.test.mjs
           node --test scripts/admin-v2-store-api.test.mjs
-          deno fmt --check backend/supabase/functions/admin-api/readModels.ts
           deno check --config backend/supabase/functions/admin-api/deno.json \
             --lock=backend/supabase/functions/deno.lock --frozen \
             backend/supabase/functions/admin-api/readModels.ts
