@@ -1,6 +1,36 @@
 import { AdminIcon } from "./AdminIcon.js";
 import { appendContent, createElement, setText } from "./dom.js";
 
+const TEACHER_TITLES = Object.freeze({
+  Overview: "Dashboard",
+  Players: "Students",
+  Market: "Stock Market",
+  Banking: "Student Banking",
+  Loans: "Student Loans",
+  Business: "Student Businesses",
+  Marketplace: "Marketplace Review",
+  Inventory: "Redemption Requests",
+  "World Management": "World & Simulation",
+  Progression: "Student Progress",
+  Settings: "Simulation Settings",
+  Logs: "Activity History",
+});
+
+function teacherTitle(value) {
+  const text = String(value || "").trim();
+  return TEACHER_TITLES[text] || text || "Dashboard";
+}
+
+function teacherIdentityName(value) {
+  const text = String(value || "").trim();
+  return !text || text.toLowerCase() === "administrator" ? "Teacher" : text;
+}
+
+function teacherContext(value) {
+  const text = String(value || "").trim();
+  return !text || text === "Teacher administration" ? "Teacher Console" : text;
+}
+
 export function AdminTopbar({
   title = "Dashboard",
   context = "Teacher Console",
@@ -25,8 +55,8 @@ export function AdminTopbar({
     children: AdminIcon({ name: "menu", size: 21 }),
   });
   const heading = createElement("div", { className: "admin-topbar__heading" });
-  const contextElement = createElement("span", { className: "admin-topbar__context", text: context });
-  const titleElement = createElement("strong", { className: "admin-topbar__title", text: title });
+  const contextElement = createElement("span", { className: "admin-topbar__context", text: teacherContext(context) });
+  const titleElement = createElement("strong", { className: "admin-topbar__title", text: teacherTitle(title) });
   heading.append(contextElement, titleElement);
 
   const actionSlot = createElement("div", { className: "admin-topbar__actions" });
@@ -58,18 +88,19 @@ export function AdminTopbar({
 
   function setIdentity(nextIdentity = {}) {
     identity = nextIdentity;
+    const name = teacherIdentityName(identity.name);
     identityButton.replaceChildren(
       createElement("span", { className: "admin-topbar__avatar", children: AdminIcon({ name: "user", size: 18 }) }),
       createElement("span", {
         className: "admin-topbar__identity-copy",
         children: [
-          createElement("strong", { text: identity.name || "Teacher" }),
+          createElement("strong", { text: name }),
           createElement("small", { text: identity.gameName || "No simulation selected" }),
         ],
       }),
       AdminIcon({ name: "chevronDown", size: 16 }),
     );
-    identityButton.setAttribute("aria-label", `Open account menu for ${identity.name || "teacher"}`);
+    identityButton.setAttribute("aria-label", `Open account menu for ${name}`);
     identityButton.title = identity.gameName || "No simulation selected";
   }
 
@@ -85,8 +116,8 @@ export function AdminTopbar({
     element: root,
     navigationToggle,
     actionSlot,
-    setTitle(nextTitle) { setText(titleElement, nextTitle, "Dashboard"); },
-    setContext(nextContext) { setText(contextElement, nextContext, "Teacher Console"); },
+    setTitle(nextTitle) { setText(titleElement, teacherTitle(nextTitle), "Dashboard"); },
+    setContext(nextContext) { setText(contextElement, teacherContext(nextContext), "Teacher Console"); },
     setNotificationCount,
     setIdentity,
     setNavigationExpanded(expanded) {
