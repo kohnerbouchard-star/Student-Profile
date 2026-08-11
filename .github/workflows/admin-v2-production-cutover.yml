@@ -56,14 +56,28 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
-          if (config.git?.deploymentEnabled?.main !== false) {
-            throw new Error('Automatic main deployment must remain disabled.');
+          const deploymentEnabled = config.git?.deploymentEnabled;
+          const automaticMain = deploymentEnabled && typeof deploymentEnabled === 'object'
+            ? deploymentEnabled.main
+            : deploymentEnabled;
+          if (![undefined, false, true].includes(automaticMain)) {
+            throw new Error('main deployment policy must be default-enabled, explicitly enabled, or explicitly disabled');
           }
           const rewrites = Array.isArray(config.rewrites) ? config.rewrites : [];
           for (const source of ['/admin', '/admin/']) {
             const matches = rewrites.filter((entry) => entry?.source === source);
             if (matches.length !== 1 || matches[0].destination !== '/admin/v2.html') {
               throw new Error(`Canonical Admin V2 rewrite missing or ambiguous for ${source}`);
+            }
+          }
+          if (automaticMain !== false) {
+            const build = fs.readFileSync('scripts/build-vercel-runtime-config.mjs', 'utf8');
+            if (!build.includes('canonicalizeAdminV2(outputRoot)')) {
+              throw new Error('Enabled main deployment requires canonical Admin V2 build output.');
+            }
+            if (!build.includes('path.join(outputRoot, "admin", "v2.html")') ||
+                !build.includes('path.join(outputRoot, "admin", "index.html")')) {
+              throw new Error('Admin V2 deployment artifact mapping is incomplete.');
             }
           }
           const v2 = fs.readFileSync('admin/v2.html', 'utf8');
