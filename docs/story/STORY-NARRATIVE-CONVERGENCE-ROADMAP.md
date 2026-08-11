@@ -581,6 +581,14 @@ This run will regenerate all 11 packs before existence checks, remove spoiler-be
 
 S5 is not complete at launch; News/Contract/system adapters, runner reliability, connected staging, S6 reachability, and S7 acceptance remain outstanding.
 
+### Run 2026-08-11 — S5 source recovery failure `31467061136`
+
+Source head: `819c70903cbeb347e515ea87c79546fd254a12db`
+
+Result: FAILED; no generated monthly source pack correction was published.
+
+Inspect the exact failed recovery, generation, parser, whole-campaign, callback, Messaging, typecheck, or scheduler step. Do not weaken coverage, callback, privacy, spoiler, hidden-canon, parser, or idempotency assertions to make this run pass.
+
 ## Run-completion rule
 
 Every story implementation/verification run must update this file before the run is considered complete. Failed runs are recorded with the exact stage and blocker; successful runs record the exact migration/verification boundary and next workstream.
