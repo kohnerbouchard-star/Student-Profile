@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "releasePolicy": {
     "allowedEvidence": [
       "connected_browser",
@@ -62,7 +62,48 @@
     "navigationAndModals": "connected_browser",
     "gameCreation": "connected_browser",
     "playerCreation": "connected_browser",
-    "gameCodeShare": "connected_browser",
-    "allMutationButtons": "unverified"
+    "gameCodeShare": "connected_browser"
+  },
+  "adminMutationExpectedCount": 39,
+  "adminMutationActions": {
+    "store.createStoreItem": { "evidence": "local_browser", "domain": "store", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "createStoreItem", "method": "POST", "evidencePath": "scripts/admin-v2-store-browser-smoke.mjs" },
+    "store.updateStoreItem": { "evidence": "local_browser", "domain": "store", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "updateStoreItem", "method": "PATCH", "evidencePath": "scripts/admin-v2-store-browser-smoke.mjs" },
+    "store.archiveStoreItem": { "evidence": "local_browser", "domain": "store", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "archiveStoreItem", "method": "DELETE", "evidencePath": "scripts/admin-v2-store-browser-smoke.mjs" },
+    "players.createPlayer": { "evidence": "local_browser", "domain": "players", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "createPlayer", "method": "POST", "evidencePath": "scripts/admin-v2-players-browser-smoke.mjs" },
+    "players.updatePlayerSettings": { "evidence": "local_browser", "domain": "players", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "updatePlayerSettings", "method": "PATCH", "evidencePath": "scripts/admin-v2-players-browser-smoke.mjs" },
+    "players.updatePlayerCredentials": { "evidence": "local_browser", "domain": "players", "sourcePath": "admin/v2/src/api/admin-api-client.js", "functionName": "updatePlayerCredentials", "method": "POST", "evidencePath": "scripts/admin-v2-players-browser-smoke.mjs" },
+    "attendance.scanAttendance": { "evidence": "contract_only", "domain": "attendance", "sourcePath": "admin/v2/src/routes/attendance/AttendanceApi.js", "functionName": "scanAttendance", "method": "POST" },
+    "attendance.correctAttendance": { "evidence": "contract_only", "domain": "attendance", "sourcePath": "admin/v2/src/routes/attendance/AttendanceApi.js", "functionName": "correctAttendance", "method": "POST" },
+    "attendance.saveAttendanceNote": { "evidence": "contract_only", "domain": "attendance", "sourcePath": "admin/v2/src/routes/attendance/AttendanceApi.js", "functionName": "saveAttendanceNote", "method": "POST" },
+    "attendance.adjustAttendanceReward": { "evidence": "contract_only", "domain": "attendance", "sourcePath": "admin/v2/src/routes/attendance/AttendanceApi.js", "functionName": "adjustAttendanceReward", "method": "POST" },
+    "attendance.setAttendanceLock": { "evidence": "contract_only", "domain": "attendance", "sourcePath": "admin/v2/src/routes/attendance/AttendanceApi.js", "functionName": "setAttendanceLock", "method": "POST" },
+    "banking.adjustBankingBalance": { "evidence": "connected_browser", "domain": "banking", "sourcePath": "admin/v2/src/routes/banking/BankingApi.js", "functionName": "adjustBankingBalance", "method": "POST", "evidencePath": "player-terminal/tools/connected-admin-ledger-runner-v4.mjs" },
+    "business.setBusinessCompliance": { "evidence": "contract_only", "domain": "business", "sourcePath": "admin/v2/src/routes/business/BusinessApi.js", "functionName": "setBusinessCompliance", "method": "POST" },
+    "crafting.recoverCraftingJob": { "evidence": "contract_only", "domain": "crafting", "sourcePath": "admin/v2/src/routes/crafting/CraftingApi.js", "functionName": "recoverCraftingJob", "method": "POST" },
+    "crafting.applyCraftingSupply": { "evidence": "contract_only", "domain": "crafting", "sourcePath": "admin/v2/src/routes/crafting/CraftingApi.js", "functionName": "applyCraftingSupply", "method": "POST" },
+    "inventory.review": { "evidence": "contract_only", "domain": "inventory", "sourcePath": "admin/inventory-redemption-queue-client.js", "functionName": "review", "method": "POST", "allowedActions": ["approve", "reject", "fulfill"] },
+    "loans.reviewApplication": { "evidence": "contract_only", "domain": "loans", "sourcePath": "admin/v2/src/routes/loans/LoansApiClient.js", "functionName": "reviewApplication", "method": "POST" },
+    "loans.upsertProduct": { "evidence": "contract_only", "domain": "loans", "sourcePath": "admin/v2/src/routes/loans/LoansApiClient.js", "functionName": "upsertProduct", "method": "POST" },
+    "loans.restructureLoan": { "evidence": "contract_only", "domain": "loans", "sourcePath": "admin/v2/src/routes/loans/LoansApiClient.js", "functionName": "restructureLoan", "method": "POST" },
+    "loans.serviceLoans": { "evidence": "contract_only", "domain": "loans", "sourcePath": "admin/v2/src/routes/loans/LoansApiClient.js", "functionName": "serviceLoans", "method": "POST" },
+    "marketplace.reviewListing": { "evidence": "contract_only", "domain": "marketplace", "sourcePath": "admin/v2/src/routes/marketplace/MarketplaceApiClient.js", "functionName": "reviewListing", "method": "POST", "allowedActions": ["hold", "approve", "reject"] },
+    "marketplace.reviewDispute": { "evidence": "contract_only", "domain": "marketplace", "sourcePath": "admin/v2/src/routes/marketplace/MarketplaceApiClient.js", "functionName": "reviewDispute", "method": "POST", "allowedActions": ["refund", "resolve_seller", "reject"] },
+    "marketplace.updatePolicy": { "evidence": "contract_only", "domain": "marketplace", "sourcePath": "admin/v2/src/routes/marketplace/MarketplaceApiClient.js", "functionName": "updatePolicy", "method": "PATCH" },
+    "messages.moderateThread": { "evidence": "contract_only", "domain": "messages", "sourcePath": "admin/v2/src/routes/messages/MessagesApi.js", "functionName": "moderateThread", "method": "POST", "allowedActions": ["disable", "enable", "close"] },
+    "messages.moderateMessage": { "evidence": "contract_only", "domain": "messages", "sourcePath": "admin/v2/src/routes/messages/MessagesApi.js", "functionName": "moderateMessage", "method": "POST", "allowedActions": ["hide", "unhide"] },
+    "messages.deleteExpiredThread": { "evidence": "contract_only", "domain": "messages", "sourcePath": "admin/v2/src/routes/messages/MessagesApi.js", "functionName": "deleteExpiredThread", "method": "POST" },
+    "newsEvents.recoverNewsPublication": { "evidence": "contract_only", "domain": "news-events", "sourcePath": "admin/v2/src/routes/news-events/NewsEventsApi.js", "functionName": "recoverNewsPublication", "method": "POST" },
+    "progression.correctPlayer": { "evidence": "contract_only", "domain": "progression", "sourcePath": "admin/v2/src/routes/progression/ProgressionClient.js", "functionName": "correctPlayer", "method": "POST" },
+    "settings.updateSettings": { "evidence": "local_browser", "domain": "settings", "sourcePath": "admin/v2/src/routes/settings/SettingsApi.js", "functionName": "updateSettings", "method": "PATCH", "evidencePath": "scripts/admin-v2-settings-browser-smoke.mjs" },
+    "contracts.createContract": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "createContract", "method": "POST" },
+    "contracts.publishContract": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "publishContract", "method": "POST" },
+    "contracts.archiveContract": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "archiveContract", "method": "POST" },
+    "contracts.duplicateContract": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "duplicateContract", "method": "POST" },
+    "contracts.reviewProgress": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "reviewProgress", "method": "POST", "allowedActions": ["approve", "reject", "request_revision"] },
+    "contracts.issueRewards": { "evidence": "contract_only", "domain": "contracts", "sourcePath": "admin/v2/src/api/contracts-api-client.js", "functionName": "issueRewards", "method": "POST" },
+    "world.controlCampaign": { "evidence": "contract_only", "domain": "world", "sourcePath": "admin/v2/src/routes/world-management/WorldManagementApi.js", "functionName": "controlCampaign", "method": "POST", "allowedActions": ["pause", "resume", "emergency_disable"] },
+    "world.recoverEffect": { "evidence": "contract_only", "domain": "world", "sourcePath": "admin/v2/src/routes/world-management/WorldManagementApi.js", "functionName": "recoverEffect", "method": "POST" },
+    "world.correctArrivalClass": { "evidence": "contract_only", "domain": "world", "sourcePath": "admin/v2/src/routes/world-management/WorldManagementApi.js", "functionName": "correctArrivalClass", "method": "POST" },
+    "world.updateRouteState": { "evidence": "contract_only", "domain": "world", "sourcePath": "admin/v2/src/routes/world-management/WorldManagementApi.js", "functionName": "updateRouteState", "method": "POST" }
   }
 }
