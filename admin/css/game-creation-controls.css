@@ -154,6 +154,12 @@
   font-size: 12px;
 }
 
+.econovaria-game-create-dialog select option,
+.econovaria-game-create-dialog select optgroup {
+  background: #071825;
+  color: #e9fbff;
+}
+
 .econovaria-game-create-dialog input:focus,
 .econovaria-game-create-dialog select:focus {
   border-color: #74e2ff;
