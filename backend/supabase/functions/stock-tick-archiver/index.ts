@@ -248,7 +248,7 @@ async function readPreparedRows(client: SupabaseClient, prepared: PreparedArchiv
       .gte("created_at", prepared.range_start).lt("created_at", prepared.range_end)
       .order("tick_index", { ascending: true }).order("stock_asset_id", { ascending: true }).range(offset, end);
     if (response.error) throw new Error(`tick_fetch_failed:${response.error.message}`);
-    const page = (response.data || []) as TickRow[];
+    const page = (response.data || []) as unknown as TickRow[];
     rows.push(...page);
     if (page.length < end - offset + 1) break;
   }
