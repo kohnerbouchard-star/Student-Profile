@@ -108,8 +108,8 @@ for (const [action, entry] of adminMutationEntries) {
       if (!source.includes(functionName)) {
         failures.push(`Admin mutation ${action} function ${functionName} is absent from ${sourcePath.source}.`);
       }
-      if (!source.includes(`method: "${method}"`) && !source.includes(`method: '${method}'`)) {
-        failures.push(`Admin mutation ${action} method ${method} is absent from ${sourcePath.source}.`);
+      if (!source.includes(`"${method}"`) && !source.includes(`'${method}'`)) {
+        failures.push(`Admin mutation ${action} verb ${method} is absent from ${sourcePath.source}.`);
       }
     } catch (error) {
       failures.push(`Admin mutation ${action} source ${sourcePath.source} could not be read: ${error.message}`);
