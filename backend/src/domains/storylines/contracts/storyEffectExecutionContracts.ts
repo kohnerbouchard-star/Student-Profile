@@ -28,6 +28,7 @@ export interface StoryEffectExecutionInput {
   readonly storylineEventId: string;
   readonly effect: StoryEffect;
   readonly effectIndex?: number;
+  readonly effectIdentity?: string;
   readonly now: string;
   readonly playerContext?: PlayerStoryContext | null;
   readonly policyScope?: StoryPolicyEffectScope | null;
