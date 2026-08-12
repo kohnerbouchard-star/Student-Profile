@@ -16,7 +16,7 @@ env:
   DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   SOURCE_BASE_SHA: 7141d50cb10261730b65840a24b606fea9455184
   SUPABASE_CLI_VERSION: 2.109.1
-  CREATED_BY: story-replay-safety-staging-verify-v1
+  CREATED_BY: story-replay-safety-staging-release-v1
 
 jobs:
   verify:
