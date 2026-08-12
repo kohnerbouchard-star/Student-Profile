@@ -83,10 +83,11 @@ jobs:
           MIGRATION_PATH="$MIGRATION_PATH" OUTPUT_PATH="$RUNNER_TEMP/loan-repayment-account-production.sql" node - <<'NODE'
           const fs = require('node:fs');
           const source = fs.readFileSync(process.env.MIGRATION_PATH, 'utf8').trim();
-          if (!/^begin;\s*/iu.test(source) || !/\s*commit;$/iu.test(source)) {
+          const bounded = source.match(/(?:^|\n)begin;\s*\n([\s\S]*?)\ncommit;\s*$/iu);
+          if (!bounded) {
             throw new Error('Migration source must be transaction bounded.');
           }
-          const body = source.replace(/^begin;\s*/iu, '').replace(/\s*commit;$/iu, '').trim();
+          const body = bounded[1].trim();
           if (!body) throw new Error('Migration body is empty.');
           const version = process.env.MIGRATION_VERSION;
           const name = process.env.MIGRATION_NAME;
