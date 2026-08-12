@@ -106,7 +106,10 @@
       "slug": "classroom-api",
       "entrypoint": "backend/supabase/functions/classroom-api/index.ts",
       "verifyJwt": true,
-      "allowedEnvironments": ["staging", "production"],
+      "allowedEnvironments": [
+        "staging",
+        "production"
+      ],
       "retirementCondition": "admin-api internal compatibility caller count reaches zero"
     }
   ],
@@ -122,6 +125,14 @@
     {
       "slug": "crafting-acceptance-operator-bootstrap-v1",
       "verifyJwt": true
+    },
+    {
+      "slug": "license-payment-webhook",
+      "verifyJwt": false
+    },
+    {
+      "slug": "license-issuance-worker",
+      "verifyJwt": false
     }
   ],
   "sourceOnlyFunctions": [

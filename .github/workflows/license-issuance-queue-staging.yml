@@ -1,0 +1,186 @@
+name: License Issuance Queue Staging Release
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/functions/license-payment-webhook/**"
+      - "backend/supabase/functions/license-issuance-worker/**"
+      - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
+      - "backend/supabase/edge-function-manifest.json"
+      - "scripts/license-issuance-queue-contract.test.mjs"
+      - "docs/architecture/license-issuance-queue-v1.md"
+      - ".github/workflows/license-issuance-queue-staging.yml"
+  push:
+    branches:
+      - feat/license-issuance-queue-v1
+      - main
+    paths:
+      - "backend/supabase/functions/license-payment-webhook/**"
+      - "backend/supabase/functions/license-issuance-worker/**"
+      - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
+      - "backend/supabase/edge-function-manifest.json"
+      - "scripts/license-issuance-queue-contract.test.mjs"
+      - "docs/architecture/license-issuance-queue-v1.md"
+      - ".github/workflows/license-issuance-queue-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: license-issuance-queue-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  contract:
+    name: Verify durable licensing contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - name: Run licensing contract tests
+        run: node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs
+      - name: Validate migration naming and ownership
+        run: node scripts/validate-supabase-migrations.mjs
+
+  staging:
+    name: Deploy isolated staging licensing queue
+    needs: contract
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/feat/license-issuance-queue-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+
+      - name: Enforce isolated staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/license-issuance-queue-v1"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          git fetch --no-tags --prune origin \
+            '+refs/heads/feat/license-issuance-queue-v1:refs/remotes/origin/feat/license-issuance-queue-v1'
+          test "$(git rev-parse HEAD)" = \
+            "$(git rev-parse origin/feat/license-issuance-queue-v1)"
+
+      - name: Re-run licensing contract
+        run: node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Require staged queue migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(
+            curl --silent --show-error \
+              --request POST \
+              --output "$RUNNER_TEMP/license-queue-health.json" \
+              --write-out '%{http_code}' \
+              "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/read_license_issuance_queue_health_v1" \
+              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header 'content-type: application/json' \
+              --data '{}'
+          )"
+          test "$status" = "200"
+          test -s "$RUNNER_TEMP/license-queue-health.json"
+
+      - name: Deploy custom-auth staging functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for slug in license-payment-webhook license-issuance-worker; do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$STAGING_PROJECT_REF" \
+              --no-verify-jwt
+          done
+
+      - name: Configure Vault-authenticated queue scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          function_url="https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/license-issuance-worker"
+          curl --fail --silent --show-error \
+            --request POST \
+            "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/configure_license_issuance_scheduler_v1" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header 'content-type: application/json' \
+            --data "{\"p_function_url\":\"${function_url}\"}" \
+            > "$RUNNER_TEMP/license-scheduler-job.json"
+          test -s "$RUNNER_TEMP/license-scheduler-job.json"
+
+      - name: Verify unauthenticated requests fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          webhook_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/license-payment-webhook" \
+              --header 'content-type: application/json' \
+              --data '{}'
+          )"
+          worker_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/license-issuance-worker" \
+              --header 'content-type: application/json' \
+              --data '{}'
+          )"
+          test "$webhook_status" = "401"
+          test "$worker_status" = "401"
+
+      - name: Upload staging evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-issuance-staging-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/license-queue-health.json
+            ${{ runner.temp }}/license-scheduler-job.json
+
+  production-hold:
+    name: Enforce production payment-provider hold
+    needs: contract
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Keep production deployment disabled
+        run: |
+          echo "License issuance remains staging-only until a payment provider, immutable price reference, reversal policy, and production secrets are approved."
