@@ -12,7 +12,7 @@ const EXPECTED_DELETE_ORDER_TABLES = 129;
 const DB_BATCH_SIZE = 20;
 const R2_BATCH_SIZE = 1000;
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json(405, { ok: false, error: "method_not_allowed" });
@@ -135,7 +135,9 @@ function environmentName(supabaseUrl: string): string {
 }
 function env(name: string): string { return String(Deno.env.get(name) || "").trim(); }
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digestBytes = new Uint8Array(bytes.byteLength);
+  digestBytes.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", digestBytes);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 function unauthorized(): Response { return json(401, { ok: false, error: "unauthorized" }); }
