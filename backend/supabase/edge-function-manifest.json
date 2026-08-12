@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "manifestId": "econovaria.edge-functions.v2",
+  "manifestId": "econovaria.edge-functions.v3",
   "environments": {
     "staging": {
       "projectRef": "eecvbssdvarfcykcfrny"
@@ -33,6 +33,12 @@
       "entrypoint": "backend/supabase/functions/bootstrap-api/index.ts",
       "verifyJwt": false,
       "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
+    },
+    {
+      "slug": "game-data-purger",
+      "entrypoint": "backend/supabase/functions/game-data-purger/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-scheduler-token-plus-expired-license-plus-review-hash-plus-hard-confirm-arm"
     },
     {
       "slug": "player-api",
@@ -93,6 +99,12 @@
       "entrypoint": "backend/supabase/functions/stock-market-orchestrator/index.ts",
       "verifyJwt": false,
       "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier"
+    },
+    {
+      "slug": "stock-tick-archiver",
+      "entrypoint": "backend/supabase/functions/stock-tick-archiver/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-stock-scheduler-token-plus-r2-put-head-get-sha256-verification-plus-guarded-purge"
     },
     {
       "slug": "web-session-api",
