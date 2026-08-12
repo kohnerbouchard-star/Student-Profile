@@ -1,0 +1,604 @@
+name: Story Retry Safety - Staging Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/story-retry-safety-staging-release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-retry-safety-staging-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_REPOSITORY: kohnerbouchard-star/Student-Profile
+  EXPECTED_ACTOR: kohnerbouchard-star
+  RELEASE_BRANCH: release/story-retry-safety-staging-v1
+  EXPECTED_SOURCE_MAIN_SHA: 284294787bb27d94d53ea938df75a2379b47619f
+  WORKFLOW_PATH: .github/workflows/story-retry-safety-staging-release.yml
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  MIGRATION_VERSION: "20260812120000"
+  MIGRATION_FILE: backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  protected_staging_release:
+    name: Protected staging migration, runner deploy, and acceptance
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/story-retry-safety-staging-v1' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.user.login == 'kohnerbouchard-star' &&
+      github.actor == 'kohnerbouchard-star'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+      EVENT_ACTOR: ${{ github.actor }}
+
+    steps:
+      - name: Check out exact staging release carrier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce immutable staging-only source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$GITHUB_REPOSITORY" = "$EXPECTED_REPOSITORY"
+          test "$EVENT_ACTOR" = "$EXPECTED_ACTOR"
+          test "$PR_AUTHOR" = "$EXPECTED_ACTOR"
+          test "$PR_HEAD_REF" = "$RELEASE_BRANCH"
+          test "$PR_BASE_REF" = "main"
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_SOURCE_MAIN_SHA"
+          test "$(git rev-list --count "$EXPECTED_SOURCE_MAIN_SHA"..HEAD)" = "1"
+
+          mapfile -t changed_paths < <(
+            git diff --name-only "$EXPECTED_SOURCE_MAIN_SHA"..HEAD
+          )
+          printf '%s\n' "${changed_paths[@]}"
+          test "${#changed_paths[@]}" = "1"
+          test "${changed_paths[0]}" = "$WORKFLOW_PATH"
+
+          git diff --exit-code "$EXPECTED_SOURCE_MAIN_SHA"..HEAD -- backend
+          test -f "$MIGRATION_FILE"
+          test -f backend/supabase/functions/stock-market-runner/index.ts
+          test -f backend/supabase/config.next.toml
+          grep -Fq "claim_story_event_execution_v1" "$MIGRATION_FILE"
+          grep -Fq "finalize_story_event_execution_v1" "$MIGRATION_FILE"
+          grep -Fq "SupabaseStoryEventExecutionRepository" \
+            backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts
+
+          denied_ref="cgiukdjwicyk""rmtkhudh"
+          if grep -Fq "$denied_ref" "$WORKFLOW_PATH"; then
+            echo "Production project reference is forbidden in this workflow." >&2
+            exit 1
+          fi
+
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          [[ "$STAGING_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          printf 'SUPABASE_URL=https://%s.supabase.co\n' "$STAGING_PROJECT_REF" \
+            >> "$GITHUB_ENV"
+
+          {
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "release_commit=$RELEASE_COMMIT"
+            echo "source_main_sha=$EXPECTED_SOURCE_MAIN_SHA"
+            echo "release_branch=$PR_HEAD_REF"
+            echo "staging_project_ref=$STAGING_PROJECT_REF"
+            echo "migration=$MIGRATION_VERSION"
+          } > /tmp/story-retry-release-boundary.txt
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Link the exact staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$STAGING_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+
+          pooler_url="$(
+            tr -d '\r\n' < backend/supabase/.temp/pooler-url
+          )"
+          case "$pooler_url" in
+            "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *)
+              echo "Linked database is not the authorized staging project." >&2
+              exit 1
+              ;;
+          esac
+
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+          psql --version
+          supabase --version
+
+      - name: Prove the exact pending migration boundary
+        id: migration_boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find backend/supabase/migrations \
+            -maxdepth 1 \
+            -type f \
+            -name '*.sql' \
+            -printf '%f\n' \
+            | sed -nE 's/^([0-9]{14})_.*\.sql$/\1/p' \
+            | sort -u \
+            > /tmp/story-retry-local-migrations.txt
+
+          psql "$DATABASE_URL" \
+            -X -qAt --no-psqlrc -v ON_ERROR_STOP=1 \
+            -c "select version from supabase_migrations.schema_migrations order by version" \
+            | sort -u \
+            > /tmp/story-retry-remote-migrations.txt
+
+          comm -23 \
+            /tmp/story-retry-local-migrations.txt \
+            /tmp/story-retry-remote-migrations.txt \
+            > /tmp/story-retry-pending-migrations.txt
+
+          echo "Pending local migration versions:"
+          cat /tmp/story-retry-pending-migrations.txt
+
+          if grep -Fxq "$MIGRATION_VERSION" \
+            /tmp/story-retry-remote-migrations.txt; then
+            test ! -s /tmp/story-retry-pending-migrations.txt
+            echo "already_applied=true" >> "$GITHUB_OUTPUT"
+            echo "Exact migration is already present; application will be skipped."
+          else
+            mapfile -t pending_versions < \
+              /tmp/story-retry-pending-migrations.txt
+            test "${#pending_versions[@]}" = "1"
+            test "${pending_versions[0]}" = "$MIGRATION_VERSION"
+            test "$(basename "$MIGRATION_FILE")" = \
+              "${MIGRATION_VERSION}_add_story_event_execution_lease_v1.sql"
+            echo "already_applied=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply the exact Story execution migration
+        if: steps.migration_boundary.outputs.already_applied != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          (
+            cd backend
+            supabase db push --linked --include-all --yes
+          ) 2>&1 | tee /tmp/story-retry-migration-apply.log
+
+      - name: Verify migration ledger and database contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          psql "$DATABASE_URL" \
+            -X --no-psqlrc -v ON_ERROR_STOP=1 <<'SQL' \
+            2>&1 | tee /tmp/story-retry-schema-verification.log
+          do $verification$
+          declare
+            migration_count integer;
+          begin
+            select count(*)
+              into migration_count
+              from supabase_migrations.schema_migrations
+             where version = '20260812120000';
+
+            if migration_count <> 1 then
+              raise exception
+                'STORY_RETRY_MIGRATION_LEDGER_MISMATCH:%',
+                migration_count;
+            end if;
+
+            if to_regclass('public.story_event_execution_claims') is null then
+              raise exception 'STORY_RETRY_CLAIM_TABLE_MISSING';
+            end if;
+
+            if to_regprocedure(
+              'public.claim_story_event_execution_v1(uuid,uuid,timestamptz,integer,jsonb,integer)'
+            ) is null then
+              raise exception 'STORY_RETRY_CLAIM_RPC_MISSING';
+            end if;
+
+            if to_regprocedure(
+              'public.fail_story_event_execution_v1(uuid,uuid,uuid,text)'
+            ) is null then
+              raise exception 'STORY_RETRY_FAIL_RPC_MISSING';
+            end if;
+
+            if to_regprocedure(
+              'public.finalize_story_event_execution_v1(uuid,uuid,uuid,jsonb)'
+            ) is null then
+              raise exception 'STORY_RETRY_FINALIZE_RPC_MISSING';
+            end if;
+
+            raise notice 'STORY_RETRY_SCHEMA_READY';
+          end
+          $verification$;
+          SQL
+
+          psql "$DATABASE_URL" \
+            -X -qAt --no-psqlrc -v ON_ERROR_STOP=1 \
+            -c "select version from supabase_migrations.schema_migrations where version = '$MIGRATION_VERSION'" \
+            > /tmp/story-retry-migration-ledger.txt
+          test "$(cat /tmp/story-retry-migration-ledger.txt)" = \
+            "$MIGRATION_VERSION"
+
+      - name: Deploy the audited Story-aware stock-market runner
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          supabase functions deploy stock-market-runner \
+            --workdir backend \
+            --project-ref "$STAGING_PROJECT_REF" \
+            --no-verify-jwt \
+            2>&1 | tee /tmp/story-retry-runner-deploy.log
+
+          supabase functions list \
+            --project-ref "$STAGING_PROJECT_REF" \
+            --output json \
+            > /tmp/story-retry-staging-functions.json
+
+          grep -Fq '"stock-market-runner"' \
+            /tmp/story-retry-staging-functions.json
+
+      - name: Run rollback-only lease and retry acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          psql "$DATABASE_URL" \
+            -X --no-psqlrc -v ON_ERROR_STOP=1 <<'SQL' \
+            2>&1 | tee /tmp/story-retry-acceptance.log
+          begin;
+
+          do $acceptance$
+          declare
+            game_id uuid;
+            event_id uuid;
+            effective_at timestamptz :=
+              date_trunc('milliseconds', clock_timestamp());
+            effective_tick integer := 987654321;
+            original_plan jsonb :=
+              '{"version":1,"acceptance":"story-retry-safety-staging","effects":[]}'::jsonb;
+            replacement_plan jsonb :=
+              '{"version":1,"acceptance":"must-not-replace","effects":[{"unexpected":true}]}'::jsonb;
+            absent_claim record;
+            first_claim record;
+            busy_claim record;
+            failed_claim record;
+            retry_claim record;
+            finalized_claim record;
+            resolved_claim record;
+            repeated_finalize record;
+            resolution_count integer;
+          begin
+            select resolution.game_session_id,
+                   resolution.storyline_event_id
+              into game_id, event_id
+              from public.story_event_resolutions as resolution
+              join public.game_sessions as game_session
+                on game_session.id = resolution.game_session_id
+             where game_session.status in ('active', 'paused')
+             order by resolution.game_session_id,
+                      resolution.storyline_event_id
+             limit 1;
+
+            if game_id is null or event_id is null then
+              select game_session.id,
+                     storyline_event.id
+                into game_id, event_id
+                from public.game_sessions as game_session
+                join public.game_session_storylines as activation
+                  on activation.game_session_id = game_session.id
+                join public.storyline_events as storyline_event
+                  on storyline_event.storyline_id = activation.storyline_id
+               where game_session.status in ('active', 'paused')
+               order by game_session.id, storyline_event.id
+               limit 1;
+            end if;
+
+            if game_id is null or event_id is null then
+              raise exception 'STORY_RETRY_ACCEPTANCE_FIXTURE_MISSING';
+            end if;
+
+            delete from public.story_event_execution_claims
+             where game_session_id = game_id
+               and storyline_event_id = event_id;
+
+            delete from public.story_event_resolutions
+             where game_session_id = game_id
+               and storyline_event_id = event_id;
+
+            select *
+              into absent_claim
+              from public.claim_story_event_execution_v1(
+                game_id,
+                event_id,
+                effective_at,
+                effective_tick,
+                null,
+                120
+              );
+
+            if absent_claim.claim_outcome <> 'absent'
+               or absent_claim.attempt_count <> 0
+               or absent_claim.claim_id is not null
+               or absent_claim.lease_token is not null then
+              raise exception
+                'STORY_RETRY_ABSENT_CLAIM_FAILED:%',
+                row_to_json(absent_claim);
+            end if;
+
+            select *
+              into first_claim
+              from public.claim_story_event_execution_v1(
+                game_id,
+                event_id,
+                effective_at,
+                effective_tick,
+                original_plan,
+                120
+              );
+
+            if first_claim.claim_outcome <> 'acquired'
+               or first_claim.attempt_count <> 1
+               or first_claim.claim_id is null
+               or first_claim.lease_token is null
+               or first_claim.execution_plan <> original_plan
+               or first_claim.effective_at <> effective_at
+               or first_claim.effective_market_tick <> effective_tick then
+              raise exception
+                'STORY_RETRY_FIRST_CLAIM_FAILED:%',
+                row_to_json(first_claim);
+            end if;
+
+            select *
+              into busy_claim
+              from public.claim_story_event_execution_v1(
+                game_id,
+                event_id,
+                effective_at + interval '1 hour',
+                effective_tick + 1,
+                replacement_plan,
+                120
+              );
+
+            if busy_claim.claim_outcome <> 'busy'
+               or busy_claim.lease_token is not null
+               or busy_claim.execution_plan <> original_plan
+               or busy_claim.effective_at <> effective_at
+               or busy_claim.effective_market_tick <> effective_tick
+               or busy_claim.attempt_count <> 1 then
+              raise exception
+                'STORY_RETRY_BUSY_EXCLUSION_FAILED:%',
+                row_to_json(busy_claim);
+            end if;
+
+            select *
+              into failed_claim
+              from public.fail_story_event_execution_v1(
+                game_id,
+                event_id,
+                first_claim.lease_token,
+                'intentional staging acceptance retry 284294787bb27d94d53ea938df75a2379b47619f'
+              );
+
+            if failed_claim.claim_outcome <> 'retryable_failed'
+               or failed_claim.attempt_count <> 1
+               or failed_claim.claim_id <> first_claim.claim_id then
+              raise exception
+                'STORY_RETRY_FAILURE_TRANSITION_FAILED:%',
+                row_to_json(failed_claim);
+            end if;
+
+            select *
+              into retry_claim
+              from public.claim_story_event_execution_v1(
+                game_id,
+                event_id,
+                effective_at + interval '2 hours',
+                effective_tick + 2,
+                replacement_plan,
+                120
+              );
+
+            if retry_claim.claim_outcome <> 'acquired'
+               or retry_claim.attempt_count <> 2
+               or retry_claim.claim_id <> first_claim.claim_id
+               or retry_claim.lease_token is null
+               or retry_claim.lease_token = first_claim.lease_token
+               or retry_claim.execution_plan <> original_plan
+               or retry_claim.effective_at <> effective_at
+               or retry_claim.effective_market_tick <> effective_tick then
+              raise exception
+                'STORY_RETRY_REACQUIRE_FAILED:%',
+                row_to_json(retry_claim);
+            end if;
+
+            select *
+              into finalized_claim
+              from public.finalize_story_event_execution_v1(
+                game_id,
+                event_id,
+                retry_claim.lease_token,
+                jsonb_build_object(
+                  'acceptance', 'passed',
+                  'executionPlanStable', true,
+                  'attemptCount', retry_claim.attempt_count
+                )
+              );
+
+            if finalized_claim.finalize_outcome <> 'finalized'
+               or finalized_claim.resolution_id is null
+               or finalized_claim.claim_id <> first_claim.claim_id
+               or finalized_claim.attempt_count <> 2 then
+              raise exception
+                'STORY_RETRY_FINALIZE_FAILED:%',
+                row_to_json(finalized_claim);
+            end if;
+
+            select count(*)
+              into resolution_count
+              from public.story_event_resolutions
+             where game_session_id = game_id
+               and storyline_event_id = event_id;
+
+            if resolution_count <> 1 then
+              raise exception
+                'STORY_RETRY_RESOLUTION_DUPLICATED:%',
+                resolution_count;
+            end if;
+
+            select *
+              into resolved_claim
+              from public.claim_story_event_execution_v1(
+                game_id,
+                event_id,
+                effective_at + interval '3 hours',
+                effective_tick + 3,
+                replacement_plan,
+                120
+              );
+
+            if resolved_claim.claim_outcome <> 'already_resolved'
+               or resolved_claim.resolution_id <>
+                  finalized_claim.resolution_id
+               or resolved_claim.lease_token is not null then
+              raise exception
+                'STORY_RETRY_ALREADY_RESOLVED_FAILED:%',
+                row_to_json(resolved_claim);
+            end if;
+
+            select *
+              into repeated_finalize
+              from public.finalize_story_event_execution_v1(
+                game_id,
+                event_id,
+                retry_claim.lease_token,
+                '{"acceptance":"must-not-duplicate"}'::jsonb
+              );
+
+            if repeated_finalize.finalize_outcome <> 'already_resolved'
+               or repeated_finalize.resolution_id <>
+                  finalized_claim.resolution_id then
+              raise exception
+                'STORY_RETRY_REPEAT_FINALIZE_FAILED:%',
+                row_to_json(repeated_finalize);
+            end if;
+
+            select count(*)
+              into resolution_count
+              from public.story_event_resolutions
+             where game_session_id = game_id
+               and storyline_event_id = event_id;
+
+            if resolution_count <> 1 then
+              raise exception
+                'STORY_RETRY_FINAL_RESOLUTION_COUNT_FAILED:%',
+                resolution_count;
+            end if;
+
+            raise notice
+              'STORY_RETRY_ACCEPTANCE_PASSED game=% event=% claim=% resolution=% attempts=%',
+              game_id,
+              event_id,
+              first_claim.claim_id,
+              finalized_claim.resolution_id,
+              retry_claim.attempt_count;
+          end
+          $acceptance$;
+
+          rollback;
+          SQL
+
+          grep -Fq "STORY_RETRY_ACCEPTANCE_PASSED" \
+            /tmp/story-retry-acceptance.log
+
+      - name: Verify rollback left no acceptance residue
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          psql "$DATABASE_URL" \
+            -X -qAt --no-psqlrc -v ON_ERROR_STOP=1 \
+            -c "select count(*) from public.story_event_execution_claims where last_error = 'intentional staging acceptance retry 284294787bb27d94d53ea938df75a2379b47619f'" \
+            | tee /tmp/story-retry-rollback-verification.txt
+
+          test "$(tail -n 1 /tmp/story-retry-rollback-verification.txt)" = "0"
+
+      - name: Write sanitized release evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p /tmp/story-retry-release-evidence
+          if [ -f /tmp/story-retry-release-boundary.txt ]; then
+            cp /tmp/story-retry-release-boundary.txt \
+              /tmp/story-retry-release-evidence/boundary.txt
+          else
+            echo "Release boundary step did not complete." \
+              > /tmp/story-retry-release-evidence/boundary.txt
+          fi
+
+          for file in \
+            /tmp/story-retry-migration-apply.log \
+            /tmp/story-retry-schema-verification.log \
+            /tmp/story-retry-migration-ledger.txt \
+            /tmp/story-retry-runner-deploy.log \
+            /tmp/story-retry-acceptance.log \
+            /tmp/story-retry-rollback-verification.txt
+          do
+            if [ -f "$file" ]; then
+              cp "$file" /tmp/story-retry-release-evidence/
+            fi
+          done
+
+          {
+            echo "No production project, migration, or Edge Function was targeted."
+            echo "Database acceptance used BEGIN/ROLLBACK and verified zero residue."
+          } > /tmp/story-retry-release-evidence/scope.txt
+
+      - name: Upload sanitized staging evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: story-retry-safety-staging-release-evidence
+          path: /tmp/story-retry-release-evidence
+          if-no-files-found: error
+          retention-days: 14
