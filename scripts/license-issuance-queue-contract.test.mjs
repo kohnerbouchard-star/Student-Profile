@@ -15,6 +15,10 @@ const MIGRATION = new URL(
   "../backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql",
   import.meta.url,
 );
+const IDEMPOTENCY_WINDOW_MIGRATION = new URL(
+  "../backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql",
+  import.meta.url,
+);
 const WEBHOOK = new URL(
   "../backend/supabase/functions/license-payment-webhook/index.ts",
   import.meta.url,
@@ -124,6 +128,35 @@ test("database queue is durable, leased, parallel-safe, and idempotent", async (
   );
 });
 
+test("automatic email retries stop before provider idempotency can expire", async () => {
+  const source = await readFile(IDEMPOTENCY_WINDOW_MIGRATION, "utf8");
+  assert.ok(source.startsWith("begin;\n"));
+  assert.ok(source.trimEnd().endsWith("commit;"));
+
+  for (const required of [
+    "first_delivery_attempt_at",
+    "interval '23 hours'",
+    "email_idempotency_window_expired",
+    "operator reconciliation is required",
+    "status = 'dead_letter'",
+    "for update skip locked",
+    "coalesce(",
+    "claim_license_issuance_jobs_v1",
+    "to service_role",
+  ]) {
+    assert.ok(source.toLowerCase().includes(required.toLowerCase()), required);
+  }
+
+  assert.match(
+    source,
+    /first_delivery_attempt_at\s*=\s*coalesce\([\s\S]+v_now/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /first_delivery_attempt_at[\s\S]+interval\s+'(?:24|25|48) hours'/u,
+  );
+});
+
 test("payment ingress authenticates the raw body and acknowledges only durable writes", async () => {
   const source = await readFile(WEBHOOK, "utf8");
 
@@ -180,7 +213,6 @@ test("worker derives the same code on retry and uses idempotent email delivery",
   );
 });
 
-
 test("deployment inventory keeps payment issuance isolated to staging", async () => {
   const manifest = JSON.parse(await readFile(EDGE_MANIFEST, "utf8"));
   const temporary = new Map(
@@ -199,6 +231,10 @@ test("deployment inventory keeps payment issuance isolated to staging", async ()
   assert.match(
     workflow,
     /configure_license_issuance_scheduler_v1/u,
+  );
+  assert.match(
+    workflow,
+    /20260813091500_harden_license_email_idempotency_window_v1\.sql/u,
   );
   assert.match(workflow, /production-hold:/u);
   assert.doesNotMatch(
