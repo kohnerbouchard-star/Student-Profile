@@ -204,7 +204,7 @@ function assertMutation(mutation, { pathSuffix, action }) {
   assert.equal(mutation.headers["x-econovaria-csrf-token"], ADMIN_V2_FIXTURE_CSRF);
   assert.match(
     String(mutation.headers["idempotency-key"] || ""),
-    new RegExp(`^admin\\.contracts\\.${action.replaceAll("-", "-")}\\.[0-9a-f-]{36}\\.\\d+$`, "i"),
+    new RegExp(`^admin\\.contracts\\.${action}\\.[0-9a-f-]{36}\\.\\d+$`, "i"),
   );
 }
 
@@ -213,7 +213,7 @@ async function runPublish(browser, fixture) {
   try {
     const row = runtime.page.locator("tr").filter({ hasText: "Scheduled Supply Briefing" });
     await row.getByRole("button", { name: "Publish" }).click();
-    const dialog = runtime.page.getByRole("dialog");
+    const dialog = runtime.page.getByRole("alertdialog");
     await dialog.getByRole("button", { name: "Publish contract" }).click();
     await dialog.waitFor({ state: "detached" });
     assert.equal(runtime.mutations.length, 1);
@@ -229,7 +229,7 @@ async function runArchive(browser, fixture) {
   try {
     const row = runtime.page.locator("tr").filter({ hasText: "Regional Supply Chain Resilience Briefing" }).first();
     await row.getByRole("button", { name: "Archive" }).click();
-    const dialog = runtime.page.getByRole("dialog");
+    const dialog = runtime.page.getByRole("alertdialog");
     await dialog.getByRole("button", { name: "Archive contract" }).click();
     await dialog.waitFor({ state: "detached" });
     assert.equal(runtime.mutations.length, 1);
@@ -245,7 +245,6 @@ async function runDuplicate(browser, fixture) {
   try {
     const row = runtime.page.locator("tr").filter({ hasText: "Regional Supply Chain Resilience Briefing" }).first();
     await row.getByRole("button", { name: "Duplicate" }).click();
-    await runtime.page.waitForFunction(() => true);
     await runtime.page.waitForTimeout(50);
     assert.equal(runtime.mutations.length, 1);
     assertMutation(runtime.mutations[0], { pathSuffix: `/${ACTIVE_CONTRACT_ID}/duplicate`, action: "duplicate" });
@@ -262,7 +261,7 @@ async function runRewards(browser, fixture) {
     await row.getByRole("button", { name: "Details" }).click();
     await runtime.page.getByRole("button", { name: "Issue rewards" }).waitFor({ state: "visible", timeout: 10_000 });
     await runtime.page.getByRole("button", { name: "Issue rewards" }).click();
-    const dialog = runtime.page.getByRole("dialog");
+    const dialog = runtime.page.getByRole("alertdialog");
     await dialog.getByRole("button", { name: "Issue rewards" }).click();
     await dialog.waitFor({ state: "detached" });
     const mutation = runtime.mutations.find(({ pathname }) => pathname.endsWith("/rewards/issue"));
