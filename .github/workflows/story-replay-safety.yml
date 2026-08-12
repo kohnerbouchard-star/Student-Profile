@@ -7,6 +7,7 @@ on:
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
+      - "backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
+      - "backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
 
 permissions:
@@ -43,7 +45,7 @@ jobs:
         with:
           deno-version: v2.9.3
 
-      - name: Check Story replay-safety source
+      - name: Check Story replay and execution safety source
         run: |
           deno check \
             --config supabase/functions/deno.json \
@@ -53,18 +55,23 @@ jobs:
             src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts \
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts \
+            src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.ts \
+            src/domains/storylines/services/storyEventExecutionPlan.ts \
             src/domains/storylines/services/storylineRunner.ts
 
-      - name: Run Story replay-safety tests
+      - name: Run Story replay and execution safety tests
         run: |
           deno test \
-            --allow-read=supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql \
+            --allow-read=supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql,supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql \
             --config supabase/functions/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
             src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
+            src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.test.ts \
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \
             src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
-            src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts
+            src/domains/storylines/services/storylineRunnerLease.test.ts \
+            src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts \
+            src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts

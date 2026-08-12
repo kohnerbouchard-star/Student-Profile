@@ -30,6 +30,7 @@ export interface StoryEffectExecutionInput {
   readonly effectIndex?: number;
   readonly effectIdentity?: string;
   readonly now: string;
+  readonly effectiveMarketTick?: number;
   readonly playerContext?: PlayerStoryContext | null;
   readonly policyScope?: StoryPolicyEffectScope | null;
   readonly dependencies: StoryEffectExecutionDependencies;
@@ -40,6 +41,7 @@ export interface StoryEffectBatchExecutionInput {
   readonly storylineEventId: string;
   readonly effects: readonly StoryEffect[];
   readonly now: string;
+  readonly effectiveMarketTick?: number;
   readonly playerContext?: PlayerStoryContext | null;
   readonly policyScope?: StoryPolicyEffectScope | null;
   readonly dependencies: StoryEffectExecutionDependencies;
@@ -143,6 +145,7 @@ export interface StoryMarketNewsWriteInput {
   readonly shockKey: string;
   readonly payload: JsonObject;
   readonly idempotencyKey: string;
+  readonly createdTick?: number;
 }
 
 export interface StoryWorldRouteStateWriteInput {

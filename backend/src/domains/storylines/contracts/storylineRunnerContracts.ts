@@ -4,6 +4,7 @@ import type {
   StoryEffectBatchExecutionResult,
   StoryEffectExecutionDependencies,
 } from "./storyEffectExecutionContracts.ts";
+import type { StoryEventExecutionRepository } from "./storyEventExecutionContracts.ts";
 import type {
   CreateStoryCutsceneNotificationForPlayersResult,
   StoryNotificationRepository,
@@ -19,6 +20,7 @@ export interface RunDueStorylineEventsInput {
   readonly currentMarketTick: number;
   readonly playerContexts: readonly PlayerStoryContext[];
   readonly repository: StorylineRepository;
+  readonly executionRepository?: StoryEventExecutionRepository;
   readonly effectDependencies: StoryEffectExecutionDependencies;
   readonly notificationRepository?: StoryNotificationRepository | null;
 }
@@ -47,7 +49,8 @@ export type StorylineRunnerEventStatus =
 
 export type StorylineRunnerSkipReason =
   | "manual_trigger"
-  | "trigger_not_due";
+  | "trigger_not_due"
+  | "execution_in_progress";
 
 export interface StorylineRunnerEventResultBase {
   readonly eventId: string;
