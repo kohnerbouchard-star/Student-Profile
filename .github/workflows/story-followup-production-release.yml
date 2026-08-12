@@ -91,8 +91,8 @@ jobs:
           done
 
           grep -q 'initialize_relationship_followups_and_meridian_fracture_v1' "$M1_PATH"
-          grep -q "relationship_%_sponsor_followup" "$M1_PATH"
-          grep -q "meridian_fracture_%_sponsor_reaction" "$M1_PATH"
+          grep -Fq "'relationship_' || (v_contact ->> 'country') || '_sponsor_followup'" "$M1_PATH"
+          grep -Fq "'meridian_fracture_' || (v_contact ->> 'country') || '_sponsor_reaction'" "$M1_PATH"
           grep -q 'create table if not exists public.game_session_story_event_overrides' "$M2_PATH"
           grep -q 'force row level security' "$M2_PATH"
           grep -q 'enable_relationship_followups_after_arrival_contact_v1' "$M2_PATH"
