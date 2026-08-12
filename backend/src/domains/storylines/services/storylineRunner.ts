@@ -201,6 +201,7 @@ async function applyPlayerRuleEffects(
   input: RunDueStorylineEventsInput,
 ): Promise<PlayerRuleApplicationResult> {
   const matchingEffects: MatchedStoryEffect[] = [];
+  const gameScopedEffectIdentities = new Set<string>();
   let matchCount = 0;
 
   for (const rule of candidate.playerRules.map(parsePlayerRule)) {
@@ -221,11 +222,16 @@ async function applyPlayerRuleEffects(
     }
 
     if (ruleMatched) {
-      matchingEffects.push(
-        ...rule.effects
-          .filter(isGameScopedStoryEffect)
-          .map((effect) => ({ effect, playerContext: null })),
-      );
+      for (const effect of rule.effects.filter(isGameScopedStoryEffect)) {
+        const identity = gameScopedStoryEffectIdentity(effect);
+
+        if (gameScopedEffectIdentities.has(identity)) {
+          continue;
+        }
+
+        gameScopedEffectIdentities.add(identity);
+        matchingEffects.push({ effect, playerContext: null });
+      }
     }
   }
 
@@ -280,6 +286,31 @@ function isGameScopedStoryEffect(effect: StoryEffect): boolean {
     effect.type === "market_news_post" ||
     effect.type === "market_status_change" ||
     effect.type === "story_flag_set";
+}
+
+function gameScopedStoryEffectIdentity(effect: StoryEffect): string {
+  if (effect.type === "contract_unlock") {
+    return `contract_unlock:${effect.contractKey}`;
+  }
+
+  if (effect.type === "story_flag_set") {
+    return `story_flag_set:${effect.flagKey}:${JSON.stringify(effect.value)}`;
+  }
+
+  if (effect.type === "market_news_post") {
+    const shockKey = effect.payload.shockKey;
+    return `market_news_post:${
+      typeof shockKey === "string" && shockKey.trim()
+        ? shockKey.trim()
+        : JSON.stringify(effect.payload)
+    }`;
+  }
+
+  if (effect.type === "market_status_change") {
+    return `market_status_change:${JSON.stringify(effect.payload)}`;
+  }
+
+  return `${effect.type}:${JSON.stringify(effect)}`;
 }
 
 function isTriggerEligible(
