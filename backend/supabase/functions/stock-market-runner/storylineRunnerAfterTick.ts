@@ -2,9 +2,6 @@ import type {
   EdgeSupabaseClient,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
-  SupabaseContractRepository,
-} from "../../../src/domains/contracts/infrastructure/supabaseContractRepository.ts";
-import {
   SupabaseStockMarketNewsRepository,
 } from "../../../src/domains/stocks/infrastructure/supabaseStockMarketNewsRepository.ts";
 import {
@@ -17,8 +14,14 @@ import {
   StockMarketStoryNewsWriter,
 } from "../../../src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts";
 import {
+  SupabaseStoryContractWriter,
+} from "../../../src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts";
+import {
   SupabaseStoryEffectLedgerWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
+import {
+  SupabaseStoryImpactWriter,
+} from "../../../src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts";
 import {
   SupabaseStoryNotificationRepository,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts";
@@ -50,7 +53,8 @@ export function createStorylineRunnerAfterTick(
   const playerContextRepository = new SupabasePlayerStoryContextRepository(
     client as any,
   );
-  const contractRepository = new SupabaseContractRepository(client as any);
+  const contractWriter = new SupabaseStoryContractWriter(client as any);
+  const impactWriter = new SupabaseStoryImpactWriter(client as any);
   const marketNews = new StockMarketStoryNewsWriter(
     new SupabaseStockMarketNewsRepository(client as any),
   );
@@ -72,8 +76,8 @@ export function createStorylineRunnerAfterTick(
         ledger,
         policies: storylineRepository,
         flags: storylineRepository,
-        impacts: storylineRepository,
-        contracts: contractRepository,
+        impacts: impactWriter,
+        contracts: contractWriter,
         marketNews,
         world: worldFx,
         currency: worldFx,
