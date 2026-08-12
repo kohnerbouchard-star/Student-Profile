@@ -1,0 +1,418 @@
+name: Story Replay Safety Staging Release V1
+
+on:
+  push:
+    branches:
+      - ops/story-replay-safety-staging-release-v1
+    paths:
+      - ".github/workflows/story-replay-safety-staging-release-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: 7141d50cb10261730b65840a24b606fea9455184
+  SUPABASE_CLI_VERSION: 2.109.1
+  CREATED_BY: story-replay-safety-staging-release-v1
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Check out exact staging candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$SOURCE_BASE_SHA"...HEAD)
+          test "${#changed[@]}" = "1"
+          test "${changed[0]}" = ".github/workflows/story-replay-safety-staging-release-v1.yml"
+          for path in \
+            backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql \
+            backend/supabase/functions/stock-market-orchestrator/index.ts \
+            backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts \
+            backend/src/domains/storylines/services/storylineRunner.ts
+          do
+            test "$(git rev-parse "HEAD:$path")" = "$(git rev-parse "$SOURCE_BASE_SHA:$path")"
+          done
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Link protected staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\nPGPASSWORD=%s\nPGSSLMODE=require\n' \
+            "$pooler_url" "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Rehearse apply and verify exact replay-safety migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration=backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql
+          version=20260812115000
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$version'")"
+          if [ "$count" = "0" ]; then
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$migration" \
+              --output /tmp/story-replay-rollback.sql \
+              --mode rollback \
+              --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-replay-rollback.sql
+
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$migration" \
+              --output /tmp/story-replay-commit.sql \
+              --mode commit \
+              --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-replay-commit.sql
+          else
+            test "$count" = "1"
+          fi
+
+          node scripts/build-exact-migration-bundle.mjs \
+            --migration "$migration" \
+            --output /tmp/story-replay-verify.sql \
+            --mode verify \
+            --created-by "$CREATED_BY"
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-replay-verify.sql
+
+      - name: Capture pre-deploy orchestrator identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-before.json" \
+          EVIDENCE_PATH="$RUNNER_TEMP/stock-market-orchestrator-before.json" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing before deployment.');
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            slug: row.slug,
+            version: row.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+
+      - name: Deploy exact scheduled Story orchestrator to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy stock-market-orchestrator \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Verify orchestrator deployment advanced
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-after.json"
+          BEFORE_PATH="$RUNNER_TEMP/stock-market-orchestrator-before.json" \
+          AFTER_PATH="$RUNNER_TEMP/functions-after.json" \
+          EVIDENCE_PATH="$RUNNER_TEMP/stock-market-orchestrator-after.json" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+          const rows = JSON.parse(fs.readFileSync(process.env.AFTER_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing after deployment.');
+          if (row.verify_jwt !== false) throw new Error('stock-market-orchestrator verify_jwt drifted.');
+          if (!Number.isInteger(row.version) || row.version <= before.version) {
+            throw new Error(`orchestrator version did not advance: ${before.version} -> ${row.version}`);
+          }
+          if (!/^[a-f0-9]{64}$/.test(String(row.ezbr_sha256 || ''))) {
+            throw new Error('orchestrator digest is invalid.');
+          }
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            environment: 'staging',
+            sourceBaseSha: process.env.SOURCE_BASE_SHA,
+            slug: row.slug,
+            version: row.version,
+            priorVersion: before.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+
+      - name: Run rollback-scoped Story replay acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/story-replay-safety-staging-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game uuid;
+            v_player uuid;
+            v_event uuid;
+            v_currency text;
+            v_first record;
+            v_second record;
+            v_impact uuid;
+            v_contract uuid;
+            v_duplicate_failed boolean := false;
+          begin
+            select g.id, p.id, e.id, upper(btrim(c.currency_code))
+            into v_game, v_player, v_event, v_currency
+            from public.game_sessions g
+            join public.players p
+              on p.game_session_id = g.id
+             and p.status = 'active'
+            join public.player_country_assignments a
+              on a.game_session_id = g.id
+             and a.player_id = p.id
+             and a.status = 'active'
+            join public.country_profiles c
+              on c.id = a.country_profile_id
+             and c.status = 'active'
+            cross join lateral (
+              select se.id
+              from public.storyline_events se
+              join public.storylines s on s.id = se.storyline_id
+              where s.storyline_key = 'econovaria_demo_act_1'
+              order by se.act desc, se.sequence desc
+              limit 1
+            ) e
+            where g.status in ('active','paused')
+            order by g.created_at desc, a.assigned_at desc
+            limit 1;
+
+            if v_game is null or v_player is null or v_event is null or coalesce(v_currency,'') = '' then
+              raise exception 'STORY_REPLAY_STAGING_FIXTURE_MISSING';
+            end if;
+
+            select * into v_first
+            from public.apply_story_cash_adjustment_v1(
+              v_game,
+              v_player,
+              v_event,
+              'cash_credit',
+              37,
+              37,
+              'Replay safety staging credit',
+              'Proves local-currency exactly-once Story cash behavior.',
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-cash-v1'
+            );
+
+            select * into v_second
+            from public.apply_story_cash_adjustment_v1(
+              v_game,
+              v_player,
+              v_event,
+              'cash_credit',
+              37,
+              37,
+              'Replay safety staging credit',
+              'Proves local-currency exactly-once Story cash behavior.',
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-cash-v1'
+            );
+
+            if v_first.adjustment_outcome <> 'applied' then
+              raise exception 'STORY_REPLAY_CASH_FIRST_OUTCOME:%', v_first.adjustment_outcome;
+            end if;
+            if v_second.adjustment_outcome <> 'replayed' then
+              raise exception 'STORY_REPLAY_CASH_SECOND_OUTCOME:%', v_second.adjustment_outcome;
+            end if;
+            if v_first.ledger_entry_id is distinct from v_second.ledger_entry_id then
+              raise exception 'STORY_REPLAY_CASH_LEDGER_ID_DRIFT';
+            end if;
+            if v_first.currency_code is distinct from v_currency or v_second.currency_code is distinct from v_currency then
+              raise exception 'STORY_REPLAY_LOCAL_CURRENCY_FAILED:%:%', v_currency, v_first.currency_code;
+            end if;
+            if (
+              select count(*)
+              from public.story_cash_adjustments
+              where game_session_id = v_game
+                and idempotency_key = 'story-replay-safety-staging-cash-v1'
+            ) <> 1 then
+              raise exception 'STORY_REPLAY_CASH_RECEIPT_COUNT_FAILED';
+            end if;
+
+            insert into public.player_story_impacts (
+              game_session_id,
+              player_id,
+              storyline_event_id,
+              effect_type,
+              impact_label,
+              impact_reason,
+              amount,
+              payload,
+              idempotency_key
+            ) values (
+              v_game,
+              v_player,
+              v_event,
+              'character_message',
+              'Replay-safe staging impact',
+              'Verifies the durable Story impact replay key.',
+              null,
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-impact-v1'
+            ) returning id into v_impact;
+
+            begin
+              insert into public.player_story_impacts (
+                game_session_id,
+                player_id,
+                storyline_event_id,
+                effect_type,
+                impact_label,
+                impact_reason,
+                amount,
+                payload,
+                idempotency_key
+              ) values (
+                v_game,
+                v_player,
+                v_event,
+                'character_message',
+                'Replay-safe staging impact',
+                'Verifies the durable Story impact replay key.',
+                null,
+                jsonb_build_object('acceptance','story-replay-safety-v1'),
+                'story-replay-safety-staging-impact-v1'
+              );
+            exception when unique_violation then
+              v_duplicate_failed := true;
+            end;
+            if not v_duplicate_failed then
+              raise exception 'STORY_REPLAY_IMPACT_UNIQUENESS_FAILED';
+            end if;
+            if (
+              select id
+              from public.player_story_impacts
+              where game_session_id = v_game
+                and idempotency_key = 'story-replay-safety-staging-impact-v1'
+            ) is distinct from v_impact then
+              raise exception 'STORY_REPLAY_IMPACT_ID_DRIFT';
+            end if;
+
+            insert into public.game_session_contracts (
+              game_session_id,
+              contract_key,
+              source_type,
+              source_id,
+              title,
+              description,
+              instructions,
+              category,
+              status,
+              visibility,
+              targeting_payload,
+              requirements_payload,
+              reward_payload,
+              completion_mode,
+              published_at,
+              metadata
+            ) values (
+              v_game,
+              'contract.story-replay-safety-staging-v1',
+              'story_event',
+              v_event,
+              'Replay Safety Staging Contract',
+              'Rollback-only acceptance Contract.',
+              'Verify same Story source and contract key are replay-readable.',
+              'story',
+              'active',
+              'public',
+              '{}'::jsonb,
+              '{}'::jsonb,
+              '{}'::jsonb,
+              'manual_review',
+              clock_timestamp(),
+              jsonb_build_object('acceptance','story-replay-safety-v1')
+            ) returning id into v_contract;
+
+            if not exists (
+              select 1
+              from public.game_session_contracts
+              where game_session_id = v_game
+                and id = v_contract
+                and contract_key = 'contract.story-replay-safety-staging-v1'
+                and source_type = 'story_event'
+                and source_id = v_event
+            ) then
+              raise exception 'STORY_REPLAY_CONTRACT_SOURCE_LOOKUP_FAILED';
+            end if;
+
+            raise notice 'STORY_REPLAY_SAFETY_STAGING_ACCEPTANCE_PASS currency=% ledger=% impact=% contract=%',
+              v_currency, v_first.ledger_entry_id, v_impact, v_contract;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'STORY_REPLAY_SAFETY_STAGING_ACCEPTANCE_PASS' /tmp/story-replay-safety-staging-acceptance.log
+
+      - name: Verify staging ledger and production denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='20260812115000'")" = "1"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+
+      - name: Upload staging replay-safety evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: story-replay-safety-${{ github.sha }}
+          path: |
+            /tmp/story-replay-safety-staging-acceptance.log
+            ${{ runner.temp }}/stock-market-orchestrator-before.json
+            ${{ runner.temp }}/stock-market-orchestrator-after.json
+          if-no-files-found: warn
+          retention-days: 30
