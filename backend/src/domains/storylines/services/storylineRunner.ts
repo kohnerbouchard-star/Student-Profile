@@ -34,7 +34,7 @@ interface ParsedPlayerRule {
 
 interface MatchedStoryEffect {
   readonly effect: StoryEffect;
-  readonly playerContext: PlayerStoryContext;
+  readonly playerContext?: PlayerStoryContext | null;
 }
 
 interface PlayerRuleApplicationResult {
@@ -204,16 +204,28 @@ async function applyPlayerRuleEffects(
   let matchCount = 0;
 
   for (const rule of candidate.playerRules.map(parsePlayerRule)) {
+    let ruleMatched = false;
+
     for (const playerContext of input.playerContexts) {
-      if (evaluateStoryCondition(rule.condition, playerContext)) {
-        matchCount += 1;
-        matchingEffects.push(
-          ...rule.effects.map((effect) => ({
-            effect,
-            playerContext,
-          })),
-        );
+      if (!evaluateStoryCondition(rule.condition, playerContext)) {
+        continue;
       }
+
+      matchCount += 1;
+      ruleMatched = true;
+      matchingEffects.push(
+        ...rule.effects
+          .filter((effect) => !isGameScopedStoryEffect(effect))
+          .map((effect) => ({ effect, playerContext })),
+      );
+    }
+
+    if (ruleMatched) {
+      matchingEffects.push(
+        ...rule.effects
+          .filter(isGameScopedStoryEffect)
+          .map((effect) => ({ effect, playerContext: null })),
+      );
     }
   }
 
@@ -247,7 +259,7 @@ async function executeEffectsForMatchedPlayers(input: {
         effect: matched.effect,
         effectIndex: index,
         now: input.now,
-        playerContext: matched.playerContext,
+        playerContext: matched.playerContext ?? null,
         dependencies: input.effectDependencies,
       }),
     );
@@ -261,6 +273,13 @@ async function executeEffectsForMatchedPlayers(input: {
       results.filter((result) => result.status === "skipped").length,
     failedCount: results.filter((result) => result.status === "failed").length,
   };
+}
+
+function isGameScopedStoryEffect(effect: StoryEffect): boolean {
+  return effect.type === "contract_unlock" ||
+    effect.type === "market_news_post" ||
+    effect.type === "market_status_change" ||
+    effect.type === "story_flag_set";
 }
 
 function isTriggerEligible(
