@@ -8,14 +8,16 @@ on:
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
       - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
+      - "backend/supabase/migrations/20260813100000_harden_license_fulfillment_snapshots_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
+      - "scripts/license-issuance-hardening-contract.test.mjs"
       - "scripts/validate-supabase-migrations.mjs"
       - "docs/architecture/license-issuance-queue-v1.md"
+      - "docs/architecture/license-issuance-hardening-v1.md"
       - ".github/workflows/license-issuance-queue-staging.yml"
   push:
     branches:
-      - feat/license-issuance-queue-v1
       - main
     paths:
       - "backend/supabase/functions/license-payment-webhook/**"
@@ -23,13 +25,26 @@ on:
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
       - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
+      - "backend/supabase/migrations/20260813100000_harden_license_fulfillment_snapshots_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
+      - "scripts/license-issuance-hardening-contract.test.mjs"
       - "scripts/validate-supabase-migrations.mjs"
       - "docs/architecture/license-issuance-queue-v1.md"
+      - "docs/architecture/license-issuance-hardening-v1.md"
       - ".github/workflows/license-issuance-queue-staging.yml"
   workflow_dispatch:
     inputs:
+      deploy_staging:
+        description: "Deploy the reviewed licensing functions to staging"
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: "Type DEPLOY LICENSE ISSUANCE TO STAGING"
+        required: true
+        default: ""
+        type: string
       enable_scheduler:
         description: "Enable the one-minute staging worker after all delivery secrets are verified"
         required: true
@@ -54,15 +69,23 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out exact workflow source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22.23.1
+          node-version: "22.23.1"
+
       - name: Run licensing contract tests
-        run: node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs
+        run: |
+          node --experimental-strip-types --test \
+            scripts/license-issuance-queue-contract.test.mjs \
+            scripts/license-issuance-hardening-contract.test.mjs
+
       - name: Validate migration naming and ownership
         run: node scripts/validate-supabase-migrations.mjs
 
@@ -70,61 +93,91 @@ jobs:
     name: Deploy isolated staging licensing queue
     needs: contract
     if: >-
-      github.event_name != 'pull_request' &&
-      github.ref == 'refs/heads/feat/license-issuance-queue-v1'
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_staging == true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: staging
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out exact requested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-node@v6
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22.23.1
+          node-version: "22.23.1"
 
-      - name: Enforce isolated staging boundary
+      - name: Enforce explicit isolated staging boundary
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/feat/license-issuance-queue-v1"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$DEPLOY_CONFIRMATION" = "DEPLOY LICENSE ISSUANCE TO STAGING"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/feat/license-issuance-queue-v1|refs/heads/fix/license-issuance-queue-hardening-v1) ;;
+            *) echo "Unapproved staging source ref: $GITHUB_REF" >&2; exit 1 ;;
+          esac
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git fetch --no-tags --prune origin \
-            '+refs/heads/feat/license-issuance-queue-v1:refs/remotes/origin/feat/license-issuance-queue-v1'
+            "+${GITHUB_REF}:refs/remotes/origin/${GITHUB_REF_NAME}"
           test "$(git rev-parse HEAD)" = \
-            "$(git rev-parse origin/feat/license-issuance-queue-v1)"
+            "$(git rev-parse refs/remotes/origin/${GITHUB_REF_NAME})"
 
-      - name: Re-run licensing contract
-        run: node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs
+      - name: Re-run licensing contracts
+        run: |
+          node --experimental-strip-types --test \
+            scripts/license-issuance-queue-contract.test.mjs \
+            scripts/license-issuance-hardening-contract.test.mjs
 
-      - uses: supabase/setup-cli@v1
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      - name: Require staged queue migrations
+      - name: Verify CLI identity
         shell: bash
         run: |
           set -euo pipefail
-          status="$(
-            curl --silent --show-error \
-              --request POST \
-              --output "$RUNNER_TEMP/license-queue-health.json" \
-              --write-out '%{http_code}' \
-              "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/read_license_issuance_queue_health_v1" \
-              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              --header 'content-type: application/json' \
-              --data '{}'
-          )"
-          test "$status" = "200"
-          test -s "$RUNNER_TEMP/license-queue-health.json"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+
+      - name: Require reviewed staging queue migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          function rpc() {
+            local name="$1"
+            local output="$2"
+            local status
+            status="$(
+              curl --silent --show-error \
+                --request POST \
+                --output "$output" \
+                --write-out '%{http_code}' \
+                "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/${name}" \
+                --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                --header 'content-type: application/json' \
+                --data '{}'
+            )"
+            test "$status" = "200"
+            test -s "$output"
+          }
+          rpc read_license_issuance_queue_health_v1 \
+            "$RUNNER_TEMP/license-queue-health.json"
+          rpc read_license_issuance_secret_rotation_guard_v1 \
+            "$RUNNER_TEMP/license-secret-rotation-guard.json"
 
       - name: Deploy custom-auth staging functions
         shell: bash
@@ -196,13 +249,14 @@ jobs:
           test "$worker_status" = "401"
 
       - name: Upload staging evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: license-issuance-staging-${{ github.sha }}
           retention-days: 30
           if-no-files-found: error
           path: |
             ${{ runner.temp }}/license-queue-health.json
+            ${{ runner.temp }}/license-secret-rotation-guard.json
             ${{ runner.temp }}/license-scheduler-disabled.json
             ${{ runner.temp }}/license-scheduler-enabled.json
 
