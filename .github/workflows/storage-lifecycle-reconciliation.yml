@@ -1,0 +1,52 @@
+name: Storage Lifecycle Reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/edge-function-manifest.json"
+      - "backend/supabase/functions/stock-tick-archiver/**"
+      - "backend/supabase/functions/game-data-purger/**"
+      - "backend/supabase/migrations/2026081310*.sql"
+      - "docs/operations/econovaria-storage-lifecycle.md"
+      - "scripts/storage-lifecycle-reconciliation-contract.test.mjs"
+      - ".github/workflows/storage-lifecycle-reconciliation.yml"
+  push:
+    branches:
+      - main
+      - "chore/reconcile-supabase-storage-lifecycle-*"
+    paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/edge-function-manifest.json"
+      - "backend/supabase/functions/stock-tick-archiver/**"
+      - "backend/supabase/functions/game-data-purger/**"
+      - "backend/supabase/migrations/2026081310*.sql"
+      - "docs/operations/econovaria-storage-lifecycle.md"
+      - "scripts/storage-lifecycle-reconciliation-contract.test.mjs"
+      - ".github/workflows/storage-lifecycle-reconciliation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storage-lifecycle-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+
+      - name: Validate storage lifecycle contract
+        run: node --test scripts/storage-lifecycle-reconciliation-contract.test.mjs
+
+      - name: Validate migration ordering and transaction policy
+        run: node scripts/validate-supabase-migrations.mjs
