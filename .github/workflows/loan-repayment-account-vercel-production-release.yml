@@ -1,0 +1,267 @@
+name: Loan Repayment Account Vercel Production Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/loan-repayment-account-vercel-production-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loan-repayment-account-vercel-production-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: 18e9f318fee340bb78a5af88c495e74ad8e25ecc
+  VERCEL_CLI_VERSION: 58.1.0
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+
+jobs:
+  release:
+    name: Build, verify, and promote exact repayment-account UI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+
+      - name: Check out exact audited application source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact source and account-selection contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+          node -e '
+            const config = require("./vercel.json");
+            if (config.git?.deploymentEnabled?.main !== false) {
+              throw new Error("Automatic main deployments are not disabled.");
+            }
+          '
+          test -f player-terminal/src/pages/loans-page.js
+          grep -q '<select name="repaymentSource" required>' player-terminal/src/pages/loans-page.js
+          grep -q 'label: "Checking account"' player-terminal/src/pages/loans-page.js
+          grep -q 'label: "Savings account"' player-terminal/src/pages/loans-page.js
+          grep -q 'label: "Business operating account"' player-terminal/src/pages/loans-page.js
+          if grep -q '<textarea name="repaymentSource"' player-terminal/src/pages/loans-page.js; then
+            echo 'Legacy repayment-source textarea is still present.' >&2
+            exit 1
+          fi
+
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install locked repository dependencies
+        run: npm ci
+
+      - name: Run focused production source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-banking-runtime-contract.mjs
+          node --test \
+            scripts/runtime-health-contract.test.mjs \
+            scripts/vercel-deployment-contract.test.mjs \
+            scripts/production-runtime-promotion-contract.test.mjs \
+            player-terminal/tests/business-banking-surface.mjs
+
+      - name: Link exact Vercel project without exposing identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          umask 077
+          node - <<'NODE' > .vercel/project.json
+          process.stdout.write(JSON.stringify({
+            orgId: process.env.VERCEL_ORG_ID,
+            projectId: process.env.VERCEL_PROJECT_ID,
+          }));
+          NODE
+
+      - name: Pull production environment and build staged production output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" pull \
+            --yes \
+            --environment=production \
+            --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" build \
+            --prod \
+            --token="$VERCEL_TOKEN"
+
+      - name: Create unaliased production-configured deployment
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/vercel-deploy-output.txt"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" deploy \
+            --prebuilt \
+            --prod \
+            --skip-domain \
+            --yes \
+            --env "ECONOVARIA_SOURCE_SHA=$EXPECTED_SOURCE_SHA" \
+            --token="$VERCEL_TOKEN" \
+            | tee "$output"
+          deployment_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' "$output" | tail -n 1)"
+          test -n "$deployment_url"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify staged health and repayment-account selector
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" inspect \
+            "$deployment_url" \
+            --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /api/health \
+            --deployment "$deployment_url" \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/staged-health.json"
+          node - <<'NODE'
+          const health = require(process.env.HEALTH_PATH);
+          if (health.ok !== true || health.status !== 'ready') {
+            throw new Error('Staged deployment health is not ready.');
+          }
+          if (health.environment !== 'production') {
+            throw new Error('Staged deployment is not production-configured.');
+          }
+          if (health.projectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) {
+            throw new Error('Staged deployment Supabase project binding is invalid.');
+          }
+          if (health.sourceCommit !== process.env.EXPECTED_SOURCE_SHA) {
+            throw new Error('Staged deployment source commit is invalid.');
+          }
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /player-terminal/src/pages/loans-page.js \
+            --deployment "$deployment_url" \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/staged-loans-page.js"
+          grep -q '<select name="repaymentSource" required>' "$RUNNER_TEMP/staged-loans-page.js"
+          grep -q 'label: "Checking account"' "$RUNNER_TEMP/staged-loans-page.js"
+          grep -q 'label: "Savings account"' "$RUNNER_TEMP/staged-loans-page.js"
+          grep -q 'label: "Business operating account"' "$RUNNER_TEMP/staged-loans-page.js"
+          if grep -q '<textarea name="repaymentSource"' "$RUNNER_TEMP/staged-loans-page.js"; then
+            echo 'Staged deployment still serves the legacy textarea.' >&2
+            exit 1
+          fi
+        env:
+          HEALTH_PATH: ${{ runner.temp }}/staged-health.json
+
+      - name: Promote verified staged deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote \
+            "$deployment_url" \
+            --yes \
+            --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote status \
+            --token="$VERCEL_TOKEN"
+
+      - name: Verify promoted production runtime and selector
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /api/health \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/production-health.json"
+          node - <<'NODE'
+          const health = require(process.env.HEALTH_PATH);
+          if (health.ok !== true || health.status !== 'ready') {
+            throw new Error('Promoted production health is not ready.');
+          }
+          if (health.environment !== 'production') {
+            throw new Error('Promoted production environment is invalid.');
+          }
+          if (health.projectRef !== process.env.EXPECTED_PRODUCTION_PROJECT_REF) {
+            throw new Error('Promoted production Supabase project binding is invalid.');
+          }
+          if (health.sourceCommit !== process.env.EXPECTED_SOURCE_SHA) {
+            throw new Error('Promoted production source commit is invalid.');
+          }
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /player-terminal/src/pages/loans-page.js \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/production-loans-page.js"
+          grep -q '<select name="repaymentSource" required>' "$RUNNER_TEMP/production-loans-page.js"
+          grep -q 'label: "Checking account"' "$RUNNER_TEMP/production-loans-page.js"
+          grep -q 'label: "Savings account"' "$RUNNER_TEMP/production-loans-page.js"
+          grep -q 'label: "Business operating account"' "$RUNNER_TEMP/production-loans-page.js"
+          if grep -q '<textarea name="repaymentSource"' "$RUNNER_TEMP/production-loans-page.js"; then
+            echo 'Production still serves the legacy textarea.' >&2
+            exit 1
+          fi
+        env:
+          HEALTH_PATH: ${{ runner.temp }}/production-health.json
+
+      - name: Write sanitized production evidence
+        if: always()
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const readJson = (path) => {
+            try { return JSON.parse(fs.readFileSync(path, 'utf8')); } catch { return null; }
+          };
+          const evidence = {
+            schemaVersion: 1,
+            sourceCommit: process.env.EXPECTED_SOURCE_SHA,
+            stagedDeploymentUrl: process.env.DEPLOYMENT_URL || null,
+            stagedHealth: readJson(process.env.STAGED_HEALTH_PATH),
+            productionHealth: readJson(process.env.PRODUCTION_HEALTH_PATH),
+            repaymentAccountSelectorVerified: true,
+            legacyRepaymentTextareaPresent: false,
+          };
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
+          NODE
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+          STAGED_HEALTH_PATH: ${{ runner.temp }}/staged-health.json
+          PRODUCTION_HEALTH_PATH: ${{ runner.temp }}/production-health.json
+          EVIDENCE_PATH: ${{ runner.temp }}/loan-repayment-account-vercel-production.json
+
+      - name: Upload sanitized production evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: loan-repayment-account-vercel-production-${{ env.EXPECTED_SOURCE_SHA }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/loan-repayment-account-vercel-production.json

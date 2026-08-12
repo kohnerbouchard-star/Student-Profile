@@ -1,0 +1,228 @@
+name: Loan Repayment Account Production Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/loan-repayment-account-production-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loan-repayment-account-production-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: 38a4392572c3ae27aa3809b9cb4779a9676ca3de
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  MIGRATION_PATH: backend/supabase/migrations/20260812113000_bind_loan_repayment_accounts_v1.sql
+  MIGRATION_VERSION: "20260812113000"
+  MIGRATION_NAME: bind_loan_repayment_accounts_v1
+  EXPECTED_MIGRATION_BLOB: 0e2617685030c7051d1df3d84a199fd95ab88d0e
+
+jobs:
+  release:
+    name: Apply authoritative loan repayment-account migration to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_MIGRATION_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$MIGRATION_VERSION" = "20260812113000"
+          test "$MIGRATION_NAME" = "bind_loan_repayment_accounts_v1"
+          command -v psql >/dev/null
+
+      - name: Check out exact merged migration source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact migration source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+          test -f "$MIGRATION_PATH"
+          test "$(git hash-object "$MIGRATION_PATH")" = "$EXPECTED_MIGRATION_BLOB"
+          grep -Eq '^begin;[[:space:]]*$' "$MIGRATION_PATH"
+          grep -Eq '^commit;[[:space:]]*$' "$MIGRATION_PATH"
+          grep -q 'add column if not exists repayment_account_type text' "$MIGRATION_PATH"
+          grep -q 'normalize_loan_application_repayment_account_v1' "$MIGRATION_PATH"
+          grep -q 'bind_player_loan_repayment_account_v1' "$MIGRATION_PATH"
+          grep -q 'balance_row.account_type = v_account' "$MIGRATION_PATH"
+          grep -q "'repayment_account_type', v_account" "$MIGRATION_PATH"
+          grep -q 'grant execute on function public.repay_player_loan_v1' "$MIGRATION_PATH"
+          if grep -Eiq '\b(drop[[:space:]]+(table|schema|database)|truncate|alter[[:space:]]+table[^;]+drop[[:space:]]+column)\b' "$MIGRATION_PATH"; then
+            echo 'Destructive SQL rejected.' >&2
+            exit 1
+          fi
+
+      - name: Build atomic forward migration with exact ledger identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          MIGRATION_PATH="$MIGRATION_PATH" OUTPUT_PATH="$RUNNER_TEMP/loan-repayment-account-production.sql" node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.MIGRATION_PATH, 'utf8').trim();
+          const bounded = source.match(/(?:^|\n)begin;\s*\n([\s\S]*?)\ncommit;\s*$/iu);
+          if (!bounded) {
+            throw new Error('Migration source must be transaction bounded.');
+          }
+          const body = bounded[1].trim();
+          if (!body) throw new Error('Migration body is empty.');
+          const version = process.env.MIGRATION_VERSION;
+          const name = process.env.MIGRATION_NAME;
+          const blob = process.env.EXPECTED_MIGRATION_BLOB;
+          const path = process.env.MIGRATION_PATH;
+          const statement = `${path}@${blob}`;
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const sql = [
+            'begin;',
+            `do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and (coalesce(name, '') <> ${literal(name)} or coalesce(statements, array[]::text[]) <> array[${literal(statement)}])) then raise exception 'Migration ledger conflict for ${version}'; end if; end $$;`,
+            body,
+            `insert into supabase_migrations.schema_migrations (version, name, statements) values (${literal(version)}, ${literal(name)}, array[${literal(statement)}]) on conflict (version) do nothing;`,
+            `do $$ begin if not exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(version)} and name = ${literal(name)} and statements = array[${literal(statement)}]) then raise exception 'Migration ledger verification failed for ${version}'; end if; end $$;`,
+            "notify pgrst, 'reload schema';",
+            'commit;',
+            '',
+          ].join('\n\n');
+          fs.writeFileSync(process.env.OUTPUT_PATH, sql, { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/loan-repayment-account-production.sql"
+
+      - name: Apply production migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/loan-repayment-account-production.sql"
+          rm -f "$RUNNER_TEMP/loan-repayment-account-production.sql"
+
+      - name: Verify production postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<'SQL' > "$RUNNER_TEMP/postconditions.json"
+          select json_build_object(
+            'loanAccountColumn', exists (
+              select 1
+              from information_schema.columns
+              where table_schema = 'public'
+                and table_name = 'player_loans'
+                and column_name = 'repayment_account_type'
+                and is_nullable = 'NO'
+            ),
+            'applicationTriggerFunction', to_regprocedure('public.normalize_loan_application_repayment_account_v1()') is not null,
+            'loanTriggerFunction', to_regprocedure('public.bind_player_loan_repayment_account_v1()') is not null,
+            'applicationTriggerEnabled', exists (
+              select 1
+              from pg_trigger
+              where tgrelid = 'public.loan_applications'::regclass
+                and tgname = 'normalize_loan_application_repayment_account'
+                and tgenabled <> 'D'
+            ),
+            'loanTriggerEnabled', exists (
+              select 1
+              from pg_trigger
+              where tgrelid = 'public.player_loans'::regclass
+                and tgname = 'bind_player_loan_repayment_account'
+                and tgenabled <> 'D'
+            ),
+            'repaymentUsesBoundAccount', position(
+              'v_loan.repayment_account_type'
+              in lower(pg_get_functiondef('public.repay_player_loan_v1(uuid,uuid,text,numeric,text)'::regprocedure))
+            ) > 0,
+            'repaymentLocksSelectedAccount', position(
+              'balance_row.account_type = v_account'
+              in lower(pg_get_functiondef('public.repay_player_loan_v1(uuid,uuid,text,numeric,text)'::regprocedure))
+            ) > 0,
+            'ledgerRecordsSelectedAccount', position(
+              '''repayment_account_type'', v_account'
+              in lower(pg_get_functiondef('public.repay_player_loan_v1(uuid,uuid,text,numeric,text)'::regprocedure))
+            ) > 0,
+            'applicationsCanonical', not exists (
+              select 1
+              from public.loan_applications
+              where repayment_source not in ('checking', 'savings')
+                and repayment_source !~ '^business:biz_[0-9a-f]{32}$'
+            ),
+            'loansCanonical', not exists (
+              select 1
+              from public.player_loans
+              where repayment_account_type not in ('checking', 'savings')
+                and repayment_account_type !~ '^business:biz_[0-9a-f]{32}$'
+            ),
+            'serviceRoleExecute', has_function_privilege(
+              'service_role',
+              'public.repay_player_loan_v1(uuid,uuid,text,numeric,text)',
+              'execute'
+            ),
+            'anonDenied', not has_function_privilege(
+              'anon',
+              'public.repay_player_loan_v1(uuid,uuid,text,numeric,text)',
+              'execute'
+            ),
+            'authenticatedDenied', not has_function_privilege(
+              'authenticated',
+              'public.repay_player_loan_v1(uuid,uuid,text,numeric,text)',
+              'execute'
+            ),
+            'ledgerRecordedExact', (
+              select count(*) = 1
+              from supabase_migrations.schema_migrations
+              where version = '20260812113000'
+                and name = 'bind_loan_repayment_accounts_v1'
+                and statements = array['backend/supabase/migrations/20260812113000_bind_loan_repayment_accounts_v1.sql@0e2617685030c7051d1df3d84a199fd95ab88d0e']
+            )
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/postconditions.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const lines = fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim().split(/\r?\n/).filter(Boolean);
+          const result = JSON.parse(lines.at(-1));
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Production postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/postconditions.json"
+
+      - name: Record release result
+        shell: bash
+        run: |
+          {
+            echo '## Loan repayment-account selection released to production'
+            echo "- Exact source SHA: \`$EXPECTED_SOURCE_SHA\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Migration: \`$MIGRATION_VERSION $MIGRATION_NAME\`"
+            echo "- Migration blob: \`$EXPECTED_MIGRATION_BLOB\`"
+            echo '- Application and loan account binding: `verified`'
+            echo '- Existing account data canonical: `verified`'
+            echo '- Service-role-only repayment execution: `verified`'
+            echo '- Atomic migration + exact ledger identity: `true`'
+            echo '- Destructive table/column changes allowed: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
