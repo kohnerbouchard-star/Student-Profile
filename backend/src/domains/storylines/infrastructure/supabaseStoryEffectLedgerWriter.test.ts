@@ -4,7 +4,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("story effect ledger writer records cash credit through ledger RPC", async () => {
+Deno.test("story effect ledger writer uses atomic replay-safe Story cash RPC", async () => {
   const client = new FakeRpcClient();
   const writer = new SupabaseStoryEffectLedgerWriter(client);
 
@@ -16,34 +16,22 @@ Deno.test("story effect ledger writer records cash credit through ledger RPC", a
 
   assertEquals(result, { id: "ledger-1" });
   assertEquals(client.calls.length, 1);
-  assertEquals(client.calls[0]?.functionName, "record_player_ledger_entry");
+  assertEquals(client.calls[0]?.functionName, "apply_story_cash_adjustment_v1");
   assertEquals(client.calls[0]?.args, {
     p_game_session_id: "game-1",
     p_player_id: "player-1",
-    p_account_type: "checking",
+    p_storyline_event_id: "event-1",
+    p_effect_type: "cash_credit",
     p_amount: 150,
-    p_currency_code: "ECO",
-    p_entry_type: "credit",
-    p_source_domain: "storylines",
-    p_source_action: "cash_credit",
-    p_source_id: "event-1",
-    p_created_by_type: "system",
-    p_created_by_id: null,
-    p_audit_metadata: {
-      idempotencyKey: "story:event-1:player-1:0:ledger",
-      storylineEventId: "event-1",
-      effectType: "cash_credit",
-      label: "Emergency subsidy",
-      reason: "Player received emergency support.",
-      amount: 150,
-      signedAmount: 150,
-      payload: { source: "test" },
-      source: "classroom_api_edge_storyline_effect",
-    },
+    p_signed_amount: 150,
+    p_label: "Emergency subsidy",
+    p_reason: "Player received emergency support.",
+    p_payload: { source: "test" },
+    p_idempotency_key: "story:event-1:player-1:0:ledger",
   });
 });
 
-Deno.test("story effect ledger writer records cash debit as signed debit through ledger RPC", async () => {
+Deno.test("story effect ledger writer preserves signed cash debit", async () => {
   const client = new FakeRpcClient();
   const writer = new SupabaseStoryEffectLedgerWriter(client);
 
@@ -54,9 +42,17 @@ Deno.test("story effect ledger writer records cash debit as signed debit through
   }));
 
   assertEquals(result, { id: "ledger-1" });
-  assertEquals(client.calls[0]?.args?.p_amount, -75);
-  assertEquals(client.calls[0]?.args?.p_entry_type, "debit");
-  assertEquals(client.calls[0]?.args?.p_source_action, "cash_debit");
+  assertEquals(client.calls[0]?.args?.p_signed_amount, -75);
+  assertEquals(client.calls[0]?.args?.p_effect_type, "cash_debit");
+});
+
+Deno.test("story effect ledger writer accepts replayed atomic result", async () => {
+  const client = new FakeRpcClient("replayed");
+  const writer = new SupabaseStoryEffectLedgerWriter(client);
+
+  assertEquals(await writer.recordCashAdjustment(cashInput({})), {
+    id: "ledger-1",
+  });
 });
 
 Deno.test("story effect ledger writer reports RPC failures", async () => {
@@ -74,7 +70,7 @@ Deno.test("story effect ledger writer reports RPC failures", async () => {
   }
 });
 
-Deno.test("story effect ledger writer rejects missing RPC row", async () => {
+Deno.test("story effect ledger writer rejects malformed RPC row", async () => {
   const client = new FakeRpcClient("empty");
   const writer = new SupabaseStoryEffectLedgerWriter(client);
 
@@ -90,6 +86,7 @@ Deno.test("story effect ledger writer rejects missing RPC row", async () => {
 });
 
 type StoryEffectType = "cash_credit" | "cash_debit";
+type FakeMode = "ok" | "replayed" | "fail" | "empty";
 
 class FakeRpcClient {
   readonly calls: {
@@ -97,7 +94,7 @@ class FakeRpcClient {
     readonly args: Record<string, unknown>;
   }[] = [];
 
-  constructor(private readonly mode: "ok" | "fail" | "empty" = "ok") {}
+  constructor(private readonly mode: FakeMode = "ok") {}
 
   rpc<Data = unknown>(
     functionName: string,
@@ -124,11 +121,11 @@ class FakeRpcClient {
 
     return Promise.resolve({
       data: [{
+        adjustment_outcome: this.mode === "replayed" ? "replayed" : "applied",
+        adjustment_id: "adjustment-1",
         ledger_entry_id: "ledger-1",
-        account_type: "checking",
+        currency_code: "NRC",
         balance: "1150",
-        currency_code: "ECO",
-        created_at: "2026-06-25T12:00:00.000Z",
       }] as Data,
       error: null,
     });
