@@ -45,7 +45,7 @@
     "marketplaceListing": { "evidence": "connected_browser", "domain": "marketplace" },
     "marketplacePurchase": { "evidence": "connected_browser", "domain": "marketplace" },
     "messageAttachment": { "evidence": "intentionally_disabled", "domain": "messaging" },
-    "messageSearch": { "evidence": "contract_only", "domain": "messaging" },
+    "messageSearch": { "evidence": "intentionally_disabled", "domain": "messaging" },
     "messageSend": { "evidence": "connected_browser", "domain": "messaging" },
     "notificationsRead": { "evidence": "connected_browser", "domain": "notifications" },
     "progressionClaim": { "evidence": "connected_browser", "domain": "progression" },
