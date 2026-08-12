@@ -138,7 +138,11 @@ test("active reconciliation migrations are environment-neutral and non-arming", 
   assertNotContains(combined, "vacuum full", "active reconciliation migrations");
 
   const foundation = migrations[2];
-  assertContains(foundation, "environment_name = null", "purge foundation");
+  assert.match(
+    foundation,
+    /values \(\s*true,\s*null,\s*null,\s*null,\s*null,\s*null,\s*clock_timestamp\(\)\s*\)/u,
+    "purge foundation must initialize environment, bucket, and lever fields to NULL",
+  );
   assertContains(foundation, "arm_id = null", "purge foundation");
   assertContains(foundation, "configure_game_data_purge_environment_v1", "purge foundation");
 
