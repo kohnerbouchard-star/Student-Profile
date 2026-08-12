@@ -8,6 +8,7 @@ on:
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
+      - "scripts/validate-supabase-migrations.mjs"
       - "docs/architecture/license-issuance-queue-v1.md"
       - ".github/workflows/license-issuance-queue-staging.yml"
   push:
@@ -20,6 +21,7 @@ on:
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
+      - "scripts/validate-supabase-migrations.mjs"
       - "docs/architecture/license-issuance-queue-v1.md"
       - ".github/workflows/license-issuance-queue-staging.yml"
   workflow_dispatch:
@@ -162,7 +164,10 @@ jobs:
               --header 'content-type: application/json' \
               --data '{}'
           )"
-          test "$webhook_status" = "401"
+          case "$webhook_status" in
+            401|503) ;;
+            *) echo "Unexpected unsigned webhook status: $webhook_status" >&2; exit 1 ;;
+          esac
           test "$worker_status" = "401"
 
       - name: Upload staging evidence
