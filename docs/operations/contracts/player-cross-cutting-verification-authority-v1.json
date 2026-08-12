@@ -13,6 +13,7 @@
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "player-terminal/src/pages/loans-page.js",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
+    "scripts/business-banking-runtime-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
@@ -21,6 +22,7 @@
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "player-terminal/src/pages/loans-page.js",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
+    "scripts/business-banking-runtime-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
