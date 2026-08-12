@@ -14,7 +14,7 @@ const canonicalMigrations = new Map([
   ["20260812211914_restore_compacted_stock_tick_ticker_index_prod_v1.sql", "ffb135d20f55fc7826482c03176d6ae13b671e4dff1c03342cc57e096d2f06a9"],
   ["20260812212415_add_hardened_game_license_purge_foundation_prod_v1.sql", "54eb4b82ccf3aca66cbab96f693bb6c2a495976593a7e277f8defc5ea7b00a8c"],
   ["20260812212602_add_hardened_game_purge_internal_contracts_prod_v1.sql", "2660894752b4ca00a77d37681f3d101d3704ef4e71804ba513bfc703ae531e4b"],
-  ["20260812212656_add_hardened_game_purge_operator_controls_prod_v1.sql", "e1d87b95b07ceb30f2854b216905a64c90c4cf93e8a433675c6a8fcd479e691b"],
+  ["20260812212656_add_hardened_game_purge_operator_controls_prod_v1.sql", "c63447cfdcc216f9fb87fcb3478083ed9e7ee6968e0cce8e7f75ef3ded661f90"],
   ["20260812213109_bound_stock_candle_retention_prod_v1.sql", "7ebf3852aab62daea0888b1d68af355d85501687297c60d007ec05d86ec35b4c"],
   ["20260812213226_drop_exact_duplicate_marketplace_reference_indexes_v1.sql", "b5564d56bbabd007914102752196a483b1dd6a65b5747617eddbc3c65900691d"],
   ["20260812214220_add_platform_storage_health_monitor_v1.sql", "f699213adfd861278d0e250d769aa912435d3e469fc0255baa3bbfd7290e1ec1"],
