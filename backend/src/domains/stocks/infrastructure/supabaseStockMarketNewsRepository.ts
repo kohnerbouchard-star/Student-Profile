@@ -136,6 +136,14 @@ export class SupabaseStockMarketNewsRepository
       .select(INSERTED_NEWS_SELECT)
       .maybeSingle();
 
+    if (response.error?.code === "23505") {
+      return {
+        news: toStockMarketNewsDto(
+          await this.readExistingShock(input.gameSessionId, input.shockId),
+        ),
+      };
+    }
+
     if (response.error) {
       throw mapMarketNewsPersistenceError(
         response.error,
@@ -154,6 +162,35 @@ export class SupabaseStockMarketNewsRepository
     return {
       news: toStockMarketNewsDto(response.data as StockMarketEventInsertedRow),
     };
+  }
+
+  private async readExistingShock(
+    gameSessionId: string,
+    shockId: string,
+  ): Promise<StockMarketEventInsertedRow> {
+    const response = await this.client
+      .from("stock_market_events")
+      .select(INSERTED_NEWS_SELECT)
+      .eq("game_session_id", gameSessionId)
+      .eq("shock_id", shockId)
+      .maybeSingle();
+
+    if (response.error) {
+      throw mapMarketNewsPersistenceError(
+        response.error,
+        "market_news_create_failed",
+      );
+    }
+
+    if (!response.data) {
+      throw new StockMarketNewsError(
+        "market_news_create_failed",
+        "Existing market news shock could not be read after a duplicate insert.",
+        500,
+      );
+    }
+
+    return response.data as StockMarketEventInsertedRow;
   }
 
   private async assertGameSessionExists(gameSessionId: string): Promise<void> {

@@ -9,6 +9,7 @@ import type {
   StoryEffectExecutionInput,
   StoryEffectExecutionResult,
   StoryFlagWriteInput,
+  StoryMarketNewsWriteInput,
   StoryPlayerImpactWriteInput,
   StoryPolicyEffectScope,
   StoryPolicyWriteInput,
@@ -108,6 +109,24 @@ export async function executeStoryEffect(
       );
     }
 
+    if (input.effect.type === "market_news_post") {
+      if (!input.dependencies.marketNews) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "unsupported_effect_type",
+        );
+      }
+
+      return applied(
+        input.effect,
+        effectIndex,
+        null,
+        await executeMarketNewsEffect(input, input.effect),
+      );
+    }
+
     if (input.effect.type === "story_flag_set") {
       return applied(
         input.effect,
@@ -128,7 +147,7 @@ export async function executeStoryEffect(
       status: "failed",
       effectType: input.effect.type,
       effectIndex,
-      playerId,
+      playerId: input.effect.type === "market_news_post" ? null : playerId,
       errorMessage: error instanceof Error ? error.message : String(error),
     };
   }
@@ -232,6 +251,38 @@ async function executeCharacterMessageEffect(
   });
 
   return collectWriteIds(impactResult);
+}
+
+async function executeMarketNewsEffect(
+  input: StoryEffectExecutionInput,
+  effect: Extract<StoryEffect, { type: "market_news_post" }>,
+): Promise<readonly string[]> {
+  if (!input.dependencies.marketNews) {
+    return [];
+  }
+
+  const shockKey = readRequiredTextPayload(
+    effect.payload,
+    "shockKey",
+    "market_news_post",
+  );
+  const marketNewsInput: StoryMarketNewsWriteInput = {
+    gameSessionId: input.gameSessionId,
+    storylineEventId: input.storylineEventId,
+    shockKey,
+    payload: effect.payload,
+    idempotencyKey: [
+      "story_market_news",
+      input.gameSessionId,
+      input.storylineEventId,
+      shockKey,
+    ].join(":"),
+  };
+  const result = await input.dependencies.marketNews.createMarketNews(
+    marketNewsInput,
+  );
+
+  return collectWriteIds(result);
 }
 
 async function executePolicyEffect(
@@ -398,6 +449,20 @@ function buildPolicyPayload(
     label: effect.label,
     reason: effect.reason,
   };
+}
+
+function readRequiredTextPayload(
+  payload: JsonObject,
+  key: string,
+  effectType: string,
+): string {
+  const value = payload[key];
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${effectType} payload ${key} must be a non-empty string.`);
+  }
+
+  return value.trim();
 }
 
 function readOptionalTextPayload(

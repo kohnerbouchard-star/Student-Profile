@@ -5,11 +5,17 @@ import {
   SupabaseContractRepository,
 } from "../../../src/domains/contracts/infrastructure/supabaseContractRepository.ts";
 import {
+  SupabaseStockMarketNewsRepository,
+} from "../../../src/domains/stocks/infrastructure/supabaseStockMarketNewsRepository.ts";
+import {
   withOptionalStoryEventOverrideReads,
 } from "../../../src/domains/storylines/infrastructure/optionalStoryEventOverrideClient.ts";
 import {
   SupabasePlayerStoryContextRepository,
 } from "../../../src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
+import {
+  StockMarketStoryNewsWriter,
+} from "../../../src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts";
 import {
   SupabaseStoryEffectLedgerWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
@@ -42,6 +48,9 @@ export function createStorylineRunnerAfterTick(
     client as any,
   );
   const contractRepository = new SupabaseContractRepository(client as any);
+  const marketNews = new StockMarketStoryNewsWriter(
+    new SupabaseStockMarketNewsRepository(client as any),
+  );
   const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
 
   return async (input: StorylineTickInput): Promise<void> => {
@@ -61,6 +70,7 @@ export function createStorylineRunnerAfterTick(
         flags: storylineRepository,
         impacts: storylineRepository,
         contracts: contractRepository,
+        marketNews,
       },
     });
   };

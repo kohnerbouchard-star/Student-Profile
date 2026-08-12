@@ -55,6 +55,7 @@ export interface StoryEffectExecutionDependencies {
   readonly flags: StoryEffectFlagWriter;
   readonly impacts: StoryEffectImpactWriter;
   readonly contracts?: StoryEffectContractWriter;
+  readonly marketNews?: StoryEffectMarketNewsWriter;
 }
 
 export interface StoryEffectLedgerWriter {
@@ -77,6 +78,10 @@ export type StoryContractCreateWriteInput = CreateGameSessionContractInput;
 
 export interface StoryEffectContractWriter {
   createGameSessionContract(input: StoryContractCreateWriteInput): Promise<StoryWriteResult>;
+}
+
+export interface StoryEffectMarketNewsWriter {
+  createMarketNews(input: StoryMarketNewsWriteInput): Promise<StoryWriteResult>;
 }
 
 export interface StoryWriteResult {
@@ -115,6 +120,14 @@ export interface StoryFlagWriteInput {
   readonly flagKey: string;
   readonly value: JsonValue;
   readonly sourceStoryEventId: string;
+  readonly idempotencyKey: string;
+}
+
+export interface StoryMarketNewsWriteInput {
+  readonly gameSessionId: string;
+  readonly storylineEventId: string;
+  readonly shockKey: string;
+  readonly payload: JsonObject;
   readonly idempotencyKey: string;
 }
 
