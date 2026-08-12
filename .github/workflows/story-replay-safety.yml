@@ -1,0 +1,70 @@
+name: Story Replay Safety
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/domains/storylines/**"
+      - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
+      - "backend/supabase/functions/stock-market-orchestrator/index.ts"
+      - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
+      - ".github/workflows/story-replay-safety.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/src/domains/storylines/**"
+      - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
+      - "backend/supabase/functions/stock-market-orchestrator/index.ts"
+      - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
+      - ".github/workflows/story-replay-safety.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-replay-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Check Story replay-safety source
+        run: |
+          deno check \
+            --config supabase/functions/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts \
+            src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts \
+            src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts \
+            src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts \
+            src/domains/storylines/services/storylineRunner.ts
+
+      - name: Run Story replay-safety tests
+        run: |
+          deno test \
+            --allow-read=supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql \
+            --config supabase/functions/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.test.ts \
+            src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
+            src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
+            src/domains/storylines/services/storylineRunnerGameScope.test.ts \
+            src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
+            src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts
