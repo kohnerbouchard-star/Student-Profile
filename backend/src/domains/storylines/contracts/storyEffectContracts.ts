@@ -27,6 +27,9 @@ export const STORY_EFFECT_TYPES = [
   "market_news_post",
   "market_status_change",
   "story_flag_set",
+  "world_route_state_change",
+  "world_location_state_change",
+  "currency_volatility",
 ] as const;
 
 export const STORY_POLICY_TYPES = [
@@ -78,7 +81,10 @@ export type StoryEffect =
   | StoryNotificationEffect
   | StoryMarketNewsPostEffect
   | StoryMarketStatusChangeEffect
-  | StoryFlagSetEffect;
+  | StoryFlagSetEffect
+  | StoryWorldRouteStateChangeEffect
+  | StoryWorldLocationStateChangeEffect
+  | StoryCurrencyVolatilityEffect;
 
 export interface StoryCashEffect {
   readonly type: "cash_credit" | "cash_debit";
@@ -140,6 +146,21 @@ export interface StoryFlagSetEffect {
   readonly type: "story_flag_set";
   readonly flagKey: string;
   readonly value: JsonValue;
+}
+
+export interface StoryWorldRouteStateChangeEffect {
+  readonly type: "world_route_state_change";
+  readonly payload: JsonObject;
+}
+
+export interface StoryWorldLocationStateChangeEffect {
+  readonly type: "world_location_state_change";
+  readonly payload: JsonObject;
+}
+
+export interface StoryCurrencyVolatilityEffect {
+  readonly type: "currency_volatility";
+  readonly payload: JsonObject;
 }
 
 export interface StoryRevealPayload {
@@ -257,6 +278,17 @@ export function parseStoryEffect(value: unknown): StoryEffect {
       type,
       status: readRequiredText(record.status, "effect.status"),
       reason: readOptionalText(record.reason, "effect.reason"),
+      payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
+    };
+  }
+
+  if (
+    type === "world_route_state_change" ||
+    type === "world_location_state_change" ||
+    type === "currency_volatility"
+  ) {
+    return {
+      type,
       payload: readJsonObjectWithDefault(record.payload, "effect.payload"),
     };
   }
