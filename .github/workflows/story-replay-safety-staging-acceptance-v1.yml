@@ -1,0 +1,207 @@
+name: Story Replay Safety Staging Acceptance V1
+
+on:
+  push:
+    branches:
+      - ops/story-replay-safety-staging-release-v1
+    paths:
+      - ".github/workflows/story-replay-safety-staging-acceptance-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: 7141d50cb10261730b65840a24b606fea9455184
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Check out exact acceptance head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce staging-only source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          test "$(git rev-parse HEAD:backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql)" = "$(git rev-parse "$SOURCE_BASE_SHA:backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql")"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Link protected staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\nPGPASSWORD=%s\nPGSSLMODE=require\n' \
+            "$pooler_url" "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Verify installed replay-safety authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='20260812115000'")" = "1"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='apply_story_cash_adjustment_v1'")" = "1"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from pg_indexes where schemaname='public' and indexname='player_story_impacts_idempotency_unique'")" = "1"
+
+      - name: Run rollback-scoped replay acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/story-replay-safety-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game uuid;
+            v_player uuid;
+            v_event uuid;
+            v_currency text;
+            v_first record;
+            v_second record;
+            v_impact uuid;
+            v_duplicate_failed boolean := false;
+          begin
+            select g.id, p.id, e.id, upper(btrim(c.currency_code))
+            into v_game, v_player, v_event, v_currency
+            from public.game_sessions g
+            join public.players p
+              on p.game_session_id = g.id and p.status = 'active'
+            join public.player_country_assignments a
+              on a.game_session_id = g.id and a.player_id = p.id and a.status = 'active'
+            join public.country_profiles c
+              on c.id = a.country_profile_id and c.status = 'active'
+            cross join lateral (
+              select se.id
+              from public.storyline_events se
+              where se.event_key = 'meridian_emergency_response'
+              limit 1
+            ) e
+            where g.status in ('active','paused')
+            order by g.created_at desc, a.assigned_at desc
+            limit 1;
+
+            if v_game is null or v_player is null or v_event is null or coalesce(v_currency,'') = '' then
+              raise exception 'STORY_REPLAY_STAGING_FIXTURE_MISSING';
+            end if;
+
+            select * into v_first
+            from public.apply_story_cash_adjustment_v1(
+              v_game, v_player, v_event, 'cash_credit', 37, 37,
+              'Replay safety staging credit',
+              'Proves local-currency exactly-once Story cash behavior.',
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-cash-v2'
+            );
+            select * into v_second
+            from public.apply_story_cash_adjustment_v1(
+              v_game, v_player, v_event, 'cash_credit', 37, 37,
+              'Replay safety staging credit',
+              'Proves local-currency exactly-once Story cash behavior.',
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-cash-v2'
+            );
+
+            if v_first.adjustment_outcome <> 'applied'
+               or v_second.adjustment_outcome <> 'replayed'
+               or v_first.ledger_entry_id is distinct from v_second.ledger_entry_id
+               or v_first.currency_code is distinct from v_currency
+               or v_second.currency_code is distinct from v_currency then
+              raise exception 'STORY_REPLAY_CASH_ACCEPTANCE_FAILED';
+            end if;
+
+            insert into public.player_story_impacts (
+              game_session_id, player_id, storyline_event_id, effect_type,
+              impact_label, impact_reason, amount, payload, idempotency_key
+            ) values (
+              v_game, v_player, v_event, 'cash_credit',
+              'Replay-safe staging impact',
+              'Verifies the durable Story impact replay key.',
+              37,
+              jsonb_build_object('acceptance','story-replay-safety-v1'),
+              'story-replay-safety-staging-impact-v2'
+            ) returning id into v_impact;
+
+            begin
+              insert into public.player_story_impacts (
+                game_session_id, player_id, storyline_event_id, effect_type,
+                impact_label, impact_reason, amount, payload, idempotency_key
+              ) values (
+                v_game, v_player, v_event, 'cash_credit',
+                'Replay-safe staging impact',
+                'Verifies the durable Story impact replay key.',
+                37,
+                jsonb_build_object('acceptance','story-replay-safety-v1'),
+                'story-replay-safety-staging-impact-v2'
+              );
+            exception when unique_violation then
+              v_duplicate_failed := true;
+            end;
+            if not v_duplicate_failed then
+              raise exception 'STORY_REPLAY_IMPACT_UNIQUENESS_FAILED';
+            end if;
+            if (
+              select id from public.player_story_impacts
+              where game_session_id=v_game
+                and idempotency_key='story-replay-safety-staging-impact-v2'
+            ) is distinct from v_impact then
+              raise exception 'STORY_REPLAY_IMPACT_ID_DRIFT';
+            end if;
+
+            raise notice 'STORY_REPLAY_SAFETY_STAGING_ACCEPTANCE_PASS currency=% ledger=% impact=%',
+              v_currency, v_first.ledger_entry_id, v_impact;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'STORY_REPLAY_SAFETY_STAGING_ACCEPTANCE_PASS' /tmp/story-replay-safety-acceptance.log
+
+      - name: Verify final staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: story-replay-safety-acceptance-${{ github.sha }}
+          path: /tmp/story-replay-safety-acceptance.log
+          if-no-files-found: warn
+          retention-days: 30
