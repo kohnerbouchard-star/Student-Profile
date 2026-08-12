@@ -34,7 +34,7 @@ interface ParsedPlayerRule {
 
 interface MatchedStoryEffect {
   readonly effect: StoryEffect;
-  readonly playerContext: PlayerStoryContext;
+  readonly playerContext?: PlayerStoryContext | null;
 }
 
 interface PlayerRuleApplicationResult {
@@ -201,18 +201,36 @@ async function applyPlayerRuleEffects(
   input: RunDueStorylineEventsInput,
 ): Promise<PlayerRuleApplicationResult> {
   const matchingEffects: MatchedStoryEffect[] = [];
+  const gameScopedEffectIdentities = new Set<string>();
   let matchCount = 0;
 
   for (const rule of candidate.playerRules.map(parsePlayerRule)) {
+    let ruleMatched = false;
+
     for (const playerContext of input.playerContexts) {
-      if (evaluateStoryCondition(rule.condition, playerContext)) {
-        matchCount += 1;
-        matchingEffects.push(
-          ...rule.effects.map((effect) => ({
-            effect,
-            playerContext,
-          })),
-        );
+      if (!evaluateStoryCondition(rule.condition, playerContext)) {
+        continue;
+      }
+
+      matchCount += 1;
+      ruleMatched = true;
+      matchingEffects.push(
+        ...rule.effects
+          .filter((effect) => !isGameScopedStoryEffect(effect))
+          .map((effect) => ({ effect, playerContext })),
+      );
+    }
+
+    if (ruleMatched) {
+      for (const effect of rule.effects.filter(isGameScopedStoryEffect)) {
+        const identity = gameScopedStoryEffectIdentity(effect);
+
+        if (gameScopedEffectIdentities.has(identity)) {
+          continue;
+        }
+
+        gameScopedEffectIdentities.add(identity);
+        matchingEffects.push({ effect, playerContext: null });
       }
     }
   }
@@ -247,7 +265,7 @@ async function executeEffectsForMatchedPlayers(input: {
         effect: matched.effect,
         effectIndex: index,
         now: input.now,
-        playerContext: matched.playerContext,
+        playerContext: matched.playerContext ?? null,
         dependencies: input.effectDependencies,
       }),
     );
@@ -261,6 +279,38 @@ async function executeEffectsForMatchedPlayers(input: {
       results.filter((result) => result.status === "skipped").length,
     failedCount: results.filter((result) => result.status === "failed").length,
   };
+}
+
+function isGameScopedStoryEffect(effect: StoryEffect): boolean {
+  return effect.type === "contract_unlock" ||
+    effect.type === "market_news_post" ||
+    effect.type === "market_status_change" ||
+    effect.type === "story_flag_set";
+}
+
+function gameScopedStoryEffectIdentity(effect: StoryEffect): string {
+  if (effect.type === "contract_unlock") {
+    return `contract_unlock:${effect.contractKey}`;
+  }
+
+  if (effect.type === "story_flag_set") {
+    return `story_flag_set:${effect.flagKey}:${JSON.stringify(effect.value)}`;
+  }
+
+  if (effect.type === "market_news_post") {
+    const shockKey = effect.payload.shockKey;
+    return `market_news_post:${
+      typeof shockKey === "string" && shockKey.trim()
+        ? shockKey.trim()
+        : JSON.stringify(effect.payload)
+    }`;
+  }
+
+  if (effect.type === "market_status_change") {
+    return `market_status_change:${JSON.stringify(effect.payload)}`;
+  }
+
+  return `${effect.type}:${JSON.stringify(effect)}`;
 }
 
 function isTriggerEligible(
