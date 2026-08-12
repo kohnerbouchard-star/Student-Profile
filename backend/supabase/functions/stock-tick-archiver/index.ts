@@ -12,7 +12,7 @@ const TICK_SELECT = [
   "long_run_volatility","explanation","created_at",
 ].join(",");
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 type PreparedArchive = {
   game_session_id: string;
   range_start: string;
@@ -274,7 +274,9 @@ function environmentValue(name: string): string { return String(Deno.env.get(nam
 function unauthorized(): Response { return json(401, { ok: false, error: { code: "unauthorized", message: "Unauthorized." } }); }
 async function safeText(response: Response): Promise<string> { try { return (await response.text()).slice(0, 400); } catch { return ""; } }
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digestBytes = new Uint8Array(bytes.byteLength);
+  digestBytes.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", digestBytes);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 function json(status: number, payload: unknown): Response {
