@@ -4,6 +4,7 @@ import type { StoryEffect } from "../contracts/storyEffectContracts.ts";
 import type {
   StoryCashAdjustmentWriteInput,
   StoryContractCreateWriteInput,
+  StoryCurrencyVolatilityWriteInput,
   StoryEffectBatchExecutionInput,
   StoryEffectBatchExecutionResult,
   StoryEffectExecutionInput,
@@ -13,8 +14,23 @@ import type {
   StoryPlayerImpactWriteInput,
   StoryPolicyEffectScope,
   StoryPolicyWriteInput,
+  StoryWorldLocationStateWriteInput,
+  StoryWorldRouteStateWriteInput,
   StoryWriteResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
+
+const OFFICIAL_CURRENCY_CODES = new Set([
+  "NRC",
+  "YRC",
+  "THD",
+  "SLV",
+  "ELD",
+  "VAL",
+  "LUM",
+  "SYN",
+  "XAL",
+  "DRV",
+]);
 
 export async function executeStoryEffect(
   input: StoryEffectExecutionInput,
@@ -127,6 +143,60 @@ export async function executeStoryEffect(
       );
     }
 
+    if (input.effect.type === "world_route_state_change") {
+      if (!input.dependencies.world) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "unsupported_effect_type",
+        );
+      }
+
+      return applied(
+        input.effect,
+        effectIndex,
+        null,
+        await executeWorldRouteStateEffect(input, input.effect),
+      );
+    }
+
+    if (input.effect.type === "world_location_state_change") {
+      if (!input.dependencies.world) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "unsupported_effect_type",
+        );
+      }
+
+      return applied(
+        input.effect,
+        effectIndex,
+        null,
+        await executeWorldLocationStateEffect(input, input.effect),
+      );
+    }
+
+    if (input.effect.type === "currency_volatility") {
+      if (!input.dependencies.currency) {
+        return skipped(
+          input.effect,
+          effectIndex,
+          null,
+          "unsupported_effect_type",
+        );
+      }
+
+      return applied(
+        input.effect,
+        effectIndex,
+        null,
+        await executeCurrencyVolatilityEffect(input, input.effect),
+      );
+    }
+
     if (input.effect.type === "story_flag_set") {
       return applied(
         input.effect,
@@ -147,7 +217,7 @@ export async function executeStoryEffect(
       status: "failed",
       effectType: input.effect.type,
       effectIndex,
-      playerId: input.effect.type === "market_news_post" ? null : playerId,
+      playerId: isGameEffect(input.effect) ? null : playerId,
       errorMessage: error instanceof Error ? error.message : String(error),
     };
   }
@@ -283,6 +353,108 @@ async function executeMarketNewsEffect(
   );
 
   return collectWriteIds(result);
+}
+
+async function executeWorldRouteStateEffect(
+  input: StoryEffectExecutionInput,
+  effect: Extract<StoryEffect, { type: "world_route_state_change" }>,
+): Promise<readonly string[]> {
+  if (!input.dependencies.world) return [];
+
+  const worldInput: StoryWorldRouteStateWriteInput = {
+    gameSessionId: input.gameSessionId,
+    storylineEventId: input.storylineEventId,
+    routeIds: readStringArrayPayload(
+      effect.payload,
+      "routeIds",
+      "world_route_state_change",
+      /^rte_[a-z0-9_]+$/,
+      100,
+    ),
+    status: readEnumTextPayload(
+      effect.payload,
+      "status",
+      "world_route_state_change",
+      ["open", "restricted", "closed"] as const,
+    ),
+    reason: readEnumTextPayload(
+      effect.payload,
+      "reason",
+      "world_route_state_change",
+      ["normal", "shortage", "meridian_disruption", "war", "recovery"] as const,
+    ),
+    costMultiplierBasisPoints: readIntegerPayload(
+      effect.payload,
+      "costMultiplierBasisPoints",
+      "world_route_state_change",
+      1000,
+      50000,
+    ),
+    durationMultiplierBasisPoints: readIntegerPayload(
+      effect.payload,
+      "durationMultiplierBasisPoints",
+      "world_route_state_change",
+      1000,
+      50000,
+    ),
+    appliedAt: input.now,
+    idempotencyKey: `story_route:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+  };
+
+  return collectWriteIds(
+    await input.dependencies.world.applyRouteState(worldInput),
+  );
+}
+
+async function executeWorldLocationStateEffect(
+  input: StoryEffectExecutionInput,
+  effect: Extract<StoryEffect, { type: "world_location_state_change" }>,
+): Promise<readonly string[]> {
+  if (!input.dependencies.world) return [];
+
+  const worldInput: StoryWorldLocationStateWriteInput = {
+    gameSessionId: input.gameSessionId,
+    storylineEventId: input.storylineEventId,
+    locationIds: readStringArrayPayload(
+      effect.payload,
+      "locationIds",
+      "world_location_state_change",
+      /^loc_[a-z0-9_]+$/,
+      100,
+    ),
+    availability: readEnumTextPayload(
+      effect.payload,
+      "availability",
+      "world_location_state_change",
+      ["normal", "shortage", "conflict", "closed"] as const,
+    ),
+    appliedAt: input.now,
+    idempotencyKey:
+      `story_location:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+  };
+
+  return collectWriteIds(
+    await input.dependencies.world.applyLocationState(worldInput),
+  );
+}
+
+async function executeCurrencyVolatilityEffect(
+  input: StoryEffectExecutionInput,
+  effect: Extract<StoryEffect, { type: "currency_volatility" }>,
+): Promise<readonly string[]> {
+  if (!input.dependencies.currency) return [];
+
+  const currencyInput: StoryCurrencyVolatilityWriteInput = {
+    gameSessionId: input.gameSessionId,
+    storylineEventId: input.storylineEventId,
+    adjustmentsBasisPoints: readCurrencyAdjustments(effect.payload),
+    appliedAt: input.now,
+    idempotencyKey: `story_fx:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+  };
+
+  return collectWriteIds(
+    await input.dependencies.currency.applyCurrencyVolatility(currencyInput),
+  );
 }
 
 async function executePolicyEffect(
@@ -501,6 +673,92 @@ function readOptionalObjectPayload(
   return value;
 }
 
+function readStringArrayPayload(
+  payload: JsonObject,
+  key: string,
+  effectType: string,
+  pattern: RegExp,
+  maxItems: number,
+): readonly string[] {
+  const value = payload[key];
+  if (
+    !Array.isArray(value) ||
+    value.length < 1 ||
+    value.length > maxItems ||
+    value.some((item) => typeof item !== "string" || !pattern.test(item))
+  ) {
+    throw new Error(`${effectType} payload ${key} is invalid.`);
+  }
+
+  const unique = [...new Set(value as string[])];
+  if (unique.length !== value.length) {
+    throw new Error(`${effectType} payload ${key} contains duplicates.`);
+  }
+  return Object.freeze(unique);
+}
+
+function readEnumTextPayload<const T extends readonly string[]>(
+  payload: JsonObject,
+  key: string,
+  effectType: string,
+  values: T,
+): T[number] {
+  const value = payload[key];
+  if (typeof value !== "string" || !values.includes(value)) {
+    throw new Error(`${effectType} payload ${key} is invalid.`);
+  }
+  return value as T[number];
+}
+
+function readIntegerPayload(
+  payload: JsonObject,
+  key: string,
+  effectType: string,
+  minimum: number,
+  maximum: number,
+): number {
+  const value = payload[key];
+  if (!Number.isInteger(value) || Number(value) < minimum || Number(value) > maximum) {
+    throw new Error(`${effectType} payload ${key} is invalid.`);
+  }
+  return Number(value);
+}
+
+function readCurrencyAdjustments(payload: JsonObject): JsonObject {
+  const value = payload.adjustmentsBasisPoints;
+  if (!isJsonObject(value)) {
+    throw new Error(
+      "currency_volatility payload adjustmentsBasisPoints must be a JSON object.",
+    );
+  }
+
+  let hasNonzero = false;
+  const result: Record<string, number> = {};
+  for (const [currencyCode, basisPoints] of Object.entries(value)) {
+    if (
+      !OFFICIAL_CURRENCY_CODES.has(currencyCode) ||
+      !Number.isInteger(basisPoints) ||
+      Number(basisPoints) < -1500 ||
+      Number(basisPoints) > 1500
+    ) {
+      throw new Error(
+        "currency_volatility adjustments must use official currency codes and integer basis points between -1500 and 1500.",
+      );
+    }
+    if (currencyCode === "VAL" && basisPoints !== 0) {
+      throw new Error("currency_volatility keeps VAL as the zero-adjustment numeraire.");
+    }
+    hasNonzero ||= Number(basisPoints) !== 0;
+    result[currencyCode] = Number(basisPoints);
+  }
+
+  if (!hasNonzero) {
+    throw new Error("currency_volatility requires at least one nonzero adjustment.");
+  }
+
+  return Object.freeze(result);
+}
+
 function isJsonObject(value: unknown): value is JsonObject {
   return (
     typeof value === "object" &&
@@ -538,6 +796,13 @@ function buildIdempotencyKey(
     input.effect.type,
     scopeKey ?? "game",
   ].join(":");
+}
+
+function isGameEffect(effect: StoryEffect): boolean {
+  return effect.type === "market_news_post" ||
+    effect.type === "world_route_state_change" ||
+    effect.type === "world_location_state_change" ||
+    effect.type === "currency_volatility";
 }
 
 function applied(

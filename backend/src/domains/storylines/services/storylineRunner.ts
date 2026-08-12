@@ -285,7 +285,10 @@ function isGameScopedStoryEffect(effect: StoryEffect): boolean {
   return effect.type === "contract_unlock" ||
     effect.type === "market_news_post" ||
     effect.type === "market_status_change" ||
-    effect.type === "story_flag_set";
+    effect.type === "story_flag_set" ||
+    effect.type === "world_route_state_change" ||
+    effect.type === "world_location_state_change" ||
+    effect.type === "currency_volatility";
 }
 
 function gameScopedStoryEffectIdentity(effect: StoryEffect): string {
@@ -308,6 +311,18 @@ function gameScopedStoryEffectIdentity(effect: StoryEffect): string {
 
   if (effect.type === "market_status_change") {
     return `market_status_change:${JSON.stringify(effect.payload)}`;
+  }
+
+  if (effect.type === "world_route_state_change") {
+    return `world_route_state_change:${JSON.stringify(effect.payload)}`;
+  }
+
+  if (effect.type === "world_location_state_change") {
+    return `world_location_state_change:${JSON.stringify(effect.payload)}`;
+  }
+
+  if (effect.type === "currency_volatility") {
+    return `currency_volatility:${JSON.stringify(effect.payload)}`;
   }
 
   return `${effect.type}:${JSON.stringify(effect)}`;

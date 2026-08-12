@@ -26,6 +26,9 @@ import {
   SupabaseStorylineRepository,
 } from "../../../src/domains/storylines/infrastructure/supabaseStorylineRepository.ts";
 import {
+  SupabaseStoryWorldFxWriter,
+} from "../../../src/domains/storylines/infrastructure/supabaseStoryWorldFxWriter.ts";
+import {
   runDueStorylineEvents,
 } from "../../../src/domains/storylines/services/storylineRunner.ts";
 
@@ -52,6 +55,7 @@ export function createStorylineRunnerAfterTick(
     new SupabaseStockMarketNewsRepository(client as any),
   );
   const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
+  const worldFx = new SupabaseStoryWorldFxWriter(client as any);
 
   return async (input: StorylineTickInput): Promise<void> => {
     const playerContexts = await playerContextRepository
@@ -71,6 +75,8 @@ export function createStorylineRunnerAfterTick(
         impacts: storylineRepository,
         contracts: contractRepository,
         marketNews,
+        world: worldFx,
+        currency: worldFx,
       },
     });
   };
