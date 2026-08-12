@@ -19,6 +19,10 @@ const IDEMPOTENCY_WINDOW_MIGRATION = new URL(
   "../backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql",
   import.meta.url,
 );
+const SCHEDULER_SAFETY_MIGRATION = new URL(
+  "../backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql",
+  import.meta.url,
+);
 const WEBHOOK = new URL(
   "../backend/supabase/functions/license-payment-webhook/index.ts",
   import.meta.url,
@@ -157,6 +161,28 @@ test("automatic email retries stop before provider idempotency can expire", asyn
   );
 });
 
+test("scheduler has a service-role kill switch", async () => {
+  const source = await readFile(SCHEDULER_SAFETY_MIGRATION, "utf8");
+  assert.ok(source.startsWith("begin;\n"));
+  assert.ok(source.trimEnd().endsWith("commit;"));
+
+  for (const required of [
+    "disable_license_issuance_scheduler_v1",
+    "econovaria-license-issuance-scheduler-v1",
+    "cron.unschedule",
+    "security definer",
+    "revoke all",
+    "to service_role",
+  ]) {
+    assert.ok(source.toLowerCase().includes(required.toLowerCase()), required);
+  }
+
+  assert.match(
+    source,
+    /where jobname\s*=\s*v_scheduler_name/u,
+  );
+});
+
 test("payment ingress authenticates the raw body and acknowledges only durable writes", async () => {
   const source = await readFile(WEBHOOK, "utf8");
 
@@ -213,7 +239,7 @@ test("worker derives the same code on retry and uses idempotent email delivery",
   );
 });
 
-test("deployment inventory keeps payment issuance isolated to staging", async () => {
+test("deployment inventory keeps payment issuance isolated and dormant in staging", async () => {
   const manifest = JSON.parse(await readFile(EDGE_MANIFEST, "utf8"));
   const temporary = new Map(
     manifest.temporaryStagingFunctions.map((entry) => [
@@ -230,11 +256,21 @@ test("deployment inventory keeps payment issuance isolated to staging", async ()
   assert.match(workflow, /--no-verify-jwt/u);
   assert.match(
     workflow,
-    /configure_license_issuance_scheduler_v1/u,
+    /20260813091500_harden_license_email_idempotency_window_v1\.sql/u,
   );
   assert.match(
     workflow,
-    /20260813091500_harden_license_email_idempotency_window_v1\.sql/u,
+    /20260813093000_add_license_issuance_scheduler_safety_switch_v1\.sql/u,
+  );
+  assert.match(workflow, /disable_license_issuance_scheduler_v1/u);
+  assert.match(workflow, /enable_scheduler:/u);
+  assert.match(
+    workflow,
+    /github\.event_name == 'workflow_dispatch' && inputs\.enable_scheduler == true/u,
+  );
+  assert.match(
+    workflow,
+    /configure_license_issuance_scheduler_v1/u,
   );
   assert.match(workflow, /production-hold:/u);
   assert.doesNotMatch(
