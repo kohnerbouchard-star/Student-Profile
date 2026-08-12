@@ -1,0 +1,346 @@
+name: Story Event Execution Lease Staging Release V1
+
+on:
+  push:
+    branches:
+      - ops/story-event-execution-lease-staging-release-v1
+    paths:
+      - ".github/workflows/story-event-execution-lease-staging-release-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: 284294787bb27d94d53ea938df75a2379b47619f
+  SUPABASE_CLI_VERSION: 2.109.1
+  CREATED_BY: story-event-execution-lease-staging-release-v1
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Check out exact staging candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce exact source and staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$SOURCE_BASE_SHA"...HEAD)
+          test "${#changed[@]}" = "1"
+          test "${changed[0]}" = ".github/workflows/story-event-execution-lease-staging-release-v1.yml"
+          for path in \
+            backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql \
+            backend/supabase/functions/stock-market-orchestrator/index.ts \
+            backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.ts \
+            backend/src/domains/storylines/services/storyEventExecutionPlan.ts \
+            backend/src/domains/storylines/services/storylineRunner.ts
+          do
+            test "$(git rev-parse "HEAD:$path")" = "$(git rev-parse "$SOURCE_BASE_SHA:$path")"
+          done
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Link protected staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\nPGPASSWORD=%s\nPGSSLMODE=require\n' \
+            "$pooler_url" "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Rehearse and apply exact execution-lease migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration=backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql
+          version=20260812120000
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$version'")"
+          if [ "$count" = "0" ]; then
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$migration" \
+              --output /tmp/story-lease-rollback.sql \
+              --mode rollback \
+              --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-lease-rollback.sql
+
+            node scripts/build-exact-migration-bundle.mjs \
+              --migration "$migration" \
+              --output /tmp/story-lease-commit.sql \
+              --mode commit \
+              --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-lease-commit.sql
+          else
+            test "$count" = "1"
+          fi
+
+          node scripts/build-exact-migration-bundle.mjs \
+            --migration "$migration" \
+            --output /tmp/story-lease-verify.sql \
+            --mode verify \
+            --created-by "$CREATED_BY"
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/story-lease-verify.sql
+
+      - name: Capture pre-deploy orchestrator identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          FUNCTIONS_PATH="$RUNNER_TEMP/functions-before.json" \
+          EVIDENCE_PATH="$RUNNER_TEMP/stock-market-orchestrator-before.json" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing before deployment.');
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            slug: row.slug,
+            version: row.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+
+      - name: Deploy exact lease-aware scheduled orchestrator to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy stock-market-orchestrator \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Verify orchestrator deployment advanced
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-after.json"
+          BEFORE_PATH="$RUNNER_TEMP/stock-market-orchestrator-before.json" \
+          AFTER_PATH="$RUNNER_TEMP/functions-after.json" \
+          EVIDENCE_PATH="$RUNNER_TEMP/stock-market-orchestrator-after.json" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+          const rows = JSON.parse(fs.readFileSync(process.env.AFTER_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing after deployment.');
+          if (row.verify_jwt !== false) throw new Error('stock-market-orchestrator verify_jwt drifted.');
+          if (!Number.isInteger(row.version) || row.version <= before.version) {
+            throw new Error(`orchestrator version did not advance: ${before.version} -> ${row.version}`);
+          }
+          if (!/^[a-f0-9]{64}$/.test(String(row.ezbr_sha256 || ''))) {
+            throw new Error('orchestrator digest is invalid.');
+          }
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            environment: 'staging',
+            sourceBaseSha: process.env.SOURCE_BASE_SHA,
+            slug: row.slug,
+            version: row.version,
+            priorVersion: before.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+
+      - name: Run rollback-scoped claim fail reacquire finalize acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/story-event-execution-lease-staging-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game uuid;
+            v_event uuid;
+            v_first record;
+            v_failed record;
+            v_second record;
+            v_final record;
+            v_after record;
+            v_effective_at timestamptz := '2026-08-13T00:00:00Z'::timestamptz;
+            v_plan jsonb := jsonb_build_object(
+              'version', 1,
+              'matchCount', 1,
+              'effects', jsonb_build_array(),
+              'notificationPlayerIds', jsonb_build_array('acceptance-player'),
+              'revealPayload', '{}'::jsonb,
+              'priority', 'normal'
+            );
+          begin
+            select g.id, e.id
+            into v_game, v_event
+            from public.game_sessions g
+            cross join lateral (
+              select se.id
+              from public.storyline_events se
+              where not exists (
+                select 1
+                from public.story_event_resolutions r
+                where r.game_session_id = g.id
+                  and r.storyline_event_id = se.id
+              )
+              order by se.act desc, se.sequence desc, se.created_at desc
+              limit 1
+            ) e
+            where g.status in ('active','paused')
+            order by g.created_at desc
+            limit 1;
+
+            if v_game is null or v_event is null then
+              raise exception 'STORY_LEASE_STAGING_FIXTURE_MISSING';
+            end if;
+
+            delete from public.story_event_execution_claims
+            where game_session_id = v_game and storyline_event_id = v_event;
+
+            select * into v_first
+            from public.claim_story_event_execution_v1(
+              v_game, v_event, v_effective_at, 40, v_plan, 120
+            );
+            if v_first.claim_outcome <> 'acquired'
+               or v_first.attempt_count <> 1
+               or v_first.lease_token is null
+               or v_first.effective_at is distinct from v_effective_at
+               or v_first.effective_market_tick <> 40
+               or v_first.execution_plan is distinct from v_plan then
+              raise exception 'STORY_LEASE_FIRST_CLAIM_FAILED:%', row_to_json(v_first);
+            end if;
+
+            select * into v_failed
+            from public.fail_story_event_execution_v1(
+              v_game, v_event, v_first.lease_token, 'acceptance transient failure'
+            );
+            if v_failed.claim_outcome <> 'retryable_failed' or v_failed.attempt_count <> 1 then
+              raise exception 'STORY_LEASE_FAIL_FAILED:%', row_to_json(v_failed);
+            end if;
+            if exists (
+              select 1 from public.story_event_resolutions
+              where game_session_id = v_game and storyline_event_id = v_event
+            ) then
+              raise exception 'STORY_LEASE_RESOLVED_BEFORE_SUCCESS';
+            end if;
+
+            select * into v_second
+            from public.claim_story_event_execution_v1(
+              v_game,
+              v_event,
+              '2026-08-13T00:15:00Z'::timestamptz,
+              55,
+              null,
+              120
+            );
+            if v_second.claim_outcome <> 'acquired'
+               or v_second.attempt_count <> 2
+               or v_second.lease_token is null
+               or v_second.lease_token is not distinct from v_first.lease_token
+               or v_second.effective_at is distinct from v_effective_at
+               or v_second.effective_market_tick <> 40
+               or v_second.execution_plan is distinct from v_plan then
+              raise exception 'STORY_LEASE_REACQUIRE_FAILED:%', row_to_json(v_second);
+            end if;
+
+            select * into v_final
+            from public.finalize_story_event_execution_v1(
+              v_game,
+              v_event,
+              v_second.lease_token,
+              jsonb_build_object('acceptance','story-event-execution-lease-v1')
+            );
+            if v_final.finalize_outcome <> 'finalized'
+               or v_final.resolution_id is null
+               or v_final.attempt_count <> 2 then
+              raise exception 'STORY_LEASE_FINALIZE_FAILED:%', row_to_json(v_final);
+            end if;
+
+            if not exists (
+              select 1
+              from public.story_event_resolutions r
+              where r.id = v_final.resolution_id
+                and r.game_session_id = v_game
+                and r.storyline_event_id = v_event
+                and r.resolved_at = v_effective_at
+                and r.resolved_market_tick = 40
+            ) then
+              raise exception 'STORY_LEASE_FINAL_RESOLUTION_DRIFT';
+            end if;
+
+            select * into v_after
+            from public.claim_story_event_execution_v1(
+              v_game, v_event, '2026-08-13T00:30:00Z'::timestamptz, 70, null, 120
+            );
+            if v_after.claim_outcome <> 'already_resolved'
+               or v_after.resolution_id is distinct from v_final.resolution_id
+               or v_after.attempt_count <> 2 then
+              raise exception 'STORY_LEASE_REPLAY_AFTER_FINALIZE_FAILED:%', row_to_json(v_after);
+            end if;
+
+            raise notice 'STORY_EVENT_EXECUTION_LEASE_STAGING_ACCEPTANCE_PASS game=% event=% claim=% resolution=% attempts=%',
+              v_game, v_event, v_second.claim_id, v_final.resolution_id, v_final.attempt_count;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'STORY_EVENT_EXECUTION_LEASE_STAGING_ACCEPTANCE_PASS' /tmp/story-event-execution-lease-staging-acceptance.log
+
+      - name: Verify staging ledger and production denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='20260812120000'")" = "1"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+
+      - name: Upload staging execution-lease evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: story-event-execution-lease-${{ github.sha }}
+          path: |
+            /tmp/story-event-execution-lease-staging-acceptance.log
+            ${{ runner.temp }}/stock-market-orchestrator-before.json
+            ${{ runner.temp }}/stock-market-orchestrator-after.json
+          if-no-files-found: warn
+          retention-days: 30
