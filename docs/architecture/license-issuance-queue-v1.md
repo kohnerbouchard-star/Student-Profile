@@ -42,7 +42,8 @@ This change adds issuance and delivery. It does not replace redemption.
 6. The webhook returns `202` only after the database transaction commits.
    A database failure returns a non-2xx response so the upstream adapter or
    payment provider can retry.
-7. A Vault-authenticated cron invokes `license-issuance-worker` every minute.
+7. After explicit activation, a Vault-authenticated cron invokes
+   `license-issuance-worker` every minute.
 8. The worker claims jobs using `FOR UPDATE SKIP LOCKED` and an expiring lease.
    Multiple workers may run safely in parallel.
 9. The worker deterministically derives an 80-bit human-safe code from a
@@ -174,6 +175,18 @@ Each HMAC/derivation secret must contain at least 32 characters and must be
 different from the public Supabase keys. The derivation secret and purchase-code
 verification secret should be independently generated.
 
+## Scheduler activation safety
+
+Normal branch pushes deploy the staging functions but call
+`disable_license_issuance_scheduler_v1`, leaving the worker dormant. The
+scheduler can only be enabled by manually dispatching the staging workflow with
+`enable_scheduler=true`.
+
+Before enabling it, verify all required secrets, configure one immutable paid
+product, complete a signed webhook test, and complete a controlled email test.
+The same kill switch is available for secret rotation, provider changes, or
+incident response.
+
 ## Queue controls
 
 The queue has the following safeguards:
@@ -193,7 +206,7 @@ The queue has the following safeguards:
 - dead-letter state with retained reconciliation context;
 - service-role-only RPCs;
 - private tables with forced RLS and no direct service-role table grants;
-- Vault-held scheduler token;
+- Vault-held scheduler token and an explicit scheduler kill switch;
 - no raw webhook payload retention;
 - no plaintext license-code persistence.
 
@@ -223,7 +236,8 @@ activated game entitlement.
 
 ## Promotion status
 
-V1 is suitable for source review and isolated staging activation. Production
-promotion remains intentionally blocked until a payment provider, immutable
-price reference, real price, currency, required secrets, and reversal policy
-are configured.
+V1 is suitable for source review and isolated staging activation. The staging
+schema and functions may be deployed while the scheduler remains disabled.
+Production promotion remains intentionally blocked until a payment provider,
+immutable price reference, real price, currency, required secrets, controlled
+email evidence, and reversal policy are configured.
