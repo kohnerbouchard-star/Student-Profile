@@ -872,6 +872,14 @@ textarea.admin-field__control {
 
 select.admin-field__control {
   color-scheme: dark;
+  background: var(--admin-color-surface-1);
+  color: var(--admin-color-text);
+}
+
+select.admin-field__control option,
+select.admin-field__control optgroup {
+  background: var(--admin-color-surface-raised);
+  color: var(--admin-color-text);
 }
 
 .admin-field__prefix,

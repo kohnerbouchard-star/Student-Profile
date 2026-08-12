@@ -15,6 +15,7 @@ import {
   handleStockMarketRunnerRequest,
 } from "../../../src/domains/stocks/api/stockMarketRunnerHttpHandler.ts";
 import { requirePublishableRequest } from "../_shared/econovariaAuth.ts";
+import { createStorylineRunnerAfterTick } from "./storylineRunnerAfterTick.ts";
 
 const createSupabaseClient = createClient as unknown as (
   url: string,
@@ -62,6 +63,7 @@ Deno.serve(async (request) => {
 
   return handleStockMarketRunnerRequest(authorization.request, {
     createServiceClient,
+    createStorylineRunnerAfterTick,
   });
 });
 
