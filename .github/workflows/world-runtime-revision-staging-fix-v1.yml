@@ -1,0 +1,139 @@
+name: World Runtime Revision Staging Fix V1
+
+on:
+  push:
+    branches:
+      - ops/world-runtime-revision-staging-fix-v1
+    paths:
+      - ".github/workflows/world-runtime-revision-staging-fix-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: be1426f60acb155c13141b342a9bec92723d7cd3
+  CREATED_BY: world-runtime-revision-staging-fix-v1
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$SOURCE_BASE_SHA"...HEAD)
+          test "${#changed[@]}" = "1"
+          test "${changed[0]}" = ".github/workflows/world-runtime-revision-staging-fix-v1.yml"
+          test "$(git rev-parse HEAD:backend/supabase/migrations/20260812114500_fix_world_runtime_revision_ambiguity_v1.sql)" = "$(git rev-parse "$SOURCE_BASE_SHA:backend/supabase/migrations/20260812114500_fix_world_runtime_revision_ambiguity_v1.sql")"
+
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Link staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;; *) exit 1 ;; esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\nPGPASSWORD=%s\nPGSSLMODE=require\n' "$pooler_url" "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Rehearse apply verify exact migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration=backend/supabase/migrations/20260812114500_fix_world_runtime_revision_ambiguity_v1.sql
+          version=20260812114500
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$version'")"
+          if [ "$count" = "0" ]; then
+            node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output /tmp/world-fix-rollback.sql --mode rollback --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/world-fix-rollback.sql
+            node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output /tmp/world-fix-commit.sql --mode commit --created-by "$CREATED_BY"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/world-fix-commit.sql
+          else
+            test "$count" = "1"
+          fi
+          node scripts/build-exact-migration-bundle.mjs --migration "$migration" --output /tmp/world-fix-verify.sql --mode verify --created-by "$CREATED_BY"
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc -f /tmp/world-fix-verify.sql
+
+      - name: Rollback-scoped Stage 5 to 6 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/world-stage6-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game uuid;
+            v_revision bigint;
+            v_outcome text;
+            v_rates integer;
+          begin
+            select g.id into v_game
+            from public.game_sessions g
+            join public.world_runtime_instances wr on wr.game_session_id=g.id
+            where g.status in ('active','paused')
+              and (select count(*) from public.world_route_states r where r.game_session_id=g.id)=13
+            order by g.created_at desc limit 1;
+            if v_game is null then raise exception 'STAGING_WORLD_FIXTURE_MISSING'; end if;
+
+            perform public.initialize_meridian_security_center_attack_v1(v_game);
+            perform public.initialize_meridian_emergency_response_v1(v_game);
+
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_location_state_v1(v_game,v_revision,'stage5-location-recheck','["loc_syndalis_meridian_security_center_v1"]','conflict',clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_route_state_v1(v_game,v_revision,'stage5-direct-recheck','["rte_meridian_syndalis_lumenor_v1"]','closed','meridian_disruption',18000,26000,clock_timestamp());
+            select command_outcome into v_outcome from public.apply_story_currency_volatility_v1(v_game,'stage5-fx-recheck','{"NRC":120,"YRC":-100,"THD":-150,"SLV":80,"ELD":-100,"VAL":0,"LUM":-250,"SYN":-500,"XAL":-180,"DRV":-160}',clock_timestamp());
+            if v_outcome <> 'applied' then raise exception 'STAGE5_FX_FAILED:%',v_outcome; end if;
+
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_location_state_v1(v_game,v_revision,'stage6-location-recheck','["loc_syndalis_meridian_security_center_v1"]','shortage',clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_route_state_v1(v_game,v_revision,'stage6-direct-recheck','["rte_meridian_syndalis_lumenor_v1"]','restricted','recovery',13500,17500,clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_route_state_v1(v_game,v_revision,'stage6-alt-recheck','["rte_meridian_dravenlok_syndalis_v1","rte_meridian_xalvoria_syndalis_v1"]','restricted','recovery',11250,13000,clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id=v_game;
+            perform public.apply_world_route_state_v1(v_game,v_revision,'stage6-overflow-recheck','["rte_meridian_lumenor_xalvoria_v1","rte_meridian_xalvoria_dravenlok_v1"]','restricted','meridian_disruption',11000,12500,clock_timestamp());
+            select command_outcome into v_outcome from public.apply_story_currency_volatility_v1(v_game,'stage6-fx-recheck','{"NRC":40,"YRC":-30,"THD":-50,"SLV":20,"ELD":-30,"VAL":0,"LUM":-90,"SYN":-180,"XAL":-70,"DRV":-60}',clock_timestamp()+interval '1 second');
+            if v_outcome <> 'applied' then raise exception 'STAGE6_FX_FAILED:%',v_outcome; end if;
+
+            if not exists (select 1 from public.world_route_states where game_session_id=v_game and public_route_id='rte_meridian_syndalis_lumenor_v1' and status='restricted' and reason='recovery') then raise exception 'STAGE6_ROUTE_FAILED'; end if;
+            if not exists (select 1 from public.world_location_states where game_session_id=v_game and public_location_id='loc_syndalis_meridian_security_center_v1' and availability='shortage') then raise exception 'STAGE6_LOCATION_FAILED'; end if;
+            select count(*)::integer into v_rates from public.currency_exchange_rates where game_session_id=v_game and source in ('story-fx:stage5-fx-recheck','story-fx:stage6-fx-recheck');
+            if v_rates <> 180 then raise exception 'STAGE6_FX_ROWS_FAILED:%',v_rates; end if;
+            raise notice 'WORLD_RUNTIME_STAGE6_STAGING_ACCEPTANCE_PASS fx_rows=%',v_rates;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'WORLD_RUNTIME_STAGE6_STAGING_ACCEPTANCE_PASS' /tmp/world-stage6-acceptance.log
+
+      - name: Verify staging ledger and production denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='20260812114500'")" = "1"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
