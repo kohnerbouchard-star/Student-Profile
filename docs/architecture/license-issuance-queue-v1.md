@@ -58,6 +58,13 @@ The queue is **at least once**. Unique constraints, deterministic code
 derivation, database leases, atomic materialization, and email-provider
 idempotency make the externally visible result effectively once.
 
+Resend retains an idempotency key for 24 hours. The queue records
+`first_delivery_attempt_at` when a job is first claimed and stops automatic
+email delivery after 23 hours. An unresolved job is retained as
+`dead_letter` with `email_idempotency_window_expired` so an operator can
+reconcile the provider state without risking a duplicate email after the
+provider's deduplication window has expired.
+
 ## License-code format
 
 The displayed code contains 16 symbols grouped as four groups of four:
@@ -181,7 +188,9 @@ The queue has the following safeguards:
 - lease token and lease expiration;
 - maximum attempt count;
 - deterministic collision nonce;
-- dead-letter state;
+- 23-hour automatic-delivery cutoff before the 24-hour provider idempotency
+  key can expire;
+- dead-letter state with retained reconciliation context;
 - service-role-only RPCs;
 - private tables with forced RLS and no direct service-role table grants;
 - Vault-held scheduler token;
