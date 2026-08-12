@@ -3,7 +3,8 @@ import path from "node:path";
 
 const MIGRATION_ROOT = path.resolve("backend/supabase/migrations");
 const FILE_PATTERN = /^(\d{14})_([a-z0-9_]+)\.sql$/;
-const CREATE_TABLE_PATTERN = /\bcreate\s+table\s+(?!if\s+not\s+exists\b)(?:public\.)?([a-z_][a-z0-9_]*)/gi;
+const CREATE_TABLE_PATTERN =
+  /\bcreate\s+table\s+(?!if\s+not\s+exists\b)(?:(?<schema>[a-z_][a-z0-9_]*)\.)?(?<table>[a-z_][a-z0-9_]*)/gi;
 
 const files = (await readdir(MIGRATION_ROOT))
   .filter((file) => file.endsWith(".sql"))
@@ -28,7 +29,12 @@ for (const file of files) {
 
   const source = await readFile(path.join(MIGRATION_ROOT, file), "utf8");
   for (const tableMatch of source.matchAll(CREATE_TABLE_PATTERN)) {
-    const table = tableMatch[1].toLowerCase();
+    const schema = String(tableMatch.groups?.schema || "public").toLowerCase();
+    if (schema !== "public") continue;
+
+    const table = String(tableMatch.groups?.table || "").toLowerCase();
+    if (!table) continue;
+
     if (tableOwners.has(table)) {
       failures.push(`${file}: creates public.${table}, already created by ${tableOwners.get(table)}`);
     } else {
