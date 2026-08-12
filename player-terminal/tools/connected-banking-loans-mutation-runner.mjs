@@ -434,7 +434,7 @@ async function proveLoans(page, fixtureData) {
   await openDisclosureForm(form);
   await form.locator('[name="amount"]').fill("500");
   await form.locator('[name="purpose"]').selectOption({ index: 0 });
-  await form.locator('[name="repaymentSource"]').fill("Connected gameplay income and existing checking reserves.");
+  await form.locator('[name="repaymentSource"]').selectOption("checking");
   const beforeApplications = applicationCount();
   const response = await submitFormAndWait(
     page,
