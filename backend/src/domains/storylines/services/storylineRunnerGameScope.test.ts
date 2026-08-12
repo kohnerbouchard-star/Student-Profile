@@ -1,4 +1,4 @@
-import type { JsonValue } from "../../../supabase/tableTypes.ts";
+import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type {
   StoryEffectExecutionDependencies,
@@ -58,7 +58,11 @@ Deno.test("storyline runner executes identical game-scoped effects once across c
 
   assertEquals(result.failedCount, 0);
   assertEquals(result.resolvedCount, 1);
-  assertEquals(result.events[0]?.playerRuleMatchCount, 2);
+  const eventResult = result.events[0];
+  if (!eventResult || eventResult.status !== "resolved") {
+    throw new Error(`Expected resolved event, received ${eventResult?.status ?? "missing"}.`);
+  }
+  assertEquals(eventResult.playerRuleMatchCount, 2);
   assertEquals(result.effectAppliedCount, 3);
   assertEquals(flags.length, 1);
   assertEquals(flags[0]?.flagKey, "meridian_customs_intrusion_detected_v1");
@@ -94,7 +98,7 @@ class FakeStorylineRepository {
 }
 
 function candidate(): StorylineEventCandidateRecord {
-  const gameEffects = [
+  const gameEffects: JsonObject[] = [
     {
       type: "market_news_post",
       payload: {
