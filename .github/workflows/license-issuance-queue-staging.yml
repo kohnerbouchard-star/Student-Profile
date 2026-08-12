@@ -7,6 +7,7 @@ on:
       - "backend/supabase/functions/license-issuance-worker/**"
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
+      - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
       - "scripts/validate-supabase-migrations.mjs"
@@ -21,12 +22,19 @@ on:
       - "backend/supabase/functions/license-issuance-worker/**"
       - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
       - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
+      - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
       - "backend/supabase/edge-function-manifest.json"
       - "scripts/license-issuance-queue-contract.test.mjs"
       - "scripts/validate-supabase-migrations.mjs"
       - "docs/architecture/license-issuance-queue-v1.md"
       - ".github/workflows/license-issuance-queue-staging.yml"
   workflow_dispatch:
+    inputs:
+      enable_scheduler:
+        description: "Enable the one-minute staging worker after all delivery secrets are verified"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -100,7 +108,7 @@ jobs:
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      - name: Require staged queue migration
+      - name: Require staged queue migrations
         shell: bash
         run: |
           set -euo pipefail
@@ -129,7 +137,22 @@ jobs:
               --no-verify-jwt
           done
 
+      - name: Disable scheduler before optional activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request POST \
+            "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/disable_license_issuance_scheduler_v1" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header 'content-type: application/json' \
+            --data '{}' \
+            > "$RUNNER_TEMP/license-scheduler-disabled.json"
+          test -s "$RUNNER_TEMP/license-scheduler-disabled.json"
+
       - name: Configure Vault-authenticated queue scheduler
+        if: github.event_name == 'workflow_dispatch' && inputs.enable_scheduler == true
         shell: bash
         run: |
           set -euo pipefail
@@ -141,8 +164,8 @@ jobs:
             --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header 'content-type: application/json' \
             --data "{\"p_function_url\":\"${function_url}\"}" \
-            > "$RUNNER_TEMP/license-scheduler-job.json"
-          test -s "$RUNNER_TEMP/license-scheduler-job.json"
+            > "$RUNNER_TEMP/license-scheduler-enabled.json"
+          test -s "$RUNNER_TEMP/license-scheduler-enabled.json"
 
       - name: Verify unauthenticated requests fail closed
         shell: bash
@@ -180,7 +203,8 @@ jobs:
           if-no-files-found: error
           path: |
             ${{ runner.temp }}/license-queue-health.json
-            ${{ runner.temp }}/license-scheduler-job.json
+            ${{ runner.temp }}/license-scheduler-disabled.json
+            ${{ runner.temp }}/license-scheduler-enabled.json
 
   production-hold:
     name: Enforce production payment-provider hold
