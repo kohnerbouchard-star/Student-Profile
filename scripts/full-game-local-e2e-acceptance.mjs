@@ -237,7 +237,7 @@ async function main() {
     activeCraftingPacks: 1,
     availableRecipes: 60,
     storylines: 1,
-    storyEvents: 44,
+    storyEvents: 45,
     persistedHashMatches: true,
   };
   for (const [key, value] of Object.entries(expectedState)) {
