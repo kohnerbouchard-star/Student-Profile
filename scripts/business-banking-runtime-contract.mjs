@@ -7,6 +7,7 @@ const files = {
   hardening: "backend/supabase/migrations/20260721122000_harden_business_banking_invariants_v1.sql",
   fixes: "backend/supabase/migrations/20260721122100_fix_business_banking_rpc_signatures_v1.sql",
   operability: "backend/supabase/migrations/20260806093000_provision_player_banking_and_credit_v1.sql",
+  repaymentAccounts: "backend/supabase/migrations/20260812113000_bind_loan_repayment_accounts_v1.sql",
   handler: "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
   repository: "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
   routes: "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
@@ -20,6 +21,7 @@ const files = {
   playerEndpoints: "player-terminal/src/api/endpoints.js",
   playerCapabilities: "player-terminal/src/api/capabilities.js",
   playerResourcePlan: "player-terminal/src/api/resource-plan.js",
+  playerLoansPage: "player-terminal/src/pages/loans-page.js",
 };
 
 const source = Object.fromEntries(await Promise.all(
@@ -31,6 +33,7 @@ const migrations = [
   source.hardening,
   source.fixes,
   source.operability,
+  source.repaymentAccounts,
 ];
 const sql = migrations.join("\n");
 
@@ -219,6 +222,29 @@ assert.match(source.operability, /when v_due_satisfied then v_loan\.next_due_at/
 assert.doesNotMatch(source.operability, /origination_fee_rate\)\s*\/\s*v_product\.term_cycles/iu);
 assert.match(source.operability, /revoke all on function public\.ensure_player_banking_accounts_v1/u);
 assert.match(source.operability, /grant execute on function public\.ensure_player_banking_accounts_v1/u);
+
+assert.match(source.repaymentAccounts, /add column if not exists repayment_account_type text/iu);
+assert.match(source.repaymentAccounts, /create or replace function public\.normalize_loan_application_repayment_account_v1/u);
+assert.match(source.repaymentAccounts, /create trigger normalize_loan_application_repayment_account/u);
+assert.match(source.repaymentAccounts, /create or replace function public\.bind_player_loan_repayment_account_v1/u);
+assert.match(source.repaymentAccounts, /create trigger bind_player_loan_repayment_account/u);
+assert.match(source.repaymentAccounts, /new\.repayment_account_type := v_account/u);
+assert.match(source.repaymentAccounts, /LOAN_REPAYMENT_ACCOUNT_INVALID/u);
+assert.match(source.repaymentAccounts, /LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE/u);
+assert.match(source.repaymentAccounts, /grant execute on function public\.repay_player_loan_v1[\s\S]{0,120}to service_role/iu);
+const repaymentSql = source.repaymentAccounts.slice(
+  source.repaymentAccounts.indexOf("create or replace function public.repay_player_loan_v1"),
+  source.repaymentAccounts.indexOf("revoke all on function public.repay_player_loan_v1"),
+);
+assert.match(repaymentSql, /v_account := lower\(btrim\(coalesce\(v_loan\.repayment_account_type, ''\)\)\)/u);
+assert.match(repaymentSql, /balance_row\.account_type = v_account/u);
+assert.match(repaymentSql, /record_player_ledger_entry\([\s\S]{0,300}v_account/iu);
+assert.doesNotMatch(repaymentSql, /else 'checking'/iu);
+assert.match(source.playerLoansPage, /<select name="repaymentSource" required>/u);
+assert.match(source.playerLoansPage, /label: "Checking account"/u);
+assert.match(source.playerLoansPage, /label: "Savings account"/u);
+assert.match(source.playerLoansPage, /label: "Business operating account"/u);
+assert.doesNotMatch(source.playerLoansPage, /<textarea name="repaymentSource"/u);
 
 assert.match(source.repository, /assertBusinessCreationAllowed/u);
 assert.match(source.repository, /business\.create_or_acquire/u);

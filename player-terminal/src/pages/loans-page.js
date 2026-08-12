@@ -9,6 +9,18 @@ function loanTone(status) {
   return "green";
 }
 
+function repaymentAccountOptions(selected, businessKey) {
+  if (selected?.borrowerType === "business") {
+    return businessKey
+      ? [{ value: `business:${businessKey}`, label: "Business operating account" }]
+      : [];
+  }
+  return [
+    { value: "checking", label: "Checking account" },
+    { value: "savings", label: "Savings account" },
+  ];
+}
+
 export function renderLoansPage(data, ui) {
   const loans = data.loans;
   const code = data.session.currencyCode;
@@ -18,6 +30,8 @@ export function renderLoansPage(data, ui) {
   const businessKey = data.business?.configured ? String(data.business.company?.id || "") : "";
   const selectedNeedsBusiness = selected?.borrowerType === "business";
   const selectedCanApply = Boolean(selected) && (!selectedNeedsBusiness || Boolean(businessKey));
+  const repaymentAccounts = repaymentAccountOptions(selected, businessKey);
+  const repaymentOptions = repaymentAccounts.map((account, index) => `<option value="${escapeHtml(account.value)}"${index === 0 ? " selected" : ""}>${escapeHtml(account.label)}</option>`).join("");
   return `<section class="player-terminal-page player-terminal-loans-page">
     <div class="player-terminal-page-heading"><div><small>CREDIT CENTER</small><h2>Loans</h2><p>Review economic-only eligibility, disclosures, applications, and repayment schedules.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`SCORE ${loans.creditScore}`, loans.creditScore >= 700 ? "green" : "amber")}</div></div>
 
@@ -41,8 +55,8 @@ export function renderLoansPage(data, ui) {
           ${selectedNeedsBusiness && businessKey ? `<input name="businessKey" type="hidden" value="${escapeHtml(businessKey)}" />` : ""}
           <label>AMOUNT<input name="amount" type="number" min="${escapeHtml(selected.minimumAmount)}" max="${escapeHtml(selected.limit)}" step="0.01" required value="${escapeHtml(Math.min(selected.limit, Math.max(selected.minimumAmount, 5000)))}" /></label>
           <label>PURPOSE<select name="purpose"><option>Inventory purchase</option><option>Business expansion</option><option>Equipment investment</option><option>Working capital</option></select></label>
-          <label>REPAYMENT SOURCE<textarea name="repaymentSource" rows="3" required placeholder="Describe expected repayment source"></textarea></label>
-          <button class="player-terminal-primary-button" type="submit" ${selectedCanApply ? "" : "disabled"}>${icon("document")} Submit application</button>
+          <label>REPAYMENT ACCOUNT<select name="repaymentSource" required>${repaymentOptions}</select><small>Approved payments will debit this account in the loan currency.</small></label>
+          <button class="player-terminal-primary-button" type="submit" ${selectedCanApply && repaymentAccounts.length ? "" : "disabled"}>${icon("document")} Submit application</button>
         </form></details>` : renderEmptyState({ title: "No credit offers", detail: "Your eligibility and available facilities will appear after the banking service completes its review.", iconName: "banking" })}
       </section>
 
