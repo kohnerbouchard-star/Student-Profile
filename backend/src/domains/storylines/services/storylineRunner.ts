@@ -26,14 +26,21 @@ import { evaluateStoryCondition } from "./storyConditionEngine.ts";
 import { executeStoryEffect } from "./storyEffectEngine.ts";
 import { createStoryCutsceneNotificationForPlayers } from "./storyNotificationService.ts";
 
+interface ParsedStoryEffect {
+  readonly effect: StoryEffect;
+  readonly authoredEffectIndex: number;
+}
+
 interface ParsedPlayerRule {
   readonly ruleKey: string;
+  readonly authoredRuleIndex: number;
   readonly condition: StoryCondition;
-  readonly effects: readonly StoryEffect[];
+  readonly effects: readonly ParsedStoryEffect[];
 }
 
 interface MatchedStoryEffect {
   readonly effect: StoryEffect;
+  readonly effectIndex: number;
   readonly playerContext?: PlayerStoryContext | null;
 }
 
@@ -201,10 +208,14 @@ async function applyPlayerRuleEffects(
   input: RunDueStorylineEventsInput,
 ): Promise<PlayerRuleApplicationResult> {
   const matchingEffects: MatchedStoryEffect[] = [];
-  const gameScopedEffectIdentities = new Set<string>();
+  const appliedGameScopedEffectIdentities = new Set<string>();
+  const parsedRules = candidate.playerRules.map((rule, ruleIndex) =>
+    parsePlayerRule(rule, ruleIndex)
+  );
+  const gameEffectIndexByIdentity = buildGameScopedEffectIndexes(parsedRules);
   let matchCount = 0;
 
-  for (const rule of candidate.playerRules.map(parsePlayerRule)) {
+  for (const rule of parsedRules) {
     let ruleMatched = false;
 
     for (const playerContext of input.playerContexts) {
@@ -214,23 +225,46 @@ async function applyPlayerRuleEffects(
 
       matchCount += 1;
       ruleMatched = true;
-      matchingEffects.push(
-        ...rule.effects
-          .filter((effect) => !isGameScopedStoryEffect(effect))
-          .map((effect) => ({ effect, playerContext })),
-      );
-    }
 
-    if (ruleMatched) {
-      for (const effect of rule.effects.filter(isGameScopedStoryEffect)) {
-        const identity = gameScopedStoryEffectIdentity(effect);
-
-        if (gameScopedEffectIdentities.has(identity)) {
+      for (const parsedEffect of rule.effects) {
+        if (isGameScopedStoryEffect(parsedEffect.effect)) {
           continue;
         }
 
-        gameScopedEffectIdentities.add(identity);
-        matchingEffects.push({ effect, playerContext: null });
+        matchingEffects.push({
+          effect: parsedEffect.effect,
+          effectIndex: encodePlayerScopedEffectIndex(
+            rule.authoredRuleIndex,
+            parsedEffect.authoredEffectIndex,
+          ),
+          playerContext,
+        });
+      }
+    }
+
+    if (ruleMatched) {
+      for (const parsedEffect of rule.effects) {
+        if (!isGameScopedStoryEffect(parsedEffect.effect)) {
+          continue;
+        }
+
+        const identity = gameScopedStoryEffectIdentity(parsedEffect.effect);
+
+        if (appliedGameScopedEffectIdentities.has(identity)) {
+          continue;
+        }
+
+        const effectIndex = gameEffectIndexByIdentity.get(identity);
+        if (effectIndex === undefined) {
+          throw new Error("Game-scoped Story effect index was not initialized.");
+        }
+
+        appliedGameScopedEffectIdentities.add(identity);
+        matchingEffects.push({
+          effect: parsedEffect.effect,
+          effectIndex,
+          playerContext: null,
+        });
       }
     }
   }
@@ -256,14 +290,13 @@ async function executeEffectsForMatchedPlayers(input: {
 }): Promise<StoryEffectBatchExecutionResult> {
   const results: StoryEffectExecutionResult[] = [];
 
-  for (let index = 0; index < input.matchingEffects.length; index += 1) {
-    const matched = input.matchingEffects[index];
+  for (const matched of input.matchingEffects) {
     results.push(
       await executeStoryEffect({
         gameSessionId: input.gameSessionId,
         storylineEventId: input.storylineEventId,
         effect: matched.effect,
-        effectIndex: index,
+        effectIndex: matched.effectIndex,
         now: input.now,
         playerContext: matched.playerContext ?? null,
         dependencies: input.effectDependencies,
@@ -279,6 +312,57 @@ async function executeEffectsForMatchedPlayers(input: {
       results.filter((result) => result.status === "skipped").length,
     failedCount: results.filter((result) => result.status === "failed").length,
   };
+}
+
+function buildGameScopedEffectIndexes(
+  rules: readonly ParsedPlayerRule[],
+): ReadonlyMap<string, number> {
+  const indexes = new Map<string, number>();
+  let authoredOrdinal = 0;
+
+  for (const rule of rules) {
+    for (const parsedEffect of rule.effects) {
+      if (!isGameScopedStoryEffect(parsedEffect.effect)) {
+        continue;
+      }
+
+      const identity = gameScopedStoryEffectIdentity(parsedEffect.effect);
+      if (indexes.has(identity)) {
+        continue;
+      }
+
+      indexes.set(identity, encodeGameScopedEffectIndex(authoredOrdinal));
+      authoredOrdinal += 1;
+    }
+  }
+
+  return indexes;
+}
+
+function encodeGameScopedEffectIndex(authoredOrdinal: number): number {
+  assertNonNegativeSafeInteger(authoredOrdinal, "game Story effect ordinal");
+  const encoded = authoredOrdinal * 2;
+  assertNonNegativeSafeInteger(encoded, "game Story effect index");
+  return encoded;
+}
+
+function encodePlayerScopedEffectIndex(
+  authoredRuleIndex: number,
+  authoredEffectIndex: number,
+): number {
+  assertNonNegativeSafeInteger(authoredRuleIndex, "Story rule index");
+  assertNonNegativeSafeInteger(authoredEffectIndex, "Story effect index");
+  const sum = authoredRuleIndex + authoredEffectIndex;
+  const paired = (sum * (sum + 1)) / 2 + authoredEffectIndex;
+  const encoded = paired * 2 + 1;
+  assertNonNegativeSafeInteger(encoded, "player Story effect identity");
+  return encoded;
+}
+
+function assertNonNegativeSafeInteger(value: number, label: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${label} is outside the supported deterministic range.`);
+  }
 }
 
 function isGameScopedStoryEffect(effect: StoryEffect): boolean {
@@ -398,17 +482,24 @@ function buildGameStoryFlagContext(
   };
 }
 
-function parsePlayerRule(value: JsonObject): ParsedPlayerRule {
+function parsePlayerRule(
+  value: JsonObject,
+  authoredRuleIndex: number,
+): ParsedPlayerRule {
   const record = value as Record<string, unknown>;
   const ruleKey = typeof record.ruleKey === "string" && record.ruleKey.trim()
     ? record.ruleKey.trim()
     : "story_rule";
   const effects = Array.isArray(record.effects)
-    ? record.effects.map(parseStoryEffect)
+    ? record.effects.map((effect, authoredEffectIndex) => ({
+      effect: parseStoryEffect(effect),
+      authoredEffectIndex,
+    }))
     : [];
 
   return {
     ruleKey,
+    authoredRuleIndex,
     condition: parseStoryCondition(record.condition),
     effects,
   };
