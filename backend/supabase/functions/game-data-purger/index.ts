@@ -3,12 +3,13 @@ import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "npm:@aws-s
 
 const SCHEDULER_NAME = "econovaria-game-data-purge-scheduler-v1";
 const SCHEDULER_HEADER = "x-econovaria-purge-scheduler-token";
-const EXPECTED_REGISTRY_SHA256 = "0967d19098bfcc7b013c5f1bed9fcb2918126fe432e779ad4c8465be6f87eaeb";
-const EXPECTED_REGISTRY_TABLES = 133;
-const EXPECTED_FK_GRAPH_SHA256 = "72aa93c5ab2a84f915a3e025879bb71db9b740256e17f295107e1039870eadb0";
-const EXPECTED_FK_GRAPH_EDGES = 213;
-const EXPECTED_DELETE_ORDER_SHA256 = "7c146263607baaf025a4153f5c2007d9e4c955e19e4532f5d530b7248741b8f3";
-const EXPECTED_DELETE_ORDER_TABLES = 129;
+const EXPECTED_REGISTRY_SHA256 = "6eb63825741b7118bc5acdc2ecef45101e7963b502ee3b0daf2b5f05a33d3f31";
+const EXPECTED_REGISTRY_TABLES = 135;
+const EXPECTED_FK_GRAPH_SHA256 = "0f48f84c8fd0e71f2cbbfba90f2ded8bba0e6b0a8842e92add335dabb4314840";
+const EXPECTED_FK_GRAPH_EDGES = 216;
+const EXPECTED_DELETE_ORDER_SHA256 = "8c60cbaf1ad690cfaf1f360148fb36035ec6492e232c8d8fc3d642961ecf4a0a";
+const EXPECTED_DELETE_ORDER_TABLES = 131;
+const DB_FINALIZE_CURSOR = 132;
 const DB_BATCH_SIZE = 20;
 const R2_BATCH_SIZE = 1000;
 
@@ -25,7 +26,7 @@ Deno.serve(async (request: Request) => {
 
   const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { "x-client-info": "econovaria-game-data-purger-v3" } },
+    global: { headers: { "x-client-info": "econovaria-game-data-purger-v4" } },
   });
 
   const schedulerToken = String(request.headers.get(SCHEDULER_HEADER) || "").trim();
@@ -88,6 +89,9 @@ function assertPreflight(preflight: Record<string, unknown>, gameSessionId: stri
   if (preflight.gameExists !== true) throw new Error("preflight_game_missing");
   if (preflight.purgeProtected === true) throw new Error("preflight_game_protected");
   if (preflight.entitlementExpired !== true) throw new Error("preflight_license_not_expired");
+  if (preflight.environmentConfigured !== true) {
+    throw new Error("preflight_environment_not_configured");
+  }
   if (preflight.leverArmed !== true || preflight.armMatches !== true) {
     throw new Error("preflight_lever_not_armed_for_request");
   }
@@ -201,7 +205,8 @@ async function purgeDbStage(
   });
   if (batch.error) throw new Error(`db_batch_failed:${batch.error.message}`);
   const result = (batch.data || {}) as Record<string, unknown>;
-  const readyToFinalize = result.readyToFinalize === true || Number(result.cursor || 0) >= 130;
+  const readyToFinalize = result.readyToFinalize === true ||
+    Number(result.cursor || 0) >= DB_FINALIZE_CURSOR;
 
   if (readyToFinalize) {
     const finalized = await client.rpc("finalize_game_data_purge_v1", {
