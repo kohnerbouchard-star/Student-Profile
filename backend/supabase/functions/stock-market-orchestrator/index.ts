@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   handleStockMarketRunnerRequest,
 } from "../../../src/domains/stocks/api/stockMarketRunnerHttpHandler.ts";
+import {
+  createStorylineRunnerAfterTick,
+} from "../stock-market-runner/storylineRunnerAfterTick.ts";
 
 const SCHEDULER_NAME = "econovaria-stock-runtime-scheduler-v1";
 const SCHEDULER_HEADER = "x-econovaria-scheduler-token";
@@ -100,6 +103,7 @@ Deno.serve(async (request: Request) => {
           },
         ) as any,
         readRunnerSecret: () => internalSecret,
+        createStorylineRunnerAfterTick,
         logStorylineRunnerFailure: (failure) => {
           storylineFailures.push({
             code: failure.code,
