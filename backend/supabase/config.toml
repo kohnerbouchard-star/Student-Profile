@@ -125,6 +125,18 @@ verify_jwt = false
 [functions.stock-market-orchestrator]
 verify_jwt = false
 
+# Database-owned archival endpoint. It validates the same Vault-held stock runtime
+# scheduler token, writes immutable Parquet to R2, downloads the object for SHA-256
+# verification, registers the manifest, and only then invokes the guarded purge RPC.
+[functions.stock-tick-archiver]
+verify_jwt = false
+
+# Database-owned destructive worker. It validates a dedicated Vault scheduler
+# token and can only claim a request that passed license expiry, grace period,
+# deterministic review, global arm, one-time confirmation and schema fingerprints.
+[functions.game-data-purger]
+verify_jwt = false
+
 # Deployed compatibility surface. Browser runtime must not target this function.
 # admin-api still forwards a bounded set of authenticated Staff operations here
 # server-side. Keep platform JWT verification enabled and retire the function only
