@@ -1,0 +1,252 @@
+name: Story Meridian Stage 4-6 Staging Orchestrator V1
+
+on:
+  push:
+    branches:
+      - ops/story-meridian-stage4-6-staging-orchestrator-v1
+    paths:
+      - ".github/workflows/story-meridian-stage4-6-staging-orchestrator-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-meridian-stage4-6-staging-orchestrator-v1
+  cancel-in-progress: false
+
+env:
+  EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  DENIED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SOURCE_BASE_SHA: ca31b2d23955a2a8cf097ebe4e5070acb88b3836
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  release:
+    name: Deploy scheduled Story orchestrator to staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: Check out exact staging candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and staging-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          git merge-base --is-ancestor "$SOURCE_BASE_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$SOURCE_BASE_SHA"...HEAD)
+          test "${#changed[@]}" = "1"
+          test "${changed[0]}" = ".github/workflows/story-meridian-stage4-6-staging-orchestrator-v1.yml"
+          for path in \
+            backend/supabase/functions/stock-market-orchestrator/index.ts \
+            backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts \
+            backend/src/domains/storylines/infrastructure/supabaseStoryWorldFxWriter.ts \
+            backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts
+          do
+            test -f "$path"
+            test "$(git rev-parse "HEAD:$path")" = "$(git rev-parse "$SOURCE_BASE_SHA:$path")"
+          done
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Link protected staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+
+      - name: Verify Stage 4-6 migration ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          count="$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version in ('20260812103000','20260812110000','20260812111000','20260812114000')")"
+          test "$count" = "4"
+
+      - name: Capture pre-deploy orchestrator identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-before.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.FUNCTIONS_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing before deployment.');
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            slug: row.slug,
+            version: row.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+        env:
+          FUNCTIONS_PATH: ${{ runner.temp }}/functions-before.json
+          EVIDENCE_PATH: ${{ runner.temp }}/stock-market-orchestrator-before.json
+
+      - name: Deploy exact scheduled orchestrator to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy stock-market-orchestrator \
+            --workdir backend \
+            --project-ref "$EXPECTED_STAGING_PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Verify orchestrator deployment advanced
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/functions-after.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+          const rows = JSON.parse(fs.readFileSync(process.env.AFTER_PATH, 'utf8'));
+          const row = rows.find((value) => value.slug === 'stock-market-orchestrator');
+          if (!row) throw new Error('stock-market-orchestrator is missing after deployment.');
+          if (row.verify_jwt !== false) throw new Error('stock-market-orchestrator verify_jwt drifted.');
+          if (!Number.isInteger(row.version) || row.version <= before.version) {
+            throw new Error(`orchestrator version did not advance: ${before.version} -> ${row.version}`);
+          }
+          if (!/^[a-f0-9]{64}$/.test(String(row.ezbr_sha256 || ''))) {
+            throw new Error('orchestrator digest is invalid.');
+          }
+          fs.writeFileSync(process.env.EVIDENCE_PATH, `${JSON.stringify({
+            environment: 'staging',
+            sourceBaseSha: process.env.SOURCE_BASE_SHA,
+            slug: row.slug,
+            version: row.version,
+            priorVersion: before.version,
+            digest: row.ezbr_sha256,
+            verifyJwt: row.verify_jwt,
+          }, null, 2)}\n`);
+          NODE
+        env:
+          BEFORE_PATH: ${{ runner.temp }}/stock-market-orchestrator-before.json
+          AFTER_PATH: ${{ runner.temp }}/functions-after.json
+          EVIDENCE_PATH: ${{ runner.temp }}/stock-market-orchestrator-after.json
+
+      - name: Run rollback-scoped Stage 5 to Stage 6 World and FX acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --no-psqlrc <<'SQL' 2>&1 | tee /tmp/meridian-stage4-6-staging-orchestrator-acceptance.log
+          begin;
+          do $accept$
+          declare
+            v_game uuid;
+            v_revision bigint;
+            v_outcome text;
+            v_rates integer;
+          begin
+            select g.id into v_game
+            from public.game_sessions g
+            join public.world_runtime_instances wr on wr.game_session_id = g.id
+            where g.status in ('active','paused')
+              and (select count(*) from public.world_route_states r where r.game_session_id = g.id) = 13
+              and (select count(distinct (fx.from_currency_code, fx.to_currency_code))
+                   from public.currency_exchange_rates fx
+                   where fx.game_session_id = g.id
+                     and fx.from_currency_code in ('NRC','YRC','THD','SLV','ELD','VAL','LUM','SYN','XAL','DRV')
+                     and fx.to_currency_code in ('NRC','YRC','THD','SLV','ELD','VAL','LUM','SYN','XAL','DRV')
+                     and fx.from_currency_code <> fx.to_currency_code) = 90
+            order by g.created_at desc
+            limit 1;
+            if v_game is null then raise exception 'MERIDIAN_STAGING_WORLD_FX_FIXTURE_MISSING'; end if;
+
+            perform public.initialize_meridian_customs_security_intrusion_v1(v_game);
+            perform public.initialize_meridian_security_center_attack_v1(v_game);
+            perform public.initialize_meridian_emergency_response_v1(v_game);
+
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_location_state_v1(v_game, v_revision, 'story-staging-stage5-location-v1', '["loc_syndalis_meridian_security_center_v1"]'::jsonb, 'conflict', clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_route_state_v1(v_game, v_revision, 'story-staging-stage5-direct-v1', '["rte_meridian_syndalis_lumenor_v1"]'::jsonb, 'closed', 'meridian_disruption', 18000, 26000, clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_route_state_v1(v_game, v_revision, 'story-staging-stage5-alts-v1', '["rte_meridian_dravenlok_syndalis_v1","rte_meridian_xalvoria_syndalis_v1"]'::jsonb, 'restricted', 'meridian_disruption', 13500, 16000, clock_timestamp());
+            select command_outcome into v_outcome from public.apply_story_currency_volatility_v1(v_game, 'story-staging-stage5-fx-v1', '{"NRC":120,"YRC":-100,"THD":-150,"SLV":80,"ELD":-100,"VAL":0,"LUM":-250,"SYN":-500,"XAL":-180,"DRV":-160}'::jsonb, clock_timestamp());
+            if v_outcome <> 'applied' then raise exception 'MERIDIAN_STAGE5_FX_FAILED:%', v_outcome; end if;
+
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_location_state_v1(v_game, v_revision, 'story-staging-stage6-location-v1', '["loc_syndalis_meridian_security_center_v1"]'::jsonb, 'shortage', clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_route_state_v1(v_game, v_revision, 'story-staging-stage6-direct-v1', '["rte_meridian_syndalis_lumenor_v1"]'::jsonb, 'restricted', 'recovery', 13500, 17500, clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_route_state_v1(v_game, v_revision, 'story-staging-stage6-alts-v1', '["rte_meridian_dravenlok_syndalis_v1","rte_meridian_xalvoria_syndalis_v1"]'::jsonb, 'restricted', 'recovery', 11250, 13000, clock_timestamp());
+            select revision into v_revision from public.world_runtime_instances where game_session_id = v_game;
+            perform public.apply_world_route_state_v1(v_game, v_revision, 'story-staging-stage6-overflow-v1', '["rte_meridian_lumenor_xalvoria_v1","rte_meridian_xalvoria_dravenlok_v1"]'::jsonb, 'restricted', 'meridian_disruption', 11000, 12500, clock_timestamp());
+            select command_outcome into v_outcome from public.apply_story_currency_volatility_v1(v_game, 'story-staging-stage6-fx-v1', '{"NRC":40,"YRC":-30,"THD":-50,"SLV":20,"ELD":-30,"VAL":0,"LUM":-90,"SYN":-180,"XAL":-70,"DRV":-60}'::jsonb, clock_timestamp() + interval '1 second');
+            if v_outcome <> 'applied' then raise exception 'MERIDIAN_STAGE6_FX_FAILED:%', v_outcome; end if;
+
+            if not exists (select 1 from public.world_location_states where game_session_id=v_game and public_location_id='loc_syndalis_meridian_security_center_v1' and availability='shortage') then raise exception 'MERIDIAN_STAGE6_LOCATION_FAILED'; end if;
+            if not exists (select 1 from public.world_route_states where game_session_id=v_game and public_route_id='rte_meridian_syndalis_lumenor_v1' and status='restricted' and reason='recovery' and cost_multiplier_basis_points=13500 and duration_multiplier_basis_points=17500) then raise exception 'MERIDIAN_STAGE6_DIRECT_ROUTE_FAILED'; end if;
+            select count(*)::integer into v_rates from public.currency_exchange_rates where game_session_id=v_game and source in ('story-fx:story-staging-stage5-fx-v1','story-fx:story-staging-stage6-fx-v1');
+            if v_rates <> 180 then raise exception 'MERIDIAN_STAGING_FX_ROW_COUNT_FAILED:%', v_rates; end if;
+
+            raise notice 'MERIDIAN_STAGE4_6_STAGING_ORCHESTRATOR_ACCEPTANCE_PASS fx_rows=%', v_rates;
+          end
+          $accept$;
+          rollback;
+          SQL
+          grep -F 'MERIDIAN_STAGE4_6_STAGING_ORCHESTRATOR_ACCEPTANCE_PASS' /tmp/meridian-stage4-6-staging-orchestrator-acceptance.log
+
+      - name: Verify staging-only final boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version in ('20260812103000','20260812110000','20260812111000','20260812114000')")" = "4"
+
+      - name: Upload staging orchestrator evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: story-meridian-stage4-6-orchestrator-${{ github.sha }}
+          path: |
+            /tmp/meridian-stage4-6-staging-orchestrator-acceptance.log
+            ${{ runner.temp }}/stock-market-orchestrator-before.json
+            ${{ runner.temp }}/stock-market-orchestrator-after.json
+          if-no-files-found: warn
+          retention-days: 30
