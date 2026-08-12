@@ -241,9 +241,9 @@ assert.match(repaymentSql, /balance_row\.account_type = v_account/u);
 assert.match(repaymentSql, /record_player_ledger_entry\([\s\S]{0,300}v_account/iu);
 assert.doesNotMatch(repaymentSql, /else 'checking'/iu);
 assert.match(source.playerLoansPage, /<select name="repaymentSource" required>/u);
-assert.match(source.playerLoansPage, />Checking account<\/option>/u);
-assert.match(source.playerLoansPage, />Savings account<\/option>/u);
-assert.match(source.playerLoansPage, /Business operating account/u);
+assert.match(source.playerLoansPage, /label: "Checking account"/u);
+assert.match(source.playerLoansPage, /label: "Savings account"/u);
+assert.match(source.playerLoansPage, /label: "Business operating account"/u);
 assert.doesNotMatch(source.playerLoansPage, /<textarea name="repaymentSource"/u);
 
 assert.match(source.repository, /assertBusinessCreationAllowed/u);
