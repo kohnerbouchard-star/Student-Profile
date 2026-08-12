@@ -1,0 +1,81 @@
+name: Supabase Storage Lifecycle Reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/20260812044346_stock_tick_hot_cold_archive_foundation_v2.sql"
+      - "backend/supabase/migrations/20260812072131_harden_stock_tick_archive_service_contract_v2.sql"
+      - "backend/supabase/migrations/20260812072445_drop_redundant_stock_tick_asset_desc_index_v1.sql"
+      - "backend/supabase/migrations/20260812211829_temporarily_drop_stock_tick_ticker_index_for_prod_compaction_v1.sql"
+      - "backend/supabase/migrations/20260812211914_restore_compacted_stock_tick_ticker_index_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212415_add_hardened_game_license_purge_foundation_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212602_add_hardened_game_purge_internal_contracts_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212656_add_hardened_game_purge_operator_controls_prod_v1.sql"
+      - "backend/supabase/migrations/20260812213109_bound_stock_candle_retention_prod_v1.sql"
+      - "backend/supabase/migrations/20260812213226_drop_exact_duplicate_marketplace_reference_indexes_v1.sql"
+      - "backend/supabase/migrations/20260812214220_add_platform_storage_health_monitor_v1.sql"
+      - "backend/supabase/migrations/20260813090000_reconcile_storage_lifecycle_runtime_cleanup_v1.sql"
+      - "backend/supabase/functions/stock-tick-archiver/**"
+      - "backend/supabase/functions/game-data-purger/**"
+      - "scripts/operations/storage-lifecycle-reconciliation/**"
+      - "docs/operations/supabase-storage-lifecycle-reconciliation-v1.md"
+      - ".github/workflows/supabase-storage-lifecycle-reconciliation.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/supabase/migrations/20260812044346_stock_tick_hot_cold_archive_foundation_v2.sql"
+      - "backend/supabase/migrations/20260812072131_harden_stock_tick_archive_service_contract_v2.sql"
+      - "backend/supabase/migrations/20260812072445_drop_redundant_stock_tick_asset_desc_index_v1.sql"
+      - "backend/supabase/migrations/20260812211829_temporarily_drop_stock_tick_ticker_index_for_prod_compaction_v1.sql"
+      - "backend/supabase/migrations/20260812211914_restore_compacted_stock_tick_ticker_index_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212415_add_hardened_game_license_purge_foundation_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212602_add_hardened_game_purge_internal_contracts_prod_v1.sql"
+      - "backend/supabase/migrations/20260812212656_add_hardened_game_purge_operator_controls_prod_v1.sql"
+      - "backend/supabase/migrations/20260812213109_bound_stock_candle_retention_prod_v1.sql"
+      - "backend/supabase/migrations/20260812213226_drop_exact_duplicate_marketplace_reference_indexes_v1.sql"
+      - "backend/supabase/migrations/20260812214220_add_platform_storage_health_monitor_v1.sql"
+      - "backend/supabase/migrations/20260813090000_reconcile_storage_lifecycle_runtime_cleanup_v1.sql"
+      - "backend/supabase/functions/stock-tick-archiver/**"
+      - "backend/supabase/functions/game-data-purger/**"
+      - "scripts/operations/storage-lifecycle-reconciliation/**"
+      - "docs/operations/supabase-storage-lifecycle-reconciliation-v1.md"
+      - ".github/workflows/supabase-storage-lifecycle-reconciliation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-storage-lifecycle-reconciliation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify canonical migration hashes and runtime contracts
+        run: node scripts/operations/storage-lifecycle-reconciliation/verify-source.mjs
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Type-check storage lifecycle Edge Functions
+        run: |
+          deno check \
+            --config backend/supabase/functions/deno.json \
+            --lock=/tmp/econovaria-storage-lifecycle-deno.lock \
+            --node-modules-dir=auto \
+            backend/supabase/functions/stock-tick-archiver/index.ts \
+            backend/supabase/functions/game-data-purger/index.ts

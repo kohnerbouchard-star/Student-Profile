@@ -1,0 +1,1 @@
+drop index if exists public.inventory_holdings_marketplace_reference_scope_unique; drop index if exists public.store_items_marketplace_reference_scope_unique;

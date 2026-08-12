@@ -1,0 +1,1 @@
+create index if not exists stock_price_ticks_ticker_tick_desc_idx on public.stock_price_ticks (game_session_id, ticker, tick_index desc);

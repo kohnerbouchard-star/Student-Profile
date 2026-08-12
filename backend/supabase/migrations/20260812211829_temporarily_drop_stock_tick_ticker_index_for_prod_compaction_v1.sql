@@ -1,0 +1,1 @@
+drop index if exists public.stock_price_ticks_ticker_tick_desc_idx;
