@@ -20,6 +20,9 @@ import {
   SupabaseStoryEffectLedgerWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
 import {
+  SupabaseStoryEventExecutionRepository,
+} from "../../../src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.ts";
+import {
   SupabaseStoryImpactWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts";
 import {
@@ -47,6 +50,9 @@ export function createStorylineRunnerAfterTick(
   const storylineRepository = new SupabaseStorylineRepository(
     withOptionalStoryEventOverrideReads(client as any) as any,
   );
+  const executionRepository = new SupabaseStoryEventExecutionRepository(
+    client as any,
+  );
   const notificationRepository = new SupabaseStoryNotificationRepository(
     client as any,
   );
@@ -71,6 +77,7 @@ export function createStorylineRunnerAfterTick(
       currentMarketTick: input.currentMarketTick,
       playerContexts,
       repository: storylineRepository,
+      executionRepository,
       notificationRepository,
       effectDependencies: {
         ledger,

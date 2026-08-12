@@ -11,6 +11,7 @@ import type {
   StorylineEventCandidateRecord,
 } from "../contracts/storylineRepositoryContracts.ts";
 import { runDueStorylineEvents } from "./storylineRunner.ts";
+import { InMemoryStoryEventExecutionRepository } from "./testing/inMemoryStoryEventExecutionRepository.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -86,6 +87,7 @@ async function execute(playerContexts: readonly PlayerStoryContext[]) {
     currentMarketTick: 30,
     playerContexts,
     repository: new FakeStorylineRepository() as never,
+    executionRepository: new InMemoryStoryEventExecutionRepository(),
     effectDependencies: dependencies,
   });
 

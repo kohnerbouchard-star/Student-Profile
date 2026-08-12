@@ -2,18 +2,17 @@ import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import {
   parseStoryCondition,
-  type StoryCondition,
 } from "../contracts/storyConditionContracts.ts";
 import {
-  parseStoryEffect,
   parseStoryRevealPayload,
-  type StoryEffect,
 } from "../contracts/storyEffectContracts.ts";
 import type {
   StoryEffectBatchExecutionResult,
-  StoryEffectExecutionDependencies,
-  StoryEffectExecutionResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
+import type {
+  StoryEventExecutionClaimResult,
+  StoryEventExecutionRepository,
+} from "../contracts/storyEventExecutionContracts.ts";
 import type {
   RunDueStorylineEventsInput,
   StorylineRunnerEventResult,
@@ -21,51 +20,44 @@ import type {
   StorylineRunnerResult,
 } from "../contracts/storylineRunnerContracts.ts";
 import { toStorylineRunnerNotificationCreatedResult } from "../contracts/storylineRunnerContracts.ts";
-import type { StorylineEventCandidateRecord } from "../contracts/storylineRepositoryContracts.ts";
+import type {
+  StorylineEventCandidateRecord,
+  StorylineRepository,
+} from "../contracts/storylineRepositoryContracts.ts";
 import { evaluateStoryCondition } from "./storyConditionEngine.ts";
-import { executeStoryEffect } from "./storyEffectEngine.ts";
+import {
+  buildStoryEventExecutionPlan,
+  executeStoryEventExecutionPlan,
+  type ParsedStoryEventExecutionPlan,
+} from "./storyEventExecutionPlan.ts";
 import { createStoryCutsceneNotificationForPlayers } from "./storyNotificationService.ts";
 
-interface ParsedStoryEffect {
-  readonly effect: StoryEffect;
-  readonly authoredEffectIndex: number;
-}
+const STORY_EXECUTION_LEASE_SECONDS = 120;
 
-interface ParsedPlayerRule {
-  readonly ruleKey: string;
-  readonly authoredRuleIndex: number;
-  readonly condition: StoryCondition;
-  readonly effects: readonly ParsedStoryEffect[];
-}
-
-interface MatchedStoryEffect {
-  readonly effect: StoryEffect;
-  readonly effectIndex: number;
-  readonly playerContext?: PlayerStoryContext | null;
-}
-
-interface PlayerRuleApplicationResult {
-  readonly matchCount: number;
-  readonly effectResult: StoryEffectBatchExecutionResult;
-}
+type LeaseAwareRunInput = Omit<RunDueStorylineEventsInput, "executionRepository"> & {
+  readonly executionRepository: StoryEventExecutionRepository;
+};
 
 export async function runDueStorylineEvents(
   input: RunDueStorylineEventsInput,
 ): Promise<StorylineRunnerResult> {
-  const candidates = await input.repository.listUnresolvedActiveStorylineEvents(
-    {
-      gameSessionId: input.gameSessionId,
-      now: input.now,
-      currentMarketTick: input.currentMarketTick,
-    },
-  );
+  const resolvedInput: LeaseAwareRunInput = {
+    ...input,
+    executionRepository: input.executionRepository ??
+      new LegacyResolutionExecutionRepository(input.repository),
+  };
+  const candidates = await input.repository.listUnresolvedActiveStorylineEvents({
+    gameSessionId: input.gameSessionId,
+    now: input.now,
+    currentMarketTick: input.currentMarketTick,
+  });
   const storyFlags = await input.repository.listGameSessionStoryFlags(
     input.gameSessionId,
   );
   const eventResults: StorylineRunnerEventResult[] = [];
 
   for (const candidate of candidates) {
-    eventResults.push(await resolveCandidate(candidate, input, storyFlags));
+    eventResults.push(await resolveCandidate(candidate, resolvedInput, storyFlags));
   }
 
   return buildRunnerResult(
@@ -77,62 +69,90 @@ export async function runDueStorylineEvents(
 
 async function resolveCandidate(
   candidate: StorylineEventCandidateRecord,
-  input: RunDueStorylineEventsInput,
+  input: LeaseAwareRunInput,
   storyFlags: PlayerStoryContext["storyFlags"],
 ): Promise<StorylineRunnerEventResult> {
+  let activeLeaseToken: string | null = null;
+
   try {
     if (candidate.triggerType === "manual") {
       return skipped(candidate, "manual_trigger");
     }
 
-    if (!isTriggerEligible(candidate, input, storyFlags)) {
-      return skipped(candidate, "trigger_not_due");
+    let claim = await claimExecution(candidate, input, null);
+    const preexisting = claimTerminalResult(candidate, claim);
+    if (preexisting) return preexisting;
+
+    if (claim.outcome === "absent") {
+      if (!isTriggerEligible(candidate, input, storyFlags)) {
+        return skipped(candidate, "trigger_not_due");
+      }
+
+      claim = await claimExecution(
+        candidate,
+        input,
+        buildStoryEventExecutionPlan(candidate, input.playerContexts),
+      );
+      const raced = claimTerminalResult(candidate, claim);
+      if (raced) return raced;
     }
 
-    const resolutionResult = await input.repository.createStoryEventResolution({
+    if (claim.outcome !== "acquired") {
+      throw new Error(`Unexpected Story execution claim outcome: ${claim.outcome}.`);
+    }
+    if (
+      !claim.leaseToken ||
+      claim.effectiveMarketTick === null ||
+      !Number.isSafeInteger(claim.effectiveMarketTick)
+    ) {
+      throw new Error("Acquired Story execution claim is incomplete.");
+    }
+
+    activeLeaseToken = claim.leaseToken;
+    const application = await executeStoryEventExecutionPlan({
       gameSessionId: input.gameSessionId,
       storylineEventId: candidate.id,
-      resolvedAt: input.now,
-      resolvedMarketTick: input.currentMarketTick,
-      status: "resolved",
-      resultPayload: {
-        eventKey: candidate.eventKey,
-        triggerType: candidate.triggerType,
-        resolutionPhase: "accepted",
-      },
+      plan: claim.executionPlan,
+      effectiveAt: claim.effectiveAt,
+      effectiveMarketTick: claim.effectiveMarketTick,
+      dependencies: input.effectDependencies,
     });
 
-    if (resolutionResult.status === "existing") {
-      return {
-        status: "already_existing",
-        eventId: candidate.id,
-        eventKey: candidate.eventKey,
-        triggerType: candidate.triggerType,
-        resolutionId: resolutionResult.resolution.id,
-      };
-    }
-
-    const applicationResult = await applyPlayerRuleEffects(candidate, input);
-    const hasFailedEffect = applicationResult.effectResult.failedCount > 0;
-
-    if (hasFailedEffect) {
+    if (application.effectResult.failedCount > 0) {
+      await input.executionRepository.fail({
+        gameSessionId: input.gameSessionId,
+        storylineEventId: candidate.id,
+        leaseToken: activeLeaseToken,
+        errorMessage: "One or more Story effects failed.",
+      });
+      activeLeaseToken = null;
       return {
         status: "failed",
         eventId: candidate.id,
         eventKey: candidate.eventKey,
         triggerType: candidate.triggerType,
         errorMessage: "One or more story effects failed.",
-        resultPayload: buildEffectResultPayload(applicationResult.effectResult),
-        effectResult: applicationResult.effectResult,
+        resultPayload: buildEffectResultPayload(application.effectResult),
+        effectResult: application.effectResult,
       };
     }
 
-    const notificationResult = await createCutsceneNotificationIfConfigured(
-      candidate,
-      input,
-    );
+    const notificationResult = await createCutsceneNotificationIfConfigured({
+      storylineEventId: candidate.id,
+      gameSessionId: input.gameSessionId,
+      plan: application.plan,
+      now: claim.effectiveAt,
+      repository: input.notificationRepository,
+    });
 
     if (notificationResult?.status === "failed") {
+      await input.executionRepository.fail({
+        gameSessionId: input.gameSessionId,
+        storylineEventId: candidate.id,
+        leaseToken: activeLeaseToken,
+        errorMessage: notificationResult.errorMessage,
+      });
+      activeLeaseToken = null;
       return {
         status: "failed",
         eventId: candidate.id,
@@ -140,25 +160,44 @@ async function resolveCandidate(
         triggerType: candidate.triggerType,
         errorMessage: notificationResult.errorMessage,
         resultPayload: {
-          ...buildEffectResultPayload(applicationResult.effectResult),
+          ...buildEffectResultPayload(application.effectResult),
           notificationStatus: "failed",
         },
-        effectResult: applicationResult.effectResult,
+        effectResult: application.effectResult,
         notificationResult,
       };
     }
+
+    const finalizeResult = await input.executionRepository.finalize({
+      gameSessionId: input.gameSessionId,
+      storylineEventId: candidate.id,
+      leaseToken: activeLeaseToken,
+      resultPayload: {
+        eventKey: candidate.eventKey,
+        triggerType: candidate.triggerType,
+        resolutionPhase: "completed",
+        playerRuleMatchCount: application.plan.matchCount,
+        ...buildEffectResultPayload(application.effectResult),
+        notificationStatus: notificationResult?.status ?? "not_configured",
+      },
+    });
+    activeLeaseToken = null;
 
     return {
       status: "resolved",
       eventId: candidate.id,
       eventKey: candidate.eventKey,
       triggerType: candidate.triggerType,
-      resolutionId: resolutionResult.resolution.id,
-      playerRuleMatchCount: applicationResult.matchCount,
-      effectResult: applicationResult.effectResult,
+      resolutionId: finalizeResult.resolutionId,
+      playerRuleMatchCount: application.plan.matchCount,
+      effectResult: application.effectResult,
       ...(notificationResult ? { notificationResult } : {}),
     };
   } catch (error) {
+    if (activeLeaseToken) {
+      await failLeaseBestEffort(candidate, input, activeLeaseToken, error);
+    }
+
     return {
       status: "failed",
       eventId: candidate.id,
@@ -169,30 +208,86 @@ async function resolveCandidate(
   }
 }
 
-async function createCutsceneNotificationIfConfigured(
+function claimExecution(
   candidate: StorylineEventCandidateRecord,
-  input: RunDueStorylineEventsInput,
-): Promise<StorylineRunnerNotificationResult | null> {
-  if (!input.notificationRepository) {
-    return null;
+  input: LeaseAwareRunInput,
+  executionPlan: JsonObject | null,
+): Promise<StoryEventExecutionClaimResult> {
+  return input.executionRepository.claim({
+    gameSessionId: input.gameSessionId,
+    storylineEventId: candidate.id,
+    effectiveAt: input.now,
+    effectiveMarketTick: input.currentMarketTick,
+    executionPlan,
+    leaseSeconds: STORY_EXECUTION_LEASE_SECONDS,
+  });
+}
+
+function claimTerminalResult(
+  candidate: StorylineEventCandidateRecord,
+  claim: StoryEventExecutionClaimResult,
+): StorylineRunnerEventResult | null {
+  if (claim.outcome === "busy") {
+    return skipped(candidate, "execution_in_progress");
   }
 
-  const reveal = parseStoryRevealPayload(candidate.revealPayload);
-
-  if (!reveal) {
-    return null;
+  if (claim.outcome === "already_resolved") {
+    if (!claim.resolutionId) {
+      throw new Error("Resolved Story execution claim is missing resolutionId.");
+    }
+    return {
+      status: "already_existing",
+      eventId: candidate.id,
+      eventKey: candidate.eventKey,
+      triggerType: candidate.triggerType,
+      resolutionId: claim.resolutionId,
+    };
   }
+
+  return null;
+}
+
+async function failLeaseBestEffort(
+  candidate: StorylineEventCandidateRecord,
+  input: LeaseAwareRunInput,
+  leaseToken: string,
+  error: unknown,
+): Promise<void> {
+  try {
+    await input.executionRepository.fail({
+      gameSessionId: input.gameSessionId,
+      storylineEventId: candidate.id,
+      leaseToken,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+  } catch (_secondaryError) {
+    // The lease may already have expired/reacquired. Side effects are
+    // deterministic and replay-safe; another owner may continue the plan.
+  }
+}
+
+async function createCutsceneNotificationIfConfigured(input: {
+  readonly storylineEventId: string;
+  readonly gameSessionId: string;
+  readonly plan: ParsedStoryEventExecutionPlan;
+  readonly now: string;
+  readonly repository: RunDueStorylineEventsInput["notificationRepository"];
+}): Promise<StorylineRunnerNotificationResult | null> {
+  if (!input.repository) return null;
+
+  const reveal = parseStoryRevealPayload(input.plan.revealPayload);
+  if (!reveal) return null;
 
   try {
     return toStorylineRunnerNotificationCreatedResult(
       await createStoryCutsceneNotificationForPlayers({
         gameSessionId: input.gameSessionId,
-        storylineEventId: candidate.id,
-        targetPlayerIds: uniquePlayerIds(input.playerContexts),
+        storylineEventId: input.storylineEventId,
+        targetPlayerIds: input.plan.notificationPlayerIds,
         reveal,
-        priority: toNotificationPriority(candidate.priority),
+        priority: toNotificationPriority(input.plan.priority),
         now: input.now,
-        repository: input.notificationRepository,
+        repository: input.repository,
       }),
     );
   } catch (error) {
@@ -201,215 +296,6 @@ async function createCutsceneNotificationIfConfigured(
       errorMessage: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-async function applyPlayerRuleEffects(
-  candidate: StorylineEventCandidateRecord,
-  input: RunDueStorylineEventsInput,
-): Promise<PlayerRuleApplicationResult> {
-  const matchingEffects: MatchedStoryEffect[] = [];
-  const appliedGameScopedEffectIdentities = new Set<string>();
-  const parsedRules = candidate.playerRules.map((rule, ruleIndex) =>
-    parsePlayerRule(rule, ruleIndex)
-  );
-  const gameEffectIndexByIdentity = buildGameScopedEffectIndexes(parsedRules);
-  let matchCount = 0;
-
-  for (const rule of parsedRules) {
-    let ruleMatched = false;
-
-    for (const playerContext of input.playerContexts) {
-      if (!evaluateStoryCondition(rule.condition, playerContext)) {
-        continue;
-      }
-
-      matchCount += 1;
-      ruleMatched = true;
-
-      for (const parsedEffect of rule.effects) {
-        if (isGameScopedStoryEffect(parsedEffect.effect)) {
-          continue;
-        }
-
-        matchingEffects.push({
-          effect: parsedEffect.effect,
-          effectIndex: encodePlayerScopedEffectIndex(
-            rule.authoredRuleIndex,
-            parsedEffect.authoredEffectIndex,
-          ),
-          playerContext,
-        });
-      }
-    }
-
-    if (ruleMatched) {
-      for (const parsedEffect of rule.effects) {
-        if (!isGameScopedStoryEffect(parsedEffect.effect)) {
-          continue;
-        }
-
-        const identity = gameScopedStoryEffectIdentity(parsedEffect.effect);
-
-        if (appliedGameScopedEffectIdentities.has(identity)) {
-          continue;
-        }
-
-        const effectIndex = gameEffectIndexByIdentity.get(identity);
-        if (effectIndex === undefined) {
-          throw new Error("Game-scoped Story effect index was not initialized.");
-        }
-
-        appliedGameScopedEffectIdentities.add(identity);
-        matchingEffects.push({
-          effect: parsedEffect.effect,
-          effectIndex,
-          playerContext: null,
-        });
-      }
-    }
-  }
-
-  return {
-    matchCount,
-    effectResult: await executeEffectsForMatchedPlayers({
-      gameSessionId: input.gameSessionId,
-      storylineEventId: candidate.id,
-      now: input.now,
-      matchingEffects,
-      effectDependencies: input.effectDependencies,
-    }),
-  };
-}
-
-async function executeEffectsForMatchedPlayers(input: {
-  readonly gameSessionId: string;
-  readonly storylineEventId: string;
-  readonly now: string;
-  readonly matchingEffects: readonly MatchedStoryEffect[];
-  readonly effectDependencies: StoryEffectExecutionDependencies;
-}): Promise<StoryEffectBatchExecutionResult> {
-  const results: StoryEffectExecutionResult[] = [];
-
-  for (const matched of input.matchingEffects) {
-    results.push(
-      await executeStoryEffect({
-        gameSessionId: input.gameSessionId,
-        storylineEventId: input.storylineEventId,
-        effect: matched.effect,
-        effectIndex: matched.effectIndex,
-        now: input.now,
-        playerContext: matched.playerContext ?? null,
-        dependencies: input.effectDependencies,
-      }),
-    );
-  }
-
-  return {
-    results,
-    appliedCount:
-      results.filter((result) => result.status === "applied").length,
-    skippedCount:
-      results.filter((result) => result.status === "skipped").length,
-    failedCount: results.filter((result) => result.status === "failed").length,
-  };
-}
-
-function buildGameScopedEffectIndexes(
-  rules: readonly ParsedPlayerRule[],
-): ReadonlyMap<string, number> {
-  const indexes = new Map<string, number>();
-  let authoredOrdinal = 0;
-
-  for (const rule of rules) {
-    for (const parsedEffect of rule.effects) {
-      if (!isGameScopedStoryEffect(parsedEffect.effect)) {
-        continue;
-      }
-
-      const identity = gameScopedStoryEffectIdentity(parsedEffect.effect);
-      if (indexes.has(identity)) {
-        continue;
-      }
-
-      indexes.set(identity, encodeGameScopedEffectIndex(authoredOrdinal));
-      authoredOrdinal += 1;
-    }
-  }
-
-  return indexes;
-}
-
-function encodeGameScopedEffectIndex(authoredOrdinal: number): number {
-  assertNonNegativeSafeInteger(authoredOrdinal, "game Story effect ordinal");
-  const encoded = authoredOrdinal * 2;
-  assertNonNegativeSafeInteger(encoded, "game Story effect index");
-  return encoded;
-}
-
-function encodePlayerScopedEffectIndex(
-  authoredRuleIndex: number,
-  authoredEffectIndex: number,
-): number {
-  assertNonNegativeSafeInteger(authoredRuleIndex, "Story rule index");
-  assertNonNegativeSafeInteger(authoredEffectIndex, "Story effect index");
-  const sum = authoredRuleIndex + authoredEffectIndex;
-  const paired = (sum * (sum + 1)) / 2 + authoredEffectIndex;
-  const encoded = paired * 2 + 1;
-  assertNonNegativeSafeInteger(encoded, "player Story effect identity");
-  return encoded;
-}
-
-function assertNonNegativeSafeInteger(value: number, label: string): void {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${label} is outside the supported deterministic range.`);
-  }
-}
-
-function isGameScopedStoryEffect(effect: StoryEffect): boolean {
-  return effect.type === "contract_unlock" ||
-    effect.type === "market_news_post" ||
-    effect.type === "market_status_change" ||
-    effect.type === "story_flag_set" ||
-    effect.type === "world_route_state_change" ||
-    effect.type === "world_location_state_change" ||
-    effect.type === "currency_volatility";
-}
-
-function gameScopedStoryEffectIdentity(effect: StoryEffect): string {
-  if (effect.type === "contract_unlock") {
-    return `contract_unlock:${effect.contractKey}`;
-  }
-
-  if (effect.type === "story_flag_set") {
-    return `story_flag_set:${effect.flagKey}:${JSON.stringify(effect.value)}`;
-  }
-
-  if (effect.type === "market_news_post") {
-    const shockKey = effect.payload.shockKey;
-    return `market_news_post:${
-      typeof shockKey === "string" && shockKey.trim()
-        ? shockKey.trim()
-        : JSON.stringify(effect.payload)
-    }`;
-  }
-
-  if (effect.type === "market_status_change") {
-    return `market_status_change:${JSON.stringify(effect.payload)}`;
-  }
-
-  if (effect.type === "world_route_state_change") {
-    return `world_route_state_change:${JSON.stringify(effect.payload)}`;
-  }
-
-  if (effect.type === "world_location_state_change") {
-    return `world_location_state_change:${JSON.stringify(effect.payload)}`;
-  }
-
-  if (effect.type === "currency_volatility") {
-    return `currency_volatility:${JSON.stringify(effect.payload)}`;
-  }
-
-  return `${effect.type}:${JSON.stringify(effect)}`;
 }
 
 function isTriggerEligible(
@@ -436,8 +322,7 @@ function isTriggerEligible(
 
   if (candidate.triggerType === "elapsed_time") {
     return candidate.scheduledOffsetSeconds !== null &&
-      candidate.scheduledOffsetSeconds <=
-        readStoryElapsedSeconds(candidate, input.now);
+      candidate.scheduledOffsetSeconds <= readStoryElapsedSeconds(candidate, input.now);
   }
 
   return false;
@@ -482,29 +367,6 @@ function buildGameStoryFlagContext(
   };
 }
 
-function parsePlayerRule(
-  value: JsonObject,
-  authoredRuleIndex: number,
-): ParsedPlayerRule {
-  const record = value as Record<string, unknown>;
-  const ruleKey = typeof record.ruleKey === "string" && record.ruleKey.trim()
-    ? record.ruleKey.trim()
-    : "story_rule";
-  const effects = Array.isArray(record.effects)
-    ? record.effects.map((effect, authoredEffectIndex) => ({
-      effect: parseStoryEffect(effect),
-      authoredEffectIndex,
-    }))
-    : [];
-
-  return {
-    ruleKey,
-    authoredRuleIndex,
-    condition: parseStoryCondition(record.condition),
-    effects,
-  };
-}
-
 function buildEffectResultPayload(
   effectResult: StoryEffectBatchExecutionResult,
 ): JsonObject {
@@ -513,12 +375,6 @@ function buildEffectResultPayload(
     effectSkippedCount: effectResult.skippedCount,
     effectFailedCount: effectResult.failedCount,
   };
-}
-
-function uniquePlayerIds(
-  playerContexts: readonly PlayerStoryContext[],
-): readonly string[] {
-  return [...new Set(playerContexts.map((player) => player.playerId))];
 }
 
 function toNotificationPriority(
@@ -538,7 +394,7 @@ function toNotificationPriority(
 
 function skipped(
   candidate: StorylineEventCandidateRecord,
-  reason: "manual_trigger" | "trigger_not_due",
+  reason: "manual_trigger" | "trigger_not_due" | "execution_in_progress",
 ): StorylineRunnerEventResult {
   return {
     status: "skipped",
@@ -557,10 +413,7 @@ function buildRunnerResult(
   const resolvedEvents = events.filter((event) => event.status === "resolved");
   const effectTotals = events.reduce(
     (totals, event) => {
-      if (!("effectResult" in event) || !event.effectResult) {
-        return totals;
-      }
-
+      if (!("effectResult" in event) || !event.effectResult) return totals;
       return {
         applied: totals.applied + event.effectResult.appliedCount,
         skipped: totals.skipped + event.effectResult.skippedCount,
@@ -574,14 +427,9 @@ function buildRunnerResult(
       if (!("notificationResult" in event) || !event.notificationResult) {
         return totals;
       }
-
       if (event.notificationResult.status === "failed") {
-        return {
-          ...totals,
-          failed: totals.failed + 1,
-        };
+        return { ...totals, failed: totals.failed + 1 };
       }
-
       return {
         created: totals.created + 1,
         deliveries: totals.deliveries + event.notificationResult.deliveryCount,
@@ -607,4 +455,137 @@ function buildRunnerResult(
     notificationFailedCount: notificationTotals.failed,
     events,
   };
+}
+
+interface LegacyClaimState {
+  readonly claimId: string;
+  readonly leaseToken: string;
+  readonly resolutionId: string;
+  readonly effectiveAt: string;
+  readonly effectiveMarketTick: number;
+  readonly executionPlan: JsonObject;
+}
+
+class LegacyResolutionExecutionRepository implements StoryEventExecutionRepository {
+  private readonly claims = new Map<string, LegacyClaimState>();
+
+  constructor(private readonly repository: StorylineRepository) {}
+
+  async claim(input: {
+    readonly gameSessionId: string;
+    readonly storylineEventId: string;
+    readonly effectiveAt: string;
+    readonly effectiveMarketTick: number;
+    readonly executionPlan: JsonObject | null;
+  }): Promise<StoryEventExecutionClaimResult> {
+    const key = `${input.gameSessionId}:${input.storylineEventId}`;
+    const existingClaim = this.claims.get(key);
+    if (existingClaim) {
+      return {
+        outcome: "busy",
+        claimId: existingClaim.claimId,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        effectiveAt: existingClaim.effectiveAt,
+        effectiveMarketTick: existingClaim.effectiveMarketTick,
+        attemptCount: 1,
+        executionPlan: existingClaim.executionPlan,
+        resolutionId: existingClaim.resolutionId,
+      };
+    }
+
+    if (input.executionPlan === null) {
+      return {
+        outcome: "absent",
+        claimId: null,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        effectiveAt: input.effectiveAt,
+        effectiveMarketTick: input.effectiveMarketTick,
+        attemptCount: 0,
+        executionPlan: {},
+        resolutionId: null,
+      };
+    }
+
+    const resolution = await this.repository.createStoryEventResolution({
+      gameSessionId: input.gameSessionId,
+      storylineEventId: input.storylineEventId,
+      resolvedAt: input.effectiveAt,
+      resolvedMarketTick: input.effectiveMarketTick,
+      status: "resolved",
+      resultPayload: { resolutionPhase: "legacy_compatibility" },
+    });
+
+    if (resolution.status === "existing") {
+      return {
+        outcome: "already_resolved",
+        claimId: null,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        effectiveAt: resolution.resolution.resolvedAt,
+        effectiveMarketTick: resolution.resolution.resolvedMarketTick,
+        attemptCount: 0,
+        executionPlan: input.executionPlan,
+        resolutionId: resolution.resolution.id,
+      };
+    }
+
+    const claim: LegacyClaimState = {
+      claimId: `legacy-claim:${resolution.resolution.id}`,
+      leaseToken: `legacy-lease:${resolution.resolution.id}`,
+      resolutionId: resolution.resolution.id,
+      effectiveAt: input.effectiveAt,
+      effectiveMarketTick: input.effectiveMarketTick,
+      executionPlan: input.executionPlan,
+    };
+    this.claims.set(key, claim);
+
+    return {
+      outcome: "acquired",
+      claimId: claim.claimId,
+      leaseToken: claim.leaseToken,
+      leaseExpiresAt: null,
+      effectiveAt: claim.effectiveAt,
+      effectiveMarketTick: claim.effectiveMarketTick,
+      attemptCount: 1,
+      executionPlan: claim.executionPlan,
+      resolutionId: null,
+    };
+  }
+
+  async fail(input: {
+    readonly gameSessionId: string;
+    readonly storylineEventId: string;
+    readonly leaseToken: string;
+  }) {
+    const claim = this.claims.get(`${input.gameSessionId}:${input.storylineEventId}`);
+    if (!claim || claim.leaseToken !== input.leaseToken) {
+      throw new Error("Legacy Story execution lease lost.");
+    }
+    return {
+      outcome: "retryable_failed" as const,
+      claimId: claim.claimId,
+      attemptCount: 1,
+    };
+  }
+
+  async finalize(input: {
+    readonly gameSessionId: string;
+    readonly storylineEventId: string;
+    readonly leaseToken: string;
+  }) {
+    const key = `${input.gameSessionId}:${input.storylineEventId}`;
+    const claim = this.claims.get(key);
+    if (!claim || claim.leaseToken !== input.leaseToken) {
+      throw new Error("Legacy Story execution lease lost.");
+    }
+    this.claims.delete(key);
+    return {
+      outcome: "finalized" as const,
+      claimId: claim.claimId,
+      resolutionId: claim.resolutionId,
+      attemptCount: 1,
+    };
+  }
 }

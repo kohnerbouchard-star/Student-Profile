@@ -10,6 +10,7 @@ import type {
   StorylineEventCandidateRecord,
 } from "../contracts/storylineRepositoryContracts.ts";
 import { runDueStorylineEvents } from "./storylineRunner.ts";
+import { InMemoryStoryEventExecutionRepository } from "./testing/inMemoryStoryEventExecutionRepository.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -53,6 +54,7 @@ Deno.test("storyline runner executes identical game-scoped effects once across c
       player("player-yrethia", "YRETHIA"),
     ],
     repository: repository as never,
+    executionRepository: new InMemoryStoryEventExecutionRepository(),
     effectDependencies: dependencies,
   });
 
