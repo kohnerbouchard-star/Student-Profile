@@ -89,7 +89,7 @@ Deno.test("Stage 5 public narrative separates confirmed attack facts from unreso
   assertIncludes(sql, "communications");
   assertIncludes(sql, "attribution remains unresolved");
   assertIncludes(sql, "have not confirmed an attacker");
-  assertIncludes(sql, "avoid_spectacle");
+  assertIncludes(sql, "'avoidspectacle', true");
 });
 
 function countOccurrences(value: string, needle: string): number {
