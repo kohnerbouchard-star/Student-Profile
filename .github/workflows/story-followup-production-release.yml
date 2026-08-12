@@ -1,0 +1,287 @@
+name: Story Follow-up Production Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/story-followup-production-release.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-followup-production-release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: 3b7945847e36f61acfcec3bc7243db367d585988
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  M1_PATH: backend/supabase/migrations/20260812092000_seed_relationship_followups_and_meridian_fracture_v1.sql
+  M1_VERSION: "20260812092000"
+  M1_NAME: seed_relationship_followups_and_meridian_fracture_v1
+  M1_BLOB: 4e7db96cd77de536f909d8ef0dacf728f30b553f
+  M2_PATH: backend/supabase/migrations/20260812092500_defer_relationship_followups_until_arrival_v1.sql
+  M2_VERSION: "20260812092500"
+  M2_NAME: defer_relationship_followups_until_arrival_v1
+  M2_BLOB: 8e21b0585e5a5f5a554cafe8aa48edeecbeab5a9
+  M3_PATH: backend/supabase/migrations/20260812093000_harden_relationship_followup_trigger_privileges_v1.sql
+  M3_VERSION: "20260812093000"
+  M3_NAME: harden_relationship_followup_trigger_privileges_v1
+  M3_BLOB: 32b853872ffc24f815ebc8d1695daeb963147238
+
+jobs:
+  release:
+    name: Apply exact Story follow-up migration chain to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Enforce production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_DB_URL"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$M1_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$M2_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$M3_BLOB" =~ ^[a-f0-9]{40}$ ]]
+          test "$M1_VERSION" = "20260812092000"
+          test "$M2_VERSION" = "20260812092500"
+          test "$M3_VERSION" = "20260812093000"
+          command -v psql >/dev/null
+
+      - name: Check out exact audited Story migration source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact migration sources and safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+
+          for SPEC in \
+            "$M1_PATH:$M1_BLOB" \
+            "$M2_PATH:$M2_BLOB" \
+            "$M3_PATH:$M3_BLOB"
+          do
+            PATH_PART="${SPEC%%:*}"
+            BLOB_PART="${SPEC##*:}"
+            test -f "$PATH_PART"
+            test "$(git hash-object "$PATH_PART")" = "$BLOB_PART"
+            grep -Eq '^begin;[[:space:]]*$' "$PATH_PART"
+            grep -Eq '^commit;[[:space:]]*$' "$PATH_PART"
+            if grep -Eiq '\b(drop[[:space:]]+(table|schema|database)|truncate|alter[[:space:]]+table[^;]+drop[[:space:]]+column)\b' "$PATH_PART"; then
+              echo "Destructive SQL rejected in $PATH_PART." >&2
+              exit 1
+            fi
+          done
+
+          grep -q 'initialize_relationship_followups_and_meridian_fracture_v1' "$M1_PATH"
+          grep -q "relationship_%_sponsor_followup" "$M1_PATH"
+          grep -q "meridian_fracture_%_sponsor_reaction" "$M1_PATH"
+          grep -q 'create table if not exists public.game_session_story_event_overrides' "$M2_PATH"
+          grep -q 'force row level security' "$M2_PATH"
+          grep -q 'enable_relationship_followups_after_arrival_contact_v1' "$M2_PATH"
+          grep -q 'revoke all on function public.activate_relationship_followups_from_full_game_v1()' "$M3_PATH"
+          grep -q 'revoke all on function public.enable_relationship_followups_after_arrival_contact_v1()' "$M3_PATH"
+
+      - name: Check exact production ledger state
+        id: ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<SQL > "$RUNNER_TEMP/story-ledger-preflight.json"
+          select json_build_object(
+            'presentCount', count(*),
+            'exactCount', count(*) filter (
+              where (version = '$M1_VERSION' and name = '$M1_NAME' and statements = array['$M1_PATH@$M1_BLOB'])
+                 or (version = '$M2_VERSION' and name = '$M2_NAME' and statements = array['$M2_PATH@$M2_BLOB'])
+                 or (version = '$M3_VERSION' and name = '$M3_NAME' and statements = array['$M3_PATH@$M3_BLOB'])
+            )
+          )
+          from supabase_migrations.schema_migrations
+          where version in ('$M1_VERSION', '$M2_VERSION', '$M3_VERSION');
+          SQL
+          PREFLIGHT_PATH="$RUNNER_TEMP/story-ledger-preflight.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.PREFLIGHT_PATH, 'utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if (result.presentCount === 0 && result.exactCount === 0) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'apply=true\n');
+          } else if (result.presentCount === 3 && result.exactCount === 3) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'apply=false\n');
+          } else {
+            throw new Error(`Story migration ledger is partial or conflicting: ${JSON.stringify(result)}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/story-ledger-preflight.json"
+
+      - name: Build atomic exact-identity Story migration chain
+        if: steps.ledger.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT_PATH="$RUNNER_TEMP/story-followup-production.sql" node - <<'NODE'
+          const fs = require('node:fs');
+          const migrations = [
+            { path: process.env.M1_PATH, version: process.env.M1_VERSION, name: process.env.M1_NAME, blob: process.env.M1_BLOB },
+            { path: process.env.M2_PATH, version: process.env.M2_VERSION, name: process.env.M2_NAME, blob: process.env.M2_BLOB },
+            { path: process.env.M3_PATH, version: process.env.M3_VERSION, name: process.env.M3_NAME, blob: process.env.M3_BLOB },
+          ];
+          const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
+          const chunks = ['begin;'];
+          for (const migration of migrations) {
+            const source = fs.readFileSync(migration.path, 'utf8').trim();
+            const bounded = source.match(/^begin;\s*\n([\s\S]*?)\ncommit;\s*$/iu);
+            if (!bounded) throw new Error(`${migration.path} must be transaction bounded.`);
+            const body = bounded[1].trim();
+            if (!body) throw new Error(`${migration.path} has an empty body.`);
+            const statement = `${migration.path}@${migration.blob}`;
+            chunks.push(
+              `do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version = ${literal(migration.version)}) then raise exception 'Migration ledger conflict for ${migration.version}'; end if; end $$;`,
+              body,
+              `insert into supabase_migrations.schema_migrations (version, name, statements) values (${literal(migration.version)}, ${literal(migration.name)}, array[${literal(statement)}]);`,
+            );
+          }
+          chunks.push("notify pgrst, 'reload schema';", 'commit;', '');
+          fs.writeFileSync(process.env.OUTPUT_PATH, chunks.join('\n\n'), { mode: 0o600 });
+          NODE
+          test -s "$RUNNER_TEMP/story-followup-production.sql"
+
+      - name: Apply production Story migration chain atomically
+        if: steps.ledger.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --file "$RUNNER_TEMP/story-followup-production.sql"
+          rm -f "$RUNNER_TEMP/story-followup-production.sql"
+
+      - name: Verify production Story postconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" \
+            --set=ON_ERROR_STOP=1 \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align <<SQL > "$RUNNER_TEMP/story-postconditions.json"
+          select json_build_object(
+            'ledgerExact', (
+              select count(*) = 3
+              from supabase_migrations.schema_migrations
+              where (version = '$M1_VERSION' and name = '$M1_NAME' and statements = array['$M1_PATH@$M1_BLOB'])
+                 or (version = '$M2_VERSION' and name = '$M2_NAME' and statements = array['$M2_PATH@$M2_BLOB'])
+                 or (version = '$M3_VERSION' and name = '$M3_NAME' and statements = array['$M3_PATH@$M3_BLOB'])
+            ),
+            'overrideTable', to_regclass('public.game_session_story_event_overrides') is not null,
+            'overrideRlsForced', exists (
+              select 1 from pg_class c
+              where c.oid = 'public.game_session_story_event_overrides'::regclass
+                and c.relrowsecurity and c.relforcerowsecurity
+            ),
+            'serviceRoleOverrideCrud',
+              has_table_privilege('service_role', 'public.game_session_story_event_overrides', 'select')
+              and has_table_privilege('service_role', 'public.game_session_story_event_overrides', 'insert')
+              and has_table_privilege('service_role', 'public.game_session_story_event_overrides', 'update')
+              and has_table_privilege('service_role', 'public.game_session_story_event_overrides', 'delete'),
+            'browserOverrideDenied',
+              not has_table_privilege('anon', 'public.game_session_story_event_overrides', 'select')
+              and not has_table_privilege('anon', 'public.game_session_story_event_overrides', 'insert')
+              and not has_table_privilege('anon', 'public.game_session_story_event_overrides', 'update')
+              and not has_table_privilege('anon', 'public.game_session_story_event_overrides', 'delete')
+              and not has_table_privilege('authenticated', 'public.game_session_story_event_overrides', 'select')
+              and not has_table_privilege('authenticated', 'public.game_session_story_event_overrides', 'insert')
+              and not has_table_privilege('authenticated', 'public.game_session_story_event_overrides', 'update')
+              and not has_table_privilege('authenticated', 'public.game_session_story_event_overrides', 'delete'),
+            'arrivalEnableTrigger', exists (
+              select 1 from pg_trigger
+              where tgrelid = 'public.player_story_impacts'::regclass
+                and tgname = 'enable_relationship_followups_after_arrival_contact_v1'
+                and not tgisinternal
+                and tgenabled <> 'D'
+            ),
+            'followupDefinitionsDormant',
+              exists (
+                select 1 from public.storyline_events
+                where event_key like 'relationship_%_sponsor_followup' and not is_active
+              )
+              and exists (
+                select 1 from public.storyline_events
+                where event_key like 'meridian_fracture_%_sponsor_reaction' and not is_active
+              )
+              and not exists (
+                select 1 from public.storyline_events
+                where (event_key like 'relationship_%_sponsor_followup'
+                    or event_key like 'meridian_fracture_%_sponsor_reaction')
+                  and is_active
+              ),
+            'overridesTargetDormantDefinitions', not exists (
+              select 1
+              from public.game_session_story_event_overrides override_row
+              join public.storyline_events event_row on event_row.id = override_row.storyline_event_id
+              where event_row.is_active
+            ),
+            'arrivalGamesBackfilled', not exists (
+              select distinct impact.game_session_id
+              from public.player_story_impacts impact
+              where impact.effect_type = 'character_message'
+                and coalesce(impact.payload -> 'payload' ->> 'phase', '') = 'arrival'
+              except
+              select distinct override_row.game_session_id
+              from public.game_session_story_event_overrides override_row
+              where override_row.enabled
+            ),
+            'triggerHelpersNotRpcCallable',
+              not has_function_privilege('anon', 'public.activate_relationship_followups_from_full_game_v1()', 'execute')
+              and not has_function_privilege('authenticated', 'public.activate_relationship_followups_from_full_game_v1()', 'execute')
+              and not has_function_privilege('service_role', 'public.activate_relationship_followups_from_full_game_v1()', 'execute')
+              and not has_function_privilege('anon', 'public.enable_relationship_followups_after_arrival_contact_v1()', 'execute')
+              and not has_function_privilege('authenticated', 'public.enable_relationship_followups_after_arrival_contact_v1()', 'execute')
+              and not has_function_privilege('service_role', 'public.enable_relationship_followups_after_arrival_contact_v1()', 'execute')
+          );
+          SQL
+          POSTCONDITIONS_PATH="$RUNNER_TEMP/story-postconditions.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const lines = fs.readFileSync(process.env.POSTCONDITIONS_PATH, 'utf8').trim().split(/\r?\n/).filter(Boolean);
+          const result = JSON.parse(lines.at(-1));
+          for (const [key, value] of Object.entries(result)) {
+            if (value !== true) throw new Error(`Production Story postcondition failed: ${key}`);
+          }
+          NODE
+          rm -f "$RUNNER_TEMP/story-postconditions.json"
+
+      - name: Record Story release result
+        shell: bash
+        run: |
+          {
+            echo '## Relationship-aware Story follow-ups released to production'
+            echo "- Exact audited source: \`$EXPECTED_SOURCE_SHA\`"
+            echo "- Production project: \`$EXPECTED_PRODUCTION_PROJECT_REF\`"
+            echo "- Migration chain: \`$M1_VERSION -> $M2_VERSION -> $M3_VERSION\`"
+            echo '- Atomic chain: `true`'
+            echo '- Exact canonical migration ledger identities: `verified`'
+            echo '- Game-scoped event overrides: `verified`'
+            echo '- Browser override-table access: `denied`'
+            echo '- Trigger-only helper RPC execution: `revoked`'
+            echo '- Existing arrival games backfilled: `verified`'
+          } >> "$GITHUB_STEP_SUMMARY"
