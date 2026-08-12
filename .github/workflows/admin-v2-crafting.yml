@@ -13,6 +13,7 @@ on:
       - "scripts/admin-v2-unit.test.mjs"
       - "scripts/admin-v2-crafting-api.test.mjs"
       - "scripts/admin-v2-crafting-browser-smoke.mjs"
+      - "scripts/admin-v2-crafting-supply-browser-smoke.mjs"
       - "package.json"
 
 permissions:
@@ -55,3 +56,6 @@ jobs:
 
       - name: Run Crafting V2 desktop and mobile smoke
         run: npm run test:admin-v2:crafting-browser
+
+      - name: Run Crafting V2 supply mutation smoke
+        run: node scripts/admin-v2-crafting-supply-browser-smoke.mjs
