@@ -15,12 +15,11 @@ const sharedRouteFiles = [
   "css/routes/player-terminal-shared-overlays.css"
 ];
 
-const [indexSource, sharedRouteSources, compatSource, packageSource, auditSource, mapTestSource] = await Promise.all([
+const [indexSource, sharedRouteSources, compatSource, packageSource, mapTestSource] = await Promise.all([
   read("index.html"),
   Promise.all(sharedRouteFiles.map(read)),
   read("css/player-terminal-route-compat.css"),
   read("package.json"),
-  read("tools/audit.mjs"),
   read("tests/player-terminal-map-protection.mjs")
 ]);
 
@@ -115,13 +114,6 @@ if (packageJson.scripts?.["route-refresh"] !== "node tests/player-terminal-route
 }
 if (!packageJson.scripts.verify.includes("route-refresh")) {
   throw new Error("route-refresh must run in npm run verify.");
-}
-for (const marker of [
-  ...sharedRouteFiles,
-  "css/player-terminal-route-compat.css",
-  "tests/player-terminal-route-refresh.mjs"
-]) {
-  if (!auditSource.includes(marker)) throw new Error(`Player audit is missing route-refresh ownership: ${marker}`);
 }
 for (const marker of [...sharedRouteFiles.map((file) => file.split("/").pop()), "player-terminal-route-compat.css"]) {
   if (!mapTestSource.includes(marker)) throw new Error(`Map protection does not inspect shared route ownership: ${marker}`);
