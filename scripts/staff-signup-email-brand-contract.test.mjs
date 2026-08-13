@@ -41,17 +41,21 @@ test("direct Resend signup delivery uses the canonical Econovaria security desig
     assert.match(canonicalConfirmation, new RegExp(text, "u"));
   }
 
-  assert.match(directMailer, /width="600"/u);
-  assert.match(directMailer, /class="email-shell"/u);
-  assert.match(directMailer, /class="email-button"/u);
+  assert.ok(directMailer.includes('width="600"'));
+  assert.ok(directMailer.includes('class="email-shell"'));
+  assert.ok(directMailer.includes('class="email-button"'));
   assert.match(directMailer, /display:none;max-height:0;overflow:hidden/u);
   assert.doesNotMatch(directMailer, /<img\b|<script\b|<iframe\b|<form\b/iu);
   assert.doesNotMatch(directMailer, /javascript:|(?:[?&]utm_|[?&](?:click|tracking)_id=)/iu);
 });
 
 test("direct signup delivery retains scanner-safe token and provider controls", () => {
-  assert.match(directMailer, /searchParams\.set\("token_hash", input\.tokenHash\)/u);
-  assert.match(directMailer, /searchParams\.set\("type", input\.verificationType\)/u);
+  assert.ok(
+    directMailer.includes('searchParams.set("token_hash", input.tokenHash)'),
+  );
+  assert.ok(
+    directMailer.includes('searchParams.set("type", input.verificationType)'),
+  );
   assert.match(directMailer, /does not confirm the account until you press the confirmation button/u);
   assert.match(directMailer, /protects the single-use confirmation token from automated email scanners/u);
   assert.match(directMailer, /Authentication-link click tracking must be disabled/u);
@@ -59,13 +63,21 @@ test("direct signup delivery retains scanner-safe token and provider controls", 
   assert.doesNotMatch(directMailer, /\{\{ \.ConfirmationURL \}\}/u);
 });
 
-test("direct signup delivery has deterministic sender and staging identity", () => {
-  assert.match(
-    directMailer,
-    /Econovaria Security <no-reply@econovaria\.com>/u,
+test("direct signup delivery requires protected sender identity and distinguishes staging", () => {
+  assert.ok(
+    directMailer.includes('AUTH_EMAIL_SENDER_NAME = "Econovaria Security"'),
   );
+  assert.ok(
+    directMailer.includes('environmentValue("ECONOVARIA_AUTH_EMAIL_FROM")'),
+  );
+  assert.match(directMailer, /normalizeAuthEmailFrom/u);
+  assert.doesNotMatch(directMailer, /no-reply@econovaria\.com/iu);
   assert.match(directMailer, /STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE/u);
   assert.match(directMailer, /eecvbssdvarfcykcfrny/u);
-  assert.match(directMailer, /subjectPrefix = environmentNotice \? "\[STAGING\] " : ""/u);
+  assert.ok(
+    directMailer.includes(
+      'const subjectPrefix = environmentNotice ? "[STAGING] " : "";',
+    ),
+  );
   assert.match(directMailer, /ECONOVARIA_DEPLOYMENT_ENVIRONMENT/u);
 });
