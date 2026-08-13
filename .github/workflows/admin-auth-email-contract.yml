@@ -4,9 +4,11 @@ on:
   pull_request:
     paths:
       - ".github/workflows/admin-auth-email-*.yml"
+      - "backend/src/domains/auth/application/staffSignupVerificationEmail.ts"
       - "backend/supabase/auth-email-template-manifest.json"
       - "backend/supabase/auth-email-templates/**"
       - "scripts/auth-email-template-contract.test.mjs"
+      - "scripts/staff-signup-email-brand-contract.test.mjs"
       - "scripts/build-supabase-auth-email-config.mjs"
       - "scripts/snapshot-supabase-auth-email-config.mjs"
       - "scripts/verify-supabase-auth-email-config.mjs"
@@ -14,9 +16,11 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/admin-auth-email-*.yml"
+      - "backend/src/domains/auth/application/staffSignupVerificationEmail.ts"
       - "backend/supabase/auth-email-template-manifest.json"
       - "backend/supabase/auth-email-templates/**"
       - "scripts/auth-email-template-contract.test.mjs"
+      - "scripts/staff-signup-email-brand-contract.test.mjs"
       - "scripts/build-supabase-auth-email-config.mjs"
       - "scripts/snapshot-supabase-auth-email-config.mjs"
       - "scripts/verify-supabase-auth-email-config.mjs"
@@ -51,7 +55,10 @@ jobs:
           node --check scripts/build-supabase-auth-email-config.mjs
           node --check scripts/snapshot-supabase-auth-email-config.mjs
           node --check scripts/verify-supabase-auth-email-config.mjs
-          node --test scripts/auth-email-template-contract.test.mjs
+          node --check scripts/staff-signup-email-brand-contract.test.mjs
+          node --test \
+            scripts/auth-email-template-contract.test.mjs \
+            scripts/staff-signup-email-brand-contract.test.mjs
           node scripts/build-supabase-auth-email-config.mjs --check
 
       - name: Build deterministic staging and production payload evidence
