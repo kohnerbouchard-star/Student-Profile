@@ -16,6 +16,7 @@ on:
       - "admin/v2/src/core/**"
       - "scripts/admin-v2-contracts-api.test.mjs"
       - "scripts/admin-v2-contracts-browser-smoke.mjs"
+      - "scripts/admin-v2-contracts-lifecycle-browser-smoke.mjs"
       - "scripts/sanitize-admin-v2-contracts-evidence.mjs"
       - "scripts/admin-v2-unit.test.mjs"
       - "scripts/admin-v2-store-api.test.mjs"
@@ -64,6 +65,7 @@ jobs:
           node --check admin/v2/src/routes/contracts/ContractsController.js
           node --check admin/v2/src/routes/contracts/ContractsRoute.js
           node --check scripts/admin-v2-contracts-browser-smoke.mjs
+          node --check scripts/admin-v2-contracts-lifecycle-browser-smoke.mjs
           node --check scripts/sanitize-admin-v2-contracts-evidence.mjs
           node --test \
             scripts/admin-v2-unit.test.mjs \
@@ -82,6 +84,9 @@ jobs:
         env:
           ADMIN_V2_CONTRACTS_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
         run: node scripts/admin-v2-contracts-browser-smoke.mjs
+
+      - name: Execute Contracts lifecycle mutation acceptance
+        run: node scripts/admin-v2-contracts-lifecycle-browser-smoke.mjs
 
       - name: Sanitize Contracts evidence
         env:
