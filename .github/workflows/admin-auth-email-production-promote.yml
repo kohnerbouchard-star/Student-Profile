@@ -35,15 +35,21 @@ concurrency:
 env:
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  SUPABASE_CLI_VERSION: 2.109.1
+  AUTH_EMAIL_FROM: "Econovaria Security <no-reply@econovaria.com>"
+  AUTH_EMAIL_ADDRESS: no-reply@econovaria.com
+  AUTH_EMAIL_SENDER_NAME: Econovaria Security
 
 jobs:
   promote:
-    name: Promote staging-verified Auth email source to production
+    name: Configure SMTP and promote staging-verified Auth email source
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: production
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      ECONOVARIA_AUTH_EMAIL_FROM: "Econovaria Security <no-reply@econovaria.com>"
     steps:
       - name: Enforce explicit production authorization
         shell: bash
@@ -51,6 +57,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$RESEND_API_KEY"
           test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "${{ inputs.confirm_action }}" = "PROMOTE ADMIN AUTH EMAIL PRODUCTION"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
@@ -96,6 +103,9 @@ jobs:
           if (evidence.verified !== true) throw new Error('Staging template verification did not pass.');
           if (evidence.trackingLinksAllowed !== false) throw new Error('Tracking-link rewrite policy drifted.');
           if (evidence.externalImagesAllowed !== false) throw new Error('External-image policy drifted.');
+          if (evidence.smtpBootstrap?.smtp?.configured !== true) throw new Error('Staging SMTP verification did not pass.');
+          if (evidence.smtpBootstrap?.resend?.domainStatus !== 'verified') throw new Error('Staging Resend domain verification did not pass.');
+          if (evidence.smtpBootstrap?.resend?.trackingUpdateApplied !== true) throw new Error('Staging tracking policy was not applied.');
           NODE
         env:
           EVIDENCE_PATH: dist/admin-auth-email-staging/admin-auth-email-staging-candidate.json
@@ -107,11 +117,20 @@ jobs:
         with:
           node-version: "22.23.1"
 
-      - name: Revalidate exact template source
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Revalidate exact email and SMTP source
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/auth-email-template-contract.test.mjs
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          node --test \
+            scripts/auth-email-template-contract.test.mjs \
+            scripts/configure-supabase-auth-smtp.test.mjs \
+            scripts/staff-signup-email-brand-contract.test.mjs
           node scripts/build-supabase-auth-email-config.mjs --check
 
       - name: Build exact production Auth email payload
@@ -128,7 +147,37 @@ jobs:
           test "$(jq -r '.sourceDigest' "$RUNNER_TEMP/admin-auth-email-production-build.json")" = \
             "${{ inputs.staging_source_digest }}"
 
-      - name: Capture current managed production email fields
+      - name: Configure Resend policy and Supabase Auth SMTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/configure-supabase-auth-smtp.mjs \
+            --environment production \
+            --mode apply \
+            --before-output "$RUNNER_TEMP/admin-auth-email-production-smtp-before.json" \
+            --evidence-output "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json"
+          test "$(jq -r '.smtp.configured' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "true"
+          test "$(jq -r '.smtp.host' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "smtp.resend.com"
+          test "$(jq -r '.smtp.adminEmail' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "$AUTH_EMAIL_ADDRESS"
+          test "$(jq -r '.resend.trackingUpdateApplied' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "true"
+
+      - name: Provision direct signup delivery secrets in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          secrets_file="$RUNNER_TEMP/admin-auth-email-production-secrets.env"
+          umask 077
+          {
+            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
+            printf 'ECONOVARIA_AUTH_EMAIL_FROM="%s"\n' "$AUTH_EMAIL_FROM"
+            printf 'ECONOVARIA_DEPLOYMENT_ENVIRONMENT=production\n'
+          } > "$secrets_file"
+          supabase secrets set \
+            --env-file "$secrets_file" \
+            --project-ref "$EXPECTED_PRODUCTION_PROJECT_REF"
+          rm -f "$secrets_file"
+
+      - name: Capture current managed production template fields
         shell: bash
         run: |
           set -euo pipefail
@@ -136,18 +185,19 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
             > "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
-          if ! jq -e '
-            ((.smtp_host // "") | length > 0) and
-            ((.smtp_user // "") | length > 0) and
-            ((.smtp_admin_email // "") | length > 0)
-          ' "$RUNNER_TEMP/admin-auth-email-production-before-raw.json" > /dev/null; then
-            echo "::error::Supabase Auth custom SMTP is not configured. Hosted template changes are blocked while the project uses the default email provider."
-            exit 1
-          fi
+          jq -e \
+            --arg email "$AUTH_EMAIL_ADDRESS" \
+            --arg sender "$AUTH_EMAIL_SENDER_NAME" \
+            '.smtp_host == "smtp.resend.com" and
+             (.smtp_port | tostring) == "465" and
+             .smtp_user == "resend" and
+             .smtp_admin_email == $email and
+             .smtp_sender_name == $sender' \
+            "$RUNNER_TEMP/admin-auth-email-production-before-raw.json" > /dev/null
           node scripts/snapshot-supabase-auth-email-config.mjs \
             --environment production \
             --actual "$RUNNER_TEMP/admin-auth-email-production-before-raw.json" \
-            --output "$RUNNER_TEMP/admin-auth-email-production-before.json"
+            --output "$RUNNER_TEMP/admin-auth-email-production-template-before.json"
           rm -f "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
 
       - name: Apply only the canonical production email fields
@@ -188,21 +238,24 @@ jobs:
             --arg sourceCommit "${{ inputs.source_commit }}" \
             --arg candidateRunId "${{ inputs.candidate_run_id }}" \
             --arg stagingSourceDigest "${{ inputs.staging_source_digest }}" \
+            --slurpfile smtp "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json" \
             '. + {
               sourceCommit: $sourceCommit,
               stagingCandidateRunId: $candidateRunId,
-              stagingSourceDigest: $stagingSourceDigest
+              stagingSourceDigest: $stagingSourceDigest,
+              smtpBootstrap: $smtp[0]
             }' \
             "$RUNNER_TEMP/admin-auth-email-production-verified-base.json" \
             > "$RUNNER_TEMP/admin-auth-email-production-promotion.json"
           rm -f \
             "$RUNNER_TEMP/admin-auth-email-production-after.json" \
             "$RUNNER_TEMP/admin-auth-email-production-payload.json" \
-            "$RUNNER_TEMP/admin-auth-email-production-build.json"
-          rm -rf "$RUNNER_TEMP/admin-auth-email-production-patches" \
+            "$RUNNER_TEMP/admin-auth-email-production-build.json" \
+            "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json" \
             "$RUNNER_TEMP/admin-auth-email-production-verified-base.json"
+          rm -rf "$RUNNER_TEMP/admin-auth-email-production-patches"
 
-      - name: Upload production template evidence and rollback snapshot
+      - name: Upload production template, SMTP, and rollback evidence
         uses: actions/upload-artifact@v6
         with:
           name: admin-auth-email-production-${{ inputs.source_commit }}
@@ -210,4 +263,5 @@ jobs:
           retention-days: 30
           path: |
             ${{ runner.temp }}/admin-auth-email-production-promotion.json
-            ${{ runner.temp }}/admin-auth-email-production-before.json
+            ${{ runner.temp }}/admin-auth-email-production-template-before.json
+            ${{ runner.temp }}/admin-auth-email-production-smtp-before.json
