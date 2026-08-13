@@ -1,0 +1,129 @@
+/* Econovaria Player Terminal refresh — shared route list and control ownership.
+   Owns dense data rows, filter controls, tabs, and search fields. */
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-list,
+  .player-terminal-news-list,
+  .player-terminal-contract-list,
+  .player-terminal-transaction-list,
+  .player-terminal-thread-list,
+  .player-terminal-reputation-list,
+  .player-terminal-milestone-list,
+  .player-terminal-loan-schedule,
+  .player-terminal-notice-list
+) {
+  display: grid;
+  gap: var(--player-space-2);
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-row,
+  .player-terminal-news-row,
+  .player-terminal-contract-row,
+  .player-terminal-transaction-row,
+  .player-terminal-thread-row,
+  .player-terminal-reputation-list article,
+  .player-terminal-milestone-list article,
+  .player-terminal-loan-schedule article,
+  .player-terminal-notice
+) {
+  min-width: 0;
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-md);
+  background: rgb(2 8 16 / 48%);
+  transition: border-color var(--player-motion-fast) var(--player-ease-out), background var(--player-motion-fast) var(--player-ease-out), transform var(--player-motion-fast) var(--player-ease-out);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-row,
+  .player-terminal-news-row,
+  .player-terminal-contract-row,
+  .player-terminal-transaction-row,
+  .player-terminal-thread-row
+):hover {
+  border-color: var(--player-color-line-strong);
+  background: rgb(0 212 255 / 5%);
+  transform: translateY(-0.0625rem);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-row,
+  .player-terminal-news-row,
+  .player-terminal-contract-row,
+  .player-terminal-transaction-row,
+  .player-terminal-thread-row
+) :is(strong, small, p, span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-row,
+  .player-terminal-news-row,
+  .player-terminal-contract-row,
+  .player-terminal-transaction-row,
+  .player-terminal-thread-row
+) strong {
+  color: var(--player-color-text);
+  font-size: var(--player-text-meta);
+  font-weight: var(--player-weight-bold);
+  line-height: 1.35;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-asset-row,
+  .player-terminal-news-row,
+  .player-terminal-contract-row,
+  .player-terminal-transaction-row,
+  .player-terminal-thread-row
+) small {
+  color: var(--player-color-text-muted);
+  font-size: var(--player-text-label);
+  line-height: 1.4;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-filter-row,
+  .player-terminal-chart-toolbar,
+  .player-terminal-news-filters,
+  .player-terminal-store-toolbar,
+  .player-terminal-inventory-toolbar,
+  .player-terminal-marketplace-summary
+) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--player-space-2);
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-filter-row button,
+  .player-terminal-chart-toolbar button,
+  .player-terminal-news-filters button,
+  .player-terminal-progression-tabs button,
+  .player-terminal-contract-tabs button
+) {
+  min-height: var(--player-control-sm);
+  padding-inline: var(--player-space-3);
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: 999px;
+  color: var(--player-color-text-muted);
+  background: rgb(2 8 16 / 42%);
+  font-size: var(--player-text-label);
+  font-weight: var(--player-weight-semibold);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-filter-row button,
+  .player-terminal-chart-toolbar button,
+  .player-terminal-news-filters button,
+  .player-terminal-progression-tabs button,
+  .player-terminal-contract-tabs button
+):is(:hover, :focus-visible, .active) {
+  color: var(--player-color-text);
+  background: rgb(0 212 255 / 8%);
+  border-color: var(--player-color-line-strong);
+  outline: none;
+}
