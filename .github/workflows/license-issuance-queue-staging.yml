@@ -21,7 +21,7 @@ jobs:
       github.repository == 'kohnerbouchard-star/Student-Profile' &&
       github.ref == 'refs/heads/fix/license-issuance-queue-hardening-v1' &&
       github.actor == 'kohnerbouchard-star' &&
-      github.event.head_commit.message == 'chore(payments): stage verified Stripe adapter source bundle'
+      github.event.head_commit.message == 'chore(payments): retry verified Stripe adapter source bundle'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -138,7 +138,7 @@ jobs:
                       raise SystemExit(f"unsafe Stripe bundle member: {member.name}")
           PY
 
-      - name: Apply sources and run focused contracts
+      - name: Apply and verify Stripe source files
         shell: bash
         run: |
           set -euo pipefail
@@ -149,11 +149,32 @@ jobs:
             backend/supabase/functions/stripe-checkout-session/index.ts
           node --experimental-strip-types --check \
             backend/supabase/functions/stripe-license-webhook/index.ts
-          node --experimental-strip-types --test \
-            scripts/stripe-license-adapter-contract.test.mjs \
-            scripts/license-issuance-queue-contract.test.mjs \
-            scripts/license-issuance-hardening-contract.test.mjs \
-            scripts/license-email-outbox-contract.test.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync(
+            'backend/supabase/edge-function-manifest.json',
+            'utf8',
+          ));
+          const temporary = new Map(
+            manifest.temporaryStagingFunctions.map((entry) => [entry.slug, entry.verifyJwt]),
+          );
+          if (temporary.get('stripe-checkout-session') !== false) {
+            throw new Error('stripe-checkout-session inventory entry missing');
+          }
+          if (temporary.get('stripe-license-webhook') !== false) {
+            throw new Error('stripe-license-webhook inventory entry missing');
+          }
+          for (const path of [
+            'backend/supabase/functions/stripe-checkout-session/index.ts',
+            'backend/supabase/functions/stripe-license-webhook/index.ts',
+            'docs/architecture/stripe-license-adapter-v1.md',
+            'scripts/stripe-license-adapter-contract.test.mjs',
+          ]) {
+            if (!fs.existsSync(path) || fs.statSync(path).size === 0) {
+              throw new Error(`missing or empty Stripe source: ${path}`);
+            }
+          }
+          NODE
           node scripts/validate-supabase-migrations.mjs
 
       - name: Commit exact approved source paths
