@@ -1,0 +1,323 @@
+name: Player Terminal UI Convergence Release Controller
+
+on:
+  push:
+    branches:
+      - release/player-terminal-ui-convergence-20260813
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: player-terminal-ui-convergence-release
+  cancel-in-progress: false
+
+env:
+  SOURCE_COMMIT: 670345c424f9d3e1f578f797431b58cbf76bc031
+  VERCEL_CLI_VERSION: 58.1.0
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+
+jobs:
+  converge:
+    name: Verify staging and promote attested production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: staging
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Enforce exact merged-main boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/release/player-terminal-ui-convergence-20260813"
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+
+      - name: Check out exact merged main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source is current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse origin/main)" = "$SOURCE_COMMIT"
+
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install locked dependencies and rerun release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --test \
+            scripts/runtime-health-contract.test.mjs \
+            scripts/live-runtime-attestation-contract.test.mjs \
+            scripts/vercel-deployment-contract.test.mjs \
+            scripts/release-integrity/workflow-contract.test.mjs \
+            scripts/production-runtime-promotion-contract.test.mjs
+
+      - name: Link exact Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          umask 077
+          node - <<'NODE' > .vercel/project.json
+          process.stdout.write(JSON.stringify({
+            orgId: process.env.VERCEL_ORG_ID,
+            projectId: process.env.VERCEL_PROJECT_ID,
+          }));
+          NODE
+
+      - name: Build exact staging output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" pull \
+            --yes \
+            --environment=preview \
+            --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" build \
+            --token="$VERCEL_TOKEN"
+
+      - name: Deploy unaliased staging candidate
+        id: staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/vercel-staging-output.txt"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" deploy \
+            --prebuilt \
+            --skip-domain \
+            --yes \
+            --env "ECONOVARIA_SOURCE_SHA=$SOURCE_COMMIT" \
+            --token="$VERCEL_TOKEN" \
+            | tee "$output"
+          deployment_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' "$output" | tail -n 1)"
+          test -n "$deployment_url"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact staging candidate
+        shell: bash
+        env:
+          STAGING_URL: ${{ steps.staging.outputs.deployment_url }}
+          HEALTH_PATH: ${{ runner.temp }}/staging-health.json
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" inspect \
+            "$STAGING_URL" \
+            --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /api/health \
+            --deployment "$STAGING_URL" \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/staging-health.json"
+          node - <<'NODE'
+          const health = require(process.env.HEALTH_PATH);
+          if (health.ok !== true || health.status !== 'ready') throw new Error('Staging health is not ready.');
+          if (health.environment !== 'staging') throw new Error('Staging environment binding is invalid.');
+          if (health.projectRef !== process.env.STAGING_PROJECT_REF) throw new Error('Staging Supabase binding is invalid.');
+          if (health.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Staging source commit is invalid.');
+          if (!Array.isArray(health.services) || health.services.some((service) => service.ok !== true)) {
+            throw new Error('A required staging session service is unhealthy.');
+          }
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /player-terminal/index.html \
+            --deployment "$STAGING_URL" \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/player-terminal-index.html"
+          for marker in \
+            player-terminal-tokens.css \
+            player-terminal-foundation.css \
+            player-terminal-shell-compat.css \
+            player-terminal-shared-layout.css \
+            player-terminal-dashboard.css
+          do
+            grep -Fq "$marker" "$RUNNER_TEMP/player-terminal-index.html"
+          done
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /player-terminal/src/pages/dashboard-page.js \
+            --deployment "$STAGING_URL" \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/player-dashboard.js"
+          grep -Fq 'renderCountryOverlay' "$RUNNER_TEMP/player-dashboard.js"
+          grep -Fq 'econovaria-world-map.png' "$RUNNER_TEMP/player-dashboard.js"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" logs \
+            "$STAGING_URL" \
+            --level error \
+            --limit 50 \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/staging-error-logs.txt"
+          test ! -s "$RUNNER_TEMP/staging-error-logs.txt"
+
+      - name: Dispatch and verify exact release attestations
+        id: attest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find_run() {
+            local workflow="$1"
+            local started_epoch="$2"
+            local output="$RUNNER_TEMP/${workflow}.runs.json"
+            local run_id=""
+            for _ in $(seq 1 60); do
+              gh api \
+                "repos/$GITHUB_REPOSITORY/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=30" \
+                > "$output"
+              run_id="$(WORKFLOW_RUNS="$output" STARTED_EPOCH="$started_epoch" node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.WORKFLOW_RUNS, 'utf8'));
+          const started = Number(process.env.STARTED_EPOCH) - 5;
+          const match = (payload.workflow_runs || [])
+            .filter((run) => run.head_sha === process.env.SOURCE_COMMIT)
+            .filter((run) => Date.parse(run.created_at) / 1000 >= started)
+            .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
+          if (match?.id) process.stdout.write(String(match.id));
+          NODE
+              )"
+              if [ -n "$run_id" ]; then
+                printf '%s' "$run_id"
+                return 0
+              fi
+              sleep 5
+            done
+            return 1
+          }
+
+          release_started="$(date +%s)"
+          gh workflow run release-integrity.yml \
+            --ref main \
+            -f source_sha="$SOURCE_COMMIT"
+          release_run_id="$(find_run release-integrity.yml "$release_started")"
+          gh run watch "$release_run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+
+          edge_started="$(date +%s)"
+          gh workflow run edge-function-inventory.yml \
+            --ref main \
+            -f source_commit="$SOURCE_COMMIT" \
+            -f confirm_action='ATTEST EDGE INVENTORY'
+          edge_run_id="$(find_run edge-function-inventory.yml "$edge_started")"
+          gh run watch "$edge_run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+
+          echo "release_run_id=$release_run_id" >> "$GITHUB_OUTPUT"
+          echo "edge_run_id=$edge_run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch canonical attested production promotion
+        id: production
+        shell: bash
+        run: |
+          set -euo pipefail
+          started_epoch="$(date +%s)"
+          gh workflow run vercel-attested-production-promote.yml \
+            --ref main \
+            -f source_commit="$SOURCE_COMMIT" \
+            -f release_integrity_run_id='${{ steps.attest.outputs.release_run_id }}' \
+            -f edge_inventory_run_id='${{ steps.attest.outputs.edge_run_id }}' \
+            -f confirm_action='PROMOTE ATTESTED VERCEL PRODUCTION'
+
+          production_run_id=""
+          for _ in $(seq 1 60); do
+            gh api \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/vercel-attested-production-promote.yml/runs?event=workflow_dispatch&branch=main&per_page=30" \
+              > "$RUNNER_TEMP/production-runs.json"
+            production_run_id="$(WORKFLOW_RUNS="$RUNNER_TEMP/production-runs.json" STARTED_EPOCH="$started_epoch" node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.WORKFLOW_RUNS, 'utf8'));
+          const started = Number(process.env.STARTED_EPOCH) - 5;
+          const match = (payload.workflow_runs || [])
+            .filter((run) => run.head_sha === process.env.SOURCE_COMMIT)
+            .filter((run) => Date.parse(run.created_at) / 1000 >= started)
+            .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
+          if (match?.id) process.stdout.write(String(match.id));
+          NODE
+            )"
+            [ -n "$production_run_id" ] && break
+            sleep 5
+          done
+          test -n "$production_run_id"
+          gh run watch "$production_run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+          echo "production_run_id=$production_run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Verify promoted production source and UI surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /api/health \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/production-health.json"
+          node - <<'NODE'
+          const health = require(process.env.HEALTH_PATH);
+          if (health.ok !== true || health.status !== 'ready') throw new Error('Production health is not ready.');
+          if (health.environment !== 'production') throw new Error('Production environment binding is invalid.');
+          if (health.projectRef !== process.env.PRODUCTION_PROJECT_REF) throw new Error('Production Supabase binding is invalid.');
+          if (health.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Production source commit is invalid.');
+          if (!Array.isArray(health.services) || health.services.some((service) => service.ok !== true)) {
+            throw new Error('A required production session service is unhealthy.');
+          }
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
+            /player-terminal/index.html \
+            --token="$VERCEL_TOKEN" \
+            > "$RUNNER_TEMP/production-player-terminal-index.html"
+          grep -Fq 'player-terminal-shared-layout.css' "$RUNNER_TEMP/production-player-terminal-index.html"
+          grep -Fq 'player-terminal-dashboard.css' "$RUNNER_TEMP/production-player-terminal-index.html"
+        env:
+          HEALTH_PATH: ${{ runner.temp }}/production-health.json
+
+      - name: Write convergence evidence
+        if: always()
+        shell: bash
+        env:
+          STAGING_URL: ${{ steps.staging.outputs.deployment_url }}
+          RELEASE_RUN_ID: ${{ steps.attest.outputs.release_run_id }}
+          EDGE_RUN_ID: ${{ steps.attest.outputs.edge_run_id }}
+          PRODUCTION_RUN_ID: ${{ steps.production.outputs.production_run_id }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const readJson = (file) => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          };
+          const evidence = {
+            schemaVersion: 1,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            stagingUrl: process.env.STAGING_URL || null,
+            stagingHealth: readJson(`${process.env.RUNNER_TEMP}/staging-health.json`),
+            releaseIntegrityRunId: process.env.RELEASE_RUN_ID || null,
+            edgeInventoryRunId: process.env.EDGE_RUN_ID || null,
+            productionPromotionRunId: process.env.PRODUCTION_RUN_ID || null,
+            productionHealth: readJson(`${process.env.RUNNER_TEMP}/production-health.json`),
+          };
+          fs.writeFileSync(`${process.env.RUNNER_TEMP}/player-terminal-ui-convergence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
+          NODE
+
+      - name: Upload convergence evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: player-terminal-ui-convergence-${{ env.SOURCE_COMMIT }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/player-terminal-ui-convergence.json
