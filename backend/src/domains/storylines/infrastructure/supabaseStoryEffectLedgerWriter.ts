@@ -18,12 +18,12 @@ interface StoryEffectLedgerRpcClient {
   }>;
 }
 
-interface LedgerRpcRow {
+interface StoryCashAdjustmentRpcRow {
+  readonly adjustment_outcome: "applied" | "replayed" | string;
+  readonly adjustment_id: string;
   readonly ledger_entry_id: string;
-  readonly account_type: string;
-  readonly balance: number | string;
   readonly currency_code: string;
-  readonly created_at: string;
+  readonly balance: number | string;
 }
 
 export class SupabaseStoryEffectLedgerWriter
@@ -34,30 +34,18 @@ export class SupabaseStoryEffectLedgerWriter
     input: StoryCashAdjustmentWriteInput,
   ): Promise<StoryWriteResult> {
     const response = await this.client.rpc<unknown[]>(
-      "record_player_ledger_entry",
+      "apply_story_cash_adjustment_v1",
       {
         p_game_session_id: input.gameSessionId,
         p_player_id: input.playerId,
-        p_account_type: "checking",
-        p_amount: input.signedAmount,
-        p_currency_code: "ECO",
-        p_entry_type: input.effectType === "cash_credit" ? "credit" : "debit",
-        p_source_domain: "storylines",
-        p_source_action: input.effectType,
-        p_source_id: input.storylineEventId,
-        p_created_by_type: "system",
-        p_created_by_id: null,
-        p_audit_metadata: {
-          idempotencyKey: input.idempotencyKey,
-          storylineEventId: input.storylineEventId,
-          effectType: input.effectType,
-          label: input.label,
-          reason: input.reason,
-          amount: input.amount,
-          signedAmount: input.signedAmount,
-          payload: input.payload,
-          source: "classroom_api_edge_storyline_effect",
-        },
+        p_storyline_event_id: input.storylineEventId,
+        p_effect_type: input.effectType,
+        p_amount: input.amount,
+        p_signed_amount: input.signedAmount,
+        p_label: input.label,
+        p_reason: input.reason,
+        p_payload: input.payload,
+        p_idempotency_key: input.idempotencyKey,
       },
     );
 
@@ -67,7 +55,7 @@ export class SupabaseStoryEffectLedgerWriter
       );
     }
 
-    const row = readLedgerRpcRow(response.data);
+    const row = readCashAdjustmentRpcRow(response.data);
 
     if (!row) {
       throw new Error("Storyline cash adjustment returned no ledger entry.");
@@ -79,7 +67,9 @@ export class SupabaseStoryEffectLedgerWriter
   }
 }
 
-function readLedgerRpcRow(value: unknown): LedgerRpcRow | null {
+function readCashAdjustmentRpcRow(
+  value: unknown,
+): StoryCashAdjustmentRpcRow | null {
   const row = Array.isArray(value) ? value[0] : value;
 
   if (!isRecord(row)) {
@@ -87,21 +77,22 @@ function readLedgerRpcRow(value: unknown): LedgerRpcRow | null {
   }
 
   if (
+    (row.adjustment_outcome !== "applied" &&
+      row.adjustment_outcome !== "replayed") ||
+    typeof row.adjustment_id !== "string" ||
     typeof row.ledger_entry_id !== "string" ||
-    typeof row.account_type !== "string" ||
     typeof row.currency_code !== "string" ||
-    typeof row.created_at !== "string" ||
     !isBalanceValue(row.balance)
   ) {
     return null;
   }
 
   return {
+    adjustment_outcome: row.adjustment_outcome,
+    adjustment_id: row.adjustment_id,
     ledger_entry_id: row.ledger_entry_id,
-    account_type: row.account_type,
-    balance: readBalanceNumber(row.balance),
     currency_code: row.currency_code,
-    created_at: row.created_at,
+    balance: readBalanceNumber(row.balance),
   };
 }
 

@@ -1,0 +1,103 @@
+/* Econovaria Player Terminal refresh — shared route state ownership.
+   Owns empty, error, disclosure, messages, holdings, and long-content containment. */
+
+.player-terminal-app-root .player-terminal-search-field {
+  flex: 1 1 18rem;
+  min-width: min(100%, 14rem);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-empty-state,
+  .player-terminal-route-error,
+  .player-terminal-error-page
+) {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--player-space-3);
+  min-height: 14rem;
+  padding: var(--player-space-8);
+  border: 0.0625rem dashed var(--player-color-line-strong);
+  border-radius: var(--player-radius-lg);
+  color: var(--player-color-text-muted);
+  background: linear-gradient(145deg, rgb(10 29 52 / 68%), rgb(4 13 27 / 76%));
+  text-align: center;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-empty-state,
+  .player-terminal-route-error,
+  .player-terminal-error-page
+) :is(h2, strong) {
+  color: var(--player-color-text);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-empty-state,
+  .player-terminal-route-error,
+  .player-terminal-error-page
+) p {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--player-color-text-muted);
+  font-size: var(--player-text-body);
+  line-height: var(--player-leading-copy);
+}
+
+.player-terminal-app-root .player-terminal-disclosure {
+  overflow: hidden;
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-md);
+  background: rgb(2 8 16 / 42%);
+}
+
+.player-terminal-app-root .player-terminal-disclosure > summary {
+  min-height: var(--player-control-lg);
+  padding: var(--player-space-3) var(--player-space-4);
+}
+
+.player-terminal-app-root .player-terminal-message-log,
+.player-terminal-app-root .player-terminal-message-panel,
+.player-terminal-app-root .player-terminal-thread-list {
+  min-width: 0;
+}
+
+.player-terminal-app-root .player-terminal-message-log article {
+  max-width: min(48rem, 88%);
+  border-radius: var(--player-radius-md);
+}
+
+.player-terminal-app-root .player-terminal-holdings-table {
+  min-width: 0;
+  overflow-x: auto;
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-md);
+  background: rgb(2 8 16 / 40%);
+}
+
+.player-terminal-app-root .player-terminal-holdings-table > :is(header, button) {
+  min-width: 44rem;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-company-identity,
+  .player-terminal-news-analysis,
+  .player-terminal-news-effects,
+  .player-terminal-contract-detail,
+  .player-terminal-loan-review,
+  .player-terminal-profile-identity,
+  .player-terminal-api-lines
+) {
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-company-identity,
+  .player-terminal-contract-detail,
+  .player-terminal-loan-review,
+  .player-terminal-profile-identity
+) :is(h3, strong, dd, code) {
+  overflow-wrap: anywhere;
+}
+
+

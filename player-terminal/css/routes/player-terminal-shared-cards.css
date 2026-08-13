@@ -1,0 +1,92 @@
+/* Econovaria Player Terminal refresh — shared route card ownership.
+   Owns commerce, inventory, business, crafting, loan, and portfolio cards. */
+
+.player-terminal-app-root :is(
+  .player-terminal-store-grid,
+  .player-terminal-inventory-grid,
+  .player-terminal-marketplace-grid,
+  .player-terminal-recipe-grid,
+  .player-terminal-achievement-grid,
+  .player-terminal-license-grid
+) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: var(--player-space-4);
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-card,
+  .player-terminal-inventory-card,
+  .player-terminal-marketplace-card,
+  .player-terminal-business-product,
+  .player-terminal-recipe-row,
+  .player-terminal-loan-offer,
+  .player-terminal-allocation-grid article,
+  .player-terminal-exposure-list article,
+  .player-terminal-business-suppliers article,
+  .player-terminal-crafting-queue article
+) {
+  min-width: 0;
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-md);
+  background: linear-gradient(145deg, rgb(10 29 52 / 78%), rgb(4 13 27 / 88%));
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 14%);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-marketplace-card,
+  .player-terminal-business-product,
+  .player-terminal-recipe-row,
+  .player-terminal-loan-offer,
+  .player-terminal-allocation-grid article,
+  .player-terminal-exposure-list article,
+  .player-terminal-business-suppliers article,
+  .player-terminal-crafting-queue article
+) {
+  gap: var(--player-space-3);
+  padding: var(--player-space-4);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-copy,
+  .player-terminal-inventory-copy,
+  .player-terminal-marketplace-card > div,
+  .player-terminal-business-product > div,
+  .player-terminal-recipe-row > div,
+  .player-terminal-loan-offer > div,
+  .player-terminal-crafting-queue article > div
+) {
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-copy h3,
+  .player-terminal-inventory-copy h3,
+  .player-terminal-marketplace-card strong,
+  .player-terminal-business-product strong,
+  .player-terminal-recipe-row strong,
+  .player-terminal-loan-offer strong,
+  .player-terminal-crafting-queue article strong
+) {
+  overflow-wrap: anywhere;
+  color: var(--player-color-text);
+  font-size: var(--player-text-entity);
+  font-weight: var(--player-weight-bold);
+  line-height: 1.35;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-copy p,
+  .player-terminal-inventory-copy p,
+  .player-terminal-marketplace-card p,
+  .player-terminal-business-product p,
+  .player-terminal-recipe-row p,
+  .player-terminal-loan-offer p,
+  .player-terminal-crafting-queue article p
+) {
+  overflow-wrap: anywhere;
+  color: var(--player-color-text-muted);
+  font-size: var(--player-text-meta);
+  line-height: 1.55;
+}

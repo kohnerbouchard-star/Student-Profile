@@ -1,0 +1,86 @@
+/* Econovaria Player Terminal refresh — shared route detail ownership.
+   Owns Banking cards, dense detail surfaces, and Store/Inventory card padding. */
+
+/* Shared route surfaces that previously depended on route-specific legacy fragments. */
+.player-terminal-app-root :is(
+  .player-terminal-bank-card,
+  .player-terminal-news-detail,
+  .player-terminal-market-detail,
+  .player-terminal-order-ticket,
+  .player-terminal-contract-detail,
+  .player-terminal-profile-identity,
+  .player-terminal-message-panel,
+  .player-terminal-loan-review,
+  .player-terminal-progression-hero,
+  .player-terminal-achievements-panel,
+  .player-terminal-licenses-panel
+) {
+  min-width: 0;
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-lg);
+  background: linear-gradient(145deg, rgb(10 29 52 / 78%), rgb(4 13 27 / 90%));
+  box-shadow: var(--player-shadow-low);
+}
+
+.player-terminal-app-root .player-terminal-bank-card {
+  min-height: 9rem;
+  padding: var(--player-space-5);
+  overflow: hidden;
+}
+
+.player-terminal-app-root .player-terminal-bank-card :is(h3, strong, dd) {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-news-detail,
+  .player-terminal-market-detail,
+  .player-terminal-order-ticket,
+  .player-terminal-contract-detail,
+  .player-terminal-profile-identity,
+  .player-terminal-message-panel,
+  .player-terminal-loan-review,
+  .player-terminal-progression-hero,
+  .player-terminal-achievements-panel,
+  .player-terminal-licenses-panel
+) {
+  padding: var(--player-space-5);
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-news-detail,
+  .player-terminal-market-detail,
+  .player-terminal-contract-detail,
+  .player-terminal-profile-identity,
+  .player-terminal-message-panel,
+  .player-terminal-loan-review,
+  .player-terminal-progression-hero
+) :is(h2, h3, h4, strong, p, small, dd, code) {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-card,
+  .player-terminal-inventory-card,
+  .player-terminal-marketplace-card
+) {
+  overflow: hidden;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-store-copy,
+  .player-terminal-store-footer,
+  .player-terminal-inventory-copy
+) {
+  padding-inline: var(--player-space-4);
+}
+
+.player-terminal-app-root .player-terminal-store-copy {
+  padding-top: var(--player-space-4);
+}
+
+.player-terminal-app-root .player-terminal-store-footer {
+  gap: var(--player-space-3);
+  padding-block: var(--player-space-3) var(--player-space-4);
+}
+

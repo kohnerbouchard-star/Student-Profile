@@ -28,7 +28,9 @@ export interface StoryEffectExecutionInput {
   readonly storylineEventId: string;
   readonly effect: StoryEffect;
   readonly effectIndex?: number;
+  readonly effectIdentity?: string;
   readonly now: string;
+  readonly effectiveMarketTick?: number;
   readonly playerContext?: PlayerStoryContext | null;
   readonly policyScope?: StoryPolicyEffectScope | null;
   readonly dependencies: StoryEffectExecutionDependencies;
@@ -39,6 +41,7 @@ export interface StoryEffectBatchExecutionInput {
   readonly storylineEventId: string;
   readonly effects: readonly StoryEffect[];
   readonly now: string;
+  readonly effectiveMarketTick?: number;
   readonly playerContext?: PlayerStoryContext | null;
   readonly policyScope?: StoryPolicyEffectScope | null;
   readonly dependencies: StoryEffectExecutionDependencies;
@@ -56,6 +59,8 @@ export interface StoryEffectExecutionDependencies {
   readonly impacts: StoryEffectImpactWriter;
   readonly contracts?: StoryEffectContractWriter;
   readonly marketNews?: StoryEffectMarketNewsWriter;
+  readonly world?: StoryEffectWorldWriter;
+  readonly currency?: StoryEffectCurrencyWriter;
 }
 
 export interface StoryEffectLedgerWriter {
@@ -82,6 +87,17 @@ export interface StoryEffectContractWriter {
 
 export interface StoryEffectMarketNewsWriter {
   createMarketNews(input: StoryMarketNewsWriteInput): Promise<StoryWriteResult>;
+}
+
+export interface StoryEffectWorldWriter {
+  applyRouteState(input: StoryWorldRouteStateWriteInput): Promise<StoryWriteResult>;
+  applyLocationState(input: StoryWorldLocationStateWriteInput): Promise<StoryWriteResult>;
+}
+
+export interface StoryEffectCurrencyWriter {
+  applyCurrencyVolatility(
+    input: StoryCurrencyVolatilityWriteInput,
+  ): Promise<StoryWriteResult>;
 }
 
 export interface StoryWriteResult {
@@ -128,6 +144,36 @@ export interface StoryMarketNewsWriteInput {
   readonly storylineEventId: string;
   readonly shockKey: string;
   readonly payload: JsonObject;
+  readonly idempotencyKey: string;
+  readonly createdTick?: number;
+}
+
+export interface StoryWorldRouteStateWriteInput {
+  readonly gameSessionId: string;
+  readonly storylineEventId: string;
+  readonly routeIds: readonly string[];
+  readonly status: "open" | "restricted" | "closed";
+  readonly reason: "normal" | "shortage" | "meridian_disruption" | "war" | "recovery";
+  readonly costMultiplierBasisPoints: number;
+  readonly durationMultiplierBasisPoints: number;
+  readonly appliedAt: string;
+  readonly idempotencyKey: string;
+}
+
+export interface StoryWorldLocationStateWriteInput {
+  readonly gameSessionId: string;
+  readonly storylineEventId: string;
+  readonly locationIds: readonly string[];
+  readonly availability: "normal" | "shortage" | "conflict" | "closed";
+  readonly appliedAt: string;
+  readonly idempotencyKey: string;
+}
+
+export interface StoryCurrencyVolatilityWriteInput {
+  readonly gameSessionId: string;
+  readonly storylineEventId: string;
+  readonly adjustmentsBasisPoints: JsonObject;
+  readonly appliedAt: string;
   readonly idempotencyKey: string;
 }
 

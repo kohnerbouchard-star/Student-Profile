@@ -26,15 +26,25 @@ export class StockMarketStoryNewsWriter implements StoryEffectMarketNewsWriter {
         storyShockKey: input.shockKey,
       },
     });
-    const currentTick = await this.repository.readCurrentTick(input.gameSessionId);
+    const frozenPayloadTick = readFrozenCreatedTick(input.payload);
+    const createdTick = input.createdTick ?? frozenPayloadTick ??
+      (await this.repository.readCurrentTick(input.gameSessionId)) + 1;
+    if (!Number.isSafeInteger(createdTick) || createdTick < 0) {
+      throw new Error("Story market news createdTick is invalid.");
+    }
     const result = await this.repository.create({
       ...createInput,
       shockId: input.idempotencyKey,
-      createdTick: currentTick + 1,
+      createdTick,
     });
 
     return { id: result.news.id };
   }
+}
+
+function readFrozenCreatedTick(payload: JsonObject): number | null {
+  const value = payload.createdTick;
+  return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null;
 }
 
 function readMetadata(payload: JsonObject): Record<string, unknown> {
