@@ -131,6 +131,14 @@
       "verifyJwt": false
     },
     {
+      "slug": "stripe-checkout-session",
+      "verifyJwt": false
+    },
+    {
+      "slug": "stripe-license-webhook",
+      "verifyJwt": false
+    },
+    {
       "slug": "license-issuance-worker",
       "verifyJwt": false
     },
