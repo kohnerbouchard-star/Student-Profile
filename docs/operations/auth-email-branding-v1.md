@@ -13,7 +13,8 @@ The repository-owned direct Resend signup delivery and the hosted Supabase Auth 
 - Border: `#334155`
 - Primary action: `#f97316`
 - Security accent: `#93c5fd`
-- Sender: `Econovaria Security <no-reply@econovaria.com>`
+- Sender display name: `Econovaria Security`
+- Sender address: an environment-specific mailbox on a domain already verified in Resend
 - Wordmark: text-based `ECONOVARIA`, with no remote font or image dependency
 - Layout: 600 px table-based transactional email with responsive mobile padding
 
@@ -47,21 +48,21 @@ Resend authentication-link click tracking and open tracking are disabled by the 
 
 The template compiler produces only reviewed `mailer_subjects_*`, `mailer_templates_*`, and `mailer_notifications_*_enabled` fields. The SMTP bootstrap sends the Resend key only to Resend, the Supabase Management API, and the environment-specific Supabase Edge secret store. Evidence and rollback artifacts exclude the SMTP password.
 
-## Required environment secret
+## Required protected configuration
 
-Create a GitHub Actions environment secret named `RESEND_API_KEY` in both:
+Create these GitHub Actions environment secrets in both `staging` and `production`:
 
-- `staging`
-- `production`
+- `RESEND_API_KEY`
+- `ECONOVARIA_AUTH_EMAIL_FROM`
 
-The existing `SUPABASE_ACCESS_TOKEN` environment secret remains required. The Resend key must have access to the exact verified sender domain `econovaria.com`.
+`ECONOVARIA_AUTH_EMAIL_FROM` may be either the verified mailbox address alone or the full identity `Econovaria Security <mailbox@verified-domain>`. When a display name is supplied, it must be exactly `Econovaria Security`. The workflow derives the sender domain from this secret and requires an exact verified Resend domain with sending enabled.
 
-The workflow does not accept the Resend key as a dispatch input, commit it to the repository, print it, or upload it as evidence.
+The existing `SUPABASE_ACCESS_TOKEN` environment secret remains required. The workflow does not accept provider credentials as dispatch inputs, commit them to the repository, print them, or upload them as evidence.
 
 ## Protected staging rollout
 
-1. Verify `econovaria.com` in Resend with sending enabled.
-2. Add `RESEND_API_KEY` to the GitHub `staging` environment.
+1. Verify the intended authentication sending domain in Resend with sending enabled.
+2. Add `RESEND_API_KEY` and `ECONOVARIA_AUTH_EMAIL_FROM` to the GitHub `staging` environment.
 3. Merge an exact reviewed source commit to `main`.
 4. Run **Admin Auth Email Staging Candidate** with:
    - the exact current `main` commit;
@@ -78,13 +79,13 @@ The workflow does not accept the Resend key as a dispatch input, commit it to th
    - sanitized SMTP, template, and rollback evidence upload.
 6. Verify a real staging signup and password-recovery message on desktop and mobile.
 
-The workflow fails before the first Supabase mutation when the Resend key is absent, the sender domain is missing, domain verification is incomplete, or sending capability is disabled.
+The workflow fails before the first Supabase mutation when either protected secret is absent, the sender mailbox is malformed, the sender name is off-brand, the exact domain is missing, domain verification is incomplete, or sending capability is disabled.
 
 ## Protected production promotion
 
 Production cannot be configured independently of staging evidence.
 
-1. Add `RESEND_API_KEY` to the GitHub `production` environment.
+1. Add `RESEND_API_KEY` and `ECONOVARIA_AUTH_EMAIL_FROM` to the GitHub `production` environment.
 2. Record the successful staging workflow run ID and `sourceDigest`.
 3. Run **Admin Auth Email Production Promote** with:
    - the same exact current `main` commit used by staging;
