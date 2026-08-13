@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "econovaria.supabase-auth-email-brand.v1",
+  "brand": {
+    "name": "Econovaria",
+    "purpose": "Authentication and account-security transactional email",
+    "background": "#020617",
+    "surface": "#0f172a",
+    "border": "#334155",
+    "primary": "#f97316",
+    "accent": "#93c5fd",
+    "trackingLinksAllowed": false,
+    "externalImagesAllowed": false
+  },
+  "environments": {
+    "staging": {
+      "projectRef": "eecvbssdvarfcykcfrny",
+      "verificationReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-email-verification",
+      "recoveryReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-password-recovery",
+      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "notice": "STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE"
+    },
+    "production": {
+      "projectRef": "cgiukdjwicykrmtkhudh",
+      "verificationReviewUrl": "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/admin-email-verification",
+      "recoveryReviewUrl": "https://econovaria.vercel.app/auth/recovery-start.html",
+      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "notice": ""
+    }
+  },
+  "templates": [
+    {
+      "id": "confirmation",
+      "category": "authentication",
+      "subject": "Confirm your Econovaria administrator account",
+      "file": "confirmation.html",
+      "subjectKey": "mailer_subjects_confirmation",
+      "contentKey": "mailer_templates_confirmation_content",
+      "requiredVariables": ["{{ .TokenHash }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "recovery",
+      "category": "authentication",
+      "subject": "Reset your Econovaria administrator password",
+      "file": "recovery.html",
+      "subjectKey": "mailer_subjects_recovery",
+      "contentKey": "mailer_templates_recovery_content",
+      "requiredVariables": ["{{ .TokenHash }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "magic_link",
+      "category": "authentication",
+      "subject": "Your secure Econovaria sign-in link",
+      "file": "magic_link.html",
+      "subjectKey": "mailer_subjects_magic_link",
+      "contentKey": "mailer_templates_magic_link_content",
+      "requiredVariables": ["{{ .TokenHash }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "invite",
+      "category": "authentication",
+      "subject": "You have been invited to Econovaria",
+      "file": "invite.html",
+      "subjectKey": "mailer_subjects_invite",
+      "contentKey": "mailer_templates_invite_content",
+      "requiredVariables": ["{{ .ConfirmationURL }}"],
+      "scannerSafe": false
+    },
+    {
+      "id": "email_change",
+      "category": "authentication",
+      "subject": "Confirm your new Econovaria email address",
+      "file": "email_change.html",
+      "subjectKey": "mailer_subjects_email_change",
+      "contentKey": "mailer_templates_email_change_content",
+      "requiredVariables": ["{{ .ConfirmationURL }}"],
+      "scannerSafe": false
+    },
+    {
+      "id": "reauthentication",
+      "category": "authentication",
+      "subject": "{{ .Token }} is your Econovaria verification code",
+      "file": "reauthentication.html",
+      "subjectKey": "mailer_subjects_reauthentication",
+      "contentKey": "mailer_templates_reauthentication_content",
+      "requiredVariables": ["{{ .Token }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "password_changed",
+      "category": "notification",
+      "subject": "Your Econovaria password was changed",
+      "file": "password_changed.html",
+      "enabledKey": "mailer_notifications_password_changed_enabled",
+      "subjectKey": "mailer_subjects_password_changed_notification",
+      "contentKey": "mailer_templates_password_changed_notification_content",
+      "requiredVariables": [],
+      "scannerSafe": true
+    },
+    {
+      "id": "email_changed",
+      "category": "notification",
+      "subject": "Your Econovaria email address was changed",
+      "file": "email_changed.html",
+      "enabledKey": "mailer_notifications_email_changed_enabled",
+      "subjectKey": "mailer_subjects_email_changed_notification",
+      "contentKey": "mailer_templates_email_changed_notification_content",
+      "requiredVariables": [],
+      "scannerSafe": true
+    },
+    {
+      "id": "phone_changed",
+      "category": "notification",
+      "subject": "Your Econovaria phone number was changed",
+      "file": "phone_changed.html",
+      "enabledKey": "mailer_notifications_phone_changed_enabled",
+      "subjectKey": "mailer_subjects_phone_changed_notification",
+      "contentKey": "mailer_templates_phone_changed_notification_content",
+      "requiredVariables": [],
+      "scannerSafe": true
+    },
+    {
+      "id": "mfa_factor_enrolled",
+      "category": "notification",
+      "subject": "A verification method was added to Econovaria",
+      "file": "mfa_factor_enrolled.html",
+      "enabledKey": "mailer_notifications_mfa_factor_enrolled_enabled",
+      "subjectKey": "mailer_subjects_mfa_factor_enrolled_notification",
+      "contentKey": "mailer_templates_mfa_factor_enrolled_notification_content",
+      "requiredVariables": ["{{ .FactorType }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "mfa_factor_unenrolled",
+      "category": "notification",
+      "subject": "A verification method was removed from Econovaria",
+      "file": "mfa_factor_unenrolled.html",
+      "enabledKey": "mailer_notifications_mfa_factor_unenrolled_enabled",
+      "subjectKey": "mailer_subjects_mfa_factor_unenrolled_notification",
+      "contentKey": "mailer_templates_mfa_factor_unenrolled_notification_content",
+      "requiredVariables": ["{{ .FactorType }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "identity_linked",
+      "category": "notification",
+      "subject": "A sign-in method was linked to Econovaria",
+      "file": "identity_linked.html",
+      "enabledKey": "mailer_notifications_identity_linked_enabled",
+      "subjectKey": "mailer_subjects_identity_linked_notification",
+      "contentKey": "mailer_templates_identity_linked_notification_content",
+      "requiredVariables": ["{{ .Provider }}"],
+      "scannerSafe": true
+    },
+    {
+      "id": "identity_unlinked",
+      "category": "notification",
+      "subject": "A sign-in method was removed from Econovaria",
+      "file": "identity_unlinked.html",
+      "enabledKey": "mailer_notifications_identity_unlinked_enabled",
+      "subjectKey": "mailer_subjects_identity_unlinked_notification",
+      "contentKey": "mailer_templates_identity_unlinked_notification_content",
+      "requiredVariables": ["{{ .Provider }}"],
+      "scannerSafe": true
+    }
+  ]
+}
