@@ -13,21 +13,26 @@ const required = [
   "src/data/empty-read-models.js",
   "css/player-terminal-tokens.css",
   "css/player-terminal-foundation.css",
+  "css/player-terminal-shell-compat.css",
+  "css/routes/player-terminal-dashboard.css",
   "tests/player-terminal-css-foundation.mjs",
   "tests/player-terminal-map-protection.mjs",
+  "tests/player-terminal-dashboard-refresh.mjs",
+  "tests/browser/player-dashboard-refresh.spec.mjs",
   "tests/v75-hardening.mjs",
   "V75_API_READINESS.md",
   "ARCHITECTURE_BEFORE_AFTER_V75.md",
-  "PLAYER_TERMINAL_REFRESH_FOUNDATION.md"
+  "PLAYER_TERMINAL_REFRESH_FOUNDATION.md",
+  "PLAYER_TERMINAL_DASHBOARD_REFRESH.md"
 ];
 for (const file of required) await access(path.join(root, file));
 
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-if (packageJson.version !== "7.5.0") throw new Error("Package version must remain 7.5.0 during the visual foundation tranche.");
+if (packageJson.version !== "7.5.0") throw new Error("Package version must remain 7.5.0 during the visual refresh tranche.");
 if (!packageJson.scripts?.hardening || !packageJson.scripts.verify.includes("hardening")) {
   throw new Error("The v7.5 hardening suite must be part of npm run verify.");
 }
-for (const script of ["css:foundation", "map-protection"]) {
+for (const script of ["css:foundation", "map-protection", "dashboard-refresh"]) {
   if (!packageJson.scripts?.[script] || !packageJson.scripts.verify.includes(script)) {
     throw new Error(`The ${script} suite must be part of npm run verify.`);
   }
@@ -91,7 +96,7 @@ for (const marker of ["routeLoading", "routeErrors", "loadRouteData", "applyCapa
 if (/console\.(?:log|error)\([^\n]*(?:token|authorization)/i.test(appSource)) {
   throw new Error("Session or authorization values must not be logged.");
 }
-const logoutBlock = appSource.match(/if \(action === "logout"\)[\s\S]{0,500}/)?.[0] || "";
+const logoutBlock = appSource.match(/if \(action === \"logout\"\)[\s\S]{0,500}/)?.[0] || "";
 if (!logoutBlock || logoutBlock.includes("playerSessionToken") || logoutBlock.includes("accessToken")) {
   throw new Error("Host-owned sign-out must not expose a session token through the global event.");
 }
@@ -104,13 +109,18 @@ for (const forbidden of ["API READY", "REQUIRES API", "NOT WIRED", "Backend conn
   if (combinedPages.includes(forbidden)) throw new Error(`Player-facing development copy remains: ${forbidden}`);
 }
 
-const [tokensCss, foundationCss, auditSource] = await Promise.all([
+const [tokensCss, foundationCss, shellCompatCss, dashboardCss, auditSource] = await Promise.all([
   readFile(path.join(root, "css/player-terminal-tokens.css"), "utf8"),
   readFile(path.join(root, "css/player-terminal-foundation.css"), "utf8"),
+  readFile(path.join(root, "css/player-terminal-shell-compat.css"), "utf8"),
+  readFile(path.join(root, "css/routes/player-terminal-dashboard.css"), "utf8"),
   readFile(path.join(root, "tools/audit.mjs"), "utf8")
 ]);
-if (/!important\b/.test(tokensCss) || /!important\b/.test(foundationCss)) {
-  throw new Error("The Player refresh foundation introduced !important debt.");
+if (/!important\b/.test(tokensCss) || /!important\b/.test(foundationCss) || /!important\b/.test(dashboardCss)) {
+  throw new Error("The Player refresh token, foundation, or Dashboard owner introduced !important debt.");
+}
+if (!shellCompatCss.includes("Temporary bounded legacy cascade takeover.")) {
+  throw new Error("The bounded shell compatibility boundary is missing.");
 }
 if (/lockedHashes|createHash\s*\(/.test(auditSource)) {
   throw new Error("The retired byte-for-byte visual hash lock returned.");
@@ -118,10 +128,18 @@ if (/lockedHashes|createHash\s*\(/.test(auditSource)) {
 if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationCss)) {
   throw new Error("The shell foundation crossed into protected map ownership.");
 }
-const tokenStats = await stat(path.join(root, "css/player-terminal-tokens.css"));
-const foundationStats = await stat(path.join(root, "css/player-terminal-foundation.css"));
-if (tokenStats.size > 8_000 || foundationStats.size > 24_000) {
-  throw new Error("Player refresh foundation exceeded its bounded CSS budget.");
+if (/\.player-terminal-(?:shell|left-menu|nav-item|app-topbar)/.test(dashboardCss)) {
+  throw new Error("The Dashboard route owner crossed into shell ownership.");
+}
+for (const marker of [".player-terminal-map-hud", ".player-terminal-map-footer", ".player-terminal-country-modal"]) {
+  if (!dashboardCss.includes(marker)) throw new Error(`Dashboard route ownership is incomplete: ${marker}`);
 }
 
-console.log(`v7.5 audit passed: ${required.length} hardening and refresh artifacts, unified Player API ownership, production guards, cookie-session transport controls, protected map ownership, and bounded source-owned CSS verified.`);
+const tokenStats = await stat(path.join(root, "css/player-terminal-tokens.css"));
+const foundationStats = await stat(path.join(root, "css/player-terminal-foundation.css"));
+const dashboardStats = await stat(path.join(root, "css/routes/player-terminal-dashboard.css"));
+if (tokenStats.size > 8_000 || foundationStats.size > 24_000 || dashboardStats.size > 36_000) {
+  throw new Error("Player refresh CSS exceeded a bounded ownership budget.");
+}
+
+console.log(`v7.5 audit passed: ${required.length} hardening and refresh artifacts, unified Player API ownership, production guards, protected map behavior, route-owned Dashboard, and bounded source-owned CSS verified.`);

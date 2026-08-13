@@ -12,6 +12,8 @@ const required = [
   "css/player-terminal-normalization.css",
   "css/player-terminal-tokens.css",
   "css/player-terminal-foundation.css",
+  "css/player-terminal-shell-compat.css",
+  "css/routes/player-terminal-dashboard.css",
   "assets/images/econovaria-world-map.png",
   "assets/map/country-regions.json",
   "src/main.js",
@@ -37,12 +39,15 @@ const required = [
   "src/pages/profile-page.js",
   "tests/player-terminal-css-foundation.mjs",
   "tests/player-terminal-map-protection.mjs",
+  "tests/player-terminal-dashboard-refresh.mjs",
+  "tests/browser/player-dashboard-refresh.spec.mjs",
   "UX_STABILIZATION.md",
   "UX_RESEARCH_AND_DECISIONS.md",
   "PLAYER_API_CONNECTIONS.md",
   "SESSION_ADAPTER.md",
   "V7_STYLE_LOCK.md",
   "PLAYER_TERMINAL_REFRESH_FOUNDATION.md",
+  "PLAYER_TERMINAL_DASHBOARD_REFRESH.md",
   "UI_MAP_PASS.md",
   "VISUAL_NORMALIZATION.md",
   "VISUAL_AUDIT_V74.md",
@@ -133,6 +138,29 @@ if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationCss
   throw new Error("The Player shell foundation must not style the protected interactive map.");
 }
 
+const shellCompatCss = await readFile(path.join(root, "css/player-terminal-shell-compat.css"), "utf8");
+if (!shellCompatCss.includes("Temporary bounded legacy cascade takeover.")) {
+  throw new Error("The bounded shell compatibility marker is missing.");
+}
+
+const dashboardCss = await readFile(path.join(root, "css/routes/player-terminal-dashboard.css"), "utf8");
+for (const marker of [
+  "Dashboard and interactive-map chrome",
+  ".player-terminal-dashboard-page",
+  ".player-terminal-command-layout",
+  ".player-terminal-map-hud",
+  ".player-terminal-map-footer",
+  ".player-terminal-country-modal"
+]) {
+  if (!dashboardCss.includes(marker)) throw new Error(`Required Dashboard route marker is missing: ${marker}`);
+}
+if (/!important\b/.test(dashboardCss)) throw new Error("The Dashboard route owner must not add !important declarations.");
+if (/\.player-terminal-(?:shell|left-menu|nav-item|app-topbar)/.test(dashboardCss)) {
+  throw new Error("The Dashboard route owner crossed into shell ownership.");
+}
+const dashboardCssStats = await stat(path.join(root, "css/routes/player-terminal-dashboard.css"));
+if (dashboardCssStats.size > 36_000) throw new Error("The Dashboard route owner exceeded its 36 KB budget.");
+
 const polishCss = await readFile(path.join(root, "css/player-terminal-polish.css"), "utf8");
 for (const marker of [
   "Country-border interaction layer",
@@ -141,7 +169,7 @@ for (const marker of [
   "Specific fit corrections found during the visual audit",
   ".player-terminal-contract-tabs"
 ]) {
-  if (!polishCss.includes(marker)) throw new Error(`Required UI/map presentation marker is missing: ${marker}`);
+  if (!polishCss.includes(marker)) throw new Error(`Required UI/map compatibility marker is missing: ${marker}`);
 }
 
 const normalizationCss = await readFile(path.join(root, "css/player-terminal-normalization.css"), "utf8");
@@ -160,8 +188,10 @@ const indexSource = await readFile(path.join(root, "index.html"), "utf8");
 const normalizationIndex = indexSource.indexOf("css/player-terminal-normalization.css");
 const tokensIndex = indexSource.indexOf("css/player-terminal-tokens.css");
 const foundationIndex = indexSource.indexOf("css/player-terminal-foundation.css");
+const compatIndex = indexSource.indexOf("css/player-terminal-shell-compat.css");
+const dashboardIndex = indexSource.indexOf("css/routes/player-terminal-dashboard.css");
 const skeletonIndex = indexSource.indexOf("css/player-terminal-skeletons.css");
-if (!(normalizationIndex >= 0 && normalizationIndex < tokensIndex && tokensIndex < foundationIndex && foundationIndex < skeletonIndex)) {
+if (!(normalizationIndex >= 0 && normalizationIndex < tokensIndex && tokensIndex < foundationIndex && foundationIndex < compatIndex && compatIndex < dashboardIndex && dashboardIndex < skeletonIndex)) {
   throw new Error("Player refresh stylesheets are not loaded in the required ownership order.");
 }
 
@@ -171,8 +201,17 @@ for (const marker of ["ECONOVARIA_MAP_SIZE", "ECONOVARIA_COUNTRY_REGIONS", "coun
 }
 
 const dashboardSource = await readFile(path.join(root, "src/pages/dashboard-page.js"), "utf8");
-for (const marker of ["renderCountryOverlay", "player-terminal-country-overlay", "player-terminal-country-border", "data-player-country"]) {
-  if (!dashboardSource.includes(marker)) throw new Error(`Required interactive map renderer marker is missing: ${marker}`);
+for (const marker of [
+  "renderCountryOverlay",
+  "player-terminal-country-overlay",
+  "player-terminal-country-border",
+  "data-player-country",
+  "player-terminal-dashboard-page",
+  "player-terminal-map-hud",
+  "player-terminal-map-footer",
+  "aria-label=\"Home market summary\""
+]) {
+  if (!dashboardSource.includes(marker)) throw new Error(`Required Dashboard or map renderer marker is missing: ${marker}`);
 }
 
 const appSource = await readFile(path.join(root, "src/app.js"), "utf8");
@@ -221,4 +260,4 @@ for (const marker of ["normalizePlayerSessionHandoff", "applyPlayerSessionHandof
 if (!appSource.includes("connectSession")) throw new Error("Public connectSession handoff is missing.");
 if (!appSource.includes("config.sessionReadyEvent") || !appSource.includes("config.sessionInvalidEvent")) throw new Error("Session handoff events are missing.");
 
-console.log(`Audit passed: ${required.length} required files and ${sourceFiles.length} source artifacts verified with Player refresh foundation and protected map ownership.`);
+console.log(`Audit passed: ${required.length} required files and ${sourceFiles.length} source artifacts verified with Player refresh foundation, route-owned Dashboard, and protected map behavior.`);

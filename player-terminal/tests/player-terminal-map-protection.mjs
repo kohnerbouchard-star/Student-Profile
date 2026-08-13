@@ -4,13 +4,14 @@ import process from "node:process";
 
 const root = process.cwd();
 const read = (relative) => readFile(path.join(root, relative), "utf8");
-const [mapSource, dashboardSource, appSource, polishSource, foundationSource, compatSource, indexSource] = await Promise.all([
+const [mapSource, dashboardSource, appSource, polishSource, foundationSource, compatSource, dashboardCss, indexSource] = await Promise.all([
   read("src/data/map-regions.js"),
   read("src/pages/dashboard-page.js"),
   read("src/app.js"),
   read("css/player-terminal-polish.css"),
   read("css/player-terminal-foundation.css"),
   read("css/player-terminal-shell-compat.css"),
+  read("css/routes/player-terminal-dashboard.css"),
   read("index.html")
 ]);
 
@@ -69,14 +70,38 @@ for (const marker of [
   ".player-terminal-country-region.is-home-country",
   ".player-terminal-map-instruction"
 ]) {
-  if (!polishSource.includes(marker)) throw new Error(`Protected map presentation contract is missing: ${marker}`);
+  if (!polishSource.includes(marker)) throw new Error(`Protected compatibility presentation contract is missing: ${marker}`);
 }
 
 if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationSource) || /player-terminal-(?:command-map|world-map|country-|map-)/.test(compatSource)) {
-  throw new Error("The Player refresh foundation or shell compatibility boundary crossed into protected map ownership.");
+  throw new Error("The Player shell foundation or compatibility boundary crossed into protected map ownership.");
+}
+
+for (const marker of [
+  "interactive-map chrome",
+  ".player-terminal-country-overlay",
+  ".player-terminal-country-hit",
+  ".player-terminal-country-region:is(:hover, :focus-visible)",
+  ".player-terminal-country-region.is-home-country",
+  ".player-terminal-map-hud",
+  ".player-terminal-map-footer"
+]) {
+  if (!dashboardCss.includes(marker)) throw new Error(`Dashboard map route owner is missing: ${marker}`);
+}
+
+for (const destructivePattern of [
+  /\.player-terminal-country-overlay\s*\{[^}]*display\s*:\s*none/s,
+  /\.player-terminal-country-region\s*\{[^}]*pointer-events\s*:\s*none/s,
+  /\.player-terminal-country-hit\s*\{[^}]*pointer-events\s*:\s*none/s
+]) {
+  if (destructivePattern.test(dashboardCss)) throw new Error(`Dashboard map route owner disables interaction: ${destructivePattern}`);
+}
+
+if (!indexSource.includes("css/routes/player-terminal-dashboard.css")) {
+  throw new Error("The Dashboard map route owner is not loaded by index.html.");
 }
 if (!indexSource.includes("./assets/images/econovaria-world-map.png") && !dashboardSource.includes("./assets/images/econovaria-world-map.png")) {
   throw new Error("The protected Econovaria map asset is no longer referenced.");
 }
 
-console.log(`Player map protection passed: ${countryIds.length} regions, geometry, renderer, keyboard hook, and presentation ownership preserved.`);
+console.log(`Player map protection passed: ${countryIds.length} regions, geometry, renderer, keyboard hook, route-owned chrome, and interaction safety preserved.`);
