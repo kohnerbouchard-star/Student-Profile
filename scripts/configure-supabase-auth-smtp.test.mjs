@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertSmtpReplacementSafe,
   buildSupabaseSmtpPayload,
   configureSupabaseAuthSmtp,
   parseSenderIdentity,
@@ -67,6 +68,27 @@ test("SMTP config snapshots never retain the provider password", () => {
   assert.doesNotMatch(JSON.stringify(sanitized), /re_test_/u);
 });
 
+test("SMTP replacement guard accepts only absent or identical provider identity", () => {
+  const sender = parseSenderIdentity(AUTH_FROM);
+  assert.doesNotThrow(() => assertSmtpReplacementSafe({ configured: false }, sender));
+  assert.doesNotThrow(() => assertSmtpReplacementSafe({
+    configured: true,
+    host: "smtp.resend.com",
+    port: "465",
+    user: "resend",
+    adminEmail: "no-reply@econovaria.com",
+    senderName: "Econovaria Security",
+  }, sender));
+  assert.throws(() => assertSmtpReplacementSafe({
+    configured: true,
+    host: "smtp.mailgun.org",
+    port: "587",
+    user: "postmaster",
+    adminEmail: "legacy@example.com",
+    senderName: "Legacy Mailer",
+  }, sender), /refusing to replace an unrelated provider or sender/u);
+});
+
 test("apply mode disables Resend tracking and verifies Supabase SMTP", async () => {
   const calls = [];
   const fetchImpl = createQueuedFetch(calls, [
@@ -111,7 +133,7 @@ test("apply mode disables Resend tracking and verifies Supabase SMTP", async () 
   assert.doesNotMatch(JSON.stringify(result), /re_test_bootstrap/u);
 
   assert.equal(calls.length, 5);
-  assert.equal(calls[0].url, "https://api.resend.com/domains");
+  assert.equal(calls[0].url, "https://api.resend.com/domains?limit=100");
   assert.equal(calls[0].method, "GET");
   assert.equal(calls[1].url, `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`);
   assert.equal(calls[1].method, "GET");
@@ -124,6 +146,45 @@ test("apply mode disables Resend tracking and verifies Supabase SMTP", async () 
   assert.equal(calls[3].method, "PATCH");
   assert.equal(JSON.parse(calls[3].body).smtp_pass, RESEND_KEY);
   assert.equal(calls[4].method, "GET");
+});
+
+test("existing unrelated SMTP fails before Resend or Supabase mutation", async () => {
+  const calls = [];
+  const fetchImpl = createQueuedFetch(calls, [
+    jsonResponse({
+      object: "list",
+      data: [{
+        id: "domain-id",
+        name: "econovaria.com",
+        status: "verified",
+        capabilities: { sending: "enabled" },
+      }],
+    }),
+    jsonResponse({
+      smtp_admin_email: "legacy@example.com",
+      smtp_host: "smtp.mailgun.org",
+      smtp_port: "587",
+      smtp_user: "postmaster",
+      smtp_sender_name: "Legacy Mailer",
+    }),
+  ]);
+
+  await assert.rejects(
+    configureSupabaseAuthSmtp(
+      { environment: "production", mode: "apply" },
+      {
+        fetchImpl,
+        environmentValue: (name) => ({
+          SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN,
+          RESEND_API_KEY: RESEND_KEY,
+          ECONOVARIA_AUTH_EMAIL_FROM: AUTH_FROM,
+        })[name] || "",
+      },
+    ),
+    /refusing to replace an unrelated provider or sender/u,
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(calls.every((call) => call.method === "GET"), true);
 });
 
 test("missing protected sender identity fails before provider access", async () => {
