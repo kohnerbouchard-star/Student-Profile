@@ -1,0 +1,78 @@
+/* Econovaria Player Terminal refresh — shared overlay ownership.
+   Owns transactional modals and notification-drawer containment; country intelligence remains Dashboard-owned. */
+
+.player-terminal-app-root :is(
+  .player-terminal-modal-backdrop,
+  .player-terminal-mobile-sheet
+) {
+  overscroll-behavior: contain;
+}
+
+.player-terminal-app-root + .player-terminal-modal-backdrop,
+.player-terminal-modal-backdrop {
+  padding: var(--player-space-4);
+  background: rgb(0 0 0 / 72%);
+  backdrop-filter: blur(0.5rem);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: min(90dvh, 48rem);
+  overflow: hidden;
+  border: 0.0625rem solid var(--player-color-line-strong);
+  border-radius: var(--player-radius-lg);
+  clip-path: none;
+  background: linear-gradient(145deg, rgb(10 29 52 / 98%), rgb(2 8 16 / 99%));
+  box-shadow: 0 2rem 6rem rgb(0 0 0 / 60%), var(--player-glow-cyan);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head,
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
+  gap: var(--player-space-4);
+  padding: var(--player-space-4) var(--player-space-5);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body {
+  display: grid;
+  gap: var(--player-space-4);
+  min-height: 0;
+  padding: var(--player-space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head :is(h3, small),
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body :is(p, dd, code) {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-app-root .player-terminal-notification-drawer {
+  overflow: hidden auto;
+  border: 0.0625rem solid var(--player-color-line-strong);
+  border-radius: var(--player-radius-lg);
+  background: linear-gradient(145deg, rgb(10 29 52 / 98%), rgb(2 8 16 / 99%));
+  box-shadow: var(--player-shadow-high);
+}
+
+
+@media (max-width: 38.75rem) {
+  .player-terminal-modal-backdrop {
+    padding: var(--player-space-2);
+  }
+
+  .player-terminal-modal:not(.player-terminal-country-modal) {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head,
+  .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body,
+  .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
+    padding: var(--player-space-4);
+  }
+
+  .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,128 @@
+/* Econovaria Player Terminal refresh — shared route responsive ownership.
+   Owns route reflow and density only; it does not own shell or map presentation. */
+
+@media (max-width: 82.5rem) {
+  .player-terminal-app-root :is(
+    .player-terminal-command-metrics,
+    .player-terminal-market-summary,
+    .player-terminal-news-summary,
+    .player-terminal-portfolio-metrics,
+    .player-terminal-business-metrics,
+    .player-terminal-loan-metrics,
+    .player-terminal-bank-accounts,
+    .player-terminal-progression-grid
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 67.5rem) {
+  .player-terminal-app-root :is(
+    .player-terminal-market-layout,
+    .player-terminal-news-layout,
+    .player-terminal-portfolio-layout,
+    .player-terminal-business-layout,
+    .player-terminal-contract-layout,
+    .player-terminal-bank-layout,
+    .player-terminal-profile-layout,
+    .player-terminal-marketplace-layout,
+    .player-terminal-messages-layout,
+    .player-terminal-loans-layout,
+    .player-terminal-crafting-layout
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-app-root .player-terminal-holdings-table > :is(header, button) {
+    min-width: 38rem;
+  }
+}
+
+@media (max-width: 53.75rem) {
+  .player-terminal-app-root .player-terminal-metric-card {
+    min-height: 6.5rem;
+  }
+
+  .player-terminal-app-root .player-terminal-message-log article {
+    max-width: 94%;
+  }
+}
+
+@media (max-width: 38.75rem) {
+  .player-terminal-app-root :is(
+    .player-terminal-command-metrics,
+    .player-terminal-market-summary,
+    .player-terminal-news-summary,
+    .player-terminal-portfolio-metrics,
+    .player-terminal-business-metrics,
+    .player-terminal-loan-metrics,
+    .player-terminal-bank-accounts,
+    .player-terminal-progression-grid
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-app-root .player-terminal-metric-card {
+    grid-template-columns: var(--player-control-sm) minmax(0, 1fr);
+    min-height: 6rem;
+    padding: var(--player-space-3);
+  }
+
+  .player-terminal-app-root .player-terminal-metric-icon,
+  .player-terminal-app-root .player-terminal-action-icon {
+    width: var(--player-control-sm);
+    height: var(--player-control-sm);
+  }
+
+  .player-terminal-app-root .player-terminal-search-field {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  .player-terminal-app-root .player-terminal-panel-header {
+    align-items: flex-start;
+  }
+
+  .player-terminal-app-root .player-terminal-holdings-table > :is(ader, button) {
+    min-width: 34rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-terminal-app-root :is(
+    .player-terminal-asset-row,
+    .player-terminal-news-row,
+    .player-terminal-contract-row,
+    .player-terminal-transaction-row,
+    .player-terminal-thread-row
+  ) {
+    transition: none;
+  }
+
+  .player-terminal-app-root :is(
+    .player-terminal-asset-row,
+    .player-terminal-news-row,
+    .player-terminal-contract-row,
+    .player-terminal-transaction-row,
+    .player-terminal-thread-row
+  ):hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 38.75rem) {
+  .player-terminal-app-root :is(
+    .player-terminal-news-detail,
+    .player-terminal-market-detail,
+    .player-terminal-order-ticket,
+    .player-terminal-contract-detail,
+    .player-terminal-profile-identity,
+    .player-terminal-message-panel,
+    .player-terminal-loan-review,
+    .player-terminal-progression-hero,
+    .player-terminal-achievements-panel,
+    .player-terminal-licenses-panel
+  ) {
+    padding: var(--player-space-4);
+  }
+}

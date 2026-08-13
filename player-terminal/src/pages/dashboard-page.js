@@ -55,6 +55,35 @@ function worldEvent(event) {
   return `<button class="player-terminal-command-event is-${escapeHtml(event.tone)}" type="button" data-player-news-link="${escapeHtml(event.id)}"><i></i><span><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.region)} · ${escapeHtml(event.impact)}</small></span>${icon("chevronRight")}</button>`;
 }
 
+function renderMapHud() {
+  return `<div class="player-terminal-map-hud" aria-hidden="true">
+    <div class="player-terminal-map-instruction">
+      <strong>SELECT A COUNTRY</strong><small>Open a highlighted border for live intelligence</small>
+    </div>
+    <div class="player-terminal-map-legend">
+      <span><i class="is-home"></i><b>Home market</b></span>
+      <span><i class="is-interactive"></i><b>Country intelligence</b></span>
+    </div>
+  </div>`;
+}
+
+function renderHomeMarketSummary(country) {
+  const growth = Number(country.growth) || 0;
+  const inflation = Number(country.inflation) || 0;
+  const stability = Math.max(0, Math.min(100, Math.round(Number(country.stability) || 0)));
+  return `<footer class="player-terminal-map-footer" aria-label="Home market summary">
+    <div class="player-terminal-map-home">
+      <span class="player-terminal-map-home-mark">${icon("globe")}</span>
+      <div><small>HOME MARKET</small><strong>${escapeHtml(country.name)}</strong><p>${escapeHtml(country.condition)} · ${escapeHtml(country.policy)}</p></div>
+    </div>
+    <dl class="player-terminal-map-metrics">
+      <div><dt>Growth</dt><dd class="${toneFromChange(growth)}">${escapeHtml(formatPercent(growth))}</dd></div>
+      <div><dt>Inflation</dt><dd>${escapeHtml(inflation.toFixed(1))}%</dd></div>
+      <div><dt>Stability</dt><dd>${escapeHtml(stability)}/100</dd></div>
+    </dl>
+  </footer>`;
+}
+
 export function renderDashboardPage(data, ui = {}, config = {}) {
   const { session, dashboard, countries, contracts, banking, messages, portfolio } = data;
   const bankingUnavailable = isResourceUnavailable(data, "banking");
@@ -82,13 +111,13 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
     ? { eyebrow: "Unavailable", detail: "Communications could not be loaded. Retry from the Messages section." }
     : { eyebrow: `${messages?.unread || 0} unread`, detail: messages?.threads?.find((thread) => thread.unread)?.preview || "No urgent messages. Review official announcements when ready." };
 
-  return `<section class="player-terminal-page player-terminal-command-page" data-page="dashboard">
+  return `<section class="player-terminal-page player-terminal-command-page player-terminal-dashboard-page" data-page="dashboard">
     <div class="player-terminal-page-heading player-terminal-command-heading">
       <div><small>PLAYER COMMAND CENTER</small><h2>Good morning, ${escapeHtml(String(session.displayName || "Player").trim().split(/\s+/)[0] || "Player")}</h2><p>Complete the next priority, monitor the economy, and keep your capital working.</p></div>
       <div class="player-terminal-heading-actions">${renderStatusPill(dashboard.marketStatus, "green")}<button class="player-terminal-secondary-button" type="button" data-route="news">${icon("news")} World brief</button></div>
     </div>
 
-    <div class="player-terminal-command-metrics">
+    <div class="player-terminal-command-metrics" aria-label="Player financial and activity summary">
       ${renderMetric({ label: "Available checking", value: availableChecking, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}
       ${renderMetric({ label: "Net worth", value: formatCurrency(dashboard.netWorth, currencyCode), meta: `${dashboard.dailyChange >= 0 ? "+" : ""}${dashboard.dailyChange.toFixed(2)}% today`, tone: "cyan", iconName: "portfolio" })}
       ${renderMetric({ label: "Active contracts", value: String(dashboard.contractsActive), meta: `${dashboard.contractsDueSoon} due soon`, tone: "amber", iconName: "contracts" })}
@@ -111,10 +140,9 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
           <img class="player-terminal-world-map" src="./assets/images/econovaria-world-map.png" alt="Map of the nations of Econovaria" />
           <div class="player-terminal-world-vignette" aria-hidden="true"></div>
           ${renderCountryOverlay(countries, session.countryId)}
-          <div class="player-terminal-map-instruction" aria-hidden="true">
-            <strong>SELECT A COUNTRY</strong><small>Click a highlighted border for intelligence</small>
-          </div>
+          ${renderMapHud()}
         </div>
+        ${renderHomeMarketSummary(playerCountry)}
       </section>
 
       <section class="player-terminal-panel player-terminal-command-events">

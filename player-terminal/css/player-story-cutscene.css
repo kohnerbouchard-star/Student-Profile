@@ -4,15 +4,29 @@
 }
 
 .player-story-cutscene-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(760px, calc(100vw - 32px));
   max-height: min(860px, calc(100vh - 32px));
+  height: auto;
+  aspect-ratio: auto;
+  overflow: hidden;
   border-color: color-mix(in srgb, var(--player-terminal-cyan, #49d7ff) 48%, transparent);
   box-shadow: 0 32px 90px rgba(0, 0, 0, .72), 0 0 48px rgba(73, 215, 255, .12);
 }
 
 .player-story-cutscene-modal > .player-terminal-modal-body {
+  position: relative;
+  inset: auto;
   display: grid;
   gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.player-story-cutscene-modal > .player-terminal-modal-footer {
+  position: relative;
+  z-index: 1;
 }
 
 .player-story-cutscene-media,

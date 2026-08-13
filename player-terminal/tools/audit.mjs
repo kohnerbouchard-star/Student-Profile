@@ -1,5 +1,4 @@
 import { access, readFile, readdir, stat } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 
@@ -11,6 +10,10 @@ const required = [
   "css/player-terminal-ux.css",
   "css/player-terminal-polish.css",
   "css/player-terminal-normalization.css",
+  "css/player-terminal-tokens.css",
+  "css/player-terminal-foundation.css",
+  "css/player-terminal-shell-compat.css",
+  "css/routes/player-terminal-dashboard.css",
   "assets/images/econovaria-world-map.png",
   "assets/map/country-regions.json",
   "src/main.js",
@@ -34,11 +37,17 @@ const required = [
   "src/pages/messages-page.js",
   "src/pages/progression-page.js",
   "src/pages/profile-page.js",
+  "tests/player-terminal-css-foundation.mjs",
+  "tests/player-terminal-map-protection.mjs",
+  "tests/player-terminal-dashboard-refresh.mjs",
+  "tests/browser/player-dashboard-refresh.spec.mjs",
   "UX_STABILIZATION.md",
   "UX_RESEARCH_AND_DECISIONS.md",
   "PLAYER_API_CONNECTIONS.md",
   "SESSION_ADAPTER.md",
   "V7_STYLE_LOCK.md",
+  "PLAYER_TERMINAL_REFRESH_FOUNDATION.md",
+  "PLAYER_TERMINAL_DASHBOARD_REFRESH.md",
   "UI_MAP_PASS.md",
   "VISUAL_NORMALIZATION.md",
   "VISUAL_AUDIT_V74.md",
@@ -101,18 +110,56 @@ for (const marker of [
   if (!uxCss.includes(marker)) throw new Error(`Required v7 UX marker is missing: ${marker}`);
 }
 
-const lockedHashes = {
-  "css/player-terminal-base.css": "8da4902d9851b579704bf71d37c3e2e5b49f27c1f6c621746ffd0c77879fdd0e",
-  "css/player-terminal.css": "004ffcf7265ebf0f72de2064cf9ed7e554aecd08568be54413f92a3833f3892a",
-  "css/player-terminal-ux.css": "4f960ad2e878500569ed0863e43350c9b662f5de99de67bc20d6656cae642356",
-  "css/player-terminal-polish.css": "09ea86afa5e977b628f2b65c394b0428437b4917c8e176e2a1a1988c0da1bbf8",
-  "src/components/icons.js": "1cabd37bbcc4c98f73d12a64b6e95316d3b2cf18c304defd6612fc2dba8ef751"
-};
-for (const [relative, expected] of Object.entries(lockedHashes)) {
-  const buffer = await readFile(path.join(root, relative));
-  const actual = createHash("sha256").update(buffer).digest("hex");
-  if (actual !== expected) throw new Error(`V7 style/icon lock changed: ${relative}`);
+const tokensCss = await readFile(path.join(root, "css/player-terminal-tokens.css"), "utf8");
+for (const marker of [
+  "refresh foundation — design tokens",
+  "--player-text-label: 0.75rem",
+  "--player-control-md: 2.75rem",
+  "--player-icon-nav: 1.25rem",
+  "--player-terminal-type-label: var(--player-text-label)"
+]) {
+  if (!tokensCss.includes(marker)) throw new Error(`Required Player token is missing: ${marker}`);
 }
+
+const foundationCss = await readFile(path.join(root, "css/player-terminal-foundation.css"), "utf8");
+for (const marker of [
+  "refresh foundation — shell ownership",
+  ".player-terminal-shell",
+  ".player-terminal-nav-item",
+  ".player-terminal-app-topbar",
+  ".player-terminal-mobile-nav"
+]) {
+  if (!foundationCss.includes(marker)) throw new Error(`Required Player foundation marker is missing: ${marker}`);
+}
+if (/!important\b/.test(tokensCss) || /!important\b/.test(foundationCss)) {
+  throw new Error("The Player refresh foundation must not add !important declarations.");
+}
+if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationCss)) {
+  throw new Error("The Player shell foundation must not style the protected interactive map.");
+}
+
+const shellCompatCss = await readFile(path.join(root, "css/player-terminal-shell-compat.css"), "utf8");
+if (!shellCompatCss.includes("Temporary bounded legacy cascade takeover.")) {
+  throw new Error("The bounded shell compatibility marker is missing.");
+}
+
+const dashboardCss = await readFile(path.join(root, "css/routes/player-terminal-dashboard.css"), "utf8");
+for (const marker of [
+  "Dashboard and interactive-map chrome",
+  ".player-terminal-dashboard-page",
+  ".player-terminal-command-layout",
+  ".player-terminal-map-hud",
+  ".player-terminal-map-footer",
+  ".player-terminal-country-modal"
+]) {
+  if (!dashboardCss.includes(marker)) throw new Error(`Required Dashboard route marker is missing: ${marker}`);
+}
+if (/!important\b/.test(dashboardCss)) throw new Error("The Dashboard route owner must not add !important declarations.");
+if (/\.player-terminal-(?:shell|left-menu|nav-item|app-topbar)/.test(dashboardCss)) {
+  throw new Error("The Dashboard route owner crossed into shell ownership.");
+}
+const dashboardCssStats = await stat(path.join(root, "css/routes/player-terminal-dashboard.css"));
+if (dashboardCssStats.size > 36_000) throw new Error("The Dashboard route owner exceeded its 36 KB budget.");
 
 const polishCss = await readFile(path.join(root, "css/player-terminal-polish.css"), "utf8");
 for (const marker of [
@@ -122,7 +169,7 @@ for (const marker of [
   "Specific fit corrections found during the visual audit",
   ".player-terminal-contract-tabs"
 ]) {
-  if (!polishCss.includes(marker)) throw new Error(`Required UI/map polish marker is missing: ${marker}`);
+  if (!polishCss.includes(marker)) throw new Error(`Required UI/map compatibility marker is missing: ${marker}`);
 }
 
 const normalizationCss = await readFile(path.join(root, "css/player-terminal-normalization.css"), "utf8");
@@ -134,12 +181,18 @@ for (const marker of [
   ".player-terminal-loan-offer > div",
   "A row-oriented search field must not retain a 240px flex-basis"
 ]) {
-  if (!normalizationCss.includes(marker)) throw new Error(`Required v7.4 normalization marker is missing: ${marker}`);
+  if (!normalizationCss.includes(marker)) throw new Error(`Required v7.4 compatibility marker is missing: ${marker}`);
 }
 
 const indexSource = await readFile(path.join(root, "index.html"), "utf8");
-if (!indexSource.includes("css/player-terminal-normalization.css")) {
-  throw new Error("v7.4 normalization stylesheet is not loaded by index.html.");
+const normalizationIndex = indexSource.indexOf("css/player-terminal-normalization.css");
+const tokensIndex = indexSource.indexOf("css/player-terminal-tokens.css");
+const foundationIndex = indexSource.indexOf("css/player-terminal-foundation.css");
+const compatIndex = indexSource.indexOf("css/player-terminal-shell-compat.css");
+const dashboardIndex = indexSource.indexOf("css/routes/player-terminal-dashboard.css");
+const skeletonIndex = indexSource.indexOf("css/player-terminal-skeletons.css");
+if (!(normalizationIndex >= 0 && normalizationIndex < tokensIndex && tokensIndex < foundationIndex && foundationIndex < compatIndex && compatIndex < dashboardIndex && dashboardIndex < skeletonIndex)) {
+  throw new Error("Player refresh stylesheets are not loaded in the required ownership order.");
 }
 
 const mapSource = await readFile(path.join(root, "src/data/map-regions.js"), "utf8");
@@ -148,8 +201,17 @@ for (const marker of ["ECONOVARIA_MAP_SIZE", "ECONOVARIA_COUNTRY_REGIONS", "coun
 }
 
 const dashboardSource = await readFile(path.join(root, "src/pages/dashboard-page.js"), "utf8");
-for (const marker of ["renderCountryOverlay", "player-terminal-country-overlay", "player-terminal-country-border", "data-player-country"]) {
-  if (!dashboardSource.includes(marker)) throw new Error(`Required interactive map renderer marker is missing: ${marker}`);
+for (const marker of [
+  "renderCountryOverlay",
+  "player-terminal-country-overlay",
+  "player-terminal-country-border",
+  "data-player-country",
+  "player-terminal-dashboard-page",
+  "player-terminal-map-hud",
+  "player-terminal-map-footer",
+  "aria-label=\"Home market summary\""
+]) {
+  if (!dashboardSource.includes(marker)) throw new Error(`Required Dashboard or map renderer marker is missing: ${marker}`);
 }
 
 const appSource = await readFile(path.join(root, "src/app.js"), "utf8");
@@ -198,4 +260,4 @@ for (const marker of ["normalizePlayerSessionHandoff", "applyPlayerSessionHandof
 if (!appSource.includes("connectSession")) throw new Error("Public connectSession handoff is missing.");
 if (!appSource.includes("config.sessionReadyEvent") || !appSource.includes("config.sessionInvalidEvent")) throw new Error("Session handoff events are missing.");
 
-console.log(`Audit passed: ${required.length} required files and ${sourceFiles.length} source artifacts verified for v7.4 visual normalization.`);
+console.log(`Audit passed: ${required.length} required files and ${sourceFiles.length} source artifacts verified with Player refresh foundation, route-owned Dashboard, and protected map behavior.`);

@@ -1,20 +1,41 @@
-# V7 Visual and Icon Lock
+# Legacy V7 Baseline and Refresh Ratchet
 
-The approved v7 visual files and icon component remain byte-for-byte unchanged.
+The Player Terminal v7 files remain part of the compatibility stack while the refresh migrates visual ownership in bounded tranches. They are no longer treated as immutable byte artifacts.
 
-| File | SHA-256 |
+The former stylesheet and icon hash lock was retired on August 13, 2026. It prevented deliberate CSS cleanup and encouraged each visual correction to be appended as another global override layer. Verification now protects behavior, accessibility, ownership boundaries, file budgets, and the interactive map rather than requiring exact legacy bytes.
+
+## Current ownership
+
+| Responsibility | Authoritative owner |
 |---|---|
-| `css/player-terminal-base.css` | `8da4902d9851b579704bf71d37c3e2e5b49f27c1f6c621746ffd0c77879fdd0e` |
-| `css/player-terminal.css` | `004ffcf7265ebf0f72de2064cf9ed7e554aecd08568be54413f92a3833f3892a` |
-| `css/player-terminal-ux.css` | `4f960ad2e878500569ed0863e43350c9b662f5de99de67bc20d6656cae642356` |
-| `css/player-terminal-polish.css` | `09ea86afa5e977b628f2b65c394b0428437b4917c8e176e2a1a1988c0da1bbf8` |
-| `src/components/icons.js` | `1cabd37bbcc4c98f73d12a64b6e95316d3b2cf18c304defd6612fc2dba8ef751` |
+| Spacing, typography, control sizes, icon roles, shell dimensions | `css/player-terminal-tokens.css` |
+| Desktop and mobile shell, navigation, top bar, page hierarchy, shared controls | `css/player-terminal-foundation.css` |
+| Temporary priority bridge for pre-foundation shell rules | `css/player-terminal-shell-compat.css` |
+| Interactive map geometry | `src/data/map-regions.js` |
+| Interactive map rendering | `src/pages/dashboard-page.js` |
+| Interactive map pointer and keyboard handling | `src/app.js` |
+| Interactive map presentation during the foundation tranche | `css/player-terminal-polish.css` |
+| Route-specific compatibility styles | Existing v7 CSS until each route is migrated |
 
-v7.4 adds one final stylesheet:
+## Ratchets
 
-- `css/player-terminal-normalization.css`
-- SHA-256: `980abdaa806a4247be1370143bcb1d5becb03385356500157a52062d80f14ded`
+- New generic `polish`, `normalization`, `override`, or `fix` stylesheets are prohibited.
+- The token and core foundation files must not use `!important`.
+- `player-terminal-shell-compat.css` may use at most 40 temporary `!important` declarations, all isolated after the `Temporary bounded legacy cascade takeover.` marker. This exception exists only to defeat pre-foundation shell rules and must decrease as `player-terminal-ux.css` is retired.
+- The foundation may not style map image, map overlay, country geometry, hit regions, markers, borders, or map instructions.
+- The token file is limited to 8 KB, the core shell foundation to 24 KB, and the temporary shell compatibility boundary to 5 KB.
+- Player labels and controls use semantic token roles instead of new fixed sub-11px text.
+- Existing v7 CSS may be reduced or retired as route ownership moves forward; new route work must not append another generation to it.
 
-The normalization layer changes only typography roles, spacing, wrapping, grid shrink behavior, safe padding, and mobile containment. It does not replace the locked visual stack.
+## Verification
 
-The dashboard map geometry, session adapter, provisional API connection map, and route renderers remain intact except for the CSS-driven fit corrections documented in `VISUAL_NORMALIZATION.md`.
+Run:
+
+```bash
+npm run css:foundation
+npm run map-protection
+npm run audit
+npm run audit:v75
+```
+
+Historical v7.4 preview images remain repository records. They are not the acceptance baseline for the refreshed terminal.
