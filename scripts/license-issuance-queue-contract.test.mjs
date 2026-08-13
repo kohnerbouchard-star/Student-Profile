@@ -27,8 +27,12 @@ const WEBHOOK = new URL(
   "../backend/supabase/functions/license-payment-webhook/index.ts",
   import.meta.url,
 );
-const WORKER = new URL(
+const ISSUANCE_WORKER = new URL(
   "../backend/supabase/functions/license-issuance-worker/index.ts",
+  import.meta.url,
+);
+const EMAIL_WORKER = new URL(
+  "../backend/supabase/functions/license-email-worker/index.ts",
   import.meta.url,
 );
 const EDGE_MANIFEST = new URL(
@@ -101,7 +105,6 @@ test("database queue is durable, leased, parallel-safe, and idempotent", async (
     "enqueue_paid_license_v1",
     "claim_license_issuance_jobs_v1",
     "materialize_issued_purchase_code_v1",
-    "complete_license_issuance_job_v1",
     "retry_license_issuance_job_v1",
     "configure_license_issuance_scheduler_v1",
     "verify_runtime_scheduler_token_v1",
@@ -122,10 +125,7 @@ test("database queue is durable, leased, parallel-safe, and idempotent", async (
     source,
     /\b(?:plaintext_code|plain_code|license_code|raw_payload)\s+(?:text|json|jsonb|bytea)\b/iu,
   );
-  assert.match(
-    source,
-    /max_redemptions\s*=\s*1/u,
-  );
+  assert.match(source, /max_redemptions\s*=\s*1/u);
   assert.match(
     source,
     /revoke all on table private\.license_issuance_jobs[\s\S]+service_role/u,
@@ -177,10 +177,7 @@ test("scheduler has a service-role kill switch", async () => {
     assert.ok(source.toLowerCase().includes(required.toLowerCase()), required);
   }
 
-  assert.match(
-    source,
-    /where jobname\s*=\s*v_scheduler_name/u,
-  );
+  assert.match(source, /where jobname\s*=\s*v_scheduler_name/u);
 });
 
 test("payment ingress authenticates the raw body and acknowledges only durable writes", async () => {
@@ -201,37 +198,65 @@ test("payment ingress authenticates the raw body and acknowledges only durable w
     assert.ok(source.includes(required), required);
   }
 
-  assert.match(
-    source,
-    /Math\.abs\([\s\S]+SIGNATURE_WINDOW_SECONDS/u,
-  );
+  assert.match(source, /Math\.abs\([\s\S]+SIGNATURE_WINDOW_SECONDS/u);
   assert.doesNotMatch(source, /licenseDurationDays/u);
   assert.doesNotMatch(source, /purchaseCodeExpiresAfterDays/u);
   assert.doesNotMatch(source, /console\.(?:log|debug)\(/u);
 });
 
-test("worker derives the same code on retry and uses idempotent email delivery", async () => {
-  const source = await readFile(WORKER, "utf8");
+test("issuance worker materializes one code and commits one email-outbox job", async () => {
+  const source = await readFile(ISSUANCE_WORKER, "utf8");
 
   for (const required of [
     "ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET",
     "ECONOVARIA_PURCHASE_CODE_HMAC_SECRET",
-    "claim_license_issuance_jobs_v1",
-    "materialize_issued_purchase_code_v1",
-    "complete_license_issuance_job_v1",
+    "claim_license_materialization_jobs_v2",
+    "materialize_license_and_enqueue_email_v2",
     "retry_license_issuance_job_v1",
-    "Idempotency-Key",
-    "license-issuance/${job.job_id}/delivery-v1",
-    "DELIVERY_CONCURRENCY",
-    "email_provider_rate_limited",
+    "PROCESSING_CONCURRENCY",
     "redactLicenseCodes",
   ]) {
     assert.ok(source.includes(required), required);
   }
 
+  assert.doesNotMatch(source, /RESEND_API_KEY/u);
+  assert.doesNotMatch(source, /Idempotency-Key/u);
+  assert.doesNotMatch(source, /api\.resend\.com/u);
   assert.doesNotMatch(
     source,
-    /p_(?:plain|raw|display)_?(?:license_)?code/u,
+    /console\.(?:log|debug)\([^)]*licenseCode/u,
+  );
+});
+
+test("email worker regenerates the code and sends through a stable idempotency key", async () => {
+  const source = await readFile(EMAIL_WORKER, "utf8");
+
+  for (const required of [
+    "ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET",
+    "ECONOVARIA_PURCHASE_CODE_HMAC_SECRET",
+    "RESEND_API_KEY",
+    "claim_license_email_jobs_v1",
+    "complete_license_email_delivery_v1",
+    "retry_license_email_job_v1",
+    "Idempotency-Key",
+    "job.idempotency_key",
+    "concurrent_idempotent_requests",
+    "invalid_idempotent_request",
+    "license_email_code_verifier_mismatch",
+    "constantTimeEqualHex",
+    "DELIVERY_CONCURRENCY",
+    "redactLicenseCodes",
+  ]) {
+    assert.ok(source.includes(required), required);
+  }
+
+  assert.match(
+    source,
+    /deriveLicenseCode\([\s\S]+jobId:\s*job\.issuance_job_id[\s\S]+nonce:\s*job\.code_generation_nonce/u,
+  );
+  assert.match(
+    source,
+    /hashIssuedPurchaseCode\([\s\S]+job\.expected_code_hash/u,
   );
   assert.doesNotMatch(
     source,
@@ -239,7 +264,7 @@ test("worker derives the same code on retry and uses idempotent email delivery",
   );
 });
 
-test("deployment inventory keeps payment issuance isolated and dormant in staging", async () => {
+test("deployment inventory keeps payment fulfillment isolated and dormant in staging", async () => {
   const manifest = JSON.parse(await readFile(EDGE_MANIFEST, "utf8"));
   const temporary = new Map(
     manifest.temporaryStagingFunctions.map((entry) => [
@@ -249,29 +274,25 @@ test("deployment inventory keeps payment issuance isolated and dormant in stagin
   );
   assert.equal(temporary.get("license-payment-webhook"), false);
   assert.equal(temporary.get("license-issuance-worker"), false);
+  assert.equal(temporary.get("license-email-worker"), false);
 
   const workflow = await readFile(STAGING_WORKFLOW, "utf8");
-  assert.match(workflow, /refs\/heads\/feat\/license-issuance-queue-v1/u);
   assert.match(workflow, /environment:\s+staging/u);
   assert.match(workflow, /--no-verify-jwt/u);
   assert.match(
     workflow,
-    /20260813091500_harden_license_email_idempotency_window_v1\.sql/u,
-  );
-  assert.match(
-    workflow,
-    /20260813093000_add_license_issuance_scheduler_safety_switch_v1\.sql/u,
+    /20260813103[0-3]00_[a-z0-9_]+\.sql/u,
   );
   assert.match(workflow, /disable_license_issuance_scheduler_v1/u);
+  assert.match(workflow, /disable_license_email_scheduler_v1/u);
   assert.match(workflow, /enable_scheduler:/u);
   assert.match(
     workflow,
     /github\.event_name == 'workflow_dispatch' && inputs\.enable_scheduler == true/u,
   );
-  assert.match(
-    workflow,
-    /configure_license_issuance_scheduler_v1/u,
-  );
+  assert.match(workflow, /configure_license_issuance_scheduler_v1/u);
+  assert.match(workflow, /configure_license_email_scheduler_v1/u);
+  assert.match(workflow, /license-email-worker/u);
   assert.match(workflow, /production-hold:/u);
   assert.doesNotMatch(
     workflow,

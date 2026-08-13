@@ -133,6 +133,10 @@
     {
       "slug": "license-issuance-worker",
       "verifyJwt": false
+    },
+    {
+      "slug": "license-email-worker",
+      "verifyJwt": false
     }
   ],
   "sourceOnlyFunctions": [
