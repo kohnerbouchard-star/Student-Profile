@@ -1,0 +1,72 @@
+name: Bootstrap Auth Email Files V2
+
+on:
+  push:
+    branches:
+      - feat/branded-supabase-auth-emails-v1
+    paths:
+      - ".github/workflows/bootstrap-auth-email-files-v2.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bootstrap-auth-email-files-v2
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/branded-supabase-auth-emails-v1
+          fetch-depth: 0
+
+      - name: Materialize reviewed Auth email catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/feat/branded-supabase-auth-emails-v1"
+          test "$(find .github/bootstrap-auth-email -maxdepth 1 -type f -name 'chunk-*' | wc -l)" = "7"
+          cat .github/bootstrap-auth-email/chunk-* > "$RUNNER_TEMP/auth-email-catalog.tar.gz.b64"
+          base64 --decode "$RUNNER_TEMP/auth-email-catalog.tar.gz.b64" > "$RUNNER_TEMP/auth-email-catalog.tar.gz"
+          echo "60b78d0d6c26d1d6379c1c4d4e9b32c283f3e9af83e5776bc7427af9876a20cb  $RUNNER_TEMP/auth-email-catalog.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/auth-email-catalog.tar.gz" -C .
+
+      - name: Validate generated source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/build-supabase-auth-email-config.mjs
+          node --check scripts/snapshot-supabase-auth-email-config.mjs
+          node --check scripts/verify-supabase-auth-email-config.mjs
+          node scripts/build-supabase-auth-email-config.mjs --check
+          node --test scripts/auth-email-template-contract.test.mjs
+
+      - name: Commit exact reviewed scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            .github/workflows/admin-auth-email-contract.yml \
+            .github/workflows/admin-auth-email-staging.yml \
+            .github/workflows/admin-auth-email-production-promote.yml \
+            backend/supabase/auth-email-template-manifest.json \
+            backend/supabase/auth-email-templates \
+            docs/operations/auth-email-branding-v1.md \
+            scripts/auth-email-template-contract.test.mjs \
+            scripts/build-supabase-auth-email-config.mjs \
+            scripts/snapshot-supabase-auth-email-config.mjs \
+            scripts/verify-supabase-auth-email-config.mjs
+          git rm -r -- .github/bootstrap-auth-email
+          git rm -- \
+            .github/workflows/bootstrap-auth-email-files.yml \
+            .github/workflows/bootstrap-auth-email-files-v2.yml
+          git diff --cached --check
+          git commit -m "feat(auth): add branded Supabase email catalog"
+          git push origin HEAD:feat/branded-supabase-auth-emails-v1
