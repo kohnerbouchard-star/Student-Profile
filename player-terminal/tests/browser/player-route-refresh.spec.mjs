@@ -94,7 +94,21 @@ test("shared route owner is active across every Player Terminal route family", a
       const visible = (element) => Boolean(element && element.getClientRects().length);
       const numericStyle = (element, property) => element ? Number.parseFloat(getComputedStyle(element)[property]) : 0;
       const headingCopy = document.querySelector(".player-terminal-page-heading p");
-      const panel = [...document.querySelectorAll(".player-terminal-panel")].find(visible);
+      const routeSurface = [...document.querySelectorAll([
+        ".player-terminal-panel",
+        ".player-terminal-store-card",
+        ".player-terminal-inventory-card",
+        ".player-terminal-marketplace-card",
+        ".player-terminal-business-product",
+        ".player-terminal-recipe-row",
+        ".player-terminal-loan-offer",
+        ".player-terminal-news-row",
+        ".player-terminal-asset-row",
+        ".player-terminal-contract-row",
+        ".player-terminal-transaction-row",
+        ".player-terminal-thread-row",
+        ".player-terminal-bank-card"
+      ].join(","))].find(visible);
       const labels = [...document.querySelectorAll([
         ".player-terminal-metric-card small",
         ".player-terminal-filter-row button",
@@ -110,13 +124,13 @@ test("shared route owner is active across every Player Terminal route family", a
       ].join(","))].filter(visible);
       return {
         headingCopySize: numericStyle(headingCopy, "fontSize"),
-        panelRadius: numericStyle(panel, "borderRadius"),
+        surfaceRadius: numericStyle(routeSurface, "borderRadius"),
         minimumLabelSize: labels.length ? Math.min(...labels.map((element) => numericStyle(element, "fontSize"))) : 12,
       };
     });
 
     expect(result.headingCopySize).toBeGreaterThanOrEqual(13);
-    expect(result.panelRadius).toBeGreaterThanOrEqual(6);
+    expect(result.surfaceRadius).toBeGreaterThanOrEqual(6);
     expect(result.minimumLabelSize).toBeGreaterThanOrEqual(11);
 
     const overflow = await horizontalOverflow(page);
