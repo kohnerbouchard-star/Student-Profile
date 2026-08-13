@@ -53,4 +53,6 @@ The compiler produces only reviewed `mailer_subjects_*`, `mailer_templates_*`, a
 
 ## SMTP dependency
 
-Template deployment is independent from SMTP configuration. Production delivery still requires a verified transactional domain and custom SMTP credentials in Supabase Auth. A template workflow reports whether custom SMTP appears configured, but it never reads, stores, or exports the SMTP password.
+Hosted Supabase projects using the free-tier default email provider cannot modify Auth email templates. The rollout workflows therefore verify that `smtp_host`, `smtp_user`, and `smtp_admin_email` are configured before making the first template PATCH. They fail before mutation when custom SMTP is absent.
+
+Production delivery requires a verified transactional domain and custom SMTP credentials in Supabase Auth. The workflows report whether custom SMTP appears configured, but they never read, store, or export the SMTP password. Configure Resend SMTP separately in staging and production, then run the protected staging candidate before production promotion.

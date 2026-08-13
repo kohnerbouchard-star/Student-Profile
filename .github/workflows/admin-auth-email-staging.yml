@@ -94,6 +94,14 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/config/auth" \
             > "$RUNNER_TEMP/admin-auth-email-staging-before-raw.json"
+          if ! jq -e '
+            ((.smtp_host // "") | length > 0) and
+            ((.smtp_user // "") | length > 0) and
+            ((.smtp_admin_email // "") | length > 0)
+          ' "$RUNNER_TEMP/admin-auth-email-staging-before-raw.json" > /dev/null; then
+            echo "::error::Supabase Auth custom SMTP is not configured. Hosted template changes are blocked while the project uses the default email provider."
+            exit 1
+          fi
           node scripts/snapshot-supabase-auth-email-config.mjs \
             --environment staging \
             --actual "$RUNNER_TEMP/admin-auth-email-staging-before-raw.json" \
