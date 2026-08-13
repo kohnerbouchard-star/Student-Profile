@@ -1,7 +1,7 @@
 /* Econovaria Player Terminal refresh foundation — design tokens.
    This is the authoritative source for shell spacing, type, controls, and icon roles. */
 
-:where(.player-terminal-app-root, [data-player-terminal-root]) {
+:where(.player-terminal-app-root, [data-player-terminal-root], .player-terminal-modal-backdrop) {
   color-scheme: dark;
 
   --player-color-void: #020810;

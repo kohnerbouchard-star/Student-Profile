@@ -30,6 +30,7 @@ async function configurePreview(page) {
 async function openRoute(page, route) {
   await page.goto(`/?preview=1#${route}`);
   await expect(page.locator(".player-terminal-page")).toBeVisible();
+  await expect(page.locator(".player-terminal-page-heading p")).toBeVisible();
   await expect(page.locator(".player-terminal-route-error")).toHaveCount(0);
 }
 
