@@ -32,7 +32,7 @@ jobs:
       - name: Fetch and verify bundle comments
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA256: 1bbd79fa62a87bf0fc68dd82ca6121bcb74bf9adda58bc0f2612f6f20ed85fe8
+          EXPECTED_SHA256: 0c207da64c423bb71a8a08cc1d77bcb2067c0e8707c904be494d92f112bd0812
           EXPECTED_AUTHOR: kohnerbouchard-star
           PR_NUMBER: "593"
         shell: bash
@@ -58,7 +58,7 @@ jobs:
           expected_sha = os.environ["EXPECTED_SHA256"]
           expected_author = os.environ["EXPECTED_AUTHOR"]
           pattern = re.compile(
-              r"^<!-- ECONOVARIA_LICENSE_BUNDLE_V1 part=(\d+) total=(\d+) "
+              r"^<!-- ECONOVARIA_LICENSE_BUNDLE_V2 part=(\d+) total=(\d+) "
               r"sha256=([0-9a-f]{64}) -->\n([A-Za-z0-9+/=]+)$"
           )
           parts = {}
@@ -80,10 +80,11 @@ jobs:
               parts[part] = match.group(4)
               comment_ids.append(str(comment["id"]))
 
-          if total != 3 or sorted(parts) != [1, 2, 3]:
+          expected_parts = list(range(1, 13))
+          if total != 12 or sorted(parts) != expected_parts:
               raise SystemExit(f"missing source-bundle parts: total={total}, parts={sorted(parts)}")
 
-          encoded = "".join(parts[index] for index in range(1, total + 1))
+          encoded = "".join(parts[index] for index in expected_parts)
           raw = base64.b64decode(encoded, validate=True)
           actual_sha = hashlib.sha256(raw).hexdigest()
           if actual_sha != expected_sha:
