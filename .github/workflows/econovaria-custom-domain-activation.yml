@@ -1,0 +1,767 @@
+name: Econovaria Custom Domain Activation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "vercel.json"
+      - ".github/workflows/econovaria-custom-domain-activation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econovaria-custom-domain-activation
+  cancel-in-progress: false
+
+env:
+  SOURCE_COMMIT: ${{ github.sha }}
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_DOMAIN: econovaria.com
+  WWW_DOMAIN: www.econovaria.com
+  PRODUCTION_ORIGIN: https://econovaria.com
+  WWW_ORIGIN: https://www.econovaria.com
+  LEGACY_PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  WEB_ALLOWED_ORIGINS: https://econovaria.com,https://www.econovaria.com,https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app
+  VERCEL_APEX_IPV4: 76.76.21.21
+  VERCEL_WWW_CNAME: cname.vercel-dns-0.com
+  SUPABASE_CLI_VERSION: 2.109.1
+
+jobs:
+  activate:
+    name: Verify domain, move DNS, and activate production origin
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_DNS_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID || secrets.CF_ZONE_ID }}
+
+    steps:
+      - name: Enforce protected production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          test "$PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$DENIED_STAGING_PROJECT_REF" = "eecvbssdvarfcykcfrny"
+          test "$PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
+          test "$PRODUCTION_DOMAIN" = "econovaria.com"
+          test "$WWW_DOMAIN" = "www.econovaria.com"
+          test "$PRODUCTION_ORIGIN" = "https://econovaria.com"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          [[ "$WEB_ALLOWED_ORIGINS" == *"$PRODUCTION_ORIGIN"* ]]
+          [[ "$WEB_ALLOWED_ORIGINS" == *"$WWW_ORIGIN"* ]]
+          [[ "$WEB_ALLOWED_ORIGINS" == *"$LEGACY_PRODUCTION_ORIGIN"* ]]
+          [[ "$WEB_ALLOWED_ORIGINS" != *"*"* ]]
+
+      - name: Check out exact activation source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Verify bounded Git-native deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const config = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
+          const aliases = Array.isArray(config.alias) ? [...config.alias].sort() : [];
+          const expectedAliases = [
+            process.env.PRODUCTION_DOMAIN,
+            process.env.WWW_DOMAIN,
+          ].sort();
+          if (JSON.stringify(aliases) !== JSON.stringify(expectedAliases)) {
+            throw new Error("Vercel custom-domain aliases are not exact.");
+          }
+          if (config.git?.deploymentEnabled?.main !== true) {
+            throw new Error("The bounded Git-native main deployment is not enabled.");
+          }
+          if (
+            config.git?.deploymentEnabled?.[
+              "ops/econovaria-git-native-domain-activation-20260813"
+            ] !== false
+          ) {
+            throw new Error("The activation branch must not create a preview deployment.");
+          }
+          if (config.outputDirectory !== "dist") {
+            throw new Error("The Vercel output directory changed unexpectedly.");
+          }
+          NODE
+          node --test scripts/live-runtime-attestation-contract.test.mjs
+
+      - name: Wait for exact main commit on the legacy production alias
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          health_path="$RUNNER_TEMP/legacy-production-health.json"
+          for attempt in $(seq 1 120); do
+            status="$(curl --silent --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 20 \
+              --header 'Cache-Control: no-cache' \
+              --output "$health_path" \
+              --write-out '%{http_code}' \
+              "$LEGACY_PRODUCTION_ORIGIN/api/health?domain_activation=$SOURCE_COMMIT" || true)"
+            if [[ "$status" == "200" ]] && node - "$health_path" "$SOURCE_COMMIT" "$PRODUCTION_PROJECT_REF" <<'NODE'
+          const fs = require("node:fs");
+          const [path, sourceCommit, projectRef] = process.argv.slice(2);
+          try {
+            const health = JSON.parse(fs.readFileSync(path, "utf8"));
+            if (
+              health.ok !== true ||
+              health.status !== "ready" ||
+              health.environment !== "production" ||
+              health.projectRef !== projectRef ||
+              health.sourceCommit !== sourceCommit
+            ) process.exit(1);
+          } catch {
+            process.exit(1);
+          }
+          NODE
+            then
+              ready=true
+              break
+            fi
+            if [[ "$attempt" != "120" ]]; then sleep 5; fi
+          done
+          test "$ready" = "true"
+
+      - name: Snapshot and reconcile Cloudflare web DNS when credentials are available
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const token = String(process.env.CLOUDFLARE_API_TOKEN || "").trim();
+          const configuredZoneId = String(process.env.CLOUDFLARE_ZONE_ID || "").trim();
+          const snapshotPath = process.env.CLOUDFLARE_SNAPSHOT_PATH;
+          const resultPath = process.env.CLOUDFLARE_RESULT_PATH;
+          const webTypes = new Set(["A", "AAAA", "CNAME"]);
+          const names = [process.env.PRODUCTION_DOMAIN, process.env.WWW_DOMAIN];
+
+          const emptySnapshot = {
+            schemaVersion: 1,
+            zoneId: null,
+            records: [],
+          };
+
+          if (!token) {
+            fs.writeFileSync(snapshotPath, `${JSON.stringify(emptySnapshot, null, 2)}\n`);
+            fs.writeFileSync(resultPath, `${JSON.stringify({
+              attempted: false,
+              applied: false,
+              reason: "cloudflare_dns_token_unavailable",
+            }, null, 2)}\n`);
+            process.exit(0);
+          }
+
+          const base = "https://api.cloudflare.com/client/v4";
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          };
+
+          async function request(path, init = {}) {
+            const response = await fetch(`${base}${path}`, {
+              ...init,
+              headers: { ...headers, ...(init.headers || {}) },
+            });
+            const text = await response.text();
+            let body;
+            try {
+              body = text ? JSON.parse(text) : {};
+            } catch {
+              body = { success: false, errors: [{ message: "non_json_response" }] };
+            }
+            if (!response.ok || body?.success === false) {
+              const details = Array.isArray(body?.errors)
+                ? body.errors.map((error) => error?.code || error?.message || "unknown").join(",")
+                : "unknown";
+              throw new Error(`Cloudflare API request failed (${response.status}:${details}).`);
+            }
+            return body;
+          }
+
+          async function listByName(zoneId, name) {
+            const body = await request(
+              `/zones/${encodeURIComponent(zoneId)}/dns_records?name=${encodeURIComponent(name)}&per_page=100`,
+            );
+            return Array.isArray(body.result) ? body.result : [];
+          }
+
+          async function deleteRecord(zoneId, id) {
+            await request(
+              `/zones/${encodeURIComponent(zoneId)}/dns_records/${encodeURIComponent(id)}`,
+              { method: "DELETE" },
+            );
+          }
+
+          async function createRecord(zoneId, record) {
+            await request(`/zones/${encodeURIComponent(zoneId)}/dns_records`, {
+              method: "POST",
+              body: JSON.stringify({
+                type: record.type,
+                name: record.name,
+                content: record.content,
+                ttl: Number.isInteger(record.ttl) ? record.ttl : 1,
+                proxied: record.proxied === true,
+              }),
+            });
+          }
+
+          async function restore(zoneId, snapshot) {
+            for (const name of names) {
+              const current = await listByName(zoneId, name);
+              for (const record of current) {
+                if (webTypes.has(String(record.type || "").toUpperCase())) {
+                  await deleteRecord(zoneId, record.id);
+                }
+              }
+            }
+            for (const record of snapshot.records) {
+              await createRecord(zoneId, record);
+            }
+          }
+
+          let zoneId = configuredZoneId;
+          let snapshot = emptySnapshot;
+          try {
+            if (!zoneId) {
+              const zones = await request(
+                `/zones?name=${encodeURIComponent(process.env.PRODUCTION_DOMAIN)}&status=active&per_page=50`,
+              );
+              const exact = (zones.result || []).filter(
+                (zone) => String(zone?.name || "").toLowerCase() === process.env.PRODUCTION_DOMAIN,
+              );
+              if (exact.length !== 1) {
+                throw new Error(`Expected one active Cloudflare zone; found ${exact.length}.`);
+              }
+              zoneId = exact[0].id;
+            }
+
+            const records = [];
+            for (const name of names) {
+              const current = await listByName(zoneId, name);
+              for (const record of current) {
+                if (!webTypes.has(String(record.type || "").toUpperCase())) continue;
+                records.push({
+                  type: record.type,
+                  name: record.name,
+                  content: record.content,
+                  ttl: record.ttl,
+                  proxied: record.proxied === true,
+                });
+              }
+            }
+            snapshot = { schemaVersion: 1, zoneId, records };
+            fs.writeFileSync(snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`);
+
+            async function reconcile(desired) {
+              const current = await listByName(zoneId, desired.name);
+              const webRecords = current.filter((record) =>
+                webTypes.has(String(record.type || "").toUpperCase())
+              );
+              for (const record of webRecords) {
+                await deleteRecord(zoneId, record.id);
+              }
+              await createRecord(zoneId, {
+                ...desired,
+                ttl: 1,
+                proxied: false,
+              });
+            }
+
+            await reconcile({
+              type: "A",
+              name: process.env.PRODUCTION_DOMAIN,
+              content: process.env.VERCEL_APEX_IPV4,
+            });
+            await reconcile({
+              type: "CNAME",
+              name: process.env.WWW_DOMAIN,
+              content: process.env.VERCEL_WWW_CNAME,
+            });
+
+            const apex = await listByName(zoneId, process.env.PRODUCTION_DOMAIN);
+            const www = await listByName(zoneId, process.env.WWW_DOMAIN);
+            const apexOk = apex.some((record) =>
+              record.type === "A" &&
+              record.content === process.env.VERCEL_APEX_IPV4 &&
+              record.proxied !== true
+            );
+            const wwwOk = www.some((record) =>
+              record.type === "CNAME" &&
+              String(record.content || "").replace(/\.$/u, "") ===
+                process.env.VERCEL_WWW_CNAME.replace(/\.$/u, "") &&
+              record.proxied !== true
+            );
+            if (!apexOk || !wwwOk) {
+              throw new Error("Cloudflare DNS did not match the Vercel routing plan.");
+            }
+
+            fs.writeFileSync(resultPath, `${JSON.stringify({
+              attempted: true,
+              applied: true,
+              zoneId,
+              apex: {
+                type: "A",
+                name: process.env.PRODUCTION_DOMAIN,
+                content: process.env.VERCEL_APEX_IPV4,
+              },
+              www: {
+                type: "CNAME",
+                name: process.env.WWW_DOMAIN,
+                content: process.env.VERCEL_WWW_CNAME,
+              },
+              previousWebRecordCount: snapshot.records.length,
+            }, null, 2)}\n`);
+          } catch (error) {
+            if (zoneId && snapshot.zoneId) {
+              try {
+                await restore(zoneId, snapshot);
+              } catch {
+                // The original error remains authoritative; rollback is best effort here.
+              }
+            }
+            fs.writeFileSync(resultPath, `${JSON.stringify({
+              attempted: true,
+              applied: false,
+              rolledBack: Boolean(zoneId && snapshot.zoneId),
+              error: error instanceof Error ? error.message : String(error),
+            }, null, 2)}\n`);
+            throw error;
+          }
+          NODE
+        env:
+          CLOUDFLARE_SNAPSHOT_PATH: ${{ runner.temp }}/cloudflare-before.json
+          CLOUDFLARE_RESULT_PATH: ${{ runner.temp }}/cloudflare-result.json
+
+      - name: Verify both custom hostnames serve the exact production commit
+        id: custom_health
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 150); do
+            apex_path="$RUNNER_TEMP/apex-health.json"
+            www_path="$RUNNER_TEMP/www-health.json"
+            apex_status="$(curl --silent --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 20 \
+              --header 'Cache-Control: no-cache' \
+              --output "$apex_path" \
+              --write-out '%{http_code}' \
+              "$PRODUCTION_ORIGIN/api/health?domain_activation=$SOURCE_COMMIT" || true)"
+            www_status="$(curl --silent --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 20 \
+              --header 'Cache-Control: no-cache' \
+              --output "$www_path" \
+              --write-out '%{http_code}' \
+              "$WWW_ORIGIN/api/health?domain_activation=$SOURCE_COMMIT" || true)"
+            if [[ "$apex_status" == "200" && "$www_status" == "200" ]] && \
+              node - "$apex_path" "$www_path" "$SOURCE_COMMIT" "$PRODUCTION_PROJECT_REF" <<'NODE'
+          const fs = require("node:fs");
+          const [apexPath, wwwPath, sourceCommit, projectRef] = process.argv.slice(2);
+          for (const path of [apexPath, wwwPath]) {
+            try {
+              const health = JSON.parse(fs.readFileSync(path, "utf8"));
+              if (
+                health.ok !== true ||
+                health.status !== "ready" ||
+                health.environment !== "production" ||
+                health.projectRef !== projectRef ||
+                health.sourceCommit !== sourceCommit
+              ) process.exit(1);
+            } catch {
+              process.exit(1);
+            }
+          }
+          NODE
+            then
+              ready=true
+              break
+            fi
+            if [[ "$attempt" != "150" ]]; then sleep 5; fi
+          done
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          if [[ "$ready" == "true" ]]; then
+            node - "$RUNNER_TEMP/apex-health.json" "$RUNNER_TEMP/www-health.json" "$RUNNER_TEMP/custom-domain-health.json" <<'NODE'
+          const fs = require("node:fs");
+          const [apexPath, wwwPath, outputPath] = process.argv.slice(2);
+          const apex = JSON.parse(fs.readFileSync(apexPath, "utf8"));
+          const www = JSON.parse(fs.readFileSync(wwwPath, "utf8"));
+          fs.writeFileSync(outputPath, `${JSON.stringify({ apex, www }, null, 2)}\n`);
+          NODE
+          fi
+
+      - name: Roll back Cloudflare web DNS if custom-domain health failed
+        if: steps.custom_health.outputs.ready != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const token = String(process.env.CLOUDFLARE_API_TOKEN || "").trim();
+          const result = JSON.parse(
+            fs.readFileSync(process.env.CLOUDFLARE_RESULT_PATH, "utf8"),
+          );
+          const snapshot = JSON.parse(
+            fs.readFileSync(process.env.CLOUDFLARE_SNAPSHOT_PATH, "utf8"),
+          );
+          if (!token || result?.applied !== true || !snapshot?.zoneId) process.exit(0);
+
+          const base = "https://api.cloudflare.com/client/v4";
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          };
+          const webTypes = new Set(["A", "AAAA", "CNAME"]);
+          const names = [process.env.PRODUCTION_DOMAIN, process.env.WWW_DOMAIN];
+
+          async function request(path, init = {}) {
+            const response = await fetch(`${base}${path}`, {
+              ...init,
+              headers: { ...headers, ...(init.headers || {}) },
+            });
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok || body?.success === false) {
+              throw new Error(`Cloudflare rollback request failed (${response.status}).`);
+            }
+            return body;
+          }
+
+          async function listByName(name) {
+            const body = await request(
+              `/zones/${encodeURIComponent(snapshot.zoneId)}/dns_records?name=${encodeURIComponent(name)}&per_page=100`,
+            );
+            return Array.isArray(body.result) ? body.result : [];
+          }
+
+          for (const name of names) {
+            const current = await listByName(name);
+            for (const record of current) {
+              if (!webTypes.has(String(record.type || "").toUpperCase())) continue;
+              await request(
+                `/zones/${encodeURIComponent(snapshot.zoneId)}/dns_records/${encodeURIComponent(record.id)}`,
+                { method: "DELETE" },
+              );
+            }
+          }
+
+          for (const record of snapshot.records || []) {
+            await request(
+              `/zones/${encodeURIComponent(snapshot.zoneId)}/dns_records`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  type: record.type,
+                  name: record.name,
+                  content: record.content,
+                  ttl: Number.isInteger(record.ttl) ? record.ttl : 1,
+                  proxied: record.proxied === true,
+                }),
+              },
+            );
+          }
+
+          fs.writeFileSync(
+            process.env.CLOUDFLARE_ROLLBACK_PATH,
+            `${JSON.stringify({
+              applied: true,
+              restoredWebRecordCount: (snapshot.records || []).length,
+            }, null, 2)}\n`,
+          );
+          NODE
+        env:
+          CLOUDFLARE_SNAPSHOT_PATH: ${{ runner.temp }}/cloudflare-before.json
+          CLOUDFLARE_RESULT_PATH: ${{ runner.temp }}/cloudflare-result.json
+          CLOUDFLARE_ROLLBACK_PATH: ${{ runner.temp }}/cloudflare-rollback.json
+
+      - name: Stop before Supabase mutation when custom domain is not healthy
+        if: steps.custom_health.outputs.ready != 'true'
+        shell: bash
+        run: |
+          echo "The exact production commit is not healthy on both custom hostnames." >&2
+          exit 1
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Activate the bounded production web-session CORS allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$WEB_ALLOWED_ORIGINS" \
+            --project-ref "$PRODUCTION_PROJECT_REF"
+          supabase secrets list \
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            > "$RUNNER_TEMP/production-secret-names.txt"
+          grep -q 'ECONOVARIA_WEB_ALLOWED_ORIGINS' \
+            "$RUNNER_TEMP/production-secret-names.txt"
+          rm -f "$RUNNER_TEMP/production-secret-names.txt"
+
+      - name: Activate Supabase Auth URLs for econovaria.com
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-before.json"
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const current = JSON.parse(
+            fs.readFileSync(process.env.AUTH_BEFORE_PATH, "utf8"),
+          );
+          const raw = current.uri_allow_list;
+          const redirects = Array.isArray(raw)
+            ? raw.map(String)
+            : String(raw || "").split(",").map((value) => value.trim()).filter(Boolean);
+          const additions = [
+            process.env.PRODUCTION_ORIGIN,
+            `${process.env.PRODUCTION_ORIGIN}/**`,
+            process.env.WWW_ORIGIN,
+            `${process.env.WWW_ORIGIN}/**`,
+            `${process.env.PRODUCTION_ORIGIN}/auth/recovery-start.html`,
+            `${process.env.PRODUCTION_ORIGIN}/auth/reset-password.html`,
+            `${process.env.WWW_ORIGIN}/auth/recovery-start.html`,
+            `${process.env.WWW_ORIGIN}/auth/reset-password.html`,
+            process.env.LEGACY_PRODUCTION_ORIGIN,
+            `${process.env.LEGACY_PRODUCTION_ORIGIN}/**`,
+          ];
+          const patch = {
+            site_url: process.env.PRODUCTION_ORIGIN,
+            uri_allow_list: [...new Set([...redirects, ...additions])].join(","),
+          };
+          for (const [key, value] of Object.entries(current)) {
+            if (
+              key.startsWith("mailer_templates_") &&
+              typeof value === "string" &&
+              value.includes(process.env.LEGACY_PRODUCTION_ORIGIN)
+            ) {
+              patch[key] = value
+                .split(process.env.LEGACY_PRODUCTION_ORIGIN)
+                .join(process.env.PRODUCTION_ORIGIN);
+            }
+          }
+          fs.writeFileSync(process.env.AUTH_PATCH_PATH, JSON.stringify(patch));
+          NODE
+
+          curl --fail --silent --show-error \
+            --request PATCH \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/auth-patch.json" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-patch-result.json"
+
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-after.json"
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const config = JSON.parse(
+            fs.readFileSync(process.env.AUTH_AFTER_PATH, "utf8"),
+          );
+          const raw = config.uri_allow_list;
+          const redirects = Array.isArray(raw)
+            ? raw.map(String)
+            : String(raw || "").split(",").map((value) => value.trim()).filter(Boolean);
+          const required = [
+            process.env.PRODUCTION_ORIGIN,
+            `${process.env.PRODUCTION_ORIGIN}/**`,
+            process.env.WWW_ORIGIN,
+            `${process.env.WWW_ORIGIN}/**`,
+            process.env.LEGACY_PRODUCTION_ORIGIN,
+            `${process.env.LEGACY_PRODUCTION_ORIGIN}/**`,
+          ];
+          if (config.site_url !== process.env.PRODUCTION_ORIGIN) {
+            throw new Error("Supabase Auth Site URL did not switch.");
+          }
+          for (const value of required) {
+            if (!redirects.includes(value)) {
+              throw new Error(`Supabase Auth redirect missing: ${value}`);
+            }
+          }
+          fs.writeFileSync(
+            process.env.AUTH_EVIDENCE_PATH,
+            `${JSON.stringify({
+              siteUrl: config.site_url,
+              requiredRedirectsPresent: true,
+              legacyMigrationRedirectRetained: true,
+            }, null, 2)}\n`,
+          );
+          NODE
+        env:
+          AUTH_BEFORE_PATH: ${{ runner.temp }}/auth-before.json
+          AUTH_PATCH_PATH: ${{ runner.temp }}/auth-patch.json
+          AUTH_AFTER_PATH: ${{ runner.temp }}/auth-after.json
+          AUTH_EVIDENCE_PATH: ${{ runner.temp }}/auth-evidence.json
+
+      - name: Verify production CORS acceptance and denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/web-session-api/login"
+          IFS=',' read -r -a origins <<< "$WEB_ALLOWED_ORIGINS"
+          for origin in "${origins[@]}"; do
+            headers="$RUNNER_TEMP/cors-$(printf '%s' "$origin" | sha256sum | cut -d' ' -f1).txt"
+            ready=false
+            for attempt in $(seq 1 30); do
+              status="$(curl --silent --show-error \
+                --request OPTIONS \
+                --header "Origin: $origin" \
+                --header 'Access-Control-Request-Method: POST' \
+                --header 'Access-Control-Request-Headers: apikey,content-type' \
+                --dump-header "$headers" \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                "$endpoint" || true)"
+              tr -d '\r' < "$headers" > "$headers.normalized" || true
+              if [[ "$status" == "204" ]] && \
+                grep -Fxiq "access-control-allow-origin: $origin" "$headers.normalized" && \
+                grep -Fxiq 'access-control-allow-credentials: true' "$headers.normalized"; then
+                ready=true
+                break
+              fi
+              if [[ "$attempt" != "30" ]]; then sleep 4; fi
+            done
+            test "$ready" = "true"
+          done
+
+          denied_status="$(curl --silent --show-error \
+            --request OPTIONS \
+            --header 'Origin: https://attacker.invalid' \
+            --header 'Access-Control-Request-Method: POST' \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            "$endpoint")"
+          test "$denied_status" = "403"
+          node - "$RUNNER_TEMP/cors-evidence.json" "$WEB_ALLOWED_ORIGINS" <<'NODE'
+          const fs = require("node:fs");
+          const [path, rawOrigins] = process.argv.slice(2);
+          fs.writeFileSync(path, `${JSON.stringify({
+            allowedOrigins: rawOrigins.split(","),
+            untrustedOriginDenied: true,
+          }, null, 2)}\n`);
+          NODE
+
+      - name: Reverify custom-domain health after Auth and CORS activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for origin in "$PRODUCTION_ORIGIN" "$WWW_ORIGIN"; do
+            path="$RUNNER_TEMP/final-$(printf '%s' "$origin" | sha256sum | cut -d' ' -f1).json"
+            status="$(curl --silent --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 20 \
+              --header 'Cache-Control: no-cache' \
+              --output "$path" \
+              --write-out '%{http_code}' \
+              "$origin/api/health?domain_activation=$SOURCE_COMMIT")"
+            test "$status" = "200"
+            node - "$path" "$SOURCE_COMMIT" "$PRODUCTION_PROJECT_REF" <<'NODE'
+          const fs = require("node:fs");
+          const [path, sourceCommit, projectRef] = process.argv.slice(2);
+          const health = JSON.parse(fs.readFileSync(path, "utf8"));
+          if (
+            health.ok !== true ||
+            health.status !== "ready" ||
+            health.environment !== "production" ||
+            health.projectRef !== projectRef ||
+            health.sourceCommit !== sourceCommit
+          ) {
+            throw new Error("Final custom-domain health verification failed.");
+          }
+          NODE
+          done
+
+      - name: Write sanitized activation evidence
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          function read(path) {
+            try {
+              return JSON.parse(fs.readFileSync(path, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+          const evidence = {
+            schemaVersion: 1,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            productionOrigin: process.env.PRODUCTION_ORIGIN,
+            wwwOrigin: process.env.WWW_ORIGIN,
+            legacyOriginRetainedDuringMigration: process.env.LEGACY_PRODUCTION_ORIGIN,
+            customDomainHealth: read(process.env.CUSTOM_HEALTH_PATH),
+            cloudflare: read(process.env.CLOUDFLARE_RESULT_PATH),
+            cloudflareRollback: read(process.env.CLOUDFLARE_ROLLBACK_PATH),
+            auth: read(process.env.AUTH_EVIDENCE_PATH),
+            cors: read(process.env.CORS_EVIDENCE_PATH),
+            secretValuesRecorded: false,
+          };
+          fs.writeFileSync(
+            process.env.EVIDENCE_PATH,
+            `${JSON.stringify(evidence, null, 2)}\n`,
+          );
+          NODE
+
+          {
+            echo "## Econovaria custom-domain activation"
+            echo "- Canonical origin: \`$PRODUCTION_ORIGIN\`"
+            echo "- WWW hostname: \`$WWW_ORIGIN\`"
+            echo "- Source commit: \`$SOURCE_COMMIT\`"
+            echo "- Supabase production project: \`$PRODUCTION_PROJECT_REF\`"
+            echo "- Legacy Vercel origin retained in migration CORS: \`true\`"
+            echo "- Secret values recorded: \`false\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          CUSTOM_HEALTH_PATH: ${{ runner.temp }}/custom-domain-health.json
+          CLOUDFLARE_RESULT_PATH: ${{ runner.temp }}/cloudflare-result.json
+          CLOUDFLARE_ROLLBACK_PATH: ${{ runner.temp }}/cloudflare-rollback.json
+          AUTH_EVIDENCE_PATH: ${{ runner.temp }}/auth-evidence.json
+          CORS_EVIDENCE_PATH: ${{ runner.temp }}/cors-evidence.json
+          EVIDENCE_PATH: ${{ runner.temp }}/econovaria-custom-domain-activation.json
+
+      - name: Upload sanitized activation evidence and DNS rollback snapshot
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: econovaria-custom-domain-activation-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/econovaria-custom-domain-activation.json
+            ${{ runner.temp }}/cloudflare-before.json
+            ${{ runner.temp }}/cloudflare-rollback.json
