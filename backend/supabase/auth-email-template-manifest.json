@@ -15,15 +15,15 @@
   "environments": {
     "staging": {
       "projectRef": "eecvbssdvarfcykcfrny",
-      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html",
-      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html",
+      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html?project_ref=eecvbssdvarfcykcfrny",
+      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html?project_ref=eecvbssdvarfcykcfrny",
       "appSignInUrl": "https://www.econovaria.com/?mode=admin",
       "notice": "STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE"
     },
     "production": {
       "projectRef": "cgiukdjwicykrmtkhudh",
-      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html",
-      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html",
+      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html?project_ref=cgiukdjwicykrmtkhudh",
+      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html?project_ref=cgiukdjwicykrmtkhudh",
       "appSignInUrl": "https://www.econovaria.com/?mode=admin",
       "notice": ""
     }
