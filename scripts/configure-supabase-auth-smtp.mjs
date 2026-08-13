@@ -10,7 +10,7 @@ const manifestPath = path.join(
 );
 const ENVIRONMENTS = new Set(["staging", "production"]);
 const MODES = new Set(["check", "apply"]);
-const RESEND_DOMAINS_URL = "https://api.resend.com/domains";
+const RESEND_DOMAINS_URL = "https://api.resend.com/domains?limit=100";
 const SUPABASE_MANAGEMENT_ORIGIN = "https://api.supabase.com";
 const DEFAULT_SENDER_NAME = "Econovaria Security";
 const MAX_RESPONSE_BYTES = 512 * 1024;
@@ -60,6 +60,25 @@ export function sanitizeSmtpConfig(config) {
     adminEmail: String(value.smtp_admin_email || ""),
     senderName: String(value.smtp_sender_name || ""),
   };
+}
+
+export function assertSmtpReplacementSafe(actual, sender) {
+  if (!actual.configured) return;
+  const expected = {
+    host: "smtp.resend.com",
+    port: "465",
+    user: "resend",
+    adminEmail: sender.senderEmail,
+    senderName: sender.senderName,
+  };
+  const mismatches = Object.entries(expected)
+    .filter(([key, value]) => actual[key] !== value)
+    .map(([key]) => key);
+  if (mismatches.length) {
+    throw new Error(
+      `Existing Supabase Auth custom SMTP differs in ${mismatches.join(", ")}; refusing to replace an unrelated provider or sender.`,
+    );
+  }
 }
 
 export async function configureSupabaseAuthSmtp(input, dependencies = {}) {
@@ -137,13 +156,14 @@ export async function configureSupabaseAuthSmtp(input, dependencies = {}) {
     "Supabase Auth configuration read",
   );
   const before = sanitizeSmtpConfig(beforeRaw);
+  if (mode === "apply") assertSmtpReplacementSafe(before, sender);
 
   let trackingUpdateApplied = false;
   let smtpUpdateApplied = false;
   if (mode === "apply") {
     await fetchJson(
       fetchImpl,
-      `${RESEND_DOMAINS_URL}/${encodeURIComponent(String(domain.id))}`,
+      `https://api.resend.com/domains/${encodeURIComponent(String(domain.id))}`,
       {
         method: "PATCH",
         headers: resendHeaders,
