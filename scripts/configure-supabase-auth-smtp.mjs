@@ -12,7 +12,6 @@ const ENVIRONMENTS = new Set(["staging", "production"]);
 const MODES = new Set(["check", "apply"]);
 const RESEND_DOMAINS_URL = "https://api.resend.com/domains";
 const SUPABASE_MANAGEMENT_ORIGIN = "https://api.supabase.com";
-const DEFAULT_FROM = "Econovaria Security <no-reply@econovaria.com>";
 const DEFAULT_SENDER_NAME = "Econovaria Security";
 const MAX_RESPONSE_BYTES = 512 * 1024;
 
@@ -28,8 +27,10 @@ export function parseSenderIdentity(rawValue) {
   if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u.test(senderDomain)) {
     throw new Error("ECONOVARIA_AUTH_EMAIL_FROM contains an invalid sender domain.");
   }
-  if (!senderName || senderName.length > 120) {
-    throw new Error("ECONOVARIA_AUTH_EMAIL_FROM contains an invalid sender name.");
+  if (senderName !== DEFAULT_SENDER_NAME) {
+    throw new Error(
+      `ECONOVARIA_AUTH_EMAIL_FROM must use the sender name ${DEFAULT_SENDER_NAME}.`,
+    );
   }
   return { senderName, senderEmail, senderDomain };
 }
@@ -77,7 +78,7 @@ export async function configureSupabaseAuthSmtp(input, dependencies = {}) {
   const accessToken = environmentValue("SUPABASE_ACCESS_TOKEN");
   const resendApiKey = environmentValue("RESEND_API_KEY");
   const sender = parseSenderIdentity(
-    environmentValue("ECONOVARIA_AUTH_EMAIL_FROM") || DEFAULT_FROM,
+    environmentValue("ECONOVARIA_AUTH_EMAIL_FROM"),
   );
   if (!accessToken) throw new Error("SUPABASE_ACCESS_TOKEN is required.");
   const smtpPayload = buildSupabaseSmtpPayload(sender, resendApiKey);
