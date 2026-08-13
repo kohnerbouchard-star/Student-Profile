@@ -44,15 +44,58 @@ function environmentValue(name: string): string {
   }
 }
 
+function allowedOrigins(): Set<string> {
+  const raw = [
+    environmentValue("ECONOVARIA_WEB_ALLOWED_ORIGINS"),
+    environmentValue("ECONOVARIA_BROWSER_ORIGIN"),
+  ].filter(Boolean).join(",");
+  const values = raw.split(",").map((value) => value.trim()).filter(Boolean);
+  const result = new Set<string>();
+  for (const value of values) {
+    try {
+      const url = new URL(value);
+      if (url.protocol === "https:" && url.pathname === "/" && !url.search && !url.hash) {
+        result.add(url.origin);
+      }
+    } catch {
+    }
+  }
+  return result;
+}
+
+const ALLOWED_ORIGINS = allowedOrigins();
+
+function finish(request: Request, response: Response): Response {
+  const origin = String(request.headers.get("origin") || "").trim();
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 Deno.serve(async (incomingRequest: Request) => {
-  if (incomingRequest.method === "OPTIONS") return jsonResponse(204, null);
+  const origin = String(incomingRequest.headers.get("origin") || "").trim();
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return jsonError(403, {
+      code: "origin_not_allowed",
+      message: "The request origin is not allowed.",
+      retryable: false,
+    });
+  }
+  const respond = (response: Response) => finish(incomingRequest, response);
+
+  if (incomingRequest.method === "OPTIONS") return respond(jsonResponse(204, null));
 
   const boundary = await enforceEdgeRequestBoundary(incomingRequest, {
     allowedMethods: ["GET", "POST"],
     maxBodyBytes: 32_768,
     requireJsonBody: true,
   });
-  if (!boundary.ok) return boundary.response;
+  if (!boundary.ok) return respond(boundary.response);
   const request = bindGatewayTrustedClientIp(
     boundary.request,
     environmentValue("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),
@@ -60,54 +103,54 @@ Deno.serve(async (incomingRequest: Request) => {
   const url = new URL(request.url);
 
   if (url.pathname.endsWith("/health")) {
-    return jsonResponse<EdgeHealthBody>(200, {
+    return respond(jsonResponse<EdgeHealthBody>(200, {
       ok: true,
       service: "bootstrap-api",
       status: "ready",
-    });
+    }));
   }
 
   const publishableFailure = await requirePublishableRequest(request);
-  if (publishableFailure) return publishableFailure;
+  if (publishableFailure) return respond(publishableFailure);
 
   const env = readEdgeSupabaseEnv();
   if (!env.ok) {
-    return jsonError(500, {
+    return respond(jsonError(500, {
       code: "bootstrap_runtime_not_configured",
       message: "The account bootstrap service is not configured.",
       retryable: false,
-    });
+    }));
   }
 
   if (url.pathname.endsWith("/staff/login")) {
-    return handleStaffLoginRequest(request, {
+    return respond(await handleStaffLoginRequest(request, {
       createAuthClient,
       createServiceClient,
-    });
+    }));
   }
 
   if (url.pathname.endsWith("/staff/signup/resend")) {
-    return handleStaffSignupResendRequest(request, { createServiceClient });
+    return respond(await handleStaffSignupResendRequest(request, { createServiceClient }));
   }
 
   if (url.pathname.endsWith("/staff/signup/cancel")) {
-    return handleStaffSignupCancelRequest(request, { createServiceClient });
+    return respond(await handleStaffSignupCancelRequest(request, { createServiceClient }));
   }
 
   if (url.pathname.endsWith("/staff/signup")) {
-    return handleStaffSignupRequest(request, { createServiceClient });
+    return respond(await handleStaffSignupRequest(request, { createServiceClient }));
   }
 
   if (url.pathname.endsWith("/licensing/activate")) {
-    return handleLicensingActivationRequest(request, {
+    return respond(await handleLicensingActivationRequest(request, {
       createAuthClient,
       createServiceClient,
-    });
+    }));
   }
 
-  return jsonError(404, {
+  return respond(jsonError(404, {
     code: "route_not_found",
     message: "Bootstrap API route was not found.",
     retryable: false,
-  });
+  }));
 });
