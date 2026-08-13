@@ -10,6 +10,7 @@ import {
 const RESEND_KEY = "re_test_bootstrap_key_123456789";
 const ACCESS_TOKEN = "sbp_test_management_token";
 const PROJECT_REF = "eecvbssdvarfcykcfrny";
+const AUTH_FROM = "Econovaria Security <no-reply@econovaria.com>";
 
 test("sender identity and SMTP payload are deterministic", () => {
   const sender = parseSenderIdentity(
@@ -20,6 +21,10 @@ test("sender identity and SMTP payload are deterministic", () => {
     senderEmail: "no-reply@econovaria.com",
     senderDomain: "econovaria.com",
   });
+  assert.deepEqual(
+    parseSenderIdentity("no-reply@econovaria.com"),
+    sender,
+  );
   assert.deepEqual(buildSupabaseSmtpPayload(sender, RESEND_KEY), {
     smtp_admin_email: "no-reply@econovaria.com",
     smtp_host: "smtp.resend.com",
@@ -31,6 +36,10 @@ test("sender identity and SMTP payload are deterministic", () => {
   assert.throws(
     () => parseSenderIdentity("not-an-email"),
     /valid email address/u,
+  );
+  assert.throws(
+    () => parseSenderIdentity("Other Name <no-reply@econovaria.com>"),
+    /must use the sender name Econovaria Security/u,
   );
   assert.throws(
     () => buildSupabaseSmtpPayload(sender, "invalid"),
@@ -89,8 +98,7 @@ test("apply mode disables Resend tracking and verifies Supabase SMTP", async () 
       environmentValue: (name) => ({
         SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN,
         RESEND_API_KEY: RESEND_KEY,
-        ECONOVARIA_AUTH_EMAIL_FROM:
-          "Econovaria Security <no-reply@econovaria.com>",
+        ECONOVARIA_AUTH_EMAIL_FROM: AUTH_FROM,
       })[name] || "",
     },
   );
@@ -118,6 +126,24 @@ test("apply mode disables Resend tracking and verifies Supabase SMTP", async () 
   assert.equal(calls[4].method, "GET");
 });
 
+test("missing protected sender identity fails before provider access", async () => {
+  const calls = [];
+  await assert.rejects(
+    configureSupabaseAuthSmtp(
+      { environment: "staging", mode: "apply" },
+      {
+        fetchImpl: createQueuedFetch(calls, []),
+        environmentValue: (name) => ({
+          SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN,
+          RESEND_API_KEY: RESEND_KEY,
+        })[name] || "",
+      },
+    ),
+    /valid email address/u,
+  );
+  assert.equal(calls.length, 0);
+});
+
 test("unverified sender domains fail before any Supabase mutation", async () => {
   const calls = [];
   const fetchImpl = createQueuedFetch(calls, [
@@ -140,6 +166,7 @@ test("unverified sender domains fail before any Supabase mutation", async () => 
         environmentValue: (name) => ({
           SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN,
           RESEND_API_KEY: RESEND_KEY,
+          ECONOVARIA_AUTH_EMAIL_FROM: AUTH_FROM,
         })[name] || "",
       },
     ),
