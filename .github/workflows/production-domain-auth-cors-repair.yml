@@ -1,1 +1,261 @@
-placeholder
+name: Production Domain Auth CORS Repair
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-domain-auth-cors-repair.yml"
+      - "backend/src/platform/supabase/edgeResponse.ts"
+      - "backend/supabase/functions/bootstrap-api/index.ts"
+      - "scripts/bootstrap-cors-domain-contract.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  PRODUCTION_ORIGIN: https://econovaria.com
+  WWW_ORIGIN: https://www.econovaria.com
+  LEGACY_PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  WEB_ALLOWED_ORIGINS: https://econovaria.com,https://www.econovaria.com,https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app
+  SUPABASE_CLI_VERSION: 2.109.1
+
+concurrency:
+  group: production-domain-auth-cors-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    name: Repair production Auth and bootstrap CORS
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce production repair boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
+          test "$PRODUCTION_ORIGIN" = "https://econovaria.com"
+          test "$WWW_ORIGIN" = "https://www.econovaria.com"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          [[ "$WEB_ALLOWED_ORIGINS" == *"$PRODUCTION_ORIGIN"* ]]
+          [[ "$WEB_ALLOWED_ORIGINS" == *"$WWW_ORIGIN"* ]]
+          [[ "$WEB_ALLOWED_ORIGINS" != *"*"* ]]
+
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/bootstrap-cors-domain-contract.test.mjs
+          node scripts/high-priority-boundary-ratchet.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Set production browser-origin secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase secrets set \
+            "ECONOVARIA_BROWSER_ORIGIN=$PRODUCTION_ORIGIN" \
+            "ECONOVARIA_WEB_ALLOWED_ORIGINS=$WEB_ALLOWED_ORIGINS" \
+            --project-ref "$PRODUCTION_PROJECT_REF"
+          supabase secrets list \
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            > "$RUNNER_TEMP/production-secret-names.txt"
+          grep -q 'ECONOVARIA_BROWSER_ORIGIN' "$RUNNER_TEMP/production-secret-names.txt"
+          grep -q 'ECONOVARIA_WEB_ALLOWED_ORIGINS' "$RUNNER_TEMP/production-secret-names.txt"
+          rm -f "$RUNNER_TEMP/production-secret-names.txt"
+
+      - name: Deploy exact bootstrap API CORS repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy bootstrap-api \
+            --workdir backend \
+            --project-ref "$PRODUCTION_PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Activate Supabase Auth URLs for econovaria.com
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-before.json"
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const current = JSON.parse(fs.readFileSync(process.env.AUTH_BEFORE_PATH, "utf8"));
+          const raw = current.uri_allow_list;
+          const redirects = Array.isArray(raw)
+            ? raw.map(String)
+            : String(raw || "").split(",").map((value) => value.trim()).filter(Boolean);
+          const additions = [
+            process.env.PRODUCTION_ORIGIN,
+            `${process.env.PRODUCTION_ORIGIN}/**`,
+            process.env.WWW_ORIGIN,
+            `${process.env.WWW_ORIGIN}/**`,
+            `${process.env.PRODUCTION_ORIGIN}/auth/recovery-start.html`,
+            `${process.env.PRODUCTION_ORIGIN}/auth/reset-password.html`,
+            `${process.env.WWW_ORIGIN}/auth/recovery-start.html`,
+            `${process.env.WWW_ORIGIN}/auth/reset-password.html`,
+            process.env.LEGACY_PRODUCTION_ORIGIN,
+            `${process.env.LEGACY_PRODUCTION_ORIGIN}/**`,
+          ];
+          const patch = {
+            site_url: process.env.PRODUCTION_ORIGIN,
+            uri_allow_list: [...new Set([...redirects, ...additions])].join(","),
+          };
+          for (const [key, value] of Object.entries(current)) {
+            if (key.startsWith("mailer_templates_") && typeof value === "string") {
+              patch[key] = value
+                .split(process.env.LEGACY_PRODUCTION_ORIGIN)
+                .join(process.env.PRODUCTION_ORIGIN);
+            }
+          }
+          fs.writeFileSync(process.env.AUTH_PATCH_PATH, JSON.stringify(patch));
+          NODE
+
+          curl --fail --silent --show-error \
+            --request PATCH \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/auth-patch.json" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-patch-result.json"
+
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/auth-after.json"
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const config = JSON.parse(fs.readFileSync(process.env.AUTH_AFTER_PATH, "utf8"));
+          const raw = config.uri_allow_list;
+          const redirects = Array.isArray(raw)
+            ? raw.map(String)
+            : String(raw || "").split(",").map((value) => value.trim()).filter(Boolean);
+          const required = [
+            process.env.PRODUCTION_ORIGIN,
+            `${process.env.PRODUCTION_ORIGIN}/**`,
+            process.env.WWW_ORIGIN,
+            `${process.env.WWW_ORIGIN}/**`,
+          ];
+          if (config.site_url !== process.env.PRODUCTION_ORIGIN) {
+            throw new Error("Supabase Auth Site URL did not switch to econovaria.com.");
+          }
+          for (const value of required) {
+            if (!redirects.includes(value)) throw new Error(`Missing Auth redirect: ${value}`);
+          }
+          NODE
+        env:
+          AUTH_BEFORE_PATH: ${{ runner.temp }}/auth-before.json
+          AUTH_PATCH_PATH: ${{ runner.temp }}/auth-patch.json
+          AUTH_AFTER_PATH: ${{ runner.temp }}/auth-after.json
+
+      - name: Verify bootstrap signup CORS for custom domains
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/bootstrap-api/staff/signup"
+          for origin in "$PRODUCTION_ORIGIN" "$WWW_ORIGIN"; do
+            headers="$RUNNER_TEMP/bootstrap-cors-$(printf '%s' "$origin" | sha256sum | cut -d' ' -f1).txt"
+            ready=false
+            for attempt in $(seq 1 30); do
+              status="$(curl --silent --show-error \
+                --request OPTIONS \
+                --header "Origin: $origin" \
+                --header 'Access-Control-Request-Method: POST' \
+                --header 'Access-Control-Request-Headers: apikey,content-type,x-econovaria-device-id' \
+                --dump-header "$headers" \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                "$endpoint" || true)"
+              tr -d '\r' < "$headers" > "$headers.normalized" || true
+              if [[ "$status" == "204" ]] && \
+                grep -Fxiq "access-control-allow-origin: $origin" "$headers.normalized"; then
+                ready=true
+                break
+              fi
+              if [[ "$attempt" != "30" ]]; then sleep 2; fi
+            done
+            test "$ready" = "true"
+          done
+
+          denied_status="$(curl --silent --show-error \
+            --request OPTIONS \
+            --header 'Origin: https://attacker.invalid' \
+            --header 'Access-Control-Request-Method: POST' \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            "$endpoint")"
+          test "$denied_status" = "403"
+
+      - name: Verify signup POST reaches bootstrap handler
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/bootstrap-api/staff/signup"
+          headers="$RUNNER_TEMP/bootstrap-post-headers.txt"
+          body="$RUNNER_TEMP/bootstrap-post-body.json"
+          status="$(curl --silent --show-error \
+            --request POST \
+            --header "Origin: $PRODUCTION_ORIGIN" \
+            --header 'Content-Type: application/json' \
+            --header 'x-econovaria-device-id: 00000000-0000-4000-8000-000000000001' \
+            --data '{"email":"cors-probe@example.invalid","password":"NotARealPassword123!","displayName":"CORS Probe"}' \
+            --dump-header "$headers" \
+            --output "$body" \
+            --write-out '%{http_code}' \
+            "$endpoint")"
+          tr -d '\r' < "$headers" > "$headers.normalized"
+          test "$status" = "401"
+          grep -Fxiq "access-control-allow-origin: $PRODUCTION_ORIGIN" "$headers.normalized"
+          node - "$body" <<'NODE'
+          const fs = require("node:fs");
+          const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (body?.error?.code !== "invalid_publishable_key") process.exit(1);
+          NODE
+
+      - name: Verify custom-domain production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for origin in "$PRODUCTION_ORIGIN" "$WWW_ORIGIN"; do
+            path="$RUNNER_TEMP/health-$(printf '%s' "$origin" | sha256sum | cut -d' ' -f1).json"
+            status="$(curl --silent --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 20 \
+              --header 'Cache-Control: no-cache' \
+              --output "$path" \
+              --write-out '%{http_code}' \
+              "$origin/api/health")"
+            test "$status" = "200"
+            node - "$path" "$PRODUCTION_PROJECT_REF" <<'NODE'
+          const fs = require("node:fs");
+          const [path, projectRef] = process.argv.slice(2);
+          const health = JSON.parse(fs.readFileSync(path, "utf8"));
+          if (health.ok !== true || health.status !== "ready" || health.environment !== "production" || health.projectRef !== projectRef) process.exit(1);
+          NODE
+          done
