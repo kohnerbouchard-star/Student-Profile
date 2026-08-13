@@ -3,9 +3,14 @@
   "framework": null,
   "buildCommand": "node scripts/build-vercel-runtime-config.mjs",
   "outputDirectory": "dist",
+  "alias": [
+    "econovaria.com",
+    "www.econovaria.com"
+  ],
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": true,
+      "ops/econovaria-git-native-domain-activation-20260813": false
     }
   },
   "functions": {
