@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - ops/econovaria-domain-cutover-20260813
+      - main
     paths:
       - ".github/workflows/econovaria-domain-cutover.yml"
   workflow_dispatch:
