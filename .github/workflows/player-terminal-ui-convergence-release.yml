@@ -24,7 +24,7 @@ jobs:
     name: Verify staging and promote attested production
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    environment: staging
+    environment: production
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
