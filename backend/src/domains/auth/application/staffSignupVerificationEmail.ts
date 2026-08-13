@@ -24,14 +24,13 @@ export interface StaffSignupVerificationEmailDependencies {
 }
 
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
-const DEFAULT_AUTH_EMAIL_FROM =
-  "Econovaria Security <no-reply@econovaria.com>";
+const AUTH_EMAIL_SENDER_NAME = "Econovaria Security";
 const STAGING_PROJECT_REF = "eecvbssdvarfcykcfrny";
 const STAGING_NOTICE = "STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE";
 const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/u;
 const DELIVERY_TIMEOUT_MS = 10_000;
 
 export async function sendStaffSignupVerificationEmail(
@@ -58,8 +57,9 @@ export async function sendStaffSignupVerificationEmail(
 
   const environmentValue = dependencies.environmentValue ?? readEnvironmentValue;
   const apiKey = environmentValue("RESEND_API_KEY");
-  const from = environmentValue("ECONOVARIA_AUTH_EMAIL_FROM") ||
-    DEFAULT_AUTH_EMAIL_FROM;
+  const from = normalizeAuthEmailFrom(
+    environmentValue("ECONOVARIA_AUTH_EMAIL_FROM"),
+  );
   const verificationBaseUrl = verificationUrl(environmentValue);
   if (!apiKey || !from || !verificationBaseUrl) return false;
 
@@ -127,6 +127,20 @@ export async function sendStaffSignupVerificationEmail(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function normalizeAuthEmailFrom(rawValue: string): string {
+  const raw = String(rawValue || "").trim();
+  const bracketed = /^(.*?)\s*<([^<>]+)>$/u.exec(raw);
+  const senderName = (bracketed?.[1] || AUTH_EMAIL_SENDER_NAME).trim();
+  const senderEmail = (bracketed?.[2] || raw).trim().toLowerCase();
+  if (
+    senderName !== AUTH_EMAIL_SENDER_NAME ||
+    !EMAIL_PATTERN.test(senderEmail)
+  ) {
+    return "";
+  }
+  return `${AUTH_EMAIL_SENDER_NAME} <${senderEmail}>`;
 }
 
 function verificationUrl(
