@@ -28,7 +28,7 @@ export class EdgeActivationError extends Error {
   }
 }
 
-const PRODUCTION_BROWSER_ORIGIN = "https://econovaria.vercel.app";
+const PRODUCTION_BROWSER_ORIGIN = "https://econovaria.com";
 const RETIRED_BROWSER_ORIGINS = new Set([
   "https://kohnerbouchard-star.github.io",
 ]);
