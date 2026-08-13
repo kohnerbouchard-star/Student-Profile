@@ -27,10 +27,30 @@ async function configurePreview(page) {
   });
 }
 
+async function waitForStableRoute(page) {
+  await page.waitForFunction(async () => {
+    const isReady = () => {
+      const routePage = document.querySelector(
+        ".player-terminal-page:not(.player-terminal-route-skeleton):not(.player-terminal-route-error)"
+      );
+      return Boolean(
+        routePage?.querySelector(".player-terminal-page-heading h2") &&
+        !document.querySelector(".player-terminal-route-skeleton")
+      );
+    };
+
+    if (!isReady()) return false;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    return isReady();
+  });
+}
+
 async function openRoute(page, route) {
   await page.goto(`/?preview=1#${route}`);
-  await expect(page.locator(".player-terminal-page")).toBeVisible();
+  await waitForStableRoute(page);
+  await expect(page.locator(".player-terminal-page:not(.player-terminal-route-skeleton)")).toBeVisible();
   await expect(page.locator(".player-terminal-page-heading h2")).toBeVisible();
+  await expect(page.locator(".player-terminal-route-skeleton")).toHaveCount(0);
   await expect(page.locator(".player-terminal-route-error")).toHaveCount(0);
 }
 
