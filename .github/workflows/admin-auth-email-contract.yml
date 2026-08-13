@@ -9,6 +9,8 @@ on:
       - "backend/supabase/auth-email-templates/**"
       - "scripts/auth-email-template-contract.test.mjs"
       - "scripts/staff-signup-email-brand-contract.test.mjs"
+      - "scripts/configure-supabase-auth-smtp.mjs"
+      - "scripts/configure-supabase-auth-smtp.test.mjs"
       - "scripts/build-supabase-auth-email-config.mjs"
       - "scripts/snapshot-supabase-auth-email-config.mjs"
       - "scripts/verify-supabase-auth-email-config.mjs"
@@ -21,6 +23,8 @@ on:
       - "backend/supabase/auth-email-templates/**"
       - "scripts/auth-email-template-contract.test.mjs"
       - "scripts/staff-signup-email-brand-contract.test.mjs"
+      - "scripts/configure-supabase-auth-smtp.mjs"
+      - "scripts/configure-supabase-auth-smtp.test.mjs"
       - "scripts/build-supabase-auth-email-config.mjs"
       - "scripts/snapshot-supabase-auth-email-config.mjs"
       - "scripts/verify-supabase-auth-email-config.mjs"
@@ -55,9 +59,12 @@ jobs:
           node --check scripts/build-supabase-auth-email-config.mjs
           node --check scripts/snapshot-supabase-auth-email-config.mjs
           node --check scripts/verify-supabase-auth-email-config.mjs
+          node --check scripts/configure-supabase-auth-smtp.mjs
+          node --check scripts/configure-supabase-auth-smtp.test.mjs
           node --check scripts/staff-signup-email-brand-contract.test.mjs
           node --test \
             scripts/auth-email-template-contract.test.mjs \
+            scripts/configure-supabase-auth-smtp.test.mjs \
             scripts/staff-signup-email-brand-contract.test.mjs
           node scripts/build-supabase-auth-email-config.mjs --check
 
