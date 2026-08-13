@@ -1,190 +1,280 @@
-name: Apply Verified License Outbox Source Bundle
+name: License Issuance Queue Staging Release
 
 on:
+  pull_request:
+    paths:
+      - "backend/supabase/functions/_shared/licenseCode.ts"
+      - "backend/supabase/functions/license-*/**"
+      - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
+      - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
+      - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
+      - "backend/supabase/migrations/20260813100000_harden_license_fulfillment_snapshots_v1.sql"
+      - "backend/supabase/migrations/20260813103000_add_license_email_outbox_schema_v1.sql"
+      - "backend/supabase/migrations/20260813103100_add_atomic_license_materialization_outbox_v2.sql"
+      - "backend/supabase/migrations/20260813103200_add_durable_license_email_worker_queue_v1.sql"
+      - "backend/supabase/migrations/20260813103300_add_license_delivery_operations_v1.sql"
+      - "backend/supabase/edge-function-manifest.json"
+      - "scripts/license-*.test.mjs"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "docs/architecture/license-*.md"
+      - ".github/workflows/license-issuance-queue-staging.yml"
   push:
     branches:
-      - fix/license-issuance-queue-hardening-v1
+      - main
+    paths:
+      - "backend/supabase/functions/_shared/licenseCode.ts"
+      - "backend/supabase/functions/license-*/**"
+      - "backend/supabase/migrations/20260813090000_add_durable_license_issuance_queue_v1.sql"
+      - "backend/supabase/migrations/20260813091500_harden_license_email_idempotency_window_v1.sql"
+      - "backend/supabase/migrations/20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql"
+      - "backend/supabase/migrations/20260813100000_harden_license_fulfillment_snapshots_v1.sql"
+      - "backend/supabase/migrations/20260813103000_add_license_email_outbox_schema_v1.sql"
+      - "backend/supabase/migrations/20260813103100_add_atomic_license_materialization_outbox_v2.sql"
+      - "backend/supabase/migrations/20260813103200_add_durable_license_email_worker_queue_v1.sql"
+      - "backend/supabase/migrations/20260813103300_add_license_delivery_operations_v1.sql"
+      - "backend/supabase/edge-function-manifest.json"
+      - "scripts/license-*.test.mjs"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "docs/architecture/license-*.md"
+      - ".github/workflows/license-issuance-queue-staging.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_staging:
+        description: "Deploy the reviewed licensing functions to staging"
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: "Type DEPLOY LICENSE ISSUANCE TO STAGING"
+        required: true
+        default: ""
+        type: string
+      enable_scheduler:
+        description: "Enable both one-minute staging workers after delivery configuration is verified"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: read
+  contents: read
 
 concurrency:
-  group: license-outbox-source-bootstrap
+  group: license-issuance-queue-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+
 jobs:
-  apply:
-    name: Verify and apply one-use source bundle
-    if: >-
-      github.repository == 'kohnerbouchard-star/Student-Profile' &&
-      github.ref == 'refs/heads/fix/license-issuance-queue-hardening-v1' &&
-      github.actor == 'kohnerbouchard-star' &&
-      github.event.head_commit.message == 'chore(licensing): publish verified outbox sources'
+  contract:
+    name: Verify durable licensing contracts
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Check out exact branch head
+      - name: Check out exact workflow source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Fetch and verify bundle comments
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA256: 0c207da64c423bb71a8a08cc1d77bcb2067c0e8707c904be494d92f112bd0812
-          EXPECTED_AUTHOR: kohnerbouchard-star
-          PR_NUMBER: "593"
-        shell: bash
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Run licensing contracts and migration validator
         run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" \
-            > "$RUNNER_TEMP/license-bundle-comments.json"
-
-          python3 - <<'PY'
-          import base64
-          import hashlib
-          import json
-          import os
-          import pathlib
-          import re
-
-          comments_path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "license-bundle-comments.json"
-          comments = json.loads(comments_path.read_text())
-          expected_sha = os.environ["EXPECTED_SHA256"]
-          expected_author = os.environ["EXPECTED_AUTHOR"]
-          pattern = re.compile(
-              r"^<!-- ECONOVARIA_LICENSE_BUNDLE_V2 part=(\d+) total=(\d+) "
-              r"sha256=([0-9a-f]{64}) -->\n([A-Za-z0-9+/=]+)$"
-          )
-          parts = {}
-          comment_ids = []
-          total = None
-
-          for comment in comments:
-              if comment.get("user", {}).get("login") != expected_author:
-                  continue
-              match = pattern.fullmatch(comment.get("body") or "")
-              if not match or match.group(3) != expected_sha:
-                  continue
-              part = int(match.group(1))
-              declared_total = int(match.group(2))
-              if total is None:
-                  total = declared_total
-              if total != declared_total or part in parts:
-                  raise SystemExit("duplicate or inconsistent source-bundle part")
-              parts[part] = match.group(4)
-              comment_ids.append(str(comment["id"]))
-
-          expected_parts = list(range(1, 13))
-          if total != 12 or sorted(parts) != expected_parts:
-              raise SystemExit(f"missing source-bundle parts: total={total}, parts={sorted(parts)}")
-
-          encoded = "".join(parts[index] for index in expected_parts)
-          raw = base64.b64decode(encoded, validate=True)
-          actual_sha = hashlib.sha256(raw).hexdigest()
-          if actual_sha != expected_sha:
-              raise SystemExit(f"source-bundle digest mismatch: {actual_sha}")
-
-          (pathlib.Path(os.environ["RUNNER_TEMP"]) / "license-outbox-bundle.tar.gz").write_bytes(raw)
-          (pathlib.Path(os.environ["RUNNER_TEMP"]) / "license-bundle-comment-ids.txt").write_text("\n".join(comment_ids) + "\n")
-          PY
-
-      - name: Enforce exact bundle file set
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os
-          import pathlib
-          import tarfile
-
-          expected = {
-              ".github/workflows/license-issuance-queue-staging.yml",
-              "backend/supabase/edge-function-manifest.json",
-              "backend/supabase/functions/_shared/licenseCode.ts",
-              "backend/supabase/functions/license-email-worker/index.ts",
-              "backend/supabase/functions/license-issuance-worker/index.ts",
-              "backend/supabase/functions/license-issuance-worker/licenseCode.ts",
-              "backend/supabase/migrations/20260813103000_add_license_email_outbox_schema_v1.sql",
-              "backend/supabase/migrations/20260813103100_add_atomic_license_materialization_outbox_v2.sql",
-              "backend/supabase/migrations/20260813103200_add_durable_license_email_worker_queue_v1.sql",
-              "backend/supabase/migrations/20260813103300_add_license_delivery_operations_v1.sql",
-              "docs/architecture/license-email-outbox-v1.md",
-              "scripts/license-email-outbox-contract.test.mjs",
-              "scripts/license-issuance-queue-contract.test.mjs",
-          }
-          archive = pathlib.Path(os.environ["RUNNER_TEMP"]) / "license-outbox-bundle.tar.gz"
-          with tarfile.open(archive, "r:gz") as bundle:
-              members = bundle.getmembers()
-              names = {member.name for member in members}
-              if names != expected:
-                  raise SystemExit(f"unexpected bundle members: {sorted(names ^ expected)}")
-              for member in members:
-                  path = pathlib.PurePosixPath(member.name)
-                  if member.issym() or member.islnk() or path.is_absolute() or ".." in path.parts:
-                      raise SystemExit(f"unsafe bundle member: {member.name}")
-          PY
-
-      - name: Apply source and run focused contracts
-        shell: bash
-        run: |
-          set -euo pipefail
-          tar -xzf "$RUNNER_TEMP/license-outbox-bundle.tar.gz" -C .
-          node --experimental-strip-types --check \
-            backend/supabase/functions/license-issuance-worker/index.ts
-          node --experimental-strip-types --check \
-            backend/supabase/functions/license-email-worker/index.ts
           node --experimental-strip-types --test \
-            scripts/license-email-outbox-contract.test.mjs \
-            scripts/license-issuance-queue-contract.test.mjs
+            scripts/license-issuance-queue-contract.test.mjs \
+            scripts/license-issuance-hardening-contract.test.mjs \
+            scripts/license-email-outbox-contract.test.mjs
           node scripts/validate-supabase-migrations.mjs
 
-      - name: Commit exact approved non-workflow source paths
-        shell: bash
-        run: |
-          set -euo pipefail
-          paths=(
-            backend/supabase/edge-function-manifest.json
-            backend/supabase/functions/_shared/licenseCode.ts
-            backend/supabase/functions/license-email-worker/index.ts
-            backend/supabase/functions/license-issuance-worker/index.ts
-            backend/supabase/functions/license-issuance-worker/licenseCode.ts
-            backend/supabase/migrations/20260813103000_add_license_email_outbox_schema_v1.sql
-            backend/supabase/migrations/20260813103100_add_atomic_license_materialization_outbox_v2.sql
-            backend/supabase/migrations/20260813103200_add_durable_license_email_worker_queue_v1.sql
-            backend/supabase/migrations/20260813103300_add_license_delivery_operations_v1.sql
-            docs/architecture/license-email-outbox-v1.md
-            scripts/license-email-outbox-contract.test.mjs
-            scripts/license-issuance-queue-contract.test.mjs
-          )
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "${paths[@]}"
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          git commit -m "feat(licensing): add durable transactional email outbox source"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+  staging:
+    name: Deploy isolated staging licensing queue
+    needs: contract
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_staging == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: Check out exact requested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Remove consumed source-bundle comments
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Enforce explicit staging boundary
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r comment_id; do
-            test -n "$comment_id" || continue
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$DEPLOY_CONFIRMATION" = "DEPLOY LICENSE ISSUANCE TO STAGING"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/feat/license-issuance-queue-v1|refs/heads/fix/license-issuance-queue-hardening-v1) ;;
+            *) echo "Unapproved staging source ref: $GITHUB_REF" >&2; exit 1 ;;
+          esac
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Re-run licensing contracts
+        run: |
+          node --experimental-strip-types --test \
+            scripts/license-issuance-queue-contract.test.mjs \
+            scripts/license-issuance-hardening-contract.test.mjs \
+            scripts/license-email-outbox-contract.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Verify reviewed schema and capture pre-deploy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          rpc() {
+            local name="$1"
+            local output="$2"
+            curl --fail --silent --show-error \
+              --request POST \
+              "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/${name}" \
+              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header 'content-type: application/json' \
+              --data '{}' > "$output"
+            test -s "$output"
+          }
+          rpc read_license_issuance_queue_health_v1 \
+            "$RUNNER_TEMP/license-queue-health.json"
+          rpc read_license_issuance_secret_rotation_guard_v1 \
+            "$RUNNER_TEMP/license-secret-rotation-guard.json"
+          rpc read_license_fulfillment_reconciliation_v1 \
+            "$RUNNER_TEMP/license-reconciliation.json"
+
+      - name: Disable both workers before deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for rpc_name in \
+            disable_license_issuance_scheduler_v1 \
+            disable_license_email_scheduler_v1
+          do
+            curl --fail --silent --show-error \
+              --request POST \
+              "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/${rpc_name}" \
+              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header 'content-type: application/json' \
+              --data '{}' > "$RUNNER_TEMP/${rpc_name}.json"
+            test -s "$RUNNER_TEMP/${rpc_name}.json"
+          done
+
+      - name: Deploy custom-auth staging functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for slug in \
+            license-payment-webhook \
+            license-issuance-worker \
+            license-email-worker
+          do
+            supabase functions deploy "$slug" \
+              --workdir backend \
+              --project-ref "$STAGING_PROJECT_REF" \
+              --no-verify-jwt
+          done
+
+      - name: Configure Vault-authenticated queue schedulers
+        if: github.event_name == 'workflow_dispatch' && inputs.enable_scheduler == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          configure_scheduler() {
+            local rpc_name="$1"
+            local function_slug="$2"
+            local output="$3"
+            local function_url="https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/${function_slug}"
+            curl --fail --silent --show-error \
+              --request POST \
+              "https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/rpc/${rpc_name}" \
+              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header 'content-type: application/json' \
+              --data "{\"p_function_url\":\"${function_url}\"}" > "$output"
+            test -s "$output"
+          }
+          configure_scheduler \
+            configure_license_issuance_scheduler_v1 \
+            license-issuance-worker \
+            "$RUNNER_TEMP/license-issuance-scheduler-enabled.json"
+          configure_scheduler \
+            configure_license_email_scheduler_v1 \
+            license-email-worker \
+            "$RUNNER_TEMP/license-email-scheduler-enabled.json"
+
+      - name: Verify unauthenticated requests fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_status() {
             curl --silent --show-error \
-              --request DELETE \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
-              >/dev/null || true
-          done < "$RUNNER_TEMP/license-bundle-comment-ids.txt"
+              --request POST \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/$1" \
+              --header 'content-type: application/json' \
+              --data '{}'
+          }
+          webhook_status="$(request_status license-payment-webhook)"
+          issuance_status="$(request_status license-issuance-worker)"
+          email_status="$(request_status license-email-worker)"
+          case "$webhook_status" in
+            401|503) ;;
+            *) echo "Unexpected unsigned webhook status: $webhook_status" >&2; exit 1 ;;
+          esac
+          test "$issuance_status" = "401"
+          test "$email_status" = "401"
+
+      - name: Upload staging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: license-issuance-staging-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/license-queue-health.json
+            ${{ runner.temp }}/license-secret-rotation-guard.json
+            ${{ runner.temp }}/license-reconciliation.json
+            ${{ runner.temp }}/disable_license_issuance_scheduler_v1.json
+            ${{ runner.temp }}/disable_license_email_scheduler_v1.json
+            ${{ runner.temp }}/license-issuance-scheduler-enabled.json
+            ${{ runner.temp }}/license-email-scheduler-enabled.json
+
+  production-hold:
+    name: Enforce production payment-provider hold
+    needs: contract
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Keep production deployment disabled
+        run: |
+          echo "License issuance remains staging-only until a payment provider, immutable price reference, reversal policy, and production secrets are approved."
