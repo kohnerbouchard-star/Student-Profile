@@ -21,7 +21,7 @@
   .player-terminal-asset-row,
   .player-terminal-news-row,
   .player-terminal-contract-row,
-  .player-terminal-transaction-row,
+  .player-termnal-transaction-row,
   .player-terminal-thread-row,
   .player-terminal-reputation-list article,
   .player-terminal-milestone-list article,
@@ -81,6 +81,22 @@
   color: var(--player-color-text-muted);
   font-size: var(--player-text-label);
   line-height: 1.4;
+}
+
+.player-terminal-app-root .player-terminal-page :is(
+  .player-terminal-metric-card small,
+  .player-terminal-filter-row button,
+  .player-terminal-chart-toolbar button,
+  .player-terminal-news-filters button,
+  .player-terminal-contract-tabs button,
+  .player-terminal-progression-tabs button,
+  .player-terminal-asset-row small,
+  .player-terminal-news-row small,
+  .player-terminal-contract-row small,
+  .player-terminal-transaction-row small,
+  .player-terminal-thread-row small
+) {
+  font-size: var(--player-text-label);
 }
 
 .player-terminal-app-root :is(
