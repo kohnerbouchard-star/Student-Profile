@@ -1,0 +1,194 @@
+name: Admin Auth Email Production Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: "Successful Admin Auth Email Staging Candidate run ID"
+        required: true
+        type: string
+      source_commit:
+        description: "Exact current main commit used by the staging candidate"
+        required: true
+        type: string
+      staging_source_digest:
+        description: "Verified sourceDigest from staging template evidence"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact production Supabase project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type PROMOTE ADMIN AUTH EMAIL PRODUCTION"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: admin-auth-email-production-promote
+  cancel-in-progress: false
+
+env:
+  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+
+jobs:
+  promote:
+    name: Promote staging-verified Auth email source to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Enforce explicit production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "${{ inputs.confirm_action }}" = "PROMOTE ADMIN AUTH EMAIL PRODUCTION"
+          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
+          [[ "${{ inputs.candidate_run_id }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          [[ "${{ inputs.staging_source_digest }}" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Check out exact current main source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Download exact staging email evidence
+        uses: actions/download-artifact@v5
+        with:
+          name: admin-auth-email-staging-${{ inputs.source_commit }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/admin-auth-email-staging
+
+      - name: Verify staging evidence identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="dist/admin-auth-email-staging/admin-auth-email-staging-candidate.json"
+          test -f "$evidence"
+          node - <<'NODE'
+          const evidence = require(`./${process.env.EVIDENCE_PATH}`);
+          if (evidence.environment !== 'staging') throw new Error('Candidate is not staging evidence.');
+          if (evidence.projectRef !== process.env.STAGING_PROJECT_REF) throw new Error('Staging project mismatch.');
+          if (evidence.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Staging source commit mismatch.');
+          if (evidence.sourceDigest !== process.env.SOURCE_DIGEST) throw new Error('Staging source digest mismatch.');
+          if (evidence.verified !== true) throw new Error('Staging template verification did not pass.');
+          if (evidence.trackingLinksAllowed !== false) throw new Error('Tracking-link rewrite policy drifted.');
+          if (evidence.externalImagesAllowed !== false) throw new Error('External-image policy drifted.');
+          NODE
+        env:
+          EVIDENCE_PATH: dist/admin-auth-email-staging/admin-auth-email-staging-candidate.json
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          SOURCE_DIGEST: ${{ inputs.staging_source_digest }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.1"
+
+      - name: Revalidate exact template source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/auth-email-template-contract.test.mjs
+          node scripts/build-supabase-auth-email-config.mjs --check
+
+      - name: Build exact production Auth email payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-supabase-auth-email-config.mjs \
+            --environment production \
+            --output "$RUNNER_TEMP/admin-auth-email-production-payload.json" \
+            --evidence-output "$RUNNER_TEMP/admin-auth-email-production-build.json"
+          test "$(jq -r '.projectRef' "$RUNNER_TEMP/admin-auth-email-production-build.json")" = \
+            "$EXPECTED_PRODUCTION_PROJECT_REF"
+          test "$(jq -r '.sourceDigest' "$RUNNER_TEMP/admin-auth-email-production-build.json")" = \
+            "${{ inputs.staging_source_digest }}"
+
+      - name: Capture current managed production email fields
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
+          node scripts/snapshot-supabase-auth-email-config.mjs \
+            --environment production \
+            --actual "$RUNNER_TEMP/admin-auth-email-production-before-raw.json" \
+            --output "$RUNNER_TEMP/admin-auth-email-production-before.json"
+          rm -f "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
+
+      - name: Apply only the canonical production email fields
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/admin-auth-email-production-payload.json" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/admin-auth-email-production-patch-response.json"
+
+      - name: Verify hosted production templates exactly match source
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
+            > "$RUNNER_TEMP/admin-auth-email-production-after.json"
+          node scripts/verify-supabase-auth-email-config.mjs \
+            --environment production \
+            --actual "$RUNNER_TEMP/admin-auth-email-production-after.json" \
+            --evidence-output "$RUNNER_TEMP/admin-auth-email-production-verified-base.json"
+          jq \
+            --arg sourceCommit "${{ inputs.source_commit }}" \
+            --arg candidateRunId "${{ inputs.candidate_run_id }}" \
+            --arg stagingSourceDigest "${{ inputs.staging_source_digest }}" \
+            '. + {
+              sourceCommit: $sourceCommit,
+              stagingCandidateRunId: $candidateRunId,
+              stagingSourceDigest: $stagingSourceDigest
+            }' \
+            "$RUNNER_TEMP/admin-auth-email-production-verified-base.json" \
+            > "$RUNNER_TEMP/admin-auth-email-production-promotion.json"
+          rm -f \
+            "$RUNNER_TEMP/admin-auth-email-production-after.json" \
+            "$RUNNER_TEMP/admin-auth-email-production-patch-response.json" \
+            "$RUNNER_TEMP/admin-auth-email-production-payload.json" \
+            "$RUNNER_TEMP/admin-auth-email-production-build.json" \
+            "$RUNNER_TEMP/admin-auth-email-production-verified-base.json"
+
+      - name: Upload production template evidence and rollback snapshot
+        uses: actions/upload-artifact@v6
+        with:
+          name: admin-auth-email-production-${{ inputs.source_commit }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/admin-auth-email-production-promotion.json
+            ${{ runner.temp }}/admin-auth-email-production-before.json
