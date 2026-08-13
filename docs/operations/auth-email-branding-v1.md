@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This catalog is the canonical visual and operational source for Supabase Auth email. It covers signup confirmation, password recovery, magic links, invitations, email changes, reauthentication codes, password and email change notifications, phone changes, MFA enrollment changes, and linked-identity changes.
+This catalog is the canonical visual and operational source for Econovaria authentication email. It covers signup confirmation, password recovery, magic links, invitations, email changes, reauthentication codes, password and email change notifications, phone changes, MFA enrollment changes, and linked-identity changes.
 
-The catalog changes presentation and hosted Auth template configuration only. It does not store provider credentials, configure SMTP, or change which application endpoint initiates signup.
+The repository-owned direct Resend signup delivery and the hosted Supabase Auth templates use the same dark security design, scanner-safe review language, sender identity, and staging distinction.
 
 ## Brand system
 
@@ -13,6 +13,7 @@ The catalog changes presentation and hosted Auth template configuration only. It
 - Border: `#334155`
 - Primary action: `#f97316`
 - Security accent: `#93c5fd`
+- Sender: `Econovaria Security <no-reply@econovaria.com>`
 - Wordmark: text-based `ECONOVARIA`, with no remote font or image dependency
 - Layout: 600 px table-based transactional email with responsive mobile padding
 
@@ -27,32 +28,73 @@ Production routes:
 - Signup and pending-account review: `admin-email-verification`
 - Password recovery: `/auth/recovery-start.html`
 
-Staging routes remain bound to the staging Supabase project. Every staging message contains an unmistakable `STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE` banner.
+Staging routes remain bound to the staging Supabase project. Every staging message contains an unmistakable `STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE` banner, and the direct signup subject is prefixed with `[STAGING]`.
 
-Resend or any replacement SMTP provider must have authentication-link click tracking disabled. Delivery, bounce, and complaint telemetry may remain enabled.
+Resend authentication-link click tracking and open tracking are disabled by the protected rollout before Supabase SMTP is configured. Delivery, bounce, and complaint telemetry may remain enabled.
 
 ## Repository authority
 
 - Manifest: `backend/supabase/auth-email-template-manifest.json`
-- Templates: `backend/supabase/auth-email-templates/*.html`
-- Compiler: `scripts/build-supabase-auth-email-config.mjs`
+- Hosted templates: `backend/supabase/auth-email-templates/*.html`
+- Direct signup mailer: `backend/src/domains/auth/application/staffSignupVerificationEmail.ts`
+- Template compiler: `scripts/build-supabase-auth-email-config.mjs`
+- SMTP bootstrap compiler: `scripts/configure-supabase-auth-smtp.mjs`
 - Hosted-config verifier: `scripts/verify-supabase-auth-email-config.mjs`
 - Rollback snapshotter: `scripts/snapshot-supabase-auth-email-config.mjs`
-- Contract tests: `scripts/auth-email-template-contract.test.mjs`
+- Hosted template tests: `scripts/auth-email-template-contract.test.mjs`
+- Direct delivery tests: `scripts/staff-signup-email-brand-contract.test.mjs`
+- SMTP bootstrap tests: `scripts/configure-supabase-auth-smtp.test.mjs`
 
-The compiler produces only reviewed `mailer_subjects_*`, `mailer_templates_*`, and `mailer_notifications_*_enabled` fields. It does not send SMTP passwords or modify unrelated Auth settings.
+The template compiler produces only reviewed `mailer_subjects_*`, `mailer_templates_*`, and `mailer_notifications_*_enabled` fields. The SMTP bootstrap sends the Resend key only to Resend, the Supabase Management API, and the environment-specific Supabase Edge secret store. Evidence and rollback artifacts exclude the SMTP password.
 
-## Protected rollout
+## Required environment secret
 
-1. Merge an exact reviewed template source commit to `main`.
-2. Run **Admin Auth Email Staging Candidate** with the exact commit and staging confirmations.
-3. Verify a real staging signup/recovery message, desktop and mobile rendering, and provider click-tracking settings.
-4. Record the staging `sourceDigest` and successful workflow run ID.
-5. Run **Admin Auth Email Production Promote** with that exact staging evidence.
-6. Retain the generated before-state snapshot and deployment evidence for rollback.
+Create a GitHub Actions environment secret named `RESEND_API_KEY` in both:
 
-## SMTP dependency
+- `staging`
+- `production`
 
-Hosted Supabase projects using the free-tier default email provider cannot modify Auth email templates. The rollout workflows therefore verify that `smtp_host`, `smtp_user`, and `smtp_admin_email` are configured before making the first template PATCH. They fail before mutation when custom SMTP is absent.
+The existing `SUPABASE_ACCESS_TOKEN` environment secret remains required. The Resend key must have access to the exact verified sender domain `econovaria.com`.
 
-Production delivery requires a verified transactional domain and custom SMTP credentials in Supabase Auth. The workflows report whether custom SMTP appears configured, but they never read, store, or export the SMTP password. Configure Resend SMTP separately in staging and production, then run the protected staging candidate before production promotion.
+The workflow does not accept the Resend key as a dispatch input, commit it to the repository, print it, or upload it as evidence.
+
+## Protected staging rollout
+
+1. Verify `econovaria.com` in Resend with sending enabled.
+2. Add `RESEND_API_KEY` to the GitHub `staging` environment.
+3. Merge an exact reviewed source commit to `main`.
+4. Run **Admin Auth Email Staging Candidate** with:
+   - the exact current `main` commit;
+   - project ref `eecvbssdvarfcykcfrny`;
+   - confirmation text `DEPLOY ADMIN AUTH EMAIL STAGING`.
+5. The workflow then performs, in order:
+   - contract validation;
+   - exact Resend sender-domain verification;
+   - disabling Resend click/open tracking;
+   - Supabase Auth SMTP configuration through the Management API;
+   - provisioning `RESEND_API_KEY`, `ECONOVARIA_AUTH_EMAIL_FROM`, and `ECONOVARIA_DEPLOYMENT_ENVIRONMENT` into the staging Edge secret store;
+   - deployment of all 13 hosted Auth templates;
+   - byte-for-byte hosted template verification;
+   - sanitized SMTP, template, and rollback evidence upload.
+6. Verify a real staging signup and password-recovery message on desktop and mobile.
+
+The workflow fails before the first Supabase mutation when the Resend key is absent, the sender domain is missing, domain verification is incomplete, or sending capability is disabled.
+
+## Protected production promotion
+
+Production cannot be configured independently of staging evidence.
+
+1. Add `RESEND_API_KEY` to the GitHub `production` environment.
+2. Record the successful staging workflow run ID and `sourceDigest`.
+3. Run **Admin Auth Email Production Promote** with:
+   - the same exact current `main` commit used by staging;
+   - the successful staging run ID;
+   - the verified staging `sourceDigest`;
+   - project ref `cgiukdjwicykrmtkhudh`;
+   - confirmation text `PROMOTE ADMIN AUTH EMAIL PRODUCTION`.
+4. The production workflow verifies the staging template, SMTP, Resend-domain, and tracking-policy evidence before configuring production.
+5. Retain the generated before-state snapshots and promotion evidence for rollback.
+
+## Hosted free-tier constraint
+
+Supabase projects using the free-tier default email provider reject hosted Auth template changes. The protected workflows resolve that dependency by configuring Resend custom SMTP before applying templates. They verify the resulting host, port, username, sender address, and sender name, while never reading the SMTP password back from Supabase or including it in artifacts.
