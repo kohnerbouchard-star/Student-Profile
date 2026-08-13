@@ -1,0 +1,90 @@
+name: Player Terminal UI Source Export
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/player-terminal-ui-source-export.yml"
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact current main commit to export"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type EXPORT PLAYER TERMINAL UI SOURCE"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: player-terminal-ui-source-export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    name: Export exact merged-main source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
+    steps:
+      - name: Enforce current-main boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "${{ inputs.confirm_action }}" = "EXPORT PLAYER TERMINAL UI SOURCE"
+          else
+            test "$GITHUB_EVENT_NAME" = "push"
+          fi
+
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify current main and create deterministic archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse origin/main)" = "$SOURCE_COMMIT"
+          tree_sha="$(git rev-parse HEAD^{tree})"
+          archive="$RUNNER_TEMP/econovaria-source-${SOURCE_COMMIT}.zip"
+          manifest="$RUNNER_TEMP/econovaria-source-${SOURCE_COMMIT}.json"
+          git archive --format=zip --output="$archive" "$SOURCE_COMMIT"
+          ARCHIVE_PATH="$archive" MANIFEST_PATH="$manifest" TREE_SHA="$tree_sha" node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const archive = fs.readFileSync(process.env.ARCHIVE_PATH);
+          const manifest = {
+            schemaVersion: 1,
+            repository: process.env.GITHUB_REPOSITORY,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            treeSha: process.env.TREE_SHA,
+            archiveSha256: crypto.createHash('sha256').update(archive).digest('hex'),
+            archiveBytes: archive.byteLength,
+          };
+          fs.writeFileSync(process.env.MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+          test -s "$archive"
+          test -s "$manifest"
+
+      - name: Upload exact source archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: econovaria-source-${{ env.SOURCE_COMMIT }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/econovaria-source-${{ env.SOURCE_COMMIT }}.zip
+            ${{ runner.temp }}/econovaria-source-${{ env.SOURCE_COMMIT }}.json
