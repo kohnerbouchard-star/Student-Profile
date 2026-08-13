@@ -20,7 +20,8 @@ jobs:
     if: >-
       github.repository == 'kohnerbouchard-star/Student-Profile' &&
       github.ref == 'refs/heads/fix/license-issuance-queue-hardening-v1' &&
-      github.actor == 'kohnerbouchard-star'
+      github.actor == 'kohnerbouchard-star' &&
+      github.event.head_commit.message == 'chore(licensing): publish verified outbox sources'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -144,12 +145,11 @@ jobs:
             scripts/license-issuance-queue-contract.test.mjs
           node scripts/validate-supabase-migrations.mjs
 
-      - name: Commit exact approved source paths
+      - name: Commit exact approved non-workflow source paths
         shell: bash
         run: |
           set -euo pipefail
           paths=(
-            .github/workflows/license-issuance-queue-staging.yml
             backend/supabase/edge-function-manifest.json
             backend/supabase/functions/_shared/licenseCode.ts
             backend/supabase/functions/license-email-worker/index.ts
@@ -168,7 +168,7 @@ jobs:
           git add -- "${paths[@]}"
           git diff --cached --check
           test -n "$(git diff --cached --name-only)"
-          git commit -m "feat(licensing): add durable transactional email outbox"
+          git commit -m "feat(licensing): add durable transactional email outbox source"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Remove consumed source-bundle comments
