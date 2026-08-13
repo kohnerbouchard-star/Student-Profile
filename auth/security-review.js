@@ -2,10 +2,6 @@
   "use strict";
 
   const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
-  const PROJECT_REFS = new Set([
-    "eecvbssdvarfcykcfrny",
-    "cgiukdjwicykrmtkhudh"
-  ]);
   const REVIEW_TYPES = new Set(["signup", "magiclink"]);
   const button = document.getElementById("continueReview");
   const message = document.getElementById("reviewMessage");
@@ -15,7 +11,6 @@
   const params = new URLSearchParams(window.location.search);
   let tokenHash = String(params.get("token_hash") || "").trim();
   const reviewType = String(params.get("type") || "").trim().toLowerCase();
-  const projectRef = String(params.get("project_ref") || "").trim().toLowerCase();
 
   function setMessage(text, isError = false) {
     if (!message) return;
@@ -39,11 +34,7 @@
 
   window.history.replaceState({}, document.title, window.location.pathname);
 
-  if (
-    !TOKEN_HASH_PATTERN.test(tokenHash) ||
-    !REVIEW_TYPES.has(reviewType) ||
-    !PROJECT_REFS.has(projectRef)
-  ) {
+  if (!TOKEN_HASH_PATTERN.test(tokenHash) || !REVIEW_TYPES.has(reviewType)) {
     invalidateReview(
       "This email verification request is invalid or has expired. Request a new email from the account-creation page."
     );
@@ -65,7 +56,7 @@
       const response = await window.fetch("/api/auth-token-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenHash, type: reviewType, projectRef }),
+        body: JSON.stringify({ tokenHash, type: reviewType }),
         cache: "no-store",
         credentials: "same-origin",
         redirect: "error",
