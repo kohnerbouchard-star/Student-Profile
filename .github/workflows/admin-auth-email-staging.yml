@@ -81,6 +81,7 @@ jobs:
           node scripts/build-supabase-auth-email-config.mjs \
             --environment staging \
             --output "$RUNNER_TEMP/admin-auth-email-staging-payload.json" \
+            --batch-directory "$RUNNER_TEMP/admin-auth-email-staging-patches" \
             --evidence-output "$RUNNER_TEMP/admin-auth-email-staging-build.json"
           test "$(jq -r '.projectRef' "$RUNNER_TEMP/admin-auth-email-staging-build.json")" = \
             "$EXPECTED_STAGING_PROJECT_REF"
@@ -103,13 +104,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data-binary @"$RUNNER_TEMP/admin-auth-email-staging-payload.json" \
-            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/config/auth" \
-            > "$RUNNER_TEMP/admin-auth-email-staging-patch-response.json"
+          for patch in "$RUNNER_TEMP/admin-auth-email-staging-patches"/*.json; do
+            response="$RUNNER_TEMP/$(basename "$patch" .json)-response.json"
+            status="$(curl --silent --show-error \
+              -o "$response" \
+              -w "%{http_code}" \
+              -X PATCH \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data-binary @"$patch" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/config/auth")"
+            if [[ "$status" != "200" ]]; then
+              echo "::error::Supabase rejected Auth email patch $(basename "$patch") with HTTP $status."
+              jq -c '{code, error, message}' "$response" 2>/dev/null || true
+              exit 1
+            fi
+            rm -f "$response"
+          done
 
       - name: Verify hosted staging templates exactly match source
         shell: bash
@@ -129,9 +140,9 @@ jobs:
             > "$RUNNER_TEMP/admin-auth-email-staging-candidate.json"
           rm -f \
             "$RUNNER_TEMP/admin-auth-email-staging-after.json" \
-            "$RUNNER_TEMP/admin-auth-email-staging-patch-response.json" \
             "$RUNNER_TEMP/admin-auth-email-staging-payload.json" \
-            "$RUNNER_TEMP/admin-auth-email-staging-build.json" \
+            "$RUNNER_TEMP/admin-auth-email-staging-build.json"
+          rm -rf "$RUNNER_TEMP/admin-auth-email-staging-patches" \
             "$RUNNER_TEMP/admin-auth-email-staging-verified-base.json"
 
       - name: Upload staging template evidence and rollback snapshot

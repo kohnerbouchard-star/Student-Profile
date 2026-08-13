@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   buildAuthEmailConfig,
+  buildAuthEmailPatchBatches,
   managedAuthEmailKeys,
 } from "./build-supabase-auth-email-config.mjs";
 
@@ -123,4 +124,23 @@ test("source identity is environment-neutral while rendered payload identity is 
   assert.notEqual(staging.evidence.renderedDigest, production.evidence.renderedDigest);
   assert.equal(staging.evidence.trackingLinksAllowed, false);
   assert.equal(production.evidence.externalImagesAllowed, false);
+});
+
+
+test("deployment payload is split into deterministic bounded template patches", () => {
+  for (const built of [staging, production]) {
+    const batches = buildAuthEmailPatchBatches(built);
+    assert.equal(batches.length, manifest.templates.length);
+    assert.deepEqual(
+      batches.map((batch) => batch.id),
+      manifest.templates.map((definition) => definition.id),
+    );
+    const reconstructed = Object.assign({}, ...batches.map((batch) => batch.payload));
+    assert.deepEqual(reconstructed, built.payload);
+    for (const batch of batches) {
+      assert.match(batch.fileName, /^\d{2}-[a-z0-9_]+[.]json$/u);
+      assert.ok(batch.bytes > 0);
+      assert.ok(batch.bytes <= 16 * 1024);
+    }
+  }
 });

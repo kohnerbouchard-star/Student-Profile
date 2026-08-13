@@ -19,176 +19,25 @@ on:
         description: "Type the exact production Supabase project ref"
         required: true
         type: string
-      confirm_action:
-        description: "Type PROMOTE ADMIN AUTH EMAIL PRODUCTION"
-        required: true
-        type: string
-
-permissions:
-  contents: read
-  actions: read
-
-concurrency:
-  group: admin-auth-email-production-promote
-  cancel-in-progress: false
-
-env:
-  EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-
-jobs:
-  promote:
-    name: Promote staging-verified Auth email source to production
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    environment: production
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-    steps:
-      - name: Enforce explicit production authorization
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/main"
-          test -n "$SUPABASE_ACCESS_TOKEN"
-          test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
-          test "${{ inputs.confirm_action }}" = "PROMOTE ADMIN AUTH EMAIL PRODUCTION"
-          test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
-          [[ "${{ inputs.candidate_run_id }}" =~ ^[0-9]+$ ]]
-          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
-          [[ "${{ inputs.staging_source_digest }}" =~ ^[a-f0-9]{64}$ ]]
-
-      - name: Check out exact current main source
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.source_commit }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Verify exact current main binding
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ inputs.source_commit }}"
-          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-
-      - name: Download exact staging email evidence
-        uses: actions/download-artifact@v5
-        with:
-          name: admin-auth-email-staging-${{ inputs.source_commit }}
-          run-id: ${{ inputs.candidate_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: dist/admin-auth-email-staging
-
-      - name: Verify staging evidence identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          evidence="dist/admin-auth-email-staging/admin-auth-email-staging-candidate.json"
-          test -f "$evidence"
-          node - <<'NODE'
-          const evidence = require(`./${process.env.EVIDENCE_PATH}`);
-          if (evidence.environment !== 'staging') throw new Error('Candidate is not staging evidence.');
-          if (evidence.projectRef !== process.env.STAGING_PROJECT_REF) throw new Error('Staging project mismatch.');
-          if (evidence.sourceCommit !== process.env.SOURCE_COMMIT) throw new Error('Staging source commit mismatch.');
-          if (evidence.sourceDigest !== process.env.SOURCE_DIGEST) throw new Error('Staging source digest mismatch.');
-          if (evidence.verified !== true) throw new Error('Staging template verification did not pass.');
-          if (evidence.trackingLinksAllowed !== false) throw new Error('Tracking-link rewrite policy drifted.');
-          if (evidence.externalImagesAllowed !== false) throw new Error('External-image policy drifted.');
-          NODE
-        env:
-          EVIDENCE_PATH: dist/admin-auth-email-staging/admin-auth-email-staging-candidate.json
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-          SOURCE_DIGEST: ${{ inputs.staging_source_digest }}
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22.23.1"
-
-      - name: Revalidate exact template source
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --test scripts/auth-email-template-contract.test.mjs
-          node scripts/build-supabase-auth-email-config.mjs --check
-
-      - name: Build exact production Auth email payload
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/build-supabase-auth-email-config.mjs \
-            --environment production \
-            --output "$RUNNER_TEMP/admin-auth-email-production-payload.json" \
-            --evidence-output "$RUNNER_TEMP/admin-auth-email-production-build.json"
-          test "$(jq -r '.projectRef' "$RUNNER_TEMP/admin-auth-email-production-build.json")" = \
-            "$EXPECTED_PRODUCTION_PROJECT_REF"
-          test "$(jq -r '.sourceDigest' "$RUNNER_TEMP/admin-auth-email-production-build.json")" = \
-            "${{ inputs.staging_source_digest }}"
-
-      - name: Capture current managed production email fields
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
-            > "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
-          node scripts/snapshot-supabase-auth-email-config.mjs \
-            --environment production \
-            --actual "$RUNNER_TEMP/admin-auth-email-production-before-raw.json" \
-            --output "$RUNNER_TEMP/admin-auth-email-production-before.json"
-          rm -f "$RUNNER_TEMP/admin-auth-email-production-before-raw.json"
-
-      - name: Apply only the canonical production email fields
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data-binary @"$RUNNER_TEMP/admin-auth-email-production-payload.json" \
-            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
-            > "$RUNNER_TEMP/admin-auth-email-production-patch-response.json"
-
-      - name: Verify hosted production templates exactly match source
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$EXPECTED_PRODUCTION_PROJECT_REF/config/auth" \
-            > "$RUNNER_TEMP/admin-auth-email-production-after.json"
-          node scripts/verify-supabase-auth-email-config.mjs \
-            --environment production \
-            --actual "$RUNNER_TEMP/admin-auth-email-production-after.json" \
-            --evidence-output "$RUNNER_TEMP/admin-auth-email-production-verified-base.json"
-          jq \
-            --arg sourceCommit "${{ inputs.source_commit }}" \
-            --arg candidateRunId "${{ inputs.candidate_run_id }}" \
-            --arg stagingSourceDigest "${{ inputs.staging_source_digest }}" \
-            '. + {
-              sourceCommit: $sourceCommit,
-              stagingCandidateRunId: $candidateRunId,
-              stagingSourceDigest: $stagingSourceDigest
-            }' \
-            "$RUNNER_TEMP/admin-auth-email-production-verified-base.json" \
-            > "$RUNNER_TEMP/admin-auth-email-production-promotion.json"
-          rm -f \
-            "$RUNNER_TEMP/admin-auth-email-production-after.json" \
-            "$RUNNER_TEMP/admin-auth-email-production-patch-response.json" \
-            "$RUNNER_TEMP/admin-auth-email-production-payload.json" \
-            "$RUNNER_TEMP/admin-auth-email-production-build.json" \
-            "$RUNNER_TEMP/admin-auth-email-production-verified-base.json"
-
-      - name: Upload production template evidence and rollback snapshot
-        uses: actions/upload-artifact@v6
-        with:
-          name: admin-auth-email-production-${{ inputs.source_commit }}
-          if-no-files-found: error
-          retention-days: 30
-          path: |
-            ${{ runner.temp }}/admin-auth-email-production-promotion.json
-            ${{ runner.temp }}/admin-auth-email-production-before.json
+     ÛÛ™š\›WØXİ[Û‚ˆ\ØÜš\[Ûˆ•\H“ÓSÕHQRSˆUUSPRS“ÑPÕSÓˆ‚ˆ™\]Z\™YˆYBˆ\Nˆİš[™Â‚œ\›Z\ÜÚ[ÛœÎ‚ˆÛÛ[Îˆ™XYˆXİ[ÛœÎˆ™XY‚˜ÛÛ˜İ\œ™[˜ŞN‚ˆÜ›İ\ˆYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\›Û[İBˆØ[˜Ù[Z[‹\›ÙÜ™\ÜÎˆ˜[ÙB‚™[‚ˆVPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘QˆÙÚ]ZÙÚXŞZÜ›]ÚYˆÕQÒS‘×Ô“Ò‘PÕÔ‘QˆYXİ˜œÜÙ˜\™˜ŞZØÙœ›B‚š›ØœÎ‚ˆ›Û[İN‚ˆ˜[YNˆ›Û[İHİYÚ[™Ë]™\šYšYY]][XZ[Ûİ\˜ÙHÈ›ÙXİ[Û‚ˆ[œË[ÛˆX[KLŒˆ[Y[İ][Z[]\ÎˆMBˆ[š\›Û›Y[ˆ›ÙXİ[Û‚ˆ[‚ˆÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆ	ŞÈÙXÜ™]Ë”ÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆ_Bˆİ\Î‚ˆH˜[YNˆ[™›Ü˜ÙH^XÚ]›ÙXİ[Ûˆ]]Üš^˜][Û‚ˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ\İ‰ÒUP—Ô‘QˆˆHœ™YœËÚXYËÛXZ[ˆ‚ˆ\İ[ˆ‰ÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆ‚ˆ\İ‰ŞÈ[œ]Ë˜ÛÛ™š\›WÜ›Ú™XİÜ™Yˆ_HˆH‰VPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘Qˆ‚ˆ\İ‰ŞÈ[œ]Ë˜ÛÛ™š\›WØXİ[Ûˆ_HˆH”“ÓSÕHQRSˆUUSPRS“ÑPÕSÓˆ‚ˆ\İ‰VPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘QˆˆOH‰ÕQÒS‘×Ô“Ò‘PÕÔ‘Qˆ‚ˆÖÈ‰ŞÈ[œ]Ë˜Ø[™Y]WÜ[—ÚY_Hˆ_ˆ–ÌNWJÉWBˆÖÈ‰ŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_Hˆ_ˆ–ØKYŒNW^ÍIWBˆÖÈ‰ŞÈ[œ]ËœİYÚ[™×ÜÛİ\˜ÙWÙYÙ\İ_Hˆ_ˆ–ØKYŒNW^ÍIWB‚ˆH˜[YNˆÚXÚÈİ]^Xİİ\œ™[XZ[ˆÛİ\˜ÙBˆ\Ù\ÎˆXİ[ÛœËØÚXÚÛİ]‚ˆÚ]‚ˆ™Yˆ	ŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_Bˆ™]ÚY\ˆˆ\œÚ\İXÜ™Y[X[Îˆ˜[ÙB‚ˆH˜[YNˆ™\šYH^Xİİ\œ™[XZ[ˆš[™[™ÂˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ\İ‰
+Ú]™]‹\\œÙHPQ
+HˆH‰ŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_H‚ˆÚ]™]ÚK[›Ë]YÜÈK\[™HÜšYÚ[ˆŠÜ™YœËÚXYËÛXZ[œ™YœËÜ™[[İ\ËÛÜšYÚ[‹ÛXZ[ˆ‚ˆ\İ‰
+Ú]™]‹\\œÙHPQ
+HˆH‰
+Ú]™]‹\\œÙHÜšYÚ[‹ÛXZ[ŠH‚‚ˆH˜[YNˆİÛ›ØY^XİİYÚ[™È[XZ[]šY[˜ÙBˆ\Ù\ÎˆXİ[ÛœËÙİÛ›ØYX\Y˜XİBˆÚ]‚ˆ˜[YNˆYZ[‹X]]Y[XZ[\İYÚ[™ËIŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_Bˆ[‹ZYˆ	ŞÈ[œ]Ë˜Ø[™Y]WÜ[—ÚY_BˆÚ]X‹]ÚÙ[ˆ	ŞÈÙXÜ™]Ë‘ÒUP—ÕÒÑSˆ_Bˆ]ˆ\İØYZ[‹X]]Y[XZ[\İYÚ[™Â‚ˆH˜[YNˆ™\šYHİYÚ[™È]šY[˜ÙHY[]BˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ]šY[˜ÙOH™\İØYZ[‹X]]Y[XZ[\İYÚ[™ËØYZ[‹X]]Y[XZ[\İYÚ[™ËXØ[™Y]KšœÛÛˆ‚ˆ\İYˆ‰]šY[˜ÙH‚ˆ›ÙHH	Ó“ÑIÂˆÛÛœİ]šY[˜ÙHH™\]Z\™J‹ÉÜ›ØÙ\ÜË™[‹‘U’QSÑWÔUX
+NÂˆYˆ
+]šY[˜ÙK™[š\›Û›Y[OOH	ÜİYÚ[™ÉÊH›İÈ™]È\œ›ÜŠ	ĞØ[™Y]H\È›İİYÚ[™È]šY[˜ÙK‰ÊNÂˆYˆ
+]šY[˜ÙKœ›Ú™Xİ™YˆOOH›ØÙ\ÜË™[‹”ÕQÒS‘×Ô“Ò‘PÕÔ‘QŠH›İÈ™]È\œ›ÜŠ	ÔİYÚ[™È›Ú™XİZ\ÛX]Ú‰ÊNÂˆYˆ
+]šY[˜ÙKœÛİ\˜ÙPÛÛ[Z]OOH›ØÙ\ÜË™[‹”ÓÕTÑWĞÓÓSRU
+H›İÈ™]È\œ›ÜŠ	ÔİYÚ[™ÈÛİ\˜ÙHÛÛ[Z]Z\ÛX]Ú‰ÊNÂˆYˆ
+]šY[˜ÙKœÛİ\˜ÙQYÙ\İOOH›ØÙ\ÜË™[‹”ÓÕTÑWÑQÑTÕ
+H›İÈ™]È\œ›ÜŠ	ÔİYÚ[™ÈÛİ\˜ÙHYÙ\İZ\ÛX]Ú‰ÊNÂˆYˆ
+]šY[˜ÙK™\šYšYYOOHYJH›İÈ™]È\œ›ÜŠ	ÔİYÚ[™È[\]H™\šYšXØ][ÛˆY›İ\ÜË‰ÊNÂˆYˆ
+]šY[˜ÙK˜XÚÚ[™Ó[šÜĞ[İÙYOOH˜[ÙJH›İÈ™]È\œ›ÜŠ	Õ˜XÚÚ[™Ë[[šÈ™]Üš]HÛXŞHšYY‰ÊNÂˆYˆ
+]šY[˜ÙK™^\›˜[[XYÙ\Ğ[İÙYOOH˜[ÙJH›İÈ™]È\œ›ÜŠ	Ñ^\›˜[Z[XYÙHÛXŞHšYY‰ÊNÂˆ“ÑBˆ[‚ˆU’QSÑWÔUˆ\İØYZ[‹X]]Y[XZ[\İYÚ[™ËØYZ[‹X]]Y[XZ[\İYÚ[™ËXØ[™Y]KšœÛÛ‚ˆÓÕTÑWĞÓÓSRUˆ	ŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_BˆÓÕTÑWÑQÑTÕˆ	ŞÈ[œ]ËœİYÚ[™×ÜÛİ\˜ÙWÙYÙ\İ_B‚ˆH˜[YNˆÙ]\›ÙBˆ\Ù\ÎˆXİ[ÛœËÜÙ]\[›ÙP‚ˆÚ]‚ˆ›ÙK]™\œÚ[ÛˆŒŒ‹ŒŒËŒH‚‚ˆH˜[YNˆ™]˜[Y]H^Xİ[\]HÛİ\˜ÙBˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ›ÙHK]\İØÜš\ËØ]]Y[XZ[][\]KXÛÛ˜Xİ\İ›ZœÂˆ›ÙHØÜš\ËØZ[\İ\X˜\ÙKX]]Y[XZ[XÛÛ™šYË›ZœÈKXÚXÚÂ‚ˆH˜[YNˆZ[^Xİ›ÙXİ[Ûˆ]][XZ[^[ØYˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ›ÙHØÜš\ËØZ[\İ\X˜\ÙKX]]Y[XZ[XÛÛ™šYË›ZœÈˆKY[š\›Û›Y[›ÙXİ[ÛˆˆK[İ]]‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\^[ØYšœÛÛˆˆˆKX˜]ÚY\™XİÜH‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\]Ú\ÈˆˆKY]šY[˜ÙK[İ]]‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XZ[šœÛÛˆ‚ˆ\İ‰
+œH\ˆ	Ëœ›Ú™Xİ™Y‰È‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XZ[šœÛÛˆŠHˆHˆ‰VPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘Qˆ‚ˆ\İ‰
+œH\ˆ	ËœÛİ\˜ÙQYÙ\İ	È‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XZ[šœÛÛˆŠHˆHˆ‰ŞÈ[œ]ËœİYÚ[™×ÜÛİ\˜ÙWÙYÙ\İ_H‚‚ˆH˜[YNˆØ\\™Hİ\œ™[X[˜YÙY›ÙXİ[Ûˆ[XZ[šY[ÂˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆİ\›KY˜Z[K\Ú[[K\ÚİËY\œ›ÜˆˆR]]Üš^˜][Ûˆ™X\™\ˆ	ÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆˆˆšÎ‹ËØ\Kœİ\X˜\ÙK˜ÛÛKİŒKÜ›Ú™XİËÉVPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘Q‹ØÛÛ™šYËØ]]ˆˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹X™Y›Ü™K\˜]ËšœÛÛˆ‚ˆ›ÙHØÜš\ËÜÛ˜\Úİ\İ\X˜\ÙKX]]Y[XZ[XÛÛ™šYË›ZœÈˆKY[š\›Û›Y[›ÙXİ[ÛˆˆKXXİX[‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹X™Y›Ü™K\˜]ËšœÛÛˆˆˆK[İ]]‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹X™Y›Ü™KšœÛÛˆ‚ˆ›HYˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹X™Y›Ü™K\˜]ËšœÛÛˆ‚‚ˆH˜[YNˆ\HÛ›HHØ[›ÛšXØ[›ÙXİ[Ûˆ[XZ[šY[ÂˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆ›Üˆ]Ú[ˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\]Ú\È‹Ê‹šœÛÛÈÂˆ™\ÜÛœÙOH‰•S“‘T—ÕSTÉ
+˜\Ù[˜[YH‰]ÚˆšœÛÛŠK\™\ÜÛœÙKšœÛÛˆ‚ˆİ]\ÏH‰
+İ\›K\Ú[[K\ÚİËY\œ›Üˆˆ[È‰™\ÜÛœÙHˆˆ]È‰^ÚØÛÙ_HˆˆVUÒˆR]]Üš^˜][Ûˆ™X\™\ˆ	ÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆˆˆRÛÛ[U\Nˆ\XØ][Û‹ÚœÛÛˆˆˆKY]KXš[˜\H‰]ÚˆˆšÎ‹ËØ\Kœİ\X˜\ÙK˜ÛÛKİŒKÜ›Ú™XİËÉVPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘Q‹ØÛÛ™šYËØ]]ŠH‚ˆYˆÖÈ‰İ]\ÈˆOHŒŒˆWNÈ[‚ˆXÚÈ™\œ›Ü”İ\X˜\ÙH™Z™XİY]][XZ[]Ú	
+˜\Ù[˜[YH‰]ÚŠHÚ]	İ]\Ëˆ‚ˆœHXÈ	ŞØÛÙK\œ›Ü‹Y\ÜØYÙ_IÈ‰™\ÜÛœÙHˆ‹Ù]‹Û[YBˆ^]BˆšBˆ›HYˆ‰™\ÜÛœÙH‚ˆÛ™B‚ˆH˜[YNˆ™\šYHÜİY›ÙXİ[Ûˆ[\]\È^XİHX]ÚÛİ\˜ÙBˆÚ[ˆ˜\Úˆ[ˆˆÙ]Y][È\Y˜Z[ˆİ\›KY˜Z[K\Ú[[K\ÚİËY\œ›ÜˆˆR]]Üš^˜][Ûˆ™X\™\ˆ	ÕTPTÑWĞPĞÑTÔ×ÕÒÑSˆˆˆšÎ‹ËØ\Kœİ\X˜\ÙK˜ÛÛKİŒKÜ›Ú™XİËÉVPÕQÔ“ÑPÕSÓ—Ô“Ò‘PÕÔ‘Q‹ØÛÛ™šYËØ]]ˆˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XY\‹šœÛÛˆ‚ˆ›ÙHØÜš\Ëİ™\šYK\İ\X˜\ÙKX]]Y[XZ[XÛÛ™šYË›ZœÈˆKY[š\›Û›Y[›ÙXİ[ÛˆˆKXXİX[‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XY\‹šœÛÛˆˆˆKY]šY[˜ÙK[İ]]‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹]™\šYšYYX˜\ÙKšœÛÛˆ‚ˆœHˆKX\™ÈÛİ\˜ÙPÛÛ[Z]‰ŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_HˆˆKX\™ÈØ[™Y]T[’Y‰ŞÈ[œ]Ë˜Ø[™Y]WÜ[—ÚY_HˆˆKX\™ÈİYÚ[™ÔÛİ\˜ÙQYÙ\İ‰ŞÈ[œ]ËœİYÚ[™×ÜÛİ\˜ÙWÙYÙ\İ_Hˆˆ	Ëˆ
+ÈÂˆÛİ\˜ÙPÛÛ[Z]ˆ	Ûİ\˜ÙPÛÛ[Z]ˆİYÚ[™ĞØ[™Y]T[’Yˆ	Ø[™Y]T[’YˆİYÚ[™ÔÛİ\˜ÙQYÙ\İˆ	İYÚ[™ÔÛİ\˜ÙQYÙ\İˆIÈˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹]™\šYšYYX˜\ÙKšœÛÛˆˆˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\›Û[İ[Û‹šœÛÛˆ‚ˆ›HYˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XY\‹šœÛÛˆˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\^[ØYšœÛÛˆˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹XZ[šœÛÛˆ‚ˆ›H\™ˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\]Ú\Èˆˆ‰•S“‘T—ÕSTØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹]™\šYšYYX˜\ÙKšœÛÛˆ‚‚ˆH˜[YNˆ\ØY›ÙXİ[Ûˆ[\]H]šY[˜ÙH[™›Û˜XÚÈÛ˜\Úİˆ\Ù\ÎˆXİ[ÛœËİ\ØYX\Y˜Xİ‚ˆÚ]‚ˆ˜[YNˆYZ[‹X]]Y[XZ[\›ÙXİ[Û‹IŞÈ[œ]ËœÛİ\˜ÙWØÛÛ[Z]_BˆY‹[›ËYš[\ËY›İ[™ˆ\œ›Ü‚ˆ™][[Û‹Y^\ÎˆÌˆ]ˆˆ	ŞÈ[›™\‹[\_KØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹\›Û[İ[Û‹šœÛÛ‚ˆ	ŞÈ[›™\‹[\_KØYZ[‹X]]Y[XZ[\›ÙXİ[Û‹X™Y›Ü™KšœÛÛ‚

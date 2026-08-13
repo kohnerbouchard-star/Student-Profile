@@ -56,6 +56,7 @@ jobs:
           node scripts/build-supabase-auth-email-config.mjs \
             --environment staging \
             --output "$RUNNER_TEMP/staging-payload.json" \
+            --batch-directory "$RUNNER_TEMP/staging-patches" \
             --evidence-output "$RUNNER_TEMP/staging-build.json"
           test "$(jq -r '.projectRef' "$RUNNER_TEMP/staging-build.json")" = "$EXPECTED_STAGING_PROJECT_REF"
 
@@ -76,13 +77,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data-binary @"$RUNNER_TEMP/staging-payload.json" \
-            "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/config/auth" \
-            > "$RUNNER_TEMP/staging-patch-response.json"
+          for patch in "$RUNNER_TEMP/staging-patches"/*.json; do
+            response="$RUNNER_TEMP/$(basename "$patch" .json)-response.json"
+            status="$(curl --silent --show-error \
+              -o "$response" \
+              -w "%{http_code}" \
+              -X PATCH \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data-binary @"$patch" \
+              "https://api.supabase.com/v1/projects/$EXPECTED_STAGING_PROJECT_REF/config/auth")"
+            if [[ "$status" != "200" ]]; then
+              echo "::error::Supabase rejected Auth email patch $(basename "$patch") with HTTP $status."
+              jq -c '{code, error, message}' "$response" 2>/dev/null || true
+              exit 1
+            fi
+            rm -f "$response"
+          done
 
       - name: Verify hosted staging configuration
         shell: bash
@@ -110,9 +121,9 @@ jobs:
           rm -f \
             "$RUNNER_TEMP/staging-before-raw.json" \
             "$RUNNER_TEMP/staging-after.json" \
-            "$RUNNER_TEMP/staging-patch-response.json" \
             "$RUNNER_TEMP/staging-payload.json" \
             "$RUNNER_TEMP/staging-build.json"
+          rm -rf "$RUNNER_TEMP/staging-patches"
 
       - name: Upload sanitized verification and rollback evidence
         uses: actions/upload-artifact@v6

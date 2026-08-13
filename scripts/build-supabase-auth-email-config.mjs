@@ -215,13 +215,49 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+export function buildAuthEmailPatchBatches(built) {
+  return (built.manifest.templates ?? []).map((definition, index) => {
+    const payload = {
+      [definition.subjectKey]: built.payload[definition.subjectKey],
+      [definition.contentKey]: built.payload[definition.contentKey],
+    };
+    if (definition.enabledKey) payload[definition.enabledKey] = true;
+    return {
+      index: index + 1,
+      id: definition.id,
+      fileName: `${String(index + 1).padStart(2, "0")}-${definition.id}.json`,
+      payload,
+      bytes: Buffer.byteLength(JSON.stringify(payload)),
+    };
+  });
+}
+
+async function writePatchBatches(directory, built) {
+  const absoluteDirectory = path.resolve(directory);
+  await fs.rm(absoluteDirectory, { recursive: true, force: true });
+  await fs.mkdir(absoluteDirectory, { recursive: true });
+  for (const batch of buildAuthEmailPatchBatches(built)) {
+    if (batch.bytes > 16 * 1024) {
+      throw new Error(`Auth email patch batch ${batch.id} exceeds the 16 KiB deployment boundary.`);
+    }
+    await writeJson(path.join(absoluteDirectory, batch.fileName), batch.payload);
+  }
+}
+
 function parseArguments(argv) {
-  const options = { environment: "", output: "", evidenceOutput: "", check: false };
+  const options = {
+    environment: "",
+    output: "",
+    evidenceOutput: "",
+    batchDirectory: "",
+    check: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--environment") options.environment = String(argv[++index] || "");
     else if (arg === "--output") options.output = String(argv[++index] || "");
     else if (arg === "--evidence-output") options.evidenceOutput = String(argv[++index] || "");
+    else if (arg === "--batch-directory") options.batchDirectory = String(argv[++index] || "");
     else if (arg === "--check") options.check = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -250,11 +286,14 @@ async function main() {
     process.stdout.write(`${JSON.stringify({ ok: true, results }, null, 2)}\n`);
     return;
   }
-  if (!options.environment || !options.output) {
-    throw new Error("Use --environment <staging|production> and --output <path>.");
+  if (!options.environment || (!options.output && !options.batchDirectory)) {
+    throw new Error(
+      "Use --environment <staging|production> with --output <path> and/or --batch-directory <path>.",
+    );
   }
   const built = await buildAuthEmailConfig(options.environment);
-  await writeJson(options.output, built.payload);
+  if (options.output) await writeJson(options.output, built.payload);
+  if (options.batchDirectory) await writePatchBatches(options.batchDirectory, built);
   if (options.evidenceOutput) await writeJson(options.evidenceOutput, built.evidence);
 }
 
