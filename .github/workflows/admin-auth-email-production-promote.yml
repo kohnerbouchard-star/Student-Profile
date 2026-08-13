@@ -36,9 +36,6 @@ env:
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   SUPABASE_CLI_VERSION: 2.109.1
-  AUTH_EMAIL_FROM: "Econovaria Security <no-reply@econovaria.com>"
-  AUTH_EMAIL_ADDRESS: no-reply@econovaria.com
-  AUTH_EMAIL_SENDER_NAME: Econovaria Security
 
 jobs:
   promote:
@@ -49,7 +46,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      ECONOVARIA_AUTH_EMAIL_FROM: "Econovaria Security <no-reply@econovaria.com>"
+      ECONOVARIA_AUTH_EMAIL_FROM: ${{ secrets.ECONOVARIA_AUTH_EMAIL_FROM }}
     steps:
       - name: Enforce explicit production authorization
         shell: bash
@@ -58,6 +55,7 @@ jobs:
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$RESEND_API_KEY"
+          test -n "$ECONOVARIA_AUTH_EMAIL_FROM"
           test "${{ inputs.confirm_project_ref }}" = "$EXPECTED_PRODUCTION_PROJECT_REF"
           test "${{ inputs.confirm_action }}" = "PROMOTE ADMIN AUTH EMAIL PRODUCTION"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$STAGING_PROJECT_REF"
@@ -158,8 +156,15 @@ jobs:
             --evidence-output "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json"
           test "$(jq -r '.smtp.configured' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "true"
           test "$(jq -r '.smtp.host' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "smtp.resend.com"
-          test "$(jq -r '.smtp.adminEmail' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "$AUTH_EMAIL_ADDRESS"
           test "$(jq -r '.resend.trackingUpdateApplied' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")" = "true"
+          sender_email="$(jq -r '.sender.email' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")"
+          sender_name="$(jq -r '.sender.name' "$RUNNER_TEMP/admin-auth-email-production-smtp-evidence.json")"
+          test -n "$sender_email"
+          test "$sender_name" = "Econovaria Security"
+          {
+            echo "AUTH_EMAIL_ADDRESS=$sender_email"
+            echo "AUTH_EMAIL_SENDER_NAME=$sender_name"
+          } >> "$GITHUB_ENV"
 
       - name: Provision direct signup delivery secrets in production
         shell: bash
@@ -169,7 +174,7 @@ jobs:
           umask 077
           {
             printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
-            printf 'ECONOVARIA_AUTH_EMAIL_FROM="%s"\n' "$AUTH_EMAIL_FROM"
+            printf 'ECONOVARIA_AUTH_EMAIL_FROM="%s"\n' "$ECONOVARIA_AUTH_EMAIL_FROM"
             printf 'ECONOVARIA_DEPLOYMENT_ENVIRONMENT=production\n'
           } > "$secrets_file"
           supabase secrets set \
