@@ -26,8 +26,8 @@ const brandTokens = ["#020617", "#0f172a", "#334155", "#f97316", "#93c5fd"];
 
 test("direct Resend signup delivery uses the canonical Econovaria security design", () => {
   for (const token of brandTokens) {
-    assert.match(directMailer, new RegExp(token.replace("#", "#"), "iu"));
-    assert.match(canonicalConfirmation, new RegExp(token.replace("#", "#"), "iu"));
+    assert.match(directMailer, new RegExp(token, "iu"));
+    assert.match(canonicalConfirmation, new RegExp(token, "iu"));
   }
 
   for (const text of [
@@ -41,9 +41,9 @@ test("direct Resend signup delivery uses the canonical Econovaria security desig
     assert.match(canonicalConfirmation, new RegExp(text, "u"));
   }
 
-  assert.match(directMailer, /width=\"600\"/u);
-  assert.match(directMailer, /class=\"email-shell\"/u);
-  assert.match(directMailer, /class=\"email-button\"/u);
+  assert.match(directMailer, /width="600"/u);
+  assert.match(directMailer, /class="email-shell"/u);
+  assert.match(directMailer, /class="email-button"/u);
   assert.match(directMailer, /display:none;max-height:0;overflow:hidden/u);
   assert.doesNotMatch(directMailer, /<img\b|<script\b|<iframe\b|<form\b/iu);
   assert.doesNotMatch(directMailer, /javascript:|(?:[?&]utm_|[?&](?:click|tracking)_id=)/iu);
