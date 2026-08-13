@@ -120,7 +120,7 @@ test("production secret provisioning is main-bound, missing-only and uses the ve
 
 test("production web origins are exact and the obsolete Cloudflare repair workflow is retired", () => {
   const expected =
-    "https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app";
+    "https://econovaria.com,https://www.econovaria.com,https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app";
   const workflow = read(SECRET_WORKFLOW);
   assert.equal(
     workflow.includes(`PRODUCTION_ALLOWED_ORIGINS: ${expected}`),

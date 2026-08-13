@@ -49,7 +49,7 @@
     "test:admin-v2:crafting-browser": "node scripts/admin-v2-crafting-browser-smoke.mjs",
     "test:admin-v2:logs-browser": "node scripts/admin-v2-logs-browser-smoke.mjs",
     "test:admin-messaging": "node scripts/admin-messaging-moderation-contract.mjs",
-    "test:auth-boundaries": "node --test scripts/auth-boundary-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs scripts/internal-runner-auth-contract.test.mjs && node --experimental-strip-types --test scripts/admin-bff-request-auth.test.mjs",
+    "test:auth-boundaries": "node --test scripts/auth-boundary-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs scripts/internal-runner-auth-contract.test.mjs scripts/canonical-production-origin-contract.test.mjs && node --experimental-strip-types --test scripts/admin-bff-request-auth.test.mjs",
     "test:web-session-release": "node --test scripts/web-session-release-contract.test.mjs scripts/mfa-handle-secret-provision-contract.test.mjs scripts/verify-downloaded-edge-function-source.test.mjs scripts/verify-edge-function-multipart-source.test.mjs scripts/production-web-session-release-orchestrator.test.mjs scripts/production-admin-staff-security-reconciliation-contract.test.mjs scripts/production-admin-bootstrap-schema-reconciliation-contract.test.mjs scripts/login-retry-countdown.test.mjs scripts/web-session-trusted-ip-contract.test.mjs scripts/admin-mfa-enrollment-lifecycle.test.mjs && node --experimental-strip-types --test scripts/admin-mfa-qr-code.test.mjs",
     "test:beta-e2e": "node --test scripts/beta-e2e-pilot.test.mjs",
     "test:branch-hygiene": "node --test scripts/branch-hygiene-policy.test.mjs",

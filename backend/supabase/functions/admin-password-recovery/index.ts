@@ -5,7 +5,7 @@ const CHALLENGE_COOKIE = "__Host-econovaria_recovery_challenge";
 const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 const JWT_PATTERN = /^[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,12288}\.[A-Za-z0-9_-]{8,4096}$/u;
-const PRODUCTION_RESET_URL = "https://econovaria.vercel.app/auth/reset-password.html";
+const PRODUCTION_RESET_URL = "https://econovaria.com/auth/reset-password.html";
 const FUNCTION_PATH = "/functions/v1/admin-password-recovery";
 
 Deno.serve(handleAdminPasswordRecoveryRequest);
@@ -66,7 +66,7 @@ function renderConfirmation(request: Request): Response {
         <input type="hidden" name="challenge" value="${challenge}">
         <button type="submit">Continue to Password Reset</button>
       </form>
-      <a class="back" href="https://econovaria.vercel.app/?mode=admin" rel="noreferrer">Return to administrator sign-in</a>
+      <a class="back" href="https://econovaria.com/?mode=admin" rel="noreferrer">Return to administrator sign-in</a>
     </section>
   </main>
 </body>
@@ -285,7 +285,7 @@ function errorPage(title: string, message: string): string {
       <span class="kicker">Econovaria account security</span>
       <h1 id="error-title">${escapeHtml(title)}</h1>
       <p>${escapeHtml(message)}</p>
-      <a class="back" href="https://econovaria.vercel.app/?mode=admin" rel="noreferrer">Return to administrator sign-in</a>
+      <a class="back" href="https://econovaria.com/?mode=admin" rel="noreferrer">Return to administrator sign-in</a>
     </section>
   </main>
 </body>

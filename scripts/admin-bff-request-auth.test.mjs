@@ -30,7 +30,7 @@ async function signedRequest({
       : "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/web-session-api/login";
   const origin = local
     ? "http://127.0.0.1:4173"
-    : "https://econovaria.vercel.app";
+    : "https://econovaria.com";
   const headers = new Headers({
     "content-type": "application/json",
     origin,
@@ -106,7 +106,7 @@ test("rejects a request missing the signed BFF envelope as malformed", async () 
     {
       method: "POST",
       headers: {
-        origin: "https://econovaria.vercel.app",
+        origin: "https://econovaria.com",
         "content-type": "application/json",
       },
       body: BODY,

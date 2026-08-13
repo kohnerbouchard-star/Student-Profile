@@ -113,7 +113,7 @@ test("security notifications are enabled and direct users only to the canonical 
     assert.equal(production.payload[definition.enabledKey], true);
     assert.match(
       production.payload[definition.contentKey],
-      /https:\/\/econovaria\.vercel\.app\/\?mode=admin/u,
+      /https:\/\/econovaria\.com\/\?mode=admin/u,
     );
   }
 });

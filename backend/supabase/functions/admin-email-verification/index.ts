@@ -6,7 +6,7 @@ const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 const JWT_PATTERN = /^[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,12288}\.[A-Za-z0-9_-]{8,4096}$/u;
 const FUNCTION_PATH = "/functions/v1/admin-email-verification";
-const DEFAULT_RETURN_URL = "https://econovaria.vercel.app/?mode=admin&reason=email-verified";
+const DEFAULT_RETURN_URL = "https://econovaria.com/?mode=admin&reason=email-verified";
 const VERIFICATION_TYPES = new Set(["signup", "magiclink"]);
 
 Deno.serve(handleAdminEmailVerificationRequest);

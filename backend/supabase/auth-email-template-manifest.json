@@ -17,14 +17,14 @@
       "projectRef": "eecvbssdvarfcykcfrny",
       "verificationReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-email-verification",
       "recoveryReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-password-recovery",
-      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "appSignInUrl": "https://econovaria.com/?mode=admin",
       "notice": "STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE"
     },
     "production": {
       "projectRef": "cgiukdjwicykrmtkhudh",
       "verificationReviewUrl": "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/admin-email-verification",
-      "recoveryReviewUrl": "https://econovaria.vercel.app/auth/recovery-start.html",
-      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "recoveryReviewUrl": "https://econovaria.com/auth/recovery-start.html",
+      "appSignInUrl": "https://econovaria.com/?mode=admin",
       "notice": ""
     }
   },

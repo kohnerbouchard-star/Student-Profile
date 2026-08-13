@@ -43,7 +43,7 @@ function loadRecoveryStart({
   const location = {
     search,
     pathname: "/auth/recovery-start.html",
-    href: `https://econovaria.vercel.app/auth/recovery-start.html${search}`,
+    href: `https://econovaria.com/auth/recovery-start.html${search}`,
     replace(value) {
       navigation.push(String(value));
     },
@@ -123,7 +123,7 @@ test("explicit continue exchanges token hash and forwards only the recovery sess
   );
   assert.equal(fixture.navigation.length, 1);
   const target = new URL(fixture.navigation[0]);
-  assert.equal(target.origin, "https://econovaria.vercel.app");
+  assert.equal(target.origin, "https://econovaria.com");
   assert.equal(target.pathname, "/auth/reset-password.html");
   const fragment = new URLSearchParams(target.hash.slice(1));
   assert.equal(fragment.get("access_token"), accessToken);
