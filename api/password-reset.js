@@ -4,6 +4,9 @@ const { isIP } = require("node:net");
 
 const MAX_BODY_BYTES = 4_096;
 const JWT_PATTERN = /^[A-Za-z0-9_-]{8,2048}\.[A-Za-z0-9_-]{8,4096}\.[A-Za-z0-9_-]{8,4096}$/u;
+const STAGING_PROJECT_REF = "eecvbssdvarfcykcfrny";
+const PRODUCTION_PROJECT_REF = "cgiukdjwicykrmtkhudh";
+const STAGING_PUBLISHABLE_KEY = "sb_publishable_hxDGtX8hXCdh4wCMjj_IKg_REc8k3WB";
 
 module.exports = async function passwordResetProxy(request, response) {
   try {
@@ -19,7 +22,6 @@ module.exports = async function passwordResetProxy(request, response) {
       ));
     }
 
-    const config = readConfig();
     const origin = requestOrigin(request);
     const clientIp = trustedClientIp(request);
     if (!clientIp) {
@@ -40,11 +42,9 @@ module.exports = async function passwordResetProxy(request, response) {
 
     const body = readBody(request);
     if (!body.ok) {
-      return sendJson(response, 413, errorBody(
-        "request_body_too_large",
-        "Password reset request is too large."
-      ));
+      return sendJson(response, body.status, errorBody(body.code, body.message));
     }
+    const config = readConfig(body.projectRef);
 
     const upstream = await fetch(
       `${config.supabaseUrl}/functions/v1/password-reset-api`,
@@ -57,7 +57,7 @@ module.exports = async function passwordResetProxy(request, response) {
           "Content-Type": "application/json",
           "x-real-ip": clientIp
         },
-        body: body.value,
+        body: JSON.stringify({ password: body.password }),
         cache: "no-store",
         redirect: "manual"
       }
@@ -86,7 +86,17 @@ module.exports = async function passwordResetProxy(request, response) {
   }
 };
 
-function readConfig() {
+function readConfig(projectRef) {
+  if (projectRef === STAGING_PROJECT_REF) {
+    return {
+      supabaseUrl: `https://${STAGING_PROJECT_REF}.supabase.co`,
+      publishableKey: STAGING_PUBLISHABLE_KEY
+    };
+  }
+  if (projectRef !== PRODUCTION_PROJECT_REF) {
+    throw new Error("invalid password-reset project");
+  }
+
   const supabaseUrl = String(process.env.ECONOVARIA_SUPABASE_URL || "")
     .trim()
     .replace(/\/+$/, "");
@@ -96,7 +106,7 @@ function readConfig() {
   const parsed = new URL(supabaseUrl);
   if (
     parsed.protocol !== "https:" ||
-    !/^[a-z0-9]{20}\.supabase\.co$/u.test(parsed.hostname) ||
+    parsed.hostname !== `${PRODUCTION_PROJECT_REF}.supabase.co` ||
     parsed.pathname !== "/" ||
     parsed.search ||
     parsed.hash ||
@@ -143,20 +153,34 @@ function trustedClientIp(request) {
 
 function readBody(request) {
   const declared = Number(request.headers?.["content-length"] || 0);
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return { ok: false };
-  let value;
-  if (request.body === undefined || request.body === null) {
-    value = Buffer.alloc(0);
-  } else if (Buffer.isBuffer(request.body)) {
-    value = request.body;
-  } else if (typeof request.body === "string") {
-    value = Buffer.from(request.body, "utf8");
-  } else {
-    value = Buffer.from(JSON.stringify(request.body), "utf8");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return failure(413, "request_body_too_large", "Password reset request is too large.");
   }
-  return value.byteLength <= MAX_BODY_BYTES
-    ? { ok: true, value }
-    : { ok: false };
+  let raw;
+  if (request.body === undefined || request.body === null) raw = Buffer.alloc(0);
+  else if (Buffer.isBuffer(request.body)) raw = request.body;
+  else if (typeof request.body === "string") raw = Buffer.from(request.body, "utf8");
+  else raw = Buffer.from(JSON.stringify(request.body), "utf8");
+  if (raw.byteLength === 0 || raw.byteLength > MAX_BODY_BYTES) {
+    return failure(raw.byteLength === 0 ? 400 : 413,
+      raw.byteLength === 0 ? "request_body_required" : "request_body_too_large",
+      raw.byteLength === 0 ? "A password reset request is required." : "Password reset request is too large.");
+  }
+  try {
+    const value = JSON.parse(raw.toString("utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+    if (Object.keys(value).some((key) => !["password", "projectRef"].includes(key))) throw new Error();
+    if (typeof value.password !== "string") throw new Error();
+    const projectRef = String(value.projectRef || PRODUCTION_PROJECT_REF).trim().toLowerCase();
+    if (![STAGING_PROJECT_REF, PRODUCTION_PROJECT_REF].includes(projectRef)) throw new Error();
+    return { ok: true, password: value.password, projectRef };
+  } catch (_) {
+    return failure(400, "invalid_request_body", "Password reset request is invalid.");
+  }
+}
+
+function failure(status, code, message) {
+  return { ok: false, status, code, message };
 }
 
 function safeHeader(value) {
