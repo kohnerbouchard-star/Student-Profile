@@ -1323,7 +1323,8 @@ select.admin-field__control optgroup {
     block-size: auto;
     min-block-size: 100vh;
     min-block-size: 100dvh;
-    overflow: visible;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .admin-shell__navigation {

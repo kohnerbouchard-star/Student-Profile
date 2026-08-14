@@ -259,6 +259,7 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
   }
 
   function reset() {
+    presetWasAutoCustom = false;
     difficulty.setValue(model.difficultyPreset);
     MODIFIER_FIELDS.forEach((name) => fields.get(name).setValue(model[name]));
     presentReward.setValue(model.attendanceWindow.presentRewardAmount);
@@ -278,13 +279,26 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
     return errors.length === 0;
   }
 
+  let presetWasAutoCustom = false;
   MODIFIER_FIELDS.forEach((name) => {
     fields.get(name).control.addEventListener("input", () => {
-      if (difficulty.getValue() !== "custom") difficulty.setValue("custom");
+      const modifiersDiffer = MODIFIER_FIELDS.some((fieldName) => (
+        !equalValue(fields.get(fieldName).getValue(), model[fieldName])
+      ));
+      if (modifiersDiffer) {
+        if (difficulty.getValue() !== "custom") difficulty.setValue("custom");
+        presetWasAutoCustom = true;
+      } else if (presetWasAutoCustom) {
+        difficulty.setValue(model.difficultyPreset);
+        presetWasAutoCustom = false;
+      }
       updateDirtyState();
     });
   });
-  difficulty.control.addEventListener("change", updateDirtyState);
+  difficulty.control.addEventListener("change", () => {
+    presetWasAutoCustom = false;
+    updateDirtyState();
+  });
   presentReward.control.addEventListener("input", updateDirtyState);
   lateReward.control.addEventListener("input", updateDirtyState);
   resetButton.addEventListener("click", reset);

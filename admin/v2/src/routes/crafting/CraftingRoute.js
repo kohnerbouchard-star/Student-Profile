@@ -1,4 +1,5 @@
 import {
+  AdminConfirmDialog,
   AdminDataTable,
   AdminDialog,
   AdminEmptyState,

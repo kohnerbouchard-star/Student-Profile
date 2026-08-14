@@ -146,6 +146,10 @@ try {
   await dialog.getByLabel("Event multiplier").fill("1.5");
   await dialog.getByLabel("Route multiplier").fill("0.9");
   await dialog.getByRole("button", { name: "Apply supply state" }).click();
+  const review = page.getByRole("alertdialog", { name: "Review supply change" });
+  await review.waitFor({ state: "visible", timeout: 10_000 });
+  await review.getByRole("button", { name: "Apply supply state" }).click();
+  await review.waitFor({ state: "detached", timeout: 10_000 });
   await dialog.waitFor({ state: "detached", timeout: 10_000 });
   await page.waitForTimeout(50);
 
