@@ -88,11 +88,9 @@ jobs:
                   current_hunk.append(line)
           flush()
           if not sections:
-              raise SystemExit(f"no file sections in {patch_path}")
+              raise SystemExit(f"no sections in {patch_path.name}")
 
-          contents = {}
-          trailing = {}
-          cursors = {}
+          contents, trailing, cursors = {}, {}, {}
           for relative, _ in sections:
               if relative in contents:
                   continue
@@ -104,16 +102,15 @@ jobs:
               trailing[relative] = source.endswith("\n")
               cursors[relative] = 0
 
-          def matches(haystack, needle, start=0):
+          def find_all(haystack, needle, start=0):
               if not needle:
-                  return [start]
+                  return [max(0, start)]
               last = len(haystack) - len(needle)
               return [i for i in range(max(0, start), last + 1) if haystack[i:i + len(needle)] == needle]
 
-          def parse_hunk(raw_hunk, number):
-              old, new = [], []
-              changed = False
-              for row in raw_hunk:
+          def parse_hunk(raw, number):
+              old, new, changed = [], [], False
+              for row in raw:
                   if row == "\\ No newline at end of file":
                       continue
                   if not row:
@@ -134,24 +131,30 @@ jobs:
                   old, new, changed = parse_hunk(raw_hunk, number)
                   if not old and not new:
                       continue
-                  candidates = matches(contents[declared], old, cursors[declared])
+
+                  candidates = find_all(contents[declared], old, cursors[declared])
                   target = declared
-                  if not candidates:
-                      candidates = matches(contents[declared], old, 0)
-                  if not candidates and changed:
-                      cross = []
-                      for relative in contents:
-                          found = matches(contents[relative], old, 0)
-                          if len(found) == 1:
-                              cross.append((relative, found[0]))
-                      if len(cross) == 1:
+                  if candidates:
+                      index = candidates[0]
+                  elif not changed:
+                      print(f"advisory anchor skipped {patch_path.name}: {declared} hunk {number}")
+                      continue
+                  else:
+                      fallback = find_all(contents[declared], old, 0)
+                      if len(fallback) == 1:
+                          index = fallback[0]
+                      else:
+                          cross = []
+                          for relative in contents:
+                              found = find_all(contents[relative], old, 0)
+                              if len(found) == 1:
+                                  cross.append((relative, found[0]))
+                          if len(cross) != 1:
+                              preview = "\n".join(old[:8])
+                              raise SystemExit(f"changed anchor not found uniquely in {patch_path.name} hunk {number}:\n{preview}")
                           target, index = cross[0]
-                          candidates = [index]
                           print(f"remap {patch_path.name}: declared {declared} -> {target} hunk {number}")
-                  if len(candidates) != 1:
-                      preview = "\n".join(old[:8])
-                      raise SystemExit(f"anchor not found uniquely in {patch_path.name} hunk {number}:\n{preview}")
-                  index = candidates[0]
+
                   if changed:
                       contents[target][index:index + len(old)] = new
                       cursors[target] = index + len(new)
