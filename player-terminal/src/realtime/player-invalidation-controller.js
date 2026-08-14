@@ -38,6 +38,7 @@ function isUnavailableResource(state, resource) {
 
 function isUserInteracting(mount, terminalState, documentRef) {
   if (terminalState?.modal) return true;
+  if (mount?.querySelector?.("[data-player-live-refresh-pause][open]")) return true;
   const active = documentRef?.activeElement;
   return Boolean(active && mount?.contains?.(active) && active.matches?.("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
@@ -140,6 +141,11 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
       if (invalidSession) { await terminal.refresh?.(); return; }
       const snapshot = terminal.getState();
       if (snapshot?.status !== "ready") return;
+      if (isUserInteracting(mount, snapshot, documentRef)) {
+        targets.forEach((resource) => pending.add(resource));
+        schedule(900);
+        return;
+      }
       const data = mergeResourceData(snapshot.data, result.data || {}, config);
       updateStoreFromSnapshot(snapshot, (state) => ({ ...state, data }));
       const firstError = Object.values(result.errors || {})[0];
