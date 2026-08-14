@@ -110,9 +110,6 @@ function reasonField(label, hint) {
 function messageCard({ thread, message, onRequestAction }) {
   const action = message.hidden ? "unhide" : "hide";
   const restrictive = action === "hide";
-  const reason = restrictive
-    ? reasonField("Message moderation reason", "Required before hiding a message.")
-    : null;
   const card = createElement("article", {
     className: "admin-messages-route__message",
     dataset: { hidden: message.hidden },
@@ -140,7 +137,6 @@ function messageCard({ thread, message, onRequestAction }) {
           message.hiddenReason || "This message is hidden by moderation.",
         ],
       }) : null,
-      reason?.element,
       createElement("div", {
         className: "admin-messages-route__message-actions",
         children: button({
@@ -149,19 +145,13 @@ function messageCard({ thread, message, onRequestAction }) {
           quiet: true,
           tone: restrictive ? "danger" : null,
           onClick(event) {
-            const moderationReason = reason?.getValue().trim() || "";
-            if (restrictive && !moderationReason) {
-              reason.setError("Enter a moderation reason before hiding this message.");
-              reason.focus();
-              return;
-            }
-            reason?.setError("");
             onRequestAction({
               kind: "message",
               thread,
               message,
               action,
-              reason: moderationReason,
+              requireReason: restrictive,
+              reasonLabel: "Message moderation reason",
               opener: event.currentTarget,
             });
           },
@@ -200,13 +190,6 @@ function messageList({ thread, onRequestAction }) {
 
 function threadCard({ thread, onRequestAction }) {
   const statusAction = thread.status === "active" ? "disable" : thread.status === "disabled" ? "enable" : "";
-  const restrictiveThreadAction = ["disable", "close"].includes(statusAction) || thread.status !== "closed";
-  const threadReason = restrictiveThreadAction
-    ? reasonField("Conversation moderation reason", "Required for disabling or closing a conversation.")
-    : null;
-  const retentionReason = thread.expired
-    ? reasonField("Retention deletion reason", "Required before deleting expired retained message content.")
-    : null;
 
   const actions = createElement("div", { className: "admin-messages-route__thread-actions" });
   if (statusAction) {
@@ -216,14 +199,14 @@ function threadCard({ thread, onRequestAction }) {
       quiet: true,
       tone: statusAction === "disable" ? "danger" : null,
       onClick(event) {
-        const reason = threadReason?.getValue().trim() || "";
-        if (statusAction === "disable" && !reason) {
-          threadReason.setError("Enter a moderation reason before disabling this conversation.");
-          threadReason.focus();
-          return;
-        }
-        threadReason?.setError("");
-        onRequestAction({ kind: "thread", thread, action: statusAction, reason, opener: event.currentTarget });
+        onRequestAction({
+          kind: "thread",
+          thread,
+          action: statusAction,
+          requireReason: statusAction === "disable",
+          reasonLabel: "Conversation moderation reason",
+          opener: event.currentTarget,
+        });
       },
     }));
   }
@@ -234,14 +217,7 @@ function threadCard({ thread, onRequestAction }) {
       quiet: true,
       tone: "danger",
       onClick(event) {
-        const reason = threadReason?.getValue().trim() || "";
-        if (!reason) {
-          threadReason.setError("Enter a moderation reason before closing this conversation.");
-          threadReason.focus();
-          return;
-        }
-        threadReason.setError("");
-        onRequestAction({ kind: "thread", thread, action: "close", reason, opener: event.currentTarget });
+        onRequestAction({ kind: "thread", thread, action: "close", requireReason: true, reasonLabel: "Conversation close reason", opener: event.currentTarget });
       },
     }));
   }
@@ -252,14 +228,7 @@ function threadCard({ thread, onRequestAction }) {
       quiet: true,
       tone: "danger",
       onClick(event) {
-        const reason = retentionReason.getValue().trim();
-        if (!reason) {
-          retentionReason.setError("Enter a reason before deleting expired retained content.");
-          retentionReason.focus();
-          return;
-        }
-        retentionReason.setError("");
-        onRequestAction({ kind: "retention", thread, action: "delete", reason, opener: event.currentTarget });
+        onRequestAction({ kind: "retention", thread, action: "delete", requireReason: true, reasonLabel: "Retention deletion reason", opener: event.currentTarget });
       },
     }));
   }
@@ -297,8 +266,6 @@ function threadCard({ thread, onRequestAction }) {
         className: "admin-messages-route__moderation-note",
         children: [AdminIcon({ name: "warning", size: 16 }), thread.moderationReason],
       }) : null,
-      threadReason?.element,
-      retentionReason?.element,
       actions,
       messageList({ thread, onRequestAction }),
     ],
@@ -340,14 +307,16 @@ function resolvedContent({ model, filters, onApplyFilters, onPage, onRequestActi
     event.preventDefault();
     onApplyFilters({ query: search.getValue(), status: status.getValue() });
   });
-  status.control.addEventListener("change", () => {
-    onApplyFilters({ query: search.getValue(), status: status.getValue() });
+  const clearFilters = button({
+    label: "Clear filters",
+    quiet: true,
+    onClick() { onApplyFilters({ query: "", status: "all" }); },
   });
 
   const controls = createElement("section", {
     className: "admin-messages-route__controls",
     attrs: { "aria-label": "Messages moderation filters" },
-    children: [search.element, status.element, filterButton],
+    children: [search.element, status.element, filterButton, clearFilters],
   });
   const list = createElement("section", {
     className: "admin-messages-route__thread-list",
@@ -411,6 +380,7 @@ export function MessagesRoute({
   let destroyed = false;
   let pendingAction = null;
   let confirmDialog = null;
+  let reason = null;
 
   function ensureConfirmDialog() {
     if (confirmDialog) return confirmDialog;
@@ -422,12 +392,19 @@ export function MessagesRoute({
       failureMessage: "The moderation action could not be completed. Review the current thread state and try again.",
       async onConfirm() {
         if (!pendingAction) return false;
-        const { kind, thread, message, action, reason } = pendingAction;
+        const moderationReason = reason?.getValue().trim() || "";
+        if (pendingAction.requireReason && !moderationReason) {
+          reason.setError("Enter a specific reason for this moderation action.");
+          reason.focus();
+          return false;
+        }
+        reason?.setError("");
+        const { kind, thread, message, action } = pendingAction;
         const result = kind === "message"
-          ? await onModerateMessage(thread, message, action, reason)
+          ? await onModerateMessage(thread, message, action, moderationReason)
           : kind === "retention"
-            ? await onDeleteExpiredThread(thread, reason)
-            : await onModerateThread(thread, action, reason);
+            ? await onDeleteExpiredThread(thread, moderationReason)
+            : await onModerateThread(thread, action, moderationReason);
         if (result?.ok !== true) throw new Error("MESSAGES_MODERATION_FAILED");
         return true;
       },
@@ -438,6 +415,12 @@ export function MessagesRoute({
   function requestAction(action) {
     pendingAction = action;
     const dialog = ensureConfirmDialog();
+    reason = action.requireReason ? reasonField(
+      action.reasonLabel || "Moderation reason",
+      "Required for this action and recorded in the moderation history.",
+    ) : null;
+    dialog.setContent(reason?.element || null);
+    dialog.setTone(action.requireReason && !["unhide", "enable"].includes(action.action) ? "danger" : "neutral");
     const subject = action.kind === "message" ? "this message" : action.thread.title;
     const verb = action.kind === "retention"
       ? "delete expired retained content for"
@@ -447,11 +430,13 @@ export function MessagesRoute({
           ? "enable"
           : action.action;
     dialog.setMessage(`${titleCase(verb)} ${subject}?`);
-    dialog.setDetail(action.reason
-      ? `Reason: ${action.reason}`
-      : "This action will be applied only through the existing game-scoped moderation contract.");
+    dialog.setDetail(action.requireReason
+      ? "Enter the reason below, then review the action before applying it."
+      : "This action will be recorded in the game moderation history.");
     void dialog.open(action.opener).then(() => {
       pendingAction = null;
+      reason = null;
+      dialog.setContent(null);
     });
   }
 

@@ -389,7 +389,7 @@ try {
       await waitForState(runtime.page, "ready");
       await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
       await runtime.page.getByRole("button", { name: "Create Contract" }).last().click();
-      await runtime.page.getByText("Contract title is required.").waitFor({ state: "visible" });
+      await runtime.page.locator(".admin-field__error").filter({ hasText: "Contract title is required." }).first().waitFor({ state: "visible" });
       assert.equal(requestEvidence.filter((entry) => entry.method === "POST" && entry.pathname.endsWith("/contracts")).length, 0);
       await runtime.page.getByLabel("Title").fill("New Evidence Contract");
       await runtime.page.getByLabel("Objective").fill("Explain the causal mechanism.");

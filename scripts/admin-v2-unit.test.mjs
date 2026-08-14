@@ -97,17 +97,17 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
       ["overview", "Overview"],
       ["players", "Players"],
       ["attendance", "Attendance"],
-      ["market", "Market"],
+      ["market", "Market Monitor"],
       ["banking", "Banking"],
       ["loans", "Loans"],
       ["contracts", "Contracts"],
-      ["business", "Business"],
-      ["crafting", "Crafting"],
+      ["business", "Business Oversight"],
+      ["crafting", "Crafting Operations"],
       ["store", "Store"],
       ["marketplace", "Marketplace"],
       ["inventory", "Inventory"],
       ["world-management", "World Management"],
-      ["news-events", "News & Events"],
+      ["news-events", "News & Event Monitor"],
       ["messages", "Messages"],
       ["progression", "Progression"],
       ["settings", "Settings"],
@@ -198,7 +198,7 @@ test("Admin v2 navigation is canonical, unique, permission-bound, and migrates s
   assert.equal(world.legacySection, null);
 
   const newsEvents = getAdminNavigationRoute("news-events");
-  assert.equal(newsEvents.label, "News & Events");
+  assert.equal(newsEvents.label, "News & Event Monitor");
   assert.equal(newsEvents.groupId, "world");
   assert.deepEqual(newsEvents.permission.allOf, ["world.manage"]);
   assert.equal(newsEvents.migration, "v2");

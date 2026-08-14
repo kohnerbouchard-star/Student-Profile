@@ -193,9 +193,9 @@ async function mutations(browser, fixture) {
     const drawer = r.page.locator(".admin-players-drawer[data-open='true']");
     await drawer.waitFor();
     assert.match(await drawer.innerText(), /Player ID and Access Code are protected/);
-    await drawer.getByRole("button", { name: "Edit Admin profile" }).click();
+    await drawer.getByRole("button", { name: "Edit admin metadata" }).click();
     const profile = r.page.locator(".admin-players-dialog[data-open='true']");
-    await profile.getByLabel("Admin display name").fill("김하늘 — Reviewed");
+    await profile.getByLabel("Staff display label").fill("김하늘 — Reviewed");
     await profile.getByRole("button", { name: "Save profile" }).click();
     await profile.waitFor({ state: "hidden" });
     await state(r.page, "ready");
@@ -232,7 +232,7 @@ async function lifecycle(browser, fixture) {
   const failedRun = await runtime(browser, fixture, "failed");
   try { await state(failedRun.page, "failed"); await safeDom(failedRun.page); await failedRun.page.getByRole("button", { name: "Try again" }).waitFor(); await shot(failedRun.page, "failed"); } finally { await failedRun.context.close(); }
   const stale = await runtime(browser, fixture, "stale");
-  try { await state(stale.page, "ready"); await stale.page.getByRole("button", { name: "Refresh" }).click(); await state(stale.page, "stale"); await safeDom(stale.page); } finally { await stale.context.close(); }
+  try { await state(stale.page, "ready"); await stale.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click(); await state(stale.page, "stale"); await safeDom(stale.page); } finally { await stale.context.close(); }
   const denied = await runtime(browser, fixture, "ready", { width: 1280, height: 720 }, false);
   try {
     await denied.page.getByRole("heading", { name: "Players access restricted" }).waitFor();

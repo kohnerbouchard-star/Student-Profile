@@ -103,9 +103,9 @@ function sessionContractNotice() {
       AdminIcon({ name: "info", size: 18 }),
       createElement("p", {
         children: [
-          createElement("strong", { text: "Exchange session status unavailable" }),
+          createElement("strong", { text: "Some exchange context is not available in Admin" }),
           createElement("span", {
-            text: "The current Admin Market read contract does not expose an authoritative open or closed session state, composite index, total volume, or asset currency. This page does not infer those values.",
+            text: "Session open/closed state, composite index, total volume, and asset currency are not included in this view. Values are shown only when the game provides them.",
           }),
         ],
       }),
@@ -591,7 +591,7 @@ export function MarketRoute({
     route.append(MarketSkeleton());
   } else if (state.status === ADMIN_DATA_STATES.FAILED) {
     route.append(AdminErrorState({
-      title: "Market Management could not be loaded",
+      title: "Market Monitor could not be loaded",
       message: safeText(
         state.error?.userMessage,
         "Authoritative Market data is temporarily unavailable.",
@@ -633,8 +633,8 @@ export function MarketRoute({
 
   const pageFrame = AdminPageFrame({
     eyebrow: "Game administration",
-    title: "Market Management",
-    description: "Monitor listed instruments, current price movement, aggregate activity, and authoritative Market events.",
+    title: "Market Monitor",
+    description: "Monitor listed instruments, price movement, aggregate activity, and market events. This route is read-only until a supported market-control mutation exists.",
     actions: refreshButton,
     content: route,
   });

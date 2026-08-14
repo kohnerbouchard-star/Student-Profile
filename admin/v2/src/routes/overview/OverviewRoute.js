@@ -111,9 +111,9 @@ function gameHero(model) {
 }
 
 const QUICK_ACTIONS = Object.freeze([
-  Object.freeze({ routeId: "attendance", label: "Scan Attendance", description: "Open attendance scanner", icon: "attendance", permission: "attendance.manage" }),
-  Object.freeze({ routeId: "contracts", label: "Add Contract", description: "Create a contract and reward", icon: "contracts", permission: "contracts.manage" }),
-  Object.freeze({ routeId: "players", label: "Add Player", description: "Create player identity and access", icon: "players", permission: "players.manage" }),
+  Object.freeze({ routeId: "attendance", intent: "focus-scanner", label: "Scan Attendance", description: "Open Attendance and focus the scanner", icon: "attendance", permission: "attendance.manage" }),
+  Object.freeze({ routeId: "contracts", intent: "create", label: "Add Contract", description: "Open the contract creation form", icon: "contracts", permission: "contracts.manage" }),
+  Object.freeze({ routeId: "players", intent: "create", label: "Add Player", description: "Open the player creation form", icon: "players", permission: "players.manage" }),
 ]);
 
 function quickActions({ hasPermission, onOpenLegacy }) {
@@ -134,7 +134,7 @@ function quickActions({ hasPermission, onOpenLegacy }) {
         }),
       ],
     });
-    button.addEventListener("click", () => onOpenLegacy(action.routeId));
+    button.addEventListener("click", () => onOpenLegacy(action.routeId, action.intent));
     grid.append(button);
   });
 
@@ -254,7 +254,7 @@ function leaderboardPanel(model, dashboardResult, onRefresh) {
     });
   }
 
-  const players = Array.isArray(model.leaderboard) ? model.leaderboard.slice(0, 10) : null;
+  const players = Array.isArray(model.leaderboard) ? model.leaderboard : [];
   const search = AdminField({
     name: "search",
     label: "Filter leaderboard",
@@ -271,7 +271,7 @@ function leaderboardPanel(model, dashboardResult, onRefresh) {
       { key: "status", label: "Status", render: (value, row) => titleCase(value || row.sessionStatus || (row.online === true ? "online" : "")) },
       { key: "netWorth", label: "Net worth", align: "end", render: (value, row) => displayAmount(value, row.currencyCode) },
     ],
-    rows: players || [],
+    rows: players.slice(0, 10),
     emptyState: AdminEmptyState({
       title: "No leaderboard entries",
       message: "No ranked players are available for the current game.",
@@ -280,7 +280,8 @@ function leaderboardPanel(model, dashboardResult, onRefresh) {
   });
   search.control.addEventListener("input", () => {
     const query = search.getValue().trim().toLowerCase();
-    table.setRows((players || []).filter((row) => String(row.displayName || row.name || "").toLowerCase().includes(query)));
+    const matches = players.filter((row) => String(row.displayName || row.name || "").toLowerCase().includes(query));
+    table.setRows((query ? matches : players).slice(0, 10));
   });
 
   return panel({

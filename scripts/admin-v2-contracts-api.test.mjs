@@ -177,6 +177,9 @@ test("Contracts API stays on the cookie-bound Admin BFF and uses existing author
     if (url.endsWith(`/games/${GAME_ID}/contracts`) && init.method === "POST") {
       return response({ ok: true, contract: contract({ status: "draft" }) });
     }
+    if (url.endsWith(`/games/${GAME_ID}/contracts/${CONTRACT_ID}`) && init.method === "PATCH") {
+      return response({ ok: true, contract: contract({ status: "draft", ...(requests.at(-1)?.body || {}) }) });
+    }
     if (url.endsWith(`/games/${GAME_ID}/contracts/${CONTRACT_ID}/publish`)) {
       return response({ ok: true, contract: contract({ status: "active" }) });
     }
@@ -199,6 +202,7 @@ test("Contracts API stays on the cookie-bound Admin BFF and uses existing author
   await api.readContracts({ gameId: GAME_ID });
   await api.readContractDetail({ gameId: GAME_ID, contractId: CONTRACT_ID });
   await api.createContract({ gameId: GAME_ID, contract: { title: "Draft", instructions: "Do it." }, idempotencyKey: IDEMPOTENCY });
+  await api.updateContract({ gameId: GAME_ID, contractId: CONTRACT_ID, contract: { title: "Edited draft" }, idempotencyKey: `${IDEMPOTENCY}.update` });
   await api.publishContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.publish` });
   await api.archiveContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.archive` });
   await api.duplicateContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.duplicate` });
@@ -208,11 +212,13 @@ test("Contracts API stays on the cookie-bound Admin BFF and uses existing author
   assert.ok(requests.every(({ url }) => url.startsWith("/api/admin/games/")));
   assert.ok(requests.every(({ init }) => init.credentials === "include"));
   assert.ok(requests.every(({ init }) => !("Authorization" in (init.headers || {}))));
+  const update = requests.find(({ url, init }) => url.endsWith(`/contracts/${CONTRACT_ID}`) && init.method === "PATCH");
+  assert.deepEqual(update.body, { title: "Edited draft" });
   const review = requests.find(({ url }) => url.endsWith(`/progress/${PROGRESS_ID}/review`));
   assert.deepEqual(review.body, { action: "request_revision", resultPayload: { feedback: "Add evidence." } });
   assert.equal(review.body.playerId, undefined);
   assert.equal(review.body.staffId, undefined);
-  const writes = requests.filter(({ init }) => init.method === "POST");
+  const writes = requests.filter(({ init }) => ["POST", "PATCH"].includes(init.method));
   assert.ok(writes.every(({ init }) => /^admin\.contracts\./.test(init.headers["Idempotency-Key"])));
 });
 
@@ -250,6 +256,7 @@ test("Contracts controller denies reads and writes without contracts.manage and 
     readContracts: async () => { reads += 1; return { data: { contracts: [] } }; },
     readContractDetail: async () => ({ progress: { ok: true, contract: {}, progress: [] }, submissions: { data: { submissions: [] } } }),
     createContract: async () => ({ ok: true, contract: {} }),
+    updateContract: async () => ({ ok: true, contract: {} }),
     publishContract: async () => ({ ok: true, contract: {} }),
     archiveContract: async () => ({ data: { contract: {} } }),
     duplicateContract: async () => ({ data: { contract: {} } }),

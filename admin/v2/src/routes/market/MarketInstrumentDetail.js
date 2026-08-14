@@ -214,7 +214,7 @@ function resolvedContent(data, fallbackInstrument, onRetry) {
       panelFailure(panels.profile, "Instrument profile is partially unavailable", onRetry),
       createElement("p", {
         className: "admin-market-detail__contract-note",
-        text: "The current Admin Market contract does not expose an asset currency or exchange session state. Values are shown without an assumed currency, and this view does not infer whether trading is open or closed.",
+        text: "Asset currency and exchange-session state are not included in this Admin view, so values are shown without an assumed currency or open/closed label.",
       }),
       priceMetrics(instrument),
       description

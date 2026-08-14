@@ -46,10 +46,10 @@ function displayDate(value) {
   }).format(new Date(timestamp));
 }
 
-function button({ label, icon, quiet = false, onClick, disabled = false, action }) {
+function button({ label, icon, quiet = false, onClick, disabled = false, disabledReason = "", action }) {
   const element = createElement("button", {
     className: `admin-button${quiet ? " admin-button--quiet" : ""}`,
-    attrs: { type: "button", disabled },
+    attrs: { type: "button", disabled, title: disabled && disabledReason ? disabledReason : null },
     dataset: { bankingAction: action },
     children: [icon ? AdminIcon({ name: icon, size: 17 }) : null, label],
   });
@@ -304,6 +304,7 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
               quiet: true,
               action: "activity",
               disabled: !player.resourceId,
+              disabledReason: !player.resourceId ? "Banking activity is unavailable because this player record has no public banking reference." : "",
               onClick: () => onSelectPlayer(player),
             }),
             button({
@@ -312,6 +313,13 @@ function catalog({ model, filters, onFiltersChange, onSelectPlayer, onAdjust }) 
               quiet: true,
               action: "adjust",
               disabled: !player.resourceId || player.status !== "active" || actionableAccounts.length === 0,
+              disabledReason: !player.resourceId
+                ? "Balance correction is unavailable because this player record has no public banking reference."
+                : player.status !== "active"
+                  ? "Balance correction is available only for active players."
+                  : actionableAccounts.length === 0
+                    ? "This player has no Checking or Savings account that can be corrected."
+                    : "",
               onClick: (event) => onAdjust(player, event.currentTarget),
             }),
           );

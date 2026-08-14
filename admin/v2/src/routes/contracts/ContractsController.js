@@ -142,6 +142,9 @@ function normalizeContract(row, index) {
   const submittedCount = safeCount(row.submittedCount ?? row.submissionCount);
   const completedCount = safeCount(row.completedCount);
   const rewardIssuedCount = safeCount(row.rewardIssuedCount);
+  const rawTargeting = isRecord(row.targetingPayload || row.targeting_payload)
+    ? (row.targetingPayload || row.targeting_payload)
+    : {};
   return Object.freeze({
     resourceId,
     rowKey: contractKey || `contract-${index + 1}`,
@@ -155,7 +158,13 @@ function normalizeContract(row, index) {
     visibility,
     completionMode,
     sourceLabel: sourceType === "teacher" ? "Teacher-created" : sourceType === "system" ? "System/template" : "Story event",
-    targeting: targetingSummary(row.targetingPayload || row.targeting_payload),
+    targeting: targetingSummary(rawTargeting),
+    targetCountryCodes: Object.freeze(
+      safeStringArray(rawTargeting.countryCodes).map((value) => value.toUpperCase()),
+    ),
+    targetingEditable: safeStringArray(rawTargeting.playerIds).length === 0
+      && safeStringArray(rawTargeting.rosterLabels).length === 0
+      && (!Array.isArray(rawTargeting.storyFlagConditions) || rawTargeting.storyFlagConditions.length === 0),
     requirementsText: safeText(
       row.requirementsPayload?.manualText || row.requirements_payload?.manualText,
       8_000,
@@ -323,6 +332,7 @@ export function createContractsController({
     "readContracts",
     "readContractDetail",
     "createContract",
+    "updateContract",
     "publishContract",
     "archiveContract",
     "duplicateContract",
@@ -445,6 +455,31 @@ export function createContractsController({
     });
   }
 
+  function updateContract(contract, input) {
+    if (!contract?.resourceId) {
+      return Promise.resolve({ ok: false, error: createAdminErrorEnvelope({ code: "NOT_FOUND", retryable: false }) });
+    }
+    if (contract.sourceType !== "teacher" || contract.targetingEditable === false || !["draft", "scheduled"].includes(contract.status)) {
+      return Promise.resolve({
+        ok: false,
+        error: createAdminErrorEnvelope({ code: "CONFLICT", retryable: false, userMessage: "Only draft or scheduled teacher contracts can be edited." }),
+      });
+    }
+    return mutate({
+      action: "update",
+      contract,
+      input,
+      request: (idempotencyKey) => api.updateContract({
+        gameId: selectedGameId,
+        contractId: contract.resourceId,
+        contract: input,
+        idempotencyKey,
+      }),
+      successTitle: "Contract updated",
+      successMessage: `${contract.title} was updated.`,
+    });
+  }
+
   function publishContract(contract) {
     if (!contract?.resourceId) return Promise.resolve({ ok: false, error: createAdminErrorEnvelope({ code: "NOT_FOUND", retryable: false }) });
     return mutate({
@@ -540,6 +575,7 @@ export function createContractsController({
       onRefresh: load,
       onLoadDetail: loadDetail,
       onCreate: createContract,
+      onEdit: updateContract,
       onPublish: publishContract,
       onArchive: archiveContract,
       onDuplicate: duplicateContract,
@@ -575,6 +611,7 @@ export function createContractsController({
     load,
     loadDetail,
     createContract,
+    updateContract,
     publishContract,
     archiveContract,
     duplicateContract,

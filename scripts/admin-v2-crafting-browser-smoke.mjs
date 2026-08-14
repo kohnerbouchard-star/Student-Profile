@@ -304,7 +304,7 @@ async function runReady(browser, fixture, viewport) {
   try {
     await runtime.page.locator('.admin-crafting-route[data-admin-v2-state="ready"]')
       .waitFor({ state: "attached", timeout: 10_000 });
-    await runtime.page.getByRole("heading", { level: 1, name: "Crafting Supervision" })
+    await runtime.page.getByRole("heading", { level: 1, name: "Crafting Operations" })
       .waitFor({ state: "visible" });
     await runtime.page.getByText("초정밀 복합소재 제조법", { exact: false }).first().waitFor({ state: "visible" });
     await assertNoOverflow(runtime.page, `ready ${viewport.width}`);
@@ -348,7 +348,8 @@ async function runState(browser, fixture, scenario) {
     } else {
       await runtime.page.locator('[data-admin-v2-state="permission-denied"]')
         .waitFor({ state: "attached", timeout: 10_000 });
-      await runtime.page.getByText("Crafting access restricted").waitFor({ state: "visible" });
+      await assertNoLeaks(runtime.page, "permission");
+      assert.deepEqual(runtime.errors, []);
       assert.equal(runtime.mutations.length, 0);
     }
     await assertNoOverflow(runtime.page, scenario);

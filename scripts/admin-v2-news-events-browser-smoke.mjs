@@ -221,7 +221,7 @@ async function createRuntime(browser, fixture, scenario, viewport = DEFAULT_VIEW
 
 async function waitForState(page, state) {
   await page.locator(`.admin-news-events[data-news-events-state="${state}"]`).waitFor({ state: "attached", timeout: 10_000 });
-  await page.getByRole("heading", { level: 1, name: "News & Events", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("heading", { level: 1, name: "News & Event Monitor", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
 }
 
 async function assertNoHorizontalOverflow(page, label) {
@@ -262,7 +262,7 @@ async function responsiveScenario(browser, fixture, viewport) {
     await assertNoPrivateIds(runtime.page, `responsive ${viewport.width}x${viewport.height}`);
     const body = await runtime.page.locator("body").innerText();
     assert.match(body, /항만 혼잡과 공급 제약/);
-    assert.match(body, /Authoritative supervisory surface/);
+    assert.match(body, /Read-only publication monitor/);
     assert.doesNotMatch(body, /Create news|Create event|Schedule event|Edit news/i);
     assert.deepEqual(runtime.browserErrors, [], `responsive ${viewport.width}x${viewport.height} emitted browser errors`);
   } finally {
@@ -279,7 +279,7 @@ async function filtersAndRecoveryScenario(browser, fixture) {
     await runtime.page.waitForTimeout(50);
     assert.equal(await runtime.page.locator(".admin-news-events .admin-data-table__row").count(), 1);
     await search.fill("");
-    await runtime.page.getByLabel("Lifecycle").selectOption("failed");
+    await runtime.page.getByLabel("Lifecycle", { exact: true }).selectOption("failed");
     await runtime.page.waitForTimeout(50);
     const rows = runtime.page.locator(".admin-news-events .admin-data-table__row");
     assert.equal(await rows.count(), 1);
@@ -332,7 +332,7 @@ async function failedScenario(browser, fixture) {
   try {
     await waitForState(runtime.page, "failed");
     const body = await runtime.page.locator("body").innerText();
-    assert.match(body, /News & Events could not be loaded/);
+    assert.match(body, /News & Event Monitor could not be loaded/);
     assert.equal(body.includes(ADMIN_V2_RAW_BACKEND_DIAGNOSTIC), false);
     await assertNoHorizontalOverflow(runtime.page, "failed");
     await assertNoPrivateIds(runtime.page, "failed");

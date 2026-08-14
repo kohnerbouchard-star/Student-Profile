@@ -1,4 +1,5 @@
 import {
+  AdminConfirmDialog,
   AdminDataTable,
   AdminDialog,
   AdminEmptyState,
@@ -99,8 +100,8 @@ function openModerationDialog({ kind, item, action, opener, onSubmit, onDispose 
     label: "Administrator reason",
     type: "textarea",
     required: true,
-    value: "Administrator review",
-    hint: "Required by the existing Marketplace moderation contract. Maximum 1,000 characters.",
+    value: "",
+    hint: "Required. Record the specific reason for this moderation decision. Maximum 1,000 characters.",
   });
   reason.control.maxLength = 1_000;
   reason.control.rows = 5;
@@ -145,7 +146,7 @@ function openModerationDialog({ kind, item, action, opener, onSubmit, onDispose 
   });
   dialog = AdminDialog({
     title: kind === "listing" ? `${titleCase(action)} listing` : `${titleCase(action)} dispute`,
-    description: "This uses the current authoritative Marketplace lifecycle and optimistic version check.",
+    description: "The decision is recorded in the Marketplace moderation history for this game.",
     content: form,
     initialFocus: reason.control,
     onClose() { queueMicrotask(() => onDispose(dialog)); },
@@ -157,16 +158,13 @@ function openModerationDialog({ kind, item, action, opener, onSubmit, onDispose 
 function openPolicyDialog({ model, opener, onSubmit, onDispose }) {
   const policy = model.policy;
   const fields = [
-    AdminField({ name: "feeRate", label: "Fee rate", type: "number", value: String(policy.feeRate), required: true }),
-    AdminField({ name: "taxRate", label: "Tax rate", type: "number", value: String(policy.taxRate), required: true }),
+    AdminField({ name: "feeRate", label: "Fee rate (%)", type: "number", value: String(policy.feeRate * 100), required: true, min: 0, max: 25, step: 0.01 }),
+    AdminField({ name: "taxRate", label: "Tax rate (%)", type: "number", value: String(policy.taxRate * 100), required: true, min: 0, max: 25, step: 0.01 }),
     AdminField({ name: "listingDurationHours", label: "Listing duration (hours)", type: "number", value: String(policy.listingDurationHours), required: true }),
     AdminField({ name: "purchaseReservationMinutes", label: "Purchase reservation (minutes)", type: "number", value: String(policy.purchaseReservationMinutes), required: true }),
     AdminField({ name: "disputeWindowDays", label: "Dispute window (days)", type: "number", value: String(policy.disputeWindowDays), required: true }),
-    AdminField({ name: "blockedCountryCodes", label: "Blocked country codes", value: policy.blockedCountryCodes.join(", ") }),
+    AdminField({ name: "blockedCountryCodes", label: "Blocked country codes", value: policy.blockedCountryCodes.join(", "), hint: "Comma-separated country codes. Codes are normalized to uppercase." }),
   ];
-  fields[0].control.step = fields[1].control.step = "0.000001";
-  fields[0].control.min = fields[1].control.min = "0";
-  fields[0].control.max = fields[1].control.max = "0.25";
   fields[2].control.min = "1"; fields[2].control.max = "720";
   fields[3].control.min = "1"; fields[3].control.max = "60";
   fields[4].control.min = "1"; fields[4].control.max = "30";
@@ -198,20 +196,85 @@ function openPolicyDialog({ model, opener, onSubmit, onDispose }) {
   let dialog;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    feedback.hidden = true;
+    fields.forEach((field) => field.setError(""));
     const data = new FormData(form);
+    const feePercent = Number(data.get("feeRate"));
+    const taxPercent = Number(data.get("taxRate"));
+    const duration = Number(data.get("listingDurationHours"));
+    const reservation = Number(data.get("purchaseReservationMinutes"));
+    const disputeDays = Number(data.get("disputeWindowDays"));
+    const blockedCodes = String(data.get("blockedCountryCodes") || "")
+      .split(",")
+      .map((code) => code.trim().toUpperCase())
+      .filter(Boolean);
+    let invalid = false;
+    if (!Number.isFinite(feePercent) || feePercent < 0 || feePercent > 25) {
+      fields[0].setError("Use a fee rate from 0% through 25%."); invalid = true;
+    }
+    if (!Number.isFinite(taxPercent) || taxPercent < 0 || taxPercent > 25) {
+      fields[1].setError("Use a tax rate from 0% through 25%."); invalid = true;
+    }
+    if (!Number.isInteger(duration) || duration < 1 || duration > 720) {
+      fields[2].setError("Use 1 through 720 hours."); invalid = true;
+    }
+    if (!Number.isInteger(reservation) || reservation < 1 || reservation > 60) {
+      fields[3].setError("Use 1 through 60 minutes."); invalid = true;
+    }
+    if (!Number.isInteger(disputeDays) || disputeDays < 1 || disputeDays > 30) {
+      fields[4].setError("Use 1 through 30 days."); invalid = true;
+    }
+    if (blockedCodes.some((code) => !/^[A-Z0-9_-]{2,24}$/.test(code))) {
+      fields[5].setError("Use valid country codes separated by commas."); invalid = true;
+    }
+    if (invalid) {
+      form.querySelector("[aria-invalid='true']")?.focus();
+      return;
+    }
     const nextPolicy = {
       marketplaceEnabled: data.get("marketplaceEnabled") === "on",
       crossCountryTradingEnabled: data.get("crossCountryTradingEnabled") === "on",
       moderationRequired: data.get("moderationRequired") === "on",
-      feeRate: Number(data.get("feeRate")),
-      taxRate: Number(data.get("taxRate")),
-      listingDurationHours: Number(data.get("listingDurationHours")),
-      purchaseReservationMinutes: Number(data.get("purchaseReservationMinutes")),
-      disputeWindowDays: Number(data.get("disputeWindowDays")),
+      feeRate: feePercent / 100,
+      taxRate: taxPercent / 100,
+      listingDurationHours: duration,
+      purchaseReservationMinutes: reservation,
+      disputeWindowDays: disputeDays,
       disputesEnabled: data.get("disputesEnabled") === "on",
       countryFeeOverrides: policy.countryFeeOverrides,
-      blockedCountryCodes: String(data.get("blockedCountryCodes") || "").split(",").map((code) => code.trim().toUpperCase()).filter(Boolean),
+      blockedCountryCodes: blockedCodes,
     };
+    const changed = [
+      ["Marketplace", policy.marketplaceEnabled, nextPolicy.marketplaceEnabled],
+      ["Cross-country trading", policy.crossCountryTradingEnabled, nextPolicy.crossCountryTradingEnabled],
+      ["Moderation required", policy.moderationRequired, nextPolicy.moderationRequired],
+      ["Disputes", policy.disputesEnabled, nextPolicy.disputesEnabled],
+      ["Fee rate", `${(policy.feeRate * 100).toFixed(2)}%`, `${(nextPolicy.feeRate * 100).toFixed(2)}%`],
+      ["Tax rate", `${(policy.taxRate * 100).toFixed(2)}%`, `${(nextPolicy.taxRate * 100).toFixed(2)}%`],
+      ["Listing duration", `${policy.listingDurationHours} h`, `${nextPolicy.listingDurationHours} h`],
+      ["Reservation", `${policy.purchaseReservationMinutes} min`, `${nextPolicy.purchaseReservationMinutes} min`],
+      ["Dispute window", `${policy.disputeWindowDays} d`, `${nextPolicy.disputeWindowDays} d`],
+      ["Blocked countries", policy.blockedCountryCodes.join(", ") || "None", nextPolicy.blockedCountryCodes.join(", ") || "None"],
+    ].filter(([, before, after]) => String(before) !== String(after));
+    if (!changed.length) {
+      feedback.textContent = "No policy changes to save.";
+      feedback.hidden = false;
+      return;
+    }
+    const review = AdminConfirmDialog({
+      title: "Review Marketplace policy changes",
+      message: "Apply these Marketplace operating changes?",
+      detail: "Disabling Marketplace features can immediately change what players can do.",
+      changes: changed.map(([label, before, after]) => ({ label, before: String(before), after: String(after) })),
+      confirmLabel: "Apply policy changes",
+      tone: changed.some(([label, before, after]) => /Marketplace|Cross-country|Disputes/.test(label) && before === true && after === false)
+        ? "danger"
+        : "neutral",
+      onConfirm: () => true,
+    });
+    const accepted = await review.open(save);
+    review.destroy();
+    if (!accepted) return;
     dialog.setBusy(true);
     const result = await onSubmit(nextPolicy);
     if (result?.ok) dialog.close("committed");
@@ -223,7 +286,7 @@ function openPolicyDialog({ model, opener, onSubmit, onDispose }) {
   });
   dialog = AdminDialog({
     title: "Marketplace policy",
-    description: "Only fields supported by the existing authoritative Marketplace policy mutation are editable.",
+    description: "Edit the supported Marketplace operating rules. Rates are entered as percentages and converted internally.",
     content: form,
     size: "large",
     initialFocus: fields[0].control,

@@ -96,6 +96,7 @@ assert.match(messageReadFlow, /data-player-message-thread/);
 assert.match(messageReadFlow, /data-player-message-unread/);
 assert.match(messageReadFlow, /api\.execute\("messageRead"/);
 assert.match(messageReadFlow, /PUBLIC_THREAD_ID/);
+// A read acknowledgement changes messaging badges only; the contract intentionally forbids a full terminal refresh.
 assert.match(messageReadFlow, /dispatchResourceRefresh/);
 assert.match(messageReadFlow, /player-resources-invalidated/);
 assert.match(messageReadFlow, /\["messages",\s*"notifications"\]/);

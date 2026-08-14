@@ -1,3 +1,16 @@
+.admin-settings-actions__dirty {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-2);
+  color: var(--admin-color-orange);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-settings-review-list {
+  display: grid;
+  gap: var(--admin-space-2);
+}
+
 .admin-settings-form {
   display: grid;
   gap: var(--admin-space-5);

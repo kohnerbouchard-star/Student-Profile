@@ -1,7 +1,9 @@
 import {
+  AdminConfirmDialog,
   AdminDataTable,
   AdminEmptyState,
   AdminErrorState,
+  AdminField,
   AdminIcon,
   AdminPageFrame,
   AdminStaleState,
@@ -33,15 +35,31 @@ function displayTime(value, timezone) {
   }
 }
 
-function button({ label, icon = null, quiet = false, disabled = false, tone = null, onClick, action }) {
+function button({ label, icon = null, quiet = false, disabled = false, disabledReason = "", tone = null, onClick, action }) {
   const element = createElement("button", {
     className: `admin-button${quiet ? " admin-button--quiet" : ""}`,
-    attrs: { type: "button", disabled },
+    attrs: {
+      type: "button",
+      disabled,
+      title: disabled && disabledReason ? disabledReason : null,
+      "aria-describedby": disabled && disabledReason ? `${action}-disabled-reason` : null,
+    },
     dataset: { attendanceAction: action, tone },
     children: [icon ? AdminIcon({ name: icon, size: 17 }) : null, label],
   });
   if (typeof onClick === "function") element.addEventListener("click", onClick);
-  return element;
+  if (!disabledReason) return element;
+  return createElement("span", {
+    className: "admin-action-with-reason",
+    children: [
+      element,
+      createElement("small", {
+        className: "admin-action-with-reason__message",
+        attrs: { id: `${action}-disabled-reason` },
+        text: disabledReason,
+      }),
+    ],
+  });
 }
 
 function metric(label, value, detail) {
@@ -110,7 +128,14 @@ function scannerPanel({ model, scanner, onScan }) {
     const value = input.value.trim();
     if (!value) return;
     input.value = "";
-    await onScan(value);
+    submit.disabled = true;
+    input.disabled = true;
+    try {
+      await onScan(value);
+    } finally {
+      if (input.isConnected) input.disabled = !scanner.accepting || model.lock.locked;
+      if (submit.isConnected) submit.disabled = !scanner.accepting || model.lock.locked;
+    }
   });
 
   if (scanner.accepting && !model.lock.locked) {
@@ -126,7 +151,7 @@ function scannerPanel({ model, scanner, onScan }) {
         children: [
           createElement("div", { children: [
             createElement("h2", { text: "Scanner" }),
-            createElement("p", { text: model.lock.locked ? "This attendance day is locked." : "Scan or enter the existing player credential. Enter submits from the keyboard." }),
+            createElement("p", { text: model.lock.locked ? "This attendance day is locked." : "Scan or enter an existing player credential. Enter submits from the keyboard." }),
           ] }),
           createElement("span", { className: "admin-attendance-route__date", text: `${model.attendanceDate} · ${model.timezone}` }),
         ],
@@ -138,9 +163,10 @@ function scannerPanel({ model, scanner, onScan }) {
 }
 
 function rosterTable(model) {
-  const table = AdminDataTable({
+  return AdminDataTable({
     caption: `Attendance roster for ${model.attendanceDate}`,
     rowKey: (row) => row.rowKey,
+    rows: model.rows,
     columns: [
       {
         key: "displayName",
@@ -163,99 +189,181 @@ function rosterTable(model) {
           text: titleCase(value),
         }),
       },
-      { key: "clockedInAt", label: "Check-in", render: (value) => displayTime(value, model.timezone) },
+      { key: "clockedInAt", label: "Check-in", sortValue: (row) => Date.parse(row.clockedInAt || "") || 0, render: (value) => displayTime(value, model.timezone) },
       { key: "source", label: "Source", render: (value) => titleCase(value) },
-      {
-        key: "note",
-        label: "Note",
-        render: (value) => value || "—",
-      },
+      { key: "note", label: "Note", render: (value) => value || "—" },
     ],
     emptyState: AdminEmptyState({
       title: "No attendance roster yet",
       message: "There are no active players or attendance records for this game today.",
       compact: true,
     }),
-  });
-  table.setRows(model.rows);
-  return table.element;
+  }).element;
 }
 
-function field({ label, name, type = "text", value = "", options = null, placeholder = "", step = null }) {
-  const control = options
-    ? createElement("select", {
-      className: "admin-attendance-route__control",
-      attrs: { name },
-      children: options.map((option) => createElement("option", {
-        attrs: { value: option.value, selected: option.value === value },
-        text: option.label,
-      })),
-    })
-    : createElement("input", {
-      className: "admin-attendance-route__control",
-      attrs: { name, type, value, placeholder, step },
+function selectedPlayerCard(row) {
+  if (!row) {
+    return createElement("div", {
+      className: "admin-attendance-route__selected-player",
+      dataset: { selected: "false" },
+      children: [
+        AdminIcon({ name: "players", size: 20 }),
+        createElement("div", { children: [
+          createElement("strong", { text: "No player selected" }),
+          createElement("span", { text: "Choose a player before preparing a correction, note, or reward adjustment." }),
+        ] }),
+      ],
     });
-  return {
-    control,
-    element: createElement("label", {
-      className: "admin-attendance-route__field",
-      children: [createElement("span", { text: label }), control],
-    }),
-  };
+  }
+  return createElement("div", {
+    className: "admin-attendance-route__selected-player",
+    dataset: { selected: "true" },
+    children: [
+      AdminIcon({ name: "players", size: 20 }),
+      createElement("div", { children: [
+        createElement("strong", { text: row.displayName }),
+        createElement("span", { text: [row.rosterLabel, titleCase(row.attendanceStatus)].filter(Boolean).join(" · ") }),
+      ] }),
+    ],
+  });
 }
 
 function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
-  const selectable = model.rows.map((row) => ({
-    value: row.rowKey,
-    label: `${row.displayName}${row.rosterLabel ? ` · ${row.rosterLabel}` : ""}`,
-  }));
-  const firstKey = selectable[0]?.value || "";
-  const player = field({ label: "Player", name: "player", value: firstKey, options: selectable });
-  const correction = field({
+  const player = AdminField({
+    name: "attendance-player",
+    label: "Player",
+    type: "select",
+    value: "",
+    options: [
+      { value: "", label: "Select a player", disabled: true },
+      ...model.rows.map((row) => ({
+        value: row.rowKey,
+        label: `${row.displayName}${row.rosterLabel ? ` · ${row.rosterLabel}` : ""}`,
+      })),
+    ],
+    hint: "Player selection is required. No roster entry is preselected.",
+  });
+  const correction = AdminField({
+    name: "attendance-correction",
     label: "Correction",
-    name: "status",
+    type: "select",
     value: "present",
     options: CORRECTION_OPTIONS.map((value) => ({ value, label: titleCase(value) })),
   });
-  const note = field({ label: "Note", name: "note", placeholder: "Optional correction note / note text" });
-  const amount = field({ label: "Reward adjustment", name: "amount", type: "number", step: "0.01", placeholder: "e.g. 1 or -1" });
+  const correctionNote = AdminField({
+    name: "attendance-correction-note",
+    label: "Correction reason",
+    type: "textarea",
+    rows: 3,
+    maxLength: 1000,
+    placeholder: "Why is this attendance state being corrected?",
+  });
+  const adminNote = AdminField({
+    name: "attendance-admin-note",
+    label: "Administrative note",
+    type: "textarea",
+    rows: 3,
+    maxLength: 1000,
+    placeholder: "Note stored with this attendance record",
+  });
+  const amount = AdminField({
+    name: "attendance-reward-amount",
+    label: "Reward adjustment",
+    type: "number",
+    step: 0.01,
+    placeholder: "e.g. 1 or -1",
+    hint: "Positive adds; negative subtracts.",
+  });
+  const rewardNote = AdminField({
+    name: "attendance-reward-note",
+    label: "Reward reason",
+    type: "textarea",
+    rows: 3,
+    maxLength: 1000,
+    placeholder: "Why is this reward being adjusted?",
+  });
+  const selectedHost = createElement("div");
   const status = createElement("div", {
     className: "admin-attendance-route__action-status",
     attrs: { role: "status", "aria-live": "polite" },
   });
+  const controls = [player, correction, correctionNote, adminNote, amount, rewardNote];
+  let busy = false;
 
+  const actionButtons = [];
+  function selectedRow() {
+    return model.rows.find((row) => row.rowKey === player.getValue()) || null;
+  }
+  function refreshSelection() {
+    selectedHost.replaceChildren(selectedPlayerCard(selectedRow()));
+    updateButtons();
+  }
+  function updateButtons() {
+    const selected = Boolean(selectedRow());
+    const unavailable = busy || model.lock.locked || !selected;
+    actionButtons.forEach((entry) => {
+      entry.element.disabled = unavailable;
+      entry.element.title = !selected
+        ? "Select a player first."
+        : model.lock.locked ? "Unlock the attendance day before making changes." : "";
+    });
+  }
+  function setBusy(next) {
+    busy = Boolean(next);
+    controls.forEach((field) => field.setDisabled(busy));
+    updateButtons();
+  }
   async function run(action, successMessage) {
+    if (busy || !selectedRow()) return;
+    status.dataset.tone = "neutral";
     status.textContent = "Saving…";
-    const result = await action();
-    status.textContent = result?.ok === true ? successMessage : result?.error?.userMessage || "The action could not be completed.";
+    setBusy(true);
+    try {
+      const result = await action();
+      const ok = result?.ok === true;
+      status.dataset.tone = ok ? "success" : "error";
+      status.textContent = ok ? successMessage : result?.error?.userMessage || "The action could not be completed.";
+    } finally {
+      setBusy(false);
+    }
   }
 
-  const correctionButton = button({
-    label: "Apply correction",
-    action: "correct",
-    disabled: !firstKey || model.lock.locked,
-    onClick: () => run(
-      () => onCorrect(player.control.value, correction.control.value, note.control.value),
-      "Correction saved.",
-    ),
-  });
-  const noteButton = button({
-    label: "Save note",
-    quiet: true,
-    action: "note",
-    disabled: !firstKey || model.lock.locked,
-    onClick: () => run(() => onSaveNote(player.control.value, note.control.value), "Note saved."),
-  });
-  const rewardButton = button({
-    label: "Adjust reward",
-    quiet: true,
-    action: "reward",
-    disabled: !firstKey || model.lock.locked,
-    onClick: () => run(() => onAdjustReward(player.control.value, {
-      amount: amount.control.value,
-      note: note.control.value,
-    }), "Reward adjustment saved."),
-  });
+  function actionButton(label, action, handler, quiet = false) {
+    const element = createElement("button", {
+      className: `admin-button${quiet ? " admin-button--quiet" : ""}`,
+      attrs: { type: "button", disabled: true },
+      dataset: { attendanceAction: action },
+      text: label,
+    });
+    element.addEventListener("click", handler);
+    actionButtons.push({ element });
+    return element;
+  }
+
+  const correctionButton = actionButton("Apply correction", "correct", () => run(
+    () => onCorrect(player.getValue(), correction.getValue(), correctionNote.getValue()),
+    "Attendance correction saved.",
+  ));
+  const noteButton = actionButton("Save note", "note", () => run(
+    () => onSaveNote(player.getValue(), adminNote.getValue()),
+    "Administrative note saved.",
+  ), true);
+  const rewardButton = actionButton("Adjust reward", "reward", () => {
+    const numericAmount = Number(amount.getValue());
+    if (!Number.isFinite(numericAmount) || numericAmount === 0) {
+      amount.setError("Enter a non-zero reward adjustment.");
+      amount.focus();
+      return;
+    }
+    amount.setError("");
+    void run(
+      () => onAdjustReward(player.getValue(), { amount: amount.getValue(), note: rewardNote.getValue() }),
+      "Reward adjustment saved.",
+    );
+  }, true);
+
+  player.control.addEventListener("change", refreshSelection);
+  refreshSelection();
 
   return createElement("section", {
     className: "admin-attendance-route__actions-panel",
@@ -265,16 +373,32 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
         className: "admin-attendance-route__section-heading",
         children: [createElement("div", { children: [
           createElement("h2", { text: "Record actions" }),
-          createElement("p", { text: "Use only the existing correction, note, and server-ledger reward operations." }),
+          createElement("p", { text: "Choose the player first, then use the action-specific fields below. No player is selected automatically." }),
         ] })],
       }),
+      player.element,
+      selectedHost,
       createElement("div", {
-        className: "admin-attendance-route__action-grid",
-        children: [player.element, correction.element, note.element, amount.element],
-      }),
-      createElement("div", {
-        className: "admin-attendance-route__action-buttons",
-        children: [correctionButton, noteButton, rewardButton],
+        className: "admin-attendance-route__action-workflows",
+        children: [
+          createElement("fieldset", { className: "admin-attendance-route__action-workflow", children: [
+            createElement("legend", { text: "Correct attendance" }),
+            correction.element,
+            correctionNote.element,
+            correctionButton,
+          ] }),
+          createElement("fieldset", { className: "admin-attendance-route__action-workflow", children: [
+            createElement("legend", { text: "Record note" }),
+            adminNote.element,
+            noteButton,
+          ] }),
+          createElement("fieldset", { className: "admin-attendance-route__action-workflow", children: [
+            createElement("legend", { text: "Adjust reward" }),
+            amount.element,
+            rewardNote.element,
+            rewardButton,
+          ] }),
+        ],
       }),
       status,
     ],
@@ -282,38 +406,79 @@ function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
 }
 
 function lockPanel({ model, onSetLocked }) {
-  const reason = field({ label: model.lock.locked ? "Unlock note" : "Lock reason", name: "lockReason", placeholder: "Optional reason" });
-  const status = createElement("div", { className: "admin-attendance-route__action-status", attrs: { role: "status", "aria-live": "polite" } });
-  const toggle = button({
-    label: model.lock.locked ? "Unlock day" : "Lock day",
-    icon: model.lock.locked ? "refresh" : "warning",
-    tone: model.lock.locked ? null : "danger",
-    action: model.lock.locked ? "unlock-day" : "lock-day",
-    onClick: async () => {
-      status.textContent = model.lock.locked ? "Unlocking…" : "Locking…";
-      const result = await onSetLocked(!model.lock.locked, reason.control.value);
-      status.textContent = result?.ok === true ? "Attendance day updated." : result?.error?.userMessage || "The day lock could not be changed.";
+  const reason = AdminField({
+    name: "attendance-lock-reason",
+    label: model.lock.locked ? "Unlock note" : "Lock reason",
+    type: "textarea",
+    rows: 2,
+    maxLength: 1000,
+    placeholder: "Optional reason",
+  });
+  const status = createElement("div", {
+    className: "admin-attendance-route__action-status",
+    attrs: { role: "status", "aria-live": "polite" },
+  });
+  const confirm = AdminConfirmDialog({
+    title: "Lock attendance day?",
+    message: `Lock attendance for ${model.attendanceDate}?`,
+    detail: "New scans and record mutations will be blocked until the day is unlocked.",
+    confirmLabel: "Lock day",
+    tone: "danger",
+    async onConfirm() {
+      const result = await onSetLocked(true, reason.getValue());
+      if (result?.ok !== true) throw new Error("ATTENDANCE_LOCK_FAILED");
+      return true;
     },
   });
-  return createElement("section", {
+  const toggle = createElement("button", {
+    className: "admin-button",
+    dataset: { tone: model.lock.locked ? "neutral" : "danger", attendanceAction: model.lock.locked ? "unlock-day" : "lock-day" },
+    attrs: { type: "button" },
+    children: [AdminIcon({ name: model.lock.locked ? "refresh" : "warning", size: 17 }), model.lock.locked ? "Unlock day" : "Lock day"],
+  });
+  toggle.addEventListener("click", async (event) => {
+    status.textContent = "";
+    if (!model.lock.locked) {
+      confirm.setDetail([
+        "New scans and record mutations will be blocked until the day is unlocked.",
+        reason.getValue().trim() ? `Reason: ${reason.getValue().trim()}` : null,
+      ].filter(Boolean).join(" "));
+      const accepted = await confirm.open(event.currentTarget);
+      if (!accepted) return;
+      status.textContent = "Attendance day locked.";
+      return;
+    }
+    toggle.disabled = true;
+    status.textContent = "Unlocking…";
+    try {
+      const result = await onSetLocked(false, reason.getValue());
+      status.textContent = result?.ok === true ? "Attendance day unlocked." : result?.error?.userMessage || "The day could not be unlocked.";
+    } finally {
+      if (toggle.isConnected) toggle.disabled = false;
+    }
+  });
+  const root = createElement("section", {
     className: "admin-attendance-route__lock-panel",
     attrs: { "aria-label": "Attendance day lock" },
     children: [
       createElement("div", { children: [
         createElement("strong", { text: model.lock.locked ? "Day locked" : "Day open" }),
-        createElement("p", { text: model.lock.reason || (model.lock.locked ? "Mutations are blocked by the server until unlocked." : "Attendance changes are currently available.") }),
+        createElement("p", { text: model.lock.reason || (model.lock.locked ? "Attendance changes are blocked until the day is unlocked." : "Attendance changes are currently available.") }),
       ] }),
       reason.element,
       toggle,
       status,
     ],
   });
+  root._destroy = () => confirm.destroy();
+  return root;
 }
 
 function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdjustReward, onSetLocked }) {
+  const lock = lockPanel({ model, onSetLocked });
   const root = createElement("div", {
     className: "admin-attendance-route__resolved",
-    children: [summary(model), scannerPanel({ model, scanner, onScan }), lockPanel({ model, onSetLocked })],
+    children: [summary(model), scannerPanel({ model, scanner, onScan }), lock],
   });
   if (model.isEmpty) {
     root.append(AdminEmptyState({
@@ -330,10 +495,10 @@ function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdju
       playerActions({ model, onCorrect, onSaveNote, onAdjustReward }),
     );
   }
+  root._destroy = () => lock._destroy?.();
   return root;
 }
 
-/** Renders Attendance from the shared Admin v2 data-state contract. */
 export function AttendanceRoute({
   state,
   scanner,
@@ -345,14 +510,13 @@ export function AttendanceRoute({
   onSetLocked = async () => ({ ok: false }),
 } = {}) {
   let destroyed = false;
-  const refreshButton = button({
-    label: state.status === ADMIN_DATA_STATES.REFRESHING ? "Refreshing…" : "Refresh",
-    icon: "refresh",
-    quiet: true,
-    action: "refresh",
-    disabled: state.status === ADMIN_DATA_STATES.REFRESHING,
-    onClick: onRefresh,
+  let resolved = null;
+  const refreshButton = createElement("button", {
+    className: "admin-button admin-button--quiet",
+    attrs: { type: "button", disabled: state.status === ADMIN_DATA_STATES.REFRESHING },
+    children: [AdminIcon({ name: "refresh", size: 17 }), state.status === ADMIN_DATA_STATES.REFRESHING ? "Refreshing…" : "Refresh"],
   });
+  refreshButton.addEventListener("click", onRefresh);
   const route = createElement("div", {
     className: "admin-attendance-route",
     dataset: { adminV2State: state.status },
@@ -372,45 +536,43 @@ export function AttendanceRoute({
       retry: state.error?.retryable ? { label: "Retry Attendance", onClick: onRefresh } : null,
     }));
   } else if (state.data) {
-    const content = resolvedContent({
-      model: state.data,
-      scanner,
-      onScan,
-      onCorrect,
-      onSaveNote,
-      onAdjustReward,
-      onSetLocked,
-    });
+    resolved = resolvedContent({ model: state.data, scanner, onScan, onCorrect, onSaveNote, onAdjustReward, onSetLocked });
     if (state.status === ADMIN_DATA_STATES.STALE) {
       route.append(AdminStaleState({
-        message: state.error?.userMessage || "Showing the last successful attendance roster while the service recovers.",
+        message: state.error?.userMessage || "Showing the last successful attendance roster. Refresh before making a correction.",
         retry: { label: "Retry", onClick: onRefresh },
-        content,
+        content: resolved,
       }));
     } else {
       if (state.status === ADMIN_DATA_STATES.REFRESHING) {
         route.append(createElement("div", {
           className: "admin-attendance-route__refresh-state",
           attrs: { role: "status" },
-          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing authoritative Attendance data…"],
+          children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing attendance data…"],
         }));
       }
-      route.append(content);
+      route.append(resolved);
     }
   }
 
   const pageFrame = AdminPageFrame({
     eyebrow: "Game administration",
     title: "Attendance",
-    description: "Manage the current game's server-authoritative attendance records, scanner check-ins, corrections, notes, rewards, and day lock.",
+    description: "Manage today’s attendance scans, corrections, notes, rewards, and day lock for the current game.",
     actions: [refreshButton],
     content: route,
+  });
+  pageFrame.element.addEventListener("admin-route-intent", (event) => {
+    if (event.detail?.intent === "focus-scanner") {
+      queueMicrotask(() => pageFrame.element.querySelector("#adminAttendanceScannerInput:not(:disabled)")?.focus({ preventScroll: false }));
+    }
   });
   return {
     ...pageFrame,
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      resolved?._destroy?.();
     },
   };
 }

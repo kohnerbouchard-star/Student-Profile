@@ -286,7 +286,7 @@ try {
     pass("current values and source-owned route");
 
     await ready.page.getByLabel("Price multiplier").fill("2.1");
-    await ready.page.getByRole("button", { name: "Review and save" }).click();
+    await ready.page.getByRole("button", { name: "Review changes" }).click();
     const summary = ready.page.locator(".admin-validation-summary");
     await summary.waitFor({ state: "visible" });
     assert.equal(await summary.evaluate((node) => node === document.activeElement), true, "validation summary did not receive focus");
@@ -296,13 +296,13 @@ try {
 
     await ready.page.getByLabel("Price multiplier").fill("1");
     await ready.page.getByLabel("Present reward").fill("6");
-    const opener = ready.page.getByRole("button", { name: "Review and save" });
+    const opener = ready.page.getByRole("button", { name: "Review changes" });
     await opener.focus();
     await opener.click();
     let dialog = ready.page.getByRole("alertdialog", { name: "Apply game settings?" });
     await dialog.waitFor({ state: "visible" });
-    const confirm = dialog.getByRole("button", { name: "Apply settings" });
-    assert.equal(await confirm.evaluate((node) => node === document.activeElement), true, "confirm action did not autofocus");
+    const safeCancel = dialog.getByRole("button", { name: "Cancel" });
+    assert.equal(await safeCancel.evaluate((node) => node === document.activeElement), true, "safe cancel action did not autofocus");
     await ready.page.keyboard.press("Escape");
     await dialog.waitFor({ state: "hidden" });
     assert.equal(await opener.evaluate((node) => node === document.activeElement), true, "Escape did not restore opener focus");
@@ -321,7 +321,7 @@ try {
     pass("confirmation focus and attendance mutation semantics");
 
     await ready.page.getByLabel("Price multiplier").fill("1.25");
-    await ready.page.getByRole("button", { name: "Review and save" }).click();
+    await ready.page.getByRole("button", { name: "Review changes" }).click();
     await ready.page.getByRole("alertdialog", { name: "Apply game settings?" })
       .getByRole("button", { name: "Apply settings" }).click();
     await waitForRequestCount(ready, "PATCH", 2);
@@ -340,7 +340,7 @@ try {
   const stale = await createRuntime(browser, fixture, { staleAfterFirstRead: true });
   try {
     await waitReady(stale.page);
-    await stale.page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await stale.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click();
     await stale.page.locator('.admin-shell[data-admin-v2-state="stale"]').waitFor({ state: "attached", timeout: 10_000 });
     assert.equal(await stale.page.getByLabel("Present reward").inputValue(), "5");
     assert.equal(await stale.page.getByRole("button", { name: "Refresh before saving" }).isDisabled(), true);
@@ -356,7 +356,7 @@ try {
   try {
     await waitReady(failed.page);
     await failed.page.getByLabel("Late reward").fill("3");
-    await failed.page.getByRole("button", { name: "Review and save" }).click();
+    await failed.page.getByRole("button", { name: "Review changes" }).click();
     await failed.page.getByRole("alertdialog", { name: "Apply game settings?" })
       .getByRole("button", { name: "Apply settings" }).click();
     await failed.page.getByText("Settings were not saved", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
