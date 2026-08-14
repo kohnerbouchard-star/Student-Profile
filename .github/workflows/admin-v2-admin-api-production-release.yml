@@ -56,9 +56,11 @@ jobs:
           test -f backend/supabase/functions/admin-api/index.ts
           test -f backend/supabase/functions/admin-api/localGameMutations.ts
           test -f backend/supabase/functions/admin-api/common.ts
-          grep -q 'operation.*update' backend/src/domains/contracts/application/adminContractMutation.ts
-          grep -q 'admin_mutate_contract_v1' backend/supabase/functions/admin-api/localGameMutations.ts
+          test -f backend/src/domains/contracts/application/adminContractMutation.ts
+          grep -q '"admin_mutate_contract_v1"' backend/src/domains/contracts/application/adminContractMutation.ts
+          grep -q 'operation: "update"' backend/supabase/functions/admin-api/localGameMutations.ts
           git diff --check
+          git hash-object backend/src/domains/contracts/application/adminContractMutation.ts
           git hash-object backend/supabase/functions/admin-api/index.ts
           git hash-object backend/supabase/functions/admin-api/localGameMutations.ts
           git hash-object backend/supabase/functions/admin-api/common.ts
