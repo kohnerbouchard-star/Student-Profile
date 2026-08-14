@@ -96,6 +96,7 @@ assert.match(messageReadFlow, /data-player-message-thread/);
 assert.match(messageReadFlow, /data-player-message-unread/);
 assert.match(messageReadFlow, /api\.execute\("messageRead"/);
 assert.match(messageReadFlow, /PUBLIC_THREAD_ID/);
+// Read acknowledgements must invalidate only the resources they change; a full terminal refresh would reintroduce the live-game refresh churn this contract prevents.
 assert.match(messageReadFlow, /dispatchResourceRefresh\(config,\s*\["messages",\s*"notifications"\]\)/);
 assert.doesNotMatch(messageReadFlow, /terminal\.refresh\(\)/);
 assert.match(messageReadFlow, /invalid_player_session/);
