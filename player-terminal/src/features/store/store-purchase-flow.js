@@ -79,8 +79,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
 
   const api = new PlayerApi(config);
   const overlayHost = document.createElement("div");
-  overlayHost.className = "player-terminal-app-root player-terminal-transaction-overlay-host";
-  overlayHost.dataset.playerTerminalRoot = "true";
+  overlayHost.className = "player-terminal-transaction-overlay-host";
   overlayHost.dataset.playerTerminalTransactionOverlayHost = "true";
   document.body.append(overlayHost);
 
