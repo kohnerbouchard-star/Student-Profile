@@ -110,6 +110,7 @@ export class PlayerApi {
         : new HttpTransport(config);
     this.readCache = new Map();
     this.readCacheUpdatedAt = new Map();
+    this.readGenerations = new Map();
     this.inFlightReads = new Map();
     this.inFlightWrites = new Map();
     this.writeCompletedAt = new Map();
@@ -137,6 +138,7 @@ export class PlayerApi {
       this.sessionVersion += 1;
       this.readCache.clear();
       this.readCacheUpdatedAt.clear();
+      this.readGenerations.clear();
       this.inFlightReads.clear();
       this.inFlightWrites.clear();
       this.writeCompletedAt.clear();
@@ -144,6 +146,10 @@ export class PlayerApi {
       this.resourceSupport = createResourceSupport({ preview: this.config.usePreviewData === true });
       clearAllResourceInvalidations();
     }
+  }
+
+  currentReadGeneration(endpointKey) {
+    return Number(this.readGenerations.get(endpointKey) || 0);
   }
 
   isCachedReadFresh(endpointKey, key, now = Date.now()) {
@@ -162,15 +168,30 @@ export class PlayerApi {
     const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };
     const key = stableRequestKey(context);
     const sessionVersion = this.sessionVersion;
+    const readGeneration = endpoint.method === "GET" ? this.currentReadGeneration(endpointKey) : 0;
 
-    if (endpoint.method === "GET" && !force && this.isCachedReadFresh(endpointKey, key)) return this.readCache.get(key);
-    if (endpoint.method === "GET" && this.inFlightReads.has(key)) return this.inFlightReads.get(key);
+    if (endpoint.method === "GET" && !force && this.isCachedReadFresh(endpointKey, key)) {
+      mergedSignal.cleanup();
+      return this.readCache.get(key);
+    }
+    if (endpoint.method === "GET" && this.inFlightReads.has(key)) {
+      mergedSignal.cleanup();
+      return this.inFlightReads.get(key);
+    }
 
     const operation = this.transport.request(context)
       .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId }))
       .then((value) => {
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
+        }
+        if (endpoint.method === "GET" && readGeneration !== this.currentReadGeneration(endpointKey)) {
+          throw new ApiRequestError("The read was superseded by newer player state.", {
+            code: "REQUEST_SUPERSEDED",
+            endpointKey,
+            path,
+            requestId
+          });
         }
         if (endpoint.method === "GET") {
           this.readCache.set(key, value);
@@ -284,6 +305,13 @@ export class PlayerApi {
 
   invalidateResources(keys) {
     const targets = new Set(keys);
+    for (const endpointKey of targets) {
+      this.readGenerations.set(endpointKey, this.currentReadGeneration(endpointKey) + 1);
+    }
+    for (const key of this.inFlightReads.keys()) {
+      const endpointKey = key.split(":")[1];
+      if (targets.has(endpointKey)) this.inFlightReads.delete(key);
+    }
     for (const key of this.readCache.keys()) {
       const endpointKey = key.split(":")[1];
       if (!targets.has(endpointKey)) continue;
