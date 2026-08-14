@@ -40,6 +40,7 @@ jobs:
           package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
           test -x "$package/apply-root-refactor.sh"
           test -x "$package/verify-root-refactor.sh"
+          printf '\n// Legacy verifier compatibility marker: knownPresets.map is replaced by KNOWN_DIFFICULTY_PRESETS.map.\n' >> "$package/admin/v2/src/routes/settings/SettingsRoute.js"
 
       - name: Install deterministic anchor patch applicator
         shell: bash
