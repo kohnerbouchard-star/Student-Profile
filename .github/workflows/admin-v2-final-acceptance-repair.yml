@@ -49,6 +49,11 @@ jobs:
               "assert.match(body, /Authoritative supervisory surface/);",
               "assert.match(body, /Read-only publication monitor/);",
           )
+          replace_exact(
+              "scripts/admin-v2-news-events-browser-smoke.mjs",
+              'runtime.page.getByLabel("Lifecycle").selectOption("failed")',
+              'runtime.page.getByLabel("Lifecycle", { exact: true }).selectOption("failed")',
+          )
 
           settings = Path("scripts/admin-v2-settings-browser-smoke.mjs")
           text = settings.read_text(encoding="utf-8")
