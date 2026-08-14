@@ -57,16 +57,6 @@ jobs:
               '"Crafting Operations"',
           )
           align(
-              "scripts/admin-v2-contracts-browser-smoke.mjs",
-              'name: /^Contracts$/',
-              'name: "Contracts Management"',
-          )
-          align(
-              "scripts/admin-v2-settings-browser-smoke.mjs",
-              'name: /^Game Settings$/',
-              'name: /^Settings$/',
-          )
-          align(
               "scripts/admin-v2-players-browser-smoke.mjs",
               '"Edit Admin profile"',
               '"Edit admin metadata"',
@@ -79,6 +69,8 @@ jobs:
           node --check scripts/admin-v2-contracts-browser-smoke.mjs
           node --check scripts/admin-v2-settings-browser-smoke.mjs
           node --check scripts/admin-v2-players-browser-smoke.mjs
+          grep -F 'name: "Contracts Management"' scripts/admin-v2-contracts-browser-smoke.mjs
+          grep -F 'name: "Settings", exact: true' scripts/admin-v2-settings-browser-smoke.mjs
           test "$(grep -c 'v2/styles/routes/loans.css' admin/v2.html)" -eq 1
       - name: Commit verified release-contract repair
         run: |
@@ -89,8 +81,6 @@ jobs:
             scripts/admin-messaging-moderation-contract.mjs \
             scripts/admin-v2-news-events-browser-smoke.mjs \
             scripts/admin-v2-crafting-browser-smoke.mjs \
-            scripts/admin-v2-contracts-browser-smoke.mjs \
-            scripts/admin-v2-settings-browser-smoke.mjs \
             scripts/admin-v2-players-browser-smoke.mjs
           git diff --cached --check
           git commit -m "test(admin): sync browser contracts with V2 UX"
