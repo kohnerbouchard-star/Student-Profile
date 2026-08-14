@@ -1,0 +1,87 @@
+name: Admin V2 UX Root Refactor Apply
+
+on:
+  push:
+    branches:
+      - automation/admin-v2-ux-root-apply-20260814
+
+permissions:
+  contents: write
+
+concurrency:
+  group: admin-v2-ux-root-apply-20260814
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact bootstrap branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Reconstruct verified refactor package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .tmp/admin-v2-ux/parts/part-*.b64 > "$RUNNER_TEMP/admin-v2-ux.tar.xz.b64"
+          base64 --decode "$RUNNER_TEMP/admin-v2-ux.tar.xz.b64" > "$RUNNER_TEMP/admin-v2-ux.tar.xz"
+          printf '%s  %s\n' '81a66f004d14d736679722e21bfbc0a3c2a8b081018da1393648a6cd5b7e06c0' "$RUNNER_TEMP/admin-v2-ux.tar.xz" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/admin-v2-ux-package"
+          tar -xJf "$RUNNER_TEMP/admin-v2-ux.tar.xz" -C "$RUNNER_TEMP/admin-v2-ux-package"
+          package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
+          test -x "$package/apply-root-refactor.sh"
+          test -x "$package/verify-root-refactor.sh"
+
+      - name: Apply canonical root refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
+          "$package/apply-root-refactor.sh" "$GITHUB_WORKSPACE"
+
+      - name: Verify changed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          node scripts/admin-v2-contracts-api.test.mjs
+          node scripts/admin-v2-store-api.test.mjs
+
+      - name: Remove bootstrap-only files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r --ignore-unmatch .tmp/admin-v2-ux
+          git rm --ignore-unmatch .github/workflows/admin-v2-ux-apply.yml
+          git diff --check
+
+      - name: Commit verified source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            admin/v2/src \
+            admin/v2/styles \
+            backend/src/domains/contracts/application/adminContractMutation.ts \
+            backend/supabase/functions/admin-api/localGameMutations.ts \
+            backend/supabase/functions/admin-api/common.ts \
+            backend/supabase/migrations
+          git status --short
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'Expected source changes were not staged.' >&2
+            exit 1
+          fi
+          git commit -m 'refactor(admin): fix Admin V2 UX at root'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
