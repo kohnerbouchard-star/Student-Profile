@@ -61,24 +61,19 @@ test("scanner page load never consumes the recovery token", () => {
   assert.match(fixture.message.textContent, /ready/i);
 });
 
-test("explicit continue uses same-origin review API and carries resolved project to reset page", async () => {
+test("explicit continue reuses same-origin password-reset function and carries resolved project", async () => {
   const accessToken = "header.payload.signature";
   const fixture = loadRecoveryStart({
     fetchImpl: async () => ({
       ok: true,
-      json: async () => ({
-        ok: true,
-        verified: true,
-        accessToken,
-        projectRef: STAGING_REF,
-      }),
+      json: async () => ({ ok: true, verified: true, accessToken, projectRef: STAGING_REF }),
     }),
   });
 
   await fixture.listeners.get("click")();
   assert.equal(fixture.fetchCalls.length, 1);
   const [url, options] = fixture.fetchCalls[0];
-  assert.equal(url, "/api/auth-token-verify");
+  assert.equal(url, "/api/password-reset?operation=verify-auth");
   assert.equal(options.method, "POST");
   assert.equal(options.credentials, "same-origin");
   assert.deepEqual(JSON.parse(options.body), {
@@ -110,7 +105,7 @@ test("recovery review stays browser-hosted and never targets Supabase HTML funct
   assert.match(html, /src="\.\/recovery-start\.js"/u);
   assert.match(html, /id="continueRecovery"[^>]*hidden/u);
   assert.match(script, /window\.history\.replaceState/u);
-  assert.match(script, /\/api\/auth-token-verify/u);
+  assert.match(script, /\/api\/password-reset\?operation=verify-auth/u);
   assert.doesNotMatch(script, /functions\/v1\/admin-password-recovery/u);
   assert.doesNotMatch(script, /\.supabase\.co\/auth\/v1\/verify/u);
 });
