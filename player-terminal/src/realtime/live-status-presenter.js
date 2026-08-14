@@ -1,5 +1,6 @@
 import { renderLiveIndicator } from "../components/player-interior.js";
-import { DEFAULT_PLAYER_LIVE_STATE_EVENT } from "./player-invalidation-controller.js";
+
+const DEFAULT_LIVE_STATE_EVENT = "econovaria:player-live-state";
 
 export function installLiveStatusPresenter({ mount, terminal, config, runtime = globalThis }) {
   if (!(mount instanceof HTMLElement) || config?.usePreviewData === true) return { destroy() {} };
@@ -33,7 +34,7 @@ export function installLiveStatusPresenter({ mount, terminal, config, runtime = 
   }
 
   const unsubscribe = terminal.subscribe?.(schedule) || (() => {});
-  runtime.addEventListener?.(String(config?.liveStateEvent || DEFAULT_PLAYER_LIVE_STATE_EVENT), schedule);
+  runtime.addEventListener?.(String(config?.liveStateEvent || DEFAULT_LIVE_STATE_EVENT), schedule);
   const timer = runtime.setInterval?.(schedule, 5000) || 0;
   schedule();
 
@@ -41,7 +42,7 @@ export function installLiveStatusPresenter({ mount, terminal, config, runtime = 
     destroy() {
       destroyed = true;
       unsubscribe();
-      runtime.removeEventListener?.(String(config?.liveStateEvent || DEFAULT_PLAYER_LIVE_STATE_EVENT), schedule);
+      runtime.removeEventListener?.(String(config?.liveStateEvent || DEFAULT_LIVE_STATE_EVENT), schedule);
       if (timer) runtime.clearInterval?.(timer);
     },
   };
