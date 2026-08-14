@@ -43,7 +43,7 @@
   if (
     !TOKEN_HASH_PATTERN.test(tokenHash) ||
     !REVIEW_TYPES.has(reviewType) ||
-    !PROJECT_REFS.has(projectRef)
+    (projectRef && !PROJECT_REFS.has(projectRef))
   ) {
     invalidateReview("This authentication request is invalid or has expired. Request a new email from Econovaria.");
     return;
