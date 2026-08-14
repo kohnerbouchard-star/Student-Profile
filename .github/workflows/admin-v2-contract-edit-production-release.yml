@@ -3,7 +3,7 @@ name: Admin V2 Contract Edit Production Release
 on:
   push:
     branches:
-      - ops/admin-v2-contract-edit-production-release-20260814
+      - main
     paths:
       - .github/workflows/admin-v2-contract-edit-production-release.yml
 
@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = "push"
-          test "$GITHUB_REF" = "refs/heads/ops/admin-v2-contract-edit-production-release-20260814"
+          test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" = "cgiukdjwicykrmtkhudh"
           test "$EXPECTED_PRODUCTION_PROJECT_REF" != "$DENIED_STAGING_PROJECT_REF"
