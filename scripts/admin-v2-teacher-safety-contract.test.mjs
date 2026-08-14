@@ -62,7 +62,7 @@ test("Contract monetary rewards no longer accept a UI-selected currency", () => 
   assert.doesNotMatch(contractForm, /CURRENCY_PATTERN/);
   assert.match(
     contractForm,
-    /rewardPayload:\s*rewardAmount > 0[\s\S]*?\{ cash:\s*\{ amount:/,
+    /rewardPayload:\s*\{\s*cash:\s*rewardAmount > 0[\s\S]*?\{ amount:/,
     "The existing Admin API compatibility boundary still receives the cash alias.",
   );
   assert.doesNotMatch(
