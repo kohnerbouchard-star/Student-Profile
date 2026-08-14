@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderStatusPill } from "../components/ui.js";
+import { renderChoiceSet, renderProgressRail, renderReceipt } from "../components/player-interior.js";
 
 function contractTone(contract) {
   if (["Completed", "Approved"].includes(contract.status)) return "green";
@@ -12,24 +13,15 @@ function contractTone(contract) {
 }
 
 function lifecycleIndex(status) {
-  return {
-    Available: 0,
-    Scheduled: 0,
-    Expired: 0,
-    Active: 1,
-    Submitted: 2,
-    "Revision Required": 3,
-    Approved: 3,
-    Rejected: 3,
-    Completed: 4
-  }[status] ?? 0;
+  return { Available: 0, Scheduled: 0, Expired: 0, Active: 1, Submitted: 2, "Revision Required": 3, Approved: 3, Rejected: 3, Completed: 4 }[status] ?? 0;
 }
 
 function renderContractRow(contract, selectedId, currencyCode) {
   const dueLabel = contract.status === "Submitted" ? "SUBMITTED" : contract.status === "Completed" ? "COMPLETED" : contract.status === "Expired" ? "EXPIRED" : "DUE";
+  const interaction = contract.interaction?.type === "multiple_choice" ? "QUIZ" : contract.interaction?.type === "evidence" ? "EVIDENCE" : "MISSION";
   return `<button class="player-terminal-contract-row${contract.id === selectedId ? " is-selected" : ""}" type="button" data-player-contract-select="${escapeHtml(contract.id)}">
     <span class="player-terminal-contract-status is-${contractTone(contract)}"><i></i></span>
-    <span><strong>${escapeHtml(contract.title)}</strong><small>${escapeHtml(contract.issuer)} · ${escapeHtml(contract.location)}</small></span>
+    <span><small>${escapeHtml(interaction)}</small><strong>${escapeHtml(contract.title)}</strong><small>${escapeHtml(contract.issuer)} · ${escapeHtml(contract.location)}</small></span>
     <span><small>STATE</small><strong>${escapeHtml(contract.status)}</strong></span>
     <span><small>${dueLabel}</small><strong>${escapeHtml(contract.due)}</strong></span>
     <span><small>REWARD</small><strong>${escapeHtml(formatCurrency(contract.rewardCash, contract.rewardCurrencyCode || currencyCode))}</strong></span>
@@ -51,26 +43,70 @@ function renderRewardItems(contract) {
   return `<div class="player-terminal-contract-section"><small>ITEM REWARDS</small><ul>${contract.rewardItems.map((item) => `<li>${icon("inventory")}<span>${escapeHtml(item.quantity)} × ${escapeHtml(item.name)}</span></li>`).join("")}</ul></div>`;
 }
 
-function renderSubmissionForm(contract, revision = false) {
-  return `${revision ? `<div class="player-terminal-review-banner">${icon("edit")}<div><strong>Revision requested</strong><p>${escapeHtml(contract.reviewFeedback || "Update the submission using the administrator’s review guidance.")}</p></div>${renderStatusPill("ACTION REQUIRED", "amber")}</div>` : ""}<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
-    <label>SUBMISSION LINK<input name="submissionUrl" type="url" placeholder="https://... (optional)" /></label>
-    <label>SUBMISSION RESPONSE<textarea name="note" rows="5" required placeholder="Describe the completed work and provide the evidence requested by this contract.">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label>
+function selectedAnswers(contract) {
+  return Object.fromEntries((contract.submission?.answers || []).map((answer) => [answer.questionKey, answer.optionKey]));
+}
+
+function revisionBanner(contract) {
+  return `<div class="player-terminal-review-banner">${icon("edit")}<div><strong>Revision requested</strong><p>${escapeHtml(contract.reviewFeedback || "Update the submission using the administrator’s review guidance.")}</p></div>${renderStatusPill("ACTION REQUIRED", "amber")}</div>`;
+}
+
+function renderMultipleChoiceSubmission(contract, revision = false) {
+  const questions = contract.interaction?.questions || [];
+  const chosen = revision ? selectedAnswers(contract) : {};
+  return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit player-terminal-contract-submit--choices" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
+    <div class="player-terminal-v2-panel player-terminal-contract-response-intro"><small>DECISION RESPONSE</small><h4>Choose one answer for every question</h4><p>Your selections are submitted to the authoritative contract record. You can review every selected answer before submitting.</p></div>
+    ${renderChoiceSet(questions, { namePrefix: "contractChoice", selected: chosen })}
+    <label class="player-terminal-contract-optional-note">OPTIONAL REASONING OR CONTEXT<textarea name="note" rows="3" placeholder="Add reasoning or context for your answers if the contract asks for it.">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label>
     <input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" />
-    <button class="player-terminal-primary-button" type="submit">${icon("upload")} ${revision ? "Resubmit for review" : "Submit for review"}</button>
+    <div class="player-terminal-contract-submit-footer"><span>${icon("shield")} Answers are saved only after the backend confirms the submission.</span><button class="player-terminal-primary-button" type="submit">${icon("send")} ${revision ? "Resubmit answers" : "Submit answers"}</button></div>
   </form>`;
 }
 
-function renderContractAction(contract) {
+function renderWrittenSubmission(contract, revision = false) {
+  return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
+    <label>SUBMISSION LINK<input name="submissionUrl" type="url" placeholder="https://... (optional)" value="${revision ? escapeHtml(contract.submission?.url || "") : ""}" /></label>
+    <label>SUBMISSION RESPONSE<textarea name="note" rows="5" required placeholder="Describe the completed work and provide the evidence requested by this contract.">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label>
+    <input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" />
+    <div class="player-terminal-contract-submit-footer"><span>${icon("shield")} Your submission is committed only after backend confirmation.</span><button class="player-terminal-primary-button" type="submit">${icon("upload")} ${revision ? "Resubmit for review" : "Submit for review"}</button></div>
+  </form>`;
+}
+
+function renderEvidenceSubmission(contract, revision = false) {
+  return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
+    <label>EVIDENCE LINK<input name="submissionUrl" type="url" required placeholder="https://..." value="${revision ? escapeHtml(contract.submission?.url || "") : ""}" /></label>
+    <label>CONTEXT<textarea name="note" rows="4" placeholder="Explain what the evidence demonstrates.">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label>
+    <input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" />
+    <div class="player-terminal-contract-submit-footer"><span>${icon("document")} Verify the evidence link before submitting.</span><button class="player-terminal-primary-button" type="submit">${icon("upload")} ${revision ? "Resubmit evidence" : "Submit evidence"}</button></div>
+  </form>`;
+}
+
+function renderSubmissionForm(contract, revision = false) {
+  if (contract.interaction?.type === "multiple_choice" && contract.interaction.questions?.length) return renderMultipleChoiceSubmission(contract, revision);
+  if (contract.interaction?.type === "evidence") return renderEvidenceSubmission(contract, revision);
+  return renderWrittenSubmission(contract, revision);
+}
+
+function renderSubmittedAnswers(contract) {
+  if (contract.interaction?.type !== "multiple_choice" || !contract.submission?.answers?.length) return "";
+  const answers = selectedAnswers(contract);
+  return `<div class="player-terminal-contract-section"><small>SUBMITTED ANSWERS</small><ol class="player-terminal-contract-answer-summary">${contract.interaction.questions.map((question, index) => {
+    const selected = question.options.find((option) => option.optionKey === answers[question.questionKey]);
+    return `<li><span>${index + 1}</span><div><strong>${escapeHtml(question.prompt)}</strong><p>${escapeHtml(selected?.label || "Answer recorded")}</p></div></li>`;
+  }).join("")}</ol></div>`;
+}
+
+function renderContractAction(contract, currencyCode) {
   if (contract.status === "Available") {
-    return `<div class="player-terminal-contract-action-panel"><p>Accepting this contract adds it to your active workload after the backend confirms eligibility and capacity.</p><button class="player-terminal-primary-button" type="button" data-player-contract-accept="${escapeHtml(contract.id)}">${icon("contracts")} Accept contract</button></div>`;
+    return `<div class="player-terminal-contract-action-panel"><div><small>READY TO BEGIN</small><strong>Accept this contract?</strong><p>Acceptance adds the mission to your active workload after the backend confirms eligibility and capacity.</p></div><button class="player-terminal-primary-button" type="button" data-player-contract-accept="${escapeHtml(contract.id)}">${icon("contracts")} Accept contract</button></div>`;
   }
   if (contract.status === "Active") return renderSubmissionForm(contract);
   if (contract.status === "Revision Required") return renderSubmissionForm(contract, true);
   if (contract.status === "Submitted") {
-    return `<div class="player-terminal-review-banner">${icon("clock")}<div><strong>Submission received</strong><p>${escapeHtml(contract.submission?.note || "The work is awaiting administrator review.")}</p><small>${escapeHtml(contract.submission?.time || contract.due)}</small></div>${renderStatusPill("UNDER REVIEW", "purple")}</div>`;
+    return `<div class="player-terminal-review-banner">${icon("clock")}<div><strong>Submission received</strong><p>${escapeHtml(contract.interaction?.type === "multiple_choice" ? "Your answers are locked while this contract is under review." : contract.submission?.note || "The work is awaiting administrator review.")}</p><small>${escapeHtml(contract.submission?.time || contract.due)}</small></div>${renderStatusPill("UNDER REVIEW", "purple")}</div>${renderSubmittedAnswers(contract)}`;
   }
   if (contract.status === "Approved") {
-    return `<div class="player-terminal-complete-banner">${icon("check")} Submission approved. Reward issuance is pending backend confirmation.</div>`;
+    return renderReceipt({ title: "Submission approved", summary: "Review is complete. Reward issuance is pending backend confirmation.", rows: [{ label: "Cash reward", value: formatCurrency(contract.rewardCash, contract.rewardCurrencyCode || currencyCode) }, { label: "Experience", value: `${contract.rewardXp} XP` }] });
   }
   if (contract.status === "Rejected") {
     return `<div class="player-terminal-review-banner">${icon("close")}<div><strong>Submission rejected</strong><p>${escapeHtml(contract.reviewFeedback || "The administrator rejected this submission.")}</p></div>${renderStatusPill("CLOSED", "red")}</div>`;
@@ -81,7 +117,13 @@ function renderContractAction(contract) {
   if (contract.status === "Scheduled") {
     return `<div class="player-terminal-review-banner">${icon("clock")}<div><strong>Contract scheduled</strong><p>This contract is visible but not yet open for acceptance.</p></div>${renderStatusPill("UPCOMING", "cyan")}</div>`;
   }
-  return `<div class="player-terminal-complete-banner">${icon("check")} Contract completed and reward issued.</div>`;
+  return renderReceipt({ title: "Contract completed", summary: "The contract is closed and its committed reward has been issued.", rows: [{ label: "Cash reward", value: formatCurrency(contract.rewardCash, contract.rewardCurrencyCode || currencyCode) }, { label: "Experience", value: `${contract.rewardXp} XP` }] });
+}
+
+function renderAttention(contract) {
+  if (contract.status === "Revision Required") return `<div class="player-terminal-contract-attention is-amber">${icon("edit")}<div><strong>Revision required</strong><p>Review the feedback and update only the requested parts before resubmitting.</p></div></div>`;
+  if (contract.urgency === "high" && ["Active", "Available"].includes(contract.status)) return `<div class="player-terminal-contract-attention is-red">${icon("clock")}<div><strong>Deadline approaching</strong><p>This contract is due ${escapeHtml(contract.due)}. Finish the required work before it expires.</p></div></div>`;
+  return "";
 }
 
 export function renderContractsPage(data, ui) {
@@ -95,7 +137,7 @@ export function renderContractsPage(data, ui) {
 
   return `<section class="player-terminal-page player-terminal-contracts-page" data-page="contracts">
     <header class="player-terminal-page-heading">
-      <div><small>MISSION & WORKFLOW CENTER</small><h2>Contracts</h2><p>Follow the authoritative lifecycle from availability through acceptance, submission, review, and reward issuance.</p></div>
+      <div><small>MISSION & WORKFLOW CENTER</small><h2>Contracts</h2><p>Accept missions, complete structured tasks, submit evidence, and track review and reward status without leaving the live game.</p></div>
       <div class="player-terminal-heading-actions">${renderStatusPill(`${contracts.length} ${tab.toUpperCase()}`, contractTone(selected || { urgency: "low" }))}</div>
     </header>
 
@@ -108,16 +150,16 @@ export function renderContractsPage(data, ui) {
       </section>
 
       ${selected ? `<section class="player-terminal-panel player-terminal-contract-detail">
-        <header><div><small>${escapeHtml(selected.issuer)} · ${escapeHtml(selected.category || "General")}</small><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.location)} · ${escapeHtml(selected.due)}</p></div>${renderStatusPill(selected.status, contractTone(selected))}</header>
+        <header><div><small>${escapeHtml(selected.issuer)} · ${escapeHtml(selected.category || "General")}${selected.difficulty ? ` · ${escapeHtml(selected.difficulty)}` : ""}</small><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.location)} · ${escapeHtml(selected.due)}</p></div>${renderStatusPill(selected.status, contractTone(selected))}</header>
+        ${renderAttention(selected)}
         ${renderLifecycle(selected, data.contracts.lifecycle)}
-        <div class="player-terminal-contract-rewards"><span><small>CASH REWARD</small><strong>${escapeHtml(formatCurrency(selected.rewardCash, selected.rewardCurrencyCode || currencyCode))}</strong></span><span><small>EXPERIENCE</small><strong>${escapeHtml(selected.rewardXp)} XP</strong></span><span><small>PROGRESS</small><strong>${escapeHtml(selected.progress)}%</strong></span></div>
-        <div class="player-terminal-progress"><i style="width:${Math.max(0, Math.min(100, Number(selected.progress) || 0))}%"></i></div>
+        <div class="player-terminal-contract-rewards"><span><small>CASH REWARD</small><strong>${escapeHtml(formatCurrency(selected.rewardCash, selected.rewardCurrencyCode || currencyCode))}</strong></span><span><small>EXPERIENCE</small><strong>${escapeHtml(selected.rewardXp)} XP</strong></span><span><small>INTERACTION</small><strong>${escapeHtml(selected.interaction?.type === "multiple_choice" ? "Multiple choice" : selected.interaction?.type === "evidence" ? "Evidence" : "Written response")}</strong></span></div>
+        ${renderProgressRail({ value: selected.progress, label: "Contract progress", detail: selected.status })}
         <div class="player-terminal-contract-detail-grid">
-          <div><div class="player-terminal-contract-section"><small>OBJECTIVE</small><p>${escapeHtml(selected.objective)}</p></div>${selected.instructions ? `<div class="player-terminal-contract-section"><small>INSTRUCTIONS</small><p>${escapeHtml(selected.instructions)}</p></div>` : ""}<div class="player-terminal-contract-section"><small>SUBMISSION REQUIREMENTS</small><ul>${selected.requirements.length ? selected.requirements.map((item) => `<li>${icon("check")}<span>${escapeHtml(item)}</span></li>`).join("") : `<li>${icon("document")}<span>Follow the contract instructions and submit a written completion response.</span></li>`}</ul></div>${renderRewardItems(selected)}</div>
+          <div><div class="player-terminal-contract-section"><small>OBJECTIVE</small><p>${escapeHtml(selected.objective)}</p></div>${selected.instructions ? `<div class="player-terminal-contract-section"><small>INSTRUCTIONS</small><p>${escapeHtml(selected.instructions)}</p></div>` : ""}<div class="player-terminal-contract-section"><small>SUBMISSION REQUIREMENTS</small><ul>${selected.requirements.length ? selected.requirements.map((item) => `<li>${icon("check")}<span>${escapeHtml(item)}</span></li>`).join("") : `<li>${icon("document")}<span>Follow the contract instructions and complete the response shown below.</span></li>`}</ul></div>${renderRewardItems(selected)}</div>
           ${renderTimeline(selected)}
         </div>
-
-        ${renderContractAction(selected)}
+        ${renderContractAction(selected, currencyCode)}
       </section>` : ""}
     </div>
   </section>`;
