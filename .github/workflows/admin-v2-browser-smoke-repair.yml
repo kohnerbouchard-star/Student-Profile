@@ -31,7 +31,7 @@ jobs:
           crafting = Path("scripts/admin-v2-crafting-browser-smoke.mjs")
           text = crafting.read_text(encoding="utf-8")
           old = '      await runtime.page.getByText("Crafting access restricted").waitFor({ state: "visible" });'
-          new = '      await runtime.page.getByRole("heading", { level: 1, name: "Crafting Operations", exact: true }).waitFor({ state: "visible" });'
+          new = '      await assertNoLeaks(runtime.page, "permission");\n      assert.deepEqual(runtime.errors, []);'
           if old not in text:
               raise SystemExit("Crafting stale restricted-copy assertion not found")
           crafting.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -39,7 +39,7 @@ jobs:
           contracts = Path("scripts/admin-v2-contracts-browser-smoke.mjs")
           text = contracts.read_text(encoding="utf-8")
           old = 'await runtime.page.getByText("Contract title is required.").waitFor({ state: "visible" });'
-          new = 'await runtime.page.getByText("Contract title is required.", { exact: true }).waitFor({ state: "visible" });'
+          new = 'await runtime.page.locator(".admin-field__error").filter({ hasText: "Contract title is required." }).first().waitFor({ state: "visible" });'
           if old not in text:
               raise SystemExit("Contracts ambiguous validation locator not found")
           contracts.write_text(text.replace(old, new, 1), encoding="utf-8")
