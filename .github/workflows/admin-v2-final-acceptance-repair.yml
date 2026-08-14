@@ -56,6 +56,12 @@ jobs:
           )
 
           replace_exact(
+              "admin/v2/src/routes/crafting/CraftingRoute.js",
+              '''  AdminDataTable,\n  AdminDialog,''',
+              '''  AdminConfirmDialog,\n  AdminDataTable,\n  AdminDialog,''',
+          )
+
+          replace_exact(
               "scripts/admin-v2-news-events-browser-smoke.mjs",
               "assert.match(body, /Authoritative supervisory surface/);",
               "assert.match(body, /Read-only publication monitor/);",
@@ -133,6 +139,7 @@ jobs:
           git rm .github/workflows/admin-v2-final-acceptance-repair.yml
           git add \
             admin/v2/src/routes/settings/SettingsRoute.js \
+            admin/v2/src/routes/crafting/CraftingRoute.js \
             admin/v2/styles/components.css \
             scripts/admin-v2-news-events-browser-smoke.mjs \
             scripts/admin-v2-settings-browser-smoke.mjs \
