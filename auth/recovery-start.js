@@ -1,22 +1,18 @@
 (() => {
   "use strict";
 
-  const runtimeConfig = window.EconovariaRuntimeConfig;
-  if (!runtimeConfig) {
-    throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
-  }
-
-  const SUPABASE_URL = String(runtimeConfig.supabaseUrl || "").replace(/\/+$/, "");
-  const SUPABASE_PUBLISHABLE_KEY = String(
-    runtimeConfig.supabasePublishableKey || ""
-  ).trim();
-  const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{32,256}$/u;
+  const TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{16,256}$/u;
+  const PROJECT_REFS = new Set([
+    "eecvbssdvarfcykcfrny",
+    "cgiukdjwicykrmtkhudh"
+  ]);
   const button = document.getElementById("continueRecovery");
   const message = document.getElementById("recoveryMessage");
   const intro = document.getElementById("recoveryIntro");
   const params = new URLSearchParams(window.location.search);
   let tokenHash = String(params.get("token_hash") || "").trim();
   const recoveryType = String(params.get("type") || "").trim().toLowerCase();
+  const projectRef = String(params.get("project_ref") || "").trim().toLowerCase();
 
   function setMessage(text, isError = false) {
     if (!message) return;
@@ -40,8 +36,7 @@
   if (
     recoveryType !== "recovery" ||
     !TOKEN_HASH_PATTERN.test(tokenHash) ||
-    !SUPABASE_URL ||
-    !SUPABASE_PUBLISHABLE_KEY
+    !PROJECT_REFS.has(projectRef)
   ) {
     invalidateRecovery(
       "This password recovery request is invalid or has expired. Request a new email from the administrator login page."
@@ -62,18 +57,12 @@
     setMessage("Verifying the one-time recovery request.");
 
     try {
-      const response = await window.fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+      const response = await window.fetch("/api/auth-token-verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_PUBLISHABLE_KEY
-        },
-        body: JSON.stringify({
-          token_hash: tokenHash,
-          type: "recovery"
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenHash, type: "recovery", projectRef }),
         cache: "no-store",
-        credentials: "omit",
+        credentials: "same-origin",
         redirect: "error",
         referrerPolicy: "no-referrer"
       });
@@ -83,10 +72,16 @@
         data = await response.json();
       } catch (_) {}
 
-      const accessToken = String(data?.access_token || "").trim();
-      if (!response.ok || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(accessToken)) {
+      const accessToken = String(data?.accessToken || "").trim();
+      if (
+        !response.ok ||
+        data?.ok !== true ||
+        data?.verified !== true ||
+        data?.projectRef !== projectRef ||
+        !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(accessToken)
+      ) {
         invalidateRecovery(
-          data?.msg || data?.error_description ||
+          data?.error?.message ||
             "This password recovery request is invalid or has expired. Request a new email from the administrator login page."
         );
         return;
@@ -96,7 +91,8 @@
       const target = new URL("reset-password.html", window.location.href);
       target.hash = new URLSearchParams({
         access_token: accessToken,
-        type: "recovery"
+        type: "recovery",
+        project_ref: projectRef
       }).toString();
       window.location.replace(target.href);
     } catch (_) {
