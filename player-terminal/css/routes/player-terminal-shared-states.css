@@ -1,5 +1,5 @@
 /* Econovaria Player Terminal refresh — shared route state ownership.
-   Owns empty, error, disclosure, messages, holdings, and long-content containment. */
+   Owns empty, error, disclosure, messages, holdings, transient status, and long-content containment. */
 
 .player-terminal-app-root .player-terminal-search-field {
   flex: 1 1 18rem;
@@ -100,4 +100,41 @@
   overflow-wrap: anywhere;
 }
 
+/* Toasts are transient application status, not legacy shell decoration. */
+.player-terminal-toast {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 100000;
+  width: min(24rem, calc(100vw - 2rem));
+  max-width: 24rem;
+  padding: .875rem 1rem;
+  border: 1px solid rgba(0, 212, 255, .42);
+  border-radius: var(--player-radius-md);
+  color: var(--player-color-text);
+  background: linear-gradient(145deg, rgba(10, 29, 52, .98), rgba(4, 13, 27, .99));
+  box-shadow: 0 1.25rem 4rem rgba(0, 0, 0, .48), var(--player-glow-cyan);
+  font-size: .8125rem;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(.5rem);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.player-terminal-toast.is-visible { opacity: 1; transform: translateY(0); }
+.player-terminal-toast.is-green { border-color: rgba(74, 222, 128, .52); box-shadow: 0 1.25rem 4rem rgba(0, 0, 0, .48), 0 0 1.5rem rgba(74, 222, 128, .09); }
+.player-terminal-toast.is-amber { border-color: rgba(255, 165, 0, .55); box-shadow: 0 1.25rem 4rem rgba(0, 0, 0, .48), 0 0 1.5rem rgba(255, 165, 0, .08); }
+.player-terminal-toast.is-red { border-color: rgba(255, 98, 104, .58); box-shadow: 0 1.25rem 4rem rgba(0, 0, 0, .48), 0 0 1.5rem rgba(255, 98, 104, .08); }
 
+@media (max-width: 520px) {
+  .player-terminal-toast {
+    right: .75rem;
+    bottom: calc(.75rem + env(safe-area-inset-bottom));
+    width: calc(100vw - 1.5rem);
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-terminal-toast { transition: none; transform: none; }
+}
