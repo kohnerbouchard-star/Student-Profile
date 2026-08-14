@@ -38,8 +38,8 @@ jobs:
 
           contracts = Path("scripts/admin-v2-contracts-browser-smoke.mjs")
           text = contracts.read_text(encoding="utf-8")
-          old = 'await page.getByText("Contract title is required.").waitFor({ state: "visible" });'
-          new = 'await page.getByText("Contract title is required.", { exact: true }).waitFor({ state: "visible" });'
+          old = 'await runtime.page.getByText("Contract title is required.").waitFor({ state: "visible" });'
+          new = 'await runtime.page.getByText("Contract title is required.", { exact: true }).waitFor({ state: "visible" });'
           if old not in text:
               raise SystemExit("Contracts ambiguous validation locator not found")
           contracts.write_text(text.replace(old, new, 1), encoding="utf-8")
