@@ -39,8 +39,8 @@ jobs:
 
           replace(
               "scripts/admin-messaging-moderation-contract.mjs",
-              r'assert.match(messageReadFlow, /terminal\\.refresh\\(\\)/);',
-              r'assert.match(messageReadFlow, /dispatchResourceRefresh\\(config,\\s*\\["messages",\\s*"notifications"\\]\\)/);\nassert.doesNotMatch(messageReadFlow, /terminal\\.refresh\\(\\)/);',
+              'assert.match(messageReadFlow, /terminal\\.refresh\\(\\)/);',
+              'assert.match(messageReadFlow, /dispatchResourceRefresh\\(config,\\s*\\["messages",\\s*"notifications"\\]\\)/);\nassert.doesNotMatch(messageReadFlow, /terminal\\.refresh\\(\\)/);',
           )
           replace(
               "scripts/admin-v2-news-events-browser-smoke.mjs",
