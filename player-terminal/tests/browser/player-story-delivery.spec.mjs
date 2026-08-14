@@ -81,8 +81,10 @@ async function installConnectedStory(page, item, options = {}) {
       },
     });
   }, { item, failAction: options.failAction || "" });
-  await expect(page.locator(".player-story-cutscene-modal[role=dialog]")).toBeVisible();
+  const dialog = page.locator(".player-story-cutscene-modal[role=dialog]");
+  await expect(dialog).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__storyWrites?.map((entry) => entry.action) || [])).toContain("seen");
+  await expect(dialog.locator("[data-player-story-action]").last()).toBeEnabled();
 }
 
 test("required cutscene traps focus, blocks Escape, and restores focus after acknowledgement", async ({ page }) => {
