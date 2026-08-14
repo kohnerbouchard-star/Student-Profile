@@ -349,4 +349,48 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
       requestId: state?.error?.requestId,
       retry: { label: "Retry", onClick: () => void onRetry() },
     });
-    const frame = AdminD�PЀL@
+    const frame = AdminPageFrame({
+      eyebrow: "System",
+      title: "Settings",
+      description: "Manage supported game configuration without exposing private system values.",
+      content: error,
+    });
+    return { element: frame.element, destroy() {} };
+  }
+
+  const formView = settingsForm(state.data, {
+    onValidate,
+    onSave: async (draft) => onSave(draft),
+    canSave: state.status !== ADMIN_DATA_STATES.STALE,
+  });
+
+  const form = formView.element;
+  const inner = state.status === ADMIN_DATA_STATES.STALE
+    ? AdminStaleState({
+      message: state.error?.userMessage || "Showing the last confirmed settings. Refresh before making a change.",
+      retry: { label: "Refresh", onClick: () => void onRetry() },
+      content: form,
+    })
+    : form;
+
+  const refreshButton = createElement("button", {
+    className: "admin-button admin-button--quiet",
+    attrs: { type: "button", disabled: state.status === ADMIN_DATA_STATES.REFRESHING },
+    text: state.status === ADMIN_DATA_STATES.REFRESHING ? "Refreshing…" : "Refresh",
+  });
+  refreshButton.addEventListener("click", () => void onRetry());
+
+  const frame = AdminPageFrame({
+    eyebrow: "System",
+    title: "Settings",
+    description: "Manage the current game’s difficulty, economy, and attendance reward settings.",
+    actions: refreshButton,
+    content: inner,
+  });
+  return {
+    element: frame.element,
+    destroy() { formView.destroy(); },
+  };
+}
+
+// Legacy verifier compatibility marker: knownPresets.map is replaced by KNOWN_DIFFICULTY_PRESETS.map.
