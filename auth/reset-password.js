@@ -8,6 +8,10 @@
 
   const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const PASSWORD_RESET_API_URL = runtimeConfig.passwordResetApiUrl;
+  const PROJECT_REFS = new Set([
+    "eecvbssdvarfcykcfrny",
+    "cgiukdjwicykrmtkhudh"
+  ]);
   const PASSWORD_MIN_LENGTH = 15;
   const PASSWORD_MAX_LENGTH = 128;
   const form = document.getElementById("resetPasswordForm");
@@ -20,6 +24,9 @@
     hash.get("access_token") || query.get("access_token") || ""
   ).trim();
   const recoveryType = String(hash.get("type") || query.get("type") || "").trim();
+  const projectRef = String(
+    hash.get("project_ref") || query.get("project_ref") || runtimeConfig.projectRef || ""
+  ).trim().toLowerCase();
   const authError = String(
     hash.get("error_description") || query.get("error_description") || ""
   );
@@ -57,7 +64,11 @@
     return;
   }
 
-  if (!accessToken || (recoveryType && recoveryType !== "recovery")) {
+  if (
+    !accessToken ||
+    (recoveryType && recoveryType !== "recovery") ||
+    !PROJECT_REFS.has(projectRef)
+  ) {
     setMessage(
       "This password recovery link is invalid or has expired. Request a new email from the administrator login page.",
       true
@@ -98,7 +109,7 @@
           apikey: SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${accessToken}`
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, projectRef }),
         credentials: "same-origin",
         cache: "no-store",
         redirect: "error",
