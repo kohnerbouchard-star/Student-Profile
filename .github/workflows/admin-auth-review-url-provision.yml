@@ -1,0 +1,64 @@
+name: Admin Auth Review URL Provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "staging or production"
+        required: true
+        type: choice
+        options: [staging, production]
+      confirm_project_ref:
+        description: "Exact Supabase project ref"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type PROVISION ADMIN AUTH REVIEW URL"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-auth-review-url-${{ inputs.target_environment }}
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: ${{ inputs.target_environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      REVIEW_URL: https://www.econovaria.com/auth/security-review.html
+    steps:
+      - name: Validate protected target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "${{ inputs.confirm_action }}" = "PROVISION ADMIN AUTH REVIEW URL"
+          case "${{ inputs.target_environment }}" in
+            staging) expected="$STAGING_PROJECT_REF" ;;
+            production) expected="$PRODUCTION_PROJECT_REF" ;;
+            *) exit 1 ;;
+          esac
+          test "${{ inputs.confirm_project_ref }}" = "$expected"
+          echo "TARGET_PROJECT_REF=$expected" >> "$GITHUB_ENV"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - name: Provision browser-hosted verification URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="$RUNNER_TEMP/auth-review.env"
+          umask 077
+          printf 'ECONOVARIA_EMAIL_VERIFICATION_URL=%s\n' "$REVIEW_URL" > "$file"
+          supabase secrets set --env-file "$file" --project-ref "$TARGET_PROJECT_REF"
+          rm -f "$file"
+          names="$(supabase secrets list --project-ref "$TARGET_PROJECT_REF" --output json | jq -r '.[].name')"
+          grep -Fxq 'ECONOVARIA_EMAIL_VERIFICATION_URL' <<< "$names"
