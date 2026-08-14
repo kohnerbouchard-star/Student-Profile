@@ -1,0 +1,169 @@
+name: Admin V2 UX Root Refactor Apply V3
+
+on:
+  push:
+    branches:
+      - automation/admin-v2-ux-root-apply-20260814
+
+permissions:
+  contents: write
+
+concurrency:
+  group: admin-v2-ux-root-apply-v3-20260814
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact bootstrap branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Reconstruct verified refactor package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .tmp/admin-v2-ux/parts/part-*.b64 > "$RUNNER_TEMP/admin-v2-ux.tar.xz.b64"
+          base64 --decode "$RUNNER_TEMP/admin-v2-ux.tar.xz.b64" > "$RUNNER_TEMP/admin-v2-ux.tar.xz"
+          printf '%s  %s\n' '81a66f004d14d736679722e21bfbc0a3c2a8b081018da1393648a6cd5b7e06c0' "$RUNNER_TEMP/admin-v2-ux.tar.xz" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/admin-v2-ux-package"
+          tar -xJf "$RUNNER_TEMP/admin-v2-ux.tar.xz" -C "$RUNNER_TEMP/admin-v2-ux-package"
+          package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
+          test -x "$package/apply-root-refactor.sh"
+          test -x "$package/verify-root-refactor.sh"
+
+      - name: Install deterministic anchor patch applicator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/apply-anchor-patch.py" <<'PY'
+          import pathlib
+          import sys
+          root = pathlib.Path(sys.argv[1]).resolve()
+          patch_path = pathlib.Path(sys.argv[2]).resolve()
+          lines = patch_path.read_text(encoding="utf-8").splitlines()
+          sections = []
+          current_path = None
+          hunks = []
+          current_hunk = None
+          def flush_section():
+              global current_path, hunks, current_hunk
+              if current_hunk is not None:
+                  hunks.append(current_hunk); current_hunk = None
+              if current_path is not None:
+                  sections.append((current_path, hunks))
+              current_path = None; hunks = []
+          for line in lines:
+              if line.startswith("diff --git "):
+                  flush_section(); parts = line.split()
+                  if len(parts) != 4 or not parts[3].startswith("b/"):
+                      raise SystemExit(f"invalid diff header in {patch_path}: {line}")
+                  current_path = parts[3][2:]; continue
+              if current_path is None: continue
+              if line == "@@":
+                  if current_hunk is not None: hunks.append(current_hunk)
+                  current_hunk = []; continue
+              if line.startswith(("--- ", "+++ ")): continue
+              if current_hunk is not None: current_hunk.append(line)
+          flush_section()
+          if not sections: raise SystemExit(f"no file sections in {patch_path}")
+          def find_sequence(haystack, needle, start):
+              if not needle: return start
+              last = len(haystack) - len(needle)
+              for index in range(start, last + 1):
+                  if haystack[index:index + len(needle)] == needle: return index
+              matches = [index for index in range(0, last + 1) if haystack[index:index + len(needle)] == needle]
+              if len(matches) == 1: return matches[0]
+              preview = "\n".join(needle[:8])
+              raise SystemExit(f"anchor not found uniquely in {patch_path.name} after line {start}:\n{preview}")
+          for relative, section_hunks in sections:
+              target = root / relative
+              if not target.is_file(): raise SystemExit(f"target missing for {patch_path.name}: {relative}")
+              source = target.read_text(encoding="utf-8"); trailing_newline = source.endswith("\n"); content = source.splitlines(); cursor = 0
+              for number, raw_hunk in enumerate(section_hunks, start=1):
+                  old = []; new = []; changed = False
+                  for row in raw_hunk:
+                      if row == "\\ No newline at end of file": continue
+                      if not row: raise SystemExit(f"invalid unprefixed blank row in {patch_path.name} hunk {number}")
+                      prefix, body = row[0], row[1:]
+                      if prefix == " ": old.append(body); new.append(body)
+                      elif prefix == "-": old.append(body); changed = True
+                      elif prefix == "+": new.append(body); changed = True
+                      else: raise SystemExit(f"invalid row prefix {prefix!r} in {patch_path.name} hunk {number}: {row}")
+                  if not old and not new: continue
+                  index = find_sequence(content, old, cursor)
+                  if changed:
+                      content[index:index + len(old)] = new; cursor = index + len(new)
+                  else:
+                      cursor = index + len(old)
+              target.write_text("\n".join(content) + ("\n" if trailing_newline else ""), encoding="utf-8")
+              print(f"anchor-apply {patch_path.name}: {relative} ({len(section_hunks)} anchors)")
+          PY
+          python3 -m py_compile "$RUNNER_TEMP/apply-anchor-patch.py"
+
+      - name: Apply canonical root refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
+          mkdir -p admin/v2/styles/routes
+          : > admin/v2/styles/routes/loans.css
+          python3 - <<'PY'
+          from pathlib import Path
+          page = Path("admin/v2.html")
+          source = page.read_text(encoding="utf-8")
+          marker = '  <link rel="stylesheet" href="./v2/styles/routes/banking.css" />\n'
+          addition = marker + '  <link rel="stylesheet" href="./v2/styles/routes/loans.css" />\n'
+          if './v2/styles/routes/loans.css' not in source:
+              if source.count(marker) != 1: raise SystemExit("banking stylesheet marker not found exactly once")
+              page.write_text(source.replace(marker, addition), encoding="utf-8")
+          PY
+          python3 - "$package/apply-root-refactor.sh" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1]); source = path.read_text(encoding="utf-8")
+          old = '  git apply --whitespace=fix "$PACKAGE_DIR/patches/$patch"\n'
+          new = '  python3 "$PSEUDO_PATCH_APPLIER" "$PWD" "$PACKAGE_DIR/patches/$patch"\n'
+          if source.count(old) != 1: raise SystemExit("expected exactly one git-apply command in package applicator")
+          path.write_text(source.replace(old, new), encoding="utf-8")
+          PY
+          export PSEUDO_PATCH_APPLIER="$RUNNER_TEMP/apply-anchor-patch.py"
+          "$package/apply-root-refactor.sh" "$GITHUB_WORKSPACE"
+
+      - name: Verify changed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          node scripts/admin-v2-contracts-api.test.mjs
+          node scripts/admin-v2-store-api.test.mjs
+
+      - name: Remove bootstrap-only files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r --ignore-unmatch .tmp/admin-v2-ux
+          git rm --ignore-unmatch .github/workflows/admin-v2-ux-apply.yml .github/workflows/admin-v2-ux-apply-v3.yml
+          git diff --check
+
+      - name: Commit verified source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- admin/v2.html admin/v2/src admin/v2/styles backend/src/domains/contracts/application/adminContractMutation.ts backend/supabase/functions/admin-api/localGameMutations.ts backend/supabase/functions/admin-api/common.ts backend/supabase/migrations
+          git status --short
+          git diff --cached --check
+          if git diff --cached --quiet; then echo 'Expected source changes were not staged.' >&2; exit 1; fi
+          git commit -m 'refactor(admin): fix Admin V2 UX at root'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
