@@ -66,11 +66,7 @@ assert.equal(isResourceInvalidated("news"), false, "A successful authenticated r
 
 markResourceInvalidations(["market", "banking"]);
 assert.deepEqual(pendingResourceInvalidations().sort(), ["banking", "market"]);
-api.setSession({
-  authenticated: true,
-  csrfToken: ROTATED_CSRF_TOKEN,
-  gameSessionId: "game-1",
-});
+api.setSession({ authenticated: true, csrfToken: ROTATED_CSRF_TOKEN, gameSessionId: "game-1" });
 assert.deepEqual(pendingResourceInvalidations(), [], "Session replacement must clear old-session invalidations.");
 assert.equal(api.config.csrfToken, ROTATED_CSRF_TOKEN);
 assert.equal("playerSessionToken" in api.config, false);
@@ -107,17 +103,17 @@ clearAllResourceInvalidations();
 eventTarget.dispatchEvent(invalidationEvent({ resources: ["store", "banking"], gameSessionId: "game-1", ignoredPayload: { balance: 999999 } }));
 eventTarget.dispatchEvent(invalidationEvent({ resources: ["store"], gameSessionId: "game-1" }));
 await delay(15);
-assert.equal(navigations, 1, "Burst invalidations must debounce into one current-route refresh.");
-assert.equal(isResourceInvalidated("store"), true, "The registry remains marked until the authenticated request completes.");
+assert.equal(navigations, 0, "Realtime reconciliation must not force route navigation or a page-style refresh.");
+assert.equal(isResourceInvalidated("store"), true, "The registry remains marked until the authenticated resource request completes.");
 
 eventTarget.dispatchEvent(invalidationEvent({ resources: ["contracts"], gameSessionId: "game-1" }));
 await delay(15);
-assert.equal(navigations, 1, "Off-route invalidations must not force an unrelated route refresh.");
+assert.equal(navigations, 0, "Off-route invalidations must not force an unrelated route navigation.");
 assert.equal(isResourceInvalidated("contracts"), true, "Off-route data stays stale until its next authenticated load.");
 
 eventTarget.dispatchEvent(invalidationEvent({ resources: ["store"], gameSessionId: "game-other" }));
 await delay(15);
-assert.equal(navigations, 1, "Cross-session invalidation signals must be ignored.");
+assert.equal(navigations, 0, "Cross-session invalidation signals must be ignored.");
 controller.destroy();
 clearAllResourceInvalidations();
 
@@ -125,7 +121,9 @@ const mainSource = await readFile(new URL("../src/main.js", import.meta.url), "u
 const controllerSource = await readFile(new URL("../src/realtime/player-invalidation-controller.js", import.meta.url), "utf8");
 assert.ok(mainSource.includes("installPlayerInvalidationController"));
 assert.ok(controllerSource.includes("markResourceInvalidations"));
+assert.ok(controllerSource.includes("api.refreshResources(targets)"), "Realtime updates must use targeted resource reconciliation.");
+assert.ok(controllerSource.includes("updateStoreFromSnapshot"), "Targeted resource results must merge into the existing Player store.");
 assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("postgres_changes"), "The frontend invalidation boundary must not subscribe directly to economic tables.");
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
-console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, debouncing, targeted route refresh, authenticated refetch, and payload privacy are valid.");
+console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, and payload privacy are valid.");
