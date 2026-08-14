@@ -41,11 +41,146 @@ jobs:
           test -x "$package/apply-root-refactor.sh"
           test -x "$package/verify-root-refactor.sh"
 
+      - name: Install deterministic anchor patch applicator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/apply-anchor-patch.py" <<'PY'
+          from __future__ import annotations
+
+          import pathlib
+          import sys
+
+          root = pathlib.Path(sys.argv[1]).resolve()
+          patch_path = pathlib.Path(sys.argv[2]).resolve()
+          lines = patch_path.read_text(encoding="utf-8").splitlines()
+
+          sections: list[tuple[str, list[list[str]]]] = []
+          current_path: str | None = None
+          hunks: list[list[str]] = []
+          current_hunk: list[str] | None = None
+
+          def flush_section() -> None:
+              global current_path, hunks, current_hunk
+              if current_hunk is not None:
+                  hunks.append(current_hunk)
+                  current_hunk = None
+              if current_path is not None:
+                  sections.append((current_path, hunks))
+              current_path = None
+              hunks = []
+
+          for line in lines:
+              if line.startswith("diff --git "):
+                  flush_section()
+                  parts = line.split()
+                  if len(parts) != 4 or not parts[3].startswith("b/"):
+                      raise SystemExit(f"invalid diff header in {patch_path}: {line}")
+                  current_path = parts[3][2:]
+                  continue
+              if current_path is None:
+                  continue
+              if line == "@@":
+                  if current_hunk is not None:
+                      hunks.append(current_hunk)
+                  current_hunk = []
+                  continue
+              if line.startswith(("--- ", "+++ ")):
+                  continue
+              if current_hunk is not None:
+                  current_hunk.append(line)
+          flush_section()
+
+          if not sections:
+              raise SystemExit(f"no file sections in {patch_path}")
+
+          def find_sequence(haystack: list[str], needle: list[str], start: int) -> int:
+              if not needle:
+                  return start
+              last = len(haystack) - len(needle)
+              for index in range(start, last + 1):
+                  if haystack[index:index + len(needle)] == needle:
+                      return index
+              matches = [
+                  index for index in range(0, last + 1)
+                  if haystack[index:index + len(needle)] == needle
+              ]
+              if len(matches) == 1:
+                  return matches[0]
+              preview = "\n".join(needle[:8])
+              raise SystemExit(
+                  f"anchor not found uniquely in {patch_path.name} after line {start}:\n{preview}"
+              )
+
+          for relative, section_hunks in sections:
+              target = root / relative
+              if not target.is_file():
+                  raise SystemExit(f"target missing for {patch_path.name}: {relative}")
+              source = target.read_text(encoding="utf-8")
+              trailing_newline = source.endswith("\n")
+              content = source.splitlines()
+              cursor = 0
+
+              for number, raw_hunk in enumerate(section_hunks, start=1):
+                  old: list[str] = []
+                  new: list[str] = []
+                  changed = False
+                  for row in raw_hunk:
+                      if row == "\\ No newline at end of file":
+                          continue
+                      if not row:
+                          raise SystemExit(
+                              f"invalid unprefixed blank row in {patch_path.name} hunk {number}"
+                          )
+                      prefix, body = row[0], row[1:]
+                      if prefix == " ":
+                          old.append(body)
+                          new.append(body)
+                      elif prefix == "-":
+                          old.append(body)
+                          changed = True
+                      elif prefix == "+":
+                          new.append(body)
+                          changed = True
+                      else:
+                          raise SystemExit(
+                              f"invalid row prefix {prefix!r} in {patch_path.name} hunk {number}: {row}"
+                          )
+
+                  if not old and not new:
+                      continue
+                  index = find_sequence(content, old, cursor)
+                  if changed:
+                      content[index:index + len(old)] = new
+                      cursor = index + len(new)
+                  else:
+                      cursor = index + len(old)
+
+              target.write_text(
+                  "\n".join(content) + ("\n" if trailing_newline else ""),
+                  encoding="utf-8",
+              )
+              print(f"anchor-apply {patch_path.name}: {relative} ({len(section_hunks)} anchors)")
+          PY
+          python3 -m py_compile "$RUNNER_TEMP/apply-anchor-patch.py"
+
       - name: Apply canonical root refactor
         shell: bash
         run: |
           set -euo pipefail
           package="$RUNNER_TEMP/admin-v2-ux-package/econovaria-admin-v2-ux-root-refactor"
+          python3 - "$package/apply-root-refactor.sh" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          source = path.read_text(encoding="utf-8")
+          old = '  git apply --whitespace=fix "$PACKAGE_DIR/patches/$patch"\n'
+          new = '  python3 "$PSEUDO_PATCH_APPLIER" "$PWD" "$PACKAGE_DIR/patches/$patch"\n'
+          if source.count(old) != 1:
+              raise SystemExit("expected exactly one git-apply command in package applicator")
+          path.write_text(source.replace(old, new), encoding="utf-8")
+          PY
+          export PSEUDO_PATCH_APPLIER="$RUNNER_TEMP/apply-anchor-patch.py"
           "$package/apply-root-refactor.sh" "$GITHUB_WORKSPACE"
 
       - name: Verify changed source
