@@ -82,6 +82,11 @@ jobs:
               '''    const confirm = dialog.getByRole("button", { name: "Apply settings" });\n    assert.equal(await confirm.evaluate((node) => node === document.activeElement), true, "confirm action did not autofocus");''',
               '''    const safeCancel = dialog.getByRole("button", { name: "Cancel" });\n    assert.equal(await safeCancel.evaluate((node) => node === document.activeElement), true, "safe cancel action did not autofocus");''',
           )
+          replace_exact(
+              "scripts/admin-v2-settings-browser-smoke.mjs",
+              '''    await stale.page.getByRole("button", { name: "Refresh", exact: true }).click();''',
+              '''    await stale.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click();''',
+          )
 
           replace_exact(
               "scripts/admin-v2-players-browser-smoke.mjs",
