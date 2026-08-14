@@ -1,8 +1,12 @@
+import { PlayerApi } from "../api/player-api.js";
+import { resolveCapabilities } from "../api/capabilities.js";
 import { resourceFreshnessMs, validInvalidationResources } from "../api/freshness.js";
 import { isResourceInvalidated, markResourceInvalidations } from "../api/invalidation-registry.js";
 import { SHELL_OPTIONAL_RESOURCES, SHELL_REQUIRED_RESOURCES, resourcesForRoute } from "../api/resource-plan.js";
+import { updateStoreFromSnapshot } from "../core/store.js";
 
 export const DEFAULT_PLAYER_INVALIDATION_EVENT = "econovaria:player-resources-invalidated";
+export const DEFAULT_PLAYER_LIVE_STATE_EVENT = "econovaria:player-live-state";
 const DEFAULT_CHECK_INTERVAL_MS = 1000;
 const DEFAULT_OPTIONAL_MULTIPLIER = 3;
 const DEFAULT_SHELL_MULTIPLIER = 2;
@@ -68,6 +72,20 @@ function routeCadenceMs(route, resource, config = {}) {
   return Infinity;
 }
 
+function mergeResourceData(currentData, patch, config) {
+  const data = { ...currentData, ...patch };
+  if (patch?.resourceStatus) {
+    data.resourceStatus = {
+      ...(currentData?.resourceStatus || {}),
+      ...patch.resourceStatus,
+    };
+  }
+  if (patch?.session || patch?.dashboard) {
+    data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
+  }
+  return data;
+}
+
 export function installPlayerInvalidationController({
   terminal,
   config,
@@ -81,7 +99,9 @@ export function installPlayerInvalidationController({
     throw new TypeError("Realtime invalidation requires an active player terminal.");
   }
 
+  const api = new PlayerApi(config);
   const eventName = String(config?.resourceInvalidationEvent || DEFAULT_PLAYER_INVALIDATION_EVENT);
+  const liveStateEvent = String(config?.liveStateEvent || DEFAULT_PLAYER_LIVE_STATE_EVENT);
   const pending = new Set();
   const observedAt = new Map();
   const observedReference = new Map();
@@ -92,7 +112,11 @@ export function installPlayerInvalidationController({
   let lastRoute = "";
 
   function setLiveState(patch) {
-    terminal.setLiveState?.(patch);
+    const snapshot = terminal.getState();
+    updateStoreFromSnapshot(snapshot, (state) => ({ ...state, live: { ...(state.live || {}), ...patch } }));
+    if (typeof eventTarget.CustomEvent === "function" && typeof eventTarget.dispatchEvent === "function") {
+      eventTarget.dispatchEvent(new eventTarget.CustomEvent(liveStateEvent, { detail: patch }));
+    }
   }
 
   function canRefreshNow() {
@@ -144,26 +168,37 @@ export function installPlayerInvalidationController({
     timer = globalThis.setTimeout(flush, Math.max(0, Number(delay) || 0));
   }
 
-  async function refreshResources(resources, state) {
+  async function refreshResources(resources) {
     const targets = [...new Set(resources)].filter(Boolean);
     if (!targets.length) return;
     refreshInFlight = true;
     setLiveState({ status: "updating" });
     try {
-      if (typeof terminal.refreshResources === "function") {
-        await terminal.refreshResources(targets, { force: true, silent: true });
-      } else if (typeof terminal.refreshRoute === "function") {
-        await terminal.refreshRoute(state.route, { force: true, silent: true });
-      } else {
-        terminal.navigate(state.route);
+      api.setSession(config);
+      const result = await api.refreshResources(targets);
+      const invalidSession = Object.values(result.errors || {}).find((error) => Number(error?.status) === 401);
+      if (invalidSession) {
+        await terminal.refresh?.();
+        return;
       }
+      const snapshot = terminal.getState();
+      if (snapshot?.status !== "ready") return;
+      const data = mergeResourceData(snapshot.data, result.data || {}, config);
+      updateStoreFromSnapshot(snapshot, (state) => ({ ...state, data }));
+      const firstError = Object.values(result.errors || {})[0];
+      const receivedData = Object.keys(result.data || {}).some((key) => key !== "resourceStatus");
+      if (firstError && !receivedData) throw firstError;
       const now = Date.now();
       for (const resource of targets) {
         pending.delete(resource);
         observedAt.set(resource, now);
       }
       observeState();
-      setLiveState({ status: "connected", updatedAt: now });
+      setLiveState({
+        status: Object.keys(result.errors || {}).length ? "reconnecting" : "connected",
+        updatedAt: now,
+        error: Object.keys(result.errors || {}).length ? "partial_refresh" : "",
+      });
     } catch (error) {
       const offline = globalThis.navigator && globalThis.navigator.onLine === false;
       setLiveState({
@@ -195,7 +230,7 @@ export function installPlayerInvalidationController({
       schedule(900);
       return;
     }
-    void refreshResources(resources, state);
+    void refreshResources(resources);
   }
 
   function handleInvalidation(event) {
@@ -210,9 +245,7 @@ export function installPlayerInvalidationController({
   function handleOnline() {
     setLiveState({ status: "reconnecting" });
     const state = terminal.getState();
-    if (state?.status === "ready") {
-      resourcesForRoute(state.route).required.forEach((resource) => pending.add(resource));
-    }
+    if (state?.status === "ready") resourcesForRoute(state.route).required.forEach((resource) => pending.add(resource));
     schedule(50);
   }
 
@@ -224,9 +257,7 @@ export function installPlayerInvalidationController({
     if (documentRef?.visibilityState === "visible") {
       setLiveState({ status: "reconnecting" });
       const state = terminal.getState();
-      if (state?.status === "ready") {
-        resourcesForRoute(state.route).required.forEach((resource) => pending.add(resource));
-      }
+      if (state?.status === "ready") resourcesForRoute(state.route).required.forEach((resource) => pending.add(resource));
       schedule(50);
     }
   }
@@ -243,16 +274,14 @@ export function installPlayerInvalidationController({
   eventTarget.addEventListener("hashchange", handleResume);
   documentRef?.addEventListener?.("visibilitychange", handleResume);
   pollTimer = globalThis.setInterval(() => schedule(0), Math.max(500, Number(checkIntervalMs) || DEFAULT_CHECK_INTERVAL_MS));
-  setLiveState({ status: canRefreshNow() ? "connected" : "offline", updatedAt: Date.now() });
+  setLiveState({ status: canRefreshNow() ? "connected" : "offline", updatedAt: Date.now(), error: "" });
 
   return {
     eventName,
     refreshNow(resources = null) {
       const state = terminal.getState();
       if (state?.status !== "ready") return;
-      const targets = resources
-        ? validInvalidationResources(resources)
-        : [...resourcesForRoute(state.route).required];
+      const targets = resources ? validInvalidationResources(resources) : [...resourcesForRoute(state.route).required];
       targets.forEach((resource) => pending.add(resource));
       schedule(0);
     },
