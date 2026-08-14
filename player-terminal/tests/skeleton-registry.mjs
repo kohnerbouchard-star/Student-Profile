@@ -49,9 +49,20 @@ for (const forbidden of [".is-control", ".is-filter", ".is-tab", ".is-field"]) {
 }
 
 const geometryCss = await readFile(new URL("../css/player-terminal-skeleton-geometry.css", import.meta.url), "utf8");
-assert.ok(geometryCss.includes(".player-terminal-marketplace-detail"), "Marketplace card geometry must remain calibrated.");
-assert.ok(geometryCss.includes(".player-terminal-inventory-card"), "Inventory card geometry must remain calibrated.");
-assert.ok(geometryCss.includes("grid-template-columns: 96px minmax(0, 1fr)"), "Inventory skeleton must retain its two-column card footprint.");
+for (const marker of [
+  ".player-terminal-command-map",
+  ".player-terminal-marketplace-detail",
+  ".player-terminal-inventory-card",
+  ".player-terminal-recipe-detail",
+  ".player-terminal-loan-offers"
+]) {
+  assert.ok(geometryCss.includes(marker), `V2 skeleton geometry is missing ${marker}.`);
+}
+assert.ok(geometryCss.includes("grid-template-columns: 112px minmax(0, 1fr)"), "Inventory skeleton must retain its calibrated desktop two-column footprint.");
+assert.ok(geometryCss.includes("height: 560px"), "Marketplace skeleton must retain its calibrated V2 detail height.");
+assert.ok(geometryCss.includes("height: 720px"), "Crafting skeleton must retain its calibrated V2 detail height.");
+assert.ok(geometryCss.includes("height: 520px"), "Loans skeleton must retain its calibrated V2 offer height.");
+assert.ok(geometryCss.includes("max-width: 780px"), "Dashboard map skeleton must retain its calibrated V2 width cap.");
 
 const layoutSource = await readFile(new URL("../src/components/layout.js", import.meta.url), "utf8");
 assert.match(layoutSource, /renderContextNav|player-terminal-context-nav/, "Skeleton work must preserve the existing Player context navigation.");

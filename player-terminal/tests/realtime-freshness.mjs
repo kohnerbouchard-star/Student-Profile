@@ -10,6 +10,7 @@ import {
   markResourceInvalidations,
   pendingResourceInvalidations
 } from "../src/api/invalidation-registry.js";
+import { createStore } from "../src/core/store.js";
 import {
   DEFAULT_PLAYER_INVALIDATION_EVENT,
   installPlayerInvalidationController,
@@ -117,13 +118,49 @@ assert.equal(navigations, 0, "Cross-session invalidation signals must be ignored
 controller.destroy();
 clearAllResourceInvalidations();
 
+const idleEventTarget = new EventTarget();
+const idleDocumentRef = new EventTarget();
+idleDocumentRef.visibilityState = "visible";
+const idleStore = createStore({
+  status: "ready",
+  route: "profile",
+  data: { session: {}, dashboard: {}, notifications: {} },
+  live: { status: "connected", updatedAt: 1, error: "" }
+});
+let idleStoreWrites = 0;
+const unsubscribeIdleWrites = idleStore.subscribe(() => { idleStoreWrites += 1; });
+const idleTerminal = {
+  getState: idleStore.getState,
+  subscribe: idleStore.subscribe,
+  navigate(nextRoute) {
+    assert.equal(nextRoute, "profile");
+    return true;
+  }
+};
+const idleController = installPlayerInvalidationController({
+  terminal: idleTerminal,
+  config: { gameSessionId: "game-1" },
+  eventTarget: idleEventTarget,
+  documentRef: idleDocumentRef,
+  debounceMs: 5,
+  checkIntervalMs: 500
+});
+const writesAfterInstall = idleStoreWrites;
+assert.equal(writesAfterInstall, 1, "Installing the live controller should publish its initial live timestamp once.");
+await delay(650);
+assert.equal(idleStoreWrites, writesAfterInstall, "An idle connected heartbeat must not write the terminal store or trigger a page rerender.");
+idleController.destroy();
+unsubscribeIdleWrites();
+
 const mainSource = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
 const controllerSource = await readFile(new URL("../src/realtime/player-invalidation-controller.js", import.meta.url), "utf8");
 assert.ok(mainSource.includes("installPlayerInvalidationController"));
 assert.ok(controllerSource.includes("markResourceInvalidations"));
 assert.ok(controllerSource.includes("api.refreshResources(targets)"), "Realtime updates must use targeted resource reconciliation.");
 assert.ok(controllerSource.includes("updateStoreFromSnapshot"), "Targeted resource results must merge into the existing Player store.");
+assert.ok(controllerSource.includes("MutationObserver"), "Opened transactional disclosures must be observed so live reconciliation cannot replace an active form.");
+assert.ok(controllerSource.includes("data-player-live-refresh-active"), "Opened form disclosures must receive an interaction guard until they close.");
 assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("postgres_changes"), "The frontend invalidation boundary must not subscribe directly to economic tables.");
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
-console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, and payload privacy are valid.");
+console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, interaction-safe disclosure deferral, idle-heartbeat stability, and payload privacy are valid.");

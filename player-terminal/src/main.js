@@ -1,5 +1,6 @@
 import { installCountryFocusController } from "./accessibility/country-focus-controller.js";
 import { installSkipLinkController } from "./accessibility/skip-link-controller.js";
+import { installToastHostController } from "./accessibility/toast-host-controller.js";
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
@@ -22,6 +23,7 @@ const mount = document.getElementById("playerTerminal");
 const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());
 const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);
+const toastHost = installToastHostController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent,
@@ -57,6 +59,7 @@ terminal.destroy = () => {
   messageReads.destroy();
   messageIntents.destroy();
   formDrafts.destroy();
+  toastHost.destroy();
   countryFocus.destroy();
   skipLink.destroy();
   destroyTerminal();

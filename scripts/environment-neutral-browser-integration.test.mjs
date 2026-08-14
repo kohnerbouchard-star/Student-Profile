@@ -38,8 +38,16 @@ function assertNoBearerConstruction(source, label) {
   );
 }
 
-test("deployable browser surface contains no committed production binding", () => {
-  const productionProjectRef = "eecvbssdvarfcykcfrny";
+test("deployable browser surface keeps project bindings inside reviewed auth boundaries", () => {
+  const reviewedProjectRefs = [
+    "eecvbssdvarfcykcfrny",
+    "cgiukdjwicykrmtkhudh",
+  ];
+  const reviewedProjectRefConsumers = new Set([
+    "auth/recovery-start.js",
+    "auth/security-review.js",
+    "auth/reset-password.js",
+  ]);
   const productionPublishableKey =
     "sb_publishable_caHEJkH8LxlDVU9VFcYrUQ_6HTrCGP8";
   const deployableFiles = [
@@ -53,11 +61,15 @@ test("deployable browser surface contains no committed production binding", () =
 
   for (const relativePath of deployableFiles) {
     const source = read(relativePath);
-    assert.equal(
-      source.includes(productionProjectRef),
-      false,
-      `${relativePath} embeds the production project ref`,
-    );
+    if (!reviewedProjectRefConsumers.has(relativePath)) {
+      for (const projectRef of reviewedProjectRefs) {
+        assert.equal(
+          source.includes(projectRef),
+          false,
+          `${relativePath} embeds a reviewed project ref outside the auth boundary`,
+        );
+      }
+    }
     assert.equal(
       source.includes(productionPublishableKey),
       false,

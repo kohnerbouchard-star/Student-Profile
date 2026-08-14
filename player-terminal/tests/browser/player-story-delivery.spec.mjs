@@ -22,8 +22,23 @@ function story(deliveryId, required) {
   };
 }
 
+async function waitForStableDashboard(page) {
+  await expect(page).toHaveURL(/#dashboard$/);
+  await page.waitForFunction(async () => {
+    const terminal = globalThis.Econovaria?.playerTerminal;
+    const state = terminal?.getState?.();
+    const routeReady = state?.status === "ready" && state?.route === "dashboard";
+    const visualReady = Boolean(document.querySelector("#player-main-content .player-terminal-page:not(.player-terminal-route-skeleton):not(.player-terminal-route-error)"));
+    if (!routeReady || !visualReady) return false;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const settled = terminal?.getState?.();
+    return settled?.status === "ready" && settled?.route === "dashboard" && !document.querySelector(".player-terminal-route-skeleton");
+  });
+}
+
 async function installConnectedStory(page, item, options = {}) {
   await page.goto("/#dashboard");
+  await waitForStableDashboard(page);
   await expect(page.locator("#player-main-content")).toBeVisible();
   await page.locator("#player-main-content").focus();
   await page.evaluate(async ({ item, failAction }) => {
@@ -66,8 +81,10 @@ async function installConnectedStory(page, item, options = {}) {
       },
     });
   }, { item, failAction: options.failAction || "" });
-  await expect(page.locator(".player-story-cutscene-modal[role=dialog]")).toBeVisible();
+  const dialog = page.locator(".player-story-cutscene-modal[role=dialog]");
+  await expect(dialog).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__storyWrites?.map((entry) => entry.action) || [])).toContain("seen");
+  await expect(dialog.locator("[data-player-story-action]").last()).toBeEnabled();
 }
 
 test("required cutscene traps focus, blocks Escape, and restores focus after acknowledgement", async ({ page }) => {

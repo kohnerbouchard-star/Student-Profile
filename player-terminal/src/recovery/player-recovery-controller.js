@@ -217,6 +217,7 @@ export function installPlayerRecoveryController({ mount, terminal, config = {}, 
   let noticeSignature = "";
   let renderScheduled = false;
   let countdownTimer = 0;
+  const toastHost = runtime.document?.querySelector?.("[data-player-terminal-toast-host]") || null;
 
   function currentPresentation() {
     if (!online) {
@@ -393,7 +394,9 @@ export function installPlayerRecoveryController({ mount, terminal, config = {}, 
   }
 
   function detectCommittedRefreshWarning() {
-    const warningNodes = mount.querySelectorAll(".player-terminal-toast.is-amber, .player-terminal-connector-status p, .player-terminal-form-error");
+    const selector = ".player-terminal-toast.is-amber, .player-terminal-connector-status p, .player-terminal-form-error";
+    const roots = toastHost && toastHost !== mount ? [mount, toastHost] : [mount];
+    const warningNodes = roots.flatMap((root) => [...root.querySelectorAll(selector)]);
     for (const node of warningNodes) {
       const text = String(node.textContent || "").toLowerCase();
       const confirmed = text.includes("action completed. some information")
@@ -527,6 +530,7 @@ export function installPlayerRecoveryController({ mount, terminal, config = {}, 
     ? new runtime.MutationObserver(scheduleRender)
     : null;
   observer?.observe(mount, { childList: true, subtree: true });
+  if (toastHost && toastHost !== mount) observer?.observe(toastHost, { childList: true, subtree: true });
   runtime.addEventListener?.(PLAYER_OPERATION_EVENT, handleOperation);
   runtime.addEventListener?.("offline", handleOffline);
   runtime.addEventListener?.("online", handleOnline);
