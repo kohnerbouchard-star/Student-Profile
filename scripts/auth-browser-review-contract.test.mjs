@@ -5,7 +5,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const require = createRequire(import.meta.url);
-const authTokenVerify = require("../api/auth-token-verify.js");
+const passwordResetProxy = require("../api/password-reset.js");
 const TOKEN_HASH = "abcdefghijklmnopqrstuvwxyzABCDEFG_1234567890";
 const STAGING_REF = "eecvbssdvarfcykcfrny";
 const PRODUCTION_REF = "cgiukdjwicykrmtkhudh";
@@ -82,14 +82,14 @@ test("email scanner GET renders review UI without consuming signup token", () =>
   assert.equal(typeof fixture.listeners.get("click"), "function");
 });
 
-test("explicit signup confirmation calls only the same-origin review API", async () => {
+test("explicit signup confirmation reuses only the same-origin password-reset function", async () => {
   const fixture = loadReview({
     fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, verified: true }) }),
   });
   await fixture.listeners.get("click")();
   assert.equal(fixture.fetchCalls.length, 1);
   const [url, options] = fixture.fetchCalls[0];
-  assert.equal(url, "/api/auth-token-verify");
+  assert.equal(url, "/api/password-reset?operation=verify-auth");
   assert.equal(options.method, "POST");
   assert.equal(options.credentials, "same-origin");
   assert.deepEqual(JSON.parse(options.body), {
@@ -119,8 +119,9 @@ test("server review resolves staging token only after explicit POST and revokes 
   };
 
   const response = mockResponse();
-  await authTokenVerify({
+  await passwordResetProxy({
     method: "POST",
+    url: "/api/password-reset?operation=verify-auth",
     body: { tokenHash: TOKEN_HASH, type: "signup", projectRef: "" },
     headers: {
       host: "www.econovaria.com",
@@ -147,7 +148,7 @@ test("review page is served by the application rather than Supabase Edge HTML", 
   assert.match(html, /src="\.\/security-review\.js"/u);
   assert.match(html, /id="continueReview"[^>]*hidden/u);
   assert.match(script, /window\.history\.replaceState/u);
-  assert.match(script, /\/api\/auth-token-verify/u);
+  assert.match(script, /\/api\/password-reset\?operation=verify-auth/u);
   assert.doesNotMatch(script, /\.supabase\.co\/functions\/v1/u);
 });
 
