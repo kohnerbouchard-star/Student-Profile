@@ -30,39 +30,47 @@ async function openTerminal(page, route) {
   await expect(page.locator(".player-terminal-route-skeleton")).toHaveCount(0);
 }
 
-async function mountSkeleton(page, route) {
-  await page.evaluate(async (currentRoute) => {
+async function inspectMountedSkeleton(page, route) {
+  return page.evaluate(async (currentRoute) => {
     const { renderRouteSkeleton } = await import("/src/components/route-skeletons.js");
     const host = document.querySelector(".player-terminal-page-host");
     if (!host) throw new Error("Player page host is unavailable.");
     host.innerHTML = renderRouteSkeleton(currentRoute);
+    const skeleton = host.querySelector(`[data-skeleton-route="${currentRoute}"]`);
+    const surfaces = [...(skeleton?.querySelectorAll(".player-terminal-skeleton-surface") || [])];
+    const rect = skeleton?.getBoundingClientRect();
+    return {
+      exists: Boolean(skeleton),
+      visible: Boolean(rect && rect.width > 0 && rect.height > 0),
+      role: skeleton?.getAttribute("role") || "",
+      headingVisible: Boolean(skeleton?.querySelector("h2")?.getClientRects().length),
+      controlCount: skeleton?.querySelectorAll("button, input, select, textarea").length || 0,
+      headingActionCount: skeleton?.querySelectorAll(".player-terminal-heading-actions").length || 0,
+      surfaceCount: surfaces.length,
+      allSurfacesBusy: surfaces.every((surface) => surface.getAttribute("aria-busy") === "true"),
+      shapeCount: skeleton?.querySelectorAll(".player-terminal-skeleton-shape").length || 0,
+      overflow: Math.max(
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        document.body.scrollWidth - document.body.clientWidth
+      )
+    };
   }, route);
-  await expect(page.locator(`[data-skeleton-route="${route}"]`)).toBeVisible();
-}
-
-async function overflow(page) {
-  return page.evaluate(() => Math.max(
-    document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    document.body.scrollWidth - document.body.clientWidth
-  ));
 }
 
 test("every route keeps the page heading and skeletonizes only data containers", async ({ page }) => {
   for (const route of ROUTES) {
     await openTerminal(page, route);
-    await mountSkeleton(page, route);
-    const skeleton = page.locator(`[data-skeleton-route="${route}"]`);
-    await expect(skeleton).toHaveAttribute("role", "status");
-    await expect(skeleton.getByRole("heading", { level: 2 })).toBeVisible();
-    await expect(skeleton.locator("button, input, select, textarea")).toHaveCount(0);
-    await expect(skeleton.locator(".player-terminal-heading-actions")).toHaveCount(0);
-    const surfaces = skeleton.locator(".player-terminal-skeleton-surface");
-    expect(await surfaces.count()).toBeGreaterThanOrEqual(2);
-    for (let index = 0; index < await surfaces.count(); index += 1) {
-      await expect(surfaces.nth(index)).toHaveAttribute("aria-busy", "true");
-    }
-    expect(await skeleton.locator(".player-terminal-skeleton-shape").count()).toBeGreaterThan(6);
-    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    const result = await inspectMountedSkeleton(page, route);
+    expect(result.exists, `${route} skeleton exists`).toBe(true);
+    expect(result.visible, `${route} skeleton is visible`).toBe(true);
+    expect(result.role).toBe("status");
+    expect(result.headingVisible, `${route} heading remains visible`).toBe(true);
+    expect(result.controlCount, `${route} has no synthetic controls`).toBe(0);
+    expect(result.headingActionCount, `${route} has no synthetic heading actions`).toBe(0);
+    expect(result.surfaceCount, `${route} has data surfaces`).toBeGreaterThanOrEqual(2);
+    expect(result.allSurfacesBusy, `${route} surfaces declare busy state`).toBe(true);
+    expect(result.shapeCount, `${route} has bounded placeholder geometry`).toBeGreaterThan(6);
+    expect(result.overflow, `${route} skeleton overflow`).toBeLessThanOrEqual(1);
   }
 });
 
@@ -77,26 +85,37 @@ test("card-level skeletons preserve the principal container width", async ({ pag
     await expect(loadedTarget).toBeVisible();
     const loadedBox = await loadedTarget.boundingBox();
 
-    await mountSkeleton(page, route);
-    const skeletonTarget = page.locator(selector).first();
-    await expect(skeletonTarget).toBeVisible();
-    const skeletonBox = await skeletonTarget.boundingBox();
-    const pageOverflow = await overflow(page);
+    const measured = await page.evaluate(async ({ currentRoute, selector }) => {
+      const { renderRouteSkeleton } = await import("/src/components/route-skeletons.js");
+      const host = document.querySelector(".player-terminal-page-host");
+      if (!host) throw new Error("Player page host is unavailable.");
+      host.innerHTML = renderRouteSkeleton(currentRoute);
+      const target = host.querySelector(selector);
+      if (!target) return { box: null, overflow: Infinity };
+      const rect = target.getBoundingClientRect();
+      return {
+        box: { width: rect.width, height: rect.height },
+        overflow: Math.max(
+          document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          document.body.scrollWidth - document.body.clientWidth
+        )
+      };
+    }, { currentRoute: route, selector });
 
     expect(loadedBox, `${route} loaded geometry`).not.toBeNull();
-    expect(skeletonBox, `${route} skeleton geometry`).not.toBeNull();
+    expect(measured.box, `${route} skeleton geometry`).not.toBeNull();
 
-    const widthRatio = skeletonBox.width / loadedBox.width;
-    const heightRatio = skeletonBox.height / loadedBox.height;
+    const widthRatio = measured.box.width / loadedBox.width;
+    const heightRatio = measured.box.height / loadedBox.height;
     const detail = {
       route,
       loaded: { width: Math.round(loadedBox.width), height: Math.round(loadedBox.height) },
-      skeleton: { width: Math.round(skeletonBox.width), height: Math.round(skeletonBox.height) },
+      skeleton: { width: Math.round(measured.box.width), height: Math.round(measured.box.height) },
       ratios: { width: Number(widthRatio.toFixed(3)), height: Number(heightRatio.toFixed(3)) },
-      overflow: pageOverflow
+      overflow: measured.overflow
     };
 
-    if (widthRatio <= 0.8 || widthRatio >= 1.2 || heightRatio <= 0.3 || heightRatio >= 2.2 || pageOverflow > 1) {
+    if (widthRatio <= 0.8 || widthRatio >= 1.2 || heightRatio <= 0.3 || heightRatio >= 2.2 || measured.overflow > 1) {
       violations.push(detail);
     }
   }
@@ -108,7 +127,13 @@ test("skeleton motion is disabled when reduced motion is requested", async ({ pa
   test.skip(testInfo.project.name.includes("mobile"), "Reduced-motion styling runs once in desktop Chromium.");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openTerminal(page, "dashboard");
-  await mountSkeleton(page, "dashboard");
-  const animationName = await page.locator(".player-terminal-skeleton-shape").first().evaluate((element) => getComputedStyle(element).animationName);
+  const animationName = await page.evaluate(async () => {
+    const { renderRouteSkeleton } = await import("/src/components/route-skeletons.js");
+    const host = document.querySelector(".player-terminal-page-host");
+    if (!host) throw new Error("Player page host is unavailable.");
+    host.innerHTML = renderRouteSkeleton("dashboard");
+    const shape = host.querySelector(".player-terminal-skeleton-shape");
+    return shape ? getComputedStyle(shape).animationName : "missing";
+  });
   expect(animationName).toBe("none");
 });
