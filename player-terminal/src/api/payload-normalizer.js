@@ -71,52 +71,42 @@ function normalizeArrivalAnswers(raw, endpointKey) {
   });
 }
 
+function normalizeContractChoiceAnswers(raw, endpointKey) {
+  const answers = [];
+  for (const [key, value] of Object.entries(raw)) {
+    if (!key.startsWith("contractChoice-")) continue;
+    const questionKey = requirePattern(key.slice("contractChoice-".length), TOKEN, endpointKey, "questionKey");
+    const optionKey = requirePattern(value, TOKEN, endpointKey, "optionKey");
+    answers.push(Object.freeze({ questionKey, optionKey }));
+  }
+  if (answers.length > 50) throw invalidPayload(endpointKey, "answers");
+  return answers;
+}
+
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
-  if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") {
-    return {};
-  }
-  if (endpointKey === "arrivalClass") {
-    return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
-  }
+  if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
+  if (endpointKey === "arrivalClass") return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   if (endpointKey === "travelQuote") {
     const allowedModes = Array.isArray(raw.allowedModes)
       ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))]
       : [];
-    if (!allowedModes.length || allowedModes.length > 4 || allowedModes.some((mode) => !TRAVEL_MODES.has(mode))) {
-      throw invalidPayload(endpointKey, "allowedModes");
-    }
-    return {
-      toLocationId: requirePattern(raw.toLocationId, PUBLIC_LOCATION_ID, endpointKey, "toLocationId"),
-      allowedModes
-    };
+    if (!allowedModes.length || allowedModes.length > 4 || allowedModes.some((mode) => !TRAVEL_MODES.has(mode))) throw invalidPayload(endpointKey, "allowedModes");
+    return { toLocationId: requirePattern(raw.toLocationId, PUBLIC_LOCATION_ID, endpointKey, "toLocationId"), allowedModes };
   }
-  if (endpointKey === "travelExecute") {
-    return { quoteId: requirePattern(raw.quoteId, PUBLIC_QUOTE_ID, endpointKey, "quoteId") };
-  }
-  if (endpointKey === "travelComplete") {
-    return { journeyId: requirePattern(raw.journeyId, PUBLIC_JOURNEY_ID, endpointKey, "journeyId") };
-  }
+  if (endpointKey === "travelExecute") return { quoteId: requirePattern(raw.quoteId, PUBLIC_QUOTE_ID, endpointKey, "quoteId") };
+  if (endpointKey === "travelComplete") return { journeyId: requirePattern(raw.journeyId, PUBLIC_JOURNEY_ID, endpointKey, "journeyId") };
   if (endpointKey === "residencyRequest") {
     const expectedRevision = Number(raw.expectedRevision);
-    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
-      throw invalidPayload(endpointKey, "expectedRevision");
-    }
-    return {
-      countryId: requirePattern(raw.countryId, COUNTRY_ID, endpointKey, "countryId"),
-      expectedRevision
-    };
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw invalidPayload(endpointKey, "expectedRevision");
+    return { countryId: requirePattern(raw.countryId, COUNTRY_ID, endpointKey, "countryId"), expectedRevision };
   }
   if (endpointKey === "storyDeliveryState") {
     const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
-    if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) {
-      throw invalidPayload(endpointKey, "action");
-    }
+    if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) throw invalidPayload(endpointKey, "action");
     return { action };
   }
-  if (endpointKey === "messageSend") {
-    return { body: messageText(raw.body, endpointKey) };
-  }
+  if (endpointKey === "messageSend") return { body: messageText(raw.body, endpointKey) };
   if (endpointKey === "messageRead") {
     const threadId = normalizeString("threadId", raw.threadId, endpointKey).toLowerCase();
     if (!PUBLIC_THREAD_ID.test(threadId)) throw invalidPayload(endpointKey, "threadId");
@@ -125,21 +115,22 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
   if (endpointKey === "messageThreadCreate") {
     const recipientPlayerId = normalizeString("recipientPlayerId", raw.recipientPlayerId, endpointKey);
     const title = normalizeString("title", raw.title, endpointKey);
-    if (!PUBLIC_PLAYER_ID.test(recipientPlayerId) || UUID.test(recipientPlayerId)) {
-      throw invalidPayload(endpointKey, "recipientPlayerId");
-    }
+    if (!PUBLIC_PLAYER_ID.test(recipientPlayerId) || UUID.test(recipientPlayerId)) throw invalidPayload(endpointKey, "recipientPlayerId");
     if (!title || title.length > 160) throw invalidPayload(endpointKey, "title");
     return { recipientPlayerId, title, body: messageText(raw.body, endpointKey) };
   }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {
+    const answers = normalizeContractChoiceAnswers(raw, endpointKey);
+    if (answers.length) {
+      const evidencePayload = { answers };
+      if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") evidencePayload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
+      if (raw.note !== undefined && raw.note !== null && raw.note !== "") evidencePayload.note = normalizeString("note", raw.note, endpointKey);
+      return { evidencePayload };
+    }
     const payload = {};
-    if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") {
-      payload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
-    }
-    if (raw.note !== undefined && raw.note !== null && raw.note !== "") {
-      payload.note = normalizeString("note", raw.note, endpointKey);
-    }
+    if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") payload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
+    if (raw.note !== undefined && raw.note !== null && raw.note !== "") payload.note = normalizeString("note", raw.note, endpointKey);
     return payload;
   }
   const payload = {};
