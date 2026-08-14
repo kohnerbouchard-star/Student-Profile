@@ -10,14 +10,28 @@ export function installCountryFocusController(mount) {
   let restoreSelector = "";
   let countryDialogOpen = false;
   let focusQueued = false;
+  let followupTimer = 0;
+
+  function focusCurrentCountry() {
+    if (!restoreSelector) return false;
+    const target = mount.querySelector(restoreSelector);
+    if (!target || typeof target.focus !== "function") return false;
+    target.focus({ preventScroll: true });
+    return document.activeElement === target;
+  }
 
   function queueFocusRestore() {
     if (!restoreSelector || focusQueued) return;
     focusQueued = true;
     requestAnimationFrame(() => {
       focusQueued = false;
-      const target = mount.querySelector(restoreSelector);
-      if (target && typeof target.focus === "function") target.focus({ preventScroll: true });
+      focusCurrentCountry();
+      clearTimeout(followupTimer);
+      followupTimer = setTimeout(() => {
+        const active = document.activeElement;
+        if (!active || active === document.body || !mount.contains(active)) focusCurrentCountry();
+        restoreSelector = "";
+      }, 120);
     });
   }
 
@@ -40,6 +54,7 @@ export function installCountryFocusController(mount) {
   return {
     destroy() {
       observer.disconnect();
+      clearTimeout(followupTimer);
       mount.removeEventListener("click", rememberCountry, true);
       mount.removeEventListener("keydown", rememberCountry, true);
       restoreSelector = "";
