@@ -14,6 +14,7 @@ import { installWorldRuntimeFlow } from "./features/world/world-runtime-flow.js"
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
+import { installLiveStatusPresenter } from "./realtime/live-status-presenter.js";
 import { installPlayerInvalidationController } from "./realtime/player-invalidation-controller.js";
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
 
@@ -38,11 +39,13 @@ const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
 const worldRuntime = installWorldRuntimeFlow({ mount, terminal, config });
-const invalidations = installPlayerInvalidationController({ terminal, config });
+const invalidations = installPlayerInvalidationController({ terminal, config, mount });
+const liveStatus = installLiveStatusPresenter({ mount, terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
   logout.destroy();
   sessionSafeExit.destroy();
+  liveStatus.destroy();
   invalidations.destroy();
   worldRuntime.destroy();
   storyDeliveries.destroy();
