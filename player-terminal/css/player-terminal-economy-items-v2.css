@@ -1,14 +1,226 @@
-/* Player V2 item economy polish. */
-.player-terminal-store-card,.player-terminal-inventory-card,.player-terminal-marketplace-card,.player-terminal-recipe-row{position:relative;border:1px solid rgba(0,212,255,.16);background:linear-gradient(145deg,rgba(10,29,52,.92),rgba(6,16,33,.95));box-shadow:var(--player-shadow-low);transition:160ms ease}
-.player-terminal-store-card:hover,.player-terminal-inventory-card:hover,.player-terminal-marketplace-card:hover,.player-terminal-recipe-row:hover,.player-terminal-marketplace-card:focus-visible,.player-terminal-recipe-row:focus-visible{border-color:var(--player-color-line-strong);background:rgba(14,38,66,.94)}
-.player-terminal-marketplace-card.active,.player-terminal-recipe-row.active{border-color:rgba(0,212,255,.55);box-shadow:var(--player-glow-cyan)}
-.player-terminal-store-image,.player-terminal-inventory-image,.player-terminal-marketplace-image,.player-terminal-marketplace-detail-hero>span,.player-terminal-recipe-hero>span{overflow:hidden;border:1px solid rgba(148,182,197,.15);background:rgba(2,8,16,.5)}
-.player-terminal-store-image img,.player-terminal-inventory-image img,.player-terminal-marketplace-image img,.player-terminal-marketplace-detail-hero img,.player-terminal-recipe-hero img{display:block;width:100%;height:100%;object-fit:cover}
-.player-terminal-item-state-line,.player-terminal-marketplace-buying-power,.player-terminal-crafting-readiness{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.75rem 1rem;border:1px solid rgba(148,182,197,.14);border-radius:var(--player-radius-sm);background:rgba(2,8,16,.4)}
-.player-terminal-item-state-line small,.player-terminal-marketplace-buying-power small,.player-terminal-crafting-readiness small{display:block;color:var(--player-color-text-faint);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.player-terminal-item-action-links,.player-terminal-crafting-material-actions{display:flex;flex-wrap:wrap;gap:.5rem}
-.player-terminal-marketplace-total{border-color:rgba(168,85,247,.28);background:rgba(168,85,247,.045)}
-.player-terminal-marketplace-buying-power{margin-block:.75rem}.player-terminal-marketplace-buying-power .is-warning{color:var(--player-color-amber)}
-.player-terminal-recipe-grid li.is-ready{border-color:rgba(74,222,128,.28);background:rgba(74,222,128,.04)}.player-terminal-recipe-grid li.is-missing{border-color:rgba(255,98,104,.3);background:rgba(255,98,104,.04)}
-.player-terminal-crafting-readiness{margin-block:1rem}.player-terminal-crafting-readiness.is-ready{border-color:rgba(74,222,128,.32)}.player-terminal-crafting-readiness.is-blocked{border-color:rgba(255,165,0,.32)}
-@media(max-width:760px){.player-terminal-item-state-line,.player-terminal-marketplace-buying-power,.player-terminal-crafting-readiness{align-items:flex-start;flex-direction:column}.player-terminal-item-action-links,.player-terminal-crafting-material-actions{width:100%}}
+/* Player V2 item economy ownership. */
+.player-terminal-store-card,
+.player-terminal-inventory-card,
+.player-terminal-marketplace-card,
+.player-terminal-recipe-row {
+  position: relative;
+  border: 1px solid rgba(0, 212, 255, .16);
+  background: linear-gradient(145deg, rgba(10, 29, 52, .92), rgba(6, 16, 33, .95));
+  box-shadow: var(--player-shadow-low);
+  transition: 160ms ease;
+}
+.player-terminal-store-card:hover,
+.player-terminal-inventory-card:hover,
+.player-terminal-marketplace-card:hover,
+.player-terminal-recipe-row:hover,
+.player-terminal-marketplace-card:focus-visible,
+.player-terminal-recipe-row:focus-visible {
+  border-color: var(--player-color-line-strong);
+  background: rgba(14, 38, 66, .94);
+}
+.player-terminal-marketplace-card.active,
+.player-terminal-recipe-row.active {
+  border-color: rgba(0, 212, 255, .55);
+  box-shadow: var(--player-glow-cyan);
+}
+
+.player-terminal-store-image,
+.player-terminal-inventory-image,
+.player-terminal-marketplace-image,
+.player-terminal-marketplace-detail-hero > span,
+.player-terminal-recipe-hero > span {
+  overflow: hidden;
+  border: 1px solid rgba(148, 182, 197, .15);
+  background: rgba(2, 8, 16, .5);
+}
+.player-terminal-store-image img,
+.player-terminal-inventory-image img,
+.player-terminal-marketplace-image img,
+.player-terminal-marketplace-detail-hero img,
+.player-terminal-recipe-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Inventory cards retain semantic separation for quantities and actions. */
+.player-terminal-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--player-space-3);
+}
+.player-terminal-inventory-card {
+  display: grid;
+  grid-template-columns: 6.125rem minmax(0, 1fr) auto;
+  gap: var(--player-space-4);
+  align-items: center;
+  min-width: 0;
+  min-height: 8.5rem;
+  padding: var(--player-space-4);
+  border-radius: var(--player-radius-md);
+}
+.player-terminal-inventory-image {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.125rem;
+  height: 6.125rem;
+  border-radius: var(--player-radius-sm);
+  background: radial-gradient(circle, rgba(0, 212, 255, .1), transparent 62%), rgba(2, 8, 16, .45);
+}
+.player-terminal-inventory-image img {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+}
+.player-terminal-inventory-image span {
+  position: absolute;
+  right: .375rem;
+  bottom: .375rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.75rem;
+  min-height: 1.5rem;
+  padding: .125rem .4rem;
+  border: 1px solid rgba(255, 165, 0, .3);
+  border-radius: var(--player-radius-xs, .25rem);
+  color: var(--player-color-amber);
+  background: rgba(2, 8, 16, .9);
+  font-size: .75rem;
+  font-weight: 850;
+}
+.player-terminal-inventory-copy { min-width: 0; }
+.player-terminal-inventory-copy small {
+  display: block;
+  color: var(--player-color-amber);
+  font-size: .75rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.player-terminal-inventory-copy h3 {
+  margin: .4rem 0 .3rem;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.player-terminal-inventory-copy p {
+  margin: 0;
+  color: var(--player-color-text-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+.player-terminal-inventory-meta {
+  display: grid;
+  justify-items: end;
+  gap: var(--player-space-3);
+  min-width: 8.5rem;
+}
+.player-terminal-inventory-meta > span {
+  display: grid;
+  gap: .2rem;
+  text-align: right;
+}
+.player-terminal-inventory-meta small {
+  display: block;
+  color: var(--player-color-text-muted);
+  font-size: .6875rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+.player-terminal-inventory-meta strong {
+  display: block;
+  font-size: .875rem;
+  white-space: nowrap;
+}
+
+.player-terminal-capacity-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--player-space-3);
+  min-width: min(100%, 19rem);
+}
+.player-terminal-capacity-meter > div { display: grid; gap: .2rem; }
+.player-terminal-capacity-meter small { color: var(--player-color-text-muted); font-size: .6875rem; font-weight: 800; }
+.player-terminal-capacity-meter strong { font-size: 1rem; }
+.player-terminal-capacity-meter > span {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  height: .5rem;
+  overflow: hidden;
+  border: 1px solid rgba(0, 212, 255, .12);
+  border-radius: 999px;
+  background: rgba(0, 212, 255, .1);
+}
+.player-terminal-capacity-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--player-color-cyan), var(--player-color-purple));
+}
+
+.player-terminal-item-state-line,
+.player-terminal-marketplace-buying-power,
+.player-terminal-crafting-readiness {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  border: 1px solid rgba(148, 182, 197, .14);
+  border-radius: var(--player-radius-sm);
+  background: rgba(2, 8, 16, .4);
+}
+.player-terminal-item-state-line small,
+.player-terminal-marketplace-buying-power small,
+.player-terminal-crafting-readiness small {
+  display: block;
+  color: var(--player-color-text-faint);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.player-terminal-item-action-links,
+.player-terminal-crafting-material-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.player-terminal-marketplace-total { border-color: rgba(168, 85, 247, .28); background: rgba(168, 85, 247, .045); }
+.player-terminal-marketplace-buying-power { margin-block: .75rem; }
+.player-terminal-marketplace-buying-power .is-warning { color: var(--player-color-amber); }
+.player-terminal-recipe-grid li.is-ready { border-color: rgba(74, 222, 128, .28); background: rgba(74, 222, 128, .04); }
+.player-terminal-recipe-grid li.is-missing { border-color: rgba(255, 98, 104, .3); background: rgba(255, 98, 104, .04); }
+.player-terminal-crafting-readiness { margin-block: 1rem; }
+.player-terminal-crafting-readiness.is-ready { border-color: rgba(74, 222, 128, .32); }
+.player-terminal-crafting-readiness.is-blocked { border-color: rgba(255, 165, 0, .32); }
+
+@media (max-width: 1180px) {
+  .player-terminal-inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .player-terminal-inventory-card { grid-template-columns: 5.125rem minmax(0, 1fr); }
+  .player-terminal-inventory-image { width: 5.125rem; height: 5.125rem; }
+  .player-terminal-inventory-image img { width: 3.75rem; height: 3.75rem; }
+  .player-terminal-inventory-meta {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    justify-items: stretch;
+    align-items: center;
+    min-width: 0;
+  }
+  .player-terminal-inventory-meta > span { text-align: left; }
+}
+
+@media (max-width: 760px) {
+  .player-terminal-item-state-line,
+  .player-terminal-marketplace-buying-power,
+  .player-terminal-crafting-readiness,
+  .player-terminal-capacity-meter { align-items: flex-start; flex-direction: column; }
+  .player-terminal-item-action-links,
+  .player-terminal-crafting-material-actions { width: 100%; }
+  .player-terminal-inventory-grid { grid-template-columns: 1fr; }
+  .player-terminal-inventory-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .player-terminal-inventory-meta .player-terminal-compact-button { justify-self: start; }
+}
+
+@media (max-width: 460px) {
+  .player-terminal-inventory-card { grid-template-columns: 1fr; }
+  .player-terminal-inventory-image { width: 4.75rem; height: 4.75rem; }
+  .player-terminal-inventory-meta { grid-template-columns: 1fr; }
+}
