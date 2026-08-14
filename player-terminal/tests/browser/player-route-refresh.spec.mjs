@@ -80,12 +80,21 @@ test("shared route owner is active across every Player Terminal route family", a
       "/css/routes/player-terminal-shared-responsive.css",
       "/css/routes/player-terminal-shared-overlays.css",
     ];
+    const retiredOwners = [
+      "/css/player-terminal-base.css",
+      "/css/player-terminal.css",
+      "/css/player-terminal-ux.css",
+      "/css/player-terminal-polish.css",
+      "/css/player-terminal-normalization.css",
+      "/css/player-terminal-shell-compat.css",
+      "/css/player-terminal-route-compat.css",
+    ];
     return {
       route: sharedOwners.every((suffix) => hrefs.some((href) => href.endsWith(suffix))),
-      compat: hrefs.some((href) => href.endsWith("/css/player-terminal-route-compat.css")),
+      legacy: retiredOwners.some((suffix) => hrefs.some((href) => href.endsWith(suffix))),
     };
   });
-  expect(stylesLoaded).toEqual({ route: true, compat: true });
+  expect(stylesLoaded).toEqual({ route: true, legacy: false });
 
   for (const route of ROUTE_FAMILIES) {
     await openRoute(page, route);
