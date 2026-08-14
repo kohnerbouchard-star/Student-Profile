@@ -158,7 +158,9 @@ assert.ok(mainSource.includes("installPlayerInvalidationController"));
 assert.ok(controllerSource.includes("markResourceInvalidations"));
 assert.ok(controllerSource.includes("api.refreshResources(targets)"), "Realtime updates must use targeted resource reconciliation.");
 assert.ok(controllerSource.includes("updateStoreFromSnapshot"), "Targeted resource results must merge into the existing Player store.");
+assert.ok(controllerSource.includes("MutationObserver"), "Opened transactional disclosures must be observed so live reconciliation cannot replace an active form.");
+assert.ok(controllerSource.includes("data-player-live-refresh-active"), "Opened form disclosures must receive an interaction guard until they close.");
 assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("postgres_changes"), "The frontend invalidation boundary must not subscribe directly to economic tables.");
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
-console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, idle-heartbeat stability, and payload privacy are valid.");
+console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, interaction-safe disclosure deferral, idle-heartbeat stability, and payload privacy are valid.");
