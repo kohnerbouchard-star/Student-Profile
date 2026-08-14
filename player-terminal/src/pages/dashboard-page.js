@@ -1,54 +1,30 @@
 import { escapeHtml, formatCurrency, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderMetric, renderStatusPill } from "../components/ui.js";
+import { renderActivityFeed, renderAttentionStrip } from "../components/player-interior.js";
 import { isResourceUnavailable } from "../api/resource-status.js";
 import { ECONOVARIA_COUNTRY_REGIONS, countryRegionPath } from "../data/map-regions.js";
 
 function renderTicker(items) {
   const safeItems = Array.isArray(items) ? items : [];
-  return `<div class="player-terminal-world-ticker player-terminal-ticker-quiet" aria-label="Market ticker">
-    <div class="player-terminal-world-ticker-track">
-      ${[...safeItems, ...safeItems].map((item) => `<span><strong>${escapeHtml(item.symbol)}</strong><b>${escapeHtml(item.price.toFixed(2))}</b><i class="${toneFromChange(item.change)}">${escapeHtml(formatPercent(item.change))}</i></span>`).join("")}
-    </div>
-  </div>`;
+  return `<div class="player-terminal-world-ticker player-terminal-ticker-quiet" aria-label="Market ticker"><div class="player-terminal-world-ticker-track">${[...safeItems, ...safeItems].map((item) => `<span><strong>${escapeHtml(item.symbol)}</strong><b>${escapeHtml(item.price.toFixed(2))}</b><i class="${toneFromChange(item.change)}">${escapeHtml(formatPercent(item.change))}</i></span>`).join("")}</div></div>`;
 }
 
 function renderCountryOverlay(countries, playerCountryId) {
   const countryById = new Map((Array.isArray(countries) ? countries : []).map((country) => [String(country.id).toLowerCase(), country]));
-  return `<svg class="player-terminal-country-overlay" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid meet" aria-label="Interactive country map" role="group">
-    <defs>
-      <filter id="playerCountryGlow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.2" result="blur"></feGaussianBlur>
-        <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
-      </filter>
-    </defs>
-    ${ECONOVARIA_COUNTRY_REGIONS.map((region) => {
-      const liveCountry = countryById.get(String(region.id).toLowerCase());
-      const countryId = liveCountry?.id || region.id;
-      const countryName = liveCountry?.name || region.name;
-      const tone = liveCountry?.tone || "cyan";
-      const isHome = String(countryId) === String(playerCountryId);
-      const path = countryRegionPath(region.polygons);
-      return `<g class="player-terminal-country-region is-${escapeHtml(tone)}${isHome ? " is-home-country" : ""}" data-player-country="${escapeHtml(countryId)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(countryName)} intelligence">
-        <title>${escapeHtml(countryName)}</title>
-        <path class="player-terminal-country-hit" d="${path}"></path>
-        <path class="player-terminal-country-fill" d="${path}" style="--country-color:${escapeHtml(region.color)}"></path>
-        <path class="player-terminal-country-border" d="${path}" style="--country-color:${escapeHtml(region.color)}"></path>
-        <g class="player-terminal-country-marker" transform="translate(${Number(region.centroid[0])} ${Number(region.centroid[1])})">
-          <circle r="10"></circle><circle r="3.2"></circle>
-        </g>
-      </g>`;
-    }).join("")}
-  </svg>`;
+  return `<svg class="player-terminal-country-overlay" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid meet" aria-label="Interactive country map" role="group"><defs><filter id="playerCountryGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs>${ECONOVARIA_COUNTRY_REGIONS.map((region) => {
+    const liveCountry = countryById.get(String(region.id).toLowerCase());
+    const countryId = liveCountry?.id || region.id;
+    const countryName = liveCountry?.name || region.name;
+    const tone = liveCountry?.tone || "cyan";
+    const isHome = String(countryId) === String(playerCountryId);
+    const path = countryRegionPath(region.polygons);
+    return `<g class="player-terminal-country-region is-${escapeHtml(tone)}${isHome ? " is-home-country" : ""}" data-player-country="${escapeHtml(countryId)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(countryName)} intelligence"><title>${escapeHtml(countryName)}</title><path class="player-terminal-country-hit" d="${path}"></path><path class="player-terminal-country-fill" d="${path}" style="--country-color:${escapeHtml(region.color)}"></path><path class="player-terminal-country-border" d="${path}" style="--country-color:${escapeHtml(region.color)}"></path><g class="player-terminal-country-marker" transform="translate(${Number(region.centroid[0])} ${Number(region.centroid[1])})"><circle r="10"></circle><circle r="3.2"></circle></g></g>`;
+  }).join("")}</svg>`;
 }
 
 function actionCard({ step, eyebrow, title, detail, route, iconName, tone = "cyan" }) {
-  return `<button class="player-terminal-next-action is-${tone}" type="button" data-route="${route}">
-    <span class="player-terminal-action-step">${escapeHtml(step)}</span>
-    <span class="player-terminal-action-icon">${icon(iconName)}</span>
-    <span><small>${escapeHtml(eyebrow)}</small><strong>${escapeHtml(title)}</strong><p>${escapeHtml(detail)}</p></span>
-    ${icon("chevronRight")}
-  </button>`;
+  return `<button class="player-terminal-next-action is-${tone}" type="button" data-route="${route}"><span class="player-terminal-action-step">${escapeHtml(step)}</span><span class="player-terminal-action-icon">${icon(iconName)}</span><span><small>${escapeHtml(eyebrow)}</small><strong>${escapeHtml(title)}</strong><p>${escapeHtml(detail)}</p></span>${icon("chevronRight")}</button>`;
 }
 
 function worldEvent(event) {
@@ -56,32 +32,14 @@ function worldEvent(event) {
 }
 
 function renderMapHud() {
-  return `<div class="player-terminal-map-hud" aria-hidden="true">
-    <div class="player-terminal-map-instruction">
-      <strong>SELECT A COUNTRY</strong><small>Open a highlighted border for live intelligence</small>
-    </div>
-    <div class="player-terminal-map-legend">
-      <span><i class="is-home"></i><b>Home market</b></span>
-      <span><i class="is-interactive"></i><b>Country intelligence</b></span>
-    </div>
-  </div>`;
+  return `<div class="player-terminal-map-hud" aria-hidden="true"><div class="player-terminal-map-instruction"><strong>SELECT A COUNTRY</strong><small>Open a highlighted border for live intelligence</small></div><div class="player-terminal-map-legend"><span><i class="is-home"></i><b>Home market</b></span><span><i class="is-interactive"></i><b>Country intelligence</b></span></div></div>`;
 }
 
 function renderHomeMarketSummary(country) {
   const growth = Number(country.growth) || 0;
   const inflation = Number(country.inflation) || 0;
   const stability = Math.max(0, Math.min(100, Math.round(Number(country.stability) || 0)));
-  return `<footer class="player-terminal-map-footer" aria-label="Home market summary">
-    <div class="player-terminal-map-home">
-      <span class="player-terminal-map-home-mark">${icon("globe")}</span>
-      <div><small>HOME MARKET</small><strong>${escapeHtml(country.name)}</strong><p>${escapeHtml(country.condition)} · ${escapeHtml(country.policy)}</p></div>
-    </div>
-    <dl class="player-terminal-map-metrics">
-      <div><dt>Growth</dt><dd class="${toneFromChange(growth)}">${escapeHtml(formatPercent(growth))}</dd></div>
-      <div><dt>Inflation</dt><dd>${escapeHtml(inflation.toFixed(1))}%</dd></div>
-      <div><dt>Stability</dt><dd>${escapeHtml(stability)}/100</dd></div>
-    </dl>
-  </footer>`;
+  return `<footer class="player-terminal-map-footer" aria-label="Home market summary"><div class="player-terminal-map-home"><span class="player-terminal-map-home-mark">${icon("globe")}</span><div><small>HOME MARKET</small><strong>${escapeHtml(country.name)}</strong><p>${escapeHtml(country.condition)} · ${escapeHtml(country.policy)}</p></div></div><dl class="player-terminal-map-metrics"><div><dt>Growth</dt><dd class="${toneFromChange(growth)}">${escapeHtml(formatPercent(growth))}</dd></div><div><dt>Inflation</dt><dd>${escapeHtml(inflation.toFixed(1))}%</dd></div><div><dt>Stability</dt><dd>${escapeHtml(stability)}/100</dd></div></dl></footer>`;
 }
 
 export function renderDashboardPage(data, ui = {}, config = {}) {
@@ -94,11 +52,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
   const playerCountry = countries.find((item) => item.id === session.countryId) || { id: session.countryId || "unknown", name: session.countryName || "Unassigned", condition: "Unavailable", policy: "Country intelligence is awaiting the world service.", growth: 0, inflation: 0, stability: 0 };
   const currencyCode = session.currencyCode;
   const allocation = portfolioUnavailable ? [] : (portfolio?.allocation || []);
-  const allocationItems = allocation.length
-    ? allocation.slice(0, 4)
-    : config.usePreviewData
-      ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]
-      : [];
+  const allocationItems = allocation.length ? allocation.slice(0, 4) : config.usePreviewData ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }] : [];
   const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(banking.checking.available, currencyCode);
   const unreadMessages = messagesUnavailable ? "—" : String(messages?.unread || 0);
 
@@ -111,61 +65,32 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
     ? { eyebrow: "Unavailable", detail: "Communications could not be loaded. Retry from the Messages section." }
     : { eyebrow: `${messages?.unread || 0} unread`, detail: messages?.threads?.find((thread) => thread.unread)?.preview || "No urgent messages. Review official announcements when ready." };
 
+  const attentionItems = [
+    activeContract ? { badge: activeContract.urgency === "high" ? "DUE SOON" : "ACTIVE CONTRACT", title: activeContract.title, detail: `${activeContract.progress}% complete · ${activeContract.due}`, iconName: "contracts", tone: activeContract.urgency === "high" ? "red" : "amber", action: 'data-route="contracts"' } : null,
+    !messagesUnavailable && Number(messages?.unread || 0) > 0 ? { badge: `${messages.unread} UNREAD`, title: "New communications", detail: messages?.threads?.find((thread) => thread.unread)?.preview || "Open Messages to review new activity.", iconName: "messages", tone: "purple", action: 'data-route="messages"' } : null,
+    dashboard.worldEvents?.[0] ? { badge: "WORLD SIGNAL", title: dashboard.worldEvents[0].title, detail: `${dashboard.worldEvents[0].region} · ${dashboard.worldEvents[0].impact}`, iconName: "news", tone: dashboard.worldEvents[0].tone || "cyan", action: `data-player-news-link="${escapeHtml(dashboard.worldEvents[0].id)}"` } : null
+  ].filter(Boolean);
+
+  const recentActivity = bankingUnavailable ? [] : (banking.transactions || banking.recentTransactions || []).slice(0, 6).map((entry) => ({
+    title: entry.title || entry.description || entry.type || "Account activity",
+    detail: entry.counterparty || entry.category || entry.note || "",
+    time: entry.time || entry.date || entry.createdAt || "",
+    value: Number.isFinite(Number(entry.amount)) ? formatCurrency(entry.amount, entry.currencyCode || currencyCode) : "",
+    tone: Number(entry.amount) < 0 ? "red" : Number(entry.amount) > 0 ? "green" : "cyan",
+    iconName: Number(entry.amount) < 0 ? "chevronRight" : "wallet"
+  }));
+
   return `<section class="player-terminal-page player-terminal-command-page player-terminal-dashboard-page" data-page="dashboard">
-    <div class="player-terminal-page-heading player-terminal-command-heading">
-      <div><small>PLAYER COMMAND CENTER</small><h2>Good morning, ${escapeHtml(String(session.displayName || "Player").trim().split(/\s+/)[0] || "Player")}</h2><p>Complete the next priority, monitor the economy, and keep your capital working.</p></div>
-      <div class="player-terminal-heading-actions">${renderStatusPill(dashboard.marketStatus, "green")}<button class="player-terminal-secondary-button" type="button" data-route="news">${icon("news")} World brief</button></div>
-    </div>
-
-    <div class="player-terminal-command-metrics" aria-label="Player financial and activity summary">
-      ${renderMetric({ label: "Available checking", value: availableChecking, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}
-      ${renderMetric({ label: "Net worth", value: formatCurrency(dashboard.netWorth, currencyCode), meta: `${dashboard.dailyChange >= 0 ? "+" : ""}${dashboard.dailyChange.toFixed(2)}% today`, tone: "cyan", iconName: "portfolio" })}
-      ${renderMetric({ label: "Active contracts", value: String(dashboard.contractsActive), meta: `${dashboard.contractsDueSoon} due soon`, tone: "amber", iconName: "contracts" })}
-      ${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}
-    </div>
-
+    <div class="player-terminal-page-heading player-terminal-command-heading"><div><small>PLAYER COMMAND CENTER</small><h2>Good morning, ${escapeHtml(String(session.displayName || "Player").trim().split(/\s+/)[0] || "Player")}</h2><p>Complete the next priority, monitor the economy, and keep your capital working.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(dashboard.marketStatus, "green")}<button class="player-terminal-secondary-button" type="button" data-route="news">${icon("news")} World brief</button></div></div>
+    ${renderAttentionStrip(attentionItems)}
+    <div class="player-terminal-command-metrics" aria-label="Player financial and activity summary">${renderMetric({ label: "Available checking", value: availableChecking, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}${renderMetric({ label: "Net worth", value: formatCurrency(dashboard.netWorth, currencyCode), meta: `${dashboard.dailyChange >= 0 ? "+" : ""}${dashboard.dailyChange.toFixed(2)}% today`, tone: "cyan", iconName: "portfolio" })}${renderMetric({ label: "Active contracts", value: String(dashboard.contractsActive), meta: `${dashboard.contractsDueSoon} due soon`, tone: "amber", iconName: "contracts" })}${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}</div>
     <div class="player-terminal-command-layout">
-      <section class="player-terminal-panel player-terminal-priority-panel">
-        <header class="player-terminal-panel-header"><div><span>NEXT ACTIONS</span><strong>Your core game loop</strong></div><small>Ordered by urgency</small></header>
-        <div class="player-terminal-next-actions">
-          ${actionCard({ step: "01", eyebrow: contractAction.eyebrow, title: contractAction.title, detail: contractAction.detail, route: "contracts", iconName: "contracts", tone: "amber" })}
-          ${actionCard({ step: "02", eyebrow: dashboard.worldEvents[0]?.region || "World", title: dashboard.worldEvents[0]?.title || "Review world intelligence", detail: dashboard.worldEvents[0]?.impact || "Check the events currently moving markets.", route: "news", iconName: "news", tone: "cyan" })}
-          ${actionCard({ step: "03", eyebrow: messageAction.eyebrow, title: "Check communications", detail: messageAction.detail, route: "messages", iconName: "messages", tone: "purple" })}
-        </div>
-      </section>
-
-      <section class="player-terminal-panel player-terminal-command-map-panel">
-        <header class="player-terminal-panel-header"><div><span>WORLD POSITION</span><strong>${escapeHtml(playerCountry.name)} · ${escapeHtml(playerCountry.condition)}</strong></div><button class="player-terminal-text-button" type="button" data-player-country="${escapeHtml(playerCountry.id)}">Country intelligence ${icon("chevronRight")}</button></header>
-        <div class="player-terminal-command-map">
-          <img class="player-terminal-world-map" src="./assets/images/econovaria-world-map.png" alt="Map of the nations of Econovaria" />
-          <div class="player-terminal-world-vignette" aria-hidden="true"></div>
-          ${renderCountryOverlay(countries, session.countryId)}
-          ${renderMapHud()}
-        </div>
-        ${renderHomeMarketSummary(playerCountry)}
-      </section>
-
-      <section class="player-terminal-panel player-terminal-command-events">
-        <header class="player-terminal-panel-header"><div><span>WORLD SIGNALS</span><strong>Events that may affect you</strong></div><button class="player-terminal-text-button" type="button" data-route="news">All news ${icon("chevronRight")}</button></header>
-        <div>${(dashboard.worldEvents || []).length ? dashboard.worldEvents.map(worldEvent).join("") : `<p class="player-terminal-inline-empty">No world signals require attention.</p>`}</div>
-      </section>
-
-      <section class="player-terminal-panel player-terminal-finance-snapshot">
-        <header class="player-terminal-panel-header"><div><span>FINANCIAL SNAPSHOT</span><strong>${escapeHtml(formatCurrency(dashboard.netWorth, currencyCode))}</strong></div><span class="player-terminal-daily-change ${toneFromChange(dashboard.dailyChange)}">${escapeHtml(formatPercent(dashboard.dailyChange))} today</span></header>
-        <div class="player-terminal-wealth-snapshot">
-          <div class="player-terminal-wealth-breakdown">
-            <button type="button" data-route="banking"><span>${icon("banking")}</span><div><small>Checking & savings</small><strong>${escapeHtml(formatCurrency(dashboard.liquidBalance + dashboard.savingsBalance, currencyCode))}</strong></div></button>
-            <button type="button" data-route="portfolio"><span>${icon("portfolio")}</span><div><small>Investments</small><strong>${escapeHtml(formatCurrency(dashboard.portfolioValue, currencyCode))}</strong></div></button>
-            <button type="button" data-route="inventory"><span>${icon("inventory")}</span><div><small>Inventory value</small><strong>${escapeHtml(formatCurrency(dashboard.inventoryValue, currencyCode))}</strong></div></button>
-          </div>
-          <div class="player-terminal-allocation-mini" aria-label="Portfolio allocation">
-            ${allocationItems.length ? allocationItems.map((item) => `<div><span><small>${escapeHtml(item.label || item.name)}</small><strong>${escapeHtml(item.percent ?? item.value)}%</strong></span><i><b style="width:${Math.min(100, Number(item.percent ?? item.value))}%"></b></i></div>`).join("") : `<p class="player-terminal-inline-empty">${portfolioUnavailable ? "Portfolio allocation is unavailable." : "No portfolio allocation yet."}</p>`}
-          </div>
-        </div>
-        <div class="player-terminal-panel-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Open portfolio</button><button class="player-terminal-secondary-button" type="button" data-route="market">${icon("market")} Review market</button></div>
-      </section>
+      <section class="player-terminal-panel player-terminal-priority-panel"><header class="player-terminal-panel-header"><div><span>NEXT ACTIONS</span><strong>Your core game loop</strong></div><small>Ordered by urgency</small></header><div class="player-terminal-next-actions">${actionCard({ step: "01", eyebrow: contractAction.eyebrow, title: contractAction.title, detail: contractAction.detail, route: "contracts", iconName: "contracts", tone: "amber" })}${actionCard({ step: "02", eyebrow: dashboard.worldEvents[0]?.region || "World", title: dashboard.worldEvents[0]?.title || "Review world intelligence", detail: dashboard.worldEvents[0]?.impact || "Check the events currently moving markets.", route: "news", iconName: "news", tone: "cyan" })}${actionCard({ step: "03", eyebrow: messageAction.eyebrow, title: "Check communications", detail: messageAction.detail, route: "messages", iconName: "messages", tone: "purple" })}</div></section>
+      <section class="player-terminal-panel player-terminal-command-map-panel"><header class="player-terminal-panel-header"><div><span>WORLD POSITION</span><strong>${escapeHtml(playerCountry.name)} · ${escapeHtml(playerCountry.condition)}</strong></div><button class="player-terminal-text-button" type="button" data-player-country="${escapeHtml(playerCountry.id)}">Country intelligence ${icon("chevronRight")}</button></header><div class="player-terminal-command-map"><img class="player-terminal-world-map" src="./assets/images/econovaria-world-map.png" alt="Map of the nations of Econovaria" /><div class="player-terminal-world-vignette" aria-hidden="true"></div>${renderCountryOverlay(countries, session.countryId)}${renderMapHud()}</div>${renderHomeMarketSummary(playerCountry)}</section>
+      <section class="player-terminal-panel player-terminal-command-events"><header class="player-terminal-panel-header"><div><span>WORLD SIGNALS</span><strong>Events that may affect you</strong></div><button class="player-terminal-text-button" type="button" data-route="news">All news ${icon("chevronRight")}</button></header><div>${(dashboard.worldEvents || []).length ? dashboard.worldEvents.map(worldEvent).join("") : `<p class="player-terminal-inline-empty">No world signals require attention.</p>`}</div></section>
+      <section class="player-terminal-panel player-terminal-finance-snapshot"><header class="player-terminal-panel-header"><div><span>FINANCIAL SNAPSHOT</span><strong>${escapeHtml(formatCurrency(dashboard.netWorth, currencyCode))}</strong></div><span class="player-terminal-daily-change ${toneFromChange(dashboard.dailyChange)}">${escapeHtml(formatPercent(dashboard.dailyChange))} today</span></header><div class="player-terminal-wealth-snapshot"><div class="player-terminal-wealth-breakdown"><button type="button" data-route="banking"><span>${icon("banking")}</span><div><small>Checking & savings</small><strong>${escapeHtml(formatCurrency(dashboard.liquidBalance + dashboard.savingsBalance, currencyCode))}</strong></div></button><button type="button" data-route="portfolio"><span>${icon("portfolio")}</span><div><small>Investments</small><strong>${escapeHtml(formatCurrency(dashboard.portfolioValue, currencyCode))}</strong></div></button><button type="button" data-route="inventory"><span>${icon("inventory")}</span><div><small>Inventory value</small><strong>${escapeHtml(formatCurrency(dashboard.inventoryValue, currencyCode))}</strong></div></button></div><div class="player-terminal-allocation-mini" aria-label="Portfolio allocation">${allocationItems.length ? allocationItems.map((item) => `<div><span><small>${escapeHtml(item.label || item.name)}</small><strong>${escapeHtml(item.percent ?? item.value)}%</strong></span><i><b style="width:${Math.min(100, Number(item.percent ?? item.value))}%"></b></i></div>`).join("") : `<p class="player-terminal-inline-empty">${portfolioUnavailable ? "Portfolio allocation is unavailable." : "No portfolio allocation yet."}</p>`}</div></div><div class="player-terminal-panel-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Open portfolio</button><button class="player-terminal-secondary-button" type="button" data-route="market">${icon("market")} Review market</button></div></section>
+      <section class="player-terminal-panel player-terminal-dashboard-activity"><header class="player-terminal-panel-header"><div><span>RECENT ACTIVITY</span><strong>What changed</strong></div><button class="player-terminal-text-button" type="button" data-route="banking">Account history ${icon("chevronRight")}</button></header>${renderActivityFeed(recentActivity, { empty: bankingUnavailable ? "Banking activity is temporarily unavailable." : "No recent account activity." })}</section>
     </div>
-
     ${dashboard.marketPulse?.length ? renderTicker(dashboard.marketPulse) : ""}
   </section>`;
 }

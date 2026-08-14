@@ -17,7 +17,9 @@ const DEFAULT_FRESHNESS_MS = Object.freeze({
   banking: 10_000,
   loans: 30_000,
   messages: 10_000,
-  progression: 30_000
+  progression: 30_000,
+  worldRuntime: 15_000,
+  storyDeliveries: 10_000
 });
 
 export const INVALIDATABLE_PLAYER_RESOURCES = Object.freeze(new Set(Object.keys(DEFAULT_FRESHNESS_MS)));
