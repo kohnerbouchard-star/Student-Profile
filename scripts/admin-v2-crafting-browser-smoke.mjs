@@ -304,7 +304,7 @@ async function runReady(browser, fixture, viewport) {
   try {
     await runtime.page.locator('.admin-crafting-route[data-admin-v2-state="ready"]')
       .waitFor({ state: "attached", timeout: 10_000 });
-    await runtime.page.getByRole("heading", { level: 1, name: "Crafting Supervision" })
+    await runtime.page.getByRole("heading", { level: 1, name: "Crafting Operations" })
       .waitFor({ state: "visible" });
     await runtime.page.getByText("초정밀 복합소재 제조법", { exact: false }).first().waitFor({ state: "visible" });
     await assertNoOverflow(runtime.page, `ready ${viewport.width}`);

@@ -221,7 +221,7 @@ async function createRuntime(browser, fixture, scenario, viewport = DEFAULT_VIEW
 
 async function waitForState(page, state) {
   await page.locator(`.admin-news-events[data-news-events-state="${state}"]`).waitFor({ state: "attached", timeout: 10_000 });
-  await page.getByRole("heading", { level: 1, name: "News & Events", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("heading", { level: 1, name: "News & Event Monitor", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
 }
 
 async function assertNoHorizontalOverflow(page, label) {

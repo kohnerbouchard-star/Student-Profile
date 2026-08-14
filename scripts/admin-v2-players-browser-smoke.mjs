@@ -193,7 +193,7 @@ async function mutations(browser, fixture) {
     const drawer = r.page.locator(".admin-players-drawer[data-open='true']");
     await drawer.waitFor();
     assert.match(await drawer.innerText(), /Player ID and Access Code are protected/);
-    await drawer.getByRole("button", { name: "Edit Admin profile" }).click();
+    await drawer.getByRole("button", { name: "Edit admin metadata" }).click();
     const profile = r.page.locator(".admin-players-dialog[data-open='true']");
     await profile.getByLabel("Admin display name").fill("김하늘 — Reviewed");
     await profile.getByRole("button", { name: "Save profile" }).click();
