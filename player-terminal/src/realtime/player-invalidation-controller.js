@@ -79,7 +79,10 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
 
   function setLiveState(patch) {
     const snapshot = terminal.getState();
-    updateStoreFromSnapshot(snapshot, (state) => ({ ...state, live: { ...(state.live || {}), ...patch } }));
+    const current = snapshot?.live || {};
+    const entries = Object.entries(patch || {});
+    if (!entries.length || entries.every(([key, value]) => Object.is(current[key], value))) return false;
+    return updateStoreFromSnapshot(snapshot, (state) => ({ ...state, live: { ...(state.live || {}), ...patch } }));
   }
 
   function canRefreshNow() {
