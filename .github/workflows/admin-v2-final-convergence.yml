@@ -34,7 +34,8 @@ jobs:
           marker = '\n// Legacy verifier compatibility marker: knownPresets.map is replaced by KNOWN_DIFFICULTY_PRESETS.map.'
           if text.count(marker) != 1:
               raise SystemExit(f'expected exactly one legacy verifier marker, found {text.count(marker)}')
-          path.write_text(text.replace(marker, '', 1), encoding='utf-8')
+          cleaned = text.replace(marker, '', 1).rstrip() + '\n'
+          path.write_text(cleaned, encoding='utf-8')
           PY
           git add admin/v2/src/routes/settings/SettingsRoute.js
           git diff --cached --check
