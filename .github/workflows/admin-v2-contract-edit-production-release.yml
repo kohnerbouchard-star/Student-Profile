@@ -97,12 +97,45 @@ jobs:
           console.log(`Production admin-api baseline version ${row.version}; verify_jwt=true; status=ACTIVE`);
           NODE
 
+      - name: Prepare history-compatible ephemeral migration workdir
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_workdir="$RUNNER_TEMP/admin-v2-contract-edit-release-backend"
+          rm -rf "$release_workdir"
+          cp -a backend "$release_workdir"
+
+          remote_only_versions=(
+            20260812044346
+            20260812072131
+            20260812072445
+            20260812211829
+            20260812211914
+            20260812212415
+            20260812212602
+            20260812212656
+            20260812213109
+            20260812213226
+            20260812214220
+            20260814022707
+            20260814073244
+          )
+          for version in "${remote_only_versions[@]}"; do
+            placeholder="$release_workdir/supabase/migrations/${version}_remote_production_history_placeholder.sql"
+            test ! -e "$placeholder"
+            printf '%s\n' '-- Ephemeral release-only placeholder: this production migration is already applied remotely.' > "$placeholder"
+          done
+
+          test -f "$release_workdir/supabase/migrations/$TARGET_MIGRATION"
+          test "$(git status --short)" = ""
+
       - name: Dry-run the out-of-order migration safely
         shell: bash
         run: |
           set -euo pipefail
+          release_workdir="$RUNNER_TEMP/admin-v2-contract-edit-release-backend"
           supabase db push \
-            --workdir backend \
+            --workdir "$release_workdir" \
             --include-all \
             --dry-run 2>&1 | tee "$RUNNER_TEMP/db-push-dry-run.txt"
 
@@ -115,11 +148,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          release_workdir="$RUNNER_TEMP/admin-v2-contract-edit-release-backend"
           supabase db push \
-            --workdir backend \
+            --workdir "$release_workdir" \
             --include-all \
             --yes
-          supabase migration list --workdir backend | tee "$RUNNER_TEMP/migration-list-after.txt"
+          supabase migration list --workdir "$release_workdir" | tee "$RUNNER_TEMP/migration-list-after.txt"
           grep -q "$TARGET_MIGRATION_VERSION" "$RUNNER_TEMP/migration-list-after.txt"
 
       - name: Deploy only production admin-api
@@ -178,6 +212,7 @@ jobs:
             echo "- Source commit: $SOURCE_COMMIT"
             echo "- Production project: $EXPECTED_PRODUCTION_PROJECT_REF"
             echo "- Migration: $TARGET_MIGRATION"
+            echo "- Remote-only history placeholders: ephemeral runner files only"
             echo "- Function: admin-api only"
             echo "- JWT verification: required"
             echo "- Seed data: not applied"
