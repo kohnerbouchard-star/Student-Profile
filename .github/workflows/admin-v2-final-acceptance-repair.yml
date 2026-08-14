@@ -45,6 +45,17 @@ jobs:
               target.write_text(text.replace(old, new), encoding="utf-8")
 
           replace_exact(
+              "admin/v2/src/routes/settings/SettingsRoute.js",
+              '''  MODIFIER_FIELDS.forEach((name) => {\n    fields.get(name).control.addEventListener("input", () => {\n      if (difficulty.getValue() !== "custom") difficulty.setValue("custom");\n      updateDirtyState();\n    });\n  });\n  difficulty.control.addEventListener("change", updateDirtyState);''',
+              '''  let presetWasAutoCustom = false;\n  MODIFIER_FIELDS.forEach((name) => {\n    fields.get(name).control.addEventListener("input", () => {\n      const modifiersDiffer = MODIFIER_FIELDS.some((fieldName) => (\n        !equalValue(fields.get(fieldName).getValue(), model[fieldName])\n      ));\n      if (modifiersDiffer) {\n        if (difficulty.getValue() !== "custom") difficulty.setValue("custom");\n        presetWasAutoCustom = true;\n      } else if (presetWasAutoCustom) {\n        difficulty.setValue(model.difficultyPreset);\n        presetWasAutoCustom = false;\n      }\n      updateDirtyState();\n    });\n  });\n  difficulty.control.addEventListener("change", () => {\n    presetWasAutoCustom = false;\n    updateDirtyState();\n  });''',
+          )
+          replace_exact(
+              "admin/v2/src/routes/settings/SettingsRoute.js",
+              '''  function reset() {\n    difficulty.setValue(model.difficultyPreset);''',
+              '''  function reset() {\n    presetWasAutoCustom = false;\n    difficulty.setValue(model.difficultyPreset);''',
+          )
+
+          replace_exact(
               "scripts/admin-v2-news-events-browser-smoke.mjs",
               "assert.match(body, /Authoritative supervisory surface/);",
               "assert.match(body, /Read-only publication monitor/);",
@@ -111,6 +122,7 @@ jobs:
           rm -f runtime-config.env.js
           git rm .github/workflows/admin-v2-final-acceptance-repair.yml
           git add \
+            admin/v2/src/routes/settings/SettingsRoute.js \
             admin/v2/styles/components.css \
             scripts/admin-v2-news-events-browser-smoke.mjs \
             scripts/admin-v2-settings-browser-smoke.mjs \
