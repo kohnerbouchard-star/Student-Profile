@@ -192,6 +192,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/admin-v2-contracts-api.test.mjs")
+          source = path.read_text(encoding="utf-8")
+          old = 'changes: { title: "Edited draft" }'
+          new = 'contract: { title: "Edited draft" }'
+          if source.count(old) != 1:
+              raise SystemExit("expected one contract update fixture alias")
+          path.write_text(source.replace(old, new), encoding="utf-8")
+          PY
           git diff --check
           node scripts/admin-v2-contracts-api.test.mjs
           node scripts/admin-v2-store-api.test.mjs
@@ -216,7 +226,8 @@ jobs:
             backend/src/domains/contracts/application/adminContractMutation.ts \
             backend/supabase/functions/admin-api/localGameMutations.ts \
             backend/supabase/functions/admin-api/common.ts \
-            backend/supabase/migrations
+            backend/supabase/migrations \
+            scripts/admin-v2-contracts-api.test.mjs
           git status --short
           git diff --cached --check
           if git diff --cached --quiet; then
