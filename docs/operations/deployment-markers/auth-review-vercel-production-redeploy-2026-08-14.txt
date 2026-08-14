@@ -1,0 +1,10 @@
+Purpose: retrigger the normal Vercel Git-integrated production deployment from the current safe main branch after the Auth browser review fix became deployable.
+
+Application source authority before marker: c86fb1346848581cb9313c3fea2c48fd1caf1b86
+Target branch: main
+Target environment: Vercel production
+Auth browser routes to verify after deployment:
+- https://www.econovaria.com/auth/security-review.html
+- https://www.econovaria.com/auth/recovery-start.html
+
+This marker changes no runtime behavior, application code, authorization, environment variables, Supabase resources, or Vercel project settings.
