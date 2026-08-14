@@ -1,0 +1,14 @@
+/* Player V2 item economy polish. */
+.player-terminal-store-card,.player-terminal-inventory-card,.player-terminal-marketplace-card,.player-terminal-recipe-row{position:relative;border:1px solid rgba(0,212,255,.16);background:linear-gradient(145deg,rgba(10,29,52,.92),rgba(6,16,33,.95));box-shadow:var(--player-shadow-low);transition:160ms ease}
+.player-terminal-store-card:hover,.player-terminal-inventory-card:hover,.player-terminal-marketplace-card:hover,.player-terminal-recipe-row:hover,.player-terminal-marketplace-card:focus-visible,.player-terminal-recipe-row:focus-visible{border-color:var(--player-color-line-strong);background:rgba(14,38,66,.94)}
+.player-terminal-marketplace-card.active,.player-terminal-recipe-row.active{border-color:rgba(0,212,255,.55);box-shadow:var(--player-glow-cyan)}
+.player-terminal-store-image,.player-terminal-inventory-image,.player-terminal-marketplace-image,.player-terminal-marketplace-detail-hero>span,.player-terminal-recipe-hero>span{overflow:hidden;border:1px solid rgba(148,182,197,.15);background:rgba(2,8,16,.5)}
+.player-terminal-store-image img,.player-terminal-inventory-image img,.player-terminal-marketplace-image img,.player-terminal-marketplace-detail-hero img,.player-terminal-recipe-hero img{display:block;width:100%;height:100%;object-fit:cover}
+.player-terminal-item-state-line,.player-terminal-marketplace-buying-power,.player-terminal-crafting-readiness{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.75rem 1rem;border:1px solid rgba(148,182,197,.14);border-radius:var(--player-radius-sm);background:rgba(2,8,16,.4)}
+.player-terminal-item-state-line small,.player-terminal-marketplace-buying-power small,.player-terminal-crafting-readiness small{display:block;color:var(--player-color-text-faint);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.player-terminal-item-action-links,.player-terminal-crafting-material-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.player-terminal-marketplace-total{border-color:rgba(168,85,247,.28);background:rgba(168,85,247,.045)}
+.player-terminal-marketplace-buying-power{margin-block:.75rem}.player-terminal-marketplace-buying-power .is-warning{color:var(--player-color-amber)}
+.player-terminal-recipe-grid li.is-ready{border-color:rgba(74,222,128,.28);background:rgba(74,222,128,.04)}.player-terminal-recipe-grid li.is-missing{border-color:rgba(255,98,104,.3);background:rgba(255,98,104,.04)}
+.player-terminal-crafting-readiness{margin-block:1rem}.player-terminal-crafting-readiness.is-ready{border-color:rgba(74,222,128,.32)}.player-terminal-crafting-readiness.is-blocked{border-color:rgba(255,165,0,.32)}
+@media(max-width:760px){.player-terminal-item-state-line,.player-terminal-marketplace-buying-power,.player-terminal-crafting-readiness{align-items:flex-start;flex-direction:column}.player-terminal-item-action-links,.player-terminal-crafting-material-actions{width:100%}}
