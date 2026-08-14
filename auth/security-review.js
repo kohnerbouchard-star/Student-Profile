@@ -59,7 +59,7 @@
     setMessage("Verifying the one-time authentication request.");
 
     try {
-      const response = await window.fetch("/api/auth-token-verify", {
+      const response = await window.fetch("/api/password-reset?operation=verify-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokenHash, type: reviewType, projectRef }),
