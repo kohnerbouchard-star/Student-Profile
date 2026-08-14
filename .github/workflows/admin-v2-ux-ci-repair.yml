@@ -1,0 +1,51 @@
+name: Admin V2 UX CI Repair
+
+on:
+  push:
+    branches:
+      - refactor/admin-v2-ux-root-v1
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Apply repair
+        run: node scripts/tmp-admin-v2-ux-ci-repair.mjs
+
+      - name: Verify candidate
+        run: |
+          node --check admin/v2/src/routes/crafting/CraftingRoute.js
+          git diff --check
+          npm run test:admin-v2
+          node --test scripts/admin-v2-contracts-api.test.mjs scripts/admin-v2-loans-api.test.mjs
+
+      - name: Commit verified repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/admin-v2-ux-ci-repair.yml scripts/tmp-admin-v2-ux-ci-repair.mjs
+          git add admin/v2/src/routes/crafting/CraftingRoute.js scripts/admin-v2-unit.test.mjs scripts/admin-v2-loans-api.test.mjs
+          git diff --cached --check
+          git commit -m 'fix(admin): repair Crafting UX flow and regressions'
+          git push origin HEAD:refactor/admin-v2-ux-root-v1
