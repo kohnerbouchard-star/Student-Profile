@@ -96,7 +96,10 @@ assert.match(messageReadFlow, /data-player-message-thread/);
 assert.match(messageReadFlow, /data-player-message-unread/);
 assert.match(messageReadFlow, /api\.execute\("messageRead"/);
 assert.match(messageReadFlow, /PUBLIC_THREAD_ID/);
-assert.match(messageReadFlow, /terminal\.refresh\(\)/);
+assert.match(messageReadFlow, /dispatchResourceRefresh/);
+assert.match(messageReadFlow, /player-resources-invalidated/);
+assert.match(messageReadFlow, /\["messages",\s*"notifications"\]/);
+assert.doesNotMatch(messageReadFlow, /terminal\.refresh\(\)/);
 assert.match(messageReadFlow, /invalid_player_session/);
 assert.doesNotMatch(messageReadFlow, /authorization|Bearer|x-player-session-token/i);
 assert.doesNotMatch(messageReadFlow, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
@@ -120,4 +123,4 @@ assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, privacy, capability, secure BFF, automatic read-on-open, hardened bootstrap, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, privacy, capability, secure BFF, automatic read-on-open, targeted resource invalidation, hardened bootstrap, and attachment-disablement contracts passed.");
