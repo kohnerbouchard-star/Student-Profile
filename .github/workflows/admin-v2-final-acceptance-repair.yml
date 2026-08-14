@@ -93,6 +93,11 @@ jobs:
               'await profile.getByLabel("Admin display name").fill("김하늘 — Reviewed");',
               'await profile.getByLabel("Staff display label").fill("김하늘 — Reviewed");',
           )
+          replace_exact(
+              "scripts/admin-v2-players-browser-smoke.mjs",
+              'await stale.page.getByRole("button", { name: "Refresh" }).click();',
+              'await stale.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click();',
+          )
 
           crafting = Path("scripts/admin-v2-crafting-supply-browser-smoke.mjs")
           text = crafting.read_text(encoding="utf-8")
