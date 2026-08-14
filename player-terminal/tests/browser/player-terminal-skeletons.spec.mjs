@@ -26,7 +26,23 @@ const GEOMETRY_TARGETS = Object.freeze({
 async function openTerminal(page, route) {
   await page.goto(`/#${route}`);
   await expect(page).toHaveURL(new RegExp(`#${route}$`));
-  await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
+  await page.waitForFunction(async (currentRoute) => {
+    const ready = () => {
+      const terminal = globalThis.Econovaria?.playerTerminal;
+      const state = terminal?.getState?.();
+      const pageNode = document.querySelector("#player-main-content .player-terminal-page:not(.player-terminal-route-skeleton):not(.player-terminal-route-error)");
+      return Boolean(
+        state?.status === "ready" &&
+        state?.route === currentRoute &&
+        pageNode &&
+        !document.querySelector(".player-terminal-route-skeleton")
+      );
+    };
+    if (!ready()) return false;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return ready();
+  }, route);
+  await expect(page.locator("#player-main-content .player-terminal-page:not(.player-terminal-route-skeleton):not(.player-terminal-route-error)")).toBeVisible();
   await expect(page.locator(".player-terminal-route-skeleton")).toHaveCount(0);
 }
 
