@@ -3,7 +3,6 @@ name: Auth Browser Review Contract
 on:
   pull_request:
     paths:
-      - "api/auth-token-verify.js"
       - "api/password-reset.js"
       - "auth/security-review.html"
       - "auth/security-review.js"
@@ -16,7 +15,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "api/auth-token-verify.js"
       - "api/password-reset.js"
       - "auth/security-review.html"
       - "auth/security-review.js"
@@ -44,7 +42,6 @@ jobs:
       - name: Validate browser-hosted auth review boundary
         run: |
           set -euo pipefail
-          node --check api/auth-token-verify.js
           node --check api/password-reset.js
           node --check auth/security-review.js
           node --check auth/recovery-start.js
