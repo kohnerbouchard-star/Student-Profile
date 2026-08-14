@@ -406,5 +406,3 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
     destroy() { formView.destroy(); },
   };
 }
-
-// Legacy verifier compatibility marker: knownPresets.map is replaced by KNOWN_DIFFICULTY_PRESETS.map.
