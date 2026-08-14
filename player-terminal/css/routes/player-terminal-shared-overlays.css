@@ -1,38 +1,83 @@
 /* Econovaria Player Terminal refresh — shared overlay ownership.
    Owns transactional modals and notification-drawer containment; country intelligence remains Dashboard-owned. */
 
-.player-terminal-app-root :is(
-  .player-terminal-modal-backdrop,
-  .player-terminal-mobile-sheet
-) {
-  overscroll-behavior: contain;
+.player-terminal-transaction-overlay-host {
+  position: relative;
+  z-index: 99998;
+  width: 0;
+  height: 0;
 }
 
-.player-terminal-app-root + .player-terminal-modal-backdrop,
+.player-terminal-app-root .player-terminal-modal-backdrop,
+.player-terminal-transaction-overlay-host .player-terminal-modal-backdrop,
 .player-terminal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: var(--player-space-4);
   background: rgb(0 0 0 / 72%);
   backdrop-filter: blur(0.5rem);
 }
 
 .player-terminal-modal:not(.player-terminal-country-modal) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(42rem, calc(100vw - 2rem));
   max-height: min(90dvh, 48rem);
+  min-width: 0;
   overflow: hidden;
   border: 0.0625rem solid var(--player-color-line-strong);
   border-radius: var(--player-radius-lg);
   clip-path: none;
+  color: var(--player-color-text);
   background: linear-gradient(145deg, rgb(10 29 52 / 98%), rgb(2 8 16 / 99%));
   box-shadow: 0 2rem 6rem rgb(0 0 0 / 60%), var(--player-glow-cyan);
 }
 
 .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head,
 .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--player-space-4);
   padding: var(--player-space-4) var(--player-space-5);
 }
 
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head {
+  border-bottom: 0.0625rem solid var(--player-color-line);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
+  border-top: 0.0625rem solid var(--player-color-line);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head > div {
+  display: grid;
+  gap: var(--player-space-1);
+  min-width: 0;
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head small {
+  color: var(--player-color-amber);
+  font-size: .75rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head h3 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.8vw, 1.75rem);
+  line-height: 1.12;
+}
+
 .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body {
+  position: static;
+  inset: auto;
   display: grid;
   gap: var(--player-space-4);
   min-height: 0;
@@ -41,9 +86,76 @@
   overscroll-behavior: contain;
 }
 
-.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head :is(h3, small),
-.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body :is(p, dd, code) {
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body > label {
+  display: grid;
+  gap: var(--player-space-2);
+  color: var(--player-color-text-muted);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body input,
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body select,
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body textarea {
+  width: 100%;
+  min-height: var(--player-control-lg);
+  padding: .65rem .75rem;
+  border: 0.0625rem solid var(--player-color-line-strong);
+  border-radius: var(--player-radius-sm);
+  color: var(--player-color-text);
+  background: rgb(2 8 16 / 82%);
+}
+
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-body :is(p, dd, code),
+.player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-head :is(h3, small) {
   overflow-wrap: anywhere;
+}
+
+.player-terminal-connector-status {
+  display: grid;
+  gap: var(--player-space-2);
+  padding: var(--player-space-4);
+  border: 0.0625rem solid rgb(255 165 0 / 22%);
+  border-radius: var(--player-radius-sm);
+  background: rgb(255 165 0 / 6%);
+}
+
+.player-terminal-connector-status p {
+  margin: 0;
+  color: var(--player-color-text-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+
+.player-terminal-connector-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--player-space-2);
+  margin: 0;
+}
+
+.player-terminal-connector-meta > div {
+  display: grid;
+  gap: var(--player-space-1);
+  min-width: 0;
+  padding: var(--player-space-3);
+  border: 0.0625rem solid var(--player-color-line);
+  border-radius: var(--player-radius-sm);
+  background: rgb(2 8 16 / 44%);
+}
+
+.player-terminal-connector-meta dt {
+  color: var(--player-color-text-muted);
+  font-size: .6875rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.player-terminal-connector-meta dd {
+  margin: 0;
+  font-size: .8125rem;
+  font-weight: 700;
 }
 
 .player-terminal-app-root .player-terminal-notification-drawer {
@@ -53,7 +165,6 @@
   background: linear-gradient(145deg, rgb(10 29 52 / 98%), rgb(2 8 16 / 99%));
   box-shadow: var(--player-shadow-high);
 }
-
 
 @media (max-width: 38.75rem) {
   .player-terminal-modal-backdrop {
@@ -71,8 +182,12 @@
     padding: var(--player-space-4);
   }
 
+  .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer,
+  .player-terminal-connector-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .player-terminal-modal:not(.player-terminal-country-modal) .player-terminal-modal-footer {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
   }
 }
