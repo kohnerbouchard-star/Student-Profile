@@ -1,0 +1,103 @@
+name: Publish Clean Admin V2 UX Refactor
+
+on:
+  push:
+    branches:
+      - automation/admin-v2-ux-root-apply-20260814
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-clean-admin-v2-ux-refactor
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout verified execution branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Validate committed refactor source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s admin/v2/styles/routes/loans.css
+          grep -q 'updateContract' admin/v2/src/api/contracts-api-client.js
+          grep -q 'updateContract' admin/v2/src/routes/contracts/ContractsController.js
+          grep -q 'KNOWN_DIFFICULTY_PRESETS.map' admin/v2/src/routes/settings/SettingsRoute.js
+          compgen -G 'backend/supabase/migrations/*_admin_v2_contract_edit_v1.sql' >/dev/null
+          node scripts/admin-v2-contracts-api.test.mjs
+          node scripts/admin-v2-store-api.test.mjs
+
+      - name: Build source-only squash patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          merge_base="$(git merge-base origin/main HEAD)"
+          git diff --binary "$merge_base"..HEAD -- \
+            admin/v2/src \
+            admin/v2/styles \
+            backend/src/domains/contracts/application \
+            backend/supabase/functions/admin-api \
+            backend/supabase/migrations \
+            scripts/admin-v2-contracts-api.test.mjs \
+            > "$RUNNER_TEMP/admin-v2-ux-source.patch"
+          test -s "$RUNNER_TEMP/admin-v2-ux-source.patch"
+
+      - name: Materialize clean feature branch from current main
+        shell: bash
+        env:
+          FINAL_BRANCH: refactor/admin-v2-ux-root-v1
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$FINAL_BRANCH" >/dev/null 2>&1; then
+            echo "Final branch already exists: $FINAL_BRANCH" >&2
+            exit 1
+          fi
+          git switch --detach origin/main
+          git switch -c "$FINAL_BRANCH"
+          git apply --3way --index "$RUNNER_TEMP/admin-v2-ux-source.patch"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          settings = Path('admin/v2/src/routes/settings/SettingsRoute.js')
+          source = settings.read_text(encoding='utf-8')
+          source = source.replace('\n// Legacy verifier compatibility marker: knownPresets.map is replaced by KNOWN_DIFFICULTY_PRESETS.map.\n', '\n')
+          settings.write_text(source, encoding='utf-8')
+
+          page = Path('admin/v2.html')
+          html = page.read_text(encoding='utf-8')
+          marker = '  <link rel="stylesheet" href="./v2/styles/routes/banking.css" />\n'
+          link = '  <link rel="stylesheet" href="./v2/styles/routes/loans.css" />\n'
+          if link not in html:
+              if html.count(marker) != 1:
+                  raise SystemExit('banking stylesheet marker not found exactly once')
+              html = html.replace(marker, marker + link)
+              page.write_text(html, encoding='utf-8')
+          PY
+
+          git add -- \
+            admin/v2.html \
+            admin/v2/src \
+            admin/v2/styles \
+            backend/src/domains/contracts/application \
+            backend/supabase/functions/admin-api \
+            backend/supabase/migrations \
+            scripts/admin-v2-contracts-api.test.mjs
+
+          git diff --cached --check
+          node scripts/admin-v2-contracts-api.test.mjs
+          node scripts/admin-v2-store-api.test.mjs
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'refactor(admin): fix Admin V2 UX at root'
+          git push origin "HEAD:$FINAL_BRANCH"
