@@ -160,7 +160,25 @@ export function ProgressionCorrectionEditor({ selectedPlayer, onCorrect }) {
       reason: reason.value.trim(),
     };
     const scope = reputation ? ` · ${pendingCommand.reputationType}:${pendingCommand.reputationScope}` : "";
-    confirm.setDetail(`${selectedPlayer.displayName} · ${pendingCommand.correctionType} ${signedNumber(numericAmount)}${scope}`);
+    confirm.setDetail(`${selectedPlayer.displayName} · ${pendingCommand.correctionType}${scope} · Reason: ${pendingCommand.reason}`);
+    if (reputation) {
+      const displayedTotal = selectedPlayer.reputation?.[pendingCommand.reputationType];
+      confirm.setChanges([{
+        label: `${pendingCommand.reputationType} reputation`,
+        before: Number.isSafeInteger(displayedTotal)
+          ? `${displayedTotal.toLocaleString("en-US")} displayed total`
+          : "Scoped value not exposed",
+        after: `${signedNumber(numericAmount)} scoped correction; server confirms the resulting value`,
+      }]);
+    } else {
+      const before = Number(selectedPlayer.experience ?? 0);
+      const after = before + numericAmount;
+      confirm.setChanges([{
+        label: "Experience",
+        before: before.toLocaleString("en-US"),
+        after: after.toLocaleString("en-US"),
+      }]);
+    }
     void confirm.open(submit);
   });
 

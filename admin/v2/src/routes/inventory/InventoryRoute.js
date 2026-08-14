@@ -55,9 +55,9 @@ function summary(model) {
     className: "admin-inventory-route__summary",
     attrs: { "aria-label": "Inventory redemption summary for this page" },
     children: [
-      metric("Pending", model.summary.pending, "Awaiting review on this page"),
-      metric("Approved", model.summary.approved, "Awaiting fulfillment on this page"),
-      metric("Closed", model.summary.rejected + model.summary.fulfilled, "Rejected or fulfilled on this page"),
+      metric("Pending", model.summary.pending, "This page only"),
+      metric("Approved", model.summary.approved, "This page only"),
+      metric("Closed", model.summary.rejected + model.summary.fulfilled, "This page only"),
     ],
   });
 }
@@ -70,9 +70,9 @@ function contractNotice(model) {
     className: "admin-inventory-route__contract-note",
     attrs: { role: "note", "aria-label": "Canonical inventory contract boundary" },
     children: [
-      createElement("strong", { text: "Canonical inventory boundary" }),
+      createElement("strong", { text: "Redemption review · current page" }),
       createElement("p", {
-        text: "This Admin contract supervises inventory redemption records. Quantities shown are requested redemption quantities, not a second owned-item balance ledger.",
+        text: "Search and summary counts apply only to the currently loaded server page. Requested quantities are redemption requests, not a second owned-item balance ledger.",
       }),
       createElement("p", {
         text: model.contract.exposesBusinessRelationship
@@ -255,10 +255,11 @@ function reviewDialog({ row, action, opener, onReview, onReviewCommitted }) {
 function resolvedInventory({ model, filters, state, onQueryChange, onStatusChange, onPage, onReview, onReviewCommitted }) {
   const search = AdminField({
     name: "search",
-    label: "Search this page",
+    label: "Search current page",
     type: "search",
     value: filters.query,
-    placeholder: "Player, item, category",
+    placeholder: "Player, item, category on this page",
+    hint: "This filter does not search records on other server pages.",
     autocomplete: "off",
     prefix: AdminIcon({ name: "search", size: 16 }),
   });

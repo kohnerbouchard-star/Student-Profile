@@ -151,15 +151,21 @@ function filterPanel(filters, onApplyFilters, onClearFilters) {
   const actorType = AdminField({
     name: "logs-actor-type",
     label: "Actor type",
+    type: "select",
     value: safeText(filters?.actorType, "", 80),
-    placeholder: "staff, player, system",
-    autocomplete: "off",
+    options: [
+      { value: "", label: "Any actor type" },
+      { value: "staff", label: "Staff" },
+      { value: "player", label: "Player" },
+      { value: "system", label: "System" },
+    ],
   });
   const targetType = AdminField({
     name: "logs-target-type",
     label: "Target/resource type",
     value: safeText(filters?.targetType, "", 80),
-    placeholder: "store_item, player, attendance",
+    placeholder: "Example: store_item, player, attendance",
+    hint: "Use the exact resource type shown in the Action/Target columns when narrowing further.",
     autocomplete: "off",
   });
   const startAt = AdminField({

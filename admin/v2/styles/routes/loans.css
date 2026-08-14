@@ -1,0 +1,12 @@
+.admin-loans-product-group {
+  display: grid;
+  gap: var(--admin-space-3);
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+}
+
+.admin-loans-product-group legend {
+  padding-inline: var(--admin-space-2);
+  color: var(--admin-color-cyan);
+  font-weight: var(--admin-weight-bold);
+}

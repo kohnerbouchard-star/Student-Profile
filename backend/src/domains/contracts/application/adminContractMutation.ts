@@ -22,9 +22,11 @@ import {
 } from "../infrastructure/supabaseContractRepository.ts";
 
 const CREATE_CONTRACT_STATUSES = ["draft", "scheduled", "active"] as const;
+const EDITABLE_CONTRACT_STATUSES = ["draft", "scheduled"] as const;
 
 export type AdminContractMutationOperation =
   | "create"
+  | "update"
   | "publish"
   | "archive"
   | "duplicate";
@@ -101,7 +103,6 @@ export function normalizeAdminContractCreateInput(
       400,
     );
   }
-
   if (body.sourceType !== undefined && body.sourceType !== "teacher") {
     throw new AdminMutationError(
       "source_type_not_allowed",
@@ -123,27 +124,42 @@ export function normalizeAdminContractCreateInput(
     category: body.category as string | null | undefined,
     status: readOptionalCreateStatus(body.status),
     visibility: body.visibility as ContractVisibility | null | undefined,
-    targetingPayload: body.targetingPayload as
-      | CreateGameSessionContractInput["targetingPayload"]
-      | undefined,
-    requirementsPayload: body.requirementsPayload as
-      | CreateGameSessionContractInput["requirementsPayload"]
-      | undefined,
-    rewardPayload: body.rewardPayload as
-      | CreateGameSessionContractInput["rewardPayload"]
-      | undefined,
-    completionMode: body.completionMode as
-      | ContractCompletionMode
-      | null
-      | undefined,
+    targetingPayload: body.targetingPayload as CreateGameSessionContractInput["targetingPayload"] | undefined,
+    requirementsPayload: body.requirementsPayload as CreateGameSessionContractInput["requirementsPayload"] | undefined,
+    rewardPayload: body.rewardPayload as CreateGameSessionContractInput["rewardPayload"] | undefined,
+    completionMode: body.completionMode as ContractCompletionMode | null | undefined,
     publishedAt: body.publishedAt as string | null | undefined,
     deadlineAt: body.deadlineAt as string | null | undefined,
     expiresAt: body.expiresAt as string | null | undefined,
     metadata: body.metadata as CreateGameSessionContractInput["metadata"],
   });
-
   validateAdminContractTargeting(parsed.visibility, parsed.targetingPayload);
   return parsed;
+}
+
+export function normalizeAdminContractUpdateInput(
+  gameSessionId: string,
+  staffUserId: string,
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized = normalizeAdminContractCreateInput(gameSessionId, staffUserId, body);
+  if (!isAllowedText(normalized.status, EDITABLE_CONTRACT_STATUSES)) {
+    throw new AdminMutationError(
+      "contract_status_not_editable",
+      "Only draft or scheduled contracts can be edited.",
+      409,
+    );
+  }
+  const {
+    gameSessionId: _gameSessionId,
+    contractTemplateId: _contractTemplateId,
+    contractKey: _contractKey,
+    sourceType: _sourceType,
+    sourceId: _sourceId,
+    createdByStaffId: _createdByStaffId,
+    ...editable
+  } = normalized;
+  return editable;
 }
 
 function validateAdminContractTargeting(
@@ -206,11 +222,7 @@ function normalizeMutation(
       createdByStaffId: _createdByStaffId,
       ...contractPayload
     } = normalized;
-    return {
-      contractId: null,
-      contractPayload,
-      requestPayload: contractPayload,
-    };
+    return { contractId: null, contractPayload, requestPayload: contractPayload };
   }
 
   const contractId = String(input.contractId ?? "").trim();
@@ -222,14 +234,18 @@ function normalizeMutation(
     );
   }
 
-  if (input.operation === "publish") {
-    const requestedPublishedAt = readOptionalIsoDateTimeText(
-      input.body.publishedAt,
-      "publishedAt",
+  if (input.operation === "update") {
+    const contractPayload = normalizeAdminContractUpdateInput(
+      input.gameSessionId,
+      input.staffUserId,
+      input.body,
     );
-    const publishedAt = requestedPublishedAt ??
-      (dependencies.now ?? (() => new Date().toISOString()))();
+    return { contractId, contractPayload, requestPayload: contractPayload };
+  }
 
+  if (input.operation === "publish") {
+    const requestedPublishedAt = readOptionalIsoDateTimeText(input.body.publishedAt, "publishedAt");
+    const publishedAt = requestedPublishedAt ?? (dependencies.now ?? (() => new Date().toISOString()))();
     return {
       contractId,
       contractPayload: { publishedAt },
@@ -237,11 +253,7 @@ function normalizeMutation(
     };
   }
 
-  return {
-    contractId,
-    contractPayload: {},
-    requestPayload: {},
-  };
+  return { contractId, contractPayload: {}, requestPayload: {} };
 }
 
 function readOperationMetadata(
@@ -249,44 +261,28 @@ function readOperationMetadata(
   body: Record<string, unknown>,
 ): Pick<AdminContractMutationResult, "alreadyArchived" | "sourceContractId"> {
   if (operation === "archive") {
-    if (typeof body.alreadyArchived !== "boolean") {
-      throw contractMutationFailed();
-    }
+    if (typeof body.alreadyArchived !== "boolean") throw contractMutationFailed();
     return { alreadyArchived: body.alreadyArchived };
   }
-
   if (operation === "duplicate") {
-    const sourceContractId = typeof body.sourceContractId === "string"
-      ? body.sourceContractId.trim()
-      : "";
-    if (!sourceContractId) {
-      throw contractMutationFailed();
-    }
+    const sourceContractId = typeof body.sourceContractId === "string" ? body.sourceContractId.trim() : "";
+    if (!sourceContractId) throw contractMutationFailed();
     return { sourceContractId };
   }
-
   return {};
 }
 
 function readContractRecord(value: unknown) {
-  if (!isRecord(value)) {
-    throw contractMutationFailed();
-  }
-
+  if (!isRecord(value)) throw contractMutationFailed();
   try {
-    return toGameSessionContractRecord(
-      value as unknown as GameSessionContractRow,
-    );
+    return toGameSessionContractRecord(value as unknown as GameSessionContractRow);
   } catch {
     throw contractMutationFailed();
   }
 }
 
 function readOptionalCreateStatus(value: unknown): ContractStatus {
-  if (value === undefined || value === null) {
-    return "draft";
-  }
-
+  if (value === undefined || value === null) return "draft";
   if (!isAllowedText(value, CREATE_CONTRACT_STATUSES)) {
     throw new AdminMutationError(
       "invalid_contract_status",
@@ -294,18 +290,11 @@ function readOptionalCreateStatus(value: unknown): ContractStatus {
       400,
     );
   }
-
   return value;
 }
 
-function readOptionalIsoDateTimeText(
-  value: unknown,
-  fieldName: string,
-): string | null {
-  if (value === undefined || value === null) {
-    return null;
-  }
-
+function readOptionalIsoDateTimeText(value: unknown, fieldName: string): string | null {
+  if (value === undefined || value === null) return null;
   const text = typeof value === "string" ? value.trim() : "";
   if (!text || Number.isNaN(Date.parse(text))) {
     throw new AdminMutationError(
@@ -314,7 +303,6 @@ function readOptionalIsoDateTimeText(
       400,
     );
   }
-
   return text;
 }
 

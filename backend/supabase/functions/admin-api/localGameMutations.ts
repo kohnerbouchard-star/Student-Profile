@@ -219,6 +219,22 @@ export async function handleLocalAdminGameMutation(
       return handled(result.status, { ok: true, contract: result.contract });
     }
 
+    const updateContractMatch = input.suffix.match(/^\/contracts\/([^/]+)$/);
+    if (updateContractMatch && input.request.method === "PATCH") {
+      const body = await normalizeContractCreate(
+        input.request.clone(),
+        identity.idempotencyKey,
+      );
+      const result = await mutateAdminContract(serviceClient, {
+        ...common,
+        operation: "update",
+        contractId: decodeURIComponent(updateContractMatch[1]),
+        body,
+        identity,
+      });
+      return handled(result.status, { ok: true, contract: result.contract });
+    }
+
     const publishMatch = input.suffix.match(/^\/contracts\/([^/]+)\/publish$/);
     if (publishMatch && input.request.method === "POST") {
       const result = await mutateAdminContract(serviceClient, {
@@ -317,6 +333,9 @@ function isAffectedMutation(method: string, suffix: string): boolean {
   ) return true;
   if (/^\/contracts\/[^/]+\/publish$/.test(suffix)) {
     return method === "POST";
+  }
+  if (/^\/contracts\/[^/]+$/.test(suffix)) {
+    return method === "PATCH";
   }
   if (/^\/contracts\/[^/]+\/(?:archive|duplicate)$/.test(suffix)) {
     return method === "POST";

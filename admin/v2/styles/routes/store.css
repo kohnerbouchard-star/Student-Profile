@@ -1,3 +1,17 @@
+.admin-store-form__media-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--admin-space-2);
+  padding: var(--admin-space-3);
+  border-inline-start: 3px solid var(--admin-color-cyan);
+  background: var(--admin-color-cyan-soft);
+  color: var(--admin-color-text-muted);
+}
+
+.admin-store-route__action-note[data-state="readonly"] {
+  color: var(--admin-color-text-faint);
+  font-style: italic;
+}
 .admin-store-route,
 .admin-store-route__resolved,
 .admin-store-route__catalog {

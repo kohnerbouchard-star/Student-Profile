@@ -267,6 +267,9 @@ export function isAdminLocalMutationProxyPath(path, method) {
     /^\/store\/items\/[^/]+$/.test(scopedPath)
   ) return true;
   if (
+    normalizedMethod === "PATCH" && /^\/contracts\/[^/]+$/.test(scopedPath)
+  ) return true;
+  if (
     ["PATCH", "PUT"].includes(normalizedMethod) &&
     /^\/store\/items\/[^/]+\/status$/.test(scopedPath)
   ) return true;

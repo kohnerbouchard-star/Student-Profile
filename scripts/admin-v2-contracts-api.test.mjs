@@ -202,7 +202,7 @@ test("Contracts API stays on the cookie-bound Admin BFF and uses existing author
   await api.readContracts({ gameId: GAME_ID });
   await api.readContractDetail({ gameId: GAME_ID, contractId: CONTRACT_ID });
   await api.createContract({ gameId: GAME_ID, contract: { title: "Draft", instructions: "Do it." }, idempotencyKey: IDEMPOTENCY });
-  await api.updateContract({ gameId: GAME_ID, contractId: CONTRACT_ID, changes: { title: "Edited draft" }, idempotencyKey: `${IDEMPOTENCY}.update` });
+  await api.updateContract({ gameId: GAME_ID, contractId: CONTRACT_ID, contract: { title: "Edited draft" }, idempotencyKey: `${IDEMPOTENCY}.update` });
   await api.publishContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.publish` });
   await api.archiveContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.archive` });
   await api.duplicateContract({ gameId: GAME_ID, contractId: CONTRACT_ID, idempotencyKey: `${IDEMPOTENCY}.duplicate` });

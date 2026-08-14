@@ -74,9 +74,9 @@ function contractNotice() {
       AdminIcon({ name: "info", size: 18 }),
       createElement("div", {
         children: [
-          createElement("strong", { text: "Authoritative supervisory surface" }),
+          createElement("strong", { text: "Read-only publication monitor" }),
           createElement("p", {
-            text: "Current Admin contracts expose campaign event history, publication-effect status, the next campaign checkpoint, and recovery of failed effects. They do not expose free-form news creation, title/body editing, or arbitrary event scheduling, so those controls are intentionally absent.",
+            text: "This page monitors campaign events, publication status, upcoming checkpoints, and failed-publication recovery. News authoring and arbitrary event scheduling are not available from this surface.",
           }),
         ],
       }),
@@ -244,6 +244,7 @@ function openDetail(row, onRecover, trigger) {
   const pairs = isNews
     ? [
       detailPair("Definition", row.newsDefinitionId),
+      detailPair("Published content", "The current read model does not expose the rendered headline/body."),
       detailPair("Audience", titleCase(row.audience)),
       detailPair("Publication status", titleCase(row.status)),
       detailPair("Attempts", String(row.attemptCount ?? 0)),
@@ -512,11 +513,11 @@ export function NewsEventsRoute({
     content = loadingContent();
   } else if (status === ADMIN_DATA_STATES.FAILED) {
     content = AdminErrorState({
-      title: "News & Events could not be loaded",
+      title: "News & Event Monitor could not be loaded",
       message: state.error?.userMessage || "The authoritative world-event service is unavailable.",
       requestId: state.error?.requestId,
       retryAfterSeconds: state.error?.retryAfterSeconds,
-      retry: state.error?.retryable ? { label: "Retry News & Events", onClick: onRefresh } : null,
+      retry: state.error?.retryable ? { label: "Retry monitor", onClick: onRefresh } : null,
     });
   } else {
     const resolved = resolvedContent(state.data || {}, filters, onFiltersChange, onRefresh, onRecover);
@@ -531,8 +532,8 @@ export function NewsEventsRoute({
 
   const frame = AdminPageFrame({
     eyebrow: "World",
-    title: "News & Events",
-    description: "Supervise authoritative campaign events and game-news publication without creating a parallel event system.",
+    title: "News & Event Monitor",
+    description: "Read campaign events and publication status, inspect upcoming checkpoints, and recover failed publication effects. Content authoring remains outside this read-only monitor.",
     actions: refreshButton(onRefresh, status === ADMIN_DATA_STATES.REFRESHING),
     content,
   });

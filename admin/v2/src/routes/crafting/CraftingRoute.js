@@ -10,6 +10,7 @@ import {
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
+import { fromAdminDateTimeLocalValue, toAdminDateTimeLocalValue } from "../../core/date-time.js";
 import { CraftingSkeleton } from "./CraftingSkeleton.js";
 
 function titleCase(value, fallback = "Not available") {
@@ -720,7 +721,7 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
     value: item?.itemKey || "",
     autocomplete: "off",
   });
-  if (editing) itemKey.setDisabled(true);
+  if (editing) itemKey.setReadOnly(true, "Item identity is immutable. Change the supply state below instead.");
 
   const countryCode = AdminField({
     name: "countryCode",
@@ -785,9 +786,9 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
   const expiresAt = AdminField({
     name: "expiresAt",
     label: "Expires at",
-    hint: "Optional ISO 8601 timestamp.",
-    value: item?.expiresAt || "",
-    autocomplete: "off",
+    type: "datetime-local",
+    hint: "Optional local expiration time. It is stored as an absolute timestamp.",
+    value: toAdminDateTimeLocalValue(item?.expiresAt),
   });
   const status = createElement("p", {
     className: "admin-crafting-form__status",
@@ -874,7 +875,8 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
     const eventValue = numberOrNull(eventMultiplier.getValue());
     const routeValue = numberOrNull(routeMultiplier.getValue());
     const sourceEvent = sourceEventKey.getValue().trim();
-    const expiry = expiresAt.getValue().trim();
+    const expiryInput = expiresAt.getValue().trim();
+    const expiry = expiryInput ? fromAdminDateTimeLocalValue(expiryInput) : "";
     let invalid = false;
 
     if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(key)) {
@@ -901,8 +903,8 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
       sourceEventKey.setError("Use an existing safe event/reference key.");
       invalid = true;
     }
-    if (expiry && Number.isNaN(Date.parse(expiry))) {
-      expiresAt.setError("Enter a valid ISO 8601 timestamp or leave this field blank.");
+    if (expiryInput && !expiry) {
+      expiresAt.setError("Enter a valid expiration date and time or leave this field blank.");
       invalid = true;
     }
     if (invalid) {
@@ -910,9 +912,7 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
       return;
     }
 
-    dialog.setBusy(true);
-    try {
-      const result = await onApplySupply(key, {
+    const proposed = {
         countryCode: country || null,
         scarcityBand: scarcityBand.getValue(),
         availableQuantity: available,
@@ -920,7 +920,37 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
         routeMultiplier: routeValue,
         sourceEventKey: sourceEvent || null,
         expiresAt: expiry || null,
-      });
+    };
+    const before = item ? [
+      `Scarcity: ${titleCase(item.scarcityBand)}`,
+      `Available: ${item.availableQuantity === null ? "unbounded" : displayNumber(item.availableQuantity)}`,
+      `Event multiplier: ${displayDecimal(item.eventMultiplier)}`,
+      `Route multiplier: ${displayDecimal(item.routeMultiplier)}`,
+      `Expires: ${item.expiresAt ? displayDate(item.expiresAt) : "no expiry"}`,
+    ].join(" · ") : "No existing override";
+    const after = [
+      `Scarcity: ${titleCase(proposed.scarcityBand)}`,
+      `Available: ${proposed.availableQuantity === null ? "unbounded" : displayNumber(proposed.availableQuantity)}`,
+      `Event multiplier: ${displayDecimal(proposed.eventMultiplier)}`,
+      `Route multiplier: ${displayDecimal(proposed.routeMultiplier)}`,
+      `Expires: ${proposed.expiresAt ? displayDate(proposed.expiresAt) : "no expiry"}`,
+    ].join(" · ");
+    const review = AdminConfirmDialog({
+      title: editing ? "Review supply change" : "Review supply override",
+      message: `Apply this ${country || "global"} supply state for ${key}?`,
+      detail: "This changes availability used by the physical economy. It does not change player-owned Inventory.",
+      changes: [{ label: "Supply state", before, after }],
+      confirmLabel: "Apply supply state",
+      tone: "neutral",
+      async onConfirm() {
+        const result = await onApplySupply(key, proposed);
+        if (result?.ok !== true) throw new Error("CRAFTING_SUPPLY_FAILED");
+        return true;
+      },
+    });
+    const accepted = await review.open(submit);
+    review.destroy();
+    if (accepted) dialog.close("committed");
       if (result?.ok === true) {
         dialog.close("committed");
       } else {
@@ -1037,8 +1067,8 @@ export function CraftingRoute({
 
   const pageFrame = AdminPageFrame({
     eyebrow: "Physical economy",
-    title: "Crafting Supervision",
-    description: "Supervise authoritative Crafting activity, supply state, effects, and safe recovery without bypassing Inventory ownership.",
+    title: "Crafting Operations",
+    description: "Review Crafting jobs, manage game supply overrides, inspect effects, and recover failed jobs. Recipe definitions and player-owned Inventory remain read-only here.",
     actions: [supplyButton, refreshButton],
     content: route,
   });
