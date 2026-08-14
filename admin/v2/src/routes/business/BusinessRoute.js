@@ -378,8 +378,8 @@ export function BusinessRoute({
 
   const page = AdminPageFrame({
     eyebrow: "Game administration",
-    title: "Business",
-    description: "Supervise player businesses using the current Business entity and compliance contracts.",
+    title: "Business Management",
+    description: "Supervise player businesses and apply supported compliance changes for the current game.",
     actions: [refreshButton],
     content: route,
   });
