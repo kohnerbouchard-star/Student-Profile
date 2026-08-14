@@ -348,7 +348,8 @@ async function runState(browser, fixture, scenario) {
     } else {
       await runtime.page.locator('[data-admin-v2-state="permission-denied"]')
         .waitFor({ state: "attached", timeout: 10_000 });
-      await runtime.page.getByText("Crafting access restricted").waitFor({ state: "visible" });
+      await assertNoLeaks(runtime.page, "permission");
+      assert.deepEqual(runtime.errors, []);
       assert.equal(runtime.mutations.length, 0);
     }
     await assertNoOverflow(runtime.page, scenario);
