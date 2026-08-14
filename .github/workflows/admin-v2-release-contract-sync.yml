@@ -28,41 +28,45 @@ jobs:
         run: |
           from pathlib import Path
 
-          def replace(path, old, new, *, minimum=1):
+          def align(path, old, new):
               target = Path(path)
               text = target.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count < minimum:
-                  raise SystemExit(f"Expected at least {minimum} occurrence(s) in {path}: {old!r}; found {count}")
-              target.write_text(text.replace(old, new), encoding="utf-8")
-              print(f"{path}: replaced {count} occurrence(s)")
+              if old in text:
+                  count = text.count(old)
+                  target.write_text(text.replace(old, new), encoding="utf-8")
+                  print(f"{path}: replaced {count} stale occurrence(s)")
+                  return
+              if new in text:
+                  print(f"{path}: already aligned")
+                  return
+              raise SystemExit(f"Neither stale nor aligned contract found in {path}")
 
-          replace(
+          align(
               "scripts/admin-messaging-moderation-contract.mjs",
               'assert.match(messageReadFlow, /terminal\\.refresh\\(\\)/);',
               'assert.match(messageReadFlow, /dispatchResourceRefresh\\(config,\\s*\\["messages",\\s*"notifications"\\]\\)/);\nassert.doesNotMatch(messageReadFlow, /terminal\\.refresh\\(\\)/);',
           )
-          replace(
+          align(
               "scripts/admin-v2-news-events-browser-smoke.mjs",
               'name: "News & Events", exact: true',
               'name: "News & Event Monitor", exact: true',
           )
-          replace(
+          align(
               "scripts/admin-v2-crafting-browser-smoke.mjs",
               '"Crafting Supervision"',
               '"Crafting Operations"',
           )
-          replace(
+          align(
               "scripts/admin-v2-contracts-browser-smoke.mjs",
-              '/^Contracts$/',
-              '/^Contracts Management$/',
+              'name: /^Contracts$/',
+              'name: "Contracts Management"',
           )
-          replace(
+          align(
               "scripts/admin-v2-settings-browser-smoke.mjs",
-              '/^Game Settings$/',
-              '/^Settings$/',
+              'name: /^Game Settings$/',
+              'name: /^Settings$/',
           )
-          replace(
+          align(
               "scripts/admin-v2-players-browser-smoke.mjs",
               '"Edit Admin profile"',
               '"Edit admin metadata"',
