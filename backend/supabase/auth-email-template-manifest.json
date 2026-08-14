@@ -15,16 +15,16 @@
   "environments": {
     "staging": {
       "projectRef": "eecvbssdvarfcykcfrny",
-      "verificationReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-email-verification",
-      "recoveryReviewUrl": "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/admin-password-recovery",
-      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html?project_ref=eecvbssdvarfcykcfrny",
+      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html?project_ref=eecvbssdvarfcykcfrny",
+      "appSignInUrl": "https://www.econovaria.com/?mode=admin",
       "notice": "STAGING ENVIRONMENT — TEST ACCOUNT MESSAGE"
     },
     "production": {
       "projectRef": "cgiukdjwicykrmtkhudh",
-      "verificationReviewUrl": "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/admin-email-verification",
-      "recoveryReviewUrl": "https://econovaria.vercel.app/auth/recovery-start.html",
-      "appSignInUrl": "https://econovaria.vercel.app/?mode=admin",
+      "verificationReviewUrl": "https://www.econovaria.com/auth/security-review.html?project_ref=cgiukdjwicykrmtkhudh",
+      "recoveryReviewUrl": "https://www.econovaria.com/auth/recovery-start.html?project_ref=cgiukdjwicykrmtkhudh",
+      "appSignInUrl": "https://www.econovaria.com/?mode=admin",
       "notice": ""
     }
   },
