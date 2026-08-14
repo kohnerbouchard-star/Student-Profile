@@ -66,6 +66,11 @@ jobs:
           if count < 3:
               raise SystemExit(f"Expected at least 3 stale Settings save locators, found {count}")
           settings.write_text(text.replace('name: "Review and save"', 'name: "Review changes"'), encoding="utf-8")
+          replace_exact(
+              "scripts/admin-v2-settings-browser-smoke.mjs",
+              '''    const confirm = dialog.getByRole("button", { name: "Apply settings" });\n    assert.equal(await confirm.evaluate((node) => node === document.activeElement), true, "confirm action did not autofocus");''',
+              '''    const safeCancel = dialog.getByRole("button", { name: "Cancel" });\n    assert.equal(await safeCancel.evaluate((node) => node === document.activeElement), true, "safe cancel action did not autofocus");''',
+          )
 
           replace_exact(
               "scripts/admin-v2-players-browser-smoke.mjs",
