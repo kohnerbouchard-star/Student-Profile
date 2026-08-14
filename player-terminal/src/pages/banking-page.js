@@ -3,38 +3,16 @@ import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 import { isEndpointEnabled } from "../api/capabilities.js";
 
-function hasNumericValue(value) {
-  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
-}
-
-function optionalCurrency(value, currencyCode, fallback = "Not configured") {
-  return hasNumericValue(value) ? formatCurrency(Number(value), currencyCode) : fallback;
-}
-
-function optionalPercent(value, fallback = "Not configured") {
-  return hasNumericValue(value) ? `${Number(value).toFixed(2)}%` : fallback;
-}
-
-function publicAccountType(value) {
-  const normalized = String(value || "checking").trim().toLowerCase();
-  return normalized === "cash" ? "checking" : normalized || "checking";
-}
-
-function publicCheckingAccountId(value) {
-  const normalized = String(value || "").trim();
-  const semanticAccountId = normalized.toLowerCase();
-  if (!normalized || semanticAccountId === "checking" || semanticAccountId === "cash") return "CHECKING";
-  return normalized;
-}
+function hasNumericValue(value) { return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)); }
+function optionalCurrency(value, currencyCode, fallback = "Not configured") { return hasNumericValue(value) ? formatCurrency(Number(value), currencyCode) : fallback; }
+function optionalPercent(value, fallback = "Not configured") { return hasNumericValue(value) ? `${Number(value).toFixed(2)}%` : fallback; }
+function publicAccountType(value) { const normalized = String(value || "checking").trim().toLowerCase(); return normalized === "cash" ? "checking" : normalized || "checking"; }
+function publicCheckingAccountId(value) { const normalized = String(value || "").trim(); const semanticAccountId = normalized.toLowerCase(); if (!normalized || semanticAccountId === "checking" || semanticAccountId === "cash") return "CHECKING"; return normalized; }
 
 function renderTransaction(transaction, fallbackCurrencyCode) {
   const positive = transaction.amount >= 0;
   const currencyCode = transaction.currencyCode || fallbackCurrencyCode;
-  return `<article class="player-terminal-transaction-row">
-    <span class="is-${positive ? "good" : "cyan"}">${icon(positive ? "contracts" : "arrowSwap")}</span>
-    <div><strong>${escapeHtml(transaction.description)}</strong><small>${escapeHtml(transaction.date)} · ${escapeHtml(transaction.category)}</small></div>
-    <div><strong class="${positive ? "is-good" : ""}">${positive ? "+" : ""}${escapeHtml(formatCurrency(transaction.amount, currencyCode))}</strong><small>${escapeHtml(transaction.status)}</small></div>
-  </article>`;
+  return `<article class="player-terminal-transaction-row ${positive ? "is-credit" : "is-debit"}"><span class="is-${positive ? "good" : "cyan"}">${icon(positive ? "contracts" : "arrowSwap")}</span><div><strong>${escapeHtml(transaction.description)}</strong><small>${escapeHtml(transaction.date)} · ${escapeHtml(transaction.category)}</small><span class="player-terminal-transaction-direction">${positive ? "CREDIT" : "DEBIT"} · ${escapeHtml(transaction.status)}</span></div><div><strong class="${positive ? "is-good" : "is-bad"}">${positive ? "+" : ""}${escapeHtml(formatCurrency(transaction.amount, currencyCode))}</strong>${hasNumericValue(transaction.balanceAfter) ? `<small class="player-terminal-transaction-balance">Balance ${escapeHtml(formatCurrency(transaction.balanceAfter, currencyCode))}</small>` : ""}</div></article>`;
 }
 
 function renderBalanceCard(balance, bank) {
@@ -44,10 +22,8 @@ function renderBalanceCard(balance, bank) {
   const isSavings = accountType === "savings";
   const detail = isSavings && bank.savings?.configured !== false
     ? `${escapeHtml(optionalPercent(bank.savings?.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings?.interestEarned, currencyCode, "Interest unavailable"))} earned`
-    : accountType === "checking"
-      ? `Authoritative ${escapeHtml(currencyCode)} checking balance`
-      : `Authoritative ${escapeHtml(currencyCode)} balance`;
-  return `<article class="player-terminal-bank-card ${isSavings ? "is-savings" : "is-checking"}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(isSavings ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3><p>${detail}</p></article>`;
+    : accountType === "checking" ? `Authoritative ${escapeHtml(currencyCode)} checking balance` : `Authoritative ${escapeHtml(currencyCode)} balance`;
+  return `<article class="player-terminal-bank-card ${isSavings ? "is-savings" : "is-checking"}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(isSavings ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3>${hasNumericValue(balance.available) ? `<div class="player-terminal-bank-available"><small>AVAILABLE NOW</small><strong>${escapeHtml(formatCurrency(balance.available, currencyCode))}</strong></div>` : ""}<p>${detail}</p></article>`;
 }
 
 export function renderBankingPage(data) {
@@ -60,59 +36,10 @@ export function renderBankingPage(data) {
   const transferLimitAvailable = hasNumericValue(bank.transferLimit);
   const transferLimit = transferLimitAvailable ? Number(bank.transferLimit) : null;
   const transferMax = transferLimitAvailable && transferLimit > 0 ? ` max="${escapeHtml(transferLimit)}"` : "";
-  const balances = Array.isArray(bank.balances) && bank.balances.length
-    ? bank.balances.map((balance) => ({
-      ...balance,
-      accountType: publicAccountType(balance.accountType),
-    }))
-    : [{
-      accountType: "checking",
-      balance: bank.checking?.balance,
-      currencyCode: bank.checking?.currencyCode || currencyCode,
-    }];
+  const balances = Array.isArray(bank.balances) && bank.balances.length ? bank.balances.map((balance) => ({ ...balance, accountType: publicAccountType(balance.accountType) })) : [{ accountType: "checking", balance: bank.checking?.balance, available: bank.checking?.available, currencyCode: bank.checking?.currencyCode || currencyCode }];
   const hasSavingsBalance = balances.some((balance) => balance.accountType === "savings");
   const canLoadMore = bank.pagination?.hasMore === true && Boolean(bank.pagination?.nextCursor);
   const checkingAccountId = publicCheckingAccountId(bank.checking?.accountId);
 
-  return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
-    <header class="player-terminal-page-heading">
-      <div><small>PLAYER LEDGER & BANKING</small><h2>Banking</h2><p>Review authoritative checking and savings balances with posted ledger activity. Additional account and transfer tools remain visible as backend capabilities are added.</p></div>
-      <div class="player-terminal-heading-actions">${bank.stale ? renderStatusPill("STALE DATA", "amber") : ""}${creditConfigured ? renderStatusPill(`CREDIT ${bank.creditScore}`, "green") : renderStatusPill("CREDIT NOT CONFIGURED", "amber")}</div>
-    </header>
-
-    <div class="player-terminal-bank-accounts" aria-label="Current balances">
-      ${balances.map((balance) => renderBalanceCard(balance, bank)).join("")}
-      ${hasSavingsBalance ? "" : `<article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>NOT CONFIGURED</strong></span></div><h3>Not configured</h3><p>The current backend has not provisioned a savings account for this player.</p></article>`}
-      <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
-    </div>
-
-    <div class="player-terminal-bank-layout">
-      <section class="player-terminal-panel player-terminal-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill(savingsTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", savingsTransferConfigured ? "cyan" : "amber")}</header>
-        <details class="player-terminal-disclosure" open><summary><span>${icon("arrowSwap")}</span><div><strong>Transfer between your accounts</strong><small>${savingsConfigured ? "Move funds between checking and savings" : "Savings account support is not configured"}</small></div>${icon("chevronRight")}</summary><form data-player-form="savings-transfer" data-endpoint="savingsTransfer">
-          <label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label>
-          <label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option></select></label>
-          <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label>
-          <label>NOTE<input name="note" type="text" maxlength="100" placeholder="Optional transfer note" ${savingsConfigured ? "" : "disabled"}/></label>
-          <button class="player-terminal-primary-button" type="submit" ${savingsTransferConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button>
-        </form></details>
-      </section>
-
-      <section class="player-terminal-panel player-terminal-external-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill(bankTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", bankTransferConfigured ? "cyan" : "amber")}</header>
-        <details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The mutable Player ID will be resolved to the recipient UUID by the backend before funds move</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer">
-          <label>RECIPIENT PLAYER ID<input name="recipientPlayerIdentifier" type="text" required maxlength="160" autocomplete="off" autocapitalize="characters" placeholder="Enter the current Player ID" /></label>
-          <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" /></label>
-          <label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label>
-          <button class="player-terminal-primary-button" type="submit" ${bankTransferConfigured ? "" : "disabled"}>${icon("send")} Send transfer</button>
-        </form></details>
-      </section>
-
-      <section class="player-terminal-panel player-terminal-transactions-panel">
-        <header class="player-terminal-panel-header"><div><span>POSTED LEDGER ACTIVITY</span><strong>${escapeHtml(bank.transactions.length)} transactions</strong></div><button class="player-terminal-compact-button" type="button" data-player-local-action="download-transactions">Export</button></header>
-        <div class="player-terminal-transaction-list">${bank.transactions.length ? bank.transactions.map((transaction) => renderTransaction(transaction, currencyCode)).join("") : renderEmptyState({ title: "No transactions yet", detail: "Posted purchases, rewards, trades, and future transfers will appear here.", iconName: "banking" })}</div>
-        <footer class="player-terminal-panel-footer"><p class="player-terminal-inline-error" role="alert" aria-live="assertive" data-player-banking-page-error hidden></p>${canLoadMore ? `<button class="player-terminal-compact-button" type="button" data-player-banking-load-more>Load more activity</button>` : `<small>All available activity loaded</small>`}</footer>
-      </section>
-    </div>
-  </section>`;
+  return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking"><header class="player-terminal-page-heading"><div><small>PLAYER LEDGER & BANKING</small><h2>Banking</h2><p>Review authoritative checking and savings balances, available funds, and posted ledger activity.</p></div><div class="player-terminal-heading-actions">${bank.stale ? renderStatusPill("STALE DATA", "amber") : ""}${creditConfigured ? renderStatusPill(`CREDIT ${bank.creditScore}`, "green") : renderStatusPill("CREDIT NOT CONFIGURED", "amber")}</div></header><div class="player-terminal-bank-accounts" aria-label="Current balances">${balances.map((balance) => renderBalanceCard(balance, bank)).join("")}${hasSavingsBalance ? "" : `<article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>NOT CONFIGURED</strong></span></div><h3>Not configured</h3><p>The current backend has not provisioned a savings account for this player.</p></article>`}<article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article></div><div class="player-terminal-bank-layout"><section class="player-terminal-panel player-terminal-transfer-panel"><header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill(savingsTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", savingsTransferConfigured ? "cyan" : "amber")}</header><details class="player-terminal-disclosure" open><summary><span>${icon("arrowSwap")}</span><div><strong>Transfer between your accounts</strong><small>${savingsConfigured ? "Move funds between checking and savings" : "Savings account support is not configured"}</small></div>${icon("chevronRight")}</summary><form data-player-form="savings-transfer" data-endpoint="savingsTransfer"><label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label><label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option></select></label><label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label><label>NOTE<input name="note" type="text" maxlength="100" placeholder="Optional transfer note" ${savingsConfigured ? "" : "disabled"}/></label><button class="player-terminal-primary-button" type="submit" ${savingsTransferConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button></form></details></section><section class="player-terminal-panel player-terminal-external-transfer-panel"><header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill(bankTransferConfigured ? "CONFIRMATION REQUIRED" : "BACKEND INTEGRATION PENDING", bankTransferConfigured ? "cyan" : "amber")}</header><details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The mutable Player ID is resolved by the backend before funds move</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer"><label>RECIPIENT PLAYER ID<input name="recipientPlayerIdentifier" type="text" required maxlength="160" autocomplete="off" autocapitalize="characters" placeholder="Enter the current Player ID" /></label><label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" /></label><label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label><button class="player-terminal-primary-button" type="submit" ${bankTransferConfigured ? "" : "disabled"}>${icon("send")} Send transfer</button></form></details></section><section class="player-terminal-panel player-terminal-transactions-panel"><header class="player-terminal-panel-header"><div><span>POSTED LEDGER ACTIVITY</span><strong>${escapeHtml(bank.transactions.length)} transactions</strong></div><button class="player-terminal-compact-button" type="button" data-player-local-action="download-transactions">Export</button></header><div class="player-terminal-transaction-list">${bank.transactions.length ? bank.transactions.map((transaction) => renderTransaction(transaction, currencyCode)).join("") : renderEmptyState({ title: "No transactions yet", detail: "Posted purchases, rewards, trades, and future transfers will appear here.", iconName: "banking" })}</div><footer class="player-terminal-panel-footer"><p class="player-terminal-inline-error" role="alert" aria-live="assertive" data-player-banking-page-error hidden></p>${canLoadMore ? `<button class="player-terminal-compact-button" type="button" data-player-banking-load-more>Load more activity</button>` : `<small>All available activity loaded</small>`}</footer></section></div></section>`;
 }
