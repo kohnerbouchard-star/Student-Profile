@@ -27,7 +27,10 @@ function navigationItem(item, currentId, onNavigate) {
     element.append(createElement("span", {
       className: "admin-navigation__badge",
       text: item.badge,
-      attrs: { "aria-label": `${item.badge} notifications` },
+      attrs: {
+        "aria-label": item.badgeLabel || String(item.badge),
+        title: item.badgeTitle || item.badgeLabel || String(item.badge),
+      },
     }));
   }
 

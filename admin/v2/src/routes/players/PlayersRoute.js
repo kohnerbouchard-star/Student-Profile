@@ -107,7 +107,14 @@ function detailContent(player) {
       createElement("section", {
         className: "admin-players-route__detail-section",
         children: [
-          createElement("h3", { text: "Roster identity" }),
+          createElement("div", {
+            className: "admin-players-route__detail-heading",
+            children: [
+              createElement("h3", { text: "Roster identity" }),
+              createElement("span", { className: "admin-field__state", text: "Read only here" }),
+            ],
+          }),
+          createElement("p", { className: "admin-u-muted", text: "These are the player-facing roster values. Admin metadata below does not overwrite them." }),
           createElement("dl", {
             className: "admin-players-route__definitions",
             children: [
@@ -125,7 +132,7 @@ function detailContent(player) {
       createElement("section", {
         className: "admin-players-route__detail-section",
         children: [
-          createElement("h3", { text: "Administrative profile" }),
+          createElement("h3", { text: "Admin metadata" }),
           createElement("dl", {
             className: "admin-players-route__definitions",
             children: [
@@ -373,8 +380,8 @@ export function PlayersRoute({
 
   function editProfile(player, opener) {
     openFormDialog({
-      title: "Edit administrative profile",
-      description: "These fields persist only to the authoritative Admin player-settings contract. They do not mutate the Player Terminal roster identity.",
+      title: "Edit admin metadata",
+      description: "These staff-only labels and notes do not rename or reassign the player-facing roster identity shown above.",
       opener,
       createForm: (options) => PlayerProfileForm({ ...options, player }),
       submit: (input) => onEditProfile(player, input),
@@ -397,7 +404,7 @@ export function PlayersRoute({
       className: "admin-players-route__detail-actions",
     });
     const profileButton = routeButton({
-      label: "Edit Admin profile",
+      label: "Edit admin metadata",
       icon: "settings",
       quiet: true,
       action: "edit-profile",
@@ -497,6 +504,9 @@ export function PlayersRoute({
     content,
   });
   route.append(frame.element);
+  route.addEventListener("admin-route-intent", (event) => {
+    if (event.detail?.intent === "create" && state.status !== ADMIN_DATA_STATES.STALE) addPlayer(addButton);
+  });
 
   return {
     element: route,

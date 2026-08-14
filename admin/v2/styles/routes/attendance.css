@@ -1,3 +1,28 @@
+.admin-attendance-route__selected-player {
+  display: grid;
+  gap: var(--admin-space-1);
+  padding: var(--admin-space-3);
+  border: 1px solid var(--admin-color-line-strong);
+  background: var(--admin-color-surface-2);
+}
+
+.admin-attendance-route__action-workflows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.admin-attendance-route__action-workflow {
+  min-inline-size: 0;
+  padding: var(--admin-space-4);
+  border: 1px solid var(--admin-color-line);
+  background: var(--admin-color-surface-1);
+}
+
+@media (max-width: 960px) {
+  .admin-attendance-route__action-workflows { grid-template-columns: 1fr; }
+}
+
 .admin-attendance-route,
 .admin-attendance-route__resolved,
 .admin-attendance-route__roster {

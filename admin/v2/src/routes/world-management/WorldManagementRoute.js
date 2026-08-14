@@ -28,7 +28,7 @@ function displayNumber(value) {
 
 function displayMinor(value) {
   return Number.isFinite(Number(value))
-    ? `${Number(value).toLocaleString("en-US")} minor units`
+    ? Number(value).toLocaleString("en-US")
     : "—";
 }
 
@@ -56,12 +56,18 @@ function actionButton({
   quiet = false,
   danger = false,
   disabled = false,
+  disabledReason = "",
   onClick,
   action,
 }) {
   const button = createElement("button", {
     className: `admin-button${quiet ? " admin-button--quiet" : ""}`,
-    attrs: { type: "button", disabled },
+    attrs: {
+      type: "button",
+      disabled,
+      title: disabled ? (disabledReason || "This action is currently unavailable.") : null,
+      "aria-label": disabled && disabledReason ? `${label}. ${disabledReason}` : label,
+    },
     dataset: {
       tone: danger ? "danger" : null,
       worldAction: action || "",
@@ -117,9 +123,10 @@ function factGrid(entries) {
   });
 }
 
-function sectionCard({ eyebrow, title, description = "", actions = [], children = [] }) {
+function sectionCard({ id = "", eyebrow, title, description = "", actions = [], children = [] }) {
   return createElement("section", {
     className: "admin-world-route__section",
+    attrs: id ? { id } : {},
     children: [
       createElement("header", {
         className: "admin-world-route__section-header",
@@ -169,6 +176,7 @@ function failedPanelNotice(model) {
 function worldConfiguration(model) {
   const runtime = model.runtime;
   return sectionCard({
+    id: "world-configuration",
     eyebrow: "World configuration",
     title: runtime ? "Authoritative runtime" : "Runtime metadata unavailable",
     description: "Runtime pack identity and revision are read directly from the current game-scoped World contract.",
@@ -373,6 +381,7 @@ function campaignSection(model, { mutationsDisabled, onReviewedAction }) {
   });
 
   return sectionCard({
+    id: "world-campaign",
     eyebrow: "Simulation lifecycle",
     title: campaign
       ? `${titleCase(campaign.currentPhase)} · ${titleCase(campaign.status)}`
@@ -447,6 +456,7 @@ function effectsSection(model, { mutationsDisabled, onReviewedAction }) {
   });
 
   return sectionCard({
+    id: "world-effects",
     eyebrow: "Simulation effects",
     title: `${displayNumber(model.effects.length)} effect commands`,
     description: `${displayNumber(model.summary.failedEffectCount)} failed effects require review. Effect payloads and News content are not displayed here.`,
@@ -603,6 +613,11 @@ function geographySection(model, { mutationsDisabled, onReviewedAction }) {
             quiet: true,
             danger: !reopening,
             disabled: mutationsDisabled || !model.runtime || !route.routeId,
+            disabledReason: mutationsDisabled
+              ? "Refresh World state before changing routes so the operation uses the latest revision."
+              : !model.runtime
+                ? "World runtime metadata is unavailable."
+                : !route.routeId ? "This route has no actionable reference." : "",
             action: reopening ? "route-reopen" : "route-close",
             onClick(event) {
               const from = locationNames.get(route.fromLocationId) || titleCase(route.fromLocationId);
@@ -629,6 +644,7 @@ function geographySection(model, { mutationsDisabled, onReviewedAction }) {
   });
 
   return sectionCard({
+    id: "world-geography",
     eyebrow: "Geography & movement",
     title: `${displayNumber(model.geography.locations.length)} locations · ${displayNumber(model.geography.routes.length)} routes`,
     description: "Route close/reopen is the only geography mutation currently exposed because it already exists in the World Admin contract.",
@@ -697,9 +713,10 @@ function travelSection(model) {
   });
 
   return sectionCard({
+    id: "world-travel",
     eyebrow: "Travel oversight",
     title: `${displayNumber(model.travel.states.length)} travel states · ${displayNumber(model.travel.journeys.length)} journeys`,
-    description: "Player ownership identifiers are intentionally excluded from this Admin V2 presentation.",
+    description: "Review aggregate travel state. Player identity details remain protected on this operational view.",
     children: [createElement("div", {
       className: "admin-world-route__table admin-world-route__table--travel",
       children: table.element,
@@ -745,7 +762,7 @@ function residencySection(model) {
   return sectionCard({
     eyebrow: "Residency oversight",
     title: `${displayNumber(model.residency.length)} residency records`,
-    description: "Current, pending, and eligible country state is read-only in this route because no residency mutation is exposed by the current Admin contract.",
+    description: "Current, pending, and eligible country state is read-only here. Residency changes are not supported by this management surface.",
     children: [createElement("div", {
       className: "admin-world-route__table admin-world-route__table--residency",
       children: table.element,
@@ -785,6 +802,17 @@ function resolvedContent(model, handlers, mutationsDisabled) {
     children: [
       summary(model),
       failedPanelNotice(model),
+      createElement("nav", {
+        className: "admin-world-route__local-nav",
+        attrs: { "aria-label": "World Management sections" },
+        children: [
+          ["Configuration", "world-configuration"],
+          ["Campaign", "world-campaign"],
+          ["Effects", "world-effects"],
+          ["Geography", "world-geography"],
+          ["Travel & residency", "world-travel"],
+        ].map(([label, id]) => createElement("a", { attrs: { href: `#${id}` }, text: label })),
+      }),
       worldConfiguration(model),
       countrySection(model),
       currencySection(model),
@@ -889,7 +917,7 @@ export function WorldManagementRoute({
   const pageFrame = AdminPageFrame({
     eyebrow: "Game administration",
     title: "World Management",
-    description: "Supervise the selected game's authoritative World runtime, countries, currencies, campaign lifecycle, geography, travel, and residency. News & Events remains a separate Admin route.",
+    description: "Manage campaign lifecycle and route availability, review geography/effects, and monitor read-only travel, residency, country, and currency state. News & Events remains a separate monitor.",
     actions: [refreshButton],
     content: route,
   });

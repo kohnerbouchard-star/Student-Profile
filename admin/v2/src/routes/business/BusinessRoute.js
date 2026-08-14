@@ -133,7 +133,16 @@ function detailContent(business) {
 }
 
 function complianceForm({ business, onSubmit, onCancel }) {
-  const requirementKey = AdminField({ name: "requirementKey", label: "Requirement key", type: "text", placeholder: "operating-license", autocomplete: "off" });
+  const requirementKey = AdminField({
+    name: "requirementKey",
+    label: "Existing compliance requirement key",
+    type: "text",
+    placeholder: "operating-license",
+    autocomplete: "off",
+    minLength: 2,
+    maxLength: 120,
+    hint: "Use an existing requirement key. The current Business read model does not expose a requirement catalog, so this screen will not invent one.",
+  });
   const requirementType = AdminField({
     name: "requirementType",
     label: "Requirement type",
@@ -158,7 +167,7 @@ function complianceForm({ business, onSubmit, onCancel }) {
       { value: "waived", label: "Waived" },
     ],
   });
-  const feeAmount = AdminField({ name: "feeAmount", label: `Fee amount${business.currencyCode ? ` (${business.currencyCode})` : ""}`, type: "number", value: "0", min: "0", step: "0.01" });
+  const feeAmount = AdminField({ name: "feeAmount", label: `Fee amount${business.currencyCode ? ` (${business.currencyCode})` : ""}`, type: "number", value: "0", min: 0, max: 10_000_000, step: 0.01, inputMode: "decimal" });
   const expiresAt = AdminField({ name: "expiresAt", label: "Expiration (optional)", type: "datetime-local" });
   const reason = AdminField({ name: "reason", label: "Reason", type: "textarea", placeholder: "Explain the administrative compliance decision." });
   const error = createElement("p", { className: "admin-business-compliance__error", attrs: { role: "alert" } });
@@ -378,8 +387,8 @@ export function BusinessRoute({
 
   const page = AdminPageFrame({
     eyebrow: "Game administration",
-    title: "Business",
-    description: "Supervise player businesses using the current Business entity and compliance contracts.",
+    title: "Business Oversight",
+    description: "Review player businesses and apply the compliance changes currently supported by this surface. Business identity and operating metrics are read-only here.",
     actions: [refreshButton],
     content: route,
   });

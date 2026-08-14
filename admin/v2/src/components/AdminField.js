@@ -1,5 +1,13 @@
 import { appendContent, createElement, createId, setText } from "./dom.js";
 
+function setOptionalAttribute(element, name, value) {
+  if (value === undefined || value === null || value === false || value === "") {
+    element.removeAttribute(name);
+    return;
+  }
+  element.setAttribute(name, value === true ? "" : String(value));
+}
+
 function createControl({ type, options, name, value, placeholder, autocomplete }) {
   if (type === "textarea") {
     const textarea = createElement("textarea", {
@@ -26,11 +34,10 @@ function createControl({ type, options, name, value, placeholder, autocomplete }
     return select;
   }
 
-  const input = createElement("input", {
+  return createElement("input", {
     className: "admin-field__control",
     attrs: { type: type || "text", name, placeholder, autocomplete, value: value ?? "" },
   });
-  return input;
 }
 
 export function AdminField({
@@ -41,6 +48,9 @@ export function AdminField({
   error,
   required = false,
   disabled = false,
+  disabledReason = "",
+  readOnly = false,
+  readOnlyReason = "",
   type = "text",
   options,
   value,
@@ -49,12 +59,25 @@ export function AdminField({
   control,
   prefix,
   suffix,
+  min,
+  max,
+  step,
+  minLength,
+  maxLength,
+  pattern,
+  inputMode,
+  rows,
+  ariaLabel,
 } = {}) {
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
+  const stateId = `${id}-state`;
   const root = createElement("div", {
     className: "admin-field",
-    dataset: { invalid: Boolean(error) },
+    dataset: {
+      invalid: Boolean(error),
+      state: disabled ? "unavailable" : readOnly ? "readonly" : "editable",
+    },
   });
   const labelElement = createElement("label", {
     className: "admin-field__label",
@@ -67,6 +90,10 @@ export function AdminField({
       text: "Required",
     }));
   }
+  const stateBadge = createElement("span", {
+    className: "admin-field__state",
+  });
+  labelElement.append(stateBadge);
 
   const input = control || createControl({
     type,
@@ -77,15 +104,17 @@ export function AdminField({
     autocomplete,
   });
   input.id = id;
-  input.disabled = disabled;
   input.required = required;
   input.classList.add("admin-field__control");
-
-  const describedBy = [];
-  if (hint) describedBy.push(hintId);
-  if (error) describedBy.push(errorId);
-  if (describedBy.length) input.setAttribute("aria-describedby", describedBy.join(" "));
-  input.setAttribute("aria-invalid", error ? "true" : "false");
+  setOptionalAttribute(input, "min", min);
+  setOptionalAttribute(input, "max", max);
+  setOptionalAttribute(input, "step", step);
+  setOptionalAttribute(input, "minlength", minLength);
+  setOptionalAttribute(input, "maxlength", maxLength);
+  setOptionalAttribute(input, "pattern", pattern);
+  setOptionalAttribute(input, "inputmode", inputMode);
+  setOptionalAttribute(input, "rows", rows);
+  setOptionalAttribute(input, "aria-label", ariaLabel);
 
   const controlFrame = createElement("div", { className: "admin-field__control-frame" });
   if (prefix) appendContent(controlFrame, createElement("span", { className: "admin-field__prefix", children: prefix }));
@@ -99,13 +128,60 @@ export function AdminField({
     attrs: { id: hintId },
   });
   hintElement.hidden = !hint;
+  const stateElement = createElement("p", {
+    className: "admin-field__availability",
+    attrs: { id: stateId },
+  });
   const errorElement = createElement("p", {
     className: "admin-field__error",
     text: error || "",
     attrs: { id: errorId },
   });
   errorElement.hidden = !error;
-  root.append(hintElement, errorElement);
+  root.append(hintElement, stateElement, errorElement);
+
+  let selectReadOnlyValue = input.value;
+  const preserveReadOnlySelect = () => {
+    if (root.dataset.state !== "readonly" || input.tagName !== "SELECT") return;
+    input.value = selectReadOnlyValue;
+  };
+  input.addEventListener("change", preserveReadOnlySelect);
+  input.addEventListener("keydown", (event) => {
+    if (root.dataset.state !== "readonly" || input.tagName !== "SELECT" || event.key === "Tab") return;
+    event.preventDefault();
+  });
+
+  function refreshDescribedBy(hasError = Boolean(error)) {
+    const ids = [
+      hint ? hintId : null,
+      stateElement.hidden ? null : stateId,
+      hasError ? errorId : null,
+    ].filter(Boolean);
+    if (ids.length) input.setAttribute("aria-describedby", ids.join(" "));
+    else input.removeAttribute("aria-describedby");
+  }
+
+  function setAvailability({ unavailable = false, unavailableReason = "", readonly = false, readonlyReason = "" } = {}) {
+    const nextState = unavailable ? "unavailable" : readonly ? "readonly" : "editable";
+    root.dataset.state = nextState;
+    const reason = unavailable ? unavailableReason : readonly ? readonlyReason : "";
+    const stateLabel = unavailable ? "Unavailable" : readonly ? "Read only" : "";
+    setText(stateBadge, stateLabel);
+    stateBadge.hidden = !stateLabel;
+    setText(stateElement, reason);
+    stateElement.hidden = !reason;
+
+    input.disabled = unavailable;
+    if (input.tagName === "SELECT") {
+      input.removeAttribute("readonly");
+      input.setAttribute("aria-readonly", readonly ? "true" : "false");
+      if (readonly) selectReadOnlyValue = input.value;
+    } else {
+      input.readOnly = readonly;
+      input.setAttribute("aria-readonly", readonly ? "true" : "false");
+    }
+    refreshDescribedBy(input.getAttribute("aria-invalid") === "true");
+  }
 
   function setError(nextError) {
     const hasError = Boolean(nextError);
@@ -113,18 +189,49 @@ export function AdminField({
     input.setAttribute("aria-invalid", hasError ? "true" : "false");
     setText(errorElement, nextError);
     errorElement.hidden = !hasError;
-    const ids = [hint ? hintId : null, hasError ? errorId : null].filter(Boolean);
-    if (ids.length) input.setAttribute("aria-describedby", ids.join(" "));
-    else input.removeAttribute("aria-describedby");
+    refreshDescribedBy(hasError);
   }
+
+  setAvailability({
+    unavailable: Boolean(disabled),
+    unavailableReason: disabledReason,
+    readonly: Boolean(readOnly),
+    readonlyReason: readOnlyReason,
+  });
+  setError(error || "");
 
   return {
     element: root,
     control: input,
     label: labelElement,
     setError,
-    setDisabled(nextDisabled) { input.disabled = Boolean(nextDisabled); },
-    setValue(nextValue) { input.value = nextValue ?? ""; },
+    setDisabled(nextDisabled, reason = disabledReason) {
+      disabled = Boolean(nextDisabled);
+      disabledReason = reason || "";
+      setAvailability({
+        unavailable: disabled,
+        unavailableReason: disabledReason,
+        readonly: readOnly,
+        readonlyReason: readOnlyReason,
+      });
+    },
+    setReadOnly(nextReadOnly, reason = readOnlyReason) {
+      readOnly = Boolean(nextReadOnly);
+      readOnlyReason = reason || "";
+      setAvailability({
+        unavailable: disabled,
+        unavailableReason: disabledReason,
+        readonly: readOnly,
+        readonlyReason: readOnlyReason,
+      });
+    },
+    setAvailability,
+    setValue(nextValue) {
+      input.value = nextValue ?? "";
+      if (root.dataset.state === "readonly" && input.tagName === "SELECT") {
+        selectReadOnlyValue = input.value;
+      }
+    },
     getValue() { return input.value; },
     focus() { input.focus(); },
   };

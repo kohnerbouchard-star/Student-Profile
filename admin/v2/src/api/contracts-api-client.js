@@ -358,6 +358,17 @@ export function createContractsApiClient({
     });
   }
 
+  function updateContract({ gameId, contractId, contract, idempotencyKey, signal } = {}) {
+    return mutation({
+      method: "PATCH",
+      path: contractPath(gameId, contractId),
+      body: contract,
+      idempotencyKey,
+      signal,
+      validate: validateContractMutation,
+    });
+  }
+
   function publishContract({ gameId, contractId, idempotencyKey, signal } = {}) {
     return mutation({
       path: contractPath(gameId, contractId, "/publish"),
@@ -429,6 +440,7 @@ export function createContractsApiClient({
     readContractDetail,
     cancelContractDetailRequest,
     createContract,
+    updateContract,
     publishContract,
     archiveContract,
     duplicateContract,

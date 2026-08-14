@@ -2,6 +2,7 @@ import {
   AdminDrawer,
   AdminEmptyState,
   AdminErrorState,
+  AdminFreshnessStatus,
   AdminNavigation,
   AdminPermissionBoundary,
   AdminRouteBoundary,
@@ -97,6 +98,9 @@ function navigationGroups() {
       label: route.label,
       icon: route.icon,
       href: route.href,
+      badge: route.modeLabel || null,
+      badgeLabel: route.modeLabel ? `Route mode: ${route.modeLabel}` : null,
+      badgeTitle: route.modeLabel ? `${route.label} is a ${route.modeLabel.toLowerCase()} surface` : null,
     })),
   }));
 }
@@ -196,6 +200,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const settingsApi = createSettingsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
+  let pendingRouteIntent = null;
   let destroyed = false;
   let toast = null;
   const overview = createOverviewController({
@@ -323,7 +328,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   const routeControllers = Object.freeze({
     overview: Object.freeze({
       controller: overview,
-      render: () => overview.render({ onOpenLegacy: navigate }),
+      render: () => overview.render({ onOpenLegacy: (routeId, intent) => navigate(routeId, intent) }),
     }),
     attendance: Object.freeze({
       controller: attendance,
@@ -462,8 +467,9 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     }
   }
 
-  function navigate(routeId) {
+  function navigate(routeId, intent = "") {
     const route = getAdminNavigationRoute(routeId) || getAdminNavigationRoute(ADMIN_DEFAULT_ROUTE_ID);
+    pendingRouteIntent = intent ? { routeId: route.id, intent } : null;
     if (window.location.hash !== route.href) {
       window.location.hash = route.id;
       return;
@@ -484,14 +490,26 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     topbar.setTitle(boundary.route.label);
 
     let content;
+    let routeView = null;
     if (boundary.kind === "migrated") {
       const entry = routeControllers[boundary.moduleKey];
       if (!entry) throw new Error("ADMIN_V2_ROUTE_CONTROLLER_UNAVAILABLE");
-      const routeView = entry.render();
+      routeView = entry.render();
+      const controllerState = entry.controller.getState?.() || {};
+      const routeContent = createElement("div", {
+        className: "admin-route-stack",
+        children: [
+          AdminFreshnessStatus({
+            state: controllerState,
+            onRefresh: typeof entry.controller.load === "function" ? () => entry.controller.load() : null,
+          }),
+          routeView.element,
+        ],
+      });
       content = AdminRouteBoundary({
         routeId: boundary.route.id,
         mode: "source",
-        content: routeView.element,
+        content: routeContent,
       }).element;
       renderedMigratedRouteId = boundary.route.id;
       shell.element.dataset.adminV2State = entry.controller.getState().status;
@@ -526,6 +544,15 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     });
     shell.setContent(permission.element);
     if (!allowed) shell.element.dataset.adminV2State = "permission-denied";
+
+    if (allowed && routeView && pendingRouteIntent?.routeId === activeRouteId) {
+      const intent = pendingRouteIntent.intent;
+      pendingRouteIntent = null;
+      queueMicrotask(() => routeView?.element?.dispatchEvent(new CustomEvent("admin-route-intent", {
+        bubbles: true,
+        detail: { intent },
+      })));
+    }
 
     const activeController = routeControllers[boundary.moduleKey]?.controller;
     const activeState = activeController?.getState?.();

@@ -178,29 +178,29 @@ export function PlayerProfileForm({
   const profile = player?.adminProfile || {};
   const displayName = AdminField({
     name: "displayName",
-    label: "Admin display name",
+    label: "Staff display label",
     value: profile.displayName || player?.displayName || "",
     required: true,
     autocomplete: "off",
-    hint: "Administrative profile metadata. This does not rename the Player Terminal account because no authoritative roster-name update route exists.",
+    hint: "Staff-only label. This does not rename the Player Terminal account.",
   });
   const status = AdminField({
     name: "status",
-    label: "Admin status label",
+    label: "Staff status label",
     value: profile.status || player?.status || "",
     autocomplete: "off",
     hint: "Administrative profile metadata; the authoritative Player account status is shown separately in the roster.",
   });
   const countryAssignment = AdminField({
     name: "countryAssignment",
-    label: "Admin country assignment",
+    label: "Staff country note",
     value: profile.countryAssignment || player?.countryName || "",
     autocomplete: "off",
     hint: "Administrative profile metadata only. Country ownership remains controlled by the existing game assignment contract.",
   });
   const adminNote = AdminField({
     name: "adminNote",
-    label: "Admin note",
+    label: "Staff note",
     type: "textarea",
     value: profile.adminNote || "",
     autocomplete: "off",
@@ -216,7 +216,7 @@ export function PlayerProfileForm({
       const name = displayName.getValue().trim();
       const errors = name
         ? []
-        : [{ field: displayName, label: "Admin display name", message: "Enter a display name." }];
+        : [{ field: displayName, label: "Staff display label", message: "Enter a display label." }];
       return {
         errors,
         value: {
