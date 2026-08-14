@@ -913,13 +913,13 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
     }
 
     const proposed = {
-        countryCode: country || null,
-        scarcityBand: scarcityBand.getValue(),
-        availableQuantity: available,
-        eventMultiplier: eventValue,
-        routeMultiplier: routeValue,
-        sourceEventKey: sourceEvent || null,
-        expiresAt: expiry || null,
+      countryCode: country || null,
+      scarcityBand: scarcityBand.getValue(),
+      availableQuantity: available,
+      eventMultiplier: eventValue,
+      routeMultiplier: routeValue,
+      sourceEventKey: sourceEvent || null,
+      expiresAt: expiry || null,
     };
     const before = item ? [
       `Scarcity: ${titleCase(item.scarcityBand)}`,
@@ -942,6 +942,7 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
       changes: [{ label: "Supply state", before, after }],
       confirmLabel: "Apply supply state",
       tone: "neutral",
+      failureMessage: "The supply operation could not be committed.",
       async onConfirm() {
         const result = await onApplySupply(key, proposed);
         if (result?.ok !== true) throw new Error("CRAFTING_SUPPLY_FAILED");
@@ -951,16 +952,6 @@ function supplyDialog({ item = null, opener, onApplySupply, onDestroyed }) {
     const accepted = await review.open(submit);
     review.destroy();
     if (accepted) dialog.close("committed");
-      if (result?.ok === true) {
-        dialog.close("committed");
-      } else {
-        status.textContent = result?.error?.userMessage || "The supply operation could not be committed.";
-      }
-    } catch (_error) {
-      status.textContent = "The supply operation could not be committed.";
-    } finally {
-      if (dialog.isOpen()) dialog.setBusy(false);
-    }
   });
 
   dialog.open(opener);

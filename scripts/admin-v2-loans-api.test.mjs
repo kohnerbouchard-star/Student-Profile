@@ -24,8 +24,8 @@ test("Loans V2 consumes the economy-scoped authoritative supervisory contract", 
   assert.match(controller, /beginAdminDataLoad/);
   assert.match(controller, /hasPermission\("economy\.adjust"\)/);
   assert.match(route, /implementationStatus = "configured"/);
-  assert.match(route, /Authoritative lending portfolio/);
-  assert.match(route, /Internal ownership UUIDs/);
+  assert.match(route, /Loan authority boundary/);
+  assert.match(route, /Internal ownership and ledger identifiers are not exposed/);
   assert.match(app, /createLoansApiClient\(\{ fetchImpl: transport \}\)/);
   assert.match(app, /createLoansController\(\{[\s\S]*?api: loansApi[\s\S]*?selectedGameId[\s\S]*?hasPermission/);
   assert.doesNotMatch(client, /Authorization/);
