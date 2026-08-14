@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -15,6 +15,13 @@ const retiredStyles = [
 ];
 for (const stylesheet of retiredStyles) {
   if (indexSource.includes(stylesheet)) throw new Error(`Retired Player stylesheet is still loaded: ${stylesheet}`);
+  try {
+    await access(path.join(root, "css", stylesheet));
+  } catch (error) {
+    if (error?.code === "ENOENT") continue;
+    throw error;
+  }
+  throw new Error(`Retired Player stylesheet still exists: ${stylesheet}`);
 }
 const canonicalFiles = [
   "css/player-terminal-tokens.css",
@@ -39,4 +46,4 @@ for (const file of canonicalFiles) {
   const source = await readFile(path.join(root, file), "utf8");
   if (/!important\b/.test(source)) throw new Error(`Canonical Player owner contains !important debt: ${file}`);
 }
-console.log(`Player V2 legacy retirement passed: ${retiredStyles.length} legacy styles are not loaded and ${canonicalFiles.length} canonical owners are priority-clean.`);
+console.log(`Player V2 legacy retirement passed: ${retiredStyles.length} legacy styles are absent and ${canonicalFiles.length} canonical owners are priority-clean.`);
