@@ -1,0 +1,104 @@
+name: Admin V2 Final Acceptance Repair
+
+on:
+  push:
+    branches:
+      - refactor/admin-v2-ux-root-v1
+    paths:
+      - .github/workflows/admin-v2-final-acceptance-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refactor/admin-v2-ux-root-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - name: Align route acceptance with source-owned UX
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_exact(path, old, new, expected=None):
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if expected is not None and count != expected:
+                  raise SystemExit(f"{path}: expected {expected} occurrence(s) of {old!r}, found {count}")
+              if count == 0:
+                  raise SystemExit(f"{path}: stale acceptance contract not found: {old!r}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+              print(f"{path}: replaced {count} occurrence(s)")
+
+          replace_exact(
+              "scripts/admin-v2-news-events-browser-smoke.mjs",
+              "assert.match(body, /Authoritative supervisory surface/);",
+              "assert.match(body, /Read-only publication monitor/);",
+              expected=1,
+          )
+
+          settings = Path("scripts/admin-v2-settings-browser-smoke.mjs")
+          text = settings.read_text(encoding="utf-8")
+          count = text.count('name: "Review and save"')
+          if count < 3:
+              raise SystemExit(f"Settings: expected at least 3 stale Review and save locators, found {count}")
+          settings.write_text(text.replace('name: "Review and save"', 'name: "Review changes"'), encoding="utf-8")
+          print(f"Settings: replaced {count} action locators")
+
+          replace_exact(
+              "scripts/admin-v2-players-browser-smoke.mjs",
+              'await profile.getByLabel("Admin display name").fill("김하늘 — Reviewed");',
+              'await profile.getByLabel("Staff display label").fill("김하늘 — Reviewed");',
+              expected=1,
+          )
+
+          crafting = Path("scripts/admin-v2-crafting-supply-browser-smoke.mjs")
+          text = crafting.read_text(encoding="utf-8")
+          old = '''  await dialog.getByRole("button", { name: "Apply supply state" }).click();\n  await dialog.waitFor({ state: "detached", timeout: 10_000 });'''
+          new = '''  await dialog.getByRole("button", { name: "Apply supply state" }).click();\n  const review = page.getByRole("alertdialog", { name: "Review supply change" });\n  await review.waitFor({ state: "visible", timeout: 10_000 });\n  await review.getByRole("button", { name: "Apply supply state" }).click();\n  await review.waitFor({ state: "detached", timeout: 10_000 });\n  await dialog.waitFor({ state: "detached", timeout: 10_000 });'''
+          if text.count(old) != 1:
+              raise SystemExit("Crafting: expected exactly one stale direct-commit interaction")
+          crafting.write_text(text.replace(old, new, 1), encoding="utf-8")
+          print("Crafting: added review confirmation interaction")
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Create browser-safe fixture runtime config
+        run: |
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_" + "publishable_runtime_fixture_1234567890"
+          });
+          EOF
+      - name: Run focused Admin V2 acceptance
+        run: |
+          node scripts/admin-v2-news-events-browser-smoke.mjs
+          node scripts/admin-v2-settings-browser-smoke.mjs
+          node scripts/admin-v2-players-browser-smoke.mjs
+          npm run test:admin-v2:crafting-browser
+          node scripts/admin-v2-crafting-supply-browser-smoke.mjs
+      - name: Verify diff and commit only acceptance scripts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f runtime-config.env.js
+          git rm .github/workflows/admin-v2-final-acceptance-repair.yml
+          git add \
+            scripts/admin-v2-news-events-browser-smoke.mjs \
+            scripts/admin-v2-settings-browser-smoke.mjs \
+            scripts/admin-v2-players-browser-smoke.mjs \
+            scripts/admin-v2-crafting-supply-browser-smoke.mjs
+          git diff --cached --check
+          git commit -m "test(admin): align final V2 browser acceptance"
+          git push origin HEAD:refactor/admin-v2-ux-root-v1
