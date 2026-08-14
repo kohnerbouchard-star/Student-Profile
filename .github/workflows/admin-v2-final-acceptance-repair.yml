@@ -23,22 +23,53 @@ jobs:
           node-version: 22.23.1
           cache: npm
       - run: npm ci
-      - name: Instrument News narrow overflow
+      - name: Apply final root and acceptance corrections
         shell: python
         run: |
           from pathlib import Path
-          path = Path("scripts/admin-v2-news-events-browser-smoke.mjs")
-          text = path.read_text(encoding="utf-8")
-          text = text.replace(
+
+          components = Path("admin/v2/styles/components.css")
+          text = components.read_text(encoding="utf-8")
+          old = '''@media (max-width: 760px) {\n  .admin-shell {\n    grid-template-columns: minmax(0, 1fr);\n    block-size: auto;\n    min-block-size: 100vh;\n    min-block-size: 100dvh;\n    overflow: visible;\n  }'''
+          new = '''@media (max-width: 760px) {\n  .admin-shell {\n    grid-template-columns: minmax(0, 1fr);\n    block-size: auto;\n    min-block-size: 100vh;\n    min-block-size: 100dvh;\n    overflow-x: clip;\n    overflow-y: visible;\n  }'''
+          if text.count(old) != 1:
+              raise SystemExit("Mobile admin shell overflow contract not found exactly once")
+          components.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          def replace_exact(path, old, new, expected=1):
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} occurrence(s), found {count}: {old!r}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_exact(
+              "scripts/admin-v2-news-events-browser-smoke.mjs",
               "assert.match(body, /Authoritative supervisory surface/);",
               "assert.match(body, /Read-only publication monitor/);",
-              1,
           )
-          old = '''  const metrics = await page.evaluate(() => ({\n    viewport: document.documentElement.clientWidth,\n    document: document.documentElement.scrollWidth,\n    body: document.body.scrollWidth,\n  }));'''
-          new = '''  const metrics = await page.evaluate(() => {\n    const viewport = document.documentElement.clientWidth;\n    const offenders = [...document.body.querySelectorAll("*")].map((element) => {\n      const rect = element.getBoundingClientRect();\n      const style = getComputedStyle(element);\n      return { tag: element.tagName, cls: element.className || "", role: element.getAttribute("role") || "", left: Math.round(rect.left * 10) / 10, right: Math.round(rect.right * 10) / 10, width: Math.round(rect.width * 10) / 10, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, minWidth: style.minWidth, overflowX: style.overflowX, position: style.position };\n    }).filter((entry) => entry.right > viewport + 1).sort((a,b) => b.right - a.right).slice(0, 30);\n    return { viewport, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, offenders };\n  });'''
-          if old not in text:
-              raise SystemExit("News overflow metrics block not found")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          settings = Path("scripts/admin-v2-settings-browser-smoke.mjs")
+          text = settings.read_text(encoding="utf-8")
+          count = text.count('name: "Review and save"')
+          if count < 3:
+              raise SystemExit(f"Expected at least 3 stale Settings save locators, found {count}")
+          settings.write_text(text.replace('name: "Review and save"', 'name: "Review changes"'), encoding="utf-8")
+
+          replace_exact(
+              "scripts/admin-v2-players-browser-smoke.mjs",
+              'await profile.getByLabel("Admin display name").fill("김하늘 — Reviewed");',
+              'await profile.getByLabel("Staff display label").fill("김하늘 — Reviewed");',
+          )
+
+          crafting = Path("scripts/admin-v2-crafting-supply-browser-smoke.mjs")
+          text = crafting.read_text(encoding="utf-8")
+          old = '''  await dialog.getByRole("button", { name: "Apply supply state" }).click();\n  await dialog.waitFor({ state: "detached", timeout: 10_000 });'''
+          new = '''  await dialog.getByRole("button", { name: "Apply supply state" }).click();\n  const review = page.getByRole("alertdialog", { name: "Review supply change" });\n  await review.waitFor({ state: "visible", timeout: 10_000 });\n  await review.getByRole("button", { name: "Apply supply state" }).click();\n  await review.waitFor({ state: "detached", timeout: 10_000 });\n  await dialog.waitFor({ state: "detached", timeout: 10_000 });'''
+          if text.count(old) != 1:
+              raise SystemExit("Crafting direct-commit smoke interaction not found exactly once")
+          crafting.write_text(text.replace(old, new, 1), encoding="utf-8")
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Create browser-safe fixture runtime config
@@ -51,5 +82,25 @@ jobs:
             supabasePublishableKey: "sb_" + "publishable_runtime_fixture_1234567890"
           });
           EOF
-      - name: Diagnose News acceptance
-        run: node scripts/admin-v2-news-events-browser-smoke.mjs
+      - name: Run focused Admin V2 acceptance
+        run: |
+          node scripts/admin-v2-news-events-browser-smoke.mjs
+          node scripts/admin-v2-settings-browser-smoke.mjs
+          node scripts/admin-v2-players-browser-smoke.mjs
+          npm run test:admin-v2:crafting-browser
+          node scripts/admin-v2-crafting-supply-browser-smoke.mjs
+      - name: Commit verified corrections and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f runtime-config.env.js
+          git rm .github/workflows/admin-v2-final-acceptance-repair.yml
+          git add \
+            admin/v2/styles/components.css \
+            scripts/admin-v2-news-events-browser-smoke.mjs \
+            scripts/admin-v2-settings-browser-smoke.mjs \
+            scripts/admin-v2-players-browser-smoke.mjs \
+            scripts/admin-v2-crafting-supply-browser-smoke.mjs
+          git diff --cached --check
+          git commit -m "fix(admin): close final V2 mobile UX acceptance gaps"
+          git push origin HEAD:refactor/admin-v2-ux-root-v1
