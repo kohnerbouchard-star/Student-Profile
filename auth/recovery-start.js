@@ -12,7 +12,7 @@
   const params = new URLSearchParams(window.location.search);
   let tokenHash = String(params.get("token_hash") || "").trim();
   const recoveryType = String(params.get("type") || "").trim().toLowerCase();
-  const projectRef = String(params.get("project_ref") || "").trim().toLowerCase();
+  const requestedProjectRef = String(params.get("project_ref") || "").trim().toLowerCase();
 
   function setMessage(text, isError = false) {
     if (!message) return;
@@ -36,7 +36,7 @@
   if (
     recoveryType !== "recovery" ||
     !TOKEN_HASH_PATTERN.test(tokenHash) ||
-    !PROJECT_REFS.has(projectRef)
+    (requestedProjectRef && !PROJECT_REFS.has(requestedProjectRef))
   ) {
     invalidateRecovery(
       "This password recovery request is invalid or has expired. Request a new email from the administrator login page."
@@ -60,7 +60,11 @@
       const response = await window.fetch("/api/auth-token-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenHash, type: "recovery", projectRef }),
+        body: JSON.stringify({
+          tokenHash,
+          type: "recovery",
+          projectRef: requestedProjectRef
+        }),
         cache: "no-store",
         credentials: "same-origin",
         redirect: "error",
@@ -73,11 +77,13 @@
       } catch (_) {}
 
       const accessToken = String(data?.accessToken || "").trim();
+      const projectRef = String(data?.projectRef || "").trim().toLowerCase();
       if (
         !response.ok ||
         data?.ok !== true ||
         data?.verified !== true ||
-        data?.projectRef !== projectRef ||
+        !PROJECT_REFS.has(projectRef) ||
+        (requestedProjectRef && requestedProjectRef !== projectRef) ||
         !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(accessToken)
       ) {
         invalidateRecovery(
