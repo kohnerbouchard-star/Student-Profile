@@ -62,14 +62,25 @@ const fixtureDocument = `<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/css/player-terminal-base.css" />
-  <link rel="stylesheet" href="/css/player-terminal.css" />
-  <link rel="stylesheet" href="/css/player-terminal-ux.css" />
-  <link rel="stylesheet" href="/css/player-terminal-polish.css" />
-  <link rel="stylesheet" href="/css/player-terminal-normalization.css" />
+  <link rel="stylesheet" href="/css/player-terminal-tokens.css" />
+  <link rel="stylesheet" href="/css/player-terminal-foundation.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-layout.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-cards.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-lists.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-states.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-details.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-responsive.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-shared-overlays.css" />
+  <link rel="stylesheet" href="/css/routes/player-terminal-dashboard.css" />
+  <link rel="stylesheet" href="/css/player-terminal-interior-v2.css" />
+  <link rel="stylesheet" href="/css/player-terminal-finance-v2.css" />
+  <link rel="stylesheet" href="/css/player-terminal-communications-v2.css" />
+  <link rel="stylesheet" href="/css/player-terminal-economy-items-v2.css" />
+  <link rel="stylesheet" href="/css/player-terminal-operations-v2.css" />
+  <link rel="stylesheet" href="/css/player-terminal-world-v2.css" />
 </head>
 <body>
-  <main id="playerTerminal" aria-label="Econovaria player terminal"></main>
+  <main id="playerTerminal" data-player-terminal-root="true" aria-label="Econovaria player terminal"></main>
 </body>
 </html>`;
 
