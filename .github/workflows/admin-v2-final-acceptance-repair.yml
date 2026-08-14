@@ -54,6 +54,11 @@ jobs:
               'runtime.page.getByLabel("Lifecycle").selectOption("failed")',
               'runtime.page.getByLabel("Lifecycle", { exact: true }).selectOption("failed")',
           )
+          replace_exact(
+              "scripts/admin-v2-news-events-browser-smoke.mjs",
+              "assert.match(body, /News & Events could not be loaded/);",
+              "assert.match(body, /News & Event Monitor could not be loaded/);",
+          )
 
           settings = Path("scripts/admin-v2-settings-browser-smoke.mjs")
           text = settings.read_text(encoding="utf-8")
