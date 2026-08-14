@@ -12,8 +12,8 @@ const RESET_QUOTE_CODES = new Set([
   "STORE_QUOTE_NOT_FOUND"
 ]);
 
-function storeModalElement(mount) {
-  const dialog = mount.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
+function storeModalElement(root) {
+  const dialog = root?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
   return dialog?.closest(".player-terminal-modal-backdrop") || null;
 }
 
@@ -78,35 +78,54 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   const api = new PlayerApi(config);
+  const overlayHost = document.createElement("div");
+  overlayHost.className = "player-terminal-app-root player-terminal-transaction-overlay-host";
+  overlayHost.dataset.playerTerminalRoot = "true";
+  overlayHost.dataset.playerTerminalTransactionOverlayHost = "true";
+  document.body.append(overlayHost);
+
   let opener = null;
+  let openerItemKey = "";
   let transaction = null;
   let destroyed = false;
 
+  function applicationRoot() {
+    return mount.querySelector(".player-terminal-app-root");
+  }
+
   function restoreApplication() {
-    const root = mount.querySelector(".player-terminal-app-root");
+    const root = applicationRoot();
     if (root) {
       root.inert = false;
       root.removeAttribute("aria-hidden");
     }
   }
 
+  function restoreOpenerFocus() {
+    const current = opener?.isConnected ? opener : (
+      openerItemKey ? mount.querySelector(`[data-player-purchase="${CSS.escape(openerItemKey)}"]`) : null
+    );
+    current?.focus?.({ preventScroll: true });
+  }
+
   function closeModal({ restoreFocus = true } = {}) {
-    storeModalElement(mount)?.remove();
+    storeModalElement(overlayHost)?.remove();
     restoreApplication();
-    if (restoreFocus) opener?.focus?.({ preventScroll: true });
+    if (restoreFocus) restoreOpenerFocus();
     opener = null;
+    openerItemKey = "";
     transaction = null;
   }
 
   function renderTransaction() {
     if (destroyed || !transaction) return;
-    storeModalElement(mount)?.remove();
+    storeModalElement(overlayHost)?.remove();
     const template = document.createElement("template");
     template.innerHTML = renderModal({ type: "storePurchase", ...transaction }, config).trim();
     const modal = template.content.firstElementChild;
     if (!modal) return;
-    mount.append(modal);
-    const root = mount.querySelector(".player-terminal-app-root");
+    overlayHost.append(modal);
+    const root = applicationRoot();
     if (root) {
       root.inert = true;
       root.setAttribute("aria-hidden", "true");
@@ -121,6 +140,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const item = state.data?.store?.items?.find((candidate) => String(candidate.itemKey || candidate.id) === String(itemId));
     if (!item) return;
     opener = button;
+    openerItemKey = String(itemId || "");
     transaction = {
       stage: "select",
       item,
@@ -135,7 +155,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   async function requestQuote(button) {
-    const input = storeModalElement(mount)?.querySelector("[data-player-store-quantity]");
+    const input = storeModalElement(overlayHost)?.querySelector("[data-player-store-quantity]");
     const quantity = Number(input?.value);
     const stock = Number(transaction?.item?.stock);
     if (!Number.isInteger(quantity) || quantity < 1 || (Number.isFinite(stock) && quantity > stock)) {
@@ -236,7 +256,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       refreshWarning: ""
     };
 
-    storeModalElement(mount)?.remove();
+    storeModalElement(overlayHost)?.remove();
     restoreApplication();
     try {
       await terminal.refresh();
@@ -256,7 +276,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
 
   function handleClick(event) {
     const purchase = event.target.closest?.("[data-player-purchase]");
-    if (purchase) {
+    if (purchase && mount.contains(purchase)) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (!purchase.disabled && purchase.getAttribute("aria-disabled") !== "true") openPurchase(purchase);
@@ -264,7 +284,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
 
     const backdrop = event.target.closest?.(".player-terminal-modal-backdrop");
-    const modal = backdrop?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
+    if (!backdrop || !overlayHost.contains(backdrop)) return;
+    const modal = backdrop.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
     if (!modal) return;
 
     event.preventDefault();
@@ -275,13 +296,9 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
     if (event.target.closest('[data-player-local-action="close-modal"]')) {
-      closeModal();
-      return;
-    }
-    const route = event.target.closest("[data-route]")?.dataset.route;
-    if (route) {
-      closeModal({ restoreFocus: false });
-      terminal.navigate(route);
+      const route = event.target.closest("[data-route]")?.dataset.route;
+      closeModal({ restoreFocus: !route });
+      if (route) terminal.navigate(route);
       return;
     }
     const review = event.target.closest("[data-player-store-review]");
@@ -298,7 +315,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   function handleKeyDown(event) {
-    const modal = storeModalElement(mount);
+    const modal = storeModalElement(overlayHost);
     if (!modal) return;
     if (event.key === "Escape") {
       event.preventDefault();
@@ -321,14 +338,17 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   mount.addEventListener("click", handleClick, true);
-  mount.addEventListener("keydown", handleKeyDown, true);
+  overlayHost.addEventListener("click", handleClick, true);
+  overlayHost.addEventListener("keydown", handleKeyDown, true);
 
   return {
     destroy() {
       destroyed = true;
       mount.removeEventListener("click", handleClick, true);
-      mount.removeEventListener("keydown", handleKeyDown, true);
+      overlayHost.removeEventListener("click", handleClick, true);
+      overlayHost.removeEventListener("keydown", handleKeyDown, true);
       closeModal({ restoreFocus: false });
+      overlayHost.remove();
     }
   };
 }
