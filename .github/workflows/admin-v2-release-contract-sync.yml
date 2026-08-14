@@ -1,0 +1,93 @@
+name: Admin V2 Release Contract Sync
+
+on:
+  push:
+    branches:
+      - refactor/admin-v2-ux-root-v1
+    paths:
+      - .github/workflows/admin-v2-release-contract-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refactor/admin-v2-ux-root-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - name: Align stale smoke contracts with intended V2 UX
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new, *, minimum=1):
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count < minimum:
+                  raise SystemExit(f"Expected at least {minimum} occurrence(s) in {path}: {old!r}; found {count}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+              print(f"{path}: replaced {count} occurrence(s)")
+
+          replace(
+              "scripts/admin-messaging-moderation-contract.mjs",
+              r'assert.match(messageReadFlow, /terminal\\.refresh\\(\\)/);',
+              r'assert.match(messageReadFlow, /dispatchResourceRefresh\\(config,\\s*\\["messages",\\s*"notifications"\\]\\)/);\nassert.doesNotMatch(messageReadFlow, /terminal\\.refresh\\(\\)/);',
+          )
+          replace(
+              "scripts/admin-v2-news-events-browser-smoke.mjs",
+              'name: "News & Events", exact: true',
+              'name: "News & Event Monitor", exact: true',
+          )
+          replace(
+              "scripts/admin-v2-crafting-browser-smoke.mjs",
+              '"Crafting Supervision"',
+              '"Crafting Operations"',
+          )
+          replace(
+              "scripts/admin-v2-contracts-browser-smoke.mjs",
+              '/^Contracts$/',
+              '/^Contracts Management$/',
+          )
+          replace(
+              "scripts/admin-v2-settings-browser-smoke.mjs",
+              '/^Game Settings$/',
+              '/^Settings$/',
+          )
+          replace(
+              "scripts/admin-v2-players-browser-smoke.mjs",
+              '"Edit Admin profile"',
+              '"Edit admin metadata"',
+          )
+      - name: Verify synchronized contracts
+        run: |
+          node scripts/admin-messaging-moderation-contract.mjs
+          node --check scripts/admin-v2-news-events-browser-smoke.mjs
+          node --check scripts/admin-v2-crafting-browser-smoke.mjs
+          node --check scripts/admin-v2-contracts-browser-smoke.mjs
+          node --check scripts/admin-v2-settings-browser-smoke.mjs
+          node --check scripts/admin-v2-players-browser-smoke.mjs
+          test "$(grep -c 'v2/styles/routes/loans.css' admin/v2.html)" -eq 1
+      - name: Commit verified release-contract repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/admin-v2-release-contract-sync.yml
+          git add \
+            scripts/admin-messaging-moderation-contract.mjs \
+            scripts/admin-v2-news-events-browser-smoke.mjs \
+            scripts/admin-v2-crafting-browser-smoke.mjs \
+            scripts/admin-v2-contracts-browser-smoke.mjs \
+            scripts/admin-v2-settings-browser-smoke.mjs \
+            scripts/admin-v2-players-browser-smoke.mjs
+          git diff --cached --check
+          git commit -m "test(admin): sync browser contracts with V2 UX"
+          git push origin HEAD:refactor/admin-v2-ux-root-v1
