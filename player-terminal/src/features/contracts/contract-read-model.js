@@ -1,3 +1,5 @@
+import { publicSubmittedAnswers, resolveContractInteraction } from "./contract-interaction-v2.js";
+
 const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function list(value) {
@@ -105,7 +107,7 @@ function rewardFields(rewardPayload) {
     rewardCurrencyCode: text(reward.currencyCode || cash.currencyCode),
     rewardXp: number(reward.xp ?? reward.experience),
     rewardItems: items.map((item) => ({
-      id: text(object(item).itemId || object(item).id),
+      id: text(object(item).itemKey || object(item).key),
       name: text(object(item).name || object(item).itemName, "Item reward"),
       quantity: number(object(item).quantity, 1)
     }))
@@ -153,6 +155,8 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
       backendStatus: text(progress.status || contract.status),
       title: text(contract.title, "Untitled contract"),
       issuer: text(metadata.issuer || contract.sourceType, "Econovaria"),
+      summary: text(metadata.summary),
+      difficulty: text(metadata.difficulty),
       category: text(contract.category, "General"),
       location: locationLabel(contract.targetingPayload),
       eligible: true,
@@ -167,11 +171,13 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
       instructions: text(contract.instructions),
       requirements: requirementList(contract.requirementsPayload),
       completionMode: text(contract.completionMode),
+      interaction: resolveContractInteraction(contract),
       reviewFeedback: reviewFeedback(progress),
       submission: progress.submittedAt || Object.keys(evidence).length ? {
         time: shortDate(progress.submittedAt, "Submitted"),
         url: text(evidence.submissionUrl || evidence.url),
-        note: text(evidence.note || evidence.response || evidence.text)
+        note: text(evidence.note || evidence.response || evidence.text),
+        answers: publicSubmittedAnswers(evidence)
       } : null,
       timeline: timeline(contract, progress, status)
     }];
