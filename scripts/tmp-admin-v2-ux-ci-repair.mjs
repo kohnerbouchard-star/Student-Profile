@@ -64,6 +64,7 @@ for (const [oldValue, newValue] of [
   ['["business", "Business"]', '["business", "Business Oversight"]'],
   ['["crafting", "Crafting"]', '["crafting", "Crafting Operations"]'],
   ['["news-events", "News & Events"]', '["news-events", "News & Event Monitor"]'],
+  ['assert.equal(newsEvents.label, "News & Events");', 'assert.equal(newsEvents.label, "News & Event Monitor");'],
 ]) {
   await replaceExact(unitPath, oldValue, newValue, `navigation assertion ${oldValue}`);
 }
