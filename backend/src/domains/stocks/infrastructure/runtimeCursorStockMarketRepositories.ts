@@ -36,8 +36,8 @@ export class RuntimeCursorStockMarketRunnerRepository
   implements StockMarketRunnerRepository {
   private readonly base: SupabaseStockMarketRunnerRepository;
 
-  constructor(private readonly client: RuntimeCursorClient & any) {
-    this.base = new SupabaseStockMarketRunnerRepository(client);
+  constructor(private readonly client: RuntimeCursorClient) {
+    this.base = new SupabaseStockMarketRunnerRepository(client as any);
   }
 
   async load(input: StockMarketRunnerLoadInput): Promise<StockMarketRunnerLoadedState> {
@@ -82,8 +82,8 @@ export class RuntimeCursorStockMarketNewsRepository
   implements StockMarketNewsRepository {
   private readonly base: SupabaseStockMarketNewsRepository;
 
-  constructor(private readonly client: RuntimeCursorClient & any) {
-    this.base = new SupabaseStockMarketNewsRepository(client);
+  constructor(private readonly client: RuntimeCursorClient) {
+    this.base = new SupabaseStockMarketNewsRepository(client as any);
   }
 
   async readCurrentTick(gameSessionId: string): Promise<number> {
