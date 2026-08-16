@@ -14,6 +14,10 @@ import {
 import {
   handleStockMarketRunnerRequest,
 } from "../../../src/domains/stocks/api/stockMarketRunnerHttpHandler.ts";
+import {
+  RuntimeCursorStockMarketNewsRepository,
+  RuntimeCursorStockMarketRunnerRepository,
+} from "../../../src/domains/stocks/infrastructure/runtimeCursorStockMarketRepositories.ts";
 import { requirePublishableRequest } from "../_shared/econovariaAuth.ts";
 import { createStorylineRunnerAfterTick } from "./storylineRunnerAfterTick.ts";
 
@@ -63,6 +67,10 @@ Deno.serve(async (request) => {
 
   return handleStockMarketRunnerRequest(authorization.request, {
     createServiceClient,
+    createRepository: (client) =>
+      new RuntimeCursorStockMarketRunnerRepository(client as any),
+    createNewsRepository: (client) =>
+      new RuntimeCursorStockMarketNewsRepository(client as any),
     createStorylineRunnerAfterTick,
   });
 });
