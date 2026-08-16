@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "econovaria.release-integrity-v2.policy.v1",
+  "policyId": "econovaria-live-parity-2026-08-16",
+  "historicalLedgerCutoff": "20260816103736",
+  "historicalLedgerBaselines": {
+    "stagingSha256": null,
+    "productionSha256": null
+  },
+  "allowedStagingOnlyTables": [
+    "private.license_email_outbox",
+    "private.license_issuance_jobs",
+    "private.license_payment_events",
+    "private.license_products"
+  ],
+  "allowedStagingOnlyRoutines": [],
+  "allowedProductionOnlyRoutines": [],
+  "approvedRoutineDefinitionDrift": []
+}
