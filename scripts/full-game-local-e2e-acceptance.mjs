@@ -253,6 +253,19 @@ async function verifyDatabase(created) {
           and override_row.enabled
           and event_row.event_key in (${sqlTextList(CONTINUATION_EVENT_KEYS)})
       ),
+      'continuationEffectiveEvents', (
+        select count(*)
+        from public.game_session_storylines as activation_row
+        join public.storyline_events as event_row
+          on event_row.storyline_id = activation_row.storyline_id
+        left join public.game_session_story_event_overrides as override_row
+          on override_row.game_session_id = activation_row.game_session_id
+         and override_row.storyline_event_id = event_row.id
+        where activation_row.game_session_id = ${sqlLiteral(created.gameSessionId)}::uuid
+          and activation_row.status = 'active'
+          and event_row.event_key in (${sqlTextList(CONTINUATION_EVENT_KEYS)})
+          and coalesce(override_row.enabled, event_row.is_active)
+      ),
       'relationshipDefinitions', (
         select count(*)
         from public.game_session_storylines as activation_row
@@ -442,6 +455,7 @@ function assertBaselineStoryState(state, label) {
     persistedHashMatches: true,
     enabledStoryOverrides: 0,
     continuationOverrides: 0,
+    continuationEffectiveEvents: 0,
     relationshipOverrides: 0,
     arrivalProbeImpacts: 0,
     storyClockAnchoredToArrival: false,
@@ -459,8 +473,9 @@ function assertBaselineStoryState(state, label) {
     `${label} pre-arrival effective Story count diverged from the global baseline`,
   );
   requireCondition(
-    state.continuationDefinitions === CONTINUATION_EVENT_KEYS.length,
-    `${label} continuationDefinitions expected ${CONTINUATION_EVENT_KEYS.length}, received ${state.continuationDefinitions}`,
+    state.continuationDefinitions > 0 &&
+      state.continuationDefinitions <= CONTINUATION_EVENT_KEYS.length,
+    `${label} continuation definition bootstrap count is invalid: ${state.continuationDefinitions}`,
   );
   requireCondition(
     state.relationshipDefinitions > 0,
@@ -486,8 +501,16 @@ function assertPostArrivalStoryState(before, after, controlBefore, controlAfter)
     "Target Story clock was not anchored to the first-arrival impact timestamp",
   );
   requireCondition(
-    after.continuationOverrides === before.continuationDefinitions,
-    `Target continuation overrides expected ${before.continuationDefinitions}, received ${after.continuationOverrides}`,
+    after.continuationDefinitions === CONTINUATION_EVENT_KEYS.length,
+    `Target continuation definitions expected ${CONTINUATION_EVENT_KEYS.length}, received ${after.continuationDefinitions}`,
+  );
+  requireCondition(
+    after.continuationOverrides === CONTINUATION_EVENT_KEYS.length,
+    `Target continuation overrides expected ${CONTINUATION_EVENT_KEYS.length}, received ${after.continuationOverrides}`,
+  );
+  requireCondition(
+    after.continuationEffectiveEvents === CONTINUATION_EVENT_KEYS.length,
+    `Target effective continuation expected ${CONTINUATION_EVENT_KEYS.length}, received ${after.continuationEffectiveEvents}`,
   );
   requireCondition(
     after.relationshipOverrides === before.relationshipDefinitions,
@@ -502,18 +525,21 @@ function assertPostArrivalStoryState(before, after, controlBefore, controlAfter)
     "First arrival mutated shared global Story activation",
   );
   requireCondition(
-    after.effectiveStoryEvents ===
-      before.globalActiveStoryEvents +
-        before.continuationDefinitions +
-        before.relationshipDefinitions,
-    `Target effective Story count after arrival was ${after.effectiveStoryEvents}; expected game-scoped baseline plus continuation and relationship definitions`,
+    after.effectiveStoryEvents - before.effectiveStoryEvents ===
+      after.continuationEffectiveEvents + after.relationshipOverrides,
+    `Target effective Story count did not increase only by game-scoped continuation and relationship overrides`,
   );
 
+  requireCondition(
+    controlAfter.continuationDefinitions === CONTINUATION_EVENT_KEYS.length,
+    `Control game did not observe the complete shared dormant continuation catalog after target arrival`,
+  );
   for (const key of [
     "globalActiveStoryEvents",
     "effectiveStoryEvents",
     "enabledStoryOverrides",
     "continuationOverrides",
+    "continuationEffectiveEvents",
     "relationshipOverrides",
     "arrivalProbeImpacts",
   ]) {
