@@ -56,6 +56,9 @@ export function evaluateStoryCondition(
 
       return cashBalance !== null && cashBalance > condition.amount;
     }
+    case "player_completed_contract":
+      return Array.isArray(player.completedContractKeys) &&
+        player.completedContractKeys.includes(condition.contractKey);
     case "player_relationship_stage_is": {
       const relationship = readRelationship(
         player.relationships,

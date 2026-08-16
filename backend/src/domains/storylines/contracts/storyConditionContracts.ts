@@ -33,6 +33,7 @@ export const STORY_CONDITION_TYPES = [
   "player_portfolio_country_exposure_at_least",
   "player_cash_below",
   "player_cash_above",
+  "player_completed_contract",
   "player_relationship_stage_is",
   "player_relationship_reply_count_at_least",
   "player_relationship_trust_score",
@@ -70,6 +71,7 @@ export type StoryLeafCondition =
   | StorySectorExposureCondition
   | StoryCountryExposureCondition
   | StoryCashThresholdCondition
+  | StoryCompletedContractCondition
   | StoryRelationshipStageCondition
   | StoryRelationshipReplyCountCondition
   | StoryRelationshipTrustCondition
@@ -111,6 +113,11 @@ export interface StoryCountryExposureCondition {
 export interface StoryCashThresholdCondition {
   readonly type: "player_cash_below" | "player_cash_above";
   readonly amount: number;
+}
+
+export interface StoryCompletedContractCondition {
+  readonly type: "player_completed_contract";
+  readonly contractKey: string;
 }
 
 export interface StoryRelationshipStageCondition {
@@ -222,6 +229,13 @@ export function parseStoryCondition(value: unknown): StoryCondition {
     };
   }
 
+  if (type === "player_completed_contract") {
+    return {
+      type,
+      contractKey: readRequiredText(record.contractKey, "condition.contractKey"),
+    };
+  }
+
   if (type === "player_relationship_stage_is") {
     return {
       type,
@@ -255,11 +269,15 @@ export function parseStoryCondition(value: unknown): StoryCondition {
     };
   }
 
-  return {
-    type,
-    flagKey: readRequiredText(record.flagKey, "condition.flagKey"),
-    value: readJsonValue(record.value, "condition.value"),
-  };
+  if (type === "story_flag_equals") {
+    return {
+      type,
+      flagKey: readRequiredText(record.flagKey, "condition.flagKey"),
+      value: readJsonValue(record.value, "condition.value"),
+    };
+  }
+
+  throw invalidStorylineContract("condition.type is not implemented.");
 }
 
 function readStoryConditionType(value: unknown): StoryConditionType {
