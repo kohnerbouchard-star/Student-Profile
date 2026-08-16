@@ -1,0 +1,48 @@
+name: Materialize Story Merge Tranche
+
+on:
+  push:
+    branches:
+      - feat/story-stage2-stage7-10-merge-v1
+    paths:
+      - ".story-materialize/**"
+      - ".github/workflows/story-materialize.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-materialize-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out carrier branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Reconstruct and verify audited Story patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .story-materialize/part-*.b64 | base64 --decode > "$RUNNER_TEMP/story.patch.gz"
+          echo 'e16ef33ea5afc9e799a4f4a0388f0fd27cf7038456801fd56373cf7f74051d56  '"$RUNNER_TEMP/story.patch.gz" | sha256sum --check
+          gzip --decompress --stdout "$RUNNER_TEMP/story.patch.gz" > "$RUNNER_TEMP/story.patch"
+          echo '1b9a97a5a35a4972853b355150fc017a8f846de602daa71c8dd827bc9363dbd9  '"$RUNNER_TEMP/story.patch" | sha256sum --check
+          git apply --check "$RUNNER_TEMP/story.patch"
+
+      - name: Apply Story tranche and erase carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git apply --index "$RUNNER_TEMP/story.patch"
+          git rm -r .story-materialize .github/workflows/story-materialize.yml
+          git diff --cached --check
+          git commit -m "feat(story): complete Meridian campaign continuation"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
