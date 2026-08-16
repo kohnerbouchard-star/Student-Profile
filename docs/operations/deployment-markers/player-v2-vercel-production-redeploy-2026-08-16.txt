@@ -1,0 +1,11 @@
+Purpose: retrigger the normal Vercel Git-integrated production deployment from the current safe main branch after the Player Terminal V2 cutover passed all release gates and the prior Vercel build-rate limit window expired.
+
+Application source authority before marker: 7a8bce6f69f736e7615350df9a3c3c4e2b983ed8
+Target branch: main
+Target environment: Vercel production
+Player route to verify after deployment:
+- https://www.econovaria.com/player-terminal/
+
+Verification requirement: the production Player HTML must not load the retired Player legacy CSS stack or compatibility bridges.
+
+This marker changes no runtime behavior, application code, authorization, environment variables, Supabase resources, or Vercel project settings.
