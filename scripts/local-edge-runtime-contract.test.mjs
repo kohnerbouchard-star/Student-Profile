@@ -20,17 +20,21 @@ const FUNCTION_POLICIES = Object.freeze({
   "staff-mfa-api": true,
   "password-reset-api": true,
   "classroom-api": true,
+  "game-data-purger": false,
   "stock-market-runner": false,
   "stock-market-read": false,
   "stock-market-seed-copy": false,
   "stock-market-player-read": false,
   "stock-market-trading": false,
   "stock-market-orchestrator": false,
+  "stock-tick-archiver": false,
 });
 const CUSTOM_AUTH_FUNCTIONS = new Set([
   "admin-password-recovery",
   "admin-email-verification",
+  "game-data-purger",
   "stock-market-orchestrator",
+  "stock-tick-archiver",
 ]);
 const WRAPPED_RUNTIME_FUNCTIONS = new Set([
   "player-api",
@@ -123,6 +127,10 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["bootstrap-api"], /handleStaffSignupRequest/);
   assert.match(functionSources["stock-market-orchestrator"], /verify_runtime_scheduler_token_v1/);
   assert.match(functionSources["stock-market-orchestrator"], /handleStockMarketRunnerRequest/);
+  assert.match(functionSources["stock-tick-archiver"], /verify_runtime_scheduler_token_v1/);
+  assert.match(functionSources["stock-tick-archiver"], /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(functionSources["game-data-purger"], /verify_runtime_scheduler_token_v1/);
+  assert.match(functionSources["game-data-purger"], /SUPABASE_SERVICE_ROLE_KEY/);
   for (const name of expectedFalse.filter((value) => value.startsWith("stock-market-") && value !== "stock-market-orchestrator")) {
     assert.match(functionSources[name], /handleStockMarket/);
   }
