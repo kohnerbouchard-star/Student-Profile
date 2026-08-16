@@ -9,7 +9,7 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": true,
+      "main": false,
       "ops/econovaria-git-native-domain-activation-20260813": false
     }
   },
