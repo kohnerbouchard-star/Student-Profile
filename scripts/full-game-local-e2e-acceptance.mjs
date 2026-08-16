@@ -126,6 +126,7 @@ async function activateCraftingSource(pack) {
 async function createFullGame(
   gameName = TARGET_GAME_NAME,
   idempotencyKey = IDEMPOTENCY_KEY,
+  expectedStoryEvents = 3,
 ) {
   const result = parseJsonLine(await runSql(`
     select public.create_provisioned_game_v2(
@@ -160,7 +161,7 @@ async function createFullGame(
     worldLocations: 50,
     worldRoutes: 13,
     storylines: 1,
-    storyEvents: 3,
+    storyEvents: expectedStoryEvents,
     arrivalPackages: 10,
     arrivalClassGrants: 8,
     craftingItems: 144,
@@ -545,7 +546,14 @@ async function main() {
 
   await activateCraftingSource(pack);
   const created = await createFullGame();
-  const control = await createFullGame(CONTROL_GAME_NAME, CONTROL_IDEMPOTENCY_KEY);
+  // The first full-game activation initializes the shared Story catalog. A
+  // second provisioned game therefore reports the initialized shared catalog
+  // count while remaining free of game-scoped continuation overrides.
+  const control = await createFullGame(
+    CONTROL_GAME_NAME,
+    CONTROL_IDEMPOTENCY_KEY,
+    43,
+  );
 
   const beforeArrival = await verifyDatabase(created);
   const controlBeforeArrival = await verifyDatabase(control);
