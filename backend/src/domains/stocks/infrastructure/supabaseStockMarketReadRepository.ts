@@ -21,8 +21,7 @@ interface SupabaseReadQueryResponse<T = unknown> {
 
 type StockMarketReadTableName =
   | "game_sessions"
-  | "game_session_stock_assets"
-  | "stock_price_ticks";
+  | "game_session_stock_assets";
 
 interface SupabaseStockMarketReadClient {
   from(tableName: StockMarketReadTableName): SupabaseStockMarketReadQueryBuilder;
@@ -96,18 +95,6 @@ const STOCK_ASSET_READ_SELECT = [
   "market_cap",
   "current_volatility",
   "long_run_volatility",
-].join(",");
-
-const STOCK_TICK_READ_SELECT = [
-  "game_session_id",
-  "stock_asset_id",
-  "tick_index",
-  "ticker",
-  "price",
-  "previous_price",
-  "change_pct",
-  "volume",
-  "created_at",
 ].join(",");
 
 export class SupabaseStockMarketReadRepository
@@ -236,19 +223,21 @@ export class SupabaseStockMarketReadRepository
     ticker: string,
     historyLimit: number,
   ): Promise<readonly StockMarketHistoryPointDto[]> {
-    const response = await this.client
-      .from("stock_price_ticks")
-      .select(STOCK_TICK_READ_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("ticker", ticker)
-      .order("tick_index", { ascending: false })
-      .limit(historyLimit);
+    const response = await this.client.rpc<readonly StockPriceTickReadRow[]>(
+      "read_stock_market_history_v2",
+      {
+        p_game_session_id: gameSessionId,
+        p_stock_asset_id: null,
+        p_ticker: ticker,
+        p_limit: historyLimit,
+      },
+    );
 
     if (response.error) {
       throw mapReadError(response.error);
     }
 
-    return ((response.data ?? []) as StockPriceTickReadRow[])
+    return (response.data ?? [])
       .map(toHistoryPoint)
       .sort((left, right) => left.tickIndex - right.tickIndex);
   }
@@ -305,7 +294,6 @@ function toNumber(value: number | string | null | undefined): number {
 
   if (typeof value === "string") {
     const parsed = Number(value);
-
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
@@ -345,6 +333,7 @@ function isSchemaNotAppliedError(error: SupabaseReadQueryError): boolean {
 
   return error.code === "42P01" ||
     error.code === "42703" ||
+    error.code === "42883" ||
     message.includes("does not exist") ||
     message.includes("schema cache");
 }
