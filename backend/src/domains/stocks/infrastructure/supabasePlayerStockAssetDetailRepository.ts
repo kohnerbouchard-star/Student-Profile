@@ -33,9 +33,11 @@ interface QueryBuilder {
 }
 
 interface PlayerStockAssetDetailClient {
-  from(
-    tableName: "game_session_stock_assets" | "stock_price_ticks",
-  ): QueryBuilder;
+  from(tableName: "game_session_stock_assets"): QueryBuilder;
+  rpc<T>(
+    functionName: string,
+    args?: unknown,
+  ): PromiseLike<QueryResponse<T>>;
 }
 
 const ASSET_SELECT = [
@@ -55,18 +57,6 @@ const ASSET_SELECT = [
   "current_volatility",
   "long_run_volatility",
   "is_active",
-].join(",");
-
-const HISTORY_SELECT = [
-  "game_session_id",
-  "stock_asset_id",
-  "tick_index",
-  "ticker",
-  "price",
-  "previous_price",
-  "change_pct",
-  "volume",
-  "created_at",
 ].join(",");
 
 export class SupabasePlayerStockAssetDetailRepository
@@ -100,15 +90,15 @@ export class SupabasePlayerStockAssetDetailRepository
     }
 
     const asset = toAssetRecord(assetRows[0]);
-    const historyResponse = await this.client
-      .from("stock_price_ticks")
-      .select(HISTORY_SELECT)
-      .eq("game_session_id", input.gameId)
-      .eq("stock_asset_id", asset.internalAssetUuid)
-      .eq("ticker", asset.ticker)
-      .order("tick_index", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(input.historyLimit);
+    const historyResponse = await this.client.rpc<readonly Record<string, unknown>[]>(
+      "read_stock_market_history_v2",
+      {
+        p_game_session_id: input.gameId,
+        p_stock_asset_id: asset.internalAssetUuid,
+        p_ticker: asset.ticker,
+        p_limit: input.historyLimit,
+      },
+    );
 
     if (historyResponse.error) throw mapPersistenceError(historyResponse.error);
 
@@ -164,6 +154,7 @@ function mapPersistenceError(
   const message = error.message.toLowerCase();
   const schemaMissing = error.code === "42P01" ||
     error.code === "42703" ||
+    error.code === "42883" ||
     message.includes("does not exist") ||
     message.includes("schema cache");
 

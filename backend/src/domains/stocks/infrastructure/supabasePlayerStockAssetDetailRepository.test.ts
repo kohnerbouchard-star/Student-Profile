@@ -14,71 +14,51 @@ const OTHER_GAME_ID = "00000000-0000-4000-8000-000000000002";
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const OTHER_ASSET_UUID = "00000000-0000-4000-8000-000000000102";
 
-Deno.test("stock asset detail scopes the asset and bounded history queries", async () => {
+Deno.test("stock asset detail scopes asset and hybrid history RPC", async () => {
   const client = new FakeClient({
     game_session_stock_assets: [
       asset(),
-      asset({
-        id: OTHER_ASSET_UUID,
-        game_session_id: OTHER_GAME_ID,
-        ticker: "AURA",
-      }),
+      asset({ id: OTHER_ASSET_UUID, game_session_id: OTHER_GAME_ID, ticker: "AURA" }),
       asset({ id: OTHER_ASSET_UUID, ticker: "BETA" }),
     ],
     stock_price_ticks: [
       tick(40),
       tick(41),
       tick(42),
-      tick(999, {
-        game_session_id: OTHER_GAME_ID,
-        stock_asset_id: OTHER_ASSET_UUID,
-      }),
+      tick(999, { game_session_id: OTHER_GAME_ID, stock_asset_id: OTHER_ASSET_UUID }),
     ],
   });
   const repository = new SupabasePlayerStockAssetDetailRepository(client as never);
-  const result = await repository.readAsset({
-    gameId: GAME_ID,
-    ticker: "AURA",
-    historyLimit: 2,
-  });
+  const result = await repository.readAsset({ gameId: GAME_ID, ticker: "AURA", historyLimit: 2 });
 
   assertEquals(result.asset?.internalAssetUuid, ASSET_UUID);
   assertEquals(result.history.map((point) => point.tickIndex), [42, 41]);
   assertEquals(result.history[0].createdAt, "2026-07-18T05:42:00.000Z");
-  assertEquals(client.queries.map((query) => query.tableName), [
-    "game_session_stock_assets",
-    "stock_price_ticks",
-  ]);
-  assertIncludes(client.queries[0].filters, {
-    column: "game_session_id",
-    value: GAME_ID,
+  assertEquals(client.queries.map((query) => query.tableName), ["game_session_stock_assets"]);
+  assertEquals(client.rpcCalls.map((call) => call.functionName), ["read_stock_market_history_v2"]);
+  assertEquals(client.rpcCalls[0].args, {
+    p_game_session_id: GAME_ID,
+    p_stock_asset_id: ASSET_UUID,
+    p_ticker: "AURA",
+    p_limit: 2,
   });
+  assertIncludes(client.queries[0].filters, { column: "game_session_id", value: GAME_ID });
   assertIncludes(client.queries[0].filters, { column: "ticker", value: "AURA" });
   assertIncludes(client.queries[0].filters, { column: "is_active", value: true });
   assertEquals(client.queries[0].limit, 2);
-  assertIncludes(client.queries[1].filters, {
-    column: "stock_asset_id",
-    value: ASSET_UUID,
-  });
-  assertEquals(client.queries[1].limit, 2);
 });
 
-Deno.test("stock asset detail does not query history when the asset is unavailable", async () => {
+Deno.test("stock asset detail does not query history when asset is unavailable", async () => {
   const client = new FakeClient({
     game_session_stock_assets: [asset({ is_active: false })],
     stock_price_ticks: [tick(42)],
   });
   const repository = new SupabasePlayerStockAssetDetailRepository(client as never);
-  const result = await repository.readAsset({
-    gameId: GAME_ID,
-    ticker: "AURA",
-    historyLimit: 200,
-  });
+  const result = await repository.readAsset({ gameId: GAME_ID, ticker: "AURA", historyLimit: 200 });
 
   assertEquals(result, { gameId: GAME_ID, asset: null, history: [] });
-  assertEquals(client.queries.map((query) => query.tableName), [
-    "game_session_stock_assets",
-  ]);
+  assertEquals(client.queries.map((query) => query.tableName), ["game_session_stock_assets"]);
+  assertEquals(client.rpcCalls, []);
 });
 
 Deno.test("stock asset detail rejects duplicate active ticker rows", async () => {
@@ -90,34 +70,21 @@ Deno.test("stock asset detail rejects duplicate active ticker rows", async () =>
   );
 
   await assertRejectsCode(
-    () =>
-      repository.readAsset({
-        gameId: GAME_ID,
-        ticker: "AURA",
-        historyLimit: 20,
-      }),
+    () => repository.readAsset({ gameId: GAME_ID, ticker: "AURA", historyLimit: 20 }),
     "player_stock_asset_detail_read_failed",
   );
 });
 
-Deno.test("stock asset detail maps missing schema errors", async () => {
+Deno.test("stock asset detail maps missing hybrid history schema errors", async () => {
   const client = new FakeClient({
-    game_session_stock_assets: [],
+    game_session_stock_assets: [asset()],
     stock_price_ticks: [],
   });
-  client.errors.set("game_session_stock_assets", {
-    code: "42P01",
-    message: "relation game_session_stock_assets does not exist",
-  });
+  client.rpcError = { code: "42883", message: "function read_stock_market_history_v2 does not exist" };
   const repository = new SupabasePlayerStockAssetDetailRepository(client as never);
 
   await assertRejectsCode(
-    () =>
-      repository.readAsset({
-        gameId: GAME_ID,
-        ticker: "AURA",
-        historyLimit: 20,
-      }),
+    () => repository.readAsset({ gameId: GAME_ID, ticker: "AURA", historyLimit: 20 }),
     "player_stock_asset_detail_schema_not_applied",
   );
 });
@@ -168,17 +135,29 @@ interface QueryLog {
 
 class FakeClient {
   readonly queries: QueryLog[] = [];
-  readonly errors = new Map<
-    string,
-    { readonly code?: string; readonly message: string }
-  >();
+  readonly rpcCalls: { readonly functionName: string; readonly args: any }[] = [];
+  readonly errors = new Map<string, { readonly code?: string; readonly message: string }>();
+  rpcError: { readonly code?: string; readonly message: string } | null = null;
 
-  constructor(
-    readonly tables: Record<string, readonly Record<string, unknown>[]>,
-  ) {}
+  constructor(readonly tables: Record<string, readonly Record<string, unknown>[]>) {}
 
   from(tableName: string): FakeQueryBuilder {
     return new FakeQueryBuilder(this, tableName);
+  }
+
+  async rpc(functionName: string, args: any) {
+    this.rpcCalls.push({ functionName, args });
+    if (this.rpcError) return { data: null, error: this.rpcError };
+    if (functionName !== "read_stock_market_history_v2") {
+      return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
+    }
+    let rows = [...(this.tables.stock_price_ticks ?? [])]
+      .filter((row) => row.game_session_id === args.p_game_session_id)
+      .filter((row) => row.stock_asset_id === args.p_stock_asset_id)
+      .filter((row) => row.ticker === args.p_ticker)
+      .sort((left, right) => Number(right.tick_index) - Number(left.tick_index));
+    rows = rows.slice(0, Number(args.p_limit) || 200);
+    return { data: rows, error: null };
   }
 }
 
@@ -188,40 +167,27 @@ class FakeQueryBuilder
   readonly orders: { readonly column: string; readonly ascending: boolean }[] = [];
   limitCount: number | null = null;
 
-  constructor(
-    private readonly client: FakeClient,
-    private readonly tableName: string,
-  ) {}
+  constructor(private readonly client: FakeClient, private readonly tableName: string) {}
 
-  select(): FakeQueryBuilder {
-    return this;
-  }
-
+  select(): FakeQueryBuilder { return this; }
   eq(column: string, value: unknown): FakeQueryBuilder {
     this.filters.push({ column, value });
     return this;
   }
-
-  order(
-    column: string,
-    options: { readonly ascending?: boolean } = {},
-  ): FakeQueryBuilder {
+  order(column: string, options: { readonly ascending?: boolean } = {}): FakeQueryBuilder {
     this.orders.push({ column, ascending: options.ascending ?? true });
     return this;
   }
-
   limit(count: number): FakeQueryBuilder {
     this.limitCount = count;
     return this;
   }
-
   then<TResult1 = { readonly data: unknown[] | null; readonly error: any }, TResult2 = never>(
     onfulfilled?: ((value: { readonly data: unknown[] | null; readonly error: any }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
   }
-
   private async execute() {
     this.client.queries.push({
       tableName: this.tableName,
@@ -229,14 +195,10 @@ class FakeQueryBuilder
       orders: [...this.orders],
       limit: this.limitCount,
     });
-
     const error = this.client.errors.get(this.tableName);
     if (error) return { data: null, error };
-
     let rows = [...(this.client.tables[this.tableName] ?? [])];
-    for (const filter of this.filters) {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
-    }
+    for (const filter of this.filters) rows = rows.filter((row) => row[filter.column] === filter.value);
     for (const order of [...this.orders].reverse()) {
       rows.sort((left, right) => {
         const comparison = compare(left[order.column], right[order.column]);
@@ -253,10 +215,7 @@ function compare(left: unknown, right: unknown): number {
   return String(left).localeCompare(String(right));
 }
 
-async function assertRejectsCode(
-  run: () => Promise<unknown>,
-  code: string,
-): Promise<void> {
+async function assertRejectsCode(run: () => Promise<unknown>, code: string): Promise<void> {
   try {
     await run();
   } catch (error) {
@@ -266,15 +225,10 @@ async function assertRejectsCode(
     }
     throw error;
   }
-  throw new Error(
-    `Expected PlayerStockAssetDetailPersistenceError with code ${code}.`,
-  );
+  throw new Error(`Expected PlayerStockAssetDetailPersistenceError with code ${code}.`);
 }
 
-function assertIncludes(
-  values: readonly unknown[],
-  expected: unknown,
-): void {
+function assertIncludes(values: readonly unknown[], expected: unknown): void {
   if (!values.some((value) => JSON.stringify(value) === JSON.stringify(expected))) {
     throw new Error(`Expected ${JSON.stringify(values)} to include ${JSON.stringify(expected)}.`);
   }
@@ -282,10 +236,6 @@ function assertIncludes(
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${
-        JSON.stringify(expected)
-      }`,
-    );
+    throw new Error(`Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
   }
 }

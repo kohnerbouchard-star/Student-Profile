@@ -3,12 +3,22 @@ import {
   handleStockMarketRunnerRequest,
 } from "../../../src/domains/stocks/api/stockMarketRunnerHttpHandler.ts";
 import {
+  RuntimeCursorStockMarketRunnerRepository,
+} from "../../../src/domains/stocks/infrastructure/runtimeCursorStockMarketRepositories.ts";
+import {
   createStorylineRunnerAfterTick,
 } from "../stock-market-runner/storylineRunnerAfterTick.ts";
 
 const SCHEDULER_NAME = "econovaria-stock-runtime-scheduler-v1";
 const SCHEDULER_HEADER = "x-econovaria-scheduler-token";
 const INTERNAL_RUNNER_HEADER = "x-stock-market-runner-secret";
+const MAX_DUE_GAMES = 100;
+
+type DueGame = {
+  game_session_id?: string;
+  simulation_seed?: string;
+  current_tick_index?: number | string;
+};
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") {
@@ -33,7 +43,7 @@ Deno.serve(async (request: Request) => {
   const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: {
-      headers: { "x-client-info": "econovaria-stock-market-orchestrator-v2" },
+      headers: { "x-client-info": "econovaria-stock-market-orchestrator-v3" },
     },
   });
 
@@ -47,33 +57,35 @@ Deno.serve(async (request: Request) => {
   });
   if (authorization.error || authorization.data !== true) return unauthorized();
 
-  const games = await client
-    .from("game_sessions")
-    .select("id")
-    .eq("status", "active")
-    .eq("lifecycle_state", "active")
-    .eq("provisioning_status", "ready")
-    .order("id", { ascending: true });
-
-  if (games.error) {
+  const due = await client.rpc("list_due_stock_market_games_v2", {
+    p_now: new Date().toISOString(),
+    p_limit: MAX_DUE_GAMES,
+  });
+  if (due.error) {
     return json(500, {
       ok: false,
       error: {
-        code: "active_game_discovery_failed",
-        message: "Could not enumerate active provisioned games.",
+        code: "due_game_discovery_failed",
+        message: "Could not enumerate due Stock Runtime V2 games.",
       },
     });
   }
 
-  const gameSessionIds = (games.data || [])
-    .map((row: { id?: string }) => String(row.id || ""))
-    .filter(Boolean);
+  const candidates = ((due.data || []) as DueGame[]).flatMap((row) => {
+    const gameSessionId = String(row.game_session_id || "").trim();
+    const currentTick = Number(row.current_tick_index);
+    if (!gameSessionId || !Number.isSafeInteger(currentTick) || currentTick < 0) return [];
+    const seed = String(row.simulation_seed || "").trim();
+    return [{ gameSessionId, tickIndex: currentTick + 1, seed: seed || undefined }];
+  });
+
   const results: Array<Record<string, unknown>> = [];
   let ticked = 0;
   let closed = 0;
   let failed = 0;
 
-  for (const gameSessionId of gameSessionIds) {
+  for (const candidate of candidates) {
+    const { gameSessionId, tickIndex, seed } = candidate;
     const internalSecret = crypto.randomUUID();
     const storylineFailures: Array<Record<string, unknown>> = [];
     try {
@@ -85,7 +97,12 @@ Deno.serve(async (request: Request) => {
             "content-type": "application/json",
             [INTERNAL_RUNNER_HEADER]: internalSecret,
           },
-          body: JSON.stringify({ action: "run_tick", gameSessionId }),
+          body: JSON.stringify({
+            action: "run_tick",
+            gameSessionId,
+            tickIndex,
+            ...(seed ? { seed } : {}),
+          }),
         },
       );
 
@@ -97,11 +114,13 @@ Deno.serve(async (request: Request) => {
             auth: { autoRefreshToken: false, persistSession: false },
             global: {
               headers: {
-                "x-client-info": "econovaria-stock-market-orchestrator-runner-v2",
+                "x-client-info": "econovaria-stock-market-orchestrator-runner-v3",
               },
             },
           },
         ) as any,
+        createRepository: (serviceClient) =>
+          new RuntimeCursorStockMarketRunnerRepository(serviceClient as any),
         readRunnerSecret: () => internalSecret,
         createStorylineRunnerAfterTick,
         logStorylineRunnerFailure: (failure) => {
@@ -159,7 +178,7 @@ Deno.serve(async (request: Request) => {
 
   return json(failed === 0 ? 200 : 500, {
     ok: failed === 0,
-    candidateGames: gameSessionIds.length,
+    candidateGames: candidates.length,
     ticked,
     closed,
     failed,

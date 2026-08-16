@@ -10,6 +10,10 @@ const runnerHandler = await readFile(
   new URL("../backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts", import.meta.url),
   "utf8",
 );
+const runtimeCursorRepositories = await readFile(
+  new URL("../backend/src/domains/stocks/infrastructure/runtimeCursorStockMarketRepositories.ts", import.meta.url),
+  "utf8",
+);
 const baseMigration = await readFile(
   new URL("../backend/supabase/migrations/20260810073000_add_stock_market_runtime_scheduler_v1.sql", import.meta.url),
   "utf8",
@@ -36,10 +40,18 @@ test("orchestrator uses vault-token authentication and the canonical stock HTTP 
   assert.doesNotMatch(orchestrator, /SUPABASE_PUBLISHABLE_KEY/u);
 });
 
+test("scheduled ticks use Runtime V2 eligibility and preserve authoritative cursor semantics", () => {
+  assert.match(orchestrator, /list_due_stock_market_games_v2/u);
+  assert.match(orchestrator, /current_tick_index/u);
+  assert.match(orchestrator, /simulation_seed/u);
+  assert.match(orchestrator, /tickIndex:\s*currentTick \+ 1/u);
+  assert.match(orchestrator, /new RuntimeCursorStockMarketRunnerRepository/u);
+  assert.doesNotMatch(orchestrator, /\.from\("game_sessions"\)/u);
+  assert.match(runtimeCursorRepositories, /get_current_stock_market_tick_index/u);
+  assert.match(runtimeCursorRepositories, /get_next_stock_market_tick_index/u);
+});
+
 test("scheduled ticks preserve market-calendar, realtime, storyline, and wall-clock semantics", () => {
-  assert.match(orchestrator, /\.eq\("status", "active"\)/u);
-  assert.match(orchestrator, /\.eq\("lifecycle_state", "active"\)/u);
-  assert.match(orchestrator, /\.eq\("provisioning_status", "ready"\)/u);
   assert.match(orchestrator, /stock_market_closed/u);
   assert.match(runnerHandler, /readStockMarketOpenState/u);
   assert.match(runnerHandler, /createDefaultPublicRealtimePublisher/u);
