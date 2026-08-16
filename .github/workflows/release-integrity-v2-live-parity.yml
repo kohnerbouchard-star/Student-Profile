@@ -17,14 +17,15 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: release-integrity-v2-live-parity
-  cancel-in-progress: false
-
 env:
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   POLICY_PATH: scripts/release-integrity-v2/live-parity-policy.json
+  SUPABASE_CLI_VERSION: 2.109.1
+
+concurrency:
+  group: release-integrity-v2-live-parity
+  cancel-in-progress: false
 
 jobs:
   static-contract:
@@ -54,18 +55,19 @@ jobs:
           if (!Array.isArray(policy.allowedStagingOnlyTables) || policy.allowedStagingOnlyTables.length !== 4) throw new Error('staging table hold');
           NODE
 
-  live-report:
-    name: Inspect current staging and production read-only
+  staging-evidence:
+    name: Export staging parity evidence read-only
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: static-contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    environment: production
+    timeout-minutes: 20
+    environment: staging
     env:
-      STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
-      PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PGSSLMODE: verify-full
+      PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
       PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
     steps:
       - name: Check out exact current main
@@ -74,39 +76,131 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify exact current main binding
+      - name: Verify exact staging binding
         shell: bash
         run: |
           set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
           git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Link exact staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          database_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$database_url" in
+            "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Unexpected staging pooler binding.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$database_url"
+          echo "DATABASE_URL=$database_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+      - name: Export staging schema and ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-integrity-v2-staging"
+          ledger_sql="select coalesce(jsonb_agg(jsonb_build_object('version', version, 'name', coalesce(name, '')) order by version), '[]'::jsonb)::text from supabase_migrations.schema_migrations"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/release-integrity-v2-staging/staging-ledger.json"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/release-integrity-v2-staging/staging-schema.json"
+          test -s "$RUNNER_TEMP/release-integrity-v2-staging/staging-ledger.json"
+          test -s "$RUNNER_TEMP/release-integrity-v2-staging/staging-schema.json"
+      - name: Upload staging metadata evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-integrity-v2-staging-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/release-integrity-v2-staging
+
+  production-evidence:
+    name: Export production parity evidence read-only
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+    steps:
+      - name: Check out exact current main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22.23.1"
-      - name: Configure certificate-verified database TLS
+      - name: Verify exact production binding
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$STAGING_SUPABASE_DB_URL"
-          test -n "$PRODUCTION_SUPABASE_DB_URL"
-          test -n "$SUPABASE_DB_CA_CERT"
-          cert_path="$RUNNER_TEMP/supabase-db-ca.crt"
-          umask 077
-          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
-          test -s "$cert_path"
-          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
-      - name: Export bounded live evidence read-only
+          test -n "$SUPABASE_DB_URL"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          SUPABASE_DB_URL="$SUPABASE_DB_URL" node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env SUPABASE_DB_URL \
+            --expected-project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Export production schema and ledger
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/release-integrity-v2"
+          mkdir -p "$RUNNER_TEMP/release-integrity-v2-production"
           ledger_sql="select coalesce(jsonb_agg(jsonb_build_object('version', version, 'name', coalesce(name, '')) order by version), '[]'::jsonb)::text from supabase_migrations.schema_migrations"
-          psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/release-integrity-v2/staging-ledger.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/release-integrity-v2/production-ledger.json"
-          psql "$STAGING_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/release-integrity-v2/staging-schema.json"
-          psql "$PRODUCTION_SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/release-integrity-v2/production-schema.json"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/release-integrity-v2-production/production-ledger.json"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/release-integrity-v2-production/production-schema.json"
+          test -s "$RUNNER_TEMP/release-integrity-v2-production/production-ledger.json"
+          test -s "$RUNNER_TEMP/release-integrity-v2-production/production-schema.json"
+      - name: Upload production metadata evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-integrity-v2-production-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/release-integrity-v2-production
+
+  compare:
+    name: Compare sanitized staging and production evidence
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [staging-evidence, production-evidence]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact current main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Download staging evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-integrity-v2-staging-${{ github.sha }}
+          path: ${{ runner.temp }}/release-integrity-v2/staging
+      - name: Download production evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-integrity-v2-production-${{ github.sha }}
+          path: ${{ runner.temp }}/release-integrity-v2/production
       - name: Produce v2 parity report
         shell: bash
         run: |
@@ -114,10 +208,10 @@ jobs:
           node scripts/release-integrity-v2/compare-live-parity.mjs \
             --mode report \
             --policy "$POLICY_PATH" \
-            --staging-schema "$RUNNER_TEMP/release-integrity-v2/staging-schema.json" \
-            --production-schema "$RUNNER_TEMP/release-integrity-v2/production-schema.json" \
-            --staging-ledger "$RUNNER_TEMP/release-integrity-v2/staging-ledger.json" \
-            --production-ledger "$RUNNER_TEMP/release-integrity-v2/production-ledger.json" \
+            --staging-schema "$RUNNER_TEMP/release-integrity-v2/staging/staging-schema.json" \
+            --production-schema "$RUNNER_TEMP/release-integrity-v2/production/production-schema.json" \
+            --staging-ledger "$RUNNER_TEMP/release-integrity-v2/staging/staging-ledger.json" \
+            --production-ledger "$RUNNER_TEMP/release-integrity-v2/production/production-ledger.json" \
             --output "$RUNNER_TEMP/release-integrity-v2/parity-report.json"
       - name: Write bounded summary
         shell: bash
@@ -140,18 +234,7 @@ jobs:
           NODE
         env:
           REPORT: ${{ runner.temp }}/release-integrity-v2/parity-report.json
-      - name: Remove raw live evidence and TLS material
-        if: always()
-        shell: bash
-        run: |
-          rm -f \
-            "$RUNNER_TEMP/release-integrity-v2/staging-schema.json" \
-            "$RUNNER_TEMP/release-integrity-v2/production-schema.json" \
-            "$RUNNER_TEMP/release-integrity-v2/staging-ledger.json" \
-            "$RUNNER_TEMP/release-integrity-v2/production-ledger.json" \
-            "$RUNNER_TEMP/supabase-db-ca.crt"
       - name: Upload sanitized parity report
-        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-integrity-v2-report-${{ github.sha }}
