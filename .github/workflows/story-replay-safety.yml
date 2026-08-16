@@ -8,6 +8,13 @@ on:
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
       - "backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql"
+      - "backend/supabase/migrations/20260816090100_seed_meridian_competing_models_v1.sql"
+      - "backend/supabase/migrations/20260816090200_seed_meridian_outbreak_of_war_v1.sql"
+      - "backend/supabase/migrations/20260816090300_seed_meridian_fortune_during_war_v1.sql"
+      - "backend/supabase/migrations/20260816090400_seed_meridian_question_of_belonging_v1.sql"
+      - "backend/supabase/migrations/20260816090500_seed_meridian_reckoning_v1.sql"
+      - "backend/supabase/migrations/20260816090600_seed_meridian_local_friend_relationships_v1.sql"
+      - "backend/supabase/migrations/20260816090700_harden_meridian_arrival_clock_gate_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
   push:
     branches:
@@ -18,6 +25,13 @@ on:
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
       - "backend/supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql"
+      - "backend/supabase/migrations/20260816090100_seed_meridian_competing_models_v1.sql"
+      - "backend/supabase/migrations/20260816090200_seed_meridian_outbreak_of_war_v1.sql"
+      - "backend/supabase/migrations/20260816090300_seed_meridian_fortune_during_war_v1.sql"
+      - "backend/supabase/migrations/20260816090400_seed_meridian_question_of_belonging_v1.sql"
+      - "backend/supabase/migrations/20260816090500_seed_meridian_reckoning_v1.sql"
+      - "backend/supabase/migrations/20260816090600_seed_meridian_local_friend_relationships_v1.sql"
+      - "backend/supabase/migrations/20260816090700_harden_meridian_arrival_clock_gate_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
 
 permissions:
@@ -56,13 +70,15 @@ jobs:
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts \
             src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.ts \
+            src/domains/storylines/contracts/storyConditionContracts.ts \
+            src/domains/storylines/services/storyConditionEngine.ts \
             src/domains/storylines/services/storyEventExecutionPlan.ts \
             src/domains/storylines/services/storylineRunner.ts
 
       - name: Run Story replay and execution safety tests
         run: |
           deno test \
-            --allow-read=supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql,supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql \
+            --allow-read=supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql,supabase/migrations/20260812120000_add_story_event_execution_lease_v1.sql,supabase/migrations/20260816090100_seed_meridian_competing_models_v1.sql,supabase/migrations/20260816090200_seed_meridian_outbreak_of_war_v1.sql,supabase/migrations/20260816090300_seed_meridian_fortune_during_war_v1.sql,supabase/migrations/20260816090400_seed_meridian_question_of_belonging_v1.sql,supabase/migrations/20260816090500_seed_meridian_reckoning_v1.sql,supabase/migrations/20260816090600_seed_meridian_local_friend_relationships_v1.sql,supabase/migrations/20260816090700_harden_meridian_arrival_clock_gate_v1.sql \
             --config supabase/functions/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
@@ -72,6 +88,16 @@ jobs:
             src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.test.ts \
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \
             src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
+            src/domains/storylines/services/storyConditionEngine.test.ts \
+            src/domains/storylines/services/storyCompletedContractCondition.test.ts \
+            src/domains/storylines/services/storyMeridianCompetingModelsMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianOutbreakOfWarMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianFortuneDuringWarMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianQuestionOfBelongingMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianReckoningMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianLocalFriendRelationshipsMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianArrivalClockGateMigrationContract.test.ts \
+            src/domains/storylines/services/storyMeridianCampaignContinuationReleaseSafety.test.ts \
             src/domains/storylines/services/storylineRunnerLease.test.ts \
             src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts \
             src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts
