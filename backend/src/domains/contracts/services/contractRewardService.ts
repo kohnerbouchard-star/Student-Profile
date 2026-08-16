@@ -20,6 +20,9 @@ export interface ContractRewardLedgerWriter {
   recordCashReward(
     input: ContractCashRewardWriteInput,
   ): Promise<ContractRewardWriteResult>;
+  applyRewardPlanAtomically?(
+    input: ContractRewardAtomicApplyInput,
+  ): Promise<ContractRewardAtomicApplyResult>;
 }
 
 export interface ContractCashRewardWriteInput {
@@ -33,6 +36,21 @@ export interface ContractCashRewardWriteInput {
   readonly staffId: string;
   readonly requestId: string;
   readonly issuedAt: string;
+}
+
+export interface ContractRewardAtomicApplyInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+  readonly staffId: string;
+  readonly requestId: string;
+}
+
+export interface ContractRewardAtomicApplyResult {
+  readonly rewardApplied: boolean;
+  readonly alreadyApplied: boolean;
+  readonly appliedAt: string;
+  readonly rewardResult: ContractRewardResult;
 }
 
 export interface ContractRewardWriteResult {
@@ -67,14 +85,27 @@ export interface ContractRewardResult {
   readonly unsupportedRewardTypes: readonly string[];
 }
 
-export interface ContractRewardAppliedEntry {
-  readonly rewardType: "cash";
-  readonly ledgerEntryId: string;
-  readonly amount: number;
-  readonly accountType: string;
-  readonly currencyCode: string;
-  readonly balance: number | null;
-}
+export type ContractRewardAppliedEntry =
+  | {
+    readonly rewardType: "cash" | "checking";
+    readonly ledgerEntryId: string;
+    readonly amount: number;
+    readonly accountType: string;
+    readonly currencyCode: string;
+    readonly balance: number | null;
+  }
+  | {
+    readonly rewardType: "story_flag";
+    readonly flagKey: string;
+    readonly value: JsonValue;
+  }
+  | {
+    readonly rewardType: "item";
+    readonly storeItemId: string;
+    readonly itemName: string;
+    readonly quantity: number;
+    readonly quantityOwned: number;
+  };
 
 export interface ContractRewardSkippedEntry {
   readonly rewardType: string;
@@ -110,6 +141,34 @@ type ContractRewardPlanResult =
 export class ContractRewardLedgerRpcWriter
   implements ContractRewardLedgerWriter {
   constructor(private readonly client: ContractRewardRpcClient) {}
+
+  async applyRewardPlanAtomically(
+    input: ContractRewardAtomicApplyInput,
+  ): Promise<ContractRewardAtomicApplyResult> {
+    const response = await this.client.rpc<unknown[]>(
+      "apply_contract_rewards_atomic_v1",
+      {
+        p_game_session_id: input.gameSessionId,
+        p_contract_id: input.contractId,
+        p_progress_id: input.progressId,
+        p_staff_user_id: input.staffId,
+        p_request_id: input.requestId,
+      },
+    );
+
+    if (response.error) {
+      throw new Error(
+        response.error.message || "Contract reward plan failed.",
+      );
+    }
+
+    const row = readAtomicRewardRpcRow(response.data);
+    if (!row) {
+      throw new Error("Contract reward plan returned no result.");
+    }
+
+    return row;
+  }
 
   async recordCashReward(
     input: ContractCashRewardWriteInput,
@@ -176,9 +235,84 @@ interface LedgerRpcRow {
   readonly created_at: string;
 }
 
+function readAtomicRewardRpcRow(
+  value: unknown,
+): ContractRewardAtomicApplyResult | null {
+  if (!Array.isArray(value) || !isRecord(value[0])) {
+    return null;
+  }
+
+  const row = value[0];
+  if (
+    typeof row.reward_applied !== "boolean" ||
+    typeof row.already_applied !== "boolean" ||
+    typeof row.applied_at !== "string" ||
+    !isRecord(row.reward_result) ||
+    !isJsonValue(row.reward_result)
+  ) {
+    return null;
+  }
+
+  return {
+    rewardApplied: row.reward_applied,
+    alreadyApplied: row.already_applied,
+    appliedAt: row.applied_at,
+    rewardResult: row.reward_result as unknown as ContractRewardResult,
+  };
+}
+
 export async function issueContractRewards(
   input: ContractRewardIssueInput,
 ): Promise<ContractRewardIssueServiceResult> {
+  if (
+    input.ledger.applyRewardPlanAtomically &&
+    requiresAtomicRewardPlan(input.rewardPayload)
+  ) {
+    try {
+      const atomicResult = await input.ledger.applyRewardPlanAtomically({
+        gameSessionId: input.gameSessionId,
+        contractId: input.contractId,
+        progressId: input.progressId,
+        staffId: input.staffId,
+        requestId: input.requestId,
+      });
+
+      return {
+        ok: true,
+        rewardResult: atomicResult.rewardResult,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const normalized = errorMessage.toUpperCase();
+      const code = normalized.includes("UNSUPPORTED_CONTRACT_REWARD_TYPES")
+        ? "unsupported_reward_type"
+        : normalized.includes("INVALID_CONTRACT") ||
+            normalized.includes("AMBIGUOUS_CONTRACT") ||
+            normalized.includes("CONTRACT_REWARD_STORY_FLAG") ||
+            normalized.includes("CONTRACT_REWARD_IDEMPOTENCY_CONFLICT")
+        ? "invalid_reward_payload"
+        : "contract_reward_issue_failed";
+
+      return {
+        ok: false,
+        code,
+        message: code === "contract_reward_issue_failed"
+          ? "Contract reward could not be issued."
+          : errorMessage,
+        rewardResult: {
+          status: "failed",
+          appliedRewards: [],
+          skippedRewards: [],
+          failedRewards: [{
+            rewardType: "all",
+            errorMessage,
+          }],
+          unsupportedRewardTypes: [],
+        },
+      };
+    }
+  }
+
   const validation = readRewardPlan(input.rewardPayload);
 
   if (!validation.ok) {
@@ -257,6 +391,12 @@ export function alreadyIssuedRewardResult(): ContractRewardResult {
     failedRewards: [],
     unsupportedRewardTypes: [],
   };
+}
+
+function requiresAtomicRewardPlan(rewardPayload: JsonObject): boolean {
+  return Object.prototype.hasOwnProperty.call(rewardPayload, "checking") ||
+    Object.prototype.hasOwnProperty.call(rewardPayload, "items") ||
+    Object.prototype.hasOwnProperty.call(rewardPayload, "storyFlagsToSet");
 }
 
 function readRewardPlan(
