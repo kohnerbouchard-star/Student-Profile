@@ -264,7 +264,10 @@ function readAtomicRewardRpcRow(
 export async function issueContractRewards(
   input: ContractRewardIssueInput,
 ): Promise<ContractRewardIssueServiceResult> {
-  if (input.ledger.applyRewardPlanAtomically) {
+  if (
+    input.ledger.applyRewardPlanAtomically &&
+    requiresAtomicRewardPlan(input.rewardPayload)
+  ) {
     try {
       const atomicResult = await input.ledger.applyRewardPlanAtomically({
         gameSessionId: input.gameSessionId,
@@ -388,6 +391,12 @@ export function alreadyIssuedRewardResult(): ContractRewardResult {
     failedRewards: [],
     unsupportedRewardTypes: [],
   };
+}
+
+function requiresAtomicRewardPlan(rewardPayload: JsonObject): boolean {
+  return Object.prototype.hasOwnProperty.call(rewardPayload, "checking") ||
+    Object.prototype.hasOwnProperty.call(rewardPayload, "items") ||
+    Object.prototype.hasOwnProperty.call(rewardPayload, "storyFlagsToSet");
 }
 
 function readRewardPlan(
