@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - ".github/workflows/edge-function-inventory-converge.yml"
+      - "backend/supabase/edge-function-manifest.json"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/functions/**"
+      - "backend/src/**"
 
 permissions:
   contents: read
@@ -359,7 +363,7 @@ jobs:
             echo '- Staging promoted first: `true`'
             echo '- Production gated on staging: `true`'
             echo '- Canonical/compat deployed functions: `16`'
-            echo '- Allowed staging temporary functions: `3`'
+            echo '- Allowed staging temporary functions: `8`'
             echo '- Unexpected production functions: `0`'
             echo '- Retired functions present: `0`'
             echo '- verify_jwt exact match: `true`'
