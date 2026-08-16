@@ -86,6 +86,7 @@ jobs:
             admin-email-verification
             admin-password-recovery
             bootstrap-api
+            game-data-purger
             player-api
             player-web-session-api
             stock-market-player-read
@@ -94,6 +95,7 @@ jobs:
             stock-market-seed-copy
             stock-market-trading
             stock-market-orchestrator
+            stock-tick-archiver
             web-session-api
           )
           for slug in "${true_functions[@]}"; do
@@ -164,8 +166,10 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST game-data-purger' \
             'POST password-reset-api' \
             'POST stock-market-orchestrator' \
+            'POST stock-tick-archiver' \
             'POST web-session-api/logout'; do
             read -r method slug <<< "$spec"
             status="$(status_for "$method" "$slug")"
@@ -244,6 +248,7 @@ jobs:
             admin-email-verification
             admin-password-recovery
             bootstrap-api
+            game-data-purger
             player-api
             player-web-session-api
             stock-market-player-read
@@ -252,6 +257,7 @@ jobs:
             stock-market-seed-copy
             stock-market-trading
             stock-market-orchestrator
+            stock-tick-archiver
             web-session-api
           )
           for slug in "${true_functions[@]}"; do
@@ -332,8 +338,10 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST game-data-purger' \
             'POST password-reset-api' \
             'POST stock-market-orchestrator' \
+            'POST stock-tick-archiver' \
             'POST web-session-api/logout'; do
             read -r method slug <<< "$spec"
             status="$(status_for "$method" "$slug")"
@@ -362,7 +370,7 @@ jobs:
             echo "- Exact source SHA: \`$GITHUB_SHA\`"
             echo '- Staging promoted first: `true`'
             echo '- Production gated on staging: `true`'
-            echo '- Canonical/compat deployed functions: `16`'
+            echo '- Canonical/compat deployed functions: `18`'
             echo '- Allowed staging temporary functions: `8`'
             echo '- Unexpected production functions: `0`'
             echo '- Retired functions present: `0`'
