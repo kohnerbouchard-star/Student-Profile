@@ -35,6 +35,12 @@
       "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
     },
     {
+      "slug": "game-data-purger",
+      "entrypoint": "backend/supabase/functions/game-data-purger/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
+    },
+    {
       "slug": "player-api",
       "entrypoint": "backend/supabase/functions/player-api/index.ts",
       "verifyJwt": false,
@@ -93,6 +99,12 @@
       "entrypoint": "backend/supabase/functions/stock-market-orchestrator/index.ts",
       "verifyJwt": false,
       "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier"
+    },
+    {
+      "slug": "stock-tick-archiver",
+      "entrypoint": "backend/supabase/functions/stock-tick-archiver/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
     },
     {
       "slug": "web-session-api",
@@ -164,6 +176,7 @@
     "player-runtime-config-audit-once",
     "player-web-session-audit-once",
     "server",
+    "stock-tick-archive-config-check",
     "web-session-config-probe"
   ],
   "productionUnexpectedFunctionsAllowed": false,
