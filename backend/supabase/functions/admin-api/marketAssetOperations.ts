@@ -2,6 +2,7 @@ import { number } from "./common.ts";
 
 interface MarketService {
   from(table: string): any;
+  rpc(functionName: string, args?: unknown): PromiseLike<{ data: any; error: any }>;
 }
 
 export interface MarketAssetOperationResult {
@@ -70,6 +71,29 @@ export async function handleMarketAssetReadOperation(
       handled: true,
       status: 200,
       body: { data: { asset, profile: asset } },
+    };
+  }
+
+  const chartMatch = input.suffix.match(/^\/market\/assets\/([^/]+)\/chart$/u);
+  if (chartMatch) {
+    const assetId = safeAssetId(chartMatch[1]);
+    if (!assetId) return invalid();
+    const result = await service.rpc("read_stock_market_history_v2", {
+      p_game_session_id: input.gameId,
+      p_stock_asset_id: assetId,
+      p_ticker: null,
+      p_limit: 500,
+    });
+    if (result.error) return failed();
+    const candles = (result.data || []).map(toChartPoint)
+      .sort((left: any, right: any) =>
+        number(left.tickIndex) - number(right.tickIndex) ||
+        Date.parse(left.timestamp || "") - Date.parse(right.timestamp || "")
+      );
+    return {
+      handled: true,
+      status: 200,
+      body: { data: { candles, chart: candles } },
     };
   }
 
@@ -153,6 +177,26 @@ function toAssetDto(row: any) {
     isActive: row.is_active === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function toChartPoint(row: any) {
+  const close = number(row.close, number(row.price));
+  const open = number(row.open, number(row.previous_price, close));
+  return {
+    tickIndex: number(row.tick_index),
+    time: row.created_at,
+    timestamp: row.created_at,
+    close,
+    open,
+    high: number(row.high, Math.max(close, open)),
+    low: number(row.low, Math.min(close, open)),
+    volume: number(row.volume),
+    changePct: number(row.change_pct),
+    sourceKind: String(row.source_kind || "tick"),
+    timeframe: String(row.timeframe || "tick"),
+    firstTickIndex: number(row.first_tick_index, number(row.tick_index)),
+    lastTickIndex: number(row.last_tick_index, number(row.tick_index)),
   };
 }
 

@@ -39,7 +39,7 @@ Deno.test("stock market read board reads only requested game session", async () 
   assertEquals(client.rpcCalls[0].args.p_game_session_id, GAME_SESSION_ID);
 });
 
-Deno.test("stock market read ticker history reads only requested game session and stock_price_ticks", async () => {
+Deno.test("stock market ticker history uses hybrid history RPC", async () => {
   const client = new FakeClient({
     game_sessions: [gameSession(), gameSession(OTHER_SESSION_ID)],
     game_session_stock_assets: [asset(), asset({ id: OTHER_ASSET_ID, game_session_id: OTHER_SESSION_ID })],
@@ -63,12 +63,16 @@ Deno.test("stock market read ticker history reads only requested game session an
   assertEquals(client.queriedTables, [
     "game_sessions",
     "game_session_stock_assets",
-    "stock_price_ticks",
   ]);
-  assertEquals(client.rpcCalls[0].args.p_ticker, "AURA");
+  assertEquals(client.rpcCalls.map((call) => call.functionName), [
+    "read_latest_stock_market_ticks_for_game",
+    "read_stock_market_history_v2",
+  ]);
+  assertEquals(client.rpcCalls[1].args.p_ticker, "AURA");
+  assertEquals(client.rpcCalls[1].args.p_limit, 200);
 });
 
-Deno.test("stock market read applies history limit", async () => {
+Deno.test("stock market read applies hybrid history limit", async () => {
   const repository = new SupabaseStockMarketReadRepository(new FakeClient({
     game_sessions: [gameSession()],
     game_session_stock_assets: [asset()],
@@ -206,10 +210,8 @@ async function assertRejectsWithCode(run: () => Promise<unknown>, code: string):
       assertEquals(error.code, code);
       return;
     }
-
     throw error;
   }
-
   throw new Error(`Expected StockMarketReadError with code ${code}.`);
 }
 
@@ -229,33 +231,35 @@ class FakeClient {
   async rpc(functionName: string, args: any) {
     this.rpcCalls.push({ functionName, args });
 
-    if (this.rpcError) {
-      return { data: null, error: this.rpcError };
-    }
+    if (this.rpcError) return { data: null, error: this.rpcError };
 
-    if (functionName !== "read_latest_stock_market_ticks_for_game") {
-      return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
-    }
-
-    let rows = [...(this.tables.stock_price_ticks ?? [])]
-      .filter((row) => row.game_session_id === args.p_game_session_id);
-
-    if (args.p_ticker) {
-      rows = rows.filter((row) => row.ticker === args.p_ticker);
-    }
-
-    const latestByAssetId = new Map<string, Record<string, unknown>>();
-
-    for (const row of rows) {
-      const assetId = String(row.stock_asset_id);
-      const existing = latestByAssetId.get(assetId);
-
-      if (!existing || Number(row.tick_index) > Number(existing.tick_index)) {
-        latestByAssetId.set(assetId, row);
+    if (functionName === "read_latest_stock_market_ticks_for_game") {
+      let rows = [...(this.tables.stock_price_ticks ?? [])]
+        .filter((row) => row.game_session_id === args.p_game_session_id);
+      if (args.p_ticker) rows = rows.filter((row) => row.ticker === args.p_ticker);
+      const latestByAssetId = new Map<string, Record<string, unknown>>();
+      for (const row of rows) {
+        const assetId = String(row.stock_asset_id);
+        const existing = latestByAssetId.get(assetId);
+        if (!existing || Number(row.tick_index) > Number(existing.tick_index)) {
+          latestByAssetId.set(assetId, row);
+        }
       }
+      return { data: [...latestByAssetId.values()], error: null };
     }
 
-    return { data: [...latestByAssetId.values()], error: null };
+    if (functionName === "read_stock_market_history_v2") {
+      let rows = [...(this.tables.stock_price_ticks ?? [])]
+        .filter((row) => row.game_session_id === args.p_game_session_id);
+      if (args.p_stock_asset_id) {
+        rows = rows.filter((row) => row.stock_asset_id === args.p_stock_asset_id);
+      }
+      if (args.p_ticker) rows = rows.filter((row) => row.ticker === args.p_ticker);
+      rows.sort((left, right) => Number(right.tick_index) - Number(left.tick_index));
+      return { data: rows.slice(0, Number(args.p_limit) || 200), error: null };
+    }
+
+    return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
   }
 }
 
@@ -266,72 +270,48 @@ class FakeQueryBuilder implements PromiseLike<{ readonly data: unknown[] | null;
 
   constructor(private readonly client: FakeClient, private readonly tableName: string) {}
 
-  select(): FakeQueryBuilder {
-    return this;
-  }
-
+  select(): FakeQueryBuilder { return this; }
   eq(column: string, value: unknown): FakeQueryBuilder {
     this.filters.push({ column, value });
     return this;
   }
-
   order(column: string, options: { readonly ascending?: boolean } = {}): FakeQueryBuilder {
     this.orderings.push({ column, ascending: options.ascending ?? true });
     return this;
   }
-
   limit(count: number): FakeQueryBuilder {
     this.limitCount = count;
     return this;
   }
-
   then<TResult1 = { readonly data: unknown[] | null; readonly error: unknown }, TResult2 = never>(
     onfulfilled?: ((value: { readonly data: unknown[] | null; readonly error: unknown }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
   }
-
   private async execute(): Promise<{ readonly data: unknown[] | null; readonly error: unknown }> {
     const tableError = this.client.tableErrors.get(this.tableName);
-
-    if (tableError) {
-      return { data: null, error: tableError };
-    }
-
+    if (tableError) return { data: null, error: tableError };
     let rows = [...(this.client.tables[this.tableName] ?? [])];
-
-    for (const filter of this.filters) {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
-    }
-
+    for (const filter of this.filters) rows = rows.filter((row) => row[filter.column] === filter.value);
     for (const ordering of [...this.orderings].reverse()) {
       rows.sort((left, right) => {
         const comparison = compareValues(left[ordering.column], right[ordering.column]);
         return ordering.ascending ? comparison : -comparison;
       });
     }
-
-    if (this.limitCount !== null) {
-      rows = rows.slice(0, this.limitCount);
-    }
-
+    if (this.limitCount !== null) rows = rows.slice(0, this.limitCount);
     return { data: rows, error: null };
   }
 }
 
 function compareValues(left: unknown, right: unknown): number {
-  if (typeof left === "number" && typeof right === "number") {
-    return left - right;
-  }
-
+  if (typeof left === "number" && typeof right === "number") return left - right;
   return String(left).localeCompare(String(right));
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
-    );
+    throw new Error(`Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
   }
 }

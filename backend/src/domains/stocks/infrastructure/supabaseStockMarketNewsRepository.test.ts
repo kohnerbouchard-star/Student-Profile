@@ -14,9 +14,8 @@ declare const Deno: {
 Deno.test("market news repository inserts stock market event row", async () => {
   const client = new FakeClient({
     game_sessions: [{ id: "game-1" }],
-    stock_price_ticks: [{ game_session_id: "game-1", tick_index: 14 }],
     stock_market_events: [],
-  });
+  }, 14);
   const repository = new SupabaseStockMarketNewsRepository(client as any);
 
   const result = await repository.create({
@@ -41,37 +40,50 @@ Deno.test("market news repository inserts stock market event row", async () => {
   assertEquals(inserted.expires_tick, 20);
 });
 
-Deno.test("market news repository reads latest tick", async () => {
+Deno.test("market news repository reads authoritative runtime cursor", async () => {
   const client = new FakeClient({
     game_sessions: [{ id: "game-1" }],
-    stock_price_ticks: [
-      { game_session_id: "game-1", tick_index: 3 },
-      { game_session_id: "game-1", tick_index: 12 },
-    ],
     stock_market_events: [],
-  });
+  }, 12);
   const repository = new SupabaseStockMarketNewsRepository(client as any);
 
   assertEquals(await repository.readCurrentTick("game-1"), 12);
+  assertEquals(client.rpcCalls, [{
+    functionName: "get_current_stock_market_tick_index_v2",
+    args: { p_game_session_id: "game-1" },
+  }]);
 });
 
-Deno.test("market news repository defaults current tick to zero when no ticks exist", async () => {
+Deno.test("market news repository defaults current runtime cursor to zero", async () => {
   const client = new FakeClient({
     game_sessions: [{ id: "game-1" }],
-    stock_price_ticks: [],
     stock_market_events: [],
-  });
+  }, 0);
   const repository = new SupabaseStockMarketNewsRepository(client as any);
 
   assertEquals(await repository.readCurrentTick("game-1"), 0);
 });
 
+Deno.test("market news repository maps missing runtime cursor schema", async () => {
+  const client = new FakeClient({
+    game_sessions: [{ id: "game-1" }],
+    stock_market_events: [],
+  }, 0);
+  client.rpcError = { code: "42883", message: "function get_current_stock_market_tick_index_v2 does not exist" };
+  const repository = new SupabaseStockMarketNewsRepository(client as any);
+
+  const error = await assertRejects(
+    () => repository.readCurrentTick("game-1"),
+    StockMarketNewsError,
+  );
+  assertEquals(error.code, "market_news_schema_not_applied");
+});
+
 Deno.test("market news repository rejects missing game session", async () => {
   const client = new FakeClient({
     game_sessions: [],
-    stock_price_ticks: [],
     stock_market_events: [],
-  });
+  }, 0);
   const repository = new SupabaseStockMarketNewsRepository(client as any);
 
   const error = await assertRejects(
@@ -126,28 +138,36 @@ function baseInput(): StockMarketNewsInsertInput {
     impactStrength: "medium",
     durationTicks: 5,
     source: "runner",
-    metadata: {
-      affectedResources: ["oil", "steel"],
-    },
+    metadata: { affectedResources: ["oil", "steel"] },
     createdTick: 15,
   };
 }
 
 interface FakeTables {
   readonly game_sessions: unknown[];
-  readonly stock_price_ticks: unknown[];
   readonly stock_market_events: unknown[];
 }
 
 class FakeClient {
   readonly tables: FakeTables;
+  readonly rpcCalls: { readonly functionName: string; readonly args: any }[] = [];
+  rpcError: { readonly code?: string; readonly message: string } | null = null;
 
-  constructor(tables: FakeTables) {
+  constructor(tables: FakeTables, private readonly currentTick: number) {
     this.tables = tables;
   }
 
   from(tableName: keyof FakeTables): FakeQueryBuilder {
     return new FakeQueryBuilder(this.tables, tableName);
+  }
+
+  async rpc(functionName: string, args: any) {
+    this.rpcCalls.push({ functionName, args });
+    if (this.rpcError) return { data: null, error: this.rpcError };
+    if (functionName !== "get_current_stock_market_tick_index_v2") {
+      return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
+    }
+    return { data: this.currentTick, error: null };
   }
 }
 
@@ -162,9 +182,7 @@ class FakeQueryBuilder {
     private readonly tableName: keyof FakeTables,
   ) {}
 
-  select(_columns: string): FakeQueryBuilder {
-    return this;
-  }
+  select(_columns: string): FakeQueryBuilder { return this; }
 
   insert(row: unknown): FakeInsertBuilder {
     const stored = {
@@ -193,68 +211,40 @@ class FakeQueryBuilder {
   }
 
   maybeSingle(): Promise<{ readonly data: unknown | null; readonly error: null }> {
-    return Promise.resolve({
-      data: this.readRows()[0] ?? null,
-      error: null,
-    });
+    return Promise.resolve({ data: this.readRows()[0] ?? null, error: null });
   }
 
   then<TResult1 = { readonly data: unknown[]; readonly error: null }, TResult2 = never>(
     onfulfilled?: ((value: { readonly data: unknown[]; readonly error: null }) => TResult1 | PromiseLike<TResult1>) | null,
     _onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
-    return Promise.resolve({
-      data: this.readRows(),
-      error: null,
-    }).then(onfulfilled ?? undefined);
+    return Promise.resolve({ data: this.readRows(), error: null }).then(onfulfilled ?? undefined);
   }
 
   private readRows(): unknown[] {
     let rows = [...this.tables[this.tableName]] as Record<string, unknown>[];
-
-    for (const filter of this.filters) {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
-    }
-
+    for (const filter of this.filters) rows = rows.filter((row) => row[filter.column] === filter.value);
     if (this.orderColumn) {
       const column = this.orderColumn;
       const direction = this.orderAscending ? 1 : -1;
-      rows.sort((left, right) => {
-        const leftValue = Number(left[column] ?? 0);
-        const rightValue = Number(right[column] ?? 0);
-        return (leftValue - rightValue) * direction;
-      });
+      rows.sort((left, right) => (Number(left[column] ?? 0) - Number(right[column] ?? 0)) * direction);
     }
-
-    if (this.limitCount !== null) {
-      rows = rows.slice(0, this.limitCount);
-    }
-
+    if (this.limitCount !== null) rows = rows.slice(0, this.limitCount);
     return rows;
   }
 }
 
 class FakeInsertBuilder {
   constructor(private readonly row: unknown) {}
-
-  select(_columns: string): FakeInsertBuilder {
-    return this;
-  }
-
+  select(_columns: string): FakeInsertBuilder { return this; }
   maybeSingle(): Promise<{ readonly data: unknown; readonly error: null }> {
-    return Promise.resolve({
-      data: this.row,
-      error: null,
-    });
+    return Promise.resolve({ data: this.row, error: null });
   }
 }
 
-
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
-    );
+    throw new Error(`Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
   }
 }
 
@@ -265,12 +255,8 @@ async function assertRejects<TError extends Error>(
   try {
     await run();
   } catch (error) {
-    if (error instanceof expectedErrorClass) {
-      return error;
-    }
-
+    if (error instanceof expectedErrorClass) return error;
     throw new Error(`Expected ${expectedErrorClass.name}, got ${String(error)}`);
   }
-
   throw new Error(`Expected ${expectedErrorClass.name} to be thrown.`);
 }

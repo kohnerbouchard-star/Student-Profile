@@ -24,11 +24,14 @@ interface SupabaseMarketNewsQueryResponse<T = unknown> {
 
 type MarketNewsTableName =
   | "game_sessions"
-  | "stock_price_ticks"
   | "stock_market_events";
 
 interface SupabaseMarketNewsClient {
   from(tableName: MarketNewsTableName): SupabaseMarketNewsQueryBuilder;
+  rpc<Data = unknown>(
+    functionName: string,
+    args?: unknown,
+  ): PromiseLike<SupabaseMarketNewsQueryResponse<Data>>;
 }
 
 interface SupabaseMarketNewsQueryBuilder {
@@ -57,10 +60,6 @@ interface GameSessionRow {
   readonly id: string;
 }
 
-interface LatestTickRow {
-  readonly tick_index: number | string;
-}
-
 interface StockMarketEventInsertedRow {
   readonly id: string;
   readonly shock_id: string;
@@ -77,7 +76,6 @@ interface StockMarketEventInsertedRow {
 }
 
 const GAME_SESSION_SELECT = "id";
-const LATEST_TICK_SELECT = "tick_index";
 const INSERTED_NEWS_SELECT = [
   "id",
   "shock_id",
@@ -100,12 +98,10 @@ export class SupabaseStockMarketNewsRepository
   async readCurrentTick(gameSessionId: string): Promise<number> {
     await this.assertGameSessionExists(gameSessionId);
 
-    const response = await this.client
-      .from("stock_price_ticks")
-      .select(LATEST_TICK_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .order("tick_index", { ascending: false })
-      .limit(1);
+    const response = await this.client.rpc<number>(
+      "get_current_stock_market_tick_index_v2",
+      { p_game_session_id: gameSessionId },
+    );
 
     if (response.error) {
       throw mapMarketNewsPersistenceError(
@@ -114,14 +110,16 @@ export class SupabaseStockMarketNewsRepository
       );
     }
 
-    const rows = (response.data ?? []) as LatestTickRow[];
-    const latestTick = rows[0]?.tick_index;
-
-    if (latestTick === undefined || latestTick === null) {
-      return 0;
+    const latestTick = Number(response.data ?? 0);
+    if (!Number.isSafeInteger(latestTick) || latestTick < 0) {
+      throw new StockMarketNewsError(
+        "market_news_create_failed",
+        "Authoritative stock runtime cursor returned an invalid current tick.",
+        500,
+      );
     }
 
-    return Math.trunc(toNumber(latestTick));
+    return latestTick;
   }
 
   async create(
@@ -240,7 +238,7 @@ function mapMarketNewsPersistenceError(
   error: SupabaseMarketNewsQueryError,
   fallbackCode: StockMarketNewsError["code"],
 ): StockMarketNewsError {
-  if (error.code === "42P01" || error.code === "42703") {
+  if (error.code === "42P01" || error.code === "42703" || error.code === "42883") {
     return new StockMarketNewsError(
       "market_news_schema_not_applied",
       "Market news schema is not applied.",
