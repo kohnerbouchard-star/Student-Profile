@@ -37,7 +37,7 @@ Deno.test("Stage 10 records a mechanically valid recovery world ending", async (
     "rte_meridian_lumenor_xalvoria_v1",
     "rte_meridian_xalvoria_dravenlok_v1",
   ]) assertIncludes(sql, route);
-  assertEquals(countOccurrences(sql, '"countryCode":'), 10);
+  assertEquals(countOccurrences(sql, '\"countryCode\":'), 10);
 });
 
 Deno.test("Stage 10 personal endings are auditable, exclusive, and not a morality meter", async () => {
@@ -69,7 +69,10 @@ Deno.test("Stage 10 personal endings are auditable, exclusive, and not a moralit
   assertIncludes(sql, "'type', 'player_cash_above', 'amount', 8000");
   assertIncludes(sql, "7,607");
   assertIncludes(sql, "jsonb_build_object('not',v_reformer_core)");
-  assertIncludes(sql, "v_reformer_core,v_community_core,v_builder_core,v_broker_core,v_magnate_core,v_citizen_core");
+  assertIncludes(
+    sql.replace(/\s+/g, ""),
+    "v_reformer_core,v_community_core,v_builder_core,v_broker_core,v_magnate_core,v_citizen_core",
+  );
 });
 
 Deno.test("Stage 10 does not fabricate legal status, attacker attribution, or moral victory", async () => {
