@@ -61,6 +61,7 @@ const requiredOrder = [
   "routes/player-terminal-shared-lists.css",
   "routes/player-terminal-shared-states.css",
   "routes/player-terminal-shared-details.css",
+  "player-terminal-disclosures.css",
   "routes/player-terminal-shared-responsive.css",
   "routes/player-terminal-shared-overlays.css",
   "routes/player-terminal-dashboard.css",
@@ -82,6 +83,7 @@ const priorityCleanFiles = [
   "css/routes/player-terminal-shared-lists.css",
   "css/routes/player-terminal-shared-states.css",
   "css/routes/player-terminal-shared-details.css",
+  "css/player-terminal-disclosures.css",
   "css/routes/player-terminal-shared-responsive.css",
   "css/routes/player-terminal-shared-overlays.css",
   "css/routes/player-terminal-dashboard.css",
@@ -105,5 +107,6 @@ if (resetPriorityCount !== 1 || !/\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!impo
 }
 if ((await stat(path.join(root, "css/player-terminal-reset.css"))).size > 4_000) throw new Error("Player reset exceeded its 4 KB ownership budget.");
 if ((await stat(path.join(root, "css/player-terminal-shell-structure.css"))).size > 16_000) throw new Error("Player shell structure exceeded its 16 KB ownership budget.");
+if ((await stat(path.join(root, "css/player-terminal-disclosures.css"))).size > 5_000) throw new Error("Player disclosure owner exceeded its 5 KB ownership budget.");
 
 console.log(`Player UI convergence contract passed: one ${recoveryStats.size}-byte bounded route-coverage layer remains while ${priorityCleanFiles.length} current owners are priority-clean.`);
