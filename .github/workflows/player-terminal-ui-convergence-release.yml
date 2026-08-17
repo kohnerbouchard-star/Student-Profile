@@ -166,7 +166,7 @@ jobs:
           for marker in \
             player-terminal-tokens.css \
             player-terminal-foundation.css \
-            player-terminal-shell-compat.css \
+            player-terminal-recovery-shell-compat.css \
             player-terminal-shared-layout.css \
             player-terminal-dashboard.css
           do
