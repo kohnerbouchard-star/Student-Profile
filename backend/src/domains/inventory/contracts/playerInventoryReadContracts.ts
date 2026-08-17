@@ -1,13 +1,13 @@
 import type { PlayerCraftingRoute } from "../../crafting/contracts/playerCraftingContracts.ts";
+import type { PlayerInventoryApplicationContext } from "./playerInventoryApplicationContext.ts";
 
 export type PlayerInventoryRoute =
   | { readonly kind: "inventory" }
   | { readonly kind: "crafting"; readonly route: PlayerCraftingRoute }
   | { readonly kind: "malformed" };
 
-export interface PlayerInventoryReadScope {
-  readonly gameId: string;
-  readonly playerUuid: string;
+export interface PlayerInventoryReadInput {
+  readonly applicationContext: PlayerInventoryApplicationContext;
   readonly effectiveAt: string;
 }
 
@@ -46,8 +46,7 @@ export interface PlayerInventoryRepositoryResult {
 
 export interface PlayerInventoryReadRepository {
   readInventory(input: {
-    readonly gameId: string;
-    readonly playerUuid: string;
+    readonly applicationContext: PlayerInventoryApplicationContext;
     readonly limit: number;
   }): Promise<PlayerInventoryRepositoryResult>;
 }

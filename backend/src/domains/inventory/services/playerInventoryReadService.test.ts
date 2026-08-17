@@ -12,8 +12,20 @@ declare const Deno: {
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const NOW = "2026-08-06T07:00:00.000Z";
+const APPLICATION_CONTEXT = Object.freeze({
+  gameSessionId: GAME,
+  actor: Object.freeze({
+    kind: "player" as const,
+    playerUuid: PLAYER,
+    playerSessionId: "00000000-0000-4000-8000-000000000011",
+  }),
+  role: "player" as const,
+  permissions: Object.freeze(["own_player"] as const),
+  requestId: "request-player-inventory-service-001",
+});
 
 Deno.test("inventory service returns deterministic canonical-item summaries without leaking UUIDs", async () => {
+  const receivedContexts: unknown[] = [];
   const service = new PlayerInventoryReadService(repository([
     record({
       holdingUuid: "00000000-0000-4000-8000-000000000101",
@@ -39,14 +51,14 @@ Deno.test("inventory service returns deterministic canonical-item summaries with
       currencyCode: "ECO",
       usable: false,
     }),
-  ]));
+  ], receivedContexts));
 
   const body = await service.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     effectiveAt: NOW,
   });
 
+  assertSame(receivedContexts[0], APPLICATION_CONTEXT);
   assertEquals(body.items.map((item) => item.id), ["field-permit", "data-chip"]);
   assertEquals(body.items[0].quantityAvailable, 1);
   assertEquals(body.items[0].storeItemId, "field-permit");
@@ -78,8 +90,7 @@ Deno.test("inventory service shows owned crafted outputs independently of Store 
       usable: true,
     }),
   ])).readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     effectiveAt: NOW,
   });
 
@@ -90,8 +101,7 @@ Deno.test("inventory service shows owned crafted outputs independently of Store 
 
 Deno.test("inventory service distinguishes empty inventory from persistence unavailability", async () => {
   const empty = await new PlayerInventoryReadService(repository([])).readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     effectiveAt: NOW,
   });
   assertEquals(empty.items, []);
@@ -107,8 +117,7 @@ Deno.test("inventory service distinguishes empty inventory from persistence unav
   });
   await assertRejects(
     () => unavailable.readInventory({
-      gameId: GAME,
-      playerUuid: PLAYER,
+      applicationContext: APPLICATION_CONTEXT,
       effectiveAt: NOW,
     }),
     "player_inventory_service_unavailable",
@@ -124,7 +133,10 @@ Deno.test("inventory service rejects cross-scope, duplicate canonical public IDs
         playerUuid: PLAYER,
         records: [],
       }),
-    }).readInventory({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW }),
+    }).readInventory({
+      applicationContext: APPLICATION_CONTEXT,
+      effectiveAt: NOW,
+    }),
     "player_inventory_scope_violation",
   );
 
@@ -138,14 +150,20 @@ Deno.test("inventory service rejects cross-scope, duplicate canonical public IDs
     () => new PlayerInventoryReadService(repository([
       record({ itemKey: "data-chip" }),
       duplicate,
-    ])).readInventory({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW }),
+    ])).readInventory({
+      applicationContext: APPLICATION_CONTEXT,
+      effectiveAt: NOW,
+    }),
     "player_inventory_scope_violation",
   );
 
   await assertRejects(
     () => new PlayerInventoryReadService(repository([
       record({ owned: 1, reserved: 2 }),
-    ])).readInventory({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW }),
+    ])).readInventory({
+      applicationContext: APPLICATION_CONTEXT,
+      effectiveAt: NOW,
+    }),
     "player_inventory_scope_violation",
   );
 });
@@ -160,21 +178,26 @@ Deno.test("inventory service fails closed above the 200-holding maximum", async 
 
   await assertRejects(
     () => new PlayerInventoryReadService(repository(records)).readInventory({
-      gameId: GAME,
-      playerUuid: PLAYER,
+      applicationContext: APPLICATION_CONTEXT,
       effectiveAt: NOW,
     }),
     "player_inventory_scope_violation",
   );
 });
 
-function repository(records: readonly PlayerInventoryRecord[]): PlayerInventoryReadRepository {
+function repository(
+  records: readonly PlayerInventoryRecord[],
+  receivedContexts: unknown[] = [],
+): PlayerInventoryReadRepository {
   return {
-    readInventory: (input) => Promise.resolve({
-      gameId: input.gameId,
-      playerUuid: input.playerUuid,
-      records,
-    }),
+    readInventory: (input) => {
+      receivedContexts.push(input.applicationContext);
+      return Promise.resolve({
+        gameId: input.applicationContext.gameSessionId,
+        playerUuid: input.applicationContext.actor.playerUuid,
+        records,
+      });
+    },
   };
 }
 
@@ -235,6 +258,10 @@ function assertNoUuid(value: string): void {
   if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(value)) {
     throw new Error(`UUID leaked into browser response: ${value}`);
   }
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) throw new Error("Expected the same object reference.");
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
