@@ -186,6 +186,7 @@ function dependencies(
 function repositoryFor(options: { readonly onUpsert?: (input: unknown) => void } = {}): ContractRepository {
   return {
     listPlayerAvailableContracts: async () => [contractRecord()],
+    listGameSessionContracts: async () => [],
     getPlayerContractProgress: async () => progressRecord({ status: "in_progress" }),
     upsertPlayerContractProgress: async (input: any) => {
       options.onUpsert?.(input);
