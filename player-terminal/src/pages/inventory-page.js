@@ -11,10 +11,19 @@ function itemTone(item) {
 
 function renderItemAction(item) {
   const availableActions = Array.isArray(item.availableActions) ? item.availableActions : [];
+  const quantityAvailable = Number(item.quantityAvailable);
   const canUse = availableActions.some((action) => ["use", "inventory.use"].includes(action))
-    && Number(item.quantityAvailable) > 0;
-  if (!canUse) return renderStatusPill(item.state, itemTone(item));
-  return `<button class="player-terminal-compact-button" type="button" data-player-inventory-use="${escapeHtml(item.id)}">${icon("use")} Request use</button>`;
+    && quantityAvailable > 0;
+  const canRedeem = availableActions.includes("inventory.redeem")
+    && quantityAvailable > 0;
+
+  if (canUse) {
+    return `<button class="player-terminal-compact-button" type="button" data-player-inventory-effect-use="${escapeHtml(item.itemKey)}">${icon("use")} Use</button>`;
+  }
+  if (canRedeem) {
+    return `<button class="player-terminal-compact-button" type="button" data-player-inventory-redeem="${escapeHtml(item.id)}">${icon("use")} Request redemption</button>`;
+  }
+  return renderStatusPill(item.state, itemTone(item));
 }
 
 function renderInventoryItem(item, fallbackCurrencyCode) {

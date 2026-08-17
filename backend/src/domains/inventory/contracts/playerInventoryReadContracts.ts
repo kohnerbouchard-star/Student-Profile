@@ -28,8 +28,10 @@ export interface PlayerInventoryRecord {
   readonly itemStatus: "active" | "disabled" | "archived";
   /** Store visibility is preserved for Store-acquired items; Store-less owned outputs remain visible. */
   readonly itemVisibility: "visible" | "hidden";
-  /** True only when the canonical item definition exposes an enabled effect. */
+  /** True only when the canonical item definition exposes an enabled automatic effect. */
   readonly usable: boolean;
+  /** Manual redemption is opt-in on the canonical game item and never inferred from ownership. */
+  readonly redemptionMode?: "teacher_approval" | null;
   readonly quantityOwned: number;
   readonly quantityReserved: number;
   readonly createdAt: string;

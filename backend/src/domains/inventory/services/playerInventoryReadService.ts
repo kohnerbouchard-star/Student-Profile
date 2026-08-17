@@ -83,10 +83,13 @@ function toItemDto(record: PlayerInventoryRecord): PlayerInventoryItemDto {
 
   const quantityAvailable = record.quantityOwned - record.quantityReserved;
   const publicItemId = record.itemKey;
-  const availableActions =
-    record.itemStatus === "active" && record.usable && quantityAvailable > 0
+  const availableActions = record.itemStatus === "active" && quantityAvailable > 0
+    ? record.usable
       ? ["inventory.use"] as const
-      : [] as const;
+      : record.redemptionMode === "teacher_approval"
+      ? ["inventory.redeem"] as const
+      : [] as const
+    : [] as const;
 
   return {
     id: publicItemId,
