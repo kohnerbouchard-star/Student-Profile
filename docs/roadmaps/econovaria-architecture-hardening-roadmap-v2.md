@@ -193,6 +193,8 @@ Execution record (2026-08-17): owner branch `chore/architecture-ratchets-v1`, ba
 
 Extend existing architecture audits rather than inventing a disconnected second framework. Add ratchets for newly measured violations so the count can only move toward zero.
 
+Implementation commit: `a19b8b072777cc708a8d78ab93bcb62166461798`; pull request pending publication.
+
 At minimum detect/ratchet:
 
 - new direct database access from UI/browser code;

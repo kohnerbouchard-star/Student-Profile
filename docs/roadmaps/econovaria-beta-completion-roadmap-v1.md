@@ -27,7 +27,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Scope and beta impact: compose the existing architecture and legacy-runtime audits with a checked v2 baseline that permits measured debt only to stay flat or decrease. Zero-tolerance checks cover direct browser database access, out-of-owner balance/Inventory mutation, unscoped live-simulation persistence and retired browser markers. No product behavior, UI, route, RPC, migration, database or deployment change.
   - Collision audit: open PRs #619, #620, #624 and #626 do not own the ratchet files; no in-flight Player/runtime file is modified.
   - Implementation files: `scripts/architecture/architecture-ratchet-v2.mjs`, `scripts/architecture/architecture-ratchet-v2-baseline.json`, `package.json`, architecture dependency documentation and both authoritative roadmaps.
-  - Pull request and commit SHA: pending publication.
+  - Pull request and commit SHA: implementation commit `a19b8b072777cc708a8d78ab93bcb62166461798`; pull request pending publication.
   - Tests/evidence: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON/diff/secret checks and the required PR suite. Exact publication evidence pending.
   - Completion boundary: unmerged and not complete. Next exact item after merged-main verification: `ARCH-100`.
 
