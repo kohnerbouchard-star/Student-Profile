@@ -1,0 +1,820 @@
+/* Econovaria Player Terminal v7.4 — surgical visual normalization.
+   This layer intentionally leaves the locked v7 visual stack untouched.
+   It normalizes type roles, spacing rhythm, long-name behavior, and safe-area containment. */
+
+:root {
+  --player-terminal-space-1: 4px;
+  --player-terminal-space-2: 8px;
+  --player-terminal-space-3: 12px;
+  --player-terminal-space-4: 16px;
+  --player-terminal-space-5: 24px;
+  --player-terminal-space-6: 32px;
+  --player-terminal-type-label: 10px;
+  --player-terminal-type-meta: 11px;
+  --player-terminal-type-body: 13px;
+  --player-terminal-type-entity: 15px;
+}
+
+/* --------------------------------------------------------------------------
+   Page rhythm and shared containment
+   -------------------------------------------------------------------------- */
+.player-terminal-page-host {
+  padding: var(--player-terminal-space-5) clamp(18px, 2.2vw, 34px) 48px !important;
+}
+
+.player-terminal-page {
+  gap: var(--player-terminal-space-5) !important;
+}
+
+.player-terminal-page-heading {
+  column-gap: var(--player-terminal-space-5);
+  row-gap: var(--player-terminal-space-3);
+  padding-block: 2px;
+}
+
+.player-terminal-page-heading > div:first-child {
+  flex: 1 1 520px;
+}
+
+.player-terminal-page-heading small,
+.player-terminal-panel-header span,
+.player-terminal-heading-balance small,
+.player-terminal-contract-section > small,
+.player-terminal-api-lines small {
+  font-size: var(--player-terminal-type-label) !important;
+  line-height: 1.25 !important;
+}
+
+.player-terminal-page-heading p {
+  max-width: 760px;
+}
+
+.player-terminal-heading-actions,
+.player-terminal-heading-balance {
+  flex: 0 1 auto;
+}
+
+.player-terminal-panel-header {
+  gap: var(--player-terminal-space-3);
+  padding-bottom: var(--player-terminal-space-3);
+}
+
+.player-terminal-panel-header > div:first-child {
+  min-width: min(100%, 220px);
+}
+
+.player-terminal-panel-header > div:first-child strong {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-panel-header > small {
+  max-width: 360px;
+  color: var(--terminal-muted);
+  font-size: var(--player-terminal-type-meta) !important;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.player-terminal-panel-actions,
+.player-terminal-filter-row,
+.player-terminal-news-filters,
+.player-terminal-chart-toolbar {
+  gap: var(--player-terminal-space-2);
+}
+
+.player-terminal-page :is(input, select, textarea) {
+  min-width: 0;
+}
+
+.player-terminal-page :is(button, a, summary):focus-visible {
+  outline-offset: -3px;
+}
+
+/* --------------------------------------------------------------------------
+   Navigation fit and the sidebar boundary control
+   -------------------------------------------------------------------------- */
+.player-terminal-collapse-control {
+  top: 62px;
+  right: -15px;
+}
+
+.player-terminal-shell.is-collapsed .player-terminal-collapse-control {
+  right: -15px;
+}
+
+.player-terminal-nav-item > strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.player-terminal-nav-submenu button,
+.player-terminal-context-nav button {
+  font-size: 11px;
+}
+
+.player-terminal-side-code-expanded small {
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   Shared card typography
+   -------------------------------------------------------------------------- */
+.player-terminal-metric-card {
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-4);
+}
+
+.player-terminal-metric-card small,
+.player-terminal-portfolio-metrics small,
+.player-terminal-market-summary small,
+.player-terminal-news-summary small,
+.player-terminal-business-metrics small,
+.player-terminal-loan-metrics small {
+  font-size: var(--player-terminal-type-label) !important;
+  line-height: 1.3;
+}
+
+.player-terminal-metric-card em,
+.player-terminal-portfolio-metrics em,
+.player-terminal-market-summary span,
+.player-terminal-news-summary span,
+.player-terminal-business-metrics em,
+.player-terminal-loan-metrics em {
+  font-size: var(--player-terminal-type-meta) !important;
+  line-height: 1.4;
+}
+
+.player-terminal-status-pill {
+  min-height: 30px;
+  font-size: 9px;
+}
+
+.player-terminal-page label,
+.player-terminal-filter-row button,
+.player-terminal-chart-toolbar button,
+.player-terminal-news-filters button {
+  font-size: var(--player-terminal-type-label) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard hierarchy and mobile-safe content
+   -------------------------------------------------------------------------- */
+.player-terminal-next-action {
+  min-height: 106px;
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-next-action small {
+  font-size: var(--player-terminal-type-label);
+}
+
+.player-terminal-next-action strong {
+  font-size: var(--player-terminal-type-entity);
+  line-height: 1.3;
+}
+
+.player-terminal-next-action p {
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-line-clamp: 3;
+}
+
+.player-terminal-command-event {
+  min-height: 68px;
+  padding: 10px var(--player-terminal-space-3);
+}
+
+.player-terminal-command-event strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.player-terminal-command-event small,
+.player-terminal-wealth-breakdown small,
+.player-terminal-allocation-mini small {
+  font-size: var(--player-terminal-type-meta);
+  line-height: 1.35;
+}
+
+.player-terminal-wealth-breakdown strong {
+  font-size: var(--player-terminal-type-entity);
+}
+
+.player-terminal-world-ticker {
+  contain: inline-size;
+}
+
+/* --------------------------------------------------------------------------
+   News: summaries are readable rather than visibly cut off
+   -------------------------------------------------------------------------- */
+.player-terminal-news-list,
+.player-terminal-news-detail {
+  padding: var(--player-terminal-space-4);
+}
+
+.player-terminal-news-row {
+  min-height: 112px;
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-news-row small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-news-row strong {
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-news-row p {
+  display: block;
+  overflow: visible;
+  font-size: 11px;
+  line-height: 1.5;
+  -webkit-line-clamp: unset;
+}
+
+.player-terminal-news-detail > header {
+  flex-wrap: wrap;
+}
+
+.player-terminal-news-detail h3 {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-news-analysis p,
+.player-terminal-news-lead {
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   Market and portfolio entity names
+   -------------------------------------------------------------------------- */
+.player-terminal-asset-row {
+  min-height: 66px;
+  gap: 10px;
+  padding: 10px;
+}
+
+.player-terminal-asset-row strong {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.player-terminal-asset-row small {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.player-terminal-market-detail h3,
+.player-terminal-market-asset-title strong,
+.player-terminal-holding-asset small {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-portfolio-metrics strong,
+.player-terminal-allocation-grid strong {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.player-terminal-allocation-grid article {
+  min-height: 82px;
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-allocation-grid small {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.player-terminal-allocation-grid strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.player-terminal-allocation-grid em,
+.player-terminal-exposure-list small {
+  font-size: 10px;
+}
+
+.player-terminal-exposure-list strong {
+  font-size: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Store, inventory, marketplace, crafting, and business cards
+   -------------------------------------------------------------------------- */
+.player-terminal-store-card {
+  grid-template-rows: 176px minmax(118px, 1fr) auto;
+}
+
+.player-terminal-store-copy {
+  padding: var(--player-terminal-space-4) var(--player-terminal-space-4) 10px;
+}
+
+.player-terminal-store-copy small,
+.player-terminal-inventory-copy small,
+.player-terminal-business-product small,
+.player-terminal-marketplace-card small,
+.player-terminal-recipe-row small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-store-copy h3,
+.player-terminal-inventory-copy h3,
+.player-terminal-marketplace-card strong,
+.player-terminal-recipe-row strong,
+.player-terminal-business-product > div:nth-child(2) > strong {
+  font-size: var(--player-terminal-type-entity);
+  line-height: 1.3;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.player-terminal-store-copy p,
+.player-terminal-inventory-copy p,
+.player-terminal-marketplace-card p,
+.player-terminal-recipe-row p,
+.player-terminal-business-product p {
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-store-footer {
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-3) var(--player-terminal-space-4) var(--player-terminal-space-4);
+}
+
+.player-terminal-store-footer > strong {
+  font-size: 15px;
+}
+
+.player-terminal-inventory-card {
+  gap: var(--player-terminal-space-4);
+  padding: var(--player-terminal-space-4);
+}
+
+.player-terminal-marketplace-card,
+.player-terminal-recipe-row,
+.player-terminal-loan-offer,
+.player-terminal-business-product {
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-business-product dt,
+.player-terminal-loan-offer dt {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.player-terminal-business-product dd,
+.player-terminal-loan-offer dd {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* --------------------------------------------------------------------------
+   Contracts: title/issuer hierarchy and resilient columns
+   -------------------------------------------------------------------------- */
+.player-terminal-contract-row {
+  grid-template-columns: 14px minmax(180px, 1fr) minmax(90px, auto) minmax(92px, auto) 16px;
+  gap: var(--player-terminal-space-3);
+  min-height: 84px;
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-contract-row > span:nth-of-type(2) strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.player-terminal-contract-row > span:nth-of-type(2) small {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.player-terminal-contract-row > span:not(:nth-of-type(2)) small {
+  font-size: 9px;
+}
+
+.player-terminal-contract-row > span:not(:nth-of-type(2)) strong {
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.player-terminal-contract-detail > header {
+  flex-wrap: wrap;
+}
+
+.player-terminal-contract-detail > header h3 {
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   Banking, messages, profile, and long labels
+   -------------------------------------------------------------------------- */
+.player-terminal-bank-card {
+  padding: var(--player-terminal-space-4) !important;
+}
+
+.player-terminal-bank-card small,
+.player-terminal-transaction-row small,
+.player-terminal-thread-row small,
+.player-terminal-message-thread-head small,
+.player-terminal-message-log header small,
+.player-terminal-profile-identity dt {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-bank-card p,
+.player-terminal-message-log p {
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.player-terminal-transaction-row {
+  min-height: 64px;
+  gap: var(--player-terminal-space-3);
+  padding: 10px var(--player-terminal-space-3);
+}
+
+.player-terminal-transaction-row strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.player-terminal-transaction-row > div:first-of-type strong {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-thread-row {
+  min-height: 68px;
+  gap: var(--player-terminal-space-3);
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-thread-row strong {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-thread-row small {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-message-log article > div {
+  padding: var(--player-terminal-space-3);
+}
+
+.player-terminal-profile-identity h3 {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-profile-identity dt {
+  font-size: 9px;
+}
+
+.player-terminal-profile-identity dd {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-api-lines code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive normalization
+   -------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+  .player-terminal-contract-row {
+    grid-template-columns: 14px minmax(0, 1fr) minmax(88px, auto) minmax(92px, auto) 16px;
+  }
+}
+
+@media (max-width: 860px) {
+  .player-terminal-page-host {
+    padding: 18px 16px 112px !important;
+  }
+
+  .player-terminal-page {
+    gap: 18px !important;
+  }
+
+  .player-terminal-page-heading h2 {
+    font-size: 30px !important;
+  }
+
+  .player-terminal-heading-actions,
+  .player-terminal-heading-balance {
+    width: 100%;
+    justify-content: flex-start;
+    justify-items: start;
+  }
+
+  .player-terminal-panel-header > small {
+    text-align: left;
+  }
+
+  .player-terminal-shell-main {
+    scroll-padding-bottom: 104px;
+  }
+
+  .player-terminal-page :is(button, a, summary, input, select, textarea) {
+    scroll-margin-bottom: 104px;
+  }
+}
+
+@media (max-width: 620px) {
+  .player-terminal-page-host {
+    padding-inline: 12px !important;
+  }
+
+  .player-terminal-page-heading > div:first-child {
+    flex-basis: 100%;
+  }
+
+  .player-terminal-page-heading p {
+    font-size: 13px !important;
+  }
+
+  .player-terminal-metric-card {
+    min-height: 104px;
+  }
+
+  .player-terminal-next-action {
+    grid-template-columns: 24px 38px minmax(0, 1fr) 16px;
+    min-height: 112px;
+    padding: 11px;
+  }
+
+  .player-terminal-news-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .player-terminal-news-row > .player-terminal-status-pill {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .player-terminal-store-card {
+    grid-template-rows: 160px auto auto;
+  }
+
+  .player-terminal-inventory-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .player-terminal-contract-row {
+    grid-template-columns: 14px minmax(0, 1fr) 16px;
+    min-height: 82px;
+  }
+
+  .player-terminal-contract-row > span:nth-of-type(n + 3) {
+    display: none;
+  }
+
+  .player-terminal-transaction-row > div:last-child {
+    justify-items: start;
+  }
+
+  .player-terminal-message-log article {
+    max-width: 96%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   v7.4 audit corrections
+   -------------------------------------------------------------------------- */
+.player-terminal-collapse-control {
+  top: 54px;
+}
+
+.player-terminal-asset-row small {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 860px) {
+  .player-terminal-page-heading > div:first-child {
+    flex: 0 1 auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .player-terminal-next-action p {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Meaningful microcopy normalization
+   -------------------------------------------------------------------------- */
+.player-terminal-news-detail > header small,
+.player-terminal-news-analysis > small,
+.player-terminal-news-effects > small,
+.player-terminal-news-links section > small,
+.player-terminal-country-related section > small {
+  font-size: var(--player-terminal-type-label);
+  line-height: 1.3;
+}
+
+.player-terminal-news-links button b,
+.player-terminal-country-related button b,
+.player-terminal-market-change {
+  font-size: 9px;
+}
+
+.player-terminal-holdings-table > header span,
+.player-terminal-holding-asset small,
+.player-terminal-holdings-table > button small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-company-identity small,
+.player-terminal-company-facts dt,
+.player-terminal-capacity-block small,
+.player-terminal-business-suppliers article small {
+  font-size: var(--player-terminal-type-label);
+  line-height: 1.35;
+}
+
+.player-terminal-capacity-block p,
+.player-terminal-business-suppliers article strong {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.player-terminal-contract-tabs strong,
+.player-terminal-contract-detail > header small,
+.player-terminal-contract-rewards small,
+.player-terminal-contract-timeline > small,
+.player-terminal-contract-timeline span small,
+.player-terminal-contract-lifecycle strong {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.player-terminal-store-media > span,
+.player-terminal-store-connector small,
+.player-terminal-inventory-value small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-marketplace-summary small,
+.player-terminal-marketplace-summary span,
+.player-terminal-marketplace-card > div:nth-child(2) > span,
+.player-terminal-marketplace-card > div:last-child small {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.player-terminal-crafting-summary small,
+.player-terminal-recipe-grid > section > small,
+.player-terminal-recipe-grid article small,
+.player-terminal-recipe-grid dt,
+.player-terminal-crafting-queue article small {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.player-terminal-crafting-summary p,
+.player-terminal-recipe-hero p,
+.player-terminal-loan-offer p,
+.player-terminal-loan-review p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.player-terminal-loan-review dt,
+.player-terminal-active-loan-head small,
+.player-terminal-active-loan-head span,
+.player-terminal-loan-schedule article small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-thread-row em,
+.player-terminal-message-thread-head span,
+.player-terminal-message-compose > div small {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.player-terminal-progression-hero small,
+.player-terminal-progression-hero .player-terminal-xp-row strong,
+.player-terminal-progression-facts dt,
+.player-terminal-progression-tabs button,
+.player-terminal-reputation-list small,
+.player-terminal-milestone-list small,
+.player-terminal-achievements-panel small,
+.player-terminal-licenses-panel small {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.player-terminal-profile-identity > div small,
+.player-terminal-api-lines code {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* Business row content groups need their own vertical rhythm. Without this,
+   inline small/strong elements visually concatenate into one label. */
+.player-terminal-business-product > div:nth-child(2),
+.player-terminal-business-suppliers article > div {
+  display: grid;
+  gap: var(--player-terminal-space-1);
+  min-width: 0;
+}
+
+.player-terminal-business-product > div:nth-child(2) > small,
+.player-terminal-business-product > div:nth-child(2) > strong,
+.player-terminal-business-product > div:nth-child(2) > p,
+.player-terminal-business-suppliers article > div > strong,
+.player-terminal-business-suppliers article > div > small {
+  display: block;
+  min-width: 0;
+}
+
+.player-terminal-business-suppliers article {
+  gap: var(--player-terminal-space-3);
+}
+
+.player-terminal-business-suppliers article > div:last-child {
+  justify-items: end;
+  text-align: right;
+}
+
+/* Crafting and loan cards use inline semantic elements in their content
+   column. Explicit vertical layout prevents category labels and entity names
+   from running together when the browser applies inherited inline flow. */
+.player-terminal-crafting-summary article > div,
+.player-terminal-recipe-row > div,
+.player-terminal-crafting-queue article > div,
+.player-terminal-loan-offer > div {
+  display: grid;
+  gap: var(--player-terminal-space-1);
+  min-width: 0;
+}
+
+.player-terminal-crafting-summary article > div > *,
+.player-terminal-recipe-row > div > *,
+.player-terminal-crafting-queue article > div > *,
+.player-terminal-loan-offer > div > * {
+  min-width: 0;
+}
+
+.player-terminal-crafting-summary p,
+.player-terminal-recipe-row p,
+.player-terminal-loan-offer p {
+  margin-top: 0;
+}
+
+.player-terminal-crafting-queue article > div > strong,
+.player-terminal-crafting-queue article > div > small,
+.player-terminal-loan-offer > div > strong,
+.player-terminal-loan-offer > div > small {
+  display: block;
+}
+
+/* A row-oriented search field must not retain a 240px flex-basis when its
+   toolbar switches to a vertical mobile layout. */
+@media (max-width: 720px) {
+  .player-terminal-search-field {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+}
