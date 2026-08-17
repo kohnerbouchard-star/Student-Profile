@@ -14,6 +14,11 @@ import {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import {
+  renderStoryDecisionRoleplay,
+  type StoryDecisionRoleplayClient,
+  type StoryDecisionRoleplayResult,
+} from "../../storylines/services/storyDecisionRoleplayService.ts";
+import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
@@ -46,9 +51,11 @@ export interface PlayerContractPublicSubmitHttpHandlerDependencies {
     gameSessionId: string,
     playerId: string,
   ) => Promise<string | null>;
-  readonly createRepository?: (
-    client: EdgeSupabaseClient,
-  ) => ContractRepository;
+  readonly createRepository?: (client: EdgeSupabaseClient) => ContractRepository;
+  readonly renderStoryRoleplay?: (
+    client: StoryDecisionRoleplayClient,
+    input: { readonly gameSessionId: string; readonly playerId: string; readonly contractKey: string },
+  ) => Promise<StoryDecisionRoleplayResult | null>;
   readonly now?: () => string;
 }
 
@@ -61,18 +68,18 @@ const FORBIDDEN_SCOPE_HEADERS = [
   "x-player-uuid",
   "x-stock-market-runner-secret",
 ] as const;
-const LOCKED_PROGRESS_STATUSES = new Set([
-  "completed",
-  "expired",
-  "failed",
-  "dismissed",
-]);
+const LOCKED_PROGRESS_STATUSES = new Set(["completed", "expired", "failed", "dismissed"]);
 const SUBMITTABLE_PROGRESS_STATUSES = new Set(["in_progress", "submitted"]);
+const STORY_DECISION_CONTRACT_KEYS = new Set([
+  "contract.meridian.compare-financing-governance.v1",
+  "contract.meridian.belonging-long-term-status-decision.v1",
+]);
 const MAX_BODY_LENGTH = 20_000;
 const MAX_JSON_DEPTH = 8;
 const MAX_OBJECT_KEYS = 80;
 const MAX_ARRAY_LENGTH = 200;
 const MAX_STRING_LENGTH = 4_000;
+const MIN_STORY_RATIONALE_LENGTH = 20;
 
 export async function handlePlayerContractPublicSubmitRequest(
   request: Request,
@@ -80,19 +87,10 @@ export async function handlePlayerContractPublicSubmitRequest(
   dependencies: PlayerContractPublicSubmitHttpHandlerDependencies,
 ): Promise<Response> {
   if (route.kind === "malformed") {
-    return jsonError(400, {
-      code: "invalid_player_contract_submit_request",
-      message: "The Player Contract submission route is invalid.",
-      retryable: false,
-    });
+    return jsonError(400, { code: "invalid_player_contract_submit_request", message: "The Player Contract submission route is invalid.", retryable: false });
   }
-
   if (request.method !== "POST") {
-    return jsonError(405, {
-      code: "method_not_allowed",
-      message: "Use POST to submit Contract evidence.",
-      retryable: false,
-    });
+    return jsonError(405, { code: "method_not_allowed", message: "Use POST to submit Contract evidence.", retryable: false });
   }
 
   try {
@@ -105,23 +103,13 @@ export async function handlePlayerContractPublicSubmitRequest(
 
     const envResult = (dependencies.readSupabaseEnv ?? readSupabaseEnv)();
     if (!envResult.ok) {
-      return jsonError(500, {
-        code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
-        retryable: false,
-      });
+      return jsonError(500, { code: "missing_edge_runtime_config", message: "Classroom API runtime configuration is incomplete.", retryable: false });
     }
 
     const serviceClient = dependencies.createServiceClient(envResult.value);
-    const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
-      sessionToken,
-    );
-    const sessionResult = await (dependencies.resolvePlayerSession ??
-      resolveActivePlayerSession)(serviceClient, sessionTokenHash);
-
-    if (!sessionResult.ok) {
-      return jsonError(sessionResult.status, sessionResult.error);
-    }
+    const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(sessionToken);
+    const sessionResult = await (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(serviceClient, sessionTokenHash);
+    if (!sessionResult.ok) return jsonError(sessionResult.status, sessionResult.error);
 
     const gameSessionId = sessionResult.session.game_session_id;
     const playerId = sessionResult.player.id;
@@ -129,61 +117,33 @@ export async function handlePlayerContractPublicSubmitRequest(
       ? dependencies.createRepository(serviceClient)
       : new SupabaseContractRepository(serviceClient as never);
     const submittedAt = (dependencies.now ?? (() => new Date().toISOString()))();
-    const countryCode = await (dependencies.resolvePlayerCountryCode ??
-      resolveActivePlayerCountryCode)(
-      serviceClient,
-      gameSessionId,
-      playerId,
-    );
+    const countryCode = await (dependencies.resolvePlayerCountryCode ?? resolveActivePlayerCountryCode)(serviceClient, gameSessionId, playerId);
     const availableContracts = await listPlayerContractsAvailableNow(repository, {
       gameSessionId,
       playerId,
       ...(countryCode ? { countryCode } : {}),
-      ...(sessionResult.player.roster_label
-        ? { rosterLabel: sessionResult.player.roster_label }
-        : {}),
+      ...(sessionResult.player.roster_label ? { rosterLabel: sessionResult.player.roster_label } : {}),
       nowIso: submittedAt,
     });
-    const contract = availableContracts.find((candidate) =>
-      candidate.contractKey === route.contractKey
-    );
+    const contract = availableContracts.find((candidate) => candidate.contractKey === route.contractKey);
 
     if (!contract) {
-      return jsonError(404, {
-        code: "contract_not_available",
-        message: "Contract is not available to the authenticated player.",
-        retryable: false,
-      });
+      return jsonError(404, { code: "contract_not_available", message: "Contract is not available to the authenticated player.", retryable: false });
     }
 
-    const existingProgress = await repository.getPlayerContractProgress({
-      gameSessionId,
-      contractId: contract.id,
-      playerId,
-    });
+    if (STORY_DECISION_CONTRACT_KEYS.has(contract.contractKey)) {
+      assertValidStoryDecisionEvidence(submitBody.evidencePayload);
+    }
 
+    const existingProgress = await repository.getPlayerContractProgress({ gameSessionId, contractId: contract.id, playerId });
     if (!existingProgress) {
-      return jsonError(409, {
-        code: "contract_not_accepted",
-        message: "Accept this Contract before submitting evidence.",
-        retryable: false,
-      });
+      return jsonError(409, { code: "contract_not_accepted", message: "Accept this Contract before submitting evidence.", retryable: false });
     }
-
     if (LOCKED_PROGRESS_STATUSES.has(String(existingProgress.status))) {
-      return jsonError(409, {
-        code: "contract_progress_locked",
-        message: "Contract progress can no longer be submitted.",
-        retryable: false,
-      });
+      return jsonError(409, { code: "contract_progress_locked", message: "Contract progress can no longer be submitted.", retryable: false });
     }
-
     if (!SUBMITTABLE_PROGRESS_STATUSES.has(String(existingProgress.status))) {
-      return jsonError(409, {
-        code: "contract_progress_not_submittable",
-        message: "Contract progress is not ready for submission.",
-        retryable: false,
-      });
+      return jsonError(409, { code: "contract_progress_not_submittable", message: "Contract progress is not ready for submission.", retryable: false });
     }
 
     const progress = await repository.upsertPlayerContractProgress({
@@ -196,49 +156,53 @@ export async function handlePlayerContractPublicSubmitRequest(
       submittedAt,
     });
 
+    let storyRoleplay: StoryDecisionRoleplayResult | null = null;
+    if (STORY_DECISION_CONTRACT_KEYS.has(contract.contractKey)) {
+      try {
+        storyRoleplay = await (dependencies.renderStoryRoleplay ?? renderStoryDecisionRoleplay)(
+          serviceClient as unknown as StoryDecisionRoleplayClient,
+          { gameSessionId, playerId, contractKey: contract.contractKey },
+        );
+      } catch {
+        storyRoleplay = null;
+      }
+    }
+
     return jsonResponse(200, {
       ok: true,
       contract: toPublicPlayerContractListItemDto(contract),
       progress: toPublicPlayerContractProgressDto(progress, contract.contractKey),
+      ...(storyRoleplay ? { storyRoleplay } : {}),
     });
   } catch (error) {
     return playerContractPublicSubmitErrorToResponse(error);
   }
 }
 
-async function readSubmitRequestBody(
-  request: Request,
-): Promise<{ readonly evidencePayload: JsonObject }> {
+async function readSubmitRequestBody(request: Request): Promise<{ readonly evidencePayload: JsonObject }> {
   const text = await request.text();
   if (!text.trim()) return { evidencePayload: {} };
-  if (text.length > MAX_BODY_LENGTH) {
-    throw invalidRequest("Contract evidence is too large.");
-  }
-
+  if (text.length > MAX_BODY_LENGTH) throw invalidRequest("Contract evidence is too large.");
   let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    throw invalidRequest("Request body must be valid JSON.");
-  }
-  if (!isRecord(value)) {
-    throw invalidRequest("Request body must be a JSON object.");
-  }
-
+  try { value = JSON.parse(text); } catch { throw invalidRequest("Request body must be valid JSON."); }
+  if (!isRecord(value)) throw invalidRequest("Request body must be a JSON object.");
   for (const key of Object.keys(value)) {
-    if (key !== "evidencePayload") {
-      throw invalidRequest(
-        "Only evidencePayload is accepted; Contract and player scope come from the route and session.",
-      );
-    }
+    if (key !== "evidencePayload") throw invalidRequest("Only evidencePayload is accepted; Contract and player scope come from the route and session.");
   }
-
   const evidencePayload = value.evidencePayload ?? {};
-  if (!isRecord(evidencePayload)) {
-    throw invalidRequest("evidencePayload must be a JSON object.");
-  }
+  if (!isRecord(evidencePayload)) throw invalidRequest("evidencePayload must be a JSON object.");
   assertBoundedJson(evidencePayload, 0);
   return { evidencePayload: evidencePayload as JsonObject };
+}
+
+function assertValidStoryDecisionEvidence(evidencePayload: JsonObject): void {
+  const storyDecision = evidencePayload.storyDecision;
+  if (!isRecord(storyDecision)) throw invalidRequest("Choose a Story response and explain your reasoning before submitting.");
+  const optionKey = typeof storyDecision.optionKey === "string" ? storyDecision.optionKey.trim() : "";
+  const rationale = typeof storyDecision.rationale === "string" ? storyDecision.rationale.trim() : "";
+  if (!optionKey || !/^[a-z0-9_]{2,80}$/.test(optionKey)) throw invalidRequest("Choose one of the available Story responses.");
+  if (rationale.length < MIN_STORY_RATIONALE_LENGTH) throw invalidRequest("Explain your reasoning in at least 20 characters before continuing the conversation.");
+  if (rationale.length > MAX_STRING_LENGTH) throw invalidRequest("Story rationale text is too long.");
 }
 
 function assertBoundedJson(value: unknown, depth: number): void {
@@ -261,58 +225,28 @@ function assertBoundedJson(value: unknown, depth: number): void {
   const entries = Object.entries(value);
   if (entries.length > MAX_OBJECT_KEYS) throw invalidRequest("Contract evidence contains too many fields.");
   for (const [key, nested] of entries) {
-    if (["__proto__", "constructor", "prototype"].includes(key)) {
-      throw invalidRequest("Contract evidence contains an invalid field.");
-    }
+    if (["__proto__", "constructor", "prototype"].includes(key)) throw invalidRequest("Contract evidence contains an invalid field.");
     assertBoundedJson(nested, depth + 1);
   }
 }
 
-function rejectClientSuppliedScope(
-  searchParams: URLSearchParams,
-  headers: Headers,
-): void {
-  if ([...searchParams.keys()].length > 0) {
-    throw invalidRequest(
-      "Player Contract submission scope is derived from the route and x-player-session-token.",
-    );
-  }
+function rejectClientSuppliedScope(searchParams: URLSearchParams, headers: Headers): void {
+  if ([...searchParams.keys()].length > 0) throw invalidRequest("Player Contract submission scope is derived from the route and x-player-session-token.");
   for (const headerName of FORBIDDEN_SCOPE_HEADERS) {
-    if (headers.has(headerName)) {
-      throw invalidRequest(
-        "Player Contract submission scope is derived from the route and x-player-session-token.",
-      );
-    }
+    if (headers.has(headerName)) throw invalidRequest("Player Contract submission scope is derived from the route and x-player-session-token.");
   }
 }
 
 function invalidRequest(message: string): EdgeActivationError {
-  return new EdgeActivationError(
-    "invalid_player_contract_submit_request",
-    message,
-    400,
-    false,
-  );
+  return new EdgeActivationError("invalid_player_contract_submit_request", message, 400, false);
 }
 
 function playerContractPublicSubmitErrorToResponse(error: unknown): Response {
   if (error instanceof EdgeActivationError) {
-    return jsonError(error.status, {
-      code: error.code,
-      message: error.message,
-      retryable: error.retryable,
-    });
+    return jsonError(error.status, { code: error.code, message: error.message, retryable: error.retryable });
   }
   if (error instanceof ContractRepositoryError) {
-    return jsonError(500, {
-      code: error.code,
-      message: "Player Contract submission failed.",
-      retryable: false,
-    });
+    return jsonError(500, { code: error.code, message: "Player Contract submission failed.", retryable: false });
   }
-  return jsonError(500, {
-    code: "player_contract_submit_request_failed",
-    message: "Player Contract submission failed.",
-    retryable: false,
-  });
+  return jsonError(500, { code: "player_contract_submit_request_failed", message: "Player Contract submission failed.", retryable: false });
 }

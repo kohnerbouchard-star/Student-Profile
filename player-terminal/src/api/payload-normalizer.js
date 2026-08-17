@@ -18,13 +18,11 @@ const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
 const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
 const COUNTRY_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const TOKEN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
+const STORY_OPTION = /^[a-z0-9_]{2,80}$/;
 const TRAVEL_MODES = new Set(["land", "sea", "air", "meridian"]);
 
 function invalidPayload(endpointKey, field) {
-  return new ApiRequestError(`Enter a valid value for ${field}.`, {
-    code: "INVALID_REQUEST",
-    endpointKey
-  });
+  return new ApiRequestError(`Enter a valid value for ${field}.`, { code: "INVALID_REQUEST", endpointKey });
 }
 
 function normalizeString(key, value, endpointKey) {
@@ -47,22 +45,16 @@ function messageText(value, endpointKey) {
   if (!text) throw invalidPayload(endpointKey, "body");
   return text;
 }
-
 function requirePattern(value, pattern, endpointKey, field) {
   const clean = normalizeString(field, value, endpointKey).toLowerCase();
   if (!pattern.test(clean)) throw invalidPayload(endpointKey, field);
   return clean;
 }
-
 function normalizeArrivalAnswers(raw, endpointKey) {
-  if (!Array.isArray(raw) || raw.length < 6 || raw.length > 8) {
-    throw invalidPayload(endpointKey, "answers");
-  }
+  if (!Array.isArray(raw) || raw.length < 6 || raw.length > 8) throw invalidPayload(endpointKey, "answers");
   const questionIds = new Set();
   return raw.map((answer) => {
-    if (!answer || typeof answer !== "object" || Array.isArray(answer)) {
-      throw invalidPayload(endpointKey, "answers");
-    }
+    if (!answer || typeof answer !== "object" || Array.isArray(answer)) throw invalidPayload(endpointKey, "answers");
     const questionId = requirePattern(answer.questionId, TOKEN, endpointKey, "questionId");
     const optionId = requirePattern(answer.optionId, TOKEN, endpointKey, "optionId");
     if (questionIds.has(questionId)) throw invalidPayload(endpointKey, "answers");
@@ -70,7 +62,6 @@ function normalizeArrivalAnswers(raw, endpointKey) {
     return Object.freeze({ questionId, optionId });
   });
 }
-
 function normalizeContractChoiceAnswers(raw, endpointKey) {
   const answers = [];
   for (const [key, value] of Object.entries(raw)) {
@@ -88,9 +79,7 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
   if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
   if (endpointKey === "arrivalClass") return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   if (endpointKey === "travelQuote") {
-    const allowedModes = Array.isArray(raw.allowedModes)
-      ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))]
-      : [];
+    const allowedModes = Array.isArray(raw.allowedModes) ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))] : [];
     if (!allowedModes.length || allowedModes.length > 4 || allowedModes.some((mode) => !TRAVEL_MODES.has(mode))) throw invalidPayload(endpointKey, "allowedModes");
     return { toLocationId: requirePattern(raw.toLocationId, PUBLIC_LOCATION_ID, endpointKey, "toLocationId"), allowedModes };
   }
@@ -121,6 +110,12 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
   }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {
+    if (raw.storyOption !== undefined || raw.storyRationale !== undefined) {
+      const optionKey = requirePattern(raw.storyOption, STORY_OPTION, endpointKey, "storyOption");
+      const rationale = normalizeString("storyRationale", raw.storyRationale, endpointKey);
+      if (rationale.length < 20) throw invalidPayload(endpointKey, "storyRationale");
+      return { evidencePayload: { storyDecision: { optionKey, rationale } } };
+    }
     const answers = normalizeContractChoiceAnswers(raw, endpointKey);
     if (answers.length) {
       const evidencePayload = { answers };
@@ -134,7 +129,6 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
     return payload;
   }
   const payload = {};
-
   for (const [key, value] of Object.entries(raw).slice(0, 80)) {
     if (value === undefined || value === null || value === "") continue;
     const rule = NUMBER_RULES[key];
@@ -151,7 +145,6 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
     if (typeof value === "string") payload[key] = normalizeString(key, value, endpointKey);
     else if (typeof value === "boolean") payload[key] = value;
   }
-
   if (endpointKey === "marketOrder") payload.timeInForce = "GTC";
   return payload;
 }

@@ -4,6 +4,7 @@ import { installToastHostController } from "./accessibility/toast-host-controlle
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
+import { installStoryDecisionFlow } from "./features/contracts/story-decision-flow.js";
 import { installInventoryActionFlow } from "./features/inventory/inventory-action-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
@@ -32,6 +33,7 @@ const formDrafts = installFormDraftPreserver(mount, {
 const messageIntents = installMessageIntentAdapter({ mount, drafts: formDrafts });
 
 const terminal = createPlayerTerminal({ mount, config });
+const storyDecisions = installStoryDecisionFlow({ mount, terminal, config });
 const messageReads = installMessageReadFlow({ mount, terminal, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
 const logout = installPlayerLogoutController({ terminal, config, mount });
@@ -60,6 +62,7 @@ terminal.destroy = () => {
   inventoryActions.destroy();
   localControls.destroy();
   messageReads.destroy();
+  storyDecisions.destroy();
   messageIntents.destroy();
   formDrafts.destroy();
   toastHost.destroy();
