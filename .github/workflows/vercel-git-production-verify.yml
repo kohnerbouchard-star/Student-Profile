@@ -75,38 +75,16 @@ jobs:
             '+refs/heads/release/production:refs/remotes/origin/release/production'
           test "$(git rev-parse origin/release/production)" = "$DEPLOYMENT_SHA"
 
-      - name: Verify deployment and canonical production health
+      - name: Verify canonical production health
         shell: bash
         run: |
           set -euo pipefail
-          deployment_health="$RUNNER_TEMP/deployment-health.json"
           canonical_health="$RUNNER_TEMP/canonical-health.json"
-          deployment_origin="${DEPLOYMENT_URL%/}"
           for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error \
               --connect-timeout 5 \
               --max-time 15 \
-              "$deployment_origin/api/health" > "$deployment_health"; then
-              if HEALTH="$deployment_health" node - <<'NODE'
-          const fs=require('node:fs');
-          const value=JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
-          if(value.ok!==true || value.status!=='ready' || value.environment!=='production' ||
-             value.projectRef!==process.env.PRODUCTION_PROJECT_REF ||
-             value.sourceCommit!==process.env.DEPLOYMENT_SHA) process.exit(1);
-          NODE
-              then break; fi
-            fi
-            if [ "$attempt" -eq 30 ]; then
-              echo 'Deployment health did not converge.' >&2
-              exit 1
-            fi
-            sleep 5
-          done
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error \
-              --connect-timeout 5 \
-              --max-time 15 \
-              "https://econovaria.com/api/health" > "$canonical_health"; then
+              "https://www.econovaria.com/api/health" > "$canonical_health"; then
               if HEALTH="$canonical_health" node - <<'NODE'
           const fs=require('node:fs');
           const value=JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
@@ -129,6 +107,4 @@ jobs:
           name: vercel-git-production-${{ github.event.client_payload.git.sha }}
           retention-days: 30
           if-no-files-found: error
-          path: |
-            ${{ runner.temp }}/deployment-health.json
-            ${{ runner.temp }}/canonical-health.json
+          path: ${{ runner.temp }}/canonical-health.json

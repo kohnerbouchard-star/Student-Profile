@@ -49,10 +49,20 @@ for (const marker of [
   "github.event.client_payload.git.sha",
   "github.event.client_payload.url",
   "release/production",
-  "https://econovaria.com/api/health",
+  "https://www.econovaria.com/api/health",
   "sourceCommit",
 ]) {
   assert.ok(verifier.includes(marker), `missing production verification marker: ${marker}`);
+}
+
+for (const forbidden of [
+  "deployment-health.json",
+  '"$deployment_origin/api/health"',
+]) {
+  assert.ok(
+    !verifier.includes(forbidden),
+    `production verifier must not depend on protected raw deployment health: ${forbidden}`,
+  );
 }
 
 assert.ok(
