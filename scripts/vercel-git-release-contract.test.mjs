@@ -55,6 +55,16 @@ for (const marker of [
   assert.ok(verifier.includes(marker), `missing production verification marker: ${marker}`);
 }
 
+for (const forbidden of [
+  "deployment-health.json",
+  '"$deployment_origin/api/health"',
+]) {
+  assert.ok(
+    !verifier.includes(forbidden),
+    `production verifier must not depend on protected raw deployment health: ${forbidden}`,
+  );
+}
+
 assert.ok(
   health.includes("environment.VERCEL_GIT_COMMIT_SHA"),
   "runtime health must accept Vercel Git commit SHA",
