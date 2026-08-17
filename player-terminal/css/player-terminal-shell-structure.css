@@ -74,6 +74,10 @@
   .player-terminal-shell:not(.is-collapsed) {
     grid-template-columns: 15rem minmax(0, 1fr);
   }
+
+  .player-terminal-shell:not(.is-collapsed) > .player-terminal-left-menu {
+    width: 100%;
+  }
 }
 
 @media (max-width: 53.75rem) {
