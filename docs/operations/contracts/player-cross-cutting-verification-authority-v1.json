@@ -11,9 +11,9 @@
   "allowedPaths": [
     ".github/workflows/player-terminal-ui-convergence-release.yml",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "player-terminal/css/player-terminal-disclosures.css",
     "player-terminal/css/player-terminal-reset.css",
     "player-terminal/css/player-terminal-shell-structure.css",
-    "player-terminal/css/routes/player-terminal-shared-details.css",
     "player-terminal/index.html",
     "player-terminal/src/forms/disclosure-state-preserver.js",
     "player-terminal/src/main.js",
@@ -28,9 +28,9 @@
   "requiredFiles": [
     ".github/workflows/player-terminal-ui-convergence-release.yml",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "player-terminal/css/player-terminal-disclosures.css",
     "player-terminal/css/player-terminal-reset.css",
     "player-terminal/css/player-terminal-shell-structure.css",
-    "player-terminal/css/routes/player-terminal-shared-details.css",
     "player-terminal/index.html",
     "player-terminal/src/forms/disclosure-state-preserver.js",
     "player-terminal/src/main.js",
