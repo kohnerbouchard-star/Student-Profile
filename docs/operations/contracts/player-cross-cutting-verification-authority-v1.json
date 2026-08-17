@@ -21,6 +21,7 @@
     "player-terminal/src/pages/inventory-page.js",
     "player-terminal/tests/inventory-read-model.mjs",
     "player-terminal/tests/student-profile-runtime-integration.mjs",
+    "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/connected-player-bff-acceptance-loader.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -38,6 +39,7 @@
     "player-terminal/src/pages/inventory-page.js",
     "player-terminal/tests/inventory-read-model.mjs",
     "player-terminal/tests/student-profile-runtime-integration.mjs",
+    "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/connected-player-bff-acceptance-loader.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
