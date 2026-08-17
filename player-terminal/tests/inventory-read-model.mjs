@@ -62,7 +62,7 @@ const response = {
       currencyCode: "ECO",
       itemStatus: "active",
       itemVisibility: "player",
-      availableActions: ["use"],
+      availableActions: ["inventory.use"],
       createdAt: "2026-07-17T12:00:00.000Z",
       updatedAt: "2026-07-18T12:00:00.000Z"
     },
@@ -71,7 +71,7 @@ const response = {
       storeItemId: "item-equipment",
       itemKey: "market-lens",
       name: "Market Lens",
-      description: "Market analysis equipment.",
+      description: "Teacher-supervised classroom equipment.",
       category: "Equipment",
       quantityOwned: 3,
       quantityReserved: 0,
@@ -81,7 +81,7 @@ const response = {
       currencyCode: "LUM",
       itemStatus: "active",
       itemVisibility: "player",
-      availableActions: [],
+      availableActions: ["inventory.redeem"],
       createdAt: "2026-07-17T12:00:00.000Z",
       updatedAt: "2026-07-18T12:00:00.000Z"
     }
@@ -95,7 +95,8 @@ assert.equal(inventory.items[0].quantityReserved, 2);
 assert.equal(inventory.items[0].quantityAvailable, 3);
 assert.equal(inventory.items[0].state, "Partially Reserved");
 assert.deepEqual(inventory.items[0].availableActions, []);
-assert.deepEqual(inventory.items[1].availableActions, ["use"]);
+assert.deepEqual(inventory.items[1].availableActions, ["inventory.use"]);
+assert.deepEqual(inventory.items[2].availableActions, ["inventory.redeem"]);
 assert.equal(inventory.items[2].currencyCode, "LUM");
 assert.equal(inventory.capacity, null);
 assert.equal(inventory.summary.quantityAvailable, 7);
@@ -114,9 +115,11 @@ assert.ok(html.includes(">2<"));
 assert.ok(html.includes("Partially Reserved"));
 assert.ok(html.includes("ECO 50"));
 assert.ok(html.includes("LUM 30"), "Inventory values must use each item’s authoritative currency code.");
-assert.ok(!html.includes('data-player-inventory-use="holding-consumable"'), "Items without an authoritative availableActions policy must not expose use controls.");
-assert.match(html, /data-player-inventory-use="holding-usable"(?![^>]*disabled)/, "Only an authoritative availableActions policy may enable item use.");
-assert.ok(!html.includes('data-player-inventory-use="holding-equipment"'), "Equipment must not be inferred as usable from presentation state.");
+assert.ok(!html.includes('data-player-inventory-effect-use="energy-cell-pack"'), "Items without an authoritative availableActions policy must not expose use controls.");
+assert.match(html, /data-player-inventory-effect-use="priority-processing-token"(?![^>]*disabled)/, "Effect-enabled items must expose direct use by canonical item key.");
+assert.match(html, /data-player-inventory-redeem="holding-equipment"(?![^>]*disabled)/, "Teacher-supervised items must expose a redemption request control.");
+assert.ok(html.includes("> Use</button>"), "Direct effect actions must be labeled Use.");
+assert.ok(html.includes("Request redemption</button>"), "Teacher-supervised actions must be labeled Request redemption.");
 assert.ok(html.includes("Item actions execute only when the backend publishes a supported policy"));
 
 const route = resolvePlayerBackendRequest({
@@ -131,4 +134,4 @@ assert.equal(route.method, "GET");
 assert.equal(route.path, "/players/me/inventory");
 assert.equal(route.payload, undefined);
 
-console.log("Inventory read model passed: authoritative quantities, reservations, currencies, capability-gated actions, and UUID privacy are valid.");
+console.log("Inventory read model passed: authoritative quantities, reservations, currencies, split item actions, and UUID privacy are valid.");
