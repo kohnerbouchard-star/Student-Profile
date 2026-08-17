@@ -83,7 +83,7 @@
     align-items: flex-start;
   }
 
-  .player-terminal-app-root .player-terminal-holdings-table > :is(ader, button) {
+  .player-terminal-app-root .player-terminal-holdings-table > :is(header, button) {
     min-width: 34rem;
   }
 }

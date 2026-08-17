@@ -1,0 +1,620 @@
+/* Econovaria Player Terminal v7.2 — UI containment and interactive map pass.
+   Loaded after the locked v7 visual stack so the approved visual language stays intact. */
+
+/* --------------------------------------------------------------------------
+   Global containment and readable wrapping
+   -------------------------------------------------------------------------- */
+.player-terminal-app-root,
+.player-terminal-shell,
+.player-terminal-shell-main,
+.player-terminal-page-host,
+.player-terminal-page,
+.player-terminal-page > *,
+.player-terminal-panel,
+.player-terminal-panel > *,
+.player-terminal-panel-header,
+.player-terminal-panel-header > *,
+.player-terminal-page-heading,
+.player-terminal-page-heading > *,
+.player-terminal-heading-actions,
+.player-terminal-market-layout > *,
+.player-terminal-contract-layout > *,
+.player-terminal-bank-layout > *,
+.player-terminal-profile-layout > *,
+.player-terminal-news-layout > *,
+.player-terminal-portfolio-layout > *,
+.player-terminal-business-layout > *,
+.player-terminal-marketplace-layout > *,
+.player-terminal-messages-layout > *,
+.player-terminal-loans-layout > *,
+.player-terminal-crafting-layout > * {
+  min-width: 0;
+}
+
+.player-terminal-app-root :is(
+  .player-terminal-page-heading h2,
+  .player-terminal-page-heading p,
+  .player-terminal-panel-header strong,
+  .player-terminal-panel-header small,
+  .player-terminal-next-action strong,
+  .player-terminal-next-action p,
+  .player-terminal-command-event strong,
+  .player-terminal-command-event small,
+  .player-terminal-metric-card strong,
+  .player-terminal-metric-card em,
+  .player-terminal-thread-row strong,
+  .player-terminal-thread-row small,
+  .player-terminal-store-copy strong,
+  .player-terminal-store-copy p,
+  .player-terminal-inventory-copy strong,
+  .player-terminal-inventory-copy p,
+  .player-terminal-business-product strong,
+  .player-terminal-business-product p
+) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.player-terminal-page-heading {
+  flex-wrap: wrap;
+  row-gap: 14px;
+}
+
+.player-terminal-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+}
+
+.player-terminal-panel-header {
+  flex-wrap: wrap;
+  row-gap: 9px;
+}
+
+.player-terminal-panel-header > div:first-child {
+  flex: 1 1 220px;
+}
+
+.player-terminal-panel-header > :is(button, .player-terminal-status-pill, small) {
+  flex: 0 0 auto;
+}
+
+.player-terminal-app-root :is(button, input, select, textarea) {
+  max-width: 100%;
+}
+
+.player-terminal-filter-row,
+.player-terminal-chart-toolbar,
+.player-terminal-panel-actions,
+.player-terminal-context-nav {
+  flex-wrap: wrap;
+}
+
+.player-terminal-metric-card {
+  grid-template-columns: 42px minmax(0, 1fr);
+  min-height: 98px;
+  padding: 14px;
+}
+
+.player-terminal-metric-card small,
+.player-terminal-portfolio-metrics small,
+.player-terminal-market-summary small,
+.player-terminal-news-summary small {
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.player-terminal-metric-card strong,
+.player-terminal-portfolio-metrics strong {
+  min-width: 0;
+  font-size: clamp(17px, 1.55vw, 22px);
+  line-height: 1.08;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.player-terminal-metric-card em,
+.player-terminal-portfolio-metrics em {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.player-terminal-next-action {
+  grid-template-columns: 28px 42px minmax(0, 1fr) 18px;
+  min-height: 96px;
+  padding: 12px;
+}
+
+.player-terminal-next-action > svg:last-child {
+  justify-self: end;
+}
+
+.player-terminal-next-action small {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.player-terminal-next-action strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.player-terminal-next-action p {
+  line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+   Navigation and shell fit
+   -------------------------------------------------------------------------- */
+.player-terminal-left-menu {
+  overflow: visible;
+}
+
+.player-terminal-nav {
+  overflow-x: visible;
+}
+
+.player-terminal-nav-item {
+  min-width: 0;
+}
+
+.player-terminal-nav-item > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-terminal-nav-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+
+.player-terminal-collapse-control {
+  z-index: 40;
+  overflow: visible;
+}
+
+.player-terminal-app-topbar {
+  min-width: 0;
+}
+
+.player-terminal-breadcrumb,
+.player-terminal-topbar-status,
+.player-terminal-top-actions {
+  min-width: 0;
+}
+
+.player-terminal-balance-chip strong,
+.player-terminal-system-clock {
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Country-border interaction layer
+   -------------------------------------------------------------------------- */
+.player-terminal-command-map {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1672 / 941;
+  max-height: 540px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #010712;
+}
+
+.player-terminal-command-map .player-terminal-world-map,
+.player-terminal-country-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.player-terminal-command-map .player-terminal-world-map {
+  object-fit: contain;
+  object-position: center;
+  opacity: .78;
+  filter: saturate(.94) contrast(1.06) brightness(.72);
+}
+
+.player-terminal-country-overlay {
+  z-index: 4;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.player-terminal-country-region {
+  cursor: pointer;
+  outline: none;
+}
+
+.player-terminal-country-hit {
+  fill: rgba(255, 255, 255, .001);
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.player-terminal-country-fill {
+  fill: var(--country-color);
+  fill-opacity: 0;
+  stroke: none;
+  pointer-events: none;
+  transition: fill-opacity .16s ease;
+}
+
+.player-terminal-country-border {
+  fill: none;
+  stroke: var(--country-color);
+  stroke-width: 1.15;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-opacity: .34;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  filter: url(#playerCountryGlow);
+  transition: stroke-opacity .16s ease, stroke-width .16s ease;
+}
+
+.player-terminal-country-marker {
+  color: var(--country-color);
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .16s ease, opacity .16s ease;
+}
+
+.player-terminal-country-marker circle:first-child {
+  fill: rgba(2, 8, 16, .86);
+  stroke: var(--country-color);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.player-terminal-country-marker circle:last-child {
+  fill: var(--country-color);
+  stroke: none;
+  filter: drop-shadow(0 0 5px var(--country-color));
+}
+
+.player-terminal-country-region:is(:hover, :focus-visible) .player-terminal-country-fill {
+  fill-opacity: .13;
+}
+
+.player-terminal-country-region:is(:hover, :focus-visible) .player-terminal-country-border {
+  stroke-width: 2.25;
+  stroke-opacity: 1;
+}
+
+.player-terminal-country-region:is(:hover, :focus-visible) .player-terminal-country-marker {
+  transform: scale(1.28);
+}
+
+.player-terminal-country-region:focus-visible .player-terminal-country-border {
+  stroke: #fff;
+  stroke-opacity: 1;
+}
+
+.player-terminal-country-region.is-home-country .player-terminal-country-fill {
+  fill-opacity: .075;
+}
+
+.player-terminal-country-region.is-home-country .player-terminal-country-border {
+  stroke-width: 1.85;
+  stroke-opacity: .92;
+}
+
+.player-terminal-country-region.is-home-country .player-terminal-country-marker circle:first-child {
+  stroke-width: 2;
+}
+
+.player-terminal-world-vignette {
+  z-index: 2;
+  pointer-events: none;
+}
+
+
+
+/* v7.3 map overlay correction: the old full-width Home Market summary was
+   removed because it obscured the southern countries and was not selection-aware. */
+.player-terminal-map-instruction {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 8;
+  display: grid;
+  gap: 3px;
+  max-width: min(260px, calc(100% - 20px));
+  padding: 8px 10px;
+  color: #d9f7ff;
+  background: rgba(2, 8, 16, .76);
+  border: 1px solid rgba(0, 212, 255, .2);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.player-terminal-map-instruction strong {
+  color: var(--terminal-cyan);
+  font: 900 9px/1.1 var(--player-terminal-font-ui);
+  letter-spacing: .09em;
+}
+
+.player-terminal-map-instruction small {
+  color: #88a7b5;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+/* The old point hotspots are intentionally superseded by the country geometry. */
+.player-terminal-command-map > .player-terminal-map-hotspot {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Route-level layout corrections
+   -------------------------------------------------------------------------- */
+.player-terminal-bank-card,
+.player-terminal-market-summary article,
+.player-terminal-news-summary article,
+.player-terminal-portfolio-metrics article,
+.player-terminal-business-metrics article,
+.player-terminal-loan-metrics article {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.player-terminal-bank-card > div,
+.player-terminal-bank-card > span,
+.player-terminal-bank-card dl,
+.player-terminal-market-summary article > *,
+.player-terminal-news-summary article > *,
+.player-terminal-portfolio-metrics article > * {
+  min-width: 0;
+}
+
+.player-terminal-bank-card strong,
+.player-terminal-bank-card dd,
+.player-terminal-market-summary strong,
+.player-terminal-news-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-search-field {
+  min-width: min(100%, 220px);
+  flex: 1 1 240px;
+}
+
+.player-terminal-store-toolbar,
+.player-terminal-inventory-toolbar,
+.player-terminal-news-filters,
+.player-terminal-marketplace-summary {
+  gap: 10px;
+}
+
+.player-terminal-messages-layout {
+  min-height: min(700px, calc(100vh - 250px));
+}
+
+.player-terminal-message-composer,
+.player-terminal-message-panel,
+.player-terminal-thread-list {
+  min-width: 0;
+}
+
+.player-terminal-thread-row {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+}
+
+.player-terminal-thread-row > div {
+  min-width: 0;
+}
+
+.player-terminal-thread-row strong,
+.player-terminal-thread-row small {
+  white-space: normal;
+}
+
+
+/* --------------------------------------------------------------------------
+   Specific fit corrections found during the visual audit
+   -------------------------------------------------------------------------- */
+.player-terminal-side-code {
+  min-height: 72px;
+}
+
+.player-terminal-side-code-expanded small {
+  max-width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.35;
+}
+
+.player-terminal-next-action {
+  min-height: 106px;
+}
+
+.player-terminal-next-action p {
+  -webkit-line-clamp: 3;
+}
+
+.player-terminal-contract-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.player-terminal-contract-layout {
+  grid-template-columns: minmax(470px, .96fr) minmax(500px, 1.04fr);
+}
+
+.player-terminal-contract-row {
+  grid-template-columns: 14px minmax(0, 1fr) 104px 96px 16px;
+  min-height: 78px;
+}
+
+.player-terminal-contract-row > span:nth-of-type(3) {
+  display: none;
+}
+
+.player-terminal-contract-row > span:nth-of-type(2) strong,
+.player-terminal-contract-row > span:nth-of-type(2) small {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.player-terminal-contract-row > span:nth-of-type(2) strong {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.player-terminal-contract-row > span:nth-of-type(2) small {
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+@media (max-width: 1180px) {
+  .player-terminal-contract-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .player-terminal-contract-row {
+    min-height: 72px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive corrections
+   -------------------------------------------------------------------------- */
+@media (max-width: 1320px) {
+  .player-terminal-command-layout {
+    grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr);
+  }
+
+  .player-terminal-market-layout {
+    grid-template-columns: minmax(270px, .72fr) minmax(0, 1.28fr);
+  }
+
+  .player-terminal-order-ticket {
+    grid-column: 1 / -1;
+  }
+
+  .player-terminal-business-metrics,
+  .player-terminal-loan-metrics,
+  .player-terminal-command-metrics,
+  .player-terminal-market-summary,
+  .player-terminal-news-summary,
+  .player-terminal-portfolio-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .player-terminal-command-layout,
+  .player-terminal-market-layout,
+  .player-terminal-contract-layout,
+  .player-terminal-bank-layout,
+  .player-terminal-profile-layout,
+  .player-terminal-news-layout,
+  .player-terminal-portfolio-layout,
+  .player-terminal-business-layout,
+  .player-terminal-marketplace-layout,
+  .player-terminal-loans-layout,
+  .player-terminal-crafting-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-messages-layout {
+    grid-template-columns: 290px minmax(0, 1fr);
+  }
+
+  .player-terminal-command-map {
+    max-height: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .player-terminal-page-host {
+    padding-inline: 16px !important;
+  }
+
+  .player-terminal-page-heading {
+    align-items: flex-start;
+  }
+
+  .player-terminal-heading-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .player-terminal-messages-layout {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .player-terminal-country-border {
+    stroke-width: 1.5;
+    stroke-opacity: .5;
+  }
+
+  .player-terminal-country-region.is-home-country .player-terminal-country-border {
+    stroke-width: 2.1;
+  }
+}
+
+@media (max-width: 620px) {
+  .player-terminal-command-metrics,
+  .player-terminal-market-summary,
+  .player-terminal-news-summary,
+  .player-terminal-portfolio-metrics,
+  .player-terminal-business-metrics,
+  .player-terminal-loan-metrics,
+  .player-terminal-bank-accounts,
+  .player-terminal-inventory-grid,
+  .player-terminal-progression-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-next-action {
+    grid-template-columns: 24px 38px minmax(0, 1fr) 16px;
+    gap: 8px;
+  }
+
+  .player-terminal-command-map {
+    min-height: 290px;
+    aspect-ratio: auto;
+  }
+
+  .player-terminal-map-instruction {
+    top: 7px;
+    left: 7px;
+    max-width: calc(100% - 14px);
+    padding: 7px 9px;
+  }
+
+  .player-terminal-map-instruction small {
+    display: none;
+  }
+
+  .player-terminal-country-marker circle:first-child {
+    r: 13;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-terminal-country-fill,
+  .player-terminal-country-border,
+  .player-terminal-country-marker {
+    transition: none;
+  }
+}

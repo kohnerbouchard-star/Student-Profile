@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -14,15 +14,59 @@ const retiredStyles = [
   "player-terminal-route-compat.css",
 ];
 for (const stylesheet of retiredStyles) {
-  if (indexSource.includes(stylesheet)) throw new Error(`Retired Player stylesheet is still loaded: ${stylesheet}`);
+  if (indexSource.includes(`./css/${stylesheet}`)) throw new Error(`Retired Player stylesheet name was reactivated: ${stylesheet}`);
   try {
     await access(path.join(root, "css", stylesheet));
   } catch (error) {
     if (error?.code === "ENOENT") continue;
     throw error;
   }
-  throw new Error(`Retired Player stylesheet still exists: ${stylesheet}`);
+  throw new Error(`Retired Player stylesheet still exists under its old ownership name: ${stylesheet}`);
 }
+
+const recoveryStyles = [
+  "player-terminal-recovery-base.css",
+  "player-terminal-recovery-core.css",
+  "player-terminal-recovery-ux.css",
+  "player-terminal-recovery-polish.css",
+  "player-terminal-recovery-normalization.css",
+  "player-terminal-recovery-shell-compat.css",
+  "player-terminal-recovery-route-compat.css",
+];
+for (const stylesheet of recoveryStyles) {
+  if (!indexSource.includes(`./css/${stylesheet}`)) throw new Error(`Player recovery stylesheet is not loaded: ${stylesheet}`);
+  const stats = await stat(path.join(root, "css", stylesheet));
+  if (stats.size === 0) throw new Error(`Player recovery stylesheet is empty: ${stylesheet}`);
+}
+
+const stylesheetOrder = [...indexSource.matchAll(/<link\s+rel="stylesheet"\s+href="\.\/css\/([^"]+)"\s*\/>/g)].map((match) => match[1]);
+const requiredOrder = [
+  "player-terminal-recovery-base.css",
+  "player-terminal-recovery-core.css",
+  "player-terminal-recovery-ux.css",
+  "player-terminal-recovery-polish.css",
+  "player-terminal-recovery-normalization.css",
+  "player-terminal-tokens.css",
+  "player-terminal-foundation.css",
+  "player-terminal-recovery-shell-compat.css",
+  "routes/player-terminal-shared-layout.css",
+  "routes/player-terminal-shared-cards.css",
+  "routes/player-terminal-shared-lists.css",
+  "routes/player-terminal-shared-states.css",
+  "routes/player-terminal-shared-details.css",
+  "routes/player-terminal-shared-responsive.css",
+  "routes/player-terminal-shared-overlays.css",
+  "player-terminal-recovery-route-compat.css",
+  "routes/player-terminal-dashboard.css",
+];
+let previousIndex = -1;
+for (const stylesheet of requiredOrder) {
+  const currentIndex = stylesheetOrder.indexOf(stylesheet);
+  if (currentIndex === -1) throw new Error(`Required Player recovery/canonical stylesheet is not loaded: ${stylesheet}`);
+  if (currentIndex <= previousIndex) throw new Error(`Player recovery cascade order is invalid at ${stylesheet}`);
+  previousIndex = currentIndex;
+}
+
 const canonicalFiles = [
   "css/player-terminal-tokens.css",
   "css/player-terminal-foundation.css",
@@ -46,4 +90,5 @@ for (const file of canonicalFiles) {
   const source = await readFile(path.join(root, file), "utf8");
   if (/!important\b/.test(source)) throw new Error(`Canonical Player owner contains !important debt: ${file}`);
 }
-console.log(`Player V2 legacy retirement passed: ${retiredStyles.length} legacy styles are absent and ${canonicalFiles.length} canonical owners are priority-clean.`);
+
+console.log(`Player UI recovery contract passed: ${recoveryStyles.length} bounded recovery layers restore the pre-cutover cascade while ${canonicalFiles.length} V2 owners remain loaded and priority-clean.`);
