@@ -1,6 +1,5 @@
 /* Econovaria Player Terminal refresh — shared route detail ownership.
-   Owns Banking cards, dense detail surfaces, Store/Inventory card padding,
-   and native disclosure presentation without overriding closed-details semantics. */
+   Owns Banking cards, dense detail surfaces, and Store/Inventory card padding. */
 
 /* Shared route surfaces that previously depended on route-specific legacy fragments. */
 .player-terminal-app-root :is(
@@ -85,90 +84,3 @@
   padding-block: var(--player-space-3) var(--player-space-4);
 }
 
-/* Native disclosures stay genuinely collapsed unless the open attribute is set. */
-.player-terminal-app-root .player-terminal-disclosure {
-  margin-top: var(--player-space-4);
-  overflow: hidden;
-  border: 0.0625rem solid var(--player-color-line);
-  border-radius: var(--player-radius-md);
-  background: rgb(0 212 255 / 2.5%);
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary {
-  display: grid;
-  grid-template-columns: var(--player-control-sm) minmax(0, 1fr) var(--player-icon-action);
-  align-items: center;
-  gap: var(--player-space-3);
-  min-height: 3.75rem;
-  padding: var(--player-space-2) var(--player-space-3);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary > span {
-  display: grid;
-  width: var(--player-control-sm);
-  height: var(--player-control-sm);
-  place-items: center;
-  color: var(--player-color-cyan);
-  background: rgb(0 212 255 / 7%);
-  border: 0.0625rem solid rgb(0 212 255 / 14%);
-  border-radius: var(--player-radius-sm);
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary > span svg,
-.player-terminal-app-root .player-terminal-disclosure > summary > svg {
-  width: var(--player-icon-action);
-  height: var(--player-icon-action);
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary > div {
-  display: grid;
-  gap: var(--player-space-1);
-  min-width: 0;
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary strong {
-  color: var(--player-color-text);
-  font-size: var(--player-text-meta);
-  line-height: 1.3;
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary small {
-  color: var(--player-color-text-muted);
-  font-size: var(--player-text-label);
-  line-height: 1.4;
-}
-
-.player-terminal-app-root .player-terminal-disclosure > summary > svg:last-child {
-  color: var(--player-color-text-muted);
-  transition: transform var(--player-motion-fast) var(--player-ease-out);
-}
-
-.player-terminal-app-root .player-terminal-disclosure[open] > summary > svg:last-child {
-  transform: rotate(90deg);
-}
-
-.player-terminal-app-root .player-terminal-disclosure[open] > form {
-  display: grid;
-  gap: var(--player-space-3);
-  padding: var(--player-space-4);
-  border-top: 0.0625rem solid var(--player-color-line);
-}
-
-@media (max-width: 38.75rem) {
-  .player-terminal-app-root .player-terminal-disclosure > summary {
-    grid-template-columns: var(--player-control-sm) minmax(0, 1fr) var(--player-icon-inline);
-    gap: var(--player-space-2);
-    padding-inline: var(--player-space-2);
-  }
-
-  .player-terminal-app-root .player-terminal-disclosure[open] > form {
-    padding: var(--player-space-3);
-  }
-}
