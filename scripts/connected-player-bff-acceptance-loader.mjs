@@ -317,7 +317,7 @@ function adaptInventoryUsableHoldingFixture(source) {
   limit 1
 )
 update public.game_items gi
-set metadata = coalesce(gi.metadata, '{}'::jsonb) || '{"effectEnabled":true}'::jsonb
+set metadata = coalesce(gi.metadata, '{}'::jsonb) || '{"effectEnabled":false,"redemptionMode":"teacher_approval"}'::jsonb
 from candidate c
 where gi.id = c.game_item_id
 returning gi.canonical_key;\`;
@@ -336,11 +336,41 @@ returning gi.canonical_key;\`;
   }
   browser = await chromium.launch({ headless: true });`;
 
-  return replaceExactlyOnce(
+  source = replaceExactlyOnce(
     source,
-    "Inventory usable holding fixture",
+    "Inventory teacher-redemption fixture",
     oldBlock,
     newBlock,
+  );
+  source = replaceExactlyOnce(
+    source,
+    "Inventory teacher-redemption selector",
+    'page.locator("[data-player-inventory-use]:visible").first()',
+    'page.locator("[data-player-inventory-redeem]:visible").first()',
+  );
+  source = replaceExactlyOnce(
+    source,
+    "Inventory teacher-redemption public key",
+    'use.getAttribute("data-player-inventory-use")',
+    'use.getAttribute("data-player-inventory-redeem")',
+  );
+  return replaceExactlyOnce(
+    source,
+    "Inventory teacher-redemption prompts",
+    "  const { page } = player;\n  await openInventory(page);",
+    `  const { page } = player;
+  page.on("dialog", async (dialog) => {
+    if (dialog.type() !== "prompt") {
+      await dialog.dismiss();
+      return;
+    }
+    if (dialog.message().startsWith("Quantity to redeem")) {
+      await dialog.accept("1");
+      return;
+    }
+    await dialog.accept("");
+  });
+  await openInventory(page);`,
   );
 }
 
