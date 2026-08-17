@@ -4,12 +4,13 @@ import process from "node:process";
 
 const root = process.cwd();
 const read = (relative) => readFile(path.join(root, relative), "utf8");
-const [indexSource, resetSource, tokensSource, foundationSource, shellStructureSource, packageSource] = await Promise.all([
+const [indexSource, resetSource, tokensSource, foundationSource, shellStructureSource, disclosureSource, packageSource] = await Promise.all([
   read("index.html"),
   read("css/player-terminal-reset.css"),
   read("css/player-terminal-tokens.css"),
   read("css/player-terminal-foundation.css"),
   read("css/player-terminal-shell-structure.css"),
+  read("css/player-terminal-disclosures.css"),
   read("package.json")
 ]);
 
@@ -50,6 +51,7 @@ const requiredOrder = [
   "routes/player-terminal-shared-lists.css",
   "routes/player-terminal-shared-states.css",
   "routes/player-terminal-shared-details.css",
+  "player-terminal-disclosures.css",
   "routes/player-terminal-shared-responsive.css",
   "routes/player-terminal-shared-overlays.css",
   "routes/player-terminal-dashboard.css",
@@ -69,8 +71,8 @@ for (const file of requiredOrder) {
   previousIndex = currentIndex;
 }
 
-if (/!important\b/.test(tokensSource) || /!important\b/.test(foundationSource) || /!important\b/.test(shellStructureSource)) {
-  throw new Error("Player tokens, shell foundation, and shell structure must remain priority-clean.");
+if (/!important\b/.test(tokensSource) || /!important\b/.test(foundationSource) || /!important\b/.test(shellStructureSource) || /!important\b/.test(disclosureSource)) {
+  throw new Error("Player tokens, shell owners, and disclosure owner must remain priority-clean.");
 }
 const resetPriority = resetSource.match(/!important\b/g) || [];
 if (resetPriority.length !== 1 || !/\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important/s.test(resetSource)) {
@@ -89,14 +91,21 @@ for (const selector of [".player-terminal-shell", ".player-terminal-left-menu", 
 for (const selector of [".player-terminal-shell", ".player-terminal-nav-item > strong", ".player-terminal-collapse-control", ".player-terminal-context-nav", ".player-terminal-mobile-nav", ".player-terminal-mobile-sheet"]) {
   if (!shellStructureSource.includes(selector)) throw new Error(`Shell structural ownership selector is missing: ${selector}`);
 }
-if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationSource) || /player-terminal-(?:command-map|world-map|country-|map-)/.test(shellStructureSource)) {
-  throw new Error("Shell ownership crossed into the protected interactive-map subsystem.");
+for (const selector of [".player-terminal-disclosure", ".player-terminal-disclosure[open] > form"]) {
+  if (!disclosureSource.includes(selector)) throw new Error(`Disclosure ownership selector is missing: ${selector}`);
+}
+if (/\.player-terminal-disclosure\s*>\s*form\s*\{[^}]*display\s*:\s*grid/s.test(disclosureSource)) {
+  throw new Error("Closed Player disclosures must not expose forms outside the [open] state.");
+}
+if (/player-terminal-(?:command-map|world-map|country-|map-)/.test(foundationSource) || /player-terminal-(?:command-map|world-map|country-|map-)/.test(shellStructureSource) || /player-terminal-(?:command-map|world-map|country-|map-)/.test(disclosureSource)) {
+  throw new Error("Shell/disclosure ownership crossed into the protected interactive-map subsystem.");
 }
 
 if ((await stat(path.join(root, "css/player-terminal-reset.css"))).size > 4_000) throw new Error("Player reset exceeded its 4 KB ownership budget.");
 if ((await stat(path.join(root, "css/player-terminal-tokens.css"))).size > 8_000) throw new Error("Player token file exceeded its 8 KB ownership budget.");
 if ((await stat(path.join(root, "css/player-terminal-foundation.css"))).size > 24_000) throw new Error("Player shell foundation exceeded its 24 KB ownership budget.");
 if ((await stat(path.join(root, "css/player-terminal-shell-structure.css"))).size > 16_000) throw new Error("Player shell structure exceeded its 16 KB ownership budget.");
+if ((await stat(path.join(root, "css/player-terminal-disclosures.css"))).size > 5_000) throw new Error("Player disclosure owner exceeded its 5 KB ownership budget.");
 
 const packageJson = JSON.parse(packageSource);
 for (const script of ["css:foundation", "map-protection"]) {
@@ -111,4 +120,4 @@ for (const file of retired) {
 }
 
 await import("./player-v2-legacy-retirement.mjs");
-console.log(`Player CSS foundation passed with ${stylesheetOrder.length} active stylesheets, one bounded route-coverage predecessor, and current shell ownership authoritative.`);
+console.log(`Player CSS foundation passed with ${stylesheetOrder.length} active stylesheets, one bounded route-coverage predecessor, and current shell/disclosure ownership authoritative.`);
