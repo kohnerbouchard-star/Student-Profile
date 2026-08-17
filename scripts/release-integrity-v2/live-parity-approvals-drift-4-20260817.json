@@ -1,0 +1,69 @@
+{
+  "approvedRoutineDefinitionDrift": [
+    {
+      "signature": "public.list_stock_tick_archive_candidates_v2()",
+      "stagingSha256": "ecd02414ff695ca259ef77e8f3c9bcdaeb668adffb185d4476c187efae5b2b9d",
+      "productionSha256": "a7848e0e889435dd73a5c4e898759c0309bf1f49dac342d2911f012852c62465"
+    },
+    {
+      "signature": "public.maintain_stock_candle_retention_v1(p_now timestamp with time zone)",
+      "stagingSha256": "3c2450a2f7249109dae39da2c87710e3818b4a56cbcc51ac64a64e409f07cec0",
+      "productionSha256": "b2fb96cf3e0d2121a3c0bb29d73f497c93ac323958737378a0253e14d6b61e9e"
+    },
+    {
+      "signature": "public.prepare_next_stock_tick_archive(p_game_session_id uuid)",
+      "stagingSha256": "462d6328f8c5e5c6d757078f2408645f1d72178e16c6a002730d0754b8ca260d",
+      "productionSha256": "617e4cc3971f7704eba87df7d3e1253637bc9a232af4150638e585b72d6c89db"
+    },
+    {
+      "signature": "public.purge_verified_stock_tick_archive(p_archive_id uuid)",
+      "stagingSha256": "507a57c57d53c2c93f281f217a6f6830bd7f3f3281f38e9675dd400153315c63",
+      "productionSha256": "18cca215c799758497e5e0449e394277e26e694d00e9e36dd7d1cd7094362818"
+    },
+    {
+      "signature": "public.read_latest_stock_market_ticks_for_game(p_game_session_id uuid, p_ticker text)",
+      "stagingSha256": "e05869b381e49efe8c4b7dd49fafd9e1538f16f08d6567a24d35ec51bc35f8e1",
+      "productionSha256": "e66ed4518623a5d083b0c028bce6d0dd0f3bc8cc59ec2e94ee09e1a0373c1d15"
+    },
+    {
+      "signature": "public.read_stock_market_history_v2(p_game_session_id uuid, p_stock_asset_id uuid, p_ticker text, p_limit integer)",
+      "stagingSha256": "02a0f383b056d6adca063e78bf96ec82d30126890845f35df79d991dbeffb459",
+      "productionSha256": "18e8a3b0133eda1fe76d7ea75d19b6b812980bf5b0c0189d53acd60ebe25dcfd"
+    },
+    {
+      "signature": "public.record_game_data_purge_failure_v1(p_request_id uuid, p_stage text, p_error text)",
+      "stagingSha256": "bd0d9ef87d5d93fa6c424576e31efc275142715c56688d554b4de2b9fb8bbf85",
+      "productionSha256": "891257bb3753c8eefadf60a8c818bc4556ac9a535357fbb86e5ec563ff2503bc"
+    },
+    {
+      "signature": "public.record_game_data_purge_r2_progress_v1(p_request_id uuid, p_r2_prefix text, p_deleted_objects bigint, p_deleted_bytes bigint, p_complete boolean)",
+      "stagingSha256": "5f1e4c134bdcdea52bd14b0b871446da154a3cbee42f6ebd25eb64f12d64eb49",
+      "productionSha256": "9be118abfeabc7352388aba2d766c00bb752a7af03fb9db0261931293890d18b"
+    },
+    {
+      "signature": "public.register_verified_stock_tick_archive(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer, p_row_count bigint, p_object_key text, p_object_etag text, p_sha256 text, p_compressed_bytes bigint)",
+      "stagingSha256": "be2ec15447ef8619c83b951c2642a71bbd3a2b91ff73eaf4d29b9e7bf65926e6",
+      "productionSha256": "aa54aa2a9e2e4ad4198cbbffed6aab73b7b6e4770ad7b89893cc5ae196a7088c"
+    },
+    {
+      "signature": "public.run_due_game_license_expirations_v1(p_now timestamp with time zone)",
+      "stagingSha256": "1c79ff0e405064b84bffe5bd03cbfdf0f02e2ae826c38686b81d245a006922d9",
+      "productionSha256": "f2e6cd64f24c3296d81e1f9528969a8bc554c885d7e417c0c1ae481e5697e5e5"
+    },
+    {
+      "signature": "public.run_platform_storage_health_check_v1(p_environment_name text)",
+      "stagingSha256": "6069083baf57ec33be6340a95e09df8b369da62b38fa49319c62735607cdc44b",
+      "productionSha256": "fe6971b6c12384cda2f8be5f2033810e20b6cf17518df457e811568877b74ec8"
+    },
+    {
+      "signature": "public.set_game_license_expiration_v1(p_game_session_id uuid, p_actor_staff_user_id uuid, p_license_expires_at timestamp with time zone)",
+      "stagingSha256": "0efaf6d1f37e19866dd2cfd5b32d515af8fba401ed85e820aef7df1ccb82af98",
+      "productionSha256": "b299e6806b7c9e628b4e5777f0c90850222779a69c147c6e3438994b4d63f618"
+    },
+    {
+      "signature": "public.verify_runtime_scheduler_token_v1(p_scheduler_name text, p_token_sha256 text)",
+      "stagingSha256": "c292581f8fd51da28f3e6e40cfc36fd3c944b21f4e29cf9f54bd4c9eb538ff77",
+      "productionSha256": "2db1ecf0e2c6956f3bb954c8df37de374bc651b4a5207de7f0f967f626fb53a9"
+    }
+  ]
+}

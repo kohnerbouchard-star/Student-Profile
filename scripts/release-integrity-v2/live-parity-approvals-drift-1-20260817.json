@@ -1,0 +1,69 @@
+{
+  "approvedRoutineDefinitionDrift": [
+    {
+      "signature": "private.assert_game_purge_authority_v1(p_staff_user_id uuid)",
+      "stagingSha256": "2f264ac2dec690c4ef4a8bade4686e16ec90646631edeaee849a729f2d66fd0c",
+      "productionSha256": "f5f50eb83c02c8f2aa9096da470a9bfe77986d169ad2b11d269da57c9ff333f7"
+    },
+    {
+      "signature": "private.build_game_data_purge_review_v2(p_request_id uuid)",
+      "stagingSha256": "d62ff79e9c8ed0b65cec0954c81674cd541e589e52b2a1e75782dc63703e3c26",
+      "productionSha256": "7669a2da7af283939b9c66a15be65c26bd2e6f32f1feb906273fedaa28e21f6a"
+    },
+    {
+      "signature": "private.purge_verified_stock_tick_archive(p_archive_id uuid)",
+      "stagingSha256": "50ddcc809a67abd0e71ec87c584e8dba23d02367e5a3a17f3d7db8e8dd6fcce5",
+      "productionSha256": "2c0a0d9f216a3a4c506da26f55b1c47dfcb2963e9158ffd038c546a925c4a4b6"
+    },
+    {
+      "signature": "private.upsert_stock_price_candles(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone)",
+      "stagingSha256": "f16d7afa4f1b947e7935923c19d8e4159d79e6c364e3d3d617a7dd633665ac45",
+      "productionSha256": "1efaa9ffc8bde4859cfe1af021ce78595a493905c76bfe02abfa2275c74e9831"
+    },
+    {
+      "signature": "private.upsert_stock_price_candles(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer)",
+      "stagingSha256": "22e9e9427e0e1153655aab2aa1991b089c0bae4ad206ea105e1f6aa2ec8796f7",
+      "productionSha256": "dd29cb983c165dee31cf9f7252732ef809ec546fff1a4581fbe5e9c387339c78"
+    },
+    {
+      "signature": "public.activate_meridian_competing_models_from_full_game_v1()",
+      "stagingSha256": "b94f762b1c10290e495f5685b3cd6fe079207b79b4654f4797f22014c16f87c2",
+      "productionSha256": "47373c3551acb0c4c3683159004f72c396eae71f9066610adff809e1203e1770"
+    },
+    {
+      "signature": "public.activate_meridian_fortune_during_war_from_full_game_v1()",
+      "stagingSha256": "7353ead84769bcafcc1839f8a0c79f9fb41126c0bada9e65aa3f654496630a32",
+      "productionSha256": "6955d1e7d1ca4712839a973dac06f41b767cfd2a2ce9ad9a8d2e836b70471e98"
+    },
+    {
+      "signature": "public.activate_meridian_outbreak_of_war_from_full_game_v1()",
+      "stagingSha256": "87e4a8599056ab241777e88e4916754b6b6182c3102886cc8537c700e8f030db",
+      "productionSha256": "7c1c7ead9c06eee4590a6e60ba7e0baf2a69c75678e3a2e38cbefc1198a50710"
+    },
+    {
+      "signature": "public.activate_meridian_question_of_belonging_from_full_game_v1()",
+      "stagingSha256": "5b44667fac5c761f152974a08373858cf601a194f1f7c1f915c0fde352009159",
+      "productionSha256": "ab382c0afe16684286a962431df52725a90493640710da523998df9a83493034"
+    },
+    {
+      "signature": "public.activate_meridian_reckoning_from_full_game_v1()",
+      "stagingSha256": "0baa86f02ffc12c3bc0e83aeb5464186c09ae11d33c42de3d867b9b89c992bff",
+      "productionSha256": "acaf46f2d762b129d959a0b0adcd08fe80b4791a7bc83bc03f1c3cb3e39bbc77"
+    },
+    {
+      "signature": "public.admin_mutate_store_item_v1(p_game_session_id uuid, p_staff_user_id uuid, p_operation text, p_item_id uuid, p_item_payload jsonb, p_request_payload jsonb, p_idempotency_key text, p_request_id text)",
+      "stagingSha256": "1f70d622d8e7ecdd1a0230f65f0cfd41ffd917afb1063b5e057bb2b65691ae34",
+      "productionSha256": "57f8c4d23aa56412f8def555264efc8e63bb725e660aa5f8fb839fa3594d8b1a"
+    },
+    {
+      "signature": "public.arm_game_data_purge_v1(p_actor_staff_user_id uuid, p_confirmation_phrase text)",
+      "stagingSha256": "e4f9ace85cf102b5a3a9832016b930b28c9d75b04e9b42648dc19f319d7f1cd5",
+      "productionSha256": "117ff06312d159281ebf01165c702cb00da0be26cfa4e95b066e644055988433"
+    },
+    {
+      "signature": "public.cancel_game_data_purge_v1(p_request_id uuid, p_actor_staff_user_id uuid)",
+      "stagingSha256": "90104965dcbf40b9bc396d4877c62c0ac977be12bdbe5101e6daba2bcab3fc7e",
+      "productionSha256": "c706248e0c5b7e808fbf9dc7923d90ddbdd4723d231f69a8274dcae8ae753582"
+    }
+  ]
+}
