@@ -14,6 +14,34 @@ function replaceExactlyOnce(source, label, before, after) {
   return source.replace(before, after);
 }
 
+function adaptDisclosureInteraction(source) {
+  const before = `async function exposeForm(target) {
+  await target.evaluate((element) => {
+    const details = element.closest("details");
+    if (details) details.open = true;
+  });
+  await target.waitFor({ state: "visible", timeout: 30_000 });
+}`;
+
+  const after = `async function exposeForm(target) {
+  await target.evaluate((element) => {
+    const details = element.closest("details");
+    if (details) details.open = true;
+    element.querySelector(
+      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+    )?.focus({ preventScroll: true });
+  });
+  await target.waitFor({ state: "visible", timeout: 30_000 });
+}`;
+
+  return replaceExactlyOnce(
+    source,
+    "Business disclosure interaction",
+    before,
+    after,
+  );
+}
+
 function adaptBusinessReplayVerification(source) {
   source = replaceExactlyOnce(
     source,
@@ -70,7 +98,9 @@ function adaptBusinessReplayVerification(source) {
 async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const canonicalCorePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
-  const source = adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8"));
+  const source = adaptDisclosureInteraction(
+    adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
+  );
   const temporaryDirectory = await mkdtemp(join(dirname(entryPath), ".business-bff-replay-"));
   const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
   const temporaryCorePath = temporaryEntryPath.replace(/\.mjs$/u, ".core.mjs");
