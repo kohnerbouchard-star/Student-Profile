@@ -36,9 +36,9 @@ function isUnavailableResource(state, resource) {
   return status?.state === "unavailable" && status?.code === "CAPABILITY_UNAVAILABLE";
 }
 
-function isUserInteracting(mount, terminalState, documentRef) {
+export function isPlayerLiveRefreshPaused(mount, terminalState, documentRef) {
   if (terminalState?.modal) return true;
-  if (mount?.querySelector?.("[data-player-live-refresh-pause][open], [data-player-live-refresh-active][open]")) return true;
+  if (mount?.querySelector?.("[data-player-live-refresh-pause][open]")) return true;
   const active = documentRef?.activeElement;
   return Boolean(active && mount?.contains?.(active) && active.matches?.("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
@@ -141,7 +141,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
       if (invalidSession) { await terminal.refresh?.(); return; }
       const snapshot = terminal.getState();
       if (snapshot?.status !== "ready") return;
-      if (isUserInteracting(mount, snapshot, documentRef)) {
+      if (isPlayerLiveRefreshPaused(mount, snapshot, documentRef)) {
         targets.forEach((resource) => pending.add(resource));
         schedule(900);
         return;
@@ -171,7 +171,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
     if (!canRefreshNow()) { setLiveState({ status: "offline" }); return; }
     const resources = dueResources(state);
     if (!resources.length) { setLiveState({ status: "connected" }); return; }
-    if (isUserInteracting(mount, state, documentRef)) { schedule(900); return; }
+    if (isPlayerLiveRefreshPaused(mount, state, documentRef)) { schedule(900); return; }
     void refreshResources(resources);
   }
 
@@ -199,18 +199,6 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
     }
   }
 
-  const MutationObserverCtor = globalThis.MutationObserver;
-  const disclosureObserver = mount && typeof MutationObserverCtor === "function"
-    ? new MutationObserverCtor((records) => {
-      for (const record of records) {
-        const details = record?.target;
-        if (!details?.matches?.("details") || !details.querySelector?.("form[data-player-form]")) continue;
-        details.toggleAttribute?.("data-player-live-refresh-active", details.open === true);
-      }
-    })
-    : null;
-  disclosureObserver?.observe?.(mount, { subtree: true, attributes: true, attributeFilter: ["open"] });
-
   const unsubscribe = terminal.subscribe?.((state) => { const previousRoute = lastRoute; observeState(state); if (state?.status === "ready" && previousRoute && state.route !== previousRoute) schedule(50); }) || (() => {});
   eventTarget.addEventListener(eventName, handleInvalidation);
   eventTarget.addEventListener("online", handleOnline);
@@ -220,5 +208,5 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   pollTimer = globalThis.setInterval(() => schedule(0), Math.max(500, Number(checkIntervalMs) || DEFAULT_CHECK_INTERVAL_MS));
   setLiveState({ status: canRefreshNow() ? "connected" : "offline", updatedAt: Date.now(), error: "" });
 
-  return { eventName, refreshNow(resources = null) { const state = terminal.getState(); if (state?.status !== "ready") return; const targets = resources ? validInvalidationResources(resources) : [...resourcesForRoute(state.route).required]; targets.forEach((resource) => pending.add(resource)); schedule(0); }, destroy() { destroyed = true; globalThis.clearTimeout(timer); globalThis.clearInterval(pollTimer); timer = 0; pollTimer = 0; disclosureObserver?.disconnect?.(); eventTarget.removeEventListener(eventName, handleInvalidation); eventTarget.removeEventListener("online", handleOnline); eventTarget.removeEventListener("offline", handleOffline); eventTarget.removeEventListener("hashchange", handleResume); documentRef?.removeEventListener?.("visibilitychange", handleResume); unsubscribe(); pending.clear(); observedAt.clear(); observedReference.clear(); } };
+  return { eventName, refreshNow(resources = null) { const state = terminal.getState(); if (state?.status !== "ready") return; const targets = resources ? validInvalidationResources(resources) : [...resourcesForRoute(state.route).required]; targets.forEach((resource) => pending.add(resource)); schedule(0); }, destroy() { destroyed = true; globalThis.clearTimeout(timer); globalThis.clearInterval(pollTimer); timer = 0; pollTimer = 0; eventTarget.removeEventListener(eventName, handleInvalidation); eventTarget.removeEventListener("online", handleOnline); eventTarget.removeEventListener("offline", handleOffline); eventTarget.removeEventListener("hashchange", handleResume); documentRef?.removeEventListener?.("visibilitychange", handleResume); unsubscribe(); pending.clear(); observedAt.clear(); observedReference.clear(); } };
 }
