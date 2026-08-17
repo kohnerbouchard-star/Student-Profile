@@ -1,4 +1,5 @@
 name: Edge Function Inventory Convergence
+# Release synchronization touch: production-current-20260817 exact merged-SHA attestation.
 
 on:
   push:
