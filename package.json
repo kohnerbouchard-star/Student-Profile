@@ -13,6 +13,7 @@
     "audit:admin-contracts": "node scripts/admin-bundle-contract-audit.mjs",
     "audit:high-priority-boundaries": "node scripts/high-priority-boundary-ratchet.mjs",
     "audit:architecture": "node scripts/admin-architecture-ratchet.mjs",
+    "audit:architecture-inventory": "node scripts/architecture/build-architecture-inventory.mjs && git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "audit:assets": "node scripts/asset-reference-audit.mjs",
     "audit:interaction-wiring": "node scripts/runtime-interaction-wiring-audit.mjs",
     "audit:beta-e2e": "node scripts/beta-e2e-pilot-validation.mjs",

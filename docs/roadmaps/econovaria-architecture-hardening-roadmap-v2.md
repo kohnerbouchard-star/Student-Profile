@@ -157,7 +157,9 @@ Add one overarching rule:
 
 ### `ARCH-000` — Current architecture inventory
 
-Status: `PLANNED`
+Status: `IMPLEMENTED_NOT_MERGED`
+
+Execution record (2026-08-17): audited fetched `origin/main` at `72cefb73a0038aa2bc24261d63e70c113cb7c24c` from the existing owner branch `agent/architecture-hardening-roadmap-v2`. Open-PR collision audit covered #619, #620, #624 and #626; none owns the ARCH-000 deliverables, while #624's Player CSS/realtime files were treated as in-flight and not modified. Deliverables are `docs/architecture/econovaria-domain-ownership-v2.md`, `docs/architecture/econovaria-dependency-map-v2.md`, `scripts/architecture/build-architecture-inventory.mjs`, and its checked snapshot under `docs/architecture/inventories/`. The inventory measures 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above the 500-line review threshold, and 123 capability-like strings. Counts are candidate baselines and do not declare every lexical match a live violation. No runtime, route, RPC, migration, UI or schema behavior changes. Local evidence passes: deterministic `audit:architecture-inventory`; `audit:high-priority-boundaries` (80 checks); `audit:architecture` (7 broad fetch assignments, 1 scoped assignment, 11 MutationObservers); `audit:legacy-runtime` (8 groups, 15 runtimes, 2 credential records); Node syntax; JSON parse; `git diff --check`; and tracked/untracked changed-file secret scans. Runtime/staging evidence is inapplicable to this documentation/read-only tooling tranche. Pull request and implementation commit are pending publication. Unresolved completion gate: the item remains unmerged and therefore cannot be `VERIFIED_COMPLETE`. Next exact item after merge and green required checks: `ARCH-001`.
 
 Produce a current-main inventory, not an old-roadmap reconstruction:
 
