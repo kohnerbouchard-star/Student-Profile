@@ -45,8 +45,11 @@ export function createSupabaseGameJoinCodeReadRepository(
       const response = await client
         .from("game_sessions")
         .select(GAME_JOIN_CODE_READ_COLUMNS)
-        .eq("id", input.gameSessionId)
-        .eq("owner_staff_user_id", input.staffUserId)
+        .eq("id", input.applicationContext.gameSessionId)
+        .eq(
+          "owner_staff_user_id",
+          input.applicationContext.actor.staffUserId,
+        )
         .maybeSingle();
 
       if (response.error) throw new GameJoinCodeReadPersistenceError();

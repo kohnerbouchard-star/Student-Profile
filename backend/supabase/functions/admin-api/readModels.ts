@@ -1,4 +1,6 @@
 import { number, object, text, todayIsoDate } from "./common.ts";
+import type { GameSessionsStaffApplicationContext } from "../../../src/domains/game-sessions/contracts/gameSessionsStaffApplicationContext.ts";
+import type { GameSettingsReadRepository } from "../../../src/domains/game-sessions/application/readGameSettings.ts";
 
 type DbRow = Record<string, any>;
 type DbService = any;
@@ -785,24 +787,14 @@ export async function loadMarket(
 }
 
 export async function loadSettings(
-  service: DbService,
-  gameId: string,
+  repository: Pick<GameSettingsReadRepository, "readAdminGameSettingsView">,
+  applicationContext: GameSessionsStaffApplicationContext,
 ): Promise<any> {
-  const [settingsResult, policyResult] = await Promise.all([
-    service.from("game_settings")
-      .select("*")
-      .eq("game_session_id", gameId)
-      .maybeSingle(),
-    service.from("game_difficulty_policy_settings")
-      .select("*")
-      .eq("game_session_id", gameId)
-      .maybeSingle(),
-  ]);
-  if (settingsResult.error || policyResult.error) {
-    throw settingsResult.error || policyResult.error;
-  }
-  const settings: DbRow = settingsResult.data || {};
-  const policy: DbRow = policyResult.data || {};
+  const result = await repository.readAdminGameSettingsView({
+    applicationContext,
+  });
+  const settings: DbRow = result.settings || {};
+  const policy: DbRow = result.difficultyPolicy || {};
   const difficulty = policy.difficulty_preset ||
     settings.difficulty_preset || "moderate";
   return {

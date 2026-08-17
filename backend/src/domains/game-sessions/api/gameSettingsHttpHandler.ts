@@ -15,6 +15,19 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { updateGameSettings } from "../application/updateGameSettings.ts";
+import {
+  GameSettingsReadError,
+  readGameSettings,
+} from "../application/readGameSettings.ts";
+import {
+  createSupabaseGameSessionMutationRepository,
+} from "../infrastructure/supabaseGameSessionMutationRepository.ts";
+import {
+  createSupabaseGameSettingsReadRepository,
+} from "../infrastructure/supabaseGameSettingsReadRepository.ts";
+import {
+  createGameSessionsStaffApplicationContext,
+} from "./gameSessionsStaffApplicationContextFactory.ts";
 
 interface GameSettingsDependencies {
   readonly resolveStaffForRequest: (
@@ -25,6 +38,13 @@ interface GameSettingsDependencies {
     },
   ) => Promise<StaffRequestResolution>;
   readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly createApplicationContext?:
+    typeof createGameSessionsStaffApplicationContext;
+  readonly createSettingsReadRepository?:
+    typeof createSupabaseGameSettingsReadRepository;
+  readonly createMutationRepository?:
+    typeof createSupabaseGameSessionMutationRepository;
+  readonly readSettings?: typeof readGameSettings;
   readonly updateSettings?: typeof updateGameSettings;
 }
 
@@ -33,9 +53,10 @@ type StaffRequestResolution =
     readonly ok: true;
     readonly staff: {
       readonly id: string;
-      readonly email: string | null;
+      readonly role: "game_admin" | "security_operator";
     };
     readonly serviceClient: EdgeSupabaseClient;
+    readonly assuranceLevel: "aal1" | "aal2" | "unknown";
   }
   | {
     readonly ok: false;
@@ -126,14 +147,34 @@ export async function handleGameSettingsRequest(
       });
     }
 
+    const publicGameSession = {
+      id: gameSession.id,
+      name: gameSession.name,
+      status: gameSession.status,
+    };
+    const applicationContext = (
+      dependencies.createApplicationContext ??
+        createGameSessionsStaffApplicationContext
+    )({
+      ownedGame: { id: publicGameSession.id },
+      staff: staffResult.staff,
+      assuranceLevel: staffResult.assuranceLevel,
+      requestId: crypto.randomUUID(),
+    });
+
     if (request.method === "PATCH") {
       const requestBody = await readGameSettingsMutationBody(request);
       const mutation = readAdminMutationIdentity(request, requestBody);
-      const result = await (dependencies.updateSettings ?? updateGameSettings)(
+      const repository = (
+        dependencies.createMutationRepository ??
+          createSupabaseGameSessionMutationRepository
+      )(
         serviceClient as unknown as AdminMutationRpcClient,
+      );
+      const result = await (dependencies.updateSettings ?? updateGameSettings)(
+        repository,
         {
-          gameSessionId: gameSession.id,
-          staffUserId: staffResult.staff.id,
+          applicationContext,
           requestBody,
           mutation,
         },
@@ -141,64 +182,41 @@ export async function handleGameSettingsRequest(
 
       return jsonResponse<GameSettingsBody>(result.status, {
         ok: true,
-        gameSession: {
-          id: gameSession.id,
-          name: gameSession.name,
-          status: gameSession.status,
-        },
+        gameSession: publicGameSession,
         settings: result.settings,
         difficultyPolicy: result.difficultyPolicy,
         replayed: result.replayed,
       });
     }
 
-    const settingsResponse = await serviceClient
-      .from("game_settings")
-      .select(
-        "difficulty_preset,attendance_window,business_market_window,stock_market_window,news_schedule,updated_at",
-      )
-      .eq("game_session_id", gameSession.id)
-      .maybeSingle();
-
-    if (settingsResponse.error) {
-      return jsonError(500, {
-        code: "game_settings_failed",
-        message: "Game settings request failed.",
-        retryable: false,
-      });
-    }
-
-    const settings = settingsResponse.data;
-
-    if (!settings) {
-      return jsonError(404, {
-        code: "game_settings_not_found",
-        message: "Game settings were not found.",
-        retryable: false,
-      });
-    }
+    const repository = (
+      dependencies.createSettingsReadRepository ??
+        createSupabaseGameSettingsReadRepository
+    )(serviceClient);
+    const result = await (dependencies.readSettings ?? readGameSettings)(
+      { applicationContext, gameSession: publicGameSession },
+      repository,
+    );
 
     return jsonResponse<GameSettingsBody>(200, {
       ok: true,
       gameSession: {
-        id: gameSession.id,
-        name: gameSession.name,
-        status: gameSession.status,
+        id: result.gameSession.id,
+        name: result.gameSession.name,
+        status: result.gameSession.status,
       },
-      settings: {
-        difficultyPreset: settings.difficulty_preset,
-        attendanceWindow: readJsonObjectSetting(settings.attendance_window),
-        businessMarketWindow: readJsonObjectSetting(
-          settings.business_market_window,
-        ),
-        stockMarketWindow: readJsonObjectSetting(settings.stock_market_window),
-        newsSchedule: readJsonObjectSetting(settings.news_schedule),
-        updatedAt: settings.updated_at,
-      },
+      settings: result.settings,
     });
   } catch (error) {
     if (error instanceof AdminMutationError) {
       return jsonError(error.status, adminMutationErrorBody(error).error);
+    }
+    if (error instanceof GameSettingsReadError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
     }
 
     return jsonError(500, {
@@ -233,10 +251,6 @@ async function readGameSettingsMutationBody(
   }
 
   return value;
-}
-
-function readJsonObjectSetting(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

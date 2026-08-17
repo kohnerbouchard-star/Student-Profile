@@ -98,10 +98,13 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
   assert.match(joinCodeReadRepository, /\.from\("game_sessions"\)/);
   assert.match(joinCodeReadRepository, /"game_join_code"/);
   assert.match(joinCodeReadRepository, /"game_join_code_status"/);
-  assert.match(joinCodeReadRepository, /\.eq\("id", input\.gameSessionId\)/);
   assert.match(
     joinCodeReadRepository,
-    /\.eq\("owner_staff_user_id", input\.staffUserId\)/,
+    /\.eq\("id", input\.applicationContext\.gameSessionId\)/,
+  );
+  assert.match(
+    joinCodeReadRepository,
+    /\.eq\(\s*"owner_staff_user_id",\s*input\.applicationContext\.actor\.staffUserId,?\s*\)/,
   );
   assert.match(resetHandler, /rotateGameJoinCode/);
   assert.match(bootstrap, /game_join_code,game_join_code_status/);

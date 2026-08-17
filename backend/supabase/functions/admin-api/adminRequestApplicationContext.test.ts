@@ -2,6 +2,7 @@ import {
   createAdminRequestApplicationContext,
   type CreateAdminRequestApplicationContextInput,
 } from "./adminRequestApplicationContext.ts";
+import type { GameSessionsStaffApplicationContext } from "../../../src/domains/game-sessions/contracts/gameSessionsStaffApplicationContext.ts";
 
 const GAME_ID = "00000000-0000-4000-8000-000000000101";
 const STAFF_ID = "00000000-0000-4000-8000-000000000201";
@@ -19,7 +20,9 @@ Deno.test("Admin application context freezes reviewed server-derived scope", () 
   });
 
   const context = createAdminRequestApplicationContext(input);
+  const gameSessionsContext: GameSessionsStaffApplicationContext = context;
 
+  assertSame(gameSessionsContext, context);
   assertEquals(context.gameSessionId, GAME_ID);
   assertEquals(context.actor, { kind: "staff", staffUserId: STAFF_ID });
   assertEquals(context.role, "game_admin");
@@ -114,6 +117,12 @@ function assertThrows(run: () => void): void {
     return;
   }
   throw new Error("Expected function to throw");
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) {
+    throw new Error("Expected the same object reference");
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

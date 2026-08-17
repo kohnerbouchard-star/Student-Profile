@@ -14,6 +14,18 @@ const adminContextSource = read(
 const redemptionSource = read(
   "backend/supabase/functions/admin-api/inventoryRedemptionOperations.ts",
 );
+const gameRoutesSource = read(
+  "backend/supabase/functions/admin-api/gameRoutes.ts",
+);
+const joinCodeOperationsSource = read(
+  "backend/supabase/functions/admin-api/gameJoinCodeOperations.ts",
+);
+const compatibilitySource = read(
+  "backend/supabase/functions/admin-api/compatibilityOperations.ts",
+);
+const readModelsSource = read(
+  "backend/supabase/functions/admin-api/readModels.ts",
+);
 const commonSource = read("backend/supabase/functions/admin-api/common.ts");
 
 test("Admin boundary runs once before owner-scoped local mutation dispatch", () => {
@@ -76,6 +88,48 @@ test("reviewed Admin context reaches the Inventory application adapter", () => {
     adminContextSource,
     /\b(?:token|service|authorization|email)\s*:/i,
   );
+});
+
+test("one reviewed Admin context reaches every Game Sessions persistence seam", () => {
+  assert.match(
+    indexSource,
+    /handleLocalAdminGameMutation\([\s\S]*?applicationContext,[\s\S]*?handleGameRead\([\s\S]*?applicationContext,/,
+  );
+  assert.match(
+    gameRoutesSource,
+    /handleGameJoinCodeReadOperation\([\s\S]*?applicationContext,/,
+  );
+  assert.match(
+    gameRoutesSource,
+    /loadSettings\([\s\S]*?createSupabaseGameSettingsReadRepository\([\s\S]*?applicationContext,/,
+  );
+  assert.match(joinCodeOperationsSource, /await read\(input\)/);
+  assert.match(
+    localMutationSource,
+    /updateGameSettings\([\s\S]*?createSupabaseGameSessionMutationRepository\([\s\S]*?applicationContext: input\.applicationContext/,
+  );
+  assert.match(
+    localMutationSource,
+    /rotateGameJoinCode\([\s\S]*?createSupabaseGameSessionMutationRepository\([\s\S]*?applicationContext: input\.applicationContext/,
+  );
+  assert.match(
+    compatibilitySource,
+    /resetGameSettingsGroup\([\s\S]*?createSupabaseGameSessionMutationRepository\([\s\S]*?applicationContext: input\.applicationContext/,
+  );
+  assert.match(
+    readModelsSource,
+    /readAdminGameSettingsView\(\{\s*applicationContext,?\s*\}\)/,
+  );
+  for (const source of [
+    gameRoutesSource,
+    joinCodeOperationsSource,
+    localMutationSource,
+    compatibilitySource,
+    readModelsSource,
+  ]) {
+    assert.doesNotMatch(source, /gameSessionId:\s*input\.gameSessionId/);
+    assert.doesNotMatch(source, /staffUserId:\s*input\.staffUserId/);
+  }
 });
 
 test("affected Admin operations dispatch to shared application handlers", () => {

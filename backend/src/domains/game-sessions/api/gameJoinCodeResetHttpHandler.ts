@@ -18,13 +18,17 @@ import {
 import {
   GameJoinCodeReadError,
   readGameJoinCode,
-  type ReadGameJoinCodeInput,
-  type ReadGameJoinCodeResult,
 } from "../application/readGameJoinCode.ts";
 import {
   createSupabaseGameJoinCodeReadRepository,
 } from "../infrastructure/supabaseGameJoinCodeReadRepository.ts";
 import { rotateGameJoinCode } from "../application/rotateGameJoinCode.ts";
+import {
+  createSupabaseGameSessionMutationRepository,
+} from "../infrastructure/supabaseGameSessionMutationRepository.ts";
+import {
+  createGameSessionsStaffApplicationContext,
+} from "./gameSessionsStaffApplicationContextFactory.ts";
 
 interface GameJoinCodeResetDependencies {
   readonly resolveStaffForRequest: (
@@ -36,10 +40,13 @@ interface GameJoinCodeResetDependencies {
   ) => Promise<StaffRequestResolution>;
   readonly readEnvironment?: typeof readSupabaseEnv;
   readonly readOwnedSession?: typeof readOwnedGameSession;
-  readonly readJoinCode?: (
-    input: ReadGameJoinCodeInput,
-    serviceClient: EdgeSupabaseClient,
-  ) => Promise<ReadGameJoinCodeResult>;
+  readonly createApplicationContext?:
+    typeof createGameSessionsStaffApplicationContext;
+  readonly createJoinCodeReadRepository?:
+    typeof createSupabaseGameJoinCodeReadRepository;
+  readonly createMutationRepository?:
+    typeof createSupabaseGameSessionMutationRepository;
+  readonly readJoinCode?: typeof readGameJoinCode;
   readonly rotateJoinCode?: typeof rotateGameJoinCode;
 }
 
@@ -48,9 +55,10 @@ type StaffRequestResolution =
     readonly ok: true;
     readonly staff: {
       readonly id: string;
-      readonly email: string | null;
+      readonly role: "game_admin" | "security_operator";
     };
     readonly serviceClient: EdgeSupabaseClient;
+    readonly assuranceLevel: "aal1" | "aal2" | "unknown";
   }
   | {
     readonly ok: false;
@@ -123,15 +131,28 @@ export async function handleResetGameJoinCodeRequest(
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
+    const applicationContext = (
+      dependencies.createApplicationContext ??
+        createGameSessionsStaffApplicationContext
+    )({
+      ownedGame: ownershipResult.gameSession,
+      staff: staffResult.staff,
+      assuranceLevel: staffResult.assuranceLevel,
+      requestId: crypto.randomUUID(),
+    });
+
     if (request.method === "GET") {
       const input = {
-        gameSessionId,
-        staffUserId: staffResult.staff.id,
+        applicationContext,
         gameSession: ownershipResult.gameSession,
       };
-      const result = await (dependencies.readJoinCode ?? readPersistedJoinCode)(
+      const repository = (
+        dependencies.createJoinCodeReadRepository ??
+          createSupabaseGameJoinCodeReadRepository
+      )(staffResult.serviceClient);
+      const result = await (dependencies.readJoinCode ?? readGameJoinCode)(
         input,
-        staffResult.serviceClient,
+        repository,
       );
 
       return jsonResponse<GameJoinCodeSuccessBody>(200, {
@@ -143,13 +164,18 @@ export async function handleResetGameJoinCodeRequest(
 
     const requestBody = await readJoinCodeRotationBody(request);
     const mutation = readAdminMutationIdentity(request, requestBody);
+    const repository = (
+      dependencies.createMutationRepository ??
+        createSupabaseGameSessionMutationRepository
+    )(
+      staffResult.serviceClient as unknown as AdminMutationRpcClient,
+    );
     const joinCodeResult = await (
       dependencies.rotateJoinCode ?? rotateGameJoinCode
     )(
-      staffResult.serviceClient as unknown as AdminMutationRpcClient,
+      repository,
       {
-        gameSessionId,
-        staffUserId: staffResult.staff.id,
+        applicationContext,
         requestBody,
         mutation,
       },
@@ -187,16 +213,6 @@ export async function handleResetGameJoinCodeRequest(
       retryable: false,
     });
   }
-}
-
-function readPersistedJoinCode(
-  input: ReadGameJoinCodeInput,
-  serviceClient: EdgeSupabaseClient,
-): Promise<ReadGameJoinCodeResult> {
-  return readGameJoinCode(
-    input,
-    createSupabaseGameJoinCodeReadRepository(serviceClient),
-  );
 }
 
 async function readJoinCodeRotationBody(

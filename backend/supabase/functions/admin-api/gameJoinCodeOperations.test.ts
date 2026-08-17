@@ -2,6 +2,7 @@ import {
   GameJoinCodeReadError,
 } from "../../../src/domains/game-sessions/application/readGameJoinCode.ts";
 import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -17,9 +18,10 @@ const UNUSED_SERVICE = {
 
 Deno.test("Admin join-code read preserves the canonical response contract", async () => {
   const inputs: unknown[] = [];
+  const applicationContext = adminContext();
   const result = await handleGameJoinCodeReadOperation(
     UNUSED_SERVICE,
-    input(),
+    input(applicationContext),
     {
       read: (scope) => {
         inputs.push(scope);
@@ -39,15 +41,13 @@ Deno.test("Admin join-code read preserves the canonical response contract", asyn
     },
   );
 
-  assertEquals(inputs, [{
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
-    gameSession: {
-      id: GAME_ID,
-      name: "Period 4 Economy",
-      status: "active",
-    },
-  }]);
+  const received = inputs[0] as ReturnType<typeof input>;
+  assertSame(received.applicationContext, applicationContext);
+  assertEquals(received.gameSession, {
+    id: GAME_ID,
+    name: "Period 4 Economy",
+    status: "active",
+  });
   assertEquals(result, {
     status: 200,
     body: {
@@ -65,6 +65,10 @@ Deno.test("Admin join-code read preserves the canonical response contract", asyn
     },
   });
   assertEquals(JSON.stringify(result).includes(STAFF_ID), false);
+  assertEquals(
+    JSON.stringify(result).includes(applicationContext.requestId),
+    false,
+  );
 });
 
 Deno.test("Admin join-code read preserves safe canonical error envelopes", async () => {
@@ -122,22 +126,35 @@ Deno.test("Admin join-code read sanitizes unexpected failures", async () => {
   });
 });
 
-function input(
-  overrides: Partial<{
-    gameSessionId: string;
-    staffUserId: string;
-  }> = {},
-) {
+function input(applicationContext = adminContext()) {
   return {
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+    applicationContext,
     gameSession: {
       id: GAME_ID,
       name: "Period 4 Economy",
       status: "active",
     },
-    ...overrides,
   };
+}
+
+function adminContext() {
+  return createAdminRequestApplicationContext({
+    ownedGame: { id: GAME_ID },
+    staffUserId: STAFF_ID,
+    requestId: "server-admin-join-code-read-001",
+    security: {
+      ok: true,
+      assuranceLevel: "aal2",
+      permissions: ["game.read"],
+      requiredPermission: "game.read",
+    },
+  });
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) {
+    throw new Error("Expected the same object reference");
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
