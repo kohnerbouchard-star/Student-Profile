@@ -78,6 +78,7 @@ Deno.test("inventory repository preserves Store public metadata while joining ca
     itemStatus: "active",
     itemVisibility: "visible",
     usable: false,
+    redemptionMode: null,
     quantityOwned: 3,
     quantityReserved: 1,
     createdAt: NOW,
