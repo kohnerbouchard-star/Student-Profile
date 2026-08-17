@@ -1,0 +1,134 @@
+name: Vercel Git Production Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/vercel-git-production-verify.yml"
+      - "scripts/vercel-git-release-contract.test.mjs"
+      - "vercel.json"
+  repository_dispatch:
+    types:
+      - vercel.deployment.success
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-git-production-verify-${{ github.event.client_payload.git.sha || github.sha }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_BRANCH: release/production
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+
+jobs:
+  static-contract:
+    name: Validate Vercel Git verification contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate tokenless release contract
+        run: node --test scripts/vercel-git-release-contract.test.mjs
+
+  verify-production:
+    name: Verify Vercel Git production deployment
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'production'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DEPLOYMENT_SHA: ${{ github.event.client_payload.git.sha }}
+      DEPLOYMENT_URL: ${{ github.event.client_payload.url }}
+    steps:
+      - name: Validate dispatch envelope
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOYMENT_SHA" =~ ^[a-f0-9]{40}$ ]]
+          node - <<'NODE'
+          const url = new URL(process.env.DEPLOYMENT_URL);
+          if (url.protocol !== 'https:' || !url.hostname.endsWith('.vercel.app')) {
+            throw new Error('Unexpected Vercel deployment URL.');
+          }
+          NODE
+
+      - name: Check out exact deployed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce release branch identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$DEPLOYMENT_SHA"
+          git fetch --no-tags --prune origin \
+            '+refs/heads/release/production:refs/remotes/origin/release/production'
+          test "$(git rev-parse origin/release/production)" = "$DEPLOYMENT_SHA"
+
+      - name: Verify deployment and canonical production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_health="$RUNNER_TEMP/deployment-health.json"
+          canonical_health="$RUNNER_TEMP/canonical-health.json"
+          deployment_origin="${DEPLOYMENT_URL%/}"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              --connect-timeout 5 \
+              --max-time 15 \
+              "$deployment_origin/api/health" > "$deployment_health"; then
+              if HEALTH="$deployment_health" node - <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
+          if(value.ok!==true || value.status!=='ready' || value.environment!=='production' ||
+             value.projectRef!==process.env.PRODUCTION_PROJECT_REF ||
+             value.sourceCommit!==process.env.DEPLOYMENT_SHA) process.exit(1);
+          NODE
+              then break; fi
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Deployment health did not converge.' >&2
+              exit 1
+            fi
+            sleep 5
+          done
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              --connect-timeout 5 \
+              --max-time 15 \
+              "https://econovaria.com/api/health" > "$canonical_health"; then
+              if HEALTH="$canonical_health" node - <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
+          if(value.ok!==true || value.status!=='ready' || value.environment!=='production' ||
+             value.projectRef!==process.env.PRODUCTION_PROJECT_REF ||
+             value.sourceCommit!==process.env.DEPLOYMENT_SHA) process.exit(1);
+          NODE
+              then break; fi
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Canonical production health did not converge to the release SHA.' >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Upload production verification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vercel-git-production-${{ github.event.client_payload.git.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/deployment-health.json
+            ${{ runner.temp }}/canonical-health.json

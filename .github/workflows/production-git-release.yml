@@ -1,0 +1,375 @@
+name: Production Git Release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-git-release.yml"
+      - ".github/workflows/vercel-git-production-verify.yml"
+      - "scripts/release-integrity-v2/**"
+      - "scripts/vercel-git-release-contract.test.mjs"
+      - "vercel.json"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-git-release
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  POLICY_PATH: scripts/release-integrity-v2/live-parity-policy.json
+  CA_BUNDLE_PATH: scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+  SUPABASE_CLI_VERSION: 2.109.1
+  RELEASE_BRANCH: release/production
+
+jobs:
+  static-contract:
+    name: Validate tokenless production release contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate parity and Vercel Git contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/release-integrity-v2/compare-live-parity.mjs
+          node --check scripts/release-integrity-v2/live-parity-lib.mjs
+          node --check scripts/release-integrity-v2/live-parity-normalize.mjs
+          node --test scripts/vercel-git-release-contract.test.mjs
+          node --input-type=module - <<'NODE'
+          import { hydratePolicy, validatePolicy } from './scripts/release-integrity-v2/live-parity-normalize.mjs';
+          import { readJson } from './scripts/release-integrity-v2/live-parity-lib.mjs';
+          const path = './scripts/release-integrity-v2/live-parity-policy.json';
+          const policy = await hydratePolicy(await readJson(path), path);
+          validatePolicy(policy);
+          if (policy.historicalLedgerCutoff !== '20260816120013') throw new Error('Historical cutoff moved.');
+          if (policy.historicalLedgerBaselines.stagingSha256 !== '133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763') throw new Error('Staging historical baseline moved.');
+          if (policy.historicalLedgerBaselines.productionSha256 !== '3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3') throw new Error('Production historical baseline moved.');
+          NODE
+
+  staging-evidence:
+    name: Capture exact staging live parity evidence
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind staging database read-only evidence session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          database_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$database_url" in
+            "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Unexpected staging database binding.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$database_url"
+          echo "DATABASE_URL=$database_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+      - name: Export staging ledger and schema fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/staging-evidence"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations" > "$RUNNER_TEMP/staging-evidence/staging-ledger.json"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-evidence/staging-schema.json"
+      - name: Upload staging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-git-release-staging-${{ github.sha }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/staging-evidence
+
+  production-evidence:
+    name: Capture exact production live parity evidence
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Enforce exact production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Export production ledger and schema fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/production-evidence"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations" > "$RUNNER_TEMP/production-evidence/production-ledger.json"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-evidence/production-schema.json"
+      - name: Upload production evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-git-release-production-${{ github.sha }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/production-evidence
+
+  enforce-parity:
+    name: Enforce exact bounded live parity
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [staging-evidence, production-evidence]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Download staging evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-git-release-staging-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/staging
+      - name: Download production evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-git-release-production-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/production
+      - name: Enforce live parity and repository migration identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release-integrity-v2/compare-live-parity.mjs \
+            --mode enforce \
+            --policy "$POLICY_PATH" \
+            --staging-schema "$RUNNER_TEMP/parity/staging/staging-schema.json" \
+            --production-schema "$RUNNER_TEMP/parity/production/production-schema.json" \
+            --staging-ledger "$RUNNER_TEMP/parity/staging/staging-ledger.json" \
+            --production-ledger "$RUNNER_TEMP/parity/production/production-ledger.json" \
+            --output "$RUNNER_TEMP/parity-report.json"
+          node --input-type=module - <<'NODE'
+          import { readdir, readFile } from 'node:fs/promises';
+          const cutoff = '20260816120013';
+          const files = (await readdir('backend/supabase/migrations'))
+            .filter((name) => /^\d{14}_.+\.sql$/u.test(name))
+            .map((name) => ({ version: name.slice(0, 14), name: name.slice(15, -4) }))
+            .filter((row) => row.version > cutoff)
+            .sort((a, b) => a.version.localeCompare(b.version) || a.name.localeCompare(b.name));
+          const loadLedger = async (path) => {
+            const value = JSON.parse(await readFile(path, 'utf8'));
+            const rows = Array.isArray(value) ? value : value.migrations;
+            return rows
+              .map((row) => ({ version: String(row.version), name: String(row.name || '') }))
+              .filter((row) => row.version > cutoff)
+              .sort((a, b) => a.version.localeCompare(b.version) || a.name.localeCompare(b.name));
+          };
+          const staging = await loadLedger(process.env.STAGING_LEDGER);
+          const production = await loadLedger(process.env.PRODUCTION_LEDGER);
+          const stable = (value) => JSON.stringify(value);
+          if (stable(files) !== stable(staging)) throw new Error('Staging post-cutoff ledger does not match repository migration manifest.');
+          if (stable(files) !== stable(production)) throw new Error('Production post-cutoff ledger does not match repository migration manifest.');
+          NODE
+        env:
+          STAGING_LEDGER: ${{ runner.temp }}/parity/staging/staging-ledger.json
+          PRODUCTION_LEDGER: ${{ runner.temp }}/parity/production/production-ledger.json
+      - name: Upload parity attestation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-git-release-parity-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/parity-report.json
+
+  publish-release-branch:
+    name: Publish parity-verified source to release/production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: enforce-parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      SOURCE_COMMIT: ${{ github.sha }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out exact current main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Enforce exact main and release-branch ancestry
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/release/production:refs/remotes/origin/release/production'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          git merge-base --is-ancestor origin/release/production HEAD
+          node - <<'NODE'
+          const config = require('./vercel.json');
+          if (config.git?.deploymentEnabled?.main !== false) throw new Error('main must remain disabled for Vercel Git deployment.');
+          if (config.git?.deploymentEnabled?.['release/production'] !== true) throw new Error('release/production must be explicitly enabled for Vercel Git deployment.');
+          NODE
+          if git diff --quiet origin/release/production HEAD -- \
+            backend/supabase/edge-function-manifest.json \
+            backend/supabase/config.toml \
+            backend/supabase/functions \
+            backend/src; then
+            echo "edge_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "edge_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Require exact-SHA Edge Function convergence when Edge source changed
+        if: steps.release.outputs.edge_changed == 'true'
+        id: edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/edge-function-inventory-converge.yml/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=20"
+          for attempt in $(seq 1 90); do
+            response="$(curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$api")"
+            state="$(RESPONSE="$response" SOURCE_COMMIT="$SOURCE_COMMIT" node - <<'NODE'
+          const body=JSON.parse(process.env.RESPONSE);
+          const run=(body.workflow_runs||[]).find((value)=>value.head_sha===process.env.SOURCE_COMMIT);
+          if(!run) process.stdout.write('missing');
+          else process.stdout.write(`${run.id}|${run.status}|${run.conclusion||''}`);
+          NODE
+            )"
+            if [ "$state" = missing ]; then sleep 10; continue; fi
+            IFS='|' read -r run_id status conclusion <<< "$state"
+            if [ "$status" = completed ]; then
+              test "$conclusion" = success
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Timed out waiting for exact-SHA Edge Function convergence.' >&2
+          exit 1
+      - name: Download exact Edge Function attestation
+        if: steps.release.outputs.edge_changed == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: edge-function-convergence-${{ github.sha }}
+          run-id: ${{ steps.edge.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/edge-attestation
+      - name: Enforce exact Edge Function attestation
+        if: steps.release.outputs.edge_changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ATTESTATION="$RUNNER_TEMP/edge-attestation/final-attestation.json" node - <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync(process.env.ATTESTATION,'utf8'));
+          if(value.ok!==true || value.sourceCommit!==process.env.SOURCE_COMMIT || (value.digestMismatches||[]).length!==0) {
+            throw new Error('Exact Edge Function attestation failed.');
+          }
+          NODE
+      - name: Fast-forward production release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git rev-parse origin/release/production)" != "$SOURCE_COMMIT" ]; then
+            git push origin "$SOURCE_COMMIT:refs/heads/$RELEASE_BRANCH"
+          fi
+          git fetch --no-tags origin "+refs/heads/$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"
+          test "$(git rev-parse "origin/$RELEASE_BRANCH")" = "$SOURCE_COMMIT"
+      - name: Write sanitized release evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-evidence"
+          node - <<'NODE' > "$RUNNER_TEMP/release-evidence/release-branch.json"
+          process.stdout.write(JSON.stringify({
+            ok: true,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            releaseBranch: process.env.RELEASE_BRANCH,
+            publication: 'fast-forward-only',
+            vercelAuthentication: 'git-integration',
+          }, null, 2));
+          NODE
+      - name: Upload release-branch evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-release-branch-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/release-evidence/release-branch.json
