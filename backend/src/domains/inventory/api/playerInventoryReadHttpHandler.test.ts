@@ -34,6 +34,42 @@ Deno.test("inventory handler derives scope from the player session and returns U
   assertNoUuid(JSON.stringify(body));
 });
 
+Deno.test("inventory handler reuses the injected application context without resolving scope again", async () => {
+  const readInputs: Array<{
+    readonly gameId: string;
+    readonly playerUuid: string;
+    readonly limit: number;
+  }> = [];
+  let resolverCalls = 0;
+  const baseRepository = repository();
+  const response = await handlePlayerInventoryReadRequest(
+    request("/players/me/inventory"),
+    { kind: "inventory" },
+    {
+      ...dependencies({
+        readInventory: (input) => {
+          readInputs.push(input);
+          return baseRepository.readInventory(input);
+        },
+      }),
+      hashSessionToken: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+      resolvePlayerSession: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+    },
+    applicationContext(),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(resolverCalls, 0);
+  assertEquals(readInputs, [{ gameId: GAME, playerUuid: PLAYER, limit: 200 }]);
+  assertNoUuid(JSON.stringify(await response.json()));
+});
+
 Deno.test("inventory handler rejects missing, game-selected, injected, and unsupported requests", async () => {
   const missing = await handlePlayerInventoryReadRequest(
     request("/players/me/inventory", { token: null }),
@@ -132,6 +168,31 @@ function dependencies(repositoryValue: PlayerInventoryReadRepository) {
     createRepository: () => repositoryValue,
     now: () => NOW,
   };
+}
+
+function applicationContext() {
+  return {
+    gameSessionId: GAME,
+    actor: {
+      kind: "player" as const,
+      playerUuid: PLAYER,
+      playerSessionId: SESSION,
+    },
+    role: "player" as const,
+    permissions: ["own_player"] as const,
+    requestId: "request-player-inventory-001",
+    playerUuid: PLAYER,
+    gameId: GAME,
+    activeSessionId: SESSION,
+    sessionValid: true,
+    sessionExpiresAt: "2026-07-19T00:00:00.000Z",
+    authorizationContext: {
+      actorType: "player",
+      source: "player_session",
+      gameScope: "session",
+      resourceScope: "own_player",
+    },
+  } as const;
 }
 
 function repository(): PlayerInventoryReadRepository {

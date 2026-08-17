@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1022,
+    "sourceFiles": 1023,
     "edgeEntrypoints": 24,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 100,
@@ -3386,7 +3386,7 @@
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 848
+        "lines": 852
       },
       {
         "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
@@ -3593,11 +3593,11 @@
         "lines": 567
       },
       {
-        "file": "admin/game-code-wiring.js",
-        "lines": 563
+        "file": "backend/supabase/functions/player-api/runtime.ts",
+        "lines": 567
       },
       {
-        "file": "backend/supabase/functions/player-api/runtime.ts",
+        "file": "admin/game-code-wiring.js",
         "lines": 563
       },
       {

@@ -12,7 +12,11 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import {
+  type PlayerRequestApplicationContext,
+  rejectClientSuppliedPlayerIdentity,
+  resolvePlayerRequestScope,
+} from "../../players/api/playerRequestScope.ts";
 import {
   PlayerInventoryRedemptionError,
   type PlayerInventoryRedemptionRepository,
@@ -42,6 +46,7 @@ export async function handlePlayerInventoryRedemptionRequest(
   request: Request,
   route: PlayerInventoryRedemptionRoute,
   dependencies: PlayerInventoryRedemptionHttpHandlerDependencies,
+  applicationContext?: PlayerRequestApplicationContext,
 ): Promise<Response> {
   if (route.kind === "malformed") {
     return errorResponse(
@@ -78,15 +83,17 @@ export async function handlePlayerInventoryRedemptionRequest(
     }
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
-    const scope = await resolvePlayerRequestScope(request, {
-      hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
-      resolvePlayerSession: (tokenHash) =>
-        (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
-          client,
-          tokenHash,
-        ),
-      now: () => now,
-    });
+    rejectClientSuppliedPlayerIdentity(request);
+    const scope = applicationContext ??
+      await resolvePlayerRequestScope(request, {
+        hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
+        resolvePlayerSession: (tokenHash) =>
+          (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
+            client,
+            tokenHash,
+          ),
+        now: () => now,
+      });
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerInventoryRedemptionRepository(client as never);

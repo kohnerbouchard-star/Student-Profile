@@ -1,5 +1,6 @@
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 import {
+  createPlayerRequestApplicationContext,
   readRequestedGameSessionId,
   rejectClientSuppliedBodyIdentity,
   rejectClientSuppliedPlayerIdentity,
@@ -49,6 +50,41 @@ Deno.test("player request scope derives immutable identity only from the active 
     },
   });
   assertEquals(hashes, ["player-token", "hash:player-token"]);
+});
+
+Deno.test("player application context reuses the resolved scope and is deeply immutable", async () => {
+  const scope = await resolvePlayerRequestScope(
+    request(),
+    dependencies(activeResolution()),
+  );
+  const context = createPlayerRequestApplicationContext({
+    scope,
+    requestId: "request-player-001",
+  });
+
+  assertEquals(context.gameSessionId, GAME_ID);
+  assertEquals(context.actor, {
+    kind: "player",
+    playerUuid: PLAYER_UUID,
+    playerSessionId: SESSION_ID,
+  });
+  assertEquals(context.role, "player");
+  assertEquals(context.permissions, ["own_player"]);
+  assertEquals(context.requestId, "request-player-001");
+  assertEquals(context.playerUuid, scope.playerUuid);
+  assertEquals(context.gameId, scope.gameId);
+  assertEquals(
+    [
+      Object.isFrozen(context),
+      Object.isFrozen(context.actor),
+      Object.isFrozen(context.permissions),
+      Object.isFrozen(context.authorizationContext),
+    ],
+    [true, true, true, true],
+  );
+  const serialized = JSON.stringify(context);
+  assertEquals(serialized.includes("player-token"), false);
+  assertEquals(serialized.includes("service"), false);
 });
 
 Deno.test("player request scope rejects a missing player session", async () => {

@@ -10,6 +10,8 @@ import {
 } from "../platform/supabase/edgeStaffSession.ts";
 import type { PlayerCapabilityEndpointKey } from "../domains/players/contracts/playerCapabilityManifestContracts.ts";
 import {
+  createPlayerRequestApplicationContext,
+  type PlayerRequestApplicationContext,
   type PlayerRequestScope,
   resolvePlayerRequestScope,
 } from "../domains/players/api/playerRequestScope.ts";
@@ -57,7 +59,18 @@ export interface PlayerRateLimitDispatchDependencies {
     input: EnforcePreAuthRateLimitInput,
     client: EdgeSupabaseClient,
   ) => Promise<RateLimitDecision>;
+  readonly createRequestId?: () => string;
 }
+
+type ReviewedPlayerRequestGuardResult =
+  | {
+    readonly ok: true;
+    readonly context: PlayerRequestApplicationContext;
+  }
+  | {
+    readonly ok: false;
+    readonly response: Response;
+  };
 
 const redemptionOperations = byMethod({
   GET: operation("player.inventory.redemptions.read", "read"),
@@ -269,7 +282,9 @@ export function readReviewedPlayerRateLimitOperation(
 export async function dispatchRateLimitedReviewedPlayerRequest(
   request: Request,
   endpointKey: ReviewedPlayerRateLimitEndpointKey,
-  next: () => Promise<Response> | Response,
+  next: (
+    context?: PlayerRequestApplicationContext,
+  ) => Promise<Response> | Response,
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
   const operation = readReviewedPlayerRateLimitOperation(
@@ -282,7 +297,7 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
       return await enforcePlayerBrowserResponsePrivacy(await next());
     }
 
-    const limited = await guardReviewedPlayerRequest(
+    const guard = await guardReviewedPlayerRequest(
       request,
       {
         ...operation,
@@ -290,7 +305,10 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
       },
       dependencies,
     );
-    return await enforcePlayerBrowserResponsePrivacy(limited ?? await next());
+    const response = guard.ok === false
+      ? guard.response
+      : await next(guard.context);
+    return await enforcePlayerBrowserResponsePrivacy(response);
   } catch {
     return unsafePlayerBrowserResponse();
   }
@@ -327,32 +345,47 @@ async function guardReviewedPlayerRequest(
   request: Request,
   operation: ReviewedPlayerRateLimitOperation,
   dependencies: PlayerRateLimitDispatchDependencies,
-): Promise<Response | null> {
+): Promise<ReviewedPlayerRequestGuardResult> {
   try {
     const client = createConfiguredClient(dependencies);
-    const scope = await (dependencies.resolveScope ?? resolveScope)(
-      request,
-      client,
-    );
+    const context = createPlayerRequestApplicationContext({
+      scope: await (dependencies.resolveScope ?? resolveScope)(request, client),
+      requestId: (dependencies.createRequestId ?? createRequestId)(),
+    });
     const decision = await (
       dependencies.enforcePostAuth ?? enforcePlayerRateLimit
     )({
       action: operation.action,
       profile: operation.profile,
       request,
-      scope,
+      scope: context,
     }, client);
-    return decision.allowed ? null : rateLimitExceededResponse(decision);
+    return decision.allowed
+      ? { ok: true, context }
+      : {
+        ok: false,
+        response: rateLimitExceededResponse(decision),
+      };
   } catch (error) {
     if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
+      return {
+        ok: false,
+        response: jsonError(error.status, {
+          code: error.code,
+          message: error.message,
+          retryable: error.retryable,
+        }),
+      };
     }
-    return rateLimitUnavailableResponse();
+    return {
+      ok: false,
+      response: rateLimitUnavailableResponse(),
+    };
   }
+}
+
+function createRequestId(): string {
+  return crypto.randomUUID();
 }
 
 async function guardPlayerLoginRequest(
