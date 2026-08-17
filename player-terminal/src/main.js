@@ -13,6 +13,7 @@ import { installNotificationInboxFlow } from "./features/notifications/notificat
 import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
 import { installWorldRuntimeFlow } from "./features/world/world-runtime-flow.js";
+import { installDisclosureStatePreserver } from "./forms/disclosure-state-preserver.js";
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
@@ -25,6 +26,7 @@ const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());
 const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);
 const toastHost = installToastHostController(mount);
+const disclosureState = installDisclosureStatePreserver(mount);
 const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent,
@@ -62,6 +64,7 @@ terminal.destroy = () => {
   messageReads.destroy();
   messageIntents.destroy();
   formDrafts.destroy();
+  disclosureState.destroy();
   toastHost.destroy();
   countryFocus.destroy();
   skipLink.destroy();

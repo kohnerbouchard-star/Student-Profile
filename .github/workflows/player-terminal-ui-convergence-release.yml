@@ -164,13 +164,28 @@ jobs:
             --token="$VERCEL_TOKEN" \
             > "$RUNNER_TEMP/player-terminal-index.html"
           for marker in \
+            player-terminal-recovery-core.css \
+            player-terminal-reset.css \
             player-terminal-tokens.css \
             player-terminal-foundation.css \
-            player-terminal-recovery-shell-compat.css \
+            player-terminal-shell-structure.css \
             player-terminal-shared-layout.css \
             player-terminal-dashboard.css
           do
             grep -Fq "$marker" "$RUNNER_TEMP/player-terminal-index.html"
+          done
+          for retired_marker in \
+            player-terminal-recovery-base.css \
+            player-terminal-recovery-ux.css \
+            player-terminal-recovery-polish.css \
+            player-terminal-recovery-normalization.css \
+            player-terminal-recovery-shell-compat.css \
+            player-terminal-recovery-route-compat.css
+          do
+            if grep -Fq "$retired_marker" "$RUNNER_TEMP/player-terminal-index.html"; then
+              echo "Retired Player recovery takeover is active: $retired_marker" >&2
+              exit 1
+            fi
           done
           npx --yes "vercel@$VERCEL_CLI_VERSION" curl \
             /player-terminal/src/pages/dashboard-page.js \
