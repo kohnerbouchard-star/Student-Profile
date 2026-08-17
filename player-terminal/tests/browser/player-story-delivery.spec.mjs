@@ -41,7 +41,9 @@ async function installConnectedStory(page, item, options = {}) {
   await waitForStableDashboard(page);
   await expect(page.locator("#player-main-content")).toBeVisible();
   await page.locator("#player-main-content").focus();
-  await page.evaluate(async ({ item, failAction }) => {
+
+  const failAction = options.failAction || "";
+  const installStory = () => page.evaluate(async ({ item: connectedItem, failAction: connectedFailAction }) => {
     const { installStoryDeliveryFlow } = await import("/src/features/notifications/story-delivery-flow.js");
     const terminal = window.Econovaria.playerTerminal;
     const mount = document.getElementById("playerTerminal");
@@ -64,23 +66,36 @@ async function installConnectedStory(page, item, options = {}) {
       },
       api: {
         setSession() {},
-        async request() { return { items: [item] }; },
+        async request() { return { items: [connectedItem] }; },
         async execute(_key, payload, params) {
           window.__storyWrites.push({ action: payload.action, deliveryId: params.deliveryId });
-          if (failAction && payload.action === failAction) throw Object.assign(new Error("expired"), { status: 401, code: "player_session_expired" });
+          if (connectedFailAction && payload.action === connectedFailAction) throw Object.assign(new Error("expired"), { status: 401, code: "player_session_expired" });
           return { result: { ok: true, action: payload.action, delivery: {
             deliveryId: params.deliveryId,
-            notificationId: item.notificationId,
-            deliveredAt: item.deliveredAt,
+            notificationId: connectedItem.notificationId,
+            deliveredAt: connectedItem.deliveredAt,
             seenAt: new Date().toISOString(),
             dismissedAt: payload.action === "dismissed" ? new Date().toISOString() : null,
             acknowledgedAt: payload.action === "acknowledged" ? new Date().toISOString() : null,
-            requiresAcknowledgement: item.requiresAcknowledgement,
+            requiresAcknowledgement: connectedItem.requiresAcknowledgement,
           } } };
         },
       },
     });
-  }, { item, failAction: options.failAction || "" });
+  }, { item, failAction });
+
+  try {
+    await installStory();
+  } catch (error) {
+    if (!/Execution context was destroyed/i.test(String(error?.message || error))) throw error;
+    const dialogSurvived = await page.locator(".player-story-cutscene-modal[role=dialog]").isVisible().catch(() => false);
+    const writesSurvived = await page.evaluate(() => Array.isArray(window.__storyWrites)).catch(() => false);
+    if (!dialogSurvived || !writesSurvived) {
+      await waitForStableDashboard(page);
+      await installStory();
+    }
+  }
+
   const dialog = page.locator(".player-story-cutscene-modal[role=dialog]");
   await expect(dialog).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__storyWrites?.map((entry) => entry.action) || [])).toContain("seen");
