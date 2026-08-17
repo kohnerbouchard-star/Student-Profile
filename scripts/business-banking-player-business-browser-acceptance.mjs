@@ -3,7 +3,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { runConnectedPlayerBffAcceptance } from "./connected-player-bff-acceptance-loader.mjs";
+import { runConnectedPlayerBffAcceptance as runBaseConnectedPlayerBffAcceptance } from "./connected-player-bff-acceptance-loader.mjs";
 import { restartLocalEdgeRuntime } from "./local-edge-runtime-isolation.mjs";
 
 function replaceExactlyOnce(source, label, before, after) {
@@ -67,7 +67,7 @@ function adaptBusinessReplayVerification(source) {
   );
 }
 
-async function runBusinessConnectedAcceptance(entryUrl) {
+async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const canonicalCorePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
   const source = adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8"));
@@ -76,11 +76,11 @@ async function runBusinessConnectedAcceptance(entryUrl) {
   const temporaryCorePath = temporaryEntryPath.replace(/\.mjs$/u, ".core.mjs");
   try {
     await writeFile(temporaryCorePath, source, "utf8");
-    await runConnectedPlayerBffAcceptance(pathToFileURL(temporaryEntryPath).href);
+    await runBaseConnectedPlayerBffAcceptance(pathToFileURL(temporaryEntryPath).href);
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
 }
 
 await restartLocalEdgeRuntime();
-await runBusinessConnectedAcceptance(import.meta.url);
+await runConnectedPlayerBffAcceptance(import.meta.url);
