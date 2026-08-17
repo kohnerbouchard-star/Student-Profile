@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "baselineMainSha": "7ecc9e018f6ee82ef4f4eae56a824e719481c3fd",
+  "maximums": {
+    "persistenceOutsideInfrastructure": 100,
+    "crossDomainDeepImports": 168,
+    "crossDomainInfrastructureImports": 9,
+    "browserTransportMonkeyPatchFiles": 9,
+    "compatibilityMarkerFiles": 209,
+    "oversizedSourceFiles": 100,
+    "oversizedHttpHandlers": 5,
+    "directBalanceMutationOutsideEconomy": 0,
+    "directInventoryMutationOutsideInventory": 0,
+    "unscopedLiveSimulationPersistence": 0,
+    "directBrowserDatabaseAccess": 0
+  },
+  "httpHandlerLineBudget": 500,
+  "retiredBrowserMarkers": [
+    "workers.dev",
+    "make-server-0dbf686f",
+    "stock-market-sim",
+    "stock-market-simulation",
+    "stock-market-game-api",
+    "stock-market-data"
+  ]
+}

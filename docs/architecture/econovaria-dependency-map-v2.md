@@ -84,3 +84,7 @@ Six filename-classified scheduler/worker entrypoints are inventoried: game-data 
 ## Collision and acceptance record
 
 At audit time the open PRs are #619 (root dependencies), #620 (Actions dependencies), #624 (Player CSS/realtime convergence) and #626 (Business browser acceptance synchronization). None owns these ARCH-000 deliverables. No runtime, UI, schema, route or RPC behavior changes in this tranche.
+
+## Phase 0 ratchet
+
+`ARCH-001` composes the existing Admin architecture and legacy-runtime audits with `scripts/architecture/architecture-ratchet-v2.mjs`. Its reconciled baseline is merged main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`. Measured debt may decrease but may not exceed the checked maxima. Zero-tolerance checks cover direct browser database access, direct balance mutation outside Economy, direct Inventory mutation outside Inventory, unscoped live-simulation persistence and retired browser markers. Non-zero baselines cover measured cross-domain imports, infrastructure imports, persistence location, compatibility candidates, browser transport monkey patches and size-budget candidates. A lexical match remains a review candidate; the ratchet does not authorize deletion or behavior changes.

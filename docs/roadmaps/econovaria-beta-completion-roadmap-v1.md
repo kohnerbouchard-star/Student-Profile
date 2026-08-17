@@ -21,8 +21,18 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
-- **`ARCH-000` — Current architecture inventory**
+- **`ARCH-001` — Architecture ratchets before large moves**
   - Status: `IMPLEMENTED_NOT_MERGED`
+  - Owner branch and baseline: `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`.
+  - Scope and beta impact: compose the existing architecture and legacy-runtime audits with a checked v2 baseline that permits measured debt only to stay flat or decrease. Zero-tolerance checks cover direct browser database access, out-of-owner balance/Inventory mutation, unscoped live-simulation persistence and retired browser markers. No product behavior, UI, route, RPC, migration, database or deployment change.
+  - Collision audit: open PRs #619, #620, #624 and #626 do not own the ratchet files; no in-flight Player/runtime file is modified.
+  - Implementation files: `scripts/architecture/architecture-ratchet-v2.mjs`, `scripts/architecture/architecture-ratchet-v2-baseline.json`, `package.json`, architecture dependency documentation and both authoritative roadmaps.
+  - Pull request and commit SHA: PR #631; implementation commit `a19b8b072777cc708a8d78ab93bcb62166461798`.
+  - Tests/evidence: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON/diff/secret checks and the required PR suite. Exact publication evidence pending.
+  - Completion boundary: unmerged and not complete. Next exact item after merged-main verification: `ARCH-100`.
+
+- **`ARCH-000` — Current architecture inventory**
+  - Status: `VERIFIED_COMPLETE`
   - Owner branch and baseline: `agent/architecture-hardening-roadmap-v2`, audited against fetched `origin/main` `72cefb73a0038aa2bc24261d63e70c113cb7c24c`.
   - Scope and beta impact: Phase 0 measured baseline for the architecture-hardening program. Documentation and read-only inventory tooling only; no product behavior, accepted UI, API, route, RPC, migration, database, deployment or production-state change.
   - Collision audit: open PRs #619, #620, #624 and #626 were inspected. None owns ARCH-000; #624's Player CSS/realtime work is treated as in-flight and was not modified.
@@ -30,9 +40,9 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Measured baseline: 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above 500 lines, and 123 capability-like strings. Lexical candidates require characterization before refactoring or deletion.
   - Tests and evidence: deterministic `audit:architecture-inventory`; `audit:high-priority-boundaries` (80 checks); `audit:architecture` (7 broad fetch assignments, 1 scoped assignment, 11 MutationObservers); `audit:legacy-runtime` (8 groups, 15 runtimes, 2 credential records); Node syntax; JSON parse; `git diff --check`; and tracked/untracked changed-file secret scans all pass. Runtime and staging evidence are inapplicable because the tranche is documentation/read-only tooling.
   - Pull request and commit SHA: PR #629; implementation commit `71bb4911f8a9e256549629ff74750a65cf26de46`.
-  - Completion boundary: local/branch evidence is not completion. This item must remain `IMPLEMENTED_NOT_MERGED` until the exact implementation is merged into `main` and its required checks pass.
-  - Unresolved blocker: merge/CI acceptance gate; no product-owner decision is required for the measured inventory.
-  - Next exact roadmap item: after ARCH-000 is merged and verified on `main`, execute `ARCH-001` without increasing any measured baseline.
+  - Completion basis: PR #629 passed its full suite and merged into `main` as `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63`. The transient Business Banking action-download failure passed unchanged on rerun. No runtime/staging evidence was required for documentation/read-only tooling.
+  - Unresolved blocker: none.
+  - Next exact roadmap item: `ARCH-001`.
 
 - **`BETA-ADMIN-UI-V2-003` — Market Management native v2 migration**
   - Status: `IMPLEMENTED_NOT_MERGED`
