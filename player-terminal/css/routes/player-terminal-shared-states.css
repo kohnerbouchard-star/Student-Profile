@@ -2,8 +2,29 @@
    Owns empty, error, disclosure, messages, holdings, transient status, and long-content containment. */
 
 .player-terminal-app-root .player-terminal-search-field {
+  display: flex;
   flex: 1 1 18rem;
-  min-width: min(100%, 14rem);
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.player-terminal-app-root .player-terminal-search-field > svg {
+  flex: 0 0 var(--player-icon-action);
+  width: var(--player-icon-action);
+  height: var(--player-icon-action);
+}
+
+.player-terminal-app-root .player-terminal-search-field > input {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.player-terminal-app-root :is(.player-terminal-store-toolbar, .player-terminal-inventory-toolbar) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .player-terminal-app-root :is(
