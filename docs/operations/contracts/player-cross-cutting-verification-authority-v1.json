@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorityId": "econovaria.stock-market-runtime-pr-483.v1",
   "purpose": "authorize-cross-cutting-player-verification",
-  "pullRequestNumber": 625,
+  "pullRequestNumber": 626,
   "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
