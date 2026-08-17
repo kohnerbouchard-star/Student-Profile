@@ -4,10 +4,12 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   for (
     const fragment of [
       'import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";',
+      'import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";',
       "const securedContext = { ...authorizedContext, security };",
       "const game = ensureOwnedGame(securedContext, gameId);",
+      "const applicationContext = createAdminRequestApplicationContext({",
       "const redemptionOperation = await handleInventoryRedemptionOperation(",
-      "staffUserId: securedContext.staff.id",
+      "applicationContext,",
     ]
   ) assertIncludes(adminIndex, fragment);
 
@@ -16,6 +18,9 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   );
   const ownership = adminIndex.indexOf(
     "const game = ensureOwnedGame(securedContext, gameId);",
+  );
+  const applicationContext = adminIndex.indexOf(
+    "const applicationContext = createAdminRequestApplicationContext({",
   );
   const redemption = adminIndex.indexOf(
     "const redemptionOperation = await handleInventoryRedemptionOperation(",
@@ -26,7 +31,8 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   assert(
     securityGuard >= 0 &&
       ownership > securityGuard &&
-      redemption > ownership &&
+      applicationContext > ownership &&
+      redemption > applicationContext &&
       genericRead > redemption,
   );
 });

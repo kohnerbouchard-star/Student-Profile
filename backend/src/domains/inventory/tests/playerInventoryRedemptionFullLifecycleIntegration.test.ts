@@ -1,4 +1,5 @@
 import { handleInventoryRedemptionOperation } from "../../../../supabase/functions/admin-api/inventoryRedemptionOperations.ts";
+import { createAdminRequestApplicationContext } from "../../../../supabase/functions/admin-api/adminRequestApplicationContext.ts";
 import { handlePlayerInventoryRedemptionRequest } from "../api/playerInventoryRedemptionHttpHandler.ts";
 import {
   type PlayerInventoryRedemptionDto,
@@ -442,8 +443,7 @@ function adminQueue(
       `https://example.test/functions/v1/admin-api/games/${gameId}/inventory/redemptions?status=${status}`,
       { method: "GET" },
     ),
-    gameId,
-    staffUserId: STAFF,
+    applicationContext: adminContext(gameId),
     suffix: "/inventory/redemptions",
   });
 }
@@ -469,9 +469,22 @@ function adminReview(
         }),
       },
     ),
-    gameId,
-    staffUserId: STAFF,
+    applicationContext: adminContext(gameId),
     suffix,
+  });
+}
+
+function adminContext(gameId: string) {
+  return createAdminRequestApplicationContext({
+    ownedGame: { id: gameId },
+    staffUserId: STAFF,
+    requestId: "admin-redemption-lifecycle-001",
+    security: {
+      ok: true,
+      assuranceLevel: "aal2",
+      permissions: ["inventory.redeem"],
+      requiredPermission: "inventory.redeem",
+    },
   });
 }
 

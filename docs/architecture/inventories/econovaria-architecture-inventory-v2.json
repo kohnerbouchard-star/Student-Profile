@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1023,
+    "sourceFiles": 1026,
     "edgeEntrypoints": 24,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 100,
@@ -3617,6 +3617,10 @@
         "lines": 555
       },
       {
+        "file": "backend/supabase/functions/admin-api/index.ts",
+        "lines": 555
+      },
+      {
         "file": "admin/v2/src/routes/marketplace/MarketplaceController.js",
         "lines": 554
       },
@@ -3634,10 +3638,6 @@
       },
       {
         "file": "backend/src/platform/supabase/edgeStaffSession.ts",
-        "lines": 548
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/index.ts",
         "lines": 548
       },
       {
@@ -3673,6 +3673,10 @@
         "lines": 521
       },
       {
+        "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
+        "lines": 519
+      },
+      {
         "file": "backend/supabase/functions/license-payment-webhook/index.ts",
         "lines": 518
       },
@@ -3693,10 +3697,6 @@
         "lines": 507
       },
       {
-        "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
-        "lines": 506
-      },
-      {
         "file": "backend/supabase/functions/admin-api/playerOperations.ts",
         "lines": 506
       },
@@ -3715,6 +3715,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -3811,6 +3812,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/attendance/AttendanceController.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -3827,6 +3829,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/logs/LogsController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -3851,6 +3854,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/business/BusinessController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4004,6 +4008,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/contracts/ContractsController.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4034,6 +4039,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/banking/BankingController.js",
           "admin/v2/src/routes/loans/LoansController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/bankingOperations.test.ts"
@@ -4165,6 +4171,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4176,6 +4183,8 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
@@ -4186,6 +4195,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4194,6 +4204,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4239,8 +4250,13 @@
           "admin/v2/src/routes/inventory/InventoryController.js",
           "backend/src/domains/inventory/services/playerInventoryReadService.ts",
           "backend/src/domains/inventory/services/playerInventoryRedemptionPolicy.test.ts",
+          "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/inventoryCraftingDispatch.test.ts",
+          "backend/supabase/functions/admin-api/inventoryRedemptionOperations.test.ts",
           "player-terminal/src/pages/inventory-page.js"
         ]
       },
@@ -4292,6 +4308,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/market/MarketController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4302,6 +4319,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/marketplace/MarketplaceController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4313,6 +4331,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/messages/MessagesController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4355,6 +4374,8 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/bankingOperations.test.ts"
@@ -4379,6 +4400,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/progression/ProgressionController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4445,6 +4467,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/settings/SettingsController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4492,6 +4515,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/store/StoreController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       },
@@ -4551,6 +4575,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/news-events/NewsEventsController.js",
           "admin/v2/src/routes/world-management/WorldManagementController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
       }

@@ -1,4 +1,5 @@
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
@@ -15,8 +16,7 @@ Deno.test("Admin Inventory seam delegates Crafting oversight before the preserve
     request: new Request("https://example.test/games/game-1/crafting/oversight?limit=25", {
       method: "GET",
     }),
-    gameId: "00000000-0000-4000-8000-000000000001",
-    staffUserId: "00000000-0000-4000-8000-000000000002",
+    applicationContext: adminContext(),
     suffix: "/crafting/oversight",
   });
 
@@ -36,12 +36,25 @@ Deno.test("Admin Inventory seam preserves unrelated fallthrough", async () => {
     request: new Request("https://example.test/games/game-1/unrelated", {
       method: "GET",
     }),
-    gameId: "00000000-0000-4000-8000-000000000001",
-    staffUserId: "00000000-0000-4000-8000-000000000002",
+    applicationContext: adminContext(),
     suffix: "/unrelated",
   });
   assertEquals(result.handled, false);
 });
+
+function adminContext() {
+  return createAdminRequestApplicationContext({
+    ownedGame: { id: "00000000-0000-4000-8000-000000000001" },
+    staffUserId: "00000000-0000-4000-8000-000000000002",
+    requestId: "admin-crafting-dispatch-001",
+    security: {
+      ok: true,
+      assuranceLevel: "aal2",
+      permissions: ["inventory.redeem"],
+      requiredPermission: "inventory.redeem",
+    },
+  });
+}
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {

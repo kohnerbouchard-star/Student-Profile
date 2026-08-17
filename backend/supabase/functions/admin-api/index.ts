@@ -31,6 +31,7 @@ import {
   type AdminSecurityGuardResult,
   guardAdminRequest,
 } from "./adminSecurityGuard.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
 type AdminSecurityFailure = Extract<
@@ -304,6 +305,12 @@ Deno.serve(async (request: Request) => {
         message: "That game is not available to this administrator.",
       });
     }
+    const applicationContext = createAdminRequestApplicationContext({
+      ownedGame: game,
+      staffUserId: securedContext.staff.id,
+      security,
+      requestId: crypto.randomUUID(),
+    });
 
     const lifecycleOperation = await handleGameLifecycleOperation(
       securedContext.service,
@@ -449,8 +456,7 @@ Deno.serve(async (request: Request) => {
       securedContext.service,
       {
         request,
-        gameId,
-        staffUserId: securedContext.staff.id,
+        applicationContext,
         suffix,
       },
     );
