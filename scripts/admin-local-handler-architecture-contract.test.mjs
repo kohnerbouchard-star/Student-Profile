@@ -8,6 +8,12 @@ const indexSource = read("backend/supabase/functions/admin-api/index.ts");
 const localMutationSource = read(
   "backend/supabase/functions/admin-api/localGameMutations.ts",
 );
+const adminContextSource = read(
+  "backend/supabase/functions/admin-api/adminRequestApplicationContext.ts",
+);
+const redemptionSource = read(
+  "backend/supabase/functions/admin-api/inventoryRedemptionOperations.ts",
+);
 const commonSource = read("backend/supabase/functions/admin-api/common.ts");
 
 test("Admin boundary runs once before owner-scoped local mutation dispatch", () => {
@@ -15,12 +21,19 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
   const contextIndex = serveSource.indexOf("await resolveContext(request)");
   const securityIndex = serveSource.indexOf("await guardAdminRequest(");
   const ownershipIndex = serveSource.indexOf("ensureOwnedGame(securedContext, gameId)");
+  const applicationContextIndex = serveSource.indexOf(
+    "createAdminRequestApplicationContext({",
+  );
   const localIndex = serveSource.indexOf("await handleLocalAdminGameMutation(");
   const compatibilityWriteIndex = serveSource.indexOf("await handleGameWrite(");
 
   assert.ok(contextIndex >= 0, "Admin authentication context must be resolved");
   assert.ok(securityIndex > contextIndex, "security must follow authentication");
   assert.ok(ownershipIndex > securityIndex, "ownership must follow security");
+  assert.ok(
+    applicationContextIndex > ownershipIndex,
+    "application context projection must follow owned-game validation",
+  );
   assert.ok(localIndex > ownershipIndex, "local handlers must follow ownership");
   assert.ok(
     compatibilityWriteIndex > localIndex,
@@ -32,9 +45,36 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
     "Admin permission, AAL2, and user-action rate limiting must run once",
   );
   assert.equal(
+    serveSource.match(/createAdminRequestApplicationContext\(\{/g)?.length,
+    1,
+    "the immutable Admin application context must be projected once",
+  );
+  assert.equal(
     serveSource.match(/await handleLocalAdminGameMutation\(/g)?.length,
     1,
     "the local mutation dispatcher must run once",
+  );
+});
+
+test("reviewed Admin context reaches the Inventory application adapter", () => {
+  assert.match(indexSource, /ownedGame:\s*game/);
+  assert.match(indexSource, /staffUserId:\s*securedContext\.staff\.id/);
+  assert.match(indexSource, /requestId:\s*crypto\.randomUUID\(\)/);
+  assert.match(
+    indexSource,
+    /handleInventoryRedemptionOperation\([\s\S]*?applicationContext,/,
+  );
+  assert.match(
+    redemptionSource,
+    /input\.applicationContext\.gameSessionId/,
+  );
+  assert.match(
+    redemptionSource,
+    /input\.applicationContext\.actor\.staffUserId/,
+  );
+  assert.doesNotMatch(
+    adminContextSource,
+    /\b(?:token|service|authorization|email)\s*:/i,
   );
 });
 
