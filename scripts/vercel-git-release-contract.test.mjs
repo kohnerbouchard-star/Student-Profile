@@ -49,7 +49,7 @@ for (const marker of [
   "github.event.client_payload.git.sha",
   "github.event.client_payload.url",
   "release/production",
-  "https://econovaria.com/api/health",
+  "https://www.econovaria.com/api/health",
   "sourceCommit",
 ]) {
   assert.ok(verifier.includes(marker), `missing production verification marker: ${marker}`);
