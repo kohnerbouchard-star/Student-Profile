@@ -21,6 +21,19 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`ARCH-000` — Current architecture inventory**
+  - Status: `IMPLEMENTED_NOT_MERGED`
+  - Owner branch and baseline: `agent/architecture-hardening-roadmap-v2`, audited against fetched `origin/main` `72cefb73a0038aa2bc24261d63e70c113cb7c24c`.
+  - Scope and beta impact: Phase 0 measured baseline for the architecture-hardening program. Documentation and read-only inventory tooling only; no product behavior, accepted UI, API, route, RPC, migration, database, deployment or production-state change.
+  - Collision audit: open PRs #619, #620, #624 and #626 were inspected. None owns ARCH-000; #624's Player CSS/realtime work is treated as in-flight and was not modified.
+  - Implementation files: `docs/architecture/econovaria-domain-ownership-v2.md`, `docs/architecture/econovaria-dependency-map-v2.md`, `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`, `scripts/architecture/build-architecture-inventory.mjs`, and the `audit:architecture-inventory` package script.
+  - Measured baseline: 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above 500 lines, and 123 capability-like strings. Lexical candidates require characterization before refactoring or deletion.
+  - Tests and evidence: deterministic `audit:architecture-inventory`; `audit:high-priority-boundaries` (80 checks); `audit:architecture` (7 broad fetch assignments, 1 scoped assignment, 11 MutationObservers); `audit:legacy-runtime` (8 groups, 15 runtimes, 2 credential records); Node syntax; JSON parse; `git diff --check`; and tracked/untracked changed-file secret scans all pass. Runtime and staging evidence are inapplicable because the tranche is documentation/read-only tooling.
+  - Pull request and commit SHA: PR #629; implementation commit `71bb4911f8a9e256549629ff74750a65cf26de46`.
+  - Completion boundary: local/branch evidence is not completion. This item must remain `IMPLEMENTED_NOT_MERGED` until the exact implementation is merged into `main` and its required checks pass.
+  - Unresolved blocker: merge/CI acceptance gate; no product-owner decision is required for the measured inventory.
+  - Next exact roadmap item: after ARCH-000 is merged and verified on `main`, execute `ARCH-001` without increasing any measured baseline.
+
 - **`BETA-ADMIN-UI-V2-003` — Market Management native v2 migration**
   - Status: `IMPLEMENTED_NOT_MERGED`
   - Owner branch and exact base: `refactor/admin-ui-v2-market-management-v1`, created from fetched `origin/main` at `9eb2277e6e16d628c0da2595d05bf99a121002a9` after Phase 2 merged.
