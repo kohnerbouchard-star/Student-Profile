@@ -18,7 +18,11 @@ import {
   type PlayerCraftingRateLimitEndpointKey,
 } from "../../../security/playerCraftingRateLimitDispatch.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import {
+  type PlayerRequestApplicationContext,
+  rejectClientSuppliedPlayerIdentity,
+  resolvePlayerRequestScope,
+} from "../../players/api/playerRequestScope.ts";
 import {
   type PlayerInventoryReadRepository,
   type PlayerInventoryReadResponseBody,
@@ -47,6 +51,7 @@ export async function handlePlayerInventoryReadRequest(
   request: Request,
   route: PlayerInventoryRoute,
   dependencies: PlayerInventoryReadHttpHandlerDependencies,
+  applicationContext?: PlayerRequestApplicationContext,
 ): Promise<Response> {
   if (route.kind === "crafting") {
     return handleCraftingBridgeRequest(request, route.route, dependencies);
@@ -82,15 +87,17 @@ export async function handlePlayerInventoryReadRequest(
 
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
-    const scope = await resolvePlayerRequestScope(request, {
-      hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
-      resolvePlayerSession: (tokenHash) =>
-        (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
-          client,
-          tokenHash,
-        ),
-      now: () => now,
-    });
+    rejectClientSuppliedPlayerIdentity(request);
+    const scope = applicationContext ??
+      await resolvePlayerRequestScope(request, {
+        hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
+        resolvePlayerSession: (tokenHash) =>
+          (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
+            client,
+            tokenHash,
+          ),
+        now: () => now,
+      });
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)

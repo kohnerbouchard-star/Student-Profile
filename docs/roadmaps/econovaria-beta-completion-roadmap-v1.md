@@ -21,15 +21,25 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`ARCH-100` — Canonical request/application context**
+  - Status: `IN_PROGRESS`
+  - Owner branch and exact base: first bounded tranche `refactor/request-application-context-v1`, created from merged Phase 0 `main` at `92a818dfd719d1dcf1407c39bb6904f5d9b78077` and reconciled with current `main` `87cb22820db4120668a860e9fd9ebcbc02779c10` after PR #632 merged.
+  - Scope and beta impact: consolidate the existing server-derived Player request scope into an immutable internal application context and forward the same authenticated object through reviewed rate limiting into Inventory read/redemption handlers in both Player entrypoints. A separate follow-up tranche will project a distinct Admin context only after the existing Admin guard and owned-game check. External methods, routes, auth, permissions, payloads, errors, idempotency, UI, schema, RPCs, migrations and deployments remain unchanged.
+  - Collision audit: open PRs #619, #620, #624 and #626 do not own the Player request-scope, rate-limit dispatcher, Inventory handler, or composition files in the first tranche. #624's Player CSS/realtime/browser-test files remain out of scope. Merged PR #632 was reconciled at `87cb22820db4120668a860e9fd9ebcbc02779c10`; its release workflow/`vercel.json` changes do not overlap.
+  - Implementation files: `backend/src/shared/requestApplicationContext.ts`; the existing Player scope and central rate-limit dispatcher; Inventory read/redemption handlers; Classroom and Player API composition roots; focused tests and `backend/package.json`; generated architecture inventory; and both authoritative roadmaps.
+  - Pull request and commit SHA: pending publication.
+  - Tests/runtime evidence: Player request-scope/privacy 22 tests, Player security/rate limiting 43 tests, Player Inventory 46 tests, the full backend smoke suite (including 157 Admin API tests), backend `typecheck:all`, explicit Player API Deno check, auth boundaries (16 + 8), high-priority boundary ratchet (80), Admin architecture ratchet, legacy-runtime audits, architecture v2 ratchet at 168 cross-domain imports, repository secret scan, and `git diff --check` pass. No connected staging evidence is required for this internal behavior-preserving refactor; required PR checks remain pending.
+  - Completion boundary: `IN_PROGRESS`; `ARCH-100A` is implemented locally but unmerged and is not complete. Next exact work: publish and merge `ARCH-100A`, reconcile merged-main evidence, then execute the distinct Admin projection tranche.
+
 - **`ARCH-001` — Architecture ratchets before large moves**
-  - Status: `IMPLEMENTED_NOT_MERGED`
+  - Status: `VERIFIED_COMPLETE`
   - Owner branch and baseline: `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`.
   - Scope and beta impact: compose the existing architecture and legacy-runtime audits with a checked v2 baseline that permits measured debt only to stay flat or decrease. Zero-tolerance checks cover direct browser database access, out-of-owner balance/Inventory mutation, unscoped live-simulation persistence and retired browser markers. No product behavior, UI, route, RPC, migration, database or deployment change.
   - Collision audit: open PRs #619, #620, #624 and #626 do not own the ratchet files; no in-flight Player/runtime file is modified.
   - Implementation files: `scripts/architecture/architecture-ratchet-v2.mjs`, `scripts/architecture/architecture-ratchet-v2-baseline.json`, `package.json`, architecture dependency documentation and both authoritative roadmaps.
-  - Pull request and commit SHA: PR #631; implementation commit `a19b8b072777cc708a8d78ab93bcb62166461798`.
-  - Tests/evidence: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON/diff/secret checks and the required PR suite. Exact publication evidence pending.
-  - Completion boundary: unmerged and not complete. Next exact item after merged-main verification: `ARCH-100`.
+  - Pull request and commit SHA: PR #631; implementation commit `a19b8b0758cf174dfb8205676b1bd4d5175c326d`; merge commit `92a818dfd719d1dcf1407c39bb6904f5d9b78077`.
+  - Tests/evidence: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON/diff/secret checks and every required PR check passed. Release-only jobs were skipped by their intended conditions; transient external action-download/Admin browser failures passed unchanged on rerun. Runtime/staging evidence is inapplicable to read-only architecture tooling.
+  - Completion boundary: merged into `main` with required evidence; no unresolved blocker. Next exact item: `ARCH-100`.
 
 - **`ARCH-000` — Current architecture inventory**
   - Status: `VERIFIED_COMPLETE`

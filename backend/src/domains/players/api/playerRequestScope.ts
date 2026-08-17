@@ -1,4 +1,5 @@
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
+import type { RequestApplicationContext } from "../../../shared/requestApplicationContext.ts";
 import {
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
@@ -74,6 +75,56 @@ export interface PlayerRequestScope {
   readonly sessionValid: true;
   readonly sessionExpiresAt: string;
   readonly authorizationContext: PlayerRequestAuthorizationContext;
+}
+
+export interface PlayerRequestApplicationActor {
+  readonly kind: "player";
+  readonly playerUuid: string;
+  readonly playerSessionId: string;
+}
+
+export interface PlayerRequestApplicationContext
+  extends
+    RequestApplicationContext<
+      PlayerRequestApplicationActor,
+      "player",
+      PlayerRequestAuthorizationContext["resourceScope"]
+    >,
+    PlayerRequestScope {}
+
+export interface CreatePlayerRequestApplicationContextInput {
+  readonly scope: PlayerRequestScope;
+  readonly requestId: string;
+}
+
+export function createPlayerRequestApplicationContext(
+  input: CreatePlayerRequestApplicationContextInput,
+): PlayerRequestApplicationContext {
+  const requestId = input.requestId.trim();
+  if (!requestId) {
+    throw new Error("Player request application context requires a request ID.");
+  }
+
+  const authorizationContext = Object.freeze({
+    ...input.scope.authorizationContext,
+  });
+  const scope = Object.freeze({
+    ...input.scope,
+    authorizationContext,
+  });
+
+  return Object.freeze({
+    ...scope,
+    gameSessionId: scope.gameId,
+    actor: Object.freeze({
+      kind: "player" as const,
+      playerUuid: scope.playerUuid,
+      playerSessionId: scope.activeSessionId,
+    }),
+    role: "player" as const,
+    permissions: Object.freeze([authorizationContext.resourceScope]),
+    requestId,
+  });
 }
 
 export interface PlayerRequestScopeDependencies {

@@ -7,6 +7,10 @@ const CLASSROOM_API = new URL(
   "../../supabase/functions/classroom-api/index.ts",
   import.meta.url,
 );
+const PLAYER_API_RUNTIME = new URL(
+  "../../supabase/functions/player-api/runtime.ts",
+  import.meta.url,
+);
 
 Deno.test("Classroom API dispatch applies one central guard to each integrated reviewed route", async () => {
   const source = await Deno.readTextFile(CLASSROOM_API);
@@ -68,6 +72,26 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
     ]
   ) {
     assertEquals(source.includes(directReturn), false);
+  }
+});
+
+Deno.test("both Player composition roots forward the authenticated Inventory context", async () => {
+  for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
+    const source = await Deno.readTextFile(sourceUrl);
+    const normalized = source.replace(/\s+/gu, " ");
+
+    assertEquals(
+      normalized.includes(
+        '"inventoryRedemption", (applicationContext) => handlePlayerInventoryRedemptionRequest( request, playerInventoryRedemptionRoute, { createServiceClient }, applicationContext, )',
+      ),
+      true,
+    );
+    assertEquals(
+      normalized.includes(
+        '"inventory", (applicationContext) => handlePlayerInventoryReadRequest( request, playerInventoryRoute, { createServiceClient }, applicationContext, )',
+      ),
+      true,
+    );
   }
 });
 

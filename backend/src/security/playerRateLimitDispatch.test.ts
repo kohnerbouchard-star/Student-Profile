@@ -1,6 +1,9 @@
 import { EdgeActivationError } from "../platform/supabase/edgeResponse.ts";
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
-import type { PlayerRequestScope } from "../domains/players/api/playerRequestScope.ts";
+import type {
+  PlayerRequestApplicationContext,
+  PlayerRequestScope,
+} from "../domains/players/api/playerRequestScope.ts";
 import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
@@ -69,11 +72,14 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
   let scopeCalls = 0;
   let limiterCalls = 0;
   let handlerCalls = 0;
+  let limiterScope: PlayerRequestScope | null = null;
+  let applicationContext: PlayerRequestApplicationContext | undefined;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
     playerRequest("GET", "/players/me/inventory"),
     "inventory",
-    () => {
+    (context) => {
       handlerCalls += 1;
+      applicationContext = context;
       return new Response("ok");
     },
     dependencies({
@@ -85,7 +91,11 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
         limiterCalls += 1;
         assertEquals(input.action, "player.inventory.read");
         assertEquals(input.profile, "read");
-        assertEquals(input.scope, SCOPE);
+        assertEquals(input.scope.playerUuid, SCOPE.playerUuid);
+        assertEquals(input.scope.gameId, SCOPE.gameId);
+        assertEquals(input.scope.activeSessionId, SCOPE.activeSessionId);
+        assertEquals(input.scope.authorizationContext, SCOPE.authorizationContext);
+        limiterScope = input.scope;
         return Promise.resolve(ALLOWED);
       },
     }),
@@ -93,6 +103,16 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
 
   assertEquals(response.status, 200);
   assertEquals([scopeCalls, limiterCalls, handlerCalls], [1, 1, 1]);
+  assertEquals(applicationContext?.gameSessionId, GAME);
+  assertEquals(applicationContext?.actor, {
+    kind: "player",
+    playerUuid: PLAYER,
+    playerSessionId: SESSION,
+  });
+  assertEquals(applicationContext?.permissions, ["own_player"]);
+  assertEquals(applicationContext?.requestId, "request-player-rate-limit-001");
+  assertSame(limiterScope, applicationContext);
+  assertEquals(Object.isFrozen(applicationContext), true);
 });
 
 Deno.test("post-auth denial and outage fail closed before route work", async () => {
@@ -160,11 +180,13 @@ Deno.test("post-auth session errors are preserved without limiter consumption", 
 Deno.test("unsupported route methods bypass consumption and retain handler semantics", async () => {
   let limiterCalls = 0;
   let handlerCalls = 0;
+  let receivedContext: PlayerRequestApplicationContext | undefined;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
     playerRequest("POST", "/players/me/inventory"),
     "inventory",
-    () => {
+    (context) => {
       handlerCalls += 1;
+      receivedContext = context;
       return new Response(null, { status: 405 });
     },
     dependencies({
@@ -176,6 +198,7 @@ Deno.test("unsupported route methods bypass consumption and retain handler seman
   );
   assertEquals(response.status, 405);
   assertEquals([limiterCalls, handlerCalls], [0, 1]);
+  assertEquals(receivedContext, undefined);
 });
 
 Deno.test("login dispatch uses classroom policy without parsing credentials", async () => {
@@ -329,8 +352,15 @@ function dependencies(
     resolveScope: () => Promise.resolve(SCOPE),
     enforcePostAuth: () => Promise.resolve(ALLOWED),
     enforcePreAuth: () => Promise.resolve(ALLOWED),
+    createRequestId: () => "request-player-rate-limit-001",
     ...overrides,
   };
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) {
+    throw new Error("Expected values to have object identity.");
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

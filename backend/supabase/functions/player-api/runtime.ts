@@ -223,10 +223,11 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventoryRedemption",
-      () => handlePlayerInventoryRedemptionRequest(
+      (applicationContext) => handlePlayerInventoryRedemptionRequest(
         request,
         playerInventoryRedemptionRoute,
         { createServiceClient },
+        applicationContext,
       ),
       { createServiceClient },
     );
@@ -237,9 +238,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventory",
-      () => handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
-        createServiceClient,
-      }),
+      (applicationContext) => handlePlayerInventoryReadRequest(
+        request,
+        playerInventoryRoute,
+        { createServiceClient },
+        applicationContext,
+      ),
       { createServiceClient },
     );
   }

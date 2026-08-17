@@ -35,6 +35,33 @@ Deno.test("Player redemption request derives scope and returns UUID-private crea
   assertNoUuid(JSON.stringify(body));
 });
 
+Deno.test("Player redemption reuses the injected application context without resolving scope again", async () => {
+  const repository = new FakeRepository();
+  let resolverCalls = 0;
+  const response = await handlePlayerInventoryRedemptionRequest(
+    request(),
+    { kind: "request", itemId: "meal-pass" },
+    {
+      ...dependencies(repository),
+      hashSessionToken: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+      resolvePlayerSession: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+    },
+    applicationContext(),
+  );
+
+  assertEquals(response.status, 201);
+  assertEquals(resolverCalls, 0);
+  assertEquals(repository.requestInputs[0]?.gameId, GAME);
+  assertEquals(repository.requestInputs[0]?.playerUuid, PLAYER);
+  assertNoUuid(JSON.stringify(await response.json()));
+});
+
 Deno.test("Player redemption exact retry returns 200 replay without changing scope", async () => {
   const repository = new FakeRepository({ outcome: "replayed" });
   const response = await handlePlayerInventoryRedemptionRequest(request(), {
@@ -260,6 +287,31 @@ function dependencies(
     createRepository: () => repository,
     now: () => NOW,
   };
+}
+
+function applicationContext() {
+  return {
+    gameSessionId: GAME,
+    actor: {
+      kind: "player" as const,
+      playerUuid: PLAYER,
+      playerSessionId: SESSION,
+    },
+    role: "player" as const,
+    permissions: ["own_player"] as const,
+    requestId: "request-player-redemption-001",
+    playerUuid: PLAYER,
+    gameId: GAME,
+    activeSessionId: SESSION,
+    sessionValid: true,
+    sessionExpiresAt: "2026-07-19T00:00:00.000Z",
+    authorizationContext: {
+      actorType: "player",
+      source: "player_session",
+      gameScope: "session",
+      resourceScope: "own_player",
+    },
+  } as const;
 }
 
 function activeResolution(overrides: { readonly playerStatus?: string } = {}) {
