@@ -110,3 +110,11 @@ export function publicSubmittedAnswers(evidence) {
     return questionKey && optionKey ? [{ questionKey, optionKey }] : [];
   });
 }
+
+export function publicSubmittedStoryDecision(evidence) {
+  const storyDecision = object(object(evidence).storyDecision);
+  const optionCandidate = text(storyDecision.optionKey);
+  const optionKey = PUBLIC_TOKEN.test(optionCandidate) ? optionCandidate.toLowerCase() : "";
+  const rationale = text(storyDecision.rationale);
+  return optionKey && rationale ? { optionKey, rationale } : null;
+}
