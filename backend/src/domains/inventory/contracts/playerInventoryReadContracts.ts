@@ -31,7 +31,7 @@ export interface PlayerInventoryRecord {
   /** True only when the canonical item definition exposes an enabled automatic effect. */
   readonly usable: boolean;
   /** Manual redemption is opt-in on the canonical game item and never inferred from ownership. */
-  readonly redemptionMode: "teacher_approval" | null;
+  readonly redemptionMode?: "teacher_approval" | null;
   readonly quantityOwned: number;
   readonly quantityReserved: number;
   readonly createdAt: string;
