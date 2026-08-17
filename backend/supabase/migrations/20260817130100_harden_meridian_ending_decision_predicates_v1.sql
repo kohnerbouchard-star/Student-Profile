@@ -1,5 +1,30 @@
 begin;
 
+-- Preserve the historical completion-only ending semantics only for games in
+-- which a player had already completed the old free-response status Contract
+-- before structured Story decisions existed. New campaigns receive no legacy
+-- flag and therefore must satisfy the semantic decision predicate below.
+insert into public.game_session_story_flags (
+  game_session_id,
+  flag_key,
+  value,
+  source_story_event_id,
+  created_at
+)
+select distinct
+  contract_row.game_session_id,
+  'meridian_story_decision_mode_v1',
+  to_jsonb('legacy_completion'::text),
+  null,
+  now()
+from public.game_session_contracts as contract_row
+join public.player_contract_progress as progress_row
+  on progress_row.game_session_id = contract_row.game_session_id
+ and progress_row.contract_id = contract_row.id
+where contract_row.contract_key = 'contract.meridian.belonging-long-term-status-decision.v1'
+  and progress_row.status in ('completed','approved')
+on conflict (game_session_id, flag_key) do nothing;
+
 create or replace function public.rewrite_meridian_long_term_status_condition_v1(
   p_value jsonb
 )
@@ -22,11 +47,25 @@ begin
       and p_value ->> 'contractKey' = 'contract.meridian.belonging-long-term-status-decision.v1'
     then
       return jsonb_build_object(
-        'type', 'player_story_decision_in',
-        'decisionKey', 'long_term_status_intent',
-        'optionKeys', jsonb_build_array(
-          'seek_permanent_residency',
-          'seek_citizenship_if_eligible'
+        'any', jsonb_build_array(
+          jsonb_build_object(
+            'type', 'player_story_decision_in',
+            'decisionKey', 'long_term_status_intent',
+            'optionKeys', jsonb_build_array(
+              'seek_permanent_residency',
+              'seek_citizenship_if_eligible'
+            )
+          ),
+          jsonb_build_object(
+            'all', jsonb_build_array(
+              jsonb_build_object(
+                'type', 'story_flag_equals',
+                'flagKey', 'meridian_story_decision_mode_v1',
+                'value', 'legacy_completion'
+              ),
+              p_value
+            )
+          )
         )
       );
     end if;
@@ -84,16 +123,16 @@ for each row
 when (new.event_key = 'meridian_reckoning')
 execute function public.harden_meridian_reckoning_decisions_v1();
 
+-- The trigger makes this idempotent even if a Story initializer later rewrites
+-- the shared Stage 10 definition from its source migration.
 update public.storyline_events as event_row
-set player_rules = public.rewrite_meridian_long_term_status_condition_v1(
-  coalesce(event_row.player_rules, '[]'::jsonb)
-)
+set player_rules = event_row.player_rules
 from public.storylines as storyline_row
 where storyline_row.id = event_row.storyline_id
   and lower(storyline_row.key) = lower('econovaria_demo_act_1')
   and event_row.event_key = 'meridian_reckoning';
 
 comment on function public.rewrite_meridian_long_term_status_condition_v1(jsonb) is
-  'Rewrites the Stage 10 long-term-status completion predicate to require a deterministic local long-term commitment decision. Relocate, defer, and temporary-only choices therefore cannot qualify Builder/Citizen identity branches merely by completing the Contract.';
+  'Requires a deterministic permanent-residency/citizenship intent for Stage 10 Builder/Citizen commitment predicates. Only games with a pre-cutover completed legacy Contract may retain the historical completion fallback; relocate, defer, and temporary choices do not qualify in structured campaigns.';
 
 commit;
