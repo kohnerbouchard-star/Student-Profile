@@ -1,11 +1,11 @@
 # Econovaria Architecture Hardening Roadmap v2
 
-**Document ID:** `ECON-ARCH-HARDENING-V2`  
-**Status:** `ACTIVE / READY_FOR_EXECUTION`  
-**Authoring date:** 2026-08-17  
-**Baseline main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`  
-**Program shape:** modular-monolith hardening; no rewrite  
-**Expected delivery shape:** approximately 15–25 bounded PRs, each independently reviewable and mergeable  
+**Document ID:** `ECON-ARCH-HARDENING-V2`
+**Status:** `ACTIVE / READY_FOR_EXECUTION`
+**Authoring date:** 2026-08-17
+**Baseline main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`
+**Program shape:** modular-monolith hardening; no rewrite
+**Expected delivery shape:** approximately 15–25 bounded PRs, each independently reviewable and mergeable
 **Companion authority:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md` remains the repository-wide completion ledger required by `AGENTS.md`.
 
 This roadmap supersedes the architectural assumptions in `docs/roadmaps/econovaria-structured-refactor-roadmap-v1.md` where current `main` has already advanced beyond them. The earlier roadmap remains valid historical evidence. Do not redo already-completed decomposition merely because the old roadmap requested it.
@@ -152,7 +152,7 @@ Add one overarching rule:
 
 # PHASE 0 — Establish the measured baseline and freeze new architecture drift
 
-**Priority:** P0  
+**Priority:** P0
 **Blocking:** all later phases
 
 ### `ARCH-000` — Current architecture inventory
@@ -186,7 +186,7 @@ Deliverables:
 
 ### `ARCH-001` — Architecture ratchets before large moves
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-000`
 
 Extend existing architecture audits rather than inventing a disconnected second framework. Add ratchets for newly measured violations so the count can only move toward zero.
@@ -214,7 +214,7 @@ At minimum detect/ratchet:
 
 ### `ARCH-100` — Canonical request/application context
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: Phase 0
 
 Create or consolidate the existing equivalent of a request/application context carrying server-derived identity and scope. Do not invent a second context if one already exists.
@@ -243,7 +243,7 @@ Requirements:
 
 ### `ARCH-101` — Data ownership classification
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-100`
 
 Classify persistent entities as one of:
@@ -258,7 +258,7 @@ Document ambiguous tables and fix unsafe access patterns before deletion/lifecyc
 
 ### `ARCH-102` — Two-game isolation contract suite
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-100`, `ARCH-101`
 
 Create reusable tests proving that a mutation/read in Game A cannot observe or alter Game B across the high-risk domains: Story/World, Inventory, Store, Crafting, Economy/Banking, Stocks, Contracts, Marketplace, Progression, Attendance, Messaging/Notifications, and game lifecycle.
@@ -290,7 +290,7 @@ No Store/Crafting/Marketplace/Contract/Progression handler may directly reproduc
 
 ## `ARCH-201` — Redemption authority and state machine
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-200`
 
 Separate direct item use from supervised redemption. Preserve the canonical lifecycle and make transitions explicit through one state machine/use-case boundary.
@@ -307,7 +307,7 @@ Forbidden: arbitrary callers setting a status column directly to simulate a tran
 
 ## `ARCH-202` — Store -> Inventory/Economy integration
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-200`, Phase 3 transaction primitive if required
 
 A successful purchase must have one authoritative orchestration path for:
@@ -323,14 +323,14 @@ No dual writes and no partially successful purchase state.
 
 ## `ARCH-203` — Crafting -> Inventory integration
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-200`
 
 Crafting owns recipes/crafting rules; Inventory owns item consume/grant. Crafting must not reproduce Inventory ownership logic.
 
 ## `ARCH-204` — Marketplace -> Inventory/Economy integration
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-200`
 
 Marketplace owns listing/reservation/trade lifecycle. Inventory and Economy remain authoritative for assets and money. Preserve existing abuse, replay, reservation, and lifecycle tests.
@@ -345,28 +345,28 @@ Scope includes Player Checking/Savings transfers, rewards/fines/payroll, Store, 
 
 ## `ARCH-206` — Stocks/Market authority
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-205`
 
 Stocks own instruments, exchange/calendar rules, prices/ticks, orders/trades, portfolios and market-specific simulation. Economy owns money movement. Do not duplicate exchange/session logic in UI or scheduler code.
 
 ## `ARCH-207` — Business/asset authority
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-205`
 
 Define a canonical business ownership/asset boundary and ensure business-banking, marketplace, investments and Admin surfaces consume it rather than reproducing ownership checks.
 
 ## `ARCH-208` — Contracts/Progression/reward authority
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-205`
 
 Contracts own lifecycle/acceptance/completion rules. Progression owns progression mechanics. Reward issuance must use canonical Economy/Inventory boundaries instead of direct writes.
 
 ## `ARCH-209` — Story/World/Campaign authority
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: Phase 1
 
 Make story/campaign/world state transitions game-scoped, explicit and deterministic. Preserve the prior cross-game story-isolation correction and add regression tests around any remaining global-vs-game configuration seams.
@@ -523,7 +523,7 @@ Redemption request -> inventory/redemption views
 
 ### `ARCH-502` — Remove route-specific manual-refresh dependence
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-500`, `ARCH-501`
 
 Measure and remove cases where a successful mutation leaves authoritative dependent UI stale until manual reload/refresh.
@@ -617,7 +617,7 @@ Targets include:
 
 ### `ARCH-701` — Delete proven-dead paths
 
-Status: `PLANNED`  
+Status: `PLANNED`
 Depends on: `ARCH-700`
 
 Delete only after proving no live consumer and preserving regression evidence. Update ratchets so deleted runtime paths cannot silently return.

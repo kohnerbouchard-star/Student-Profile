@@ -1,7 +1,7 @@
 # Econovaria Domain Ownership v2
 
-**Roadmap item:** `ARCH-000`  
-**Audited main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`  
+**Roadmap item:** `ARCH-000`
+**Audited main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`
 **Inventory:** `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`
 
 This is a measured ownership inventory, not a claim that the listed boundaries are already enforced. It preserves current behavior and identifies the authority decisions that later roadmap items must ratchet and converge.
@@ -60,4 +60,3 @@ No browser-provided UUID is declared authoritative by this inventory. `game_sess
 ## Ownership rule
 
 Every cross-domain mutation must be orchestrated by an application use case and invoke the owning domain's public command/use case. Reads may use an explicitly owned read model. A domain must not import another domain's infrastructure or mutate its tables as a shortcut.
-

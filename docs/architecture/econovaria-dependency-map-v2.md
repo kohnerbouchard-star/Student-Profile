@@ -1,7 +1,7 @@
 # Econovaria Dependency Map v2
 
-**Roadmap item:** `ARCH-000`  
-**Audited main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`  
+**Roadmap item:** `ARCH-000`
+**Audited main:** `72cefb73a0038aa2bc24261d63e70c113cb7c24c`
 **Generated evidence:** `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`
 
 ## Runtime topology
@@ -84,4 +84,3 @@ Six filename-classified scheduler/worker entrypoints are inventoried: game-data 
 ## Collision and acceptance record
 
 At audit time the open PRs are #619 (root dependencies), #620 (Actions dependencies), #624 (Player CSS/realtime convergence) and #626 (Business browser acceptance synchronization). None owns these ARCH-000 deliverables. No runtime, UI, schema, route or RPC behavior changes in this tranche.
-
