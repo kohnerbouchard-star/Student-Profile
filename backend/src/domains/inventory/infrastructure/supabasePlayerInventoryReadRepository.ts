@@ -225,6 +225,9 @@ function toInventoryRecord(
       ? requireStoreItemVisibility(storeItem.visibility)
       : "visible",
     usable: metadata.effectEnabled === true,
+    redemptionMode: metadata.redemptionMode === "teacher_approval"
+      ? "teacher_approval"
+      : null,
     quantityOwned: requireNonNegativeInteger(holding.quantity_owned),
     quantityReserved: requireNonNegativeInteger(holding.quantity_reserved),
     createdAt: requireIsoDateTime(holding.created_at),
