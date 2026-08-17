@@ -1,0 +1,294 @@
+/* Econovaria Player Terminal — current shell structure ownership.
+   Completes structural properties that were previously inherited from retired
+   UX layers. This file contains no legacy priority bridge and no map styling. */
+
+.player-terminal-shell {
+  position: relative;
+  gap: 0;
+}
+
+.player-terminal-shell:not(.is-collapsed) {
+  grid-template-columns: var(--player-nav-size) minmax(0, 1fr);
+}
+
+.player-terminal-shell-main {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.player-terminal-page-host {
+  padding: var(--player-space-6) clamp(var(--player-space-5), 2.2vw, var(--player-space-8)) var(--player-space-10);
+}
+
+.player-terminal-nav-item > strong {
+  display: block;
+}
+
+.player-terminal-collapse-control {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.player-terminal-side-code-compact {
+  display: none;
+}
+
+.player-terminal-shell.is-collapsed .player-terminal-side-code {
+  display: grid;
+  place-items: center;
+  padding: var(--player-space-1);
+}
+
+.player-terminal-shell.is-collapsed .player-terminal-side-code-compact {
+  display: grid;
+  width: var(--player-control-md);
+  height: var(--player-control-md);
+  place-items: center;
+  padding: 0;
+  color: var(--player-color-amber);
+  background: transparent;
+  border: 0;
+}
+
+.player-terminal-context-nav {
+  position: sticky;
+  top: var(--player-topbar-size);
+  z-index: 20;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.player-terminal-context-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.player-terminal-mobile-nav,
+.player-terminal-mobile-sheet {
+  display: none;
+}
+
+@media (max-width: 1180px) and (min-width: 861px) {
+  .player-terminal-shell:not(.is-collapsed) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+
+  .player-terminal-shell:not(.is-collapsed) > .player-terminal-left-menu {
+    width: 100%;
+  }
+}
+
+@media (max-width: 53.75rem) {
+  .player-terminal-shell-main {
+    margin-bottom: 0;
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+
+  .player-terminal-page-host {
+    padding: var(--player-space-5) var(--player-space-4) var(--player-space-8);
+  }
+
+  .player-terminal-context-nav {
+    top: 4rem;
+  }
+
+  .player-terminal-mobile-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 200;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: 4.5rem;
+    padding: var(--player-space-1) max(var(--player-space-2), env(safe-area-inset-right)) max(var(--player-space-2), env(safe-area-inset-bottom)) max(var(--player-space-2), env(safe-area-inset-left));
+  }
+
+  .player-terminal-mobile-nav button {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 3.25rem;
+    padding: var(--player-space-1);
+    place-items: center;
+    align-content: center;
+    gap: var(--player-space-1);
+    color: var(--player-color-text-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .player-terminal-mobile-nav button.active {
+    color: var(--player-color-text);
+    background: rgb(0 212 255 / 7%);
+  }
+
+  .player-terminal-mobile-nav button.active::before {
+    position: absolute;
+    top: 0;
+    right: 24%;
+    left: 24%;
+    height: 0.125rem;
+    background: var(--player-color-cyan);
+    box-shadow: 0 0 0.625rem var(--player-color-cyan);
+    content: "";
+  }
+
+  .player-terminal-mobile-nav span {
+    display: grid;
+    place-items: center;
+  }
+
+  .player-terminal-mobile-nav strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 0.6875rem;
+    font-weight: var(--player-weight-bold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .player-terminal-mobile-nav small {
+    position: absolute;
+    top: var(--player-space-1);
+    right: 15%;
+    display: grid;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding-inline: 0.25rem;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--player-color-void);
+    background: var(--player-color-amber);
+    font: var(--player-weight-black) 0.625rem/1 var(--player-font-ui);
+  }
+
+  .player-terminal-mobile-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    display: grid;
+    align-items: end;
+  }
+
+  .player-terminal-mobile-sheet-scrim {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    background: rgb(0 0 0 / 66%);
+    border: 0;
+  }
+
+  .player-terminal-mobile-sheet > section {
+    position: relative;
+    max-height: min(72dvh, 38.75rem);
+    overflow-y: auto;
+    padding: var(--player-space-4) var(--player-space-4) calc(var(--player-space-5) + env(safe-area-inset-bottom));
+    border-top: 0.0625rem solid var(--player-color-line-strong);
+  }
+
+  .player-terminal-mobile-sheet header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--player-space-3);
+    padding-bottom: var(--player-space-3);
+    border-bottom: 0.0625rem solid var(--player-color-line);
+  }
+
+  .player-terminal-mobile-sheet header > div {
+    display: grid;
+    gap: var(--player-space-1);
+  }
+
+  .player-terminal-mobile-sheet header span {
+    color: var(--player-color-amber);
+    font: var(--player-weight-black) var(--player-text-label)/1 var(--player-font-ui);
+    letter-spacing: 0.08em;
+  }
+
+  .player-terminal-mobile-sheet header strong {
+    font-size: var(--player-text-section);
+  }
+
+  .player-terminal-mobile-sheet header button {
+    display: grid;
+    width: var(--player-control-lg);
+    height: var(--player-control-lg);
+    padding: 0;
+    place-items: center;
+    color: var(--player-color-text);
+    background: rgb(0 212 255 / 5%);
+    border: 0.0625rem solid var(--player-color-line);
+    border-radius: var(--player-radius-sm);
+  }
+
+  .player-terminal-mobile-sheet section > div {
+    display: grid;
+    gap: var(--player-space-2);
+    padding-block: var(--player-space-3);
+  }
+
+  .player-terminal-mobile-sheet section > div > button {
+    display: grid;
+    grid-template-columns: var(--player-control-sm) minmax(0, 1fr) var(--player-icon-action);
+    align-items: center;
+    gap: var(--player-space-3);
+    min-height: 3.75rem;
+    padding: var(--player-space-2) var(--player-space-3);
+    color: var(--player-color-text);
+    background: rgb(0 212 255 / 3%);
+    border: 0.0625rem solid var(--player-color-line);
+    border-radius: var(--player-radius-sm);
+    text-align: left;
+  }
+
+  .player-terminal-mobile-sheet section > div > button > span {
+    display: grid;
+    width: var(--player-control-sm);
+    height: var(--player-control-sm);
+    place-items: center;
+    color: var(--player-color-cyan);
+    background: rgb(0 212 255 / 7%);
+    border-radius: var(--player-radius-sm);
+  }
+
+  .player-terminal-mobile-sheet section > div > button div {
+    display: grid;
+    gap: var(--player-space-1);
+    min-width: 0;
+  }
+
+  .player-terminal-mobile-sheet section > div > button small {
+    color: var(--player-color-text-muted);
+    font-size: var(--player-text-label);
+  }
+
+  .player-terminal-mobile-game-code {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: var(--player-control-lg);
+    padding: var(--player-space-2) var(--player-space-3);
+    color: var(--player-color-text);
+    background: rgb(255 165 0 / 5%);
+    border: 0.0625rem solid rgb(255 165 0 / 20%);
+    border-radius: var(--player-radius-sm);
+  }
+
+  .player-terminal-mobile-game-code span {
+    color: var(--player-color-text-muted);
+    font-size: var(--player-text-label);
+  }
+
+  .player-terminal-mobile-game-code strong {
+    font: var(--player-weight-black) var(--player-text-meta)/1 var(--player-font-ui);
+    letter-spacing: 0.08em;
+  }
+}

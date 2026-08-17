@@ -14,6 +14,7 @@ import { createStore } from "../src/core/store.js";
 import {
   DEFAULT_PLAYER_INVALIDATION_EVENT,
   installPlayerInvalidationController,
+  isPlayerLiveRefreshPaused,
   normalizePlayerInvalidationEvent,
   shouldRefreshCurrentRoute
 } from "../src/realtime/player-invalidation-controller.js";
@@ -32,6 +33,49 @@ assert.deepEqual(normalizePlayerInvalidationEvent({ resources: ["contracts"], ga
 assert.equal(shouldRefreshCurrentRoute("store", ["banking"]), true);
 assert.equal(shouldRefreshCurrentRoute("store", ["contracts"]), false);
 assert.equal(shouldRefreshCurrentRoute("market", ["dashboard"]), true, "Shell/dashboard invalidations affect every active route.");
+
+const ordinaryDisclosureMount = {
+  querySelector(selector) {
+    assert.equal(selector, "[data-player-live-refresh-pause][open]");
+    return null;
+  },
+  contains() { return false; }
+};
+assert.equal(
+  isPlayerLiveRefreshPaused(ordinaryDisclosureMount, { modal: null }, { activeElement: null }),
+  false,
+  "An ordinary open disclosure must not freeze live resource reconciliation."
+);
+
+const explicitPauseMount = {
+  querySelector(selector) {
+    return selector === "[data-player-live-refresh-pause][open]" ? { open: true } : null;
+  },
+  contains() { return false; }
+};
+assert.equal(
+  isPlayerLiveRefreshPaused(explicitPauseMount, { modal: null }, { activeElement: null }),
+  true,
+  "Only an explicitly pause-marked open disclosure should defer live reconciliation."
+);
+
+const focusedInput = {
+  matches(selector) { return selector.includes("input"); }
+};
+const focusedMount = {
+  querySelector() { return null; },
+  contains(element) { return element === focusedInput; }
+};
+assert.equal(
+  isPlayerLiveRefreshPaused(focusedMount, { modal: null }, { activeElement: focusedInput }),
+  true,
+  "A genuinely focused editable control must continue to protect active input from rerenders."
+);
+assert.equal(
+  isPlayerLiveRefreshPaused(ordinaryDisclosureMount, { modal: { type: "confirm" } }, { activeElement: null }),
+  true,
+  "An active modal must defer live reconciliation."
+);
 
 let newsReads = 0;
 const api = new PlayerApi({
@@ -158,9 +202,10 @@ assert.ok(mainSource.includes("installPlayerInvalidationController"));
 assert.ok(controllerSource.includes("markResourceInvalidations"));
 assert.ok(controllerSource.includes("api.refreshResources(targets)"), "Realtime updates must use targeted resource reconciliation.");
 assert.ok(controllerSource.includes("updateStoreFromSnapshot"), "Targeted resource results must merge into the existing Player store.");
-assert.ok(controllerSource.includes("MutationObserver"), "Opened transactional disclosures must be observed so live reconciliation cannot replace an active form.");
-assert.ok(controllerSource.includes("data-player-live-refresh-active"), "Opened form disclosures must receive an interaction guard until they close.");
+assert.ok(controllerSource.includes("[data-player-live-refresh-pause][open]"), "Explicit transactional refresh pauses must remain supported.");
+assert.ok(!controllerSource.includes("data-player-live-refresh-active"), "Ordinary open disclosures must never become permanent live-refresh blockers.");
+assert.ok(!controllerSource.includes("MutationObserver"), "Live refresh must not infer user interaction merely from disclosure open state.");
 assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("postgres_changes"), "The frontend invalidation boundary must not subscribe directly to economic tables.");
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
-console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, interaction-safe disclosure deferral, idle-heartbeat stability, and payload privacy are valid.");
+console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, focus-aware interaction deferral, idle-heartbeat stability, and payload privacy are valid.");
