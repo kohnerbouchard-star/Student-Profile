@@ -15,7 +15,7 @@ select distinct
   contract_row.game_session_id,
   'meridian_story_decision_mode_v1',
   to_jsonb('legacy_completion'::text),
-  null,
+  null::uuid,
   now()
 from public.game_session_contracts as contract_row
 join public.player_contract_progress as progress_row
