@@ -11,6 +11,17 @@ declare const Deno: {
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const NOW = "2026-08-17T03:20:00.000Z";
+const APPLICATION_CONTEXT = Object.freeze({
+  gameSessionId: GAME,
+  actor: Object.freeze({
+    kind: "player" as const,
+    playerUuid: PLAYER,
+    playerSessionId: "00000000-0000-4000-8000-000000000011",
+  }),
+  role: "player" as const,
+  permissions: Object.freeze(["own_player"] as const),
+  requestId: "request-player-inventory-policy-001",
+});
 
 Deno.test("inventory action policy prefers direct effects, exposes opt-in teacher redemption, and leaves passive items inert", async () => {
   const records = [
@@ -19,12 +30,15 @@ Deno.test("inventory action policy prefers direct effects, exposes opt-in teache
     record("steel-component"),
   ];
   const repository: PlayerInventoryReadRepository = {
-    readInventory: ({ gameId, playerUuid }) => Promise.resolve({ gameId, playerUuid, records }),
+    readInventory: ({ applicationContext }) => Promise.resolve({
+      gameId: applicationContext.gameSessionId,
+      playerUuid: applicationContext.actor.playerUuid,
+      records,
+    }),
   };
 
   const body = await new PlayerInventoryReadService(repository).readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     effectiveAt: NOW,
   });
   const byKey = new Map(body.items.map((item) => [item.itemKey, item.availableActions]));

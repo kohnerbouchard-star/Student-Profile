@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1026,
+    "sourceFiles": 1029,
     "edgeEntrypoints": 24,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 100,
@@ -195,7 +195,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 26,
+      "sourceFiles": 29,
       "publicBoundaryFiles": []
     },
     {
@@ -3585,6 +3585,10 @@
         "lines": 579
       },
       {
+        "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
+        "lines": 577
+      },
+      {
         "file": "admin/inventory-redemption-queue-surface.js",
         "lines": 569
       },
@@ -3671,10 +3675,6 @@
       {
         "file": "admin/v2/src/routes/players/PlayersRoute.js",
         "lines": 521
-      },
-      {
-        "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
-        "lines": 519
       },
       {
         "file": "backend/supabase/functions/license-payment-webhook/index.ts",

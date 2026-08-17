@@ -1,6 +1,7 @@
 import { handleInventoryRedemptionOperation } from "../../../../supabase/functions/admin-api/inventoryRedemptionOperations.ts";
 import { createAdminRequestApplicationContext } from "../../../../supabase/functions/admin-api/adminRequestApplicationContext.ts";
 import { handlePlayerInventoryRedemptionRequest } from "../api/playerInventoryRedemptionHttpHandler.ts";
+import type { PlayerInventoryApplicationContext } from "../contracts/playerInventoryApplicationContext.ts";
 import {
   type PlayerInventoryRedemptionDto,
   PlayerInventoryRedemptionError,
@@ -42,6 +43,20 @@ Deno.test("connected Store-owned Inventory redemption lifecycle is idempotent, s
   });
   assertEquals(replay.status, 200);
   assertEquals((await replay.json()).outcome, "replayed");
+  assertEquals(state.holding, { quantityOwned: 4, quantityReserved: 2 });
+  assertEquals(state.transitions.length, 1);
+  assertEquals(state.inventoryEvents.length, 1);
+
+  const conflict = await playerRequest(state, {
+    quantity: 1,
+    note: "Changed payload for the same key.",
+    idempotencyKey: "redeem:meal-pass:001",
+  });
+  assertEquals(conflict.status, 409);
+  assertEquals(
+    (await conflict.json()).error.code,
+    "player_inventory_redemption_idempotency_conflict",
+  );
   assertEquals(state.holding, { quantityOwned: 4, quantityReserved: 2 });
   assertEquals(state.transitions.length, 1);
   assertEquals(state.inventoryEvents.length, 1);
@@ -162,6 +177,18 @@ Deno.test("connected Store-owned Inventory redemption lifecycle is idempotent, s
   assertEquals(wrongGameQueue.status, 404);
   assertNoUuid(wrongGameQueue.body);
 
+  const wrongGamePlayerRead = await handlePlayerInventoryRedemptionRequest(
+    playerHttpRequest("GET", "/players/me/inventory/redemptions"),
+    { kind: "collection" },
+    playerDependencies(state),
+    playerApplicationContext(OTHER_GAME),
+  );
+  assertEquals(wrongGamePlayerRead.status, 404);
+  assertEquals(
+    (await wrongGamePlayerRead.json()).error.code,
+    "player_inventory_redemption_unavailable",
+  );
+
   const allHistory = await handlePlayerInventoryRedemptionRequest(
     playerHttpRequest("GET", "/players/me/inventory/redemptions"),
     { kind: "collection" },
@@ -190,7 +217,7 @@ class SharedRedemptionState implements PlayerInventoryRedemptionRepository {
   private sequence = 0;
 
   request(input: Parameters<PlayerInventoryRedemptionRepository["request"]>[0]) {
-    this.assertPlayerScope(input.gameId, input.playerUuid);
+    this.assertPlayerScope(input.applicationContext);
     const existingId = this.playerKeys.get(input.command.idempotencyKey);
     if (existingId) {
       const existing = this.requireRequest(existingId);
@@ -237,7 +264,7 @@ class SharedRedemptionState implements PlayerInventoryRedemptionRepository {
   }
 
   read(input: Parameters<PlayerInventoryRedemptionRepository["read"]>[0]) {
-    this.assertPlayerScope(input.gameId, input.playerUuid);
+    this.assertPlayerScope(input.applicationContext);
     const rows = this.requests
       .filter((request) => !input.requestId || request.id === input.requestId)
       .filter((request) => !input.status || request.status === input.status)
@@ -317,8 +344,13 @@ class SharedRedemptionState implements PlayerInventoryRedemptionRepository {
     });
   }
 
-  private assertPlayerScope(gameId: string, playerUuid: string): void {
-    if (gameId !== GAME || playerUuid !== PLAYER) {
+  private assertPlayerScope(
+    applicationContext: PlayerInventoryApplicationContext,
+  ): void {
+    if (
+      applicationContext.gameSessionId !== GAME ||
+      applicationContext.actor.playerUuid !== PLAYER
+    ) {
       throw new PlayerInventoryRedemptionError(
         "player_inventory_redemption_unavailable",
         "Unavailable.",
@@ -405,6 +437,32 @@ function playerDependencies(repository: PlayerInventoryRedemptionRepository) {
     createRepository: () => repository,
     now: () => NOW,
   };
+}
+
+function playerApplicationContext(gameSessionId: string) {
+  const authorizationContext = Object.freeze({
+    actorType: "player" as const,
+    source: "player_session" as const,
+    gameScope: "session" as const,
+    resourceScope: "own_player" as const,
+  });
+  return Object.freeze({
+    gameSessionId,
+    actor: Object.freeze({
+      kind: "player" as const,
+      playerUuid: PLAYER,
+      playerSessionId: SESSION,
+    }),
+    role: "player" as const,
+    permissions: Object.freeze(["own_player"] as const),
+    requestId: "request-player-redemption-wrong-game-001",
+    playerUuid: PLAYER,
+    gameId: gameSessionId,
+    activeSessionId: SESSION,
+    sessionValid: true as const,
+    sessionExpiresAt: "2026-07-20T00:00:00.000Z",
+    authorizationContext,
+  });
 }
 
 function playerRequest(

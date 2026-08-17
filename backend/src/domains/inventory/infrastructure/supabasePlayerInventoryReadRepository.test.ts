@@ -12,8 +12,20 @@ const STORE_ITEM = "00000000-0000-4000-8000-000000000201";
 const ACCOUNT = "00000000-0000-4000-8000-000000000251";
 const NOW = "2026-08-06T07:00:00.000Z";
 const LIMIT = 200;
+const APPLICATION_CONTEXT = Object.freeze({
+  gameSessionId: GAME,
+  actor: Object.freeze({
+    kind: "player" as const,
+    playerUuid: PLAYER,
+    playerSessionId: "00000000-0000-4000-8000-000000000011",
+  }),
+  role: "player" as const,
+  permissions: Object.freeze(["own_player"] as const),
+  requestId: "request-player-inventory-repository-001",
+});
 
 Deno.test("inventory repository preserves Store public metadata while joining canonical ownership", async () => {
+  const filters: FilterCall[] = [];
   const repository = new SupabasePlayerInventoryReadRepository(client({
     inventory_holdings: [{
       id: HOLDING,
@@ -53,14 +65,19 @@ Deno.test("inventory repository preserves Store public metadata while joining ca
       status: "active",
       visibility: "visible",
     }],
-  }) as never);
+  }, [], undefined, filters) as never);
 
   const result = await repository.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   });
 
+  assertEquals(filters, [
+    { table: "inventory_holdings", column: "game_session_id", value: GAME },
+    { table: "inventory_holdings", column: "player_id", value: PLAYER },
+    { table: "game_items", column: "game_session_id", value: GAME },
+    { table: "store_items", column: "game_session_id", value: GAME },
+  ]);
   assertEquals(result.gameId, GAME);
   assertEquals(result.playerUuid, PLAYER);
   assertEquals(result.records[0], {
@@ -129,8 +146,7 @@ Deno.test("inventory repository uses canonical item status instead of Store offe
   }) as never);
 
   const result = await repository.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   });
 
@@ -171,8 +187,7 @@ Deno.test("inventory repository reads crafted ownership without a Store offer", 
   }, accessed) as never);
 
   const result = await repository.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   });
 
@@ -195,8 +210,7 @@ Deno.test("inventory repository returns a valid empty result without querying me
   }, accessed) as never);
 
   const result = await repository.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   });
 
@@ -226,8 +240,7 @@ Deno.test("inventory repository fails closed for missing canonical metadata, inc
     store_items: [],
   }) as never);
   await assertRejects(() => missingMetadata.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   }), "player_inventory_metadata_missing");
 
@@ -259,8 +272,7 @@ Deno.test("inventory repository fails closed for missing canonical metadata, inc
     }],
   }) as never);
   await assertRejects(() => mismatchedStore.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   }), "player_inventory_metadata_missing");
 
@@ -270,8 +282,7 @@ Deno.test("inventory repository fails closed for missing canonical metadata, inc
     store_items: [],
   }, [], { table: "inventory_holdings", code: "42P01" }) as never);
   await assertRejects(() => unavailable.readInventory({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: APPLICATION_CONTEXT,
     limit: LIMIT,
   }), "player_inventory_schema_not_applied");
 });
@@ -280,6 +291,7 @@ function client(
   rows: Record<string, readonly Record<string, unknown>[]>,
   accessed: string[] = [],
   failure?: { readonly table: string; readonly code?: string },
+  filters: FilterCall[] = [],
 ) {
   return {
     from(tableName: string) {
@@ -290,6 +302,8 @@ function client(
             failure?.table === tableName
               ? { data: null, error: { message: "relation does not exist", code: failure.code } }
               : { data: rows[tableName] ?? [], error: null },
+            tableName,
+            filters,
           );
         },
       };
@@ -304,9 +318,10 @@ class FakeBuilder implements PromiseLike<{
   constructor(private readonly response: {
     readonly data: readonly Record<string, unknown>[] | null;
     readonly error: { readonly message: string; readonly code?: string } | null;
-  }) {}
+  }, private readonly tableName: string, private readonly filters: FilterCall[]) {}
 
-  eq(): FakeBuilder {
+  eq(column: string, value: unknown): FakeBuilder {
+    this.filters.push({ table: this.tableName, column, value });
     return this;
   }
 
@@ -338,6 +353,12 @@ class FakeBuilder implements PromiseLike<{
   ): PromiseLike<TResult1 | TResult2> {
     return Promise.resolve(this.response).then(onfulfilled, onrejected);
   }
+}
+
+interface FilterCall {
+  readonly table: string;
+  readonly column: string;
+  readonly value: unknown;
 }
 
 async function assertRejects(

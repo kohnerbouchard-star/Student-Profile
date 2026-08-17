@@ -19,6 +19,7 @@ import {
 } from "../../../security/playerCraftingRateLimitDispatch.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
+  createPlayerRequestApplicationContext,
   type PlayerRequestApplicationContext,
   rejectClientSuppliedPlayerIdentity,
   resolvePlayerRequestScope,
@@ -88,15 +89,18 @@ export async function handlePlayerInventoryReadRequest(
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
     rejectClientSuppliedPlayerIdentity(request);
-    const scope = applicationContext ??
-      await resolvePlayerRequestScope(request, {
-        hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
-        resolvePlayerSession: (tokenHash) =>
-          (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
-            client,
-            tokenHash,
-          ),
-        now: () => now,
+    const resolvedApplicationContext = applicationContext ??
+      createPlayerRequestApplicationContext({
+        scope: await resolvePlayerRequestScope(request, {
+          hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
+          resolvePlayerSession: (tokenHash) =>
+            (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
+              client,
+              tokenHash,
+            ),
+          now: () => now,
+        }),
+        requestId: crypto.randomUUID(),
       });
 
     const repository = dependencies.createRepository
@@ -104,8 +108,7 @@ export async function handlePlayerInventoryReadRequest(
       : new SupabasePlayerInventoryReadRepository(client as never);
     const service = new PlayerInventoryReadService(repository);
     const body = await service.readInventory({
-      gameId: scope.gameId,
-      playerUuid: scope.playerUuid,
+      applicationContext: resolvedApplicationContext,
       effectiveAt: now.toISOString(),
     });
 
