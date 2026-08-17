@@ -34,17 +34,33 @@ function renderRewardItems(contract) {
 function selectedAnswers(contract) { return Object.fromEntries((contract.submission?.answers || []).map((answer) => [answer.questionKey, answer.optionKey])); }
 function revisionBanner(contract) { return `<div class="player-terminal-review-banner">${icon("edit")}<div><strong>Revision requested</strong><p>${escapeHtml(contract.reviewFeedback || "Update the submission using the administrator’s review guidance.")}</p></div>${renderStatusPill("ACTION REQUIRED", "amber")}</div>`; }
 
-function renderStoryDecisionSubmission(contract) {
+function renderStoryDecisionSubmission(contract, revision = false) {
   const interaction = contract.interaction || {};
-  return `<form class="player-terminal-contract-submit player-terminal-story-decision" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
-    <div class="player-terminal-v2-panel player-terminal-contract-response-intro"><small>${escapeHtml(interaction.sceneTitle || "STORY CONVERSATION")}</small><h4>${escapeHtml(interaction.speakerRole || "Your contact")}</h4><p>${escapeHtml(interaction.question || "Choose how you want to respond.")}</p></div>
-    <fieldset class="player-terminal-story-decision-options"><legend>How do you answer?</legend>${(interaction.options || []).map((option) => `<label class="player-terminal-story-decision-option"><input type="radio" name="storyOption" value="${escapeHtml(option.optionKey)}" required data-story-reaction="${escapeHtml(option.characterReaction || "")}" data-story-rationale-prompt="${escapeHtml(option.rationalePrompt || "Explain your reasoning.")}"/><span><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.detail || "")}</small></span></label>`).join("")}</fieldset>
-    <section class="player-terminal-v2-panel player-terminal-story-decision-followup" data-story-decision-followup hidden>
-      <small>${escapeHtml(interaction.speakerRole || "Your contact")}</small><p data-story-decision-reaction></p><p><strong data-story-decision-rationale-prompt></strong></p>
-      <label>YOUR EXPLANATION<textarea name="storyRationale" rows="5" minlength="20" maxlength="4000" disabled placeholder="Explain why you chose this response."></textarea></label>
+  const committed = revision ? contract.submission?.storyDecision : null;
+  const committedOptionKey = committed?.optionKey || "";
+  const committedOption = (interaction.options || []).find((option) => option.optionKey === committedOptionKey);
+  const hasCommittedOption = Boolean(committedOption);
+  const optionMarkup = (interaction.options || []).map((option) => {
+    const checked = hasCommittedOption && option.optionKey === committedOptionKey;
+    const disabled = hasCommittedOption && !checked;
+    return `<label class="player-terminal-story-decision-option${disabled ? " is-locked" : ""}"><input type="radio" name="storyOption" value="${escapeHtml(option.optionKey)}" required ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} data-story-reaction="${escapeHtml(option.characterReaction || "")}" data-story-rationale-prompt="${escapeHtml(option.rationalePrompt || "Explain your reasoning.")}"/><span><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.detail || "")}</small></span></label>`;
+  }).join("");
+  const reaction = committedOption?.characterReaction || "";
+  const rationalePrompt = committedOption?.rationalePrompt || "Explain your reasoning.";
+  const rationale = committed?.rationale || "";
+  const modeCopy = hasCommittedOption
+    ? `<p class="player-terminal-story-decision-lock-note">Your original Story choice is already committed. The reviewer can request a stronger explanation, but this revision cannot rewrite the decision or award relationship trust again.</p>`
+    : "";
+
+  return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit player-terminal-story-decision" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}">
+    <div class="player-terminal-v2-panel player-terminal-contract-response-intro"><small>${escapeHtml(interaction.sceneTitle || "STORY CONVERSATION")}</small><h4>${escapeHtml(interaction.speakerRole || "Your contact")}</h4><p>${escapeHtml(interaction.question || "Choose how you want to respond.")}</p>${modeCopy}</div>
+    <fieldset class="player-terminal-story-decision-options"><legend>${hasCommittedOption ? "Your committed answer" : "How do you answer?"}</legend>${optionMarkup}</fieldset>
+    <section class="player-terminal-v2-panel player-terminal-story-decision-followup" data-story-decision-followup ${hasCommittedOption ? "" : "hidden"}>
+      <small>${escapeHtml(interaction.speakerRole || "Your contact")}</small><p data-story-decision-reaction>${escapeHtml(reaction)}</p><p><strong data-story-decision-rationale-prompt>${escapeHtml(rationalePrompt)}</strong></p>
+      <label>YOUR EXPLANATION<textarea name="storyRationale" rows="5" minlength="20" maxlength="4000" ${hasCommittedOption ? "required" : "disabled"} placeholder="${escapeHtml(rationalePrompt)}">${escapeHtml(rationale)}</textarea></label>
     </section>
     <input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" />
-    <div class="player-terminal-contract-submit-footer"><span>${icon("shield")} Your selected answer drives Story mechanics. Your explanation is required and is kept with the decision.</span><button class="player-terminal-primary-button" type="submit">${icon("send")} Commit decision</button></div>
+    <div class="player-terminal-contract-submit-footer"><span>${icon("shield")} ${hasCommittedOption ? "Only your explanation can be revised; the Story choice and its trust consequence remain locked." : "Your selected answer drives Story mechanics. Your explanation is required and is kept with the decision."}</span><button class="player-terminal-primary-button" type="submit">${icon("send")} ${hasCommittedOption ? "Resubmit explanation" : "Commit decision"}</button></div>
   </form>`;
 }
 
@@ -56,7 +72,7 @@ function renderMultipleChoiceSubmission(contract, revision = false) {
 function renderWrittenSubmission(contract, revision = false) { return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}"><label>SUBMISSION LINK<input name="submissionUrl" type="url" placeholder="https://... (optional)" value="${revision ? escapeHtml(contract.submission?.url || "") : ""}" /></label><label>SUBMISSION RESPONSE<textarea name="note" rows="5" required placeholder="Describe the completed work and provide the evidence requested by this contract.">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label><input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" /><div class="player-terminal-contract-submit-footer"><span>${icon("shield")} Your submission is committed only after backend confirmation.</span><button class="player-terminal-primary-button" type="submit">${icon("upload")} ${revision ? "Resubmit for review" : "Submit for review"}</button></div></form>`; }
 function renderEvidenceSubmission(contract, revision = false) { return `${revision ? revisionBanner(contract) : ""}<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(contract.id)}"><label>EVIDENCE LINK<input name="submissionUrl" type="url" required placeholder="https://..." value="${revision ? escapeHtml(contract.submission?.url || "") : ""}" /></label><label>CONTEXT<textarea name="note" rows="4">${revision ? escapeHtml(contract.submission?.note || "") : ""}</textarea></label><input type="hidden" name="contractId" value="${escapeHtml(contract.id)}" /><div class="player-terminal-contract-submit-footer"><span>${icon("document")} Verify the evidence link before submitting.</span><button class="player-terminal-primary-button" type="submit">${icon("upload")} ${revision ? "Resubmit evidence" : "Submit evidence"}</button></div></form>`; }
 function renderSubmissionForm(contract, revision = false) {
-  if (contract.interaction?.type === "story_decision") return renderStoryDecisionSubmission(contract);
+  if (contract.interaction?.type === "story_decision") return renderStoryDecisionSubmission(contract, revision);
   if (contract.interaction?.type === "multiple_choice" && contract.interaction.questions?.length) return renderMultipleChoiceSubmission(contract, revision);
   if (contract.interaction?.type === "evidence") return renderEvidenceSubmission(contract, revision);
   return renderWrittenSubmission(contract, revision);
