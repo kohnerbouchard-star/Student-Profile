@@ -102,7 +102,7 @@ values
     'industrial_security',jsonb_build_object('semanticTags',jsonb_build_array('prioritized_industrial_security'),'dimensions',jsonb_build_object('finance',1,'governance',1,'logistics',1,'resilience',3)),
     'hybrid',jsonb_build_object('semanticTags',jsonb_build_array('prioritized_hybrid_model'),'dimensions',jsonb_build_object('finance',2,'governance',2,'logistics',2,'resilience',2))
   ),
-  5,
+  10,
   true
 ),
 (
@@ -129,7 +129,7 @@ values
     'relocate',jsonb_build_object('semanticTags',jsonb_build_array('status_intent_relocate'),'dimensions',jsonb_build_object('local_commitment',0)),
     'defer',jsonb_build_object('semanticTags',jsonb_build_array('status_intent_deferred'),'dimensions',jsonb_build_object('local_commitment',0))
   ),
-  5,
+  10,
   true
 )
 on conflict (decision_key) do update
@@ -202,9 +202,17 @@ begin
     and decision_row.version = 1;
 
   if found then
-    if v_existing.option_key <> v_option_key or v_existing.rationale <> v_rationale then
+    if v_existing.option_key <> v_option_key then
       raise exception 'STORY_DECISION_ALREADY_COMMITTED' using errcode = '23505';
     end if;
+
+    if v_existing.rationale <> v_rationale then
+      update public.player_story_decisions
+      set rationale = v_rationale,
+          updated_at = now()
+      where id = v_existing.id;
+    end if;
+
     return new;
   end if;
 
@@ -217,9 +225,10 @@ begin
   order by relationship_row.updated_at desc
   limit 1;
 
-  select coalesce(array_agg(tag_value), '{}')
+  select coalesce(array_agg(tag_value order by tag_value), '{}'::text[])
   into v_tags
-  from jsonb_array_elements_text(coalesce(v_option -> 'semanticTags', '[]'::jsonb)) as tag_value;
+  from jsonb_array_elements_text(coalesce(v_option -> 'semanticTags', '[]'::jsonb))
+    as tag_row(tag_value);
 
   insert into public.player_story_decisions (
     game_session_id, player_id, decision_key, contract_key, contract_id,
@@ -276,5 +285,10 @@ after insert or update of status, evidence_payload, submitted_at
 on public.player_contract_progress
 for each row
 execute function public.capture_player_story_decision_v1();
+
+comment on table public.player_story_decisions is
+  'Authoritative player Story decisions. The selected option is immutable for a decision version; teacher-requested rationale revisions may update the explanation without replaying trust or changing the mechanical choice.';
+comment on table public.player_story_relationship_adjustments is
+  'Idempotent trust ledger for authored Story consequences. Ordinary free-form replies never award trust; substantive Story decisions can award trust once through their decision record.';
 
 commit;
