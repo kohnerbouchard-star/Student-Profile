@@ -7,6 +7,10 @@
   gap: 0;
 }
 
+.player-terminal-shell:not(.is-collapsed) {
+  grid-template-columns: var(--player-nav-size) minmax(0, 1fr);
+}
+
 .player-terminal-shell-main {
   margin-bottom: 0;
   padding-bottom: 0;
@@ -64,6 +68,12 @@
 .player-terminal-mobile-nav,
 .player-terminal-mobile-sheet {
   display: none;
+}
+
+@media (max-width: 1180px) and (min-width: 861px) {
+  .player-terminal-shell:not(.is-collapsed) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 53.75rem) {
