@@ -23,7 +23,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 - **`ARCH-001` — Architecture ratchets before large moves**
   - Status: `IMPLEMENTED_NOT_MERGED`
-  - Owner branch and baseline: `chore/architecture-ratchets-v1`, based on merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63`.
+  - Owner branch and baseline: `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`.
   - Scope and beta impact: compose the existing architecture and legacy-runtime audits with a checked v2 baseline that permits measured debt only to stay flat or decrease. Zero-tolerance checks cover direct browser database access, out-of-owner balance/Inventory mutation, unscoped live-simulation persistence and retired browser markers. No product behavior, UI, route, RPC, migration, database or deployment change.
   - Collision audit: open PRs #619, #620, #624 and #626 do not own the ratchet files; no in-flight Player/runtime file is modified.
   - Implementation files: `scripts/architecture/architecture-ratchet-v2.mjs`, `scripts/architecture/architecture-ratchet-v2-baseline.json`, `package.json`, architecture dependency documentation and both authoritative roadmaps.

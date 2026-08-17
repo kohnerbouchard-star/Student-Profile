@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineMainSha": "e40cb5b05c913fb52f402e2f7171f8b7ee69ad63",
+  "baselineMainSha": "7ecc9e018f6ee82ef4f4eae56a824e719481c3fd",
   "maximums": {
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
