@@ -257,7 +257,8 @@ const inventoryData = {
     categories: ["All"],
     summary: {},
     items: [{
-      id: "meal-pass",
+      id: "focus-boost-holding",
+      itemKey: "focus-boost",
       image: "./assets/store-items/store-item-consumable.svg",
       quantityOwned: 1,
       quantityAvailable: 1,
@@ -265,16 +266,17 @@ const inventoryData = {
       category: "Consumable",
       state: "Available",
       itemVisibility: "player",
-      name: "Meal Pass",
-      description: "Redeemable classroom item.",
+      name: "Focus Boost",
+      description: "Effect-enabled inventory item.",
       totalOwnedValue: 1,
       availableActions: ["inventory.use"]
     }]
   }
 };
 const enabledHtml = renderInventoryPage(inventoryData, { inventoryCategory: "All" });
-assert.match(enabledHtml, /Request use/);
-assert.match(enabledHtml, /data-player-inventory-use="meal-pass"/);
+assert.match(enabledHtml, /data-player-inventory-effect-use="focus-boost"/);
+assert.match(enabledHtml, / Use<\/button>/);
+assert.doesNotMatch(enabledHtml, /Request use/);
 const disabledHtml = renderInventoryPage({
   ...inventoryData,
   inventory: {
@@ -282,7 +284,8 @@ const disabledHtml = renderInventoryPage({
     items: [{ ...inventoryData.inventory.items[0], availableActions: [] }]
   }
 }, { inventoryCategory: "All" });
-assert.doesNotMatch(disabledHtml, /data-player-inventory-use=/);
+assert.doesNotMatch(disabledHtml, /data-player-inventory-effect-use=/);
+assert.doesNotMatch(disabledHtml, /data-player-inventory-redeem=/);
 assert.doesNotMatch(disabledHtml, /data-capability-status="integration-pending"/);
 assert.match(disabledHtml, /Available/);
 
