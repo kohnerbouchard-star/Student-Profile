@@ -1,10 +1,10 @@
 {
   "schemaVersion": "econovaria.release-integrity-v2.policy.v1",
-  "policyId": "econovaria-live-parity-2026-08-16",
-  "historicalLedgerCutoff": "20260816103736",
+  "policyId": "econovaria-live-parity-2026-08-17",
+  "historicalLedgerCutoff": "20260816120013",
   "historicalLedgerBaselines": {
-    "stagingSha256": null,
-    "productionSha256": null
+    "stagingSha256": "133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763",
+    "productionSha256": "3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3"
   },
   "allowedStagingOnlyTables": [
     "private.license_email_outbox",
