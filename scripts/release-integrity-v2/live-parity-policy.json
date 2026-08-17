@@ -14,5 +14,11 @@
   ],
   "allowedStagingOnlyRoutines": [],
   "allowedProductionOnlyRoutines": [],
-  "approvedRoutineDefinitionDrift": []
+  "approvalFiles": [
+    "live-parity-approvals-env-20260817.json",
+    "live-parity-approvals-drift-1-20260817.json",
+    "live-parity-approvals-drift-2-20260817.json",
+    "live-parity-approvals-drift-3-20260817.json",
+    "live-parity-approvals-drift-4-20260817.json"
+  ]
 }

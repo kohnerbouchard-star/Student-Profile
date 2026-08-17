@@ -1,0 +1,373 @@
+name: Production Current Parity Finalize 2026-08-17
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-current-parity-finalize-20260817.yml"
+      - "scripts/release-integrity-v2/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-current-parity-finalize-20260817.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-current-parity-finalize-20260817
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  EDGE_ATTESTED_SHA: 72cefb73a0038aa2bc24261d63e70c113cb7c24c
+  POLICY_PATH: scripts/release-integrity-v2/live-parity-policy.json
+  CA_BUNDLE_PATH: scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+  SUPABASE_CLI_VERSION: 2.109.1
+  VERCEL_CLI_VERSION: 58.1.0
+
+jobs:
+  static-contract:
+    name: Validate exact parity finalization contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate parity policy and modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/release-integrity-v2/compare-live-parity.mjs
+          node --check scripts/release-integrity-v2/live-parity-lib.mjs
+          node --check scripts/release-integrity-v2/live-parity-normalize.mjs
+          node --input-type=module - <<'NODE'
+          import { hydratePolicy, validatePolicy } from './scripts/release-integrity-v2/live-parity-normalize.mjs';
+          import { readJson } from './scripts/release-integrity-v2/live-parity-lib.mjs';
+          const path = './scripts/release-integrity-v2/live-parity-policy.json';
+          const policy = await hydratePolicy(await readJson(path), path);
+          validatePolicy(policy);
+          if (policy.historicalLedgerCutoff !== '20260816120013') throw new Error('Historical cutoff moved.');
+          if (policy.historicalLedgerBaselines.stagingSha256 !== '133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763') throw new Error('Staging historical baseline moved.');
+          if (policy.historicalLedgerBaselines.productionSha256 !== '3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3') throw new Error('Production historical baseline moved.');
+          if (policy.approvedStagingOnlyRoutines.length !== 18) throw new Error('Unexpected staging-only routine approval count.');
+          if (policy.approvedProductionOnlyRoutines.length !== 1) throw new Error('Unexpected production-only routine approval count.');
+          if (policy.approvedRoutineDefinitionDrift.length !== 52) throw new Error('Unexpected routine drift approval count.');
+          if (policy.approvedStagingOnlyRoutineGrants.length !== 3) throw new Error('Unexpected staging-only routine grant approval count.');
+          NODE
+      - name: Prove Edge Function source unchanged since attested source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$EDGE_ATTESTED_SHA" HEAD
+          git diff --quiet "$EDGE_ATTESTED_SHA" HEAD -- \
+            backend/supabase/edge-function-manifest.json \
+            backend/supabase/config.toml \
+            backend/supabase/functions \
+            backend/src
+
+  staging-evidence:
+    name: Capture exact staging live parity evidence
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind staging database read-only evidence session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          database_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$database_url" in
+            "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Unexpected staging database binding.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$database_url"
+          echo "DATABASE_URL=$database_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+      - name: Export staging ledger and schema fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/staging-evidence"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations" > "$RUNNER_TEMP/staging-evidence/staging-ledger.json"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-evidence/staging-schema.json"
+      - name: Upload staging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: parity-finalize-staging-${{ github.sha }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/staging-evidence
+
+  production-evidence:
+    name: Capture exact production live parity evidence
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: staging-evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Export production ledger and schema fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/production-evidence"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations" > "$RUNNER_TEMP/production-evidence/production-ledger.json"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-evidence/production-schema.json"
+      - name: Upload production evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: parity-finalize-production-${{ github.sha }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/production-evidence
+
+  enforce-parity:
+    name: Enforce exact bounded live parity
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [staging-evidence, production-evidence]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Download staging evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: parity-finalize-staging-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/staging
+      - name: Download production evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: parity-finalize-production-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/production
+      - name: Enforce parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release-integrity-v2/compare-live-parity.mjs \
+            --mode enforce \
+            --policy "$POLICY_PATH" \
+            --staging-schema "$RUNNER_TEMP/parity/staging/staging-schema.json" \
+            --production-schema "$RUNNER_TEMP/parity/production/production-schema.json" \
+            --staging-ledger "$RUNNER_TEMP/parity/staging/staging-ledger.json" \
+            --production-ledger "$RUNNER_TEMP/parity/production/production-ledger.json" \
+            --output "$RUNNER_TEMP/parity-report.json"
+      - name: Upload parity attestation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: parity-finalize-attestation-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/parity-report.json
+
+  vercel-promote:
+    name: Promote exact parity-verified source to Vercel
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: enforce-parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ github.sha }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Check out exact current main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce current main and unchanged Edge Function source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          git merge-base --is-ancestor "$EDGE_ATTESTED_SHA" HEAD
+          git diff --quiet "$EDGE_ATTESTED_SHA" HEAD -- backend/supabase/edge-function-manifest.json backend/supabase/config.toml backend/supabase/functions backend/src
+          node - <<'NODE'
+          const config=require('./vercel.json');
+          if(config.git?.deploymentEnabled?.main!==false) throw new Error('Automatic main deployments are not disabled.');
+          NODE
+      - name: Require successful attested Edge Function bundle
+        id: edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/edge-function-inventory-converge.yml/runs?head_sha=$EDGE_ATTESTED_SHA&event=push&per_page=20"
+          response="$(curl --fail --silent --show-error -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GITHUB_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' "$api")"
+          run_id="$(RESPONSE="$response" EDGE_ATTESTED_SHA="$EDGE_ATTESTED_SHA" node - <<'NODE'
+          const body=JSON.parse(process.env.RESPONSE);
+          const run=(body.workflow_runs||[]).find(v=>v.head_sha===process.env.EDGE_ATTESTED_SHA && v.status==='completed' && v.conclusion==='success');
+          if(!run) process.exit(1);
+          process.stdout.write(String(run.id));
+          NODE
+          )"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download attested Edge Function evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: edge-function-convergence-${{ env.EDGE_ATTESTED_SHA }}
+          run-id: ${{ steps.edge.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/edge-attestation
+      - name: Enforce attested Edge Function evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ATTESTATION="$RUNNER_TEMP/edge-attestation/final-attestation.json" node - <<'NODE'
+          const fs=require('node:fs');
+          const v=JSON.parse(fs.readFileSync(process.env.ATTESTATION,'utf8'));
+          if(v.ok!==true || v.sourceCommit!==process.env.EDGE_ATTESTED_SHA || (v.digestMismatches||[]).length!==0) throw new Error('Edge Function attestation failed.');
+          NODE
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install locked repository dependencies
+        run: npm ci
+      - name: Run release and health contracts
+        run: |
+          set -euo pipefail
+          node --test scripts/runtime-health-contract.test.mjs scripts/live-runtime-attestation-contract.test.mjs scripts/vercel-deployment-contract.test.mjs scripts/release-integrity/workflow-contract.test.mjs scripts/production-runtime-promotion-contract.test.mjs
+      - name: Link exact Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          umask 077
+          node - <<'NODE' > .vercel/project.json
+          process.stdout.write(JSON.stringify({orgId:process.env.VERCEL_ORG_ID,projectId:process.env.VERCEL_PROJECT_ID}));
+          NODE
+      - name: Pull production environment and build staged output
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" build --prod --token="$VERCEL_TOKEN"
+      - name: Create unaliased staged production deployment
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/vercel-deploy-output.txt"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" deploy --prebuilt --prod --skip-domain --yes --env "ECONOVARIA_SOURCE_SHA=$SOURCE_COMMIT" --token="$VERCEL_TOKEN" | tee "$output"
+          deployment_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' "$output" | tail -n 1)"
+          test -n "$deployment_url"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Verify staged deployment before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" inspect "$deployment_url" --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl /api/health --deployment "$deployment_url" --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/staged-health.json"
+          HEALTH="$RUNNER_TEMP/staged-health.json" node - <<'NODE'
+          const health=require(process.env.HEALTH);
+          if(health.ok!==true||health.status!=='ready'||health.environment!=='production'||health.projectRef!==process.env.PRODUCTION_PROJECT_REF||health.sourceCommit!==process.env.SOURCE_COMMIT) throw new Error('Staged production health attestation failed.');
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" logs "$deployment_url" --level error --limit 50 --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/staged-error-logs.txt"
+          test ! -s "$RUNNER_TEMP/staged-error-logs.txt"
+      - name: Promote verified staged deployment
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote "${{ steps.deploy.outputs.deployment_url }}" --yes --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote status --token="$VERCEL_TOKEN"
+      - name: Verify promoted production runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl /api/health --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/production-health.json"
+          HEALTH="$RUNNER_TEMP/production-health.json" node - <<'NODE'
+          const health=require(process.env.HEALTH);
+          if(health.ok!==true||health.status!=='ready'||health.environment!=='production'||health.projectRef!==process.env.PRODUCTION_PROJECT_REF||health.sourceCommit!==process.env.SOURCE_COMMIT) throw new Error('Promoted production health attestation failed.');
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" logs --environment production --level error --since 5m --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/production-error-logs.txt"
+          test ! -s "$RUNNER_TEMP/production-error-logs.txt"
+      - name: Upload production promotion evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: parity-finalize-vercel-${{ github.sha }}
+          if-no-files-found: ignore
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/staged-health.json
+            ${{ runner.temp }}/production-health.json
