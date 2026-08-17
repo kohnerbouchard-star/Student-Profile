@@ -39,6 +39,7 @@ function isUnavailableResource(state, resource) {
 
 export function isPlayerLiveRefreshPaused(mount, terminalState, documentRef) {
   if (terminalState?.modal) return true;
+  if (mount?.querySelector?.("[data-player-market-order-dialog]")) return true;
   if (mount?.querySelector?.("[data-player-live-refresh-pause][open]")) return true;
   const active = documentRef?.activeElement;
   return Boolean(active && mount?.contains?.(active) && active.matches?.("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
