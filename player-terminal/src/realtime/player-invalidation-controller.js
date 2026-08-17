@@ -9,6 +9,7 @@ export const DEFAULT_PLAYER_INVALIDATION_EVENT = "econovaria:player-resources-in
 const DEFAULT_CHECK_INTERVAL_MS = 1000;
 const DEFAULT_OPTIONAL_MULTIPLIER = 3;
 const DEFAULT_SHELL_MULTIPLIER = 2;
+const RECENT_REFRESH_GUARD_MS = 1500;
 const MAX_BATCH = 8;
 const SPECIALIZED_RUNTIME_RESOURCES = new Set(["storyDeliveries"]);
 
@@ -64,6 +65,16 @@ function mergeResourceData(currentData, patch, config) {
   return data;
 }
 
+function withoutSupersededResources(resultData, superseded) {
+  const patch = { ...(resultData || {}) };
+  for (const resource of superseded) delete patch[resource];
+  if (patch.resourceStatus && typeof patch.resourceStatus === "object") {
+    patch.resourceStatus = { ...patch.resourceStatus };
+    for (const resource of superseded) delete patch.resourceStatus[resource];
+  }
+  return patch;
+}
+
 export function installPlayerInvalidationController({ terminal, config, mount = globalThis.document?.getElementById?.("playerTerminal") || null, eventTarget = globalThis, documentRef = globalThis.document, debounceMs = 120, checkIntervalMs = DEFAULT_CHECK_INTERVAL_MS }) {
   if (!terminal || typeof terminal.getState !== "function" || typeof terminal.navigate !== "function") throw new TypeError("Realtime invalidation requires an active player terminal.");
 
@@ -72,6 +83,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   const pending = new Set();
   const observedAt = new Map();
   const observedReference = new Map();
+  const appliedRefreshReferences = new Map();
   let timer = 0;
   let pollTimer = 0;
   let refreshInFlight = false;
@@ -98,6 +110,16 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
     const visible = resourcesVisibleOnRoute(state.route);
     for (const resource of visible) {
       const reference = state.data?.[resource];
+      const refreshGuard = appliedRefreshReferences.get(resource);
+      if (refreshGuard) {
+        if (now > refreshGuard.expiresAt) {
+          appliedRefreshReferences.delete(resource);
+        } else if (reference !== refreshGuard.reference) {
+          appliedRefreshReferences.delete(resource);
+          pending.add(resource);
+          schedule(50);
+        }
+      }
       if (reference !== undefined && observedReference.get(resource) !== reference) {
         observedReference.set(resource, reference);
         observedAt.set(resource, now);
@@ -132,6 +154,9 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   async function refreshResources(resources) {
     const targets = [...new Set(resources)].filter(Boolean);
     if (!targets.length) return;
+    const baselineState = terminal.getState();
+    const baselineReferences = new Map(targets.map((resource) => [resource, baselineState?.data?.[resource]]));
+    for (const resource of targets) appliedRefreshReferences.delete(resource);
     refreshInFlight = true;
     setLiveState({ status: "updating" });
     try {
@@ -146,14 +171,34 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
         schedule(900);
         return;
       }
-      const data = mergeResourceData(snapshot.data, result.data || {}, config);
+
+      const superseded = new Set(targets.filter((resource) => snapshot.data?.[resource] !== baselineReferences.get(resource)));
+      const patch = withoutSupersededResources(result.data, superseded);
+      const data = mergeResourceData(snapshot.data, patch, config);
       updateStoreFromSnapshot(snapshot, (state) => ({ ...state, data }));
+
       const firstError = Object.values(result.errors || {})[0];
-      const receivedData = Object.keys(result.data || {}).some((key) => key !== "resourceStatus");
-      if (firstError && !receivedData) throw firstError;
+      const receivedData = Object.keys(patch).some((key) => key !== "resourceStatus");
+      if (firstError && !receivedData && superseded.size === 0) throw firstError;
+
       const now = Date.now();
-      for (const resource of targets) { pending.delete(resource); observedAt.set(resource, now); }
-      observeState();
+      const settledState = terminal.getState();
+      for (const resource of targets) {
+        if (superseded.has(resource)) {
+          pending.add(resource);
+          continue;
+        }
+        pending.delete(resource);
+        observedAt.set(resource, now);
+        if (Object.prototype.hasOwnProperty.call(patch, resource)) {
+          appliedRefreshReferences.set(resource, {
+            reference: settledState?.data?.[resource],
+            expiresAt: now + RECENT_REFRESH_GUARD_MS
+          });
+        }
+      }
+      observeState(settledState);
+      if (superseded.size) schedule(50);
       setLiveState({ status: Object.keys(result.errors || {}).length ? "reconnecting" : "connected", updatedAt: now, error: Object.keys(result.errors || {}).length ? "partial_refresh" : "" });
     } catch (error) {
       const offline = globalThis.navigator && globalThis.navigator.onLine === false;
@@ -208,5 +253,5 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   pollTimer = globalThis.setInterval(() => schedule(0), Math.max(500, Number(checkIntervalMs) || DEFAULT_CHECK_INTERVAL_MS));
   setLiveState({ status: canRefreshNow() ? "connected" : "offline", updatedAt: Date.now(), error: "" });
 
-  return { eventName, refreshNow(resources = null) { const state = terminal.getState(); if (state?.status !== "ready") return; const targets = resources ? validInvalidationResources(resources) : [...resourcesForRoute(state.route).required]; targets.forEach((resource) => pending.add(resource)); schedule(0); }, destroy() { destroyed = true; globalThis.clearTimeout(timer); globalThis.clearInterval(pollTimer); timer = 0; pollTimer = 0; eventTarget.removeEventListener(eventName, handleInvalidation); eventTarget.removeEventListener("online", handleOnline); eventTarget.removeEventListener("offline", handleOffline); eventTarget.removeEventListener("hashchange", handleResume); documentRef?.removeEventListener?.("visibilitychange", handleResume); unsubscribe(); pending.clear(); observedAt.clear(); observedReference.clear(); } };
+  return { eventName, refreshNow(resources = null) { const state = terminal.getState(); if (state?.status !== "ready") return; const targets = resources ? validInvalidationResources(resources) : [...resourcesForRoute(state.route).required]; targets.forEach((resource) => pending.add(resource)); schedule(0); }, destroy() { destroyed = true; globalThis.clearTimeout(timer); globalThis.clearInterval(pollTimer); timer = 0; pollTimer = 0; eventTarget.removeEventListener(eventName, handleInvalidation); eventTarget.removeEventListener("online", handleOnline); eventTarget.removeEventListener("offline", handleOffline); eventTarget.removeEventListener("hashchange", handleResume); documentRef?.removeEventListener?.("visibilitychange", handleResume); unsubscribe(); pending.clear(); observedAt.clear(); observedReference.clear(); appliedRefreshReferences.clear(); } };
 }
