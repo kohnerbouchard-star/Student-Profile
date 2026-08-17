@@ -106,7 +106,7 @@ jobs:
             if curl --fail --silent --show-error \
               --connect-timeout 5 \
               --max-time 15 \
-              "https://econovaria.com/api/health" > "$canonical_health"; then
+              "https://www.econovaria.com/api/health" > "$canonical_health"; then
               if HEALTH="$canonical_health" node - <<'NODE'
           const fs=require('node:fs');
           const value=JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
