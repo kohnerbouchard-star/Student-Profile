@@ -1,0 +1,46 @@
+name: Business Economy V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/20260819*.sql"
+      - "backend/src/domains/business-banking/**"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/api/**"
+      - "scripts/business-*-authority-contract.mjs"
+      - ".github/workflows/business-economy-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-economy-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authority-contract:
+    name: Business economy authority contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/business-formation-authority-contract.mjs
+      - run: node scripts/business-economy-authority-contract.mjs
+
+  backend-typecheck:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm run typecheck
+        working-directory: backend
