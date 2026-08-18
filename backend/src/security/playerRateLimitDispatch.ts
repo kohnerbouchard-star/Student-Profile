@@ -119,6 +119,15 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   businessCreate: byMethod({
     POST: operation("player.business.create", "sensitive"),
   }),
+  businessFormationPropose: byMethod({
+    POST: operation("player.business.formation.propose", "sensitive"),
+  }),
+  businessFormationRespond: byMethod({
+    POST: operation("player.business.formation.respond", "sensitive"),
+  }),
+  businessFormationActivate: byMethod({
+    POST: operation("player.business.formation.activate", "sensitive"),
+  }),
   businessHire: byMethod({
     POST: operation("player.business.employees.hire", "sensitive"),
   }),
