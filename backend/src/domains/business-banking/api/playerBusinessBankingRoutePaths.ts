@@ -14,6 +14,21 @@ export function readPlayerBusinessBankingRoutePath(
 
   if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead" };
   if (tail.length === 1 && tail[0] === "businesses") return { kind: "businessCreate" };
+  if (tail.length === 2 && tail[0] === "business" && tail[1] === "formations") {
+    return { kind: "businessFormationPropose" };
+  }
+  if (
+    tail.length === 4 && tail[0] === "business" && tail[1] === "formations" &&
+    tail[3] === "respond" && validKey(tail[2], "bfp")
+  ) {
+    return { kind: "businessFormationRespond", formationKey: tail[2].toLowerCase() };
+  }
+  if (
+    tail.length === 4 && tail[0] === "business" && tail[1] === "formations" &&
+    tail[3] === "activate" && validKey(tail[2], "bfp")
+  ) {
+    return { kind: "businessFormationActivate", formationKey: tail[2].toLowerCase() };
+  }
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "products") {
     return { kind: "businessProductCreate" };
   }
