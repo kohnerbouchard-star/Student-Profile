@@ -1,0 +1,34 @@
+name: Temporary Architecture Inventory Refresh
+
+on:
+  push:
+    branches:
+      - fix/campaign-runtime-provisioning-v3
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/campaign-runtime-provisioning-v3
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Regenerate architecture inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
+      - name: Commit generated inventory and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git rm .github/workflows/refresh-architecture-inventory-temporary.yml
+          git diff --cached --exit-code && { echo 'Expected generated inventory drift was not found.' >&2; exit 1; } || true
+          git commit -m 'Refresh architecture inventory after campaign refactor'
+          git push origin HEAD:fix/campaign-runtime-provisioning-v3
