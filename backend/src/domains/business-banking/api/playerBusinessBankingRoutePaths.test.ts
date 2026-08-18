@@ -14,17 +14,27 @@ Deno.test("Player Business and Banking routes publish every reviewed operation",
   });
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
+    operation: "legacy",
   });
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/formations"), {
-    kind: "businessFormationPropose",
+    kind: "businessCreate",
+    operation: "formationPropose",
   });
   assertEquals(
     readPlayerBusinessBankingRoutePath(`/players/me/business/formations/${key("bfp", "f")}/respond`),
-    { kind: "businessFormationRespond", formationKey: key("bfp", "f") },
+    {
+      kind: "businessCreate",
+      operation: "formationRespond",
+      formationKey: key("bfp", "f"),
+    },
   );
   assertEquals(
     readPlayerBusinessBankingRoutePath(`/players/me/business/formations/${key("bfp", "e")}/activate`),
-    { kind: "businessFormationActivate", formationKey: key("bfp", "e") },
+    {
+      kind: "businessCreate",
+      operation: "formationActivate",
+      formationKey: key("bfp", "e"),
+    },
   );
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/products"), {
     kind: "businessProductCreate",
