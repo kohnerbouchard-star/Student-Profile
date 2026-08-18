@@ -15,6 +15,17 @@ Deno.test("Player Business and Banking routes publish every reviewed operation",
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
   });
+  assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/formations"), {
+    kind: "businessFormationPropose",
+  });
+  assertEquals(
+    readPlayerBusinessBankingRoutePath(`/players/me/business/formations/${key("bfp", "f")}/respond`),
+    { kind: "businessFormationRespond", formationKey: key("bfp", "f") },
+  );
+  assertEquals(
+    readPlayerBusinessBankingRoutePath(`/players/me/business/formations/${key("bfp", "e")}/activate`),
+    { kind: "businessFormationActivate", formationKey: key("bfp", "e") },
+  );
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/products"), {
     kind: "businessProductCreate",
   });
@@ -60,6 +71,7 @@ Deno.test("Player Business and Banking routes publish every reviewed operation",
 Deno.test("Player Business and Banking routes reject malformed and non-Player paths", () => {
   assertEquals(readPlayerBusinessBankingRoutePath("/games/game/business"), null);
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/products/not-a-key/pricing"), null);
+  assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/formations/not-a-key/respond"), null);
   assertEquals(readPlayerBusinessBankingRoutePath(`/players/me/banking/loans/${key("lop", "e")}/payments`), null);
   assertEquals(readPlayerBusinessBankingRoutePath("/players/other/banking/transfers"), null);
 });
