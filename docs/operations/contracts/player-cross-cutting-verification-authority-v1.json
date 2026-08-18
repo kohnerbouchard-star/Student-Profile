@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.player-commerce-transfer-disclosure-pr-642.v1",
+  "authorityId": "econovaria.stock-market-runtime-pr-483.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 642,
   "baseRef": "main",
