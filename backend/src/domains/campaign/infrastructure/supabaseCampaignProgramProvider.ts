@@ -1,11 +1,13 @@
-import type { CampaignInstance } from "../contracts/campaignRuntimeContracts.ts";
+import type {
+  CampaignEventDefinition,
+  CampaignInstance,
+} from "../contracts/campaignRuntimeContracts.ts";
 import type {
   CampaignOutcomeEvidence,
   CampaignProgramDefinition,
 } from "../services/campaignProgram.ts";
 import { validateCampaignProgram } from "../services/campaignProgram.ts";
 import type { CampaignProgramProvider } from "../services/campaignScheduler.ts";
-import type { CampaignSchedulePolicy } from "./supabaseCampaignRuntimeRepository.ts";
 
 interface SupabaseResponse<T = unknown> {
   readonly data: T | null;
@@ -21,7 +23,19 @@ interface QueryBuilder extends PromiseLike<SupabaseResponse<unknown[]>> {
 }
 
 export interface CampaignProgramSupabaseClient {
-  from(tableName: "campaign_program_definitions" | "campaign_outcome_evidence_snapshots"): QueryBuilder;
+  from(
+    tableName:
+      | "campaign_program_definitions"
+      | "campaign_outcome_evidence_snapshots",
+  ): QueryBuilder;
+}
+
+export interface CampaignSchedulePolicy {
+  nextScheduledAt(input: {
+    readonly instance: CampaignInstance;
+    readonly event: CampaignEventDefinition;
+    readonly occurredAt: string;
+  }): string | null;
 }
 
 interface ProgramRow {
@@ -39,8 +53,10 @@ interface EvidenceRow {
   readonly evidence_digest: string;
 }
 
-const PROGRAM_SELECT = "pack_id,pack_version,definition_id,definition_digest,program,status";
-const EVIDENCE_SELECT = "evidence_revision,recovery_readiness_basis_points,evidence_digest";
+const PROGRAM_SELECT =
+  "pack_id,pack_version,definition_id,definition_digest,program,status";
+const EVIDENCE_SELECT =
+  "evidence_revision,recovery_readiness_basis_points,evidence_digest";
 
 export function createSupabaseCampaignProgramProvider(
   client: CampaignProgramSupabaseClient,
@@ -68,7 +84,9 @@ export function createSupabaseCampaignProgramProvider(
       }
 
       const row = response.data as ProgramRow;
-      const program = validateCampaignProgram(row.program as CampaignProgramDefinition);
+      const program = validateCampaignProgram(
+        row.program as CampaignProgramDefinition,
+      );
       if (
         program.packId !== row.pack_id ||
         program.packVersion !== row.pack_version ||
@@ -97,7 +115,10 @@ export function createSupabaseCampaignProgramProvider(
         .maybeSingle();
 
       if (response.error) {
-        throw failure("campaign_outcome_evidence_read_failed", response.error.message);
+        throw failure(
+          "campaign_outcome_evidence_read_failed",
+          response.error.message,
+        );
       }
       if (!response.data) {
         throw failure(
@@ -114,26 +135,37 @@ export function createSupabaseCampaignProgramProvider(
           10_000,
           "recovery readiness",
         ),
-        evidenceRevision: integer(row.evidence_revision, 1, Number.MAX_SAFE_INTEGER, "evidence revision"),
+        evidenceRevision: integer(
+          row.evidence_revision,
+          1,
+          Number.MAX_SAFE_INTEGER,
+          "evidence revision",
+        ),
         evidenceDigest: String(row.evidence_digest),
       };
       if (!/^sha256:[0-9a-f]{64}$/.test(evidence.evidenceDigest)) {
-        throw failure("campaign_outcome_evidence_invalid", "Campaign outcome evidence digest is invalid.");
+        throw failure(
+          "campaign_outcome_evidence_invalid",
+          "Campaign outcome evidence digest is invalid.",
+        );
       }
       return Object.freeze(evidence);
     },
   };
 }
 
-const VERSIONED_PHASE_DELAYS_MS: Readonly<Record<string, Readonly<Record<string, number>>>> = Object.freeze({
-  "econovaria.beta-seed-pack.v1|1.0.0-beta|campaign.beta.primary.v1": Object.freeze({
-    arrival: 6 * 7 * 24 * 60 * 60 * 1000,
-    opportunity: 8 * 7 * 24 * 60 * 60 * 1000,
-    rivalry: 8 * 7 * 24 * 60 * 60 * 1000,
-    shortage: 8 * 7 * 24 * 60 * 60 * 1000,
-    meridian_disruption: 10 * 7 * 24 * 60 * 60 * 1000,
-    open_conflict: 12 * 7 * 24 * 60 * 60 * 1000,
-  }),
+const VERSIONED_PHASE_DELAYS_MS: Readonly<
+  Record<string, Readonly<Record<string, number>>>
+> = Object.freeze({
+  "econovaria.beta-seed-pack.v1|1.0.0-beta|campaign.beta.primary.v1":
+    Object.freeze({
+      arrival: 6 * 7 * 24 * 60 * 60 * 1000,
+      opportunity: 8 * 7 * 24 * 60 * 60 * 1000,
+      rivalry: 8 * 7 * 24 * 60 * 60 * 1000,
+      shortage: 8 * 7 * 24 * 60 * 60 * 1000,
+      meridian_disruption: 10 * 7 * 24 * 60 * 60 * 1000,
+      open_conflict: 12 * 7 * 24 * 60 * 60 * 1000,
+    }),
 });
 
 export function createVersionedCampaignSchedulePolicy(): CampaignSchedulePolicy {
@@ -154,16 +186,28 @@ export function createVersionedCampaignSchedulePolicy(): CampaignSchedulePolicy 
       }
       const occurred = Date.parse(occurredAt);
       if (!Number.isFinite(occurred)) {
-        throw failure("campaign_schedule_time_invalid", "Campaign occurrence time is invalid.");
+        throw failure(
+          "campaign_schedule_time_invalid",
+          "Campaign occurrence time is invalid.",
+        );
       }
       return new Date(occurred + Number(delay)).toISOString();
     },
   };
 }
 
-function integer(value: unknown, minimum: number, maximum: number, label: string): number {
+function integer(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+  label: string,
+): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < minimum ||
+    parsed > maximum
+  ) {
     throw failure("campaign_program_data_invalid", `${label} is invalid.`);
   }
   return parsed;
