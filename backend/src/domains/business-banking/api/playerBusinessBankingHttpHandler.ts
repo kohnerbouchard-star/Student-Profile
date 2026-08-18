@@ -147,6 +147,37 @@ async function executeRoute(
   };
   switch (route.kind) {
     case "businessCreate": {
+      if (route.operation === "formationPropose") {
+        return repository.execute("propose_business_formation_v2", {
+          ...base,
+          p_legal_name: readText(body.legalName, "legalName", 2, 160),
+          p_entity_type: readEnum(body.entityType, "entityType", [
+            "sole_proprietorship",
+            "partnership",
+            "llc",
+            "c_corporation",
+          ]),
+          p_industry_code: readIndustryCode(body.industryCode),
+          p_owners: readFormationOwners(body.owners),
+          p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
+        });
+      }
+      if (route.operation === "formationRespond") {
+        return repository.execute("respond_business_formation_v2", {
+          ...base,
+          p_formation_key: route.formationKey,
+          p_decision: readEnum(body.decision, "decision", ["approve", "reject"]),
+          p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
+        });
+      }
+      if (route.operation === "formationActivate") {
+        return repository.execute("activate_business_formation_v2", {
+          ...base,
+          p_formation_key: route.formationKey,
+          p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
+        });
+      }
+
       const idempotencyKey = readIdempotencyKey(body.idempotencyKey);
       await repository.assertBusinessCreationAllowed?.({
         ...scope,
@@ -169,33 +200,6 @@ async function executeRoute(
         p_idempotency_key: idempotencyKey,
       });
     }
-    case "businessFormationPropose":
-      return repository.execute("propose_business_formation_v2", {
-        ...base,
-        p_legal_name: readText(body.legalName, "legalName", 2, 160),
-        p_entity_type: readEnum(body.entityType, "entityType", [
-          "sole_proprietorship",
-          "partnership",
-          "llc",
-          "c_corporation",
-        ]),
-        p_industry_code: readIndustryCode(body.industryCode),
-        p_owners: readFormationOwners(body.owners),
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
-      });
-    case "businessFormationRespond":
-      return repository.execute("respond_business_formation_v2", {
-        ...base,
-        p_formation_key: route.formationKey,
-        p_decision: readEnum(body.decision, "decision", ["approve", "reject"]),
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
-      });
-    case "businessFormationActivate":
-      return repository.execute("activate_business_formation_v2", {
-        ...base,
-        p_formation_key: route.formationKey,
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
-      });
     case "businessProductCreate":
       return repository.execute("submit_business_product_v1", {
         ...base,
@@ -353,20 +357,28 @@ function validateMethodAndFields(
   const read = route.kind === "businessRead" || route.kind === "loansRead";
   if (read && method !== "GET") throw methodNotAllowed("Use GET for this resource.");
   if (!read && method !== "POST") throw methodNotAllowed("Use POST for this action.");
+
+  const businessCreateFields = route.kind === "businessCreate"
+    ? route.operation === "formationPropose"
+      ? ["legalName", "entityType", "industryCode", "owners", "idempotencyKey"]
+      : route.operation === "formationRespond"
+      ? ["decision", "idempotencyKey"]
+      : route.operation === "formationActivate"
+      ? ["idempotencyKey"]
+      : [
+        "legalName",
+        "entityType",
+        "industryCode",
+        "capitalization",
+        "acquireBusinessKey",
+        "idempotencyKey",
+      ]
+    : [];
+
   const allowed: Record<PlayerBusinessBankingRoute["kind"], readonly string[]> = {
     businessRead: [],
     loansRead: [],
-    businessCreate: [
-      "legalName",
-      "entityType",
-      "industryCode",
-      "capitalization",
-      "acquireBusinessKey",
-      "idempotencyKey",
-    ],
-    businessFormationPropose: ["legalName", "entityType", "industryCode", "owners", "idempotencyKey"],
-    businessFormationRespond: ["decision", "idempotencyKey"],
-    businessFormationActivate: ["idempotencyKey"],
+    businessCreate: businessCreateFields,
     businessProductCreate: [
       "businessKey",
       "name",
