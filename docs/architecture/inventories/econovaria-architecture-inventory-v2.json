@@ -8,15 +8,15 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1043,
+    "sourceFiles": 1045,
     "edgeEntrypoints": 25,
     "handlerFiles": 58,
-    "persistenceOutsideInfrastructure": 101,
+    "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 210,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
-    "oversizedSourceFiles": 101,
+    "oversizedSourceFiles": 100,
     "capabilityStrings": 123
   },
   "domains": [
@@ -100,7 +100,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 12,
+      "sourceFiles": 13,
       "publicBoundaryFiles": []
     },
     {
@@ -763,10 +763,6 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
-        "layer": "outside-domain"
-      },
-      {
-        "file": "backend/supabase/functions/campaign-orchestrator/index.ts",
         "layer": "outside-domain"
       },
       {
@@ -3102,12 +3098,6 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/campaign-orchestrator/index.ts",
-        "markers": [
-          "fallback"
-        ]
-      },
-      {
         "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts",
         "markers": [
           "compatibilitytarget"
@@ -3419,10 +3409,6 @@
       {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
         "lines": 821
-      },
-      {
-        "file": "backend/supabase/functions/campaign-orchestrator/index.ts",
-        "lines": 818
       },
       {
         "file": "backend/src/supabase/tableTypes.ts",
