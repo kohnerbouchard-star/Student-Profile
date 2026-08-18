@@ -20,6 +20,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "staff-mfa-api": true,
   "password-reset-api": true,
   "classroom-api": true,
+  "campaign-orchestrator": false,
   "game-data-purger": false,
   "stock-market-runner": false,
   "stock-market-read": false,
@@ -32,6 +33,7 @@ const FUNCTION_POLICIES = Object.freeze({
 const CUSTOM_AUTH_FUNCTIONS = new Set([
   "admin-password-recovery",
   "admin-email-verification",
+  "campaign-orchestrator",
   "game-data-purger",
   "stock-market-orchestrator",
   "stock-tick-archiver",
@@ -125,6 +127,9 @@ test("local Supabase starts every declared split Edge security boundary", async 
     /dispatchRateLimitedReviewedPlayerRequest/,
   );
   assert.match(functionSources["bootstrap-api"], /handleStaffSignupRequest/);
+  assert.match(functionSources["campaign-orchestrator"], /x-econovaria-scheduler-token/);
+  assert.match(functionSources["campaign-orchestrator"], /verifySchedulerToken/);
+  assert.match(functionSources["campaign-orchestrator"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(functionSources["stock-market-orchestrator"], /verify_runtime_scheduler_token_v1/);
   assert.match(functionSources["stock-market-orchestrator"], /handleStockMarketRunnerRequest/);
   assert.match(functionSources["stock-tick-archiver"], /verify_runtime_scheduler_token_v1/);
