@@ -204,7 +204,9 @@ export function createSupabaseCampaignEffectPorts(
 
 async function publishMarketEvent(
   client: CampaignEffectSupabaseClient,
-  command: PurposeBuiltCommand<"publish_news" | "apply_market_shock">,
+  command:
+    | PurposeBuiltCommand<"publish_news">
+    | PurposeBuiltCommand<"apply_market_shock">,
   payload: AnyRecord,
   magnitudeBasisPoints: number,
   publishedAt: string,
@@ -333,7 +335,9 @@ async function rpc(
 }
 
 function assertAudience(
-  command: PurposeBuiltCommand<"publish_news" | "notify_players">,
+  command:
+    | PurposeBuiltCommand<"publish_news">
+    | PurposeBuiltCommand<"notify_players">,
   expected: "all_players",
 ): void {
   if (command.effect.audience !== expected) {
