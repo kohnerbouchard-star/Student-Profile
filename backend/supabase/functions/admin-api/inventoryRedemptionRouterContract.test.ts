@@ -4,23 +4,26 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   for (
     const fragment of [
       'import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";',
-      'import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";',
-      "const securedContext = { ...authorizedContext, security };",
+      "securedContext = await hydrateAdminBootstrapContext({",
+      "requestId: crypto.randomUUID(),",
       "const game = ensureOwnedGame(securedContext, gameId);",
-      "const applicationContext = createAdminRequestApplicationContext({",
+      "const applicationContext = applicationContextForAdminGame(",
       "const redemptionOperation = await handleInventoryRedemptionOperation(",
       "applicationContext,",
     ]
   ) assertIncludes(adminIndex, fragment);
 
   const securityGuard = adminIndex.indexOf(
-    "const securedContext = { ...authorizedContext, security };",
+    "const security = await guardAdminRequest(",
+  );
+  const hydration = adminIndex.indexOf(
+    "securedContext = await hydrateAdminBootstrapContext({",
   );
   const ownership = adminIndex.indexOf(
     "const game = ensureOwnedGame(securedContext, gameId);",
   );
   const applicationContext = adminIndex.indexOf(
-    "const applicationContext = createAdminRequestApplicationContext({",
+    "const applicationContext = applicationContextForAdminGame(",
   );
   const redemption = adminIndex.indexOf(
     "const redemptionOperation = await handleInventoryRedemptionOperation(",
@@ -30,7 +33,8 @@ Deno.test("Admin router dispatches authenticated owned-game redemption operation
   );
   assert(
     securityGuard >= 0 &&
-      ownership > securityGuard &&
+      hydration > securityGuard &&
+      ownership > hydration &&
       applicationContext > ownership &&
       redemption > applicationContext &&
       genericRead > redemption,

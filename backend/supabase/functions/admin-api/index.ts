@@ -31,7 +31,11 @@ import {
   type AdminSecurityGuardResult,
   guardAdminRequest,
 } from "./adminSecurityGuard.ts";
-import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
+import {
+  AdminBootstrapCompositionError,
+  applicationContextForAdminGame,
+  hydrateAdminBootstrapContext,
+} from "./adminBootstrapComposition.ts";
 
 type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
 type AdminSecurityFailure = Extract<
@@ -273,7 +277,22 @@ Deno.serve(async (request: Request) => {
     if (security.ok === false) {
       return adminSecurityFailureResponse(request, security);
     }
-    const securedContext = { ...authorizedContext, security };
+    let securedContext;
+    try {
+      securedContext = await hydrateAdminBootstrapContext({
+        context: authorizedContext,
+        security,
+        requestId: crypto.randomUUID(),
+      });
+    } catch (error) {
+      if (error instanceof AdminBootstrapCompositionError) {
+        return json(request, error.status, {
+          code: "auth_failed",
+          message: error.responseMessage,
+        });
+      }
+      throw error;
+    }
 
     const globalResponse = await handleGlobalRoute(
       request,
@@ -305,12 +324,10 @@ Deno.serve(async (request: Request) => {
         message: "That game is not available to this administrator.",
       });
     }
-    const applicationContext = createAdminRequestApplicationContext({
-      ownedGame: game,
-      staffUserId: securedContext.staff.id,
-      security,
-      requestId: crypto.randomUUID(),
-    });
+    const applicationContext = applicationContextForAdminGame(
+      securedContext.gameBootstrapEntries,
+      game,
+    );
 
     const lifecycleOperation = await handleGameLifecycleOperation(
       securedContext.service,

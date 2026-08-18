@@ -11,6 +11,7 @@ import {
   TRUSTED_IP_HEADERS,
   type TrustedIpHeader,
 } from "../../../src/security/rateLimitKeying.ts";
+import { discoverAdminOwnedGameIdentities } from "./adminBootstrapComposition.ts";
 
 export { corsHeaders };
 
@@ -93,23 +94,8 @@ type PostgrestQueryResult<T> = {
   error: unknown;
 };
 
-type StaffBootstrapRow = {
+type StaffIdentityRow = {
   id: string;
-  supabase_auth_user_id: string | null;
-  email: string;
-  display_name: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type GameBootstrapRow = {
-  id: string;
-  name: string;
-  status: string;
-  game_join_code: string | null;
-  game_join_code_status: string;
-  created_at: string;
-  updated_at: string;
 };
 
 export async function resolveContext(request) {
@@ -143,12 +129,12 @@ export async function resolveContext(request) {
 
   const staffQuery = service
     .from("staff_users")
-    .select("id,supabase_auth_user_id,email,display_name,created_at,updated_at")
+    .select("id")
     .eq("supabase_auth_user_id", user.id)
     .maybeSingle();
   const staffResult = await (
     staffQuery as unknown as Promise<
-      PostgrestQueryResult<StaffBootstrapRow | null>
+      PostgrestQueryResult<StaffIdentityRow | null>
     >
   );
   if (staffResult.error || !staffResult.data) {
@@ -159,19 +145,13 @@ export async function resolveContext(request) {
     };
   }
 
-  const gamesQuery = service
-    .from("game_sessions")
-    .select(
-      "id,name,status,game_join_code,game_join_code_status,created_at,updated_at",
-    )
-    .eq("owner_staff_user_id", staffResult.data.id)
-    .order("created_at", { ascending: false });
-  const gamesResult = await (
-    gamesQuery as unknown as Promise<
-      PostgrestQueryResult<GameBootstrapRow[] | null>
-    >
-  );
-  if (gamesResult.error) {
+  let games;
+  try {
+    games = await discoverAdminOwnedGameIdentities(
+      service,
+      staffResult.data.id,
+    );
+  } catch {
     return {
       ok: false,
       status: 500,
@@ -184,7 +164,7 @@ export async function resolveContext(request) {
     token,
     user,
     staff: staffResult.data,
-    games: gamesResult.data || [],
+    games,
     service,
   };
 }
@@ -317,7 +297,9 @@ function atomicContractRewardPath(path, method) {
 }
 
 function classroomTrustedClientIp(request) {
-  const configuredHeader = environmentValue("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER")
+  const configuredHeader = environmentValue(
+    "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER",
+  )
     .trim().toLowerCase();
   if (
     configuredHeader === "x-forwarded-for" ||

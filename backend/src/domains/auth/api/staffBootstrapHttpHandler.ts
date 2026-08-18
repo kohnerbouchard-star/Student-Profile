@@ -4,18 +4,36 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
   resolveStaffSessionForRequest,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   overwriteTrustedClientIpHeaders,
   type TrustedIpHeader,
 } from "../../../security/rateLimitKeying.ts";
+import {
+  discoverStaffGameSessionIds,
+  hydrateStaffGameSessionBootstrap,
+  type StaffGameSessionBootstrapRepository,
+} from "../application/staffGameSessionBootstrap.ts";
+import { createSupabaseStaffGameSessionBootstrapRepository } from "../infrastructure/supabaseStaffGameSessionBootstrapRepository.ts";
+import {
+  createStaffRequestApplicationContext,
+  type CreateStaffRequestApplicationContextInput,
+} from "../../../shared/staffRequestApplicationContextFactory.ts";
 
 interface StaffBootstrapDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly resolveStaffSession?: typeof resolveStaffSessionForRequest;
+  readonly createBootstrapRepository?: (
+    client: EdgeSupabaseClient,
+  ) => StaffGameSessionBootstrapRepository;
+  readonly createApplicationContext?: (
+    input: CreateStaffRequestApplicationContextInput,
+  ) => ReturnType<typeof createStaffRequestApplicationContext>;
+  readonly createRequestId?: () => string;
 }
 
 interface StaffBootstrapBody {
@@ -37,16 +55,6 @@ interface StaffBootstrapBody {
     readonly createdAt: string;
     readonly updatedAt: string;
   }[];
-}
-
-interface StaffBootstrapSessionRow {
-  readonly id: string;
-  readonly name: string;
-  readonly status: string;
-  readonly game_join_code: string | null;
-  readonly game_join_code_status: string;
-  readonly created_at: string;
-  readonly updated_at: string;
 }
 
 interface OptionalDenoEnvironment {
@@ -83,12 +91,15 @@ export async function handleStaffBootstrapRequest(
     }
 
     const protectedRequest = internalWebSessionRequest(request);
-    const staffResult = await resolveStaffSessionForRequest(
+    const resolveStaffSession = dependencies.resolveStaffSession ??
+      resolveStaffSessionForRequest;
+    const staffResult = await resolveStaffSession(
       protectedRequest,
       envResult.value,
       dependencies,
       {
-        missingMessage: "A verified Supabase Auth user is required to load staff data.",
+        missingMessage:
+          "A verified Supabase Auth user is required to load staff data.",
         lookupFailureError: {
           code: "staff_bootstrap_failed",
           message: "Staff bootstrap failed.",
@@ -98,26 +109,33 @@ export async function handleStaffBootstrapRequest(
       },
     );
 
-    if (!staffResult.ok) {
+    if (staffResult.ok === false) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
     const { serviceClient, staff } = staffResult;
-
-    const sessionsResponse = await serviceClient
-      .from("game_sessions")
-      .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
-      .eq("owner_staff_user_id", staff.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false });
-
-    if (sessionsResponse.error) {
-      return jsonError(500, {
-        code: "staff_bootstrap_failed",
-        message: "Staff bootstrap failed.",
-        retryable: false,
-      });
-    }
+    const repository = (dependencies.createBootstrapRepository ??
+      createSupabaseStaffGameSessionBootstrapRepository)(serviceClient);
+    const gameSessionIds = await discoverStaffGameSessionIds(repository, {
+      staffUserId: staff.id,
+      visibility: "active",
+    });
+    const requestId = (dependencies.createRequestId ?? (() =>
+      crypto.randomUUID()))();
+    const createApplicationContext = dependencies.createApplicationContext ??
+      createStaffRequestApplicationContext;
+    const applicationContexts = gameSessionIds.map((gameSessionId) =>
+      createApplicationContext({
+        ownedGame: { id: gameSessionId },
+        staff: { id: staff.id, role: staff.role },
+        assuranceLevel: staffResult.assuranceLevel,
+        requestId,
+      })
+    );
+    const sessions = await hydrateStaffGameSessionBootstrap(repository, {
+      applicationContexts,
+      visibility: "active",
+    });
 
     return jsonResponse<StaffBootstrapBody>(200, {
       ok: true,
@@ -128,15 +146,15 @@ export async function handleStaffBootstrapRequest(
         displayName: staff.display_name,
         status: staff.status,
       },
-      activeGameSessions: ((sessionsResponse.data ?? []) as readonly StaffBootstrapSessionRow[]).map((session) => ({
-        id: session.id,
-        name: session.name,
-        status: session.status,
-        joinCode: session.game_join_code,
-        gameCode: session.game_join_code,
-        joinCodeStatus: session.game_join_code_status,
-        createdAt: session.created_at,
-        updatedAt: session.updated_at,
+      activeGameSessions: sessions.map(({ gameSession }) => ({
+        id: gameSession.id,
+        name: gameSession.name,
+        status: gameSession.status,
+        joinCode: gameSession.gameJoinCode,
+        gameCode: gameSession.gameJoinCode,
+        joinCodeStatus: gameSession.gameJoinCodeStatus,
+        createdAt: gameSession.createdAt,
+        updatedAt: gameSession.updatedAt,
       })),
     });
   } catch {
@@ -162,7 +180,8 @@ function internalWebSessionRequest(request: Request): Request {
 }
 
 function configuredTrustedIpHeader(): TrustedIpHeader {
-  const deno = (globalThis as typeof globalThis & { Deno?: OptionalDenoEnvironment }).Deno;
+  const deno =
+    (globalThis as typeof globalThis & { Deno?: OptionalDenoEnvironment }).Deno;
   const configured = String(
     deno?.env?.get?.("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "",
   ).trim().toLowerCase();

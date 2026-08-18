@@ -11,6 +11,12 @@ const localMutationSource = read(
 const adminContextSource = read(
   "backend/supabase/functions/admin-api/adminRequestApplicationContext.ts",
 );
+const adminBootstrapSource = read(
+  "backend/supabase/functions/admin-api/adminBootstrapComposition.ts",
+);
+const staffBootstrapRepositorySource = read(
+  "backend/src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.ts",
+);
 const redemptionSource = read(
   "backend/supabase/functions/admin-api/inventoryRedemptionOperations.ts",
 );
@@ -32,19 +38,21 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
   const serveSource = indexSource.slice(indexSource.indexOf("Deno.serve("));
   const contextIndex = serveSource.indexOf("await resolveContext(request)");
   const securityIndex = serveSource.indexOf("await guardAdminRequest(");
+  const hydrationIndex = serveSource.indexOf("await hydrateAdminBootstrapContext({");
   const ownershipIndex = serveSource.indexOf("ensureOwnedGame(securedContext, gameId)");
   const applicationContextIndex = serveSource.indexOf(
-    "createAdminRequestApplicationContext({",
+    "applicationContextForAdminGame(",
   );
   const localIndex = serveSource.indexOf("await handleLocalAdminGameMutation(");
   const compatibilityWriteIndex = serveSource.indexOf("await handleGameWrite(");
 
   assert.ok(contextIndex >= 0, "Admin authentication context must be resolved");
   assert.ok(securityIndex > contextIndex, "security must follow authentication");
-  assert.ok(ownershipIndex > securityIndex, "ownership must follow security");
+  assert.ok(hydrationIndex > securityIndex, "detailed hydration must follow security");
+  assert.ok(ownershipIndex > hydrationIndex, "ownership must follow reviewed hydration");
   assert.ok(
     applicationContextIndex > ownershipIndex,
-    "application context projection must follow owned-game validation",
+    "the exact hydrated application context must follow owned-game validation",
   );
   assert.ok(localIndex > ownershipIndex, "local handlers must follow ownership");
   assert.ok(
@@ -57,9 +65,22 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
     "Admin permission, AAL2, and user-action rate limiting must run once",
   );
   assert.equal(
-    serveSource.match(/createAdminRequestApplicationContext\(\{/g)?.length,
+    serveSource.match(/requestId:\s*crypto\.randomUUID\(\)/g)?.length,
     1,
-    "the immutable Admin application context must be projected once",
+    "one request correlation ID must be generated after the guard",
+  );
+  assert.doesNotMatch(serveSource, /createAdminRequestApplicationContext\(/);
+  assert.match(
+    adminBootstrapSource,
+    /input\.context\.games\.map\(\(ownedGame\)\s*=>\s*createAdminRequestApplicationContext\(\{/,
+  );
+  assert.match(
+    adminBootstrapSource,
+    /applicationContext:\s*entry\.applicationContext/,
+  );
+  assert.match(
+    adminBootstrapSource,
+    /candidate\.game\s*===\s*game/,
   );
   assert.equal(
     serveSource.match(/await handleLocalAdminGameMutation\(/g)?.length,
@@ -69,9 +90,14 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
 });
 
 test("reviewed Admin context reaches the Inventory application adapter", () => {
-  assert.match(indexSource, /ownedGame:\s*game/);
-  assert.match(indexSource, /staffUserId:\s*securedContext\.staff\.id/);
+  assert.match(adminBootstrapSource, /ownedGame,/);
+  assert.match(adminBootstrapSource, /staffUserId:\s*input\.context\.staff\.id/);
+  assert.match(adminBootstrapSource, /requestId:\s*input\.requestId/);
   assert.match(indexSource, /requestId:\s*crypto\.randomUUID\(\)/);
+  assert.match(
+    indexSource,
+    /applicationContextForAdminGame\(\s*securedContext\.gameBootstrapEntries,\s*game,?\s*\)/,
+  );
   assert.match(
     indexSource,
     /handleInventoryRedemptionOperation\([\s\S]*?applicationContext,/,
@@ -87,6 +113,30 @@ test("reviewed Admin context reaches the Inventory application adapter", () => {
   assert.doesNotMatch(
     adminContextSource,
     /\b(?:token|service|authorization|email)\s*:/i,
+  );
+  assert.match(
+    adminContextSource,
+    /createStaffRequestApplicationContext<AdminPermission>/,
+  );
+});
+
+test("Admin preguard discovery is ID-only and detailed rows hydrate under exact contexts", () => {
+  assert.match(
+    commonSource,
+    /from\("staff_users"\)[\s\S]*?\.select\("id"\)[\s\S]*?discoverAdminOwnedGameIdentities/,
+  );
+  assert.match(staffBootstrapRepositorySource, /STAFF_GAME_SESSION_DISCOVERY_COLUMNS\s*=\s*"id"/);
+  assert.match(
+    staffBootstrapRepositorySource,
+    /\.select\(STAFF_GAME_SESSION_DISCOVERY_COLUMNS\)[\s\S]*?\.eq\("owner_staff_user_id", input\.staffUserId\)/,
+  );
+  assert.match(
+    staffBootstrapRepositorySource,
+    /\.select\(STAFF_GAME_SESSION_HYDRATION_COLUMNS\)[\s\S]*?\.in\("id", reviewed\.gameSessionIds\)[\s\S]*?\.eq\("owner_staff_user_id", reviewed\.staffUserId\)/,
+  );
+  assert.doesNotMatch(
+    commonSource,
+    /\.select\(\s*"id,name,status,game_join_code,game_join_code_status,created_at,updated_at"/,
   );
 });
 

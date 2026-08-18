@@ -266,6 +266,84 @@ dependency.
 | 24 | `ARCH-100W — Audit/log and Admin router closure`; `refactor/admin-audit-context-propagation-v1` | Audit/log domain, `loadPlayerHistoryAudit`, direct market-impact/settings audit branches, related-record scoping, and remaining Admin router scalar seams | `ARCH-100V`; Admin API/logs/browser contract, cross-game related-record denial and exact branch ownership |
 | 25 | `ARCH-100X — Context propagation residual closure`; `refactor/context-propagation-closure-v1` | Generated exact-main root-to-handler/classification artifact, exemption/unreachable contracts, final owner-map reconciliation | `ARCH-100W`; zero unassigned live edges and zero unresolved required entries; every focused suite plus full smoke/typecheck/root and architecture/safety gates |
 
+### Active `ARCH-100F` root and edge ledger
+
+`ARCH-100F` is owned solely by
+`refactor/multi-game-bootstrap-context-hydration-v1`, created from exact verified
+main/release SHA `59a82ef8580d7d571727e722424bc84cf064e8aa` and tree
+`7ccf90a65bc0e1717b96f66a7ebca929513e96bf` after the `ARCH-100E` verification
+ledger merged. The refreshed collision audit covers open PRs #619, #620, #624
+and #626. None owns the bounded bootstrap/context source; #619 owns only root
+dependency manifests, #620 owns workflow control-plane files, and #624/#626 own
+Player browser/realtime/authority-manifest acceptance. This owner may register
+tests in `backend/package.json`, but it may not edit root dependency manifests,
+workflows, browser/UI or authority-manifest files. Exact-path stale donors
+`wip/codex-production-slices-2026-08-04`,
+`automation/admin-v2-ux-root-apply-20260814`, and
+`feat/story-narrative-convergence-v1` overlap bounded paths or package
+registration and remain prohibited from merge or cherry-pick.
+
+Before runtime implementation, the exact reviewed roots and direct/internal
+composition edges are:
+
+1. `backend/supabase/functions/admin-api/index.ts::Deno.serve` calls
+   `common.resolveContext`, which authenticates the bearer and discovers only
+   the Staff ID plus owner-filtered game IDs in descending `created_at` order,
+   with no status filter and no Staff/browser or game DTO fields. It then calls
+   `adminSecurityGuard.guardAdminRequest` exactly once. Only after that guard,
+   one server request ID is created and one distinct canonical Admin context is
+   created per discovered game ID. An Auth-owned read application and Supabase
+   adapter recheck owner membership and hydrate the full Staff profile plus all
+   game rows all-or-nothing; every hydrated row remains paired with the exact
+   context that authorized it, and selected-game dispatch reuses that object
+   rather than creating a second context.
+2. That hydrated Admin set flows through `handleGlobalRoute` to
+   `selectGame`/`gameDto` for `GET /session/bootstrap`, `GET /games`, and
+   `POST /games/:id/switch`; and through `ensureOwnedGame` to
+   `gameRoutes.handleGameRead`/`gameDto` for `GET /games/:id` and
+   `GET /games/:id/dashboard`. Existing downstream consumers that require the
+   persistence-shaped row, including game archive name/status confirmation,
+   receive the same all-status hydrated set. Zero owned games creates no game
+   context and performs no game-row hydration query.
+3. `backend/supabase/functions/staff-api/index.ts::Deno.serve` preserves its
+   publishable-key, environment, method, and route checks before calling
+   `auth/api/staffBootstrapHttpHandler.handleStaffBootstrapRequest` for
+   `/staff/bootstrap`.
+4. `backend/supabase/functions/classroom-api/index.ts::Deno.serve` calls the
+   same handler for `/staff/bootstrap` without adding or weakening a root guard.
+5. `backend/supabase/functions/web-session-api/index.ts::Deno.serve` reaches
+   `loadStaffBootstrap` from successful `handleLogin`, `handleStatus`, and
+   `handleMfa` verification. `loadStaffBootstrap` makes the existing in-process
+   `/staff/bootstrap` request to the same handler, whose dependency wrapper
+   continues to replace the internal caller IP with its trusted synthetic IP.
+6. For roots 3–5, the shared handler performs method/environment validation and
+   calls `resolveStaffSessionForRequest` exactly once, preserving bearer auth,
+   active Staff status, role/claims, AAL, and universal rate-limit order. It then
+   discovers owner-filtered active game IDs only, creates one request ID and one
+   distinct neutral Staff context per ID, and calls the same Auth hydration
+   application/adapter. The adapter rechecks owner and active status to close
+   discovery/hydration races; the application validates exact membership,
+   cardinality, ownership and row shape, restores discovery order, and fails the
+   whole request on any missing, duplicate, extra, malformed, or failed row.
+   Zero games returns the existing empty DTO without a hydration query.
+7. The existing Game Sessions consumers remain concrete authority-regression
+   edges: Staff and Classroom join-code/settings routes call
+   `gameJoinCodeResetHttpHandler.handleResetGameJoinCodeRequest` and
+   `gameSettingsHttpHandler.handleGameSettingsRequest`; their domain factory
+   becomes only a type alias/re-export/delegate to the neutral shared Staff
+   contract/factory. Neutral shared code never imports Game Sessions, while the
+   existing one-game auth/ownership/context/repository behavior remains exact.
+
+All edges preserve current Admin all-status versus Staff active-only filtering,
+descending order, selection fallback, nullable-versus-empty join-code mapping,
+routes, methods, response/error envelopes, identifier compatibility, guard and
+rate counts, and browser privacy. No context, correlation request ID, new owner
+field, aggregate/fabricated game ID, schema, migration, RPC, economic write,
+idempotency identity, UI, dependency, workflow, or deployment change is in
+scope. Focused neutral-context, Auth application/repository, Admin composition,
+Staff/Classroom/Web Session and Game Sessions tests must cover every edge above
+before the general per-owner acceptance gate applies.
+
 The sequence is a maximum reviewed scope, not permission to keep an oversized
 tranche. An owner must split before implementation if its fresh source audit
 shows unrelated behavior or a safely reviewable PR cannot result. Any split is
