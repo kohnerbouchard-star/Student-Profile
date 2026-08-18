@@ -13,21 +13,31 @@ export function readPlayerBusinessBankingRoutePath(
   const tail = segments.slice(2);
 
   if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead" };
-  if (tail.length === 1 && tail[0] === "businesses") return { kind: "businessCreate" };
+  if (tail.length === 1 && tail[0] === "businesses") {
+    return { kind: "businessCreate", operation: "legacy" };
+  }
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "formations") {
-    return { kind: "businessFormationPropose" };
+    return { kind: "businessCreate", operation: "formationPropose" };
   }
   if (
     tail.length === 4 && tail[0] === "business" && tail[1] === "formations" &&
     tail[3] === "respond" && validKey(tail[2], "bfp")
   ) {
-    return { kind: "businessFormationRespond", formationKey: tail[2].toLowerCase() };
+    return {
+      kind: "businessCreate",
+      operation: "formationRespond",
+      formationKey: tail[2].toLowerCase(),
+    };
   }
   if (
     tail.length === 4 && tail[0] === "business" && tail[1] === "formations" &&
     tail[3] === "activate" && validKey(tail[2], "bfp")
   ) {
-    return { kind: "businessFormationActivate", formationKey: tail[2].toLowerCase() };
+    return {
+      kind: "businessCreate",
+      operation: "formationActivate",
+      formationKey: tail[2].toLowerCase(),
+    };
   }
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "products") {
     return { kind: "businessProductCreate" };
