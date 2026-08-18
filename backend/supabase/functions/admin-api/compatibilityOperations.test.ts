@@ -1,6 +1,7 @@
 import type { AdminMutationRpcClient } from "../../../src/platform/supabase/adminMutation.ts";
 import { handleCompatibilityOperation } from "./compatibilityOperations.ts";
 import { handleLocalAdminGameMutation } from "./localGameMutations.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -31,16 +32,14 @@ Deno.test("Contract archive and duplicate compatibility routes use only the loca
   ]);
 
   const archived = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/contracts/${TARGET_ID}/archive`,
     method: "POST",
     body: {},
     identity: IDENTITY,
   });
   const duplicated = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/contracts/${TARGET_ID}/duplicate`,
     method: "POST",
     body: {},
@@ -76,16 +75,14 @@ Deno.test("Store restock and rebalance compatibility routes use only the local R
   ]);
 
   const restocked = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/store/items/${TARGET_ID}/restock`,
     method: "POST",
     body: { amount: "5" },
     identity: IDENTITY,
   });
   const rebalanced = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/store/items/${TARGET_ID}/rebalance-price`,
     method: "POST",
     body: { targetPrice: "44.567" },
@@ -130,18 +127,17 @@ Deno.test("Player archive and Settings reset compatibility routes are atomic loc
       difficultyPolicy: { difficulty_preset: "moderate", source: "preset" },
     }, 200),
   ]);
+  const resetApplicationContext = adminContext();
 
   const archived = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/players/${TARGET_ID}/archive`,
     method: "POST",
     body: {},
     identity: IDENTITY,
   });
   const reset = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: resetApplicationContext,
     path: `/games/${GAME_SESSION_ID}/settings/difficulty/reset`,
     method: "POST",
     body: {},
@@ -156,14 +152,20 @@ Deno.test("Player archive and Settings reset compatibility routes are atomic loc
     "admin_archive_player_v1",
     "admin_update_game_settings_v1",
   ]);
+  assertEquals(service.calls[1]?.args.p_game_session_id, GAME_SESSION_ID);
+  assertEquals(service.calls[1]?.args.p_staff_user_id, STAFF_USER_ID);
+  assertEquals(service.calls[1]?.args.p_request_id, IDENTITY.requestId);
+  assertEquals(
+    service.calls[1]?.args.p_request_id === resetApplicationContext.requestId,
+    false,
+  );
   assertEquals(service.directTableCalls, 0);
 });
 
 Deno.test("Compatibility mutations reject missing stable identity before persistence", async () => {
   const service = new FakeCompatibilityService([]);
   const result = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/contracts/${TARGET_ID}/archive`,
     method: "POST",
     body: {},
@@ -186,8 +188,7 @@ Deno.test("Compatibility operation bodies cannot cross the URL permission domain
         contractId: TARGET_ID,
       },
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: "/players",
     gameSession: { id: GAME_SESSION_ID, name: "Test Game", status: "active" },
   });
@@ -208,8 +209,7 @@ Deno.test("Compatibility operation bodies cannot cross the URL permission domain
 Deno.test("Direct compatibility routes reject a conflicting body operation", async () => {
   const service = new FakeCompatibilityService([]);
   const result = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/contracts/${TARGET_ID}/archive`,
     method: "POST",
     body: { adminOperation: "archive-player", playerId: TARGET_ID },
@@ -230,8 +230,7 @@ Deno.test("Compatibility mutation database failures never return success", async
     error: { message: "database unavailable" },
   }]);
   const result = await handleCompatibilityOperation(service, {
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     path: `/games/${GAME_SESSION_ID}/store/items/${TARGET_ID}/restock`,
     method: "POST",
     body: { quantity: 3 },
@@ -256,8 +255,7 @@ Deno.test("Direct v606 Contract compatibility routes enter the local mutation di
       "POST",
       {},
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: `/contracts/${TARGET_ID}/archive`,
     gameSession: { id: GAME_SESSION_ID, name: "Test Game", status: "active" },
   });
@@ -287,8 +285,7 @@ Deno.test("Rewritten v606 Store compatibility operations keep the same local ide
         quantity: 2,
       },
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: `/store/items/${TARGET_ID}`,
     gameSession: { id: GAME_SESSION_ID, name: "Test Game", status: "active" },
   });
@@ -331,8 +328,7 @@ Deno.test("Store image multipart fails closed before database mutation", async (
         body: form,
       },
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: `/store/items/${TARGET_ID}`,
     gameSession: { id: GAME_SESSION_ID, name: "Test Game", status: "active" },
   });
@@ -380,8 +376,7 @@ Deno.test("Direct Player archive and Settings reset suffixes enter the local dis
       "POST",
       {},
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: `/players/${TARGET_ID}/archive`,
     gameSession,
   });
@@ -391,8 +386,7 @@ Deno.test("Direct Player archive and Settings reset suffixes enter the local dis
       "POST",
       {},
     ),
-    gameSessionId: GAME_SESSION_ID,
-    staffUserId: STAFF_USER_ID,
+    applicationContext: adminContext(),
     suffix: "/settings/difficulty/reset",
     gameSession,
   });
@@ -469,6 +463,25 @@ function mutationRequest(
       "x-request-id": IDENTITY.requestId,
     },
     body: JSON.stringify(body),
+  });
+}
+
+function adminContext() {
+  return createAdminRequestApplicationContext({
+    ownedGame: { id: GAME_SESSION_ID },
+    staffUserId: STAFF_USER_ID,
+    requestId: "server-admin-compatibility-001",
+    security: {
+      ok: true,
+      assuranceLevel: "aal2",
+      permissions: [
+        "contracts.manage",
+        "players.manage",
+        "settings.manage",
+        "store.manage",
+      ],
+      requiredPermission: "settings.manage",
+    },
   });
 }
 

@@ -1,26 +1,26 @@
 import {
   AdminMutationError,
-  type AdminMutationIdentity,
-  type AdminMutationRpcClient,
-  executeAdminMutationRpc,
 } from "../../../platform/supabase/adminMutation.ts";
+import type {
+  GameSessionMutationIdentity,
+  GameSessionMutationRepository,
+} from "../contracts/gameSessionMutationRepository.ts";
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
 import {
   normalizeRequiredStockMarketWindowSetting,
   StockMarketWindowConfigError,
 } from "../../stocks/calendars/stockMarketWindowConfig.ts";
 
 export interface UpdateGameSettingsInput {
-  readonly gameSessionId: string;
-  readonly staffUserId: string;
+  readonly applicationContext: GameSessionsStaffApplicationContext;
   readonly requestBody: unknown;
-  readonly mutation: AdminMutationIdentity;
+  readonly mutation: GameSessionMutationIdentity;
 }
 
 export interface ResetGameSettingsGroupInput {
-  readonly gameSessionId: string;
-  readonly staffUserId: string;
+  readonly applicationContext: GameSessionsStaffApplicationContext;
   readonly group: string;
-  readonly mutation: AdminMutationIdentity;
+  readonly mutation: GameSessionMutationIdentity;
 }
 
 export interface GameSettingsMutationPatches {
@@ -68,7 +68,7 @@ const POLICY_COLUMNS = [
 ] as const;
 
 export function updateGameSettings(
-  client: AdminMutationRpcClient,
+  repository: GameSessionMutationRepository,
   input: UpdateGameSettingsInput,
 ): Promise<UpdateGameSettingsResult> {
   const patches = buildGameSettingsMutationPatches(input.requestBody);
@@ -83,11 +83,11 @@ export function updateGameSettings(
     );
   }
 
-  return executeGameSettingsMutation(client, input, patches);
+  return executeGameSettingsMutation(repository, input, patches);
 }
 
 export async function resetGameSettingsGroup(
-  client: AdminMutationRpcClient,
+  repository: GameSessionMutationRepository,
   input: ResetGameSettingsGroupInput,
 ): Promise<UpdateGameSettingsResult & { readonly group: string }> {
   const group = input.group.trim().toLowerCase();
@@ -120,7 +120,7 @@ export async function resetGameSettingsGroup(
     gameSettingsPatch = { [column]: {} };
   }
 
-  const result = await executeGameSettingsMutation(client, input, {
+  const result = await executeGameSettingsMutation(repository, input, {
     gameSettingsPatch,
     difficultyPolicyPatch,
     requestPayload: {
@@ -133,30 +133,20 @@ export async function resetGameSettingsGroup(
 }
 
 async function executeGameSettingsMutation(
-  client: AdminMutationRpcClient,
+  repository: GameSessionMutationRepository,
   input: Pick<
     UpdateGameSettingsInput,
-    "gameSessionId" | "staffUserId" | "mutation"
+    "applicationContext" | "mutation"
   >,
   patches: GameSettingsMutationPatches,
 ): Promise<UpdateGameSettingsResult> {
-  const result = await executeAdminMutationRpc(
-    client,
-    "admin_update_game_settings_v1",
-    {
-      p_game_session_id: input.gameSessionId,
-      p_staff_user_id: input.staffUserId,
-      p_game_settings_patch: patches.gameSettingsPatch,
-      p_difficulty_policy_patch: patches.difficultyPolicyPatch,
-      p_request_payload: patches.requestPayload,
-      p_idempotency_key: input.mutation.idempotencyKey,
-      p_request_id: input.mutation.requestId,
-    },
-    {
-      code: "game_settings_failed",
-      message: "Game settings request failed.",
-    },
-  );
+  const result = await repository.updateGameSettings({
+    applicationContext: input.applicationContext,
+    gameSettingsPatch: patches.gameSettingsPatch,
+    difficultyPolicyPatch: patches.difficultyPolicyPatch,
+    requestPayload: patches.requestPayload,
+    mutation: input.mutation,
+  });
 
   const settingsRow = requiredRecord(
     result.body.settings,

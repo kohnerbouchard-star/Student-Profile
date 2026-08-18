@@ -491,8 +491,7 @@ Deno.serve(async (request: Request) => {
       >[0],
       {
         request,
-        gameSessionId: gameId,
-        staffUserId: securedContext.staff.id,
+        applicationContext,
         suffix,
         gameSession: {
           id: game.id,
@@ -516,6 +515,7 @@ Deno.serve(async (request: Request) => {
       game,
       gameId,
       suffix,
+      applicationContext,
     );
     if (readResponse) return readResponse;
 

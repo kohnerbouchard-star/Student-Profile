@@ -29,6 +29,8 @@ import {
   loadPlayerHistoryAudit,
 } from "./attendancePlayerOperations.ts";
 import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
+import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
+import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
 
 function classroomGamePath(gameId: string, suffix: string): string {
   return `/games/${encodeURIComponent(gameId)}${suffix}`;
@@ -124,6 +126,7 @@ export async function handleGameRead(
   game: any,
   gameId: string,
   suffix: string,
+  applicationContext: AdminRequestApplicationContext,
 ): Promise<Response | null> {
   if (request.method !== "GET") return null;
 
@@ -135,8 +138,7 @@ export async function handleGameRead(
     const operation = await handleGameJoinCodeReadOperation(
       context.service,
       {
-        gameSessionId: gameId,
-        staffUserId: context.staff.id,
+        applicationContext,
         gameSession: {
           id: game.id,
           name: game.name,
@@ -437,7 +439,12 @@ export async function handleGameRead(
 
   if (suffix === "/settings") {
     return json(request, 200, {
-      data: { settings: await loadSettings(context.service, gameId) },
+      data: {
+        settings: await loadSettings(
+          createSupabaseGameSettingsReadRepository(context.service),
+          applicationContext,
+        ),
+      },
     });
   }
 
@@ -453,7 +460,10 @@ export async function handleGameRead(
   const settingsGroupMatch = suffix.match(/^\/settings\/([^/]+)$/);
   if (settingsGroupMatch) {
     const group = decodeURIComponent(settingsGroupMatch[1]);
-    const settings = await loadSettings(context.service, gameId);
+    const settings = await loadSettings(
+      createSupabaseGameSettingsReadRepository(context.service),
+      applicationContext,
+    );
     return json(request, 200, {
       data: { group, settings, value: settings?.[group] ?? null },
     });

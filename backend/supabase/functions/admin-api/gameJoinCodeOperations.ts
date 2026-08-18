@@ -31,11 +31,7 @@ export async function handleGameJoinCodeReadOperation(
         scope,
         createSupabaseGameJoinCodeReadRepository(service),
       ));
-    const result = await read({
-      gameSessionId: input.gameSessionId,
-      staffUserId: input.staffUserId,
-      gameSession: input.gameSession,
-    });
+    const result = await read(input);
 
     return {
       status: 200,

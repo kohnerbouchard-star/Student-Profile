@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1029,
+    "sourceFiles": 1040,
     "edgeEntrypoints": 24,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 100,
@@ -173,7 +173,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 22,
+      "sourceFiles": 33,
       "publicBoundaryFiles": []
     },
     {
@@ -3377,16 +3377,16 @@
         "lines": 860
       },
       {
-        "file": "backend/supabase/functions/admin-api/readModels.ts",
-        "lines": 859
-      },
-      {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
         "lines": 856
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
         "lines": 852
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/readModels.ts",
+        "lines": 851
       },
       {
         "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
@@ -3433,12 +3433,12 @@
         "lines": 730
       },
       {
-        "file": "frontend/src/core/login.js",
-        "lines": 715
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "lines": 724
       },
       {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 713
+        "file": "frontend/src/core/login.js",
+        "lines": 715
       },
       {
         "file": "backend/src/domains/markets/state/priceTimeOrderBookStateMachine.ts",
@@ -3641,6 +3641,10 @@
         "lines": 551
       },
       {
+        "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+        "lines": 550
+      },
+      {
         "file": "backend/src/platform/supabase/edgeStaffSession.ts",
         "lines": 548
       },
@@ -3655,10 +3659,6 @@
       {
         "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
         "lines": 544
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
-        "lines": 537
       },
       {
         "file": "admin/v2/src/routes/market/MarketController.js",
@@ -3813,7 +3813,8 @@
           "admin/v2/src/routes/attendance/AttendanceController.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4009,7 +4010,9 @@
           "admin/v2/src/routes/contracts/ContractsController.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4183,11 +4186,15 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewController.js",
+          "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeOperations.test.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts"
         ]
       },
       {
@@ -4204,9 +4211,13 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/src/domains/game-sessions/application/rotateGameJoinCode.test.ts",
+          "backend/src/domains/game-sessions/application/updateGameSettings.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4378,7 +4389,9 @@
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
-          "backend/supabase/functions/admin-api/bankingOperations.test.ts"
+          "backend/supabase/functions/admin-api/bankingOperations.test.ts",
+          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4467,9 +4480,15 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/settings/SettingsController.js",
+          "backend/src/domains/game-sessions/application/readGameSettings.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4516,7 +4535,9 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/store/StoreController.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
-          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
