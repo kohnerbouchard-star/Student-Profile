@@ -22,6 +22,7 @@
     "backend/supabase/migrations/20260819062100_business_party_banking_and_activation_v2.sql",
     "backend/supabase/migrations/20260819063000_business_governance_equity_v2.sql",
     "docs/architecture/business-system-audit-redesign-v1.md",
+    "docs/operations/contracts/button-action-coverage-v1.json",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "docs/roadmaps/business-v2-development-execution-log-v1.md",
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
