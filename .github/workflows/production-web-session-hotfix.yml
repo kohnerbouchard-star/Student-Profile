@@ -57,7 +57,7 @@ jobs:
       source_sha256: ${{ steps.package.outputs.source_sha256 }}
     steps:
       - name: Check out reviewed source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_commit || github.sha }}
           fetch-depth: 0
@@ -82,7 +82,7 @@ jobs:
           echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload immutable candidate source
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: production-web-session-${{ steps.identity.outputs.source_commit }}
           path: dist/production-web-session
@@ -181,7 +181,7 @@ jobs:
           test "$TRUSTED_CLIENT_IP_HEADER" = "x-real-ip"
 
       - name: Download exact immutable source
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
           path: dist/production-web-session
@@ -211,7 +211,7 @@ jobs:
             backend/src/security
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
