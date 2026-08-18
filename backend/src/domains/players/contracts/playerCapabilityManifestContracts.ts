@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-19.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -26,6 +26,9 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "bankTransfer",
   "businessCreate",
   "businessEmployeeTerminate",
+  "businessFormationActivate",
+  "businessFormationPropose",
+  "businessFormationRespond",
   "businessHire",
   "businessInputPurchase",
   "businessPrice",
@@ -76,6 +79,9 @@ export type PlayerCapabilityEndpointKey =
   | "bankTransfer"
   | "business"
   | "businessCreate"
+  | "businessFormationActivate"
+  | "businessFormationPropose"
+  | "businessFormationRespond"
   | "businessHire"
   | "businessInputPurchase"
   | "businessPrice"
@@ -245,6 +251,30 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "businessCreate",
     operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }],
     actionCapabilities: ["businessCreate"],
+  },
+  {
+    key: "businessFormationPropose",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations",
+    }],
+    actionCapabilities: ["businessFormationPropose"],
+  },
+  {
+    key: "businessFormationRespond",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations/:formationKey/respond",
+    }],
+    actionCapabilities: ["businessFormationRespond"],
+  },
+  {
+    key: "businessFormationActivate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations/:formationKey/activate",
+    }],
+    actionCapabilities: ["businessFormationActivate"],
   },
   {
     key: "businessProductCreate",
