@@ -1,0 +1,72 @@
+name: Campaign Production Source Bundle Temporary
+
+on:
+  push:
+    branches:
+      - ops/campaign-production-promote-20260818
+    paths:
+      - .github/workflows/campaign-production-source-bundle-temporary.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-production-source-bundle-temporary
+  cancel-in-progress: false
+
+env:
+  SOURCE_COMMIT: 6716d8f420b79cf778a0173d555cfd3029040e5e
+
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact merged Campaign source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce exact current main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse origin/main)" = "$SOURCE_COMMIT"
+
+      - name: Bundle exact Campaign migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/campaign-production-source"
+          mkdir -p "$out/migrations"
+          expected=(
+            20260818121000_activate_campaign_runtime_provisioning_v3.sql
+            20260818121200_fix_campaign_event_trigger_key_v2.sql
+            20260818121300_fix_campaign_event_revision_ambiguity_v2.sql
+            20260818121400_harden_campaign_program_digest_v1.sql
+            20260818121500_add_campaign_runtime_scheduler_v1.sql
+            20260818121600_harden_campaign_trigger_permissions_v1.sql
+            20260818121700_fix_game_provisioning_preflight_source_selection_v2.sql
+            20260818121800_add_game_provisioning_failure_observability_v1.sql
+            20260818121900_add_private_game_provisioning_failure_log_v1.sql
+            20260818122000_inherit_canonical_stock_market_window_v2.sql
+            20260818122100_keep_pinned_retired_campaign_programs_valid_v1.sql
+          )
+          for file in "${expected[@]}"; do
+            test -f "backend/supabase/migrations/$file"
+            cp "backend/supabase/migrations/$file" "$out/migrations/$file"
+          done
+          (cd "$out" && sha256sum migrations/*.sql > SHA256SUMS)
+          printf '%s\n' "$SOURCE_COMMIT" > "$out/SOURCE_COMMIT"
+
+      - name: Upload exact source bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-production-source-${{ env.SOURCE_COMMIT }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/campaign-production-source
