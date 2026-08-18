@@ -70,7 +70,6 @@ export function createSupabaseCampaignProgramProvider(
         .eq("pack_version", instance.definition.packVersion)
         .eq("definition_id", instance.definition.definitionId)
         .eq("definition_digest", instance.definition.definitionDigest)
-        .eq("status", "active")
         .maybeSingle();
 
       if (response.error) {
