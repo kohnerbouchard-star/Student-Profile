@@ -1,3 +1,4 @@
+// Deployment convergence marker: 2026-08-18 staging/production digest parity.
 import {
   createSupabaseCampaignProgramProvider,
   createVersionedCampaignSchedulePolicy,
