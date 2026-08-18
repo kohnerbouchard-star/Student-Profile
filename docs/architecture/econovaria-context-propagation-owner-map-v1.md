@@ -1,0 +1,392 @@
+# Econovaria Context Propagation Owner Map v1
+
+**Roadmap item:** `ARCH-100E`  
+**Audited main:** `651e607c0f63f79532c9f06ee74b705622ee7819`  
+**Audited tree:** `f784e1d585db8b2e4337f50558b23442bbee8e56`  
+**Status:** classification and dependency ledger; no residual path is implemented by this document
+
+This map is the reviewed closure ledger for `ARCH-100`. It classifies the live
+request boundaries found by the `ARCH-100E` source audit after `ARCH-100A`
+through `ARCH-100D`, assigns each known remaining game-scoped seam to one
+collision-bounded owner, and records the boundaries where a game context cannot
+truthfully exist. `ARCH-100X` must generate and reconcile a deterministic
+root-to-handler inventory before the parent can close; this document does not
+claim a reproducible zero-unassigned inventory yet. The classification does not
+authorize a route, schema, RPC, response, gameplay, economic, idempotency, or UI
+change.
+
+## Canonical authorities and invariants
+
+The implementation must consolidate the existing authorities rather than create
+a parallel context:
+
+- `backend/src/shared/requestApplicationContext.ts` is the common immutable
+  game-scoped contract.
+- `backend/src/domains/players/api/playerRequestScope.ts` creates the canonical
+  Player context after a live Player session, player, and game are derived
+  server-side.
+- `backend/supabase/functions/admin-api/adminRequestApplicationContext.ts`
+  creates the Admin context after the Admin permission/AAL/rate guard and owned
+  game check.
+- `backend/src/domains/game-sessions/contracts/gameSessionsStaffApplicationContext.ts`
+  is the current domain-owned Staff view. Its shared factory creates a Staff
+  context after Staff auth/AAL/rate checks and owned-game resolution.
+- Inventory and Game Sessions type-only context ports are verified examples.
+  Later domains may expose equivalent minimal type-only views, but may not create
+  a second request identity or authentication authority.
+
+Every implementation owner must preserve these rules:
+
+1. Browser UUIDs are never ownership authority. Game-scoped identifiers are
+   match-or-reject inputs; an explicitly characterized global preference may
+   select or fall back only within the server-derived owned-game set.
+2. Authentication, claims/permission policy, and server-derived actor/game scope
+   precede context creation. Universal guards may rate-limit before context;
+   scope-dependent Player, Admin Messaging/Progression, or other domain limiters
+   receive the exact context after creation. No domain use case or business
+   persistence executes until every applicable limiter approves.
+3. The same frozen context object reaches every existing/applicable handler,
+   application use case or service, and domain repository port. Only a narrow
+   infrastructure adapter may project `gameSessionId` or actor IDs into
+   queries/RPCs.
+4. Admin and Player authentication stay distinct. Shared Staff/Classroom handlers
+   retain their reviewed Staff policy and an empty frozen permission set until a
+   granular Staff grant model is separately authorized.
+5. A game-scoped route, body, query, header, or command identifier that conflicts
+   with canonical scope is rejected or ignored according to its characterized
+   compatibility contract; it never reaches a wrong-game domain adapter,
+   business query, or mutation/RPC call. Authentication,
+   Staff/session lookup, owner-ID discovery, permission, and rate-limit
+   persistence may necessarily establish the boundary first. An invalid global
+   Admin `x-econovaria-game-id` remains the characterized owned-game preference
+   fallback; it is not game ownership authority.
+6. `context.requestId` is correlation identity. Mutation identities, audit IDs,
+   idempotency keys, token hashes, replay fingerprints, and deterministic reward
+   identities remain separate.
+7. The context object, its correlation request ID, and new server-only ownership
+   fields are never serialized into browser DTOs or arbitrary log payloads.
+   Existing UUID-shaped or scope-bearing identifiers across Admin, Staff, and
+   Player browser surfaces—including game/Staff/Auth/session fields, route/query
+   IDs, and realtime channel scope—are compatibility candidates, not ownership
+   authority, and are neither expanded nor falsely claimed removed by this
+   propagation tranche. `ARCH-100X` must add an exact response/route exposure
+   appendix to its generated artifact and classify each as an approved public
+   contract identifier or a blocking internal-identifier remediation owner.
+   Approved structured correlation logging may use
+   `requestId` under the observability policy without returning it to browsers.
+8. Context contracts and mutation-identity ports are infrastructure-neutral and
+   domain-owned/type-only. Domain contracts/application code may not import Edge
+   roots, Supabase implementations, or platform mutation-identity types.
+9. Shared Staff domains receive type-only views of one canonical frozen Staff
+   context. `ARCH-100F` must move/generalize construction into a neutral
+   shared/auth contract and factory. The Game Sessions contract/factory becomes
+   only a type-only alias, re-export, or delegate to neutral; neutral code may
+   never import Game Sessions. Per-domain context factories and generic
+   Admin/Staff/Player unions are forbidden. Each incoming request/process has
+   one correlation request ID and at most one context per owned game; an explicit
+   Admin-to-Classroom HTTP hop creates a separate downstream process-local Staff
+   context after reauthorization.
+
+## Classification vocabulary
+
+| Class | Meaning | Closure treatment |
+|---|---|---|
+| `VERIFIED_CONTEXT` | Exact context propagation is merged and verified. | Retain regression coverage; no new owner. |
+| `GAME_CONTEXT_REQUIRED` | A live authenticated operation has a server-derived game/actor and still decomposes or re-resolves it above the persistence adapter. | Must merge through the assigned `ARCH-100*` owner. |
+| `DERIVE_THEN_CONTEXT` | The endpoint legitimately starts without a Player/Staff game context, derives authority inside its existing guard, then performs scoped work. | Guard stays context-free; create and propagate the canonical context immediately after derivation. |
+| `MULTI_GAME_DISCOVERY` | A bootstrap request discovers zero or more games owned by one authenticated Staff actor. No single game describes the request. | Owner-filtered summary lookup may establish scope; scoped hydration must use one reviewed context per owned game. Never fabricate an `all` game ID. |
+| `AUTH_WORKFLOW_SCOPE` | A pre-session authentication flow has verified and server-bound a game, player, and credential but cannot yet possess an active-session Player context. | Use one immutable Players-owned workflow scope for credential upgrade/session creation; it is not a `PlayerRequestApplicationContext` and does not become browser authority. |
+| `GLOBAL_STAFF_OPERATION` | Staff profile, session, help, or other actor-global behavior does not read or mutate game-owned data. | Characterize and keep outside `GameContext`. |
+| `PRE_GAME_WORKFLOW` | Licensing/provisioning creates a game, so no owned game exists at entry. | Treat existing `LicensingActivationRouteContext` as command/audit metadata, not canonical context; do not fabricate game scope. Post-create game work must re-enter a reviewed game boundary. |
+| `PRE_AUTH_BOUNDARY` | Login or another guard executes before authenticated actor scope exists. | Remains context-free until successful derivation; unsupported/malformed requests remain scope-free. |
+| `UNREACHABLE_COMPATIBILITY` | A route/parser/handler has no live composition root. | Prove it remains unreachable and assign retirement to `ARCH-700`; do not revive it for propagation. |
+| `SYSTEM_RUNTIME` | A scheduler/worker is authenticated as system runtime rather than Admin/Staff/Player. | Owned by `ARCH-600`/`ARCH-601`, not by actor `GameContext`; its game scoping must still be explicit. |
+
+An exempt boundary is not permission to run an unscoped query. It is an audited
+statement about where context cannot yet exist or is not semantically applicable.
+
+## Boundary creation order
+
+### Admin
+
+`resolveContext` may authenticate the bearer, resolve the Staff record, and load
+only owner-filtered game IDs needed by the security guard. Names, status, join
+codes, and every browser DTO field hydrate only after `guardAdminRequest`. After
+the guard, single-game routes call `ensureOwnedGame` and create one Admin context. Multi-game
+bootstrap hydration reuses the one reviewed actor/permission/AAL/rate result and
+creates one context for each discovered owned game only after that row proves
+ownership. Every per-game context is distinct but shares one server-generated
+request correlation ID for the bootstrap request. It may not invent stronger
+permissions or repeat the universal guard. The hydrated set serves global
+bootstrap/games/switch plus base `/games/:id` and `/games/:id/dashboard` game DTO
+consumers while preserving zero-game behavior, current ordering, Admin all-status
+versus Staff active-only filtering, and all-or-nothing failure behavior.
+
+### shared Staff/Classroom handlers
+
+Method and environment checks, `resolveStaffSessionForRequest`, Staff status and
+role validation, metadata/AAL policy, the universal rate limit, and
+`readOwnedGameSession` precede context creation. Endpoint-specific guards also
+precede it; notably Attendance scan creates context only after the scanner rate
+limit. Both `staff-api` and `classroom-api` roots must retain identical
+composition evidence.
+
+`admin-api/common.ts::proxyClassroom` is an explicit process boundary: JavaScript
+object identity cannot and must not cross the HTTP request. The Admin context is
+preserved to the outbound adapter, which rejects a path/body/header game mismatch
+before fetch and serializes neither the context object, its application-context
+`requestId`, nor its Staff actor UUID. Existing reviewed transport
+`X-Request-Id`/`Idempotency-Key` forwarding and mutation identity semantics remain
+separate and unchanged. The receiving Classroom function repeats authentication,
+ownership, and applicable guards, then creates a new Staff context whose exact
+identity is preserved only inside that downstream process. Players access-reset
+and Contract progress/review/reward proxy paths require this two-sided evidence.
+
+### Player
+
+`dispatchRateLimitedReviewedPlayerRequest` already creates one frozen Player
+context after session/game/player derivation and passes it to the rate limiter.
+Every reviewed live callback must forward that exact object. Direct-handler or
+bespoke flows with an existing authenticated derivation boundary may create a
+fallback only after the same server authorization; other callers require context.
+Unsupported methods remain scope-free. Attendance clock-in, Dashboard POST, and
+Crafting POST are `DERIVE_THEN_CONTEXT` flows and must keep their existing bespoke
+guard/rate order. Login remains `PRE_AUTH_BOUNDARY` through throttling and
+credential comparison; once a game/player/credential binding is verified, its
+legacy credential upgrade and session creation use an `AUTH_WORKFLOW_SCOPE`, not
+an active-session Player context.
+
+## Residual inventory
+
+### Admin and shared Staff/Classroom
+
+| Family | Reviewed live seams | Class | Owner |
+|---|---|---|---|
+| Multi-game bootstrap | `admin-api/common.ts` (`resolveContext`, `gameDto`, `selectGame`, `ensureOwnedGame`), `admin-api/index.ts` global bootstrap/games/switch routes, `auth/api/staffBootstrapHttpHandler.ts`, Staff/Classroom/Web Session callers | `MULTI_GAME_DISCOVERY` | `ARCH-100F` |
+| Players | Admin `localGameMutations.ts`, `compatibilityOperations.ts`, `playerOperations.ts`, `attendancePlayerOperations.ts`, `gameRoutes.ts`, player read models and archive application; shared roster/create and access-code reset handlers/applications | `GAME_CONTEXT_REQUIRED` | `ARCH-100G1`/`ARCH-100G2` |
+| Attendance | Admin `attendanceOperations.ts`, `idempotentLedgerOperations.ts`, read models/proxy paths; shared daily/scan handlers and `recordAttendanceForAuthorizedStaff.ts` | `GAME_CONTEXT_REQUIRED` | `ARCH-100H` |
+| Store | Admin local/compat/read routes; shared Store catalog handler, route/service, mutation application, and Supabase adapter | `GAME_CONTEXT_REQUIRED` | `ARCH-100I` |
+| Contracts | Admin local/compat/read/review/reward routes; shared Contract handler, mutation/reward services, contracts, and repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100J1`–`ARCH-100J3` |
+| Economy and personal banking | Admin banking/ledger operations and player-economic read fragments; shared balance seed, ledger history, adjustment handler/service | `GAME_CONTEXT_REQUIRED` | `ARCH-100K1`/`ARCH-100K2` |
+| Business banking | `admin-api/businessBankingOperations.ts` | `GAME_CONTEXT_REQUIRED` | `ARCH-100L` |
+| Stocks/market reads | `admin-api/marketAssetOperations.ts`, market read/chart fragments | `GAME_CONTEXT_REQUIRED` | `ARCH-100M1` |
+| Marketplace | `admin-api/marketplaceOperations.ts`; GET snapshot is write-capable because it can expire listings | `GAME_CONTEXT_REQUIRED` | `ARCH-100N` |
+| World/Countries | `admin-api/worldRuntimeOperations.ts` and campaign/effect/arrival/travel/residency seams | `GAME_CONTEXT_REQUIRED` | `ARCH-100O` |
+| Messaging | Admin messaging core/participant operations and Staff messaging rate limiter | `GAME_CONTEXT_REQUIRED` | `ARCH-100P` |
+| Progression | Admin progression operations and domain limiter | `GAME_CONTEXT_REQUIRED` | `ARCH-100Q` |
+| Story initialization | shared demo Storyline initialization handler/contracts/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100S` |
+| Crafting | `admin-api/craftingOperations.ts` | `GAME_CONTEXT_REQUIRED` | `ARCH-100T` |
+| Game lifecycle | Admin game lifecycle operations and the game-archive branch of account operations | `GAME_CONTEXT_REQUIRED` | `ARCH-100U` |
+| Audit/log reads | Admin logs, related-audit lookup, log read models, and remaining game-router audit branches | `GAME_CONTEXT_REQUIRED` | `ARCH-100W` |
+| Inventory/redemption | Admin and Player Inventory seams | `VERIFIED_CONTEXT` | `ARCH-100B`/`ARCH-100C` |
+| Game settings/join code | Admin and shared Staff/Classroom Game Sessions seams | `VERIFIED_CONTEXT` | `ARCH-100D` |
+| Admin actor-global routes | account/profile/help/sign-out, `/notifications`, `/account/security`, and `/account/sessions` branches that do not touch game-owned data | `GLOBAL_STAFF_OPERATION` | closure characterization in `ARCH-100X` |
+| Staff auth lifecycle | `staffLoginHttpHandler.ts` and Staff signup/resend/cancel handlers across Bootstrap/Classroom/Web Session roots | `PRE_AUTH_BOUNDARY` until authenticated Staff scope exists | closure characterization in `ARCH-100X` |
+| Web Session lifecycle | cookie/session/logout adapters with no game-owned work | `GLOBAL_STAFF_OPERATION` | closure characterization in `ARCH-100X` |
+| Root prerequisites | health, OPTIONS, publishable-key, method, and environment guards | `PRE_AUTH_BOUNDARY` | closure characterization in `ARCH-100X` |
+| Licensing/game creation | licensing activation route/application/repository before the game exists; `LicensingActivationRouteContext` is unfrozen command/audit metadata whose request ID may originate from a header/idempotency key | `PRE_GAME_WORKFLOW` | pre-game leg characterized in `ARCH-100X`; post-create onboarding/read leg in `ARCH-100U` |
+
+The `ARCH-100W` related-audit owner must fix or fail closed the current lookup
+shape where an audit event is scoped by game but its related record can be loaded
+by target ID alone. Context propagation may not preserve that cross-game gap.
+
+### Player
+
+| Family | Reviewed live seams | Class | Owner |
+|---|---|---|---|
+| Session/capability | capability manifest, session bootstrap/logout handlers, both Player roots | `GAME_CONTEXT_REQUIRED` | `ARCH-100G3` |
+| Attendance clock-in | bespoke Attendance handler/RPC boundary | `DERIVE_THEN_CONTEXT` | `ARCH-100H` |
+| Store | public Store handler/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100I` |
+| Contracts | public list/accept/submit handlers and Player repositories | `GAME_CONTEXT_REQUIRED` | `ARCH-100J1`–`ARCH-100J3` |
+| Banking | public banking handler/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100K1`/`ARCH-100K2` |
+| Business banking | large operation handler/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100L` |
+| Stocks/market reads | asset/detail/watchlist handlers, services, and repositories | `GAME_CONTEXT_REQUIRED` | `ARCH-100M1` |
+| Stock portfolio/trading | portfolio/read/trading handlers and repositories | `GAME_CONTEXT_REQUIRED` | `ARCH-100M2` |
+| Marketplace | handler and Supabase repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100N` |
+| World/Countries | World runtime adapter/handler/service/repository and Countries read handler/service/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100O` |
+| Messaging | `classroom-api/messagingDispatch.ts`, lifecycle/messaging handlers and RPC adapters | `GAME_CONTEXT_REQUIRED` | `ARCH-100P` |
+| Progression | handler and RPC adapters | `GAME_CONTEXT_REQUIRED` | `ARCH-100Q` |
+| Notifications/Story delivery | notification and story-delivery handlers/services/repositories | `GAME_CONTEXT_REQUIRED` | `ARCH-100R` |
+| Crafting GET | Inventory bridge must forward its exact outer Player context through the Crafting handler/repository | `GAME_CONTEXT_REQUIRED` | `ARCH-100T` |
+| Crafting POST | inner Crafting dispatcher derives scope today; create/pass context there without changing outer/inner rate counts | `DERIVE_THEN_CONTEXT` | `ARCH-100T` |
+| Game Dashboard GET | handler/repository and both Player roots | `GAME_CONTEXT_REQUIRED` | `ARCH-100V` |
+| Game Dashboard POST | live cutscene-delivery mutation in the same handler; the outer reviewed map has no POST operation | `DERIVE_THEN_CONTEXT` | `ARCH-100V` |
+| Inventory/redemption | both Player roots, handlers, services, repositories | `VERIFIED_CONTEXT` | `ARCH-100A`/`ARCH-100C` |
+| Login discovery/verification | pre-auth dispatcher, throttle, game/player/credential lookup and comparison | `PRE_AUTH_BOUNDARY` | `ARCH-100G3` characterization |
+| Login credential upgrade/session creation | post-verification scoped RPC work | `AUTH_WORKFLOW_SCOPE` | `ARCH-100G3` |
+| Retired/uncomposed handlers | always-null legacy Contract route plus unreferenced ledger/Store handler candidates | `UNREACHABLE_COMPATIBILITY` | prove unreachable in `ARCH-100X`; retire only in `ARCH-700` |
+
+### Non-actor runtime boundaries
+
+`backend/supabase/functions/stock-market-player-read/index.ts` is not a Player
+request root. It requires publishable identity plus signed internal-runner
+authorization, claims a nonce, and then supplies service-role access to a scoped
+handler. It is `SYSTEM_RUNTIME`, remains outside `PlayerRequestApplicationContext`,
+and is owned by `ARCH-600`/`ARCH-601`. `ARCH-100X` must characterize its explicit
+game/player-session binding and require signature, nonce, replay, secret, and
+wrong-game denial evidence; no Player context may be fabricated for it. The
+stock orchestrator/runner/archiver, licensing workers, and data purger are the
+same actor-classification family, with their detailed scope retained by the
+scheduler/runtime roadmap owners.
+
+## Dependency-ordered owner sequence
+
+Only one residual `ARCH-100*` implementation owner may be active at a time. This
+is stricter than the functional dependency graph because `admin-api/index.ts`,
+the two Player roots, shared handler/application seams, package test registration,
+and the architecture inventory are merge hot spots. A later owner starts from the
+exact verified merge of its predecessor; unmerged work never satisfies a
+dependency.
+
+| Order | Item and sole branch | Bounded ownership | Functional dependencies and focused acceptance |
+|---:|---|---|---|
+| 1 | `ARCH-100F — Multi-game bootstrap context hydration`; `refactor/multi-game-bootstrap-context-hydration-v1` | Neutral canonical Staff context authority; ID-only pre-guard discovery; post-guard per-game DTO/join-code hydration for Admin plus Staff/Classroom/Web Session roots | `ARCH-100E`; one guard and one request ID, distinct context per owned game, zero-game/all-status-vs-active/order/all-or-nothing parity, base/dashboard DTO consumers, Game Sessions, Admin API, auth and web-session gates |
+| 2 | `ARCH-100G1 — Staff Players roster/create/archive context`; `refactor/staff-players-context-propagation-v1` | Shared roster/create plus Admin create/archive/read branches; Player-history audit is excluded for `ARCH-100W` | `ARCH-100F`; Admin local/API, every Staff/Classroom root, credential/currency/privacy/two-game tests |
+| 3 | `ARCH-100G2 — Staff Player credential-reset context`; `refactor/player-credential-context-propagation-v1` | Sensitive access-code reset and Admin-to-Classroom proxy boundary | `ARCH-100G1`; credential/session revocation, no proxy serialization, cross-game and both-process auth tests |
+| 4 | `ARCH-100G3 — Player session/capability/auth-workflow context`; `refactor/player-session-context-propagation-v1` | Both Player roots, capability/bootstrap/logout, pre-auth login characterization and post-verification auth workflow scope | `ARCH-100G2`; register bootstrap-currency test; preserve logout `alreadyLoggedOut`, token hashes, login throttle order, credential upgrade, token privacy and session replay/conflict |
+| 5 | `ARCH-100H — Attendance context propagation`; `refactor/attendance-context-propagation-v1` | Admin/shared Staff daily/scan/correction and Player clock-in derive-then-context | `ARCH-100G3`; Admin local/API, every live root, Attendance guards, economic ledger invariants, replay/two-game tests |
+| 6 | `ARCH-100I — Store context propagation`; `refactor/store-context-propagation-v1` | Admin/shared Staff reads/mutations and Player Store | `ARCH-100H`; Admin local/API, Player Store, Inventory/Economy authority and replay tests |
+| 7 | `ARCH-100J1 — Contract read context`; `refactor/contracts-read-context-propagation-v1` | Admin/shared Staff list/progress and Player list reads | `ARCH-100I`; Contract read DTO/privacy/two-game and every-root composition tests |
+| 8 | `ARCH-100J2 — Contract create/publish context`; `refactor/contracts-mutation-context-propagation-v1` | Admin/shared Staff create/edit/publish/archive/duplicate and Player accept/submit where the shared seam applies | `ARCH-100J1`; Admin local/API and Player lifecycle/replay/targeting tests |
+| 9 | `ARCH-100J3 — Contract review/reward context`; `refactor/contracts-review-reward-context-propagation-v1` | Review, atomic reward issuance, audit reads and two-process proxy boundary | `ARCH-100J2`; deterministic reward identity, no dual-write, no proxy serialization, replay/conflict/two-game tests |
+| 10 | `ARCH-100K1 — Economy read context`; `refactor/economy-read-context-propagation-v1` | Admin/shared Staff ledger history plus Player personal-banking reads | `ARCH-100J3`; public banking, ledger privacy/currency/two-game tests |
+| 11 | `ARCH-100K2 — Economy mutation context`; `refactor/economy-mutation-context-propagation-v1` | Balance seed, Staff adjustment, transfers and Attendance-linked economic mutations | `ARCH-100K1`, `ARCH-100H`; economic invariants, Admin economic-write, idempotency/replay/conflict tests |
+| 12 | `ARCH-100L — Business Banking context propagation`; `refactor/business-banking-context-propagation-v1` | Admin and Player Business/loan/savings operation surfaces | `ARCH-100K2`; handler characterization, ledger atomicity, replay/conflict and Business runtime evidence |
+| 13 | `ARCH-100M1 — Stocks and market read context`; `refactor/stocks-market-read-context-propagation-v1` | Admin market reads and Player asset/detail/watchlist only; direct market-impact audit is excluded for `ARCH-100W` | `ARCH-100L`; Player market assets, Admin market, effective-time/watchlist/two-game tests |
+| 14 | `ARCH-100M2 — Stock portfolio/trading context`; `refactor/stock-trading-context-propagation-v1` | Player portfolio/read/trading economic paths; internal-runner root explicitly excluded as `SYSTEM_RUNTIME` | `ARCH-100M1`, `ARCH-100K2`; stock trading/calendar, ledger atomicity, order replay/conflict and wrong-game tests |
+| 15 | `ARCH-100N — Marketplace context propagation`; `refactor/marketplace-context-propagation-v1` | Admin moderation/snapshot and Player listing/trade lifecycle | `ARCH-100M2`, `ARCH-100C`, `ARCH-100K2`; Marketplace lifecycle/abuse, Inventory reservation, ledger/replay tests |
+| 16 | `ARCH-100O — World and Countries context propagation`; `refactor/world-context-propagation-v1` | Admin and Player World/Countries/arrival/travel/residency | `ARCH-100N`; Player World and World runtime, travel idempotency and two-game tests |
+| 17 | `ARCH-100P — Messaging context propagation`; `refactor/messaging-context-propagation-v1` | Admin moderation/scope-dependent limiter and Player thread/message lifecycle | `ARCH-100O`; exact-context limiter, Player Messaging/security, Admin moderation, policy and replay tests |
+| 18 | `ARCH-100Q — Progression context propagation`; `refactor/progression-context-propagation-v1` | Admin review/correction/limiter and Player read/unlock/claim | `ARCH-100P`, `ARCH-100K2`; exact-context limiter, Player/Admin Progression, reward/idempotency and simulation gates |
+| 19 | `ARCH-100R — Notification delivery context propagation`; `refactor/notification-context-propagation-v1` | Player Notifications and Story delivery | `ARCH-100Q`; Player Notifications, privacy/state-transition/two-game tests |
+| 20 | `ARCH-100S — Storyline initialization context propagation`; `refactor/storyline-context-propagation-v1` | Shared Staff demo Storyline initialization | `ARCH-100R`; focused handler/repository plus every-root composition tests |
+| 21 | `ARCH-100T — Crafting context propagation`; `refactor/crafting-context-propagation-v1` | Admin Crafting; Player GET exact outer forwarding and POST inner derive-then-context | `ARCH-100S`, `ARCH-100C`, `ARCH-100K2`; Player Crafting, registered dispatcher test, exact outer/inner rate counts, runtime, Inventory/ledger replay tests |
+| 22 | `ARCH-100U — Game lifecycle and post-create context`; `refactor/game-lifecycle-context-propagation-v1` | Admin lifecycle/archive plus only the post-activation `completeOnboarding`/`readGame` leg of provisioning | `ARCH-100T`, `ARCH-100F`; context created after activation/owner proof, correlation ID distinct from provisioning idempotency, lifecycle/replay/operational-state tests |
+| 23 | `ARCH-100V — Game Dashboard context propagation`; `refactor/game-dashboard-context-propagation-v1` | Player GET read plus live POST cutscene mutation; replace direct Story infrastructure reach with a Dashboard-owned neutral port/adapter | `ARCH-100U`, `ARCH-100R`, `ARCH-100S`; register handler test, every-root GET/POST, no-call-before-auth/mismatch, state/replay/privacy tests |
+| 24 | `ARCH-100W — Audit/log and Admin router closure`; `refactor/admin-audit-context-propagation-v1` | Audit/log domain, `loadPlayerHistoryAudit`, direct market-impact/settings audit branches, related-record scoping, and remaining Admin router scalar seams | `ARCH-100V`; Admin API/logs/browser contract, cross-game related-record denial and exact branch ownership |
+| 25 | `ARCH-100X — Context propagation residual closure`; `refactor/context-propagation-closure-v1` | Generated exact-main root-to-handler/classification artifact, exemption/unreachable contracts, final owner-map reconciliation | `ARCH-100W`; zero unassigned live edges and zero unresolved required entries; every focused suite plus full smoke/typecheck/root and architecture/safety gates |
+
+The sequence is a maximum reviewed scope, not permission to keep an oversized
+tranche. An owner must split before implementation if its fresh source audit
+shows unrelated behavior or a safely reviewable PR cannot result. Any split is
+added to both roadmaps before code and remains serialized in this same order.
+
+## Per-owner acceptance gate
+
+Every implementation owner must record and pass:
+
+- exact verified predecessor merge SHA and refreshed active branch/PR collision
+  audit before the owner branch is created;
+- characterization of auth, permission/AAL, rate-limit, ownership, response,
+  error, audit, and idempotency behavior before movement;
+- reference-identity and frozen-context tests through each use-case/repository
+  seam, plus proof that only narrow adapters project ownership scalars;
+- where an existing authenticated direct boundary legitimately derives scope,
+  fallback characterization showing no context exists on method, environment,
+  auth, AAL/rate, or ownership failure; callers otherwise require context at
+  compile time and no fallback may be introduced;
+- route/body/query/header mismatch and two-game isolation tests proving no
+  game-domain/business adapter, query, RPC, or mutation runs for the wrong
+  game/player while prerequisite security establishment remains explicit;
+- composition evidence for every concrete live root named by that owner, not a
+  presumed pair of roots; before implementation the owner appends the exact root
+  file/entrypoint and every direct/internal composition edge to this map and both
+  roadmaps, then tests every listed edge;
+- mutation-specific applied/replayed/conflict evidence without substituting
+  `context.requestId` for existing operation identity;
+- no inward dependency from a domain contract/application module to an Edge
+  root, Supabase implementation, or platform mutation type;
+- unchanged routes, methods, schemas, response/error DTOs, existing identifier
+  compatibility, no new context/ownership-field exposure, Admin v606/Player
+  Terminal behavior, and economic authority for valid/compatible requests; an
+  owner-required cross-scope denial uses the existing error envelope and is
+  recorded as an explicit fail-closed security behavior change;
+- the focused suites in the sequence table, `backend` `typecheck:all` and smoke,
+  root auth/architecture/high-priority/legacy/secret/diff gates, deterministic
+  inventory, and full `npm test` when runtime code changes;
+- exact-head PR success, merge into `main`, accepted-head/merge tree parity,
+  every required exact-merge workflow, applicable Edge/release/Vercel/health
+  evidence, and branch hygiene before `VERIFIED_COMPLETE`.
+
+Tests currently present but not package-registered must be registered by their
+owner: Game Dashboard handler (`ARCH-100V`), Crafting rate-limit dispatch
+(`ARCH-100T`), and Progression idempotency header (`ARCH-100Q`). Attendance and
+Business Banking require new handler-level characterization suites. The Player
+session owner must also register `playerSessionBootstrapCurrencyHttpHandler.test.ts`.
+Registration may touch `backend/package.json`; it must be serialized and must not alter root
+dependencies owned by PR #619.
+
+## Collision ledger
+
+Current open PRs at audit time:
+
+- #619 owns root dependency manifests; no context tranche may absorb dependency
+  changes.
+- #620 owns workflow definitions. It is an acceptance-control-plane collision;
+  context tranches do not edit workflows and must reconcile/rerun if it merges.
+- #624 and #626 own Player browser/realtime/authority-manifest acceptance work.
+  Backend owners exclude their UI, browser, workflow, and authority-manifest
+  files; `ARCH-100L` must refresh #626 before Business Banking work.
+
+Never merge or cherry-pick these stale donor hazards:
+
+- `wip/codex-production-slices-2026-08-04`;
+- `automation/admin-v2-ux-root-apply-20260814`;
+- `agent/market-minute-replay-v1`;
+- the two PR501 banking release aliases when their read/banking files overlap;
+- `feat/story-narrative-convergence-v1`;
+- `fix/contract-story-flag-rewards-v1` where Contract rewards overlap.
+
+Exact-path collision checks must be refreshed for every owner. Domain-vertical
+ownership means Admin, shared Staff/Classroom, and Player callers for one domain
+move together; separate role branches may not edit their shared application or
+repository seam in parallel.
+
+Shared Admin routers are branch-owned, not generally shared: `ARCH-100F` owns
+base/dashboard `gameDto` hydration; `ARCH-100W` alone owns
+`loadPlayerHistoryAudit`, direct market-impact audit, and direct settings-audit
+branches. Earlier Players, Market, and Game Sessions owners exclude those audit
+functions. Every other owner records the exact `gameRoutes.ts`, `readModels.ts`,
+`routeData.ts`, `localGameMutations.ts`, `compatibilityOperations.ts`, or
+`common.ts` branches it may edit before implementation, then leaves unrelated
+branches byte-unchanged.
+
+## `ARCH-100` closure gate
+
+`ARCH-100X` may close the parent only when merged-main evidence proves all of the
+following:
+
+1. A generated artifact records exact audited-main SHA/tree and every live
+   composition-root-to-handler edge, with a reproducible command/hash, zero
+   unassigned live edges, and zero unresolved `GAME_CONTEXT_REQUIRED` or
+   `DERIVE_THEN_CONTEXT` entries.
+2. Every live reviewed Player dispatcher callback forwards the exact canonical
+   context, except characterized unsupported/malformed operations; every bespoke
+   derive-then-context or auth-workflow path satisfies its recorded boundary.
+3. No live game-scoped Admin router or shared Staff/Classroom handler decomposes
+   context before its domain use case/repository port or re-resolves actor/game
+   ownership after a canonical boundary already exists.
+4. Remaining ownership scalar reads occur only in security/ownership
+   establishment, narrow infrastructure adapters, truthful exempt boundaries,
+   or tests.
+5. Multi-game discovery uses ID-only owner-filtered discovery and one context per
+   game for scoped hydration; no fabricated aggregate game context exists.
+6. Every `AUTH_WORKFLOW_SCOPE`, `GLOBAL_STAFF_OPERATION`, `PRE_GAME_WORKFLOW`,
+   `PRE_AUTH_BOUNDARY`, `UNREACHABLE_COMPATIBILITY`, and `SYSTEM_RUNTIME` entry
+   has executable characterization evidence.
+7. No browser contract newly exposes context, correlation identity, or a
+   server-only ownership field; existing identifier contracts remain recorded,
+   no economic/Inventory/Contract/Marketplace authority dual-write was introduced,
+   and existing idempotency/replay behavior remains exact.
+8. The generated identifier-exposure appendix covers every Admin, Staff, and
+   Player response/route scope field. Each entry is either proved an approved
+   public identifier or assigned to a remediation owner that must merge before
+   `ARCH-100X`; no unresolved internal ownership UUID exposure remains.
+9. The deterministic residual inventory, architecture ratchets, focused suites,
+   full repository gates, exact-merge runtime evidence, and both authoritative
+   roadmaps agree.
+
+Scalar strings are intentionally not required to disappear from persistence
+adapters or ownership guards. Closure is measured by authority and propagation
+boundaries, not by a naive lexical zero count. Until `ARCH-100X` is merged and
+verified, `ARCH-100` remains `IN_PROGRESS` and `ARCH-101` remains blocked.
