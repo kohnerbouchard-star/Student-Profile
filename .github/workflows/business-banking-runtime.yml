@@ -10,6 +10,7 @@ on:
       - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
+      - "backend/supabase/migrations/20260819*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
@@ -22,6 +23,8 @@ on:
       - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
+      - "scripts/business-formation-authority-contract.mjs"
+      - "docs/architecture/business-system-audit-redesign-v1.md"
       - ".github/workflows/business-banking-runtime.yml"
       - "package.json"
   push:
@@ -34,6 +37,7 @@ on:
       - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
+      - "backend/supabase/migrations/20260819*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
@@ -46,6 +50,8 @@ on:
       - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
+      - "scripts/business-formation-authority-contract.mjs"
+      - "docs/architecture/business-system-audit-redesign-v1.md"
       - ".github/workflows/business-banking-runtime.yml"
       - "package.json"
 
@@ -72,6 +78,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run deterministic economic simulations
         run: node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
+      - name: Validate Business formation authority contract
+        run: node scripts/business-formation-authority-contract.mjs
       - name: Validate runtime and migration contract
         id: runtime-contract
         shell: bash
