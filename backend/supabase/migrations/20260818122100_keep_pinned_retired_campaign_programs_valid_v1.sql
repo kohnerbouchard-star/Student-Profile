@@ -3,16 +3,16 @@ begin;
 do $patch$
 declare
   v_definition text;
-  v_old text := E'and program_row.definition_digest=campaign_row.definition_digest and program_row.status=''active''';
-  v_new text := E'and program_row.definition_digest=campaign_row.definition_digest';
+  v_old text := E'and p.definition_digest=c.definition_digest and p.status=''active''';
+  v_new text := E'and p.definition_digest=c.definition_digest';
 begin
-  select pg_get_functiondef(p.oid)
+  select pg_get_functiondef(proc.oid)
   into v_definition
-  from pg_proc p
-  join pg_namespace n on n.oid = p.pronamespace
+  from pg_proc proc
+  join pg_namespace n on n.oid = proc.pronamespace
   where n.nspname = 'public'
-    and p.proname = 'verify_provisioned_game_v1'
-    and pg_get_function_identity_arguments(p.oid) =
+    and proc.proname = 'verify_provisioned_game_v1'
+    and pg_get_function_identity_arguments(proc.oid) =
       'p_game_session_id uuid, p_staff_user_id uuid';
 
   if v_definition is null then
@@ -20,8 +20,8 @@ begin
   end if;
 
   if position(v_old in v_definition) = 0 then
-    if position('program_row.definition_digest=campaign_row.definition_digest' in v_definition) > 0
-       and position('program_row.status=''active''' in v_definition) = 0
+    if position('p.definition_digest=c.definition_digest' in v_definition) > 0
+       and position('p.status=''active''' in v_definition) = 0
     then
       return;
     end if;
