@@ -1,6 +1,6 @@
 export type PlayerBusinessBankingRoute =
   | { readonly kind: "businessRead" }
-  | { readonly kind: "businessCreate"; readonly operation: "legacy" }
+  | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
   | {
     readonly kind: "businessCreate";

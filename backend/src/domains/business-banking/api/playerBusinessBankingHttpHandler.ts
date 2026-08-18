@@ -1,21 +1,10 @@
 /// <reference lib="dom" />
 
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
-import {
-  EdgeActivationError,
-  jsonError,
-  jsonResponse,
-} from "../../../platform/supabase/edgeResponse.ts";
+import { EdgeActivationError, jsonError, jsonResponse } from "../../../platform/supabase/edgeResponse.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
-import {
-  type EdgeSupabaseClient,
-  readSupabaseEnv,
-  type SupabaseEnv,
-} from "../../../platform/supabase/edgeStaffSession.ts";
-import {
-  type PlayerRequestScope,
-  resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
+import { type EdgeSupabaseClient, readSupabaseEnv, type SupabaseEnv } from "../../../platform/supabase/edgeStaffSession.ts";
+import { type PlayerRequestScope, resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
   PlayerBusinessBankingError,
@@ -37,20 +26,10 @@ const FORBIDDEN_SCOPE_HEADERS = [
   "x-player-uuid",
 ] as const;
 const FORBIDDEN_BODY_FIELDS = new Set([
-  "gameId",
-  "gameSessionId",
-  "playerId",
-  "playerUuid",
-  "senderPlayerId",
-  "recipientPlayerId",
-  "ownerPlayerId",
-  "staffUserId",
+  "gameId", "gameSessionId", "playerId", "playerUuid", "senderPlayerId",
+  "recipientPlayerId", "ownerPlayerId", "staffUserId",
 ]);
-const FORMATION_OWNER_FIELDS = new Set([
-  "playerIdentifier",
-  "ownershipBasisPoints",
-  "capitalContribution",
-]);
+const FORMATION_OWNER_FIELDS = new Set(["playerIdentifier", "ownershipBasisPoints", "capitalContribution"]);
 
 export interface PlayerBusinessBankingHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -60,9 +39,7 @@ export interface PlayerBusinessBankingHttpHandlerDependencies {
     client: EdgeSupabaseClient,
     body: Record<string, unknown>,
   ) => Promise<Pick<PlayerRequestScope, "gameId" | "playerUuid">>;
-  readonly createRepository?: (
-    client: EdgeSupabaseClient,
-  ) => PlayerBusinessBankingRepository;
+  readonly createRepository?: (client: EdgeSupabaseClient) => PlayerBusinessBankingRepository;
 }
 
 export async function handlePlayerBusinessBankingRequest(
@@ -74,7 +51,6 @@ export async function handlePlayerBusinessBankingRequest(
     validateEnvelope(request);
     const body = request.method === "GET" ? await readEmptyBody(request) : await readBody(request);
     validateMethodAndFields(route, request.method, body);
-
     const environment = (dependencies.readEnvironment ?? readSupabaseEnv)();
     if (!environment.ok) {
       return jsonError(500, {
@@ -84,47 +60,22 @@ export async function handlePlayerBusinessBankingRequest(
       });
     }
     const client = dependencies.createServiceClient(environment.value);
-    const scope = await (dependencies.resolveScope ?? defaultResolveScope)(
-      request,
-      client,
-      body,
-    );
+    const scope = await (dependencies.resolveScope ?? defaultResolveScope)(request, client, body);
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerBusinessBankingRepository(client);
-    const publicScope = {
-      gameSessionId: scope.gameId,
-      playerId: scope.playerUuid,
-    };
-
-    if (route.kind === "businessRead") {
-      return privateJson(200, await repository.readBusiness(publicScope));
-    }
-    if (route.kind === "loansRead") {
-      return privateJson(200, await repository.readLoans(publicScope));
-    }
-
+    const publicScope = { gameSessionId: scope.gameId, playerId: scope.playerUuid };
+    if (route.kind === "businessRead") return privateJson(200, await repository.readBusiness(publicScope));
+    if (route.kind === "loansRead") return privateJson(200, await repository.readLoans(publicScope));
     const context = await readEconomicContext(repository, publicScope);
     const result = await executeRoute(repository, route, body, publicScope, context);
-    return privateJson(200, {
-      ok: true,
-      result,
-      refreshRequired: true,
-    });
+    return privateJson(200, { ok: true, result, refreshRequired: true });
   } catch (error) {
     if (error instanceof PlayerBusinessBankingError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
+      return jsonError(error.status, { code: error.code, message: error.message, retryable: error.retryable });
     }
     if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
+      return jsonError(error.status, { code: error.code, message: error.message, retryable: error.retryable });
     }
     return jsonError(500, {
       code: "player_business_banking_request_failed",
@@ -141,22 +92,14 @@ async function executeRoute(
   scope: { readonly gameSessionId: string; readonly playerId: string },
   context: PlayerEconomicContext,
 ): Promise<Record<string, unknown>> {
-  const base = {
-    p_game_session_id: scope.gameSessionId,
-    p_player_id: scope.playerId,
-  };
+  const base = { p_game_session_id: scope.gameSessionId, p_player_id: scope.playerId };
   switch (route.kind) {
     case "businessCreate": {
       if (route.operation === "formationPropose") {
         return repository.execute("propose_business_formation_v2", {
           ...base,
           p_legal_name: readText(body.legalName, "legalName", 2, 160),
-          p_entity_type: readEnum(body.entityType, "entityType", [
-            "sole_proprietorship",
-            "partnership",
-            "llc",
-            "c_corporation",
-          ]),
+          p_entity_type: readEnum(body.entityType, "entityType", ["sole_proprietorship", "partnership", "llc", "c_corporation"]),
           p_industry_code: readIndustryCode(body.industryCode),
           p_owners: readFormationOwners(body.owners),
           p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
@@ -177,20 +120,13 @@ async function executeRoute(
           p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
         });
       }
-
       const idempotencyKey = readIdempotencyKey(body.idempotencyKey);
-      await repository.assertBusinessCreationAllowed?.({
-        ...scope,
-        idempotencyKey,
-      });
+      await repository.assertBusinessCreationAllowed?.({ ...scope, idempotencyKey });
       return repository.execute("create_or_acquire_player_business_v1", {
         ...base,
         p_legal_name: readText(body.legalName, "legalName", 2, 120),
         p_entity_type: readEnum(body.entityType, "entityType", [
-          "sole_proprietorship",
-          "partnership",
-          "corporation",
-          "cooperative",
+          "sole_proprietorship", "partnership", "corporation", "cooperative",
         ]),
         p_industry_code: readText(body.industryCode, "industryCode", 2, 80),
         p_country_code: context.countryCode,
@@ -319,11 +255,7 @@ async function readEconomicContext(
   const countryCode = typeof context.country_code === "string" ? context.country_code : "";
   const currencyCode = typeof context.currency_code === "string" ? context.currency_code : "";
   if (!countryCode || !currencyCode) {
-    throw invalidRequest(
-      "Player country and currency must be assigned before this action.",
-      409,
-      "player_economic_context_missing",
-    );
+    throw invalidRequest("Player country and currency must be assigned before this action.", 409, "player_economic_context_missing");
   }
   return { countryCode, currencyCode };
 }
@@ -341,9 +273,7 @@ function defaultResolveScope(
 
 function validateEnvelope(request: Request): void {
   const url = new URL(request.url);
-  if ([...url.searchParams.keys()].length) {
-    throw invalidRequest("Business and Banking routes do not accept query parameters.");
-  }
+  if ([...url.searchParams.keys()].length) throw invalidRequest("Business and Banking routes do not accept query parameters.");
   if (FORBIDDEN_SCOPE_HEADERS.some((header) => request.headers.has(header))) {
     throw invalidRequest("Player scope is derived only from x-player-session-token.");
   }
@@ -357,53 +287,20 @@ function validateMethodAndFields(
   const read = route.kind === "businessRead" || route.kind === "loansRead";
   if (read && method !== "GET") throw methodNotAllowed("Use GET for this resource.");
   if (!read && method !== "POST") throw methodNotAllowed("Use POST for this action.");
-
-  const businessCreateFields = route.kind === "businessCreate"
-    ? route.operation === "formationPropose"
-      ? ["legalName", "entityType", "industryCode", "owners", "idempotencyKey"]
-      : route.operation === "formationRespond"
-      ? ["decision", "idempotencyKey"]
-      : route.operation === "formationActivate"
-      ? ["idempotencyKey"]
-      : [
-        "legalName",
-        "entityType",
-        "industryCode",
-        "capitalization",
-        "acquireBusinessKey",
-        "idempotencyKey",
-      ]
-    : [];
-
+  const businessCreateFields = route.kind !== "businessCreate" ? []
+    : route.operation === "formationPropose" ? ["legalName", "entityType", "industryCode", "owners", "idempotencyKey"]
+    : route.operation === "formationRespond" ? ["decision", "idempotencyKey"]
+    : route.operation === "formationActivate" ? ["idempotencyKey"]
+    : ["legalName", "entityType", "industryCode", "capitalization", "acquireBusinessKey", "idempotencyKey"];
   const allowed: Record<PlayerBusinessBankingRoute["kind"], readonly string[]> = {
     businessRead: [],
     loansRead: [],
     businessCreate: businessCreateFields,
-    businessProductCreate: [
-      "businessKey",
-      "name",
-      "category",
-      "unitPrice",
-      "unitInputCost",
-      "unitLaborCost",
-      "capacityUnits",
-      "baseDemandUnits",
-      "qualityScore",
-      "idempotencyKey",
-    ],
+    businessProductCreate: ["businessKey", "name", "category", "unitPrice", "unitInputCost", "unitLaborCost", "capacityUnits", "baseDemandUnits", "qualityScore", "idempotencyKey"],
     businessInputPurchase: ["businessKey", "productKey", "quantity", "idempotencyKey"],
     businessProduction: ["businessKey", "productKey", "productId", "quantity", "priority", "idempotencyKey"],
     businessPrice: ["businessKey", "price", "expectedVersion", "idempotencyKey"],
-    businessHire: [
-      "businessKey",
-      "employeePlayerIdentifier",
-      "role",
-      "roleName",
-      "contractType",
-      "wagePerCycle",
-      "productivityIndex",
-      "idempotencyKey",
-    ],
+    businessHire: ["businessKey", "employeePlayerIdentifier", "role", "roleName", "contractType", "wagePerCycle", "productivityIndex", "idempotencyKey"],
     businessTerminate: ["businessKey", "reason", "idempotencyKey"],
     businessStatus: ["businessKey", "transition", "reason", "idempotencyKey"],
     playerTransfer: ["recipientPlayerIdentifier", "amount", "memo", "idempotencyKey"],
@@ -428,9 +325,7 @@ async function readBody(request: Request): Promise<Record<string, unknown>> {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_BODY_BYTES) throw invalidRequest("Request body is too large.");
   const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
-    throw invalidRequest("Request body is too large.");
-  }
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) throw invalidRequest("Request body is too large.");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw || "{}");
@@ -448,22 +343,17 @@ function readText(value: unknown, field: string, minimum: number, maximum: numbe
   }
   return result;
 }
-
 function readOptionalText(value: unknown, maximum: number): string | null {
   if (value === null || value === undefined || value === "") return null;
   const result = typeof value === "string" ? value.trim() : "";
-  if (!result || result.length > maximum) {
-    throw invalidRequest(`Optional text must contain at most ${maximum} characters.`);
-  }
+  if (!result || result.length > maximum) throw invalidRequest(`Optional text must contain at most ${maximum} characters.`);
   return result;
 }
-
 function readEnum(value: unknown, field: string, values: readonly string[]): string {
   const result = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (!values.includes(result)) throw invalidRequest(`${field} is invalid.`);
   return result;
 }
-
 function readNumber(value: unknown, field: string, minimum: number, maximum: number): number {
   const result = Number(value);
   if (!Number.isFinite(result) || result < minimum || result > maximum) {
@@ -471,102 +361,66 @@ function readNumber(value: unknown, field: string, minimum: number, maximum: num
   }
   return result;
 }
-
 function readMoney(value: unknown, field: string, minimum: number, maximum: number): number {
   return Math.round(readNumber(value, field, minimum, maximum) * 100) / 100;
 }
-
 function readInteger(value: unknown, field: string, minimum: number, maximum: number): number {
   const result = readNumber(value, field, minimum, maximum);
   if (!Number.isInteger(result)) throw invalidRequest(`${field} must be an integer.`);
   return result;
 }
-
 function readOptionalInteger(value: unknown, field: string, minimum: number, maximum: number): number | null {
   if (value === null || value === undefined || value === "") return null;
   return readInteger(value, field, minimum, maximum);
 }
-
 function readKey(value: unknown, field: string, prefix: string): string {
   const result = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (!PUBLIC_KEY.test(result) || !result.startsWith(`${prefix}_`)) {
-    throw invalidRequest(`${field} is invalid.`);
-  }
+  if (!PUBLIC_KEY.test(result) || !result.startsWith(`${prefix}_`)) throw invalidRequest(`${field} is invalid.`);
   return result;
 }
-
 function readOptionalKey(value: unknown, prefix: string): string | null {
   if (value === null || value === undefined || value === "") return null;
   return readKey(value, `${prefix}Key`, prefix);
 }
-
 function readIdempotencyKey(value: unknown): string {
   const result = typeof value === "string" ? value.trim() : "";
   if (!IDEMPOTENCY_KEY.test(result)) throw invalidRequest("idempotencyKey is invalid.");
   return result;
 }
-
 function readIndustryCode(value: unknown): string {
   const result = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/u.test(result)) {
-    throw invalidRequest("industryCode is invalid.");
-  }
+  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/u.test(result)) throw invalidRequest("industryCode is invalid.");
   return result;
 }
-
 function readFormationOwners(value: unknown): readonly Record<string, unknown>[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > 16) {
     throw invalidRequest("owners must contain 1-16 proposed owners.");
   }
   return value.map((candidate, index) => {
-    if (!isRecord(candidate)) {
-      throw invalidRequest(`owners[${index}] must be an object.`);
-    }
+    if (!isRecord(candidate)) throw invalidRequest(`owners[${index}] must be an object.`);
     for (const field of Object.keys(candidate)) {
-      if (FORBIDDEN_BODY_FIELDS.has(field)) {
-        throw invalidRequest(`Player scope field is prohibited in owners[${index}]: ${field}.`);
-      }
-      if (!FORMATION_OWNER_FIELDS.has(field)) {
-        throw invalidRequest(`Unexpected owners[${index}] field: ${field}.`);
-      }
+      if (FORBIDDEN_BODY_FIELDS.has(field)) throw invalidRequest(`Player scope field is prohibited in owners[${index}]: ${field}.`);
+      if (!FORMATION_OWNER_FIELDS.has(field)) throw invalidRequest(`Unexpected owners[${index}] field: ${field}.`);
     }
     return {
       playerIdentifier: readText(candidate.playerIdentifier, `owners[${index}].playerIdentifier`, 1, 160),
-      ownershipBasisPoints: readInteger(
-        candidate.ownershipBasisPoints,
-        `owners[${index}].ownershipBasisPoints`,
-        1,
-        10_000,
-      ),
-      capitalContribution: readMoney(
-        candidate.capitalContribution ?? 0,
-        `owners[${index}].capitalContribution`,
-        0,
-        10_000_000,
-      ),
+      ownershipBasisPoints: readInteger(candidate.ownershipBasisPoints, `owners[${index}].ownershipBasisPoints`, 1, 10_000),
+      capitalContribution: readMoney(candidate.capitalContribution ?? 0, `owners[${index}].capitalContribution`, 0, 10_000_000),
     };
   });
 }
-
 function normalizeAccount(value: unknown): string {
   const account = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (account === "checking" || account === "cash") return "checking";
   if (account === "savings") return "savings";
   throw invalidRequest("Account type is invalid.");
 }
-
 function methodNotAllowed(message: string): PlayerBusinessBankingError {
   return new PlayerBusinessBankingError("method_not_allowed", message, 405);
 }
-
-function invalidRequest(
-  message: string,
-  status = 400,
-  code = "invalid_business_banking_request",
-): PlayerBusinessBankingError {
+function invalidRequest(message: string, status = 400, code = "invalid_business_banking_request"): PlayerBusinessBankingError {
   return new PlayerBusinessBankingError(code, message, status);
 }
-
 function privateJson(status: number, body: unknown): Response {
   return jsonResponse(status, body, {
     "cache-control": "private, no-store, max-age=0",

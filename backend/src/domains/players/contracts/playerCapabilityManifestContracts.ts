@@ -25,10 +25,7 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "bankingExport",
   "bankTransfer",
   "businessCreate",
-  "businessEmployeeTerminate",
-  "businessFormationActivate",
-  "businessFormationPropose",
-  "businessFormationRespond",
+  "businessEmployeeTerminate", "businessFormationActivate", "businessFormationPropose", "businessFormationRespond",
   "businessHire",
   "businessInputPurchase",
   "businessPrice",
@@ -78,10 +75,7 @@ export type PlayerCapabilityEndpointKey =
   | "banking"
   | "bankTransfer"
   | "business"
-  | "businessCreate"
-  | "businessFormationActivate"
-  | "businessFormationPropose"
-  | "businessFormationRespond"
+  | "businessCreate" | "businessFormationActivate" | "businessFormationPropose" | "businessFormationRespond"
   | "businessHire"
   | "businessInputPurchase"
   | "businessPrice"
@@ -247,35 +241,11 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
     routeCapabilities: ["business"],
   },
-  {
-    key: "businessCreate",
-    operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }],
-    actionCapabilities: ["businessCreate"],
-  },
-  {
-    key: "businessFormationPropose",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/business/formations",
-    }],
-    actionCapabilities: ["businessFormationPropose"],
-  },
-  {
-    key: "businessFormationRespond",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/business/formations/:formationKey/respond",
-    }],
-    actionCapabilities: ["businessFormationRespond"],
-  },
-  {
-    key: "businessFormationActivate",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/business/formations/:formationKey/activate",
-    }],
-    actionCapabilities: ["businessFormationActivate"],
-  },
+  { key: "businessCreate", operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }], actionCapabilities: ["businessCreate"] },
+  { key: "businessFormationPropose", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations" }], actionCapabilities: ["businessFormationPropose"] },
+  { key: "businessFormationRespond", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations/:formationKey/respond" }], actionCapabilities: ["businessFormationRespond"] },
+  { key: "businessFormationActivate", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations/:formationKey/activate" }], actionCapabilities: ["businessFormationActivate"] },
+
   {
     key: "businessProductCreate",
     operations: [{

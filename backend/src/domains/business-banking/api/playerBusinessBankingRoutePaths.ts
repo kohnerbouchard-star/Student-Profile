@@ -14,7 +14,7 @@ export function readPlayerBusinessBankingRoutePath(
 
   if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead" };
   if (tail.length === 1 && tail[0] === "businesses") {
-    return { kind: "businessCreate", operation: "legacy" };
+    return { kind: "businessCreate", operation: "directCreate" };
   }
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "formations") {
     return { kind: "businessCreate", operation: "formationPropose" };

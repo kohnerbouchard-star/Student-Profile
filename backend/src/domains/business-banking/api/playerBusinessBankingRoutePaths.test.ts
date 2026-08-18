@@ -14,7 +14,7 @@ Deno.test("Player Business and Banking routes publish every reviewed operation",
   });
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
-    operation: "legacy",
+    operation: "directCreate",
   });
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/formations"), {
     kind: "businessCreate",

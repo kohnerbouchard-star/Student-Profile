@@ -19,10 +19,9 @@ import {
   resolveProgressionBackendRequest,
 } from "./progression-backend-routes.js";
 
-// Phase 0 formation operations are already implemented by the Business/Banking
-// backend-route adapter, but the legacy core route-key list predates them. Keep
-// this bounded compatibility bridge until Phase 1 extracts Business into its own
-// composed backend-route module.
+// Phase 0 formation operations are implemented by the Business/Banking adapter,
+// while the core route-key list predates them. Keep this bounded bridge until
+// Phase 1 extracts Business into its own composed backend-route module.
 const BUSINESS_FORMATION_BACKEND_ROUTE_KEYS = Object.freeze([
   "businessFormationPropose",
   "businessFormationRespond",
@@ -69,8 +68,7 @@ export function resolvePlayerBackendRequest(input) {
   if (hasCraftingBackendRoute(input.endpointKey)) {
     return resolveCraftingBackendRequest(input);
   }
-  // The core resolver delegates unknown core keys to the existing
-  // Business/Banking adapter, so formation operations remain on the reviewed
-  // same-origin transport while Phase 1 performs the domain extraction.
+  // The core resolver already delegates these keys to the Business/Banking
+  // adapter; Phase 1 will replace this bridge with the extracted Business module.
   return resolveCorePlayerBackendRequest(input);
 }
