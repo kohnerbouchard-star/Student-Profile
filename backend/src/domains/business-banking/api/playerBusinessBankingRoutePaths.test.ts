@@ -11,6 +11,11 @@ const key = (prefix: string, digit: string) => `${prefix}_${digit.repeat(32)}`;
 Deno.test("Player Business and Banking routes publish every reviewed operation", () => {
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business"), {
     kind: "businessRead",
+    resource: "overview",
+  });
+  assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/stockroom"), {
+    kind: "businessRead",
+    resource: "stockroom",
   });
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
@@ -80,6 +85,7 @@ Deno.test("Player Business and Banking routes publish every reviewed operation",
 
 Deno.test("Player Business and Banking routes reject malformed and non-Player paths", () => {
   assertEquals(readPlayerBusinessBankingRoutePath("/games/game/business"), null);
+  assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/stockroom/extra"), null);
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/products/not-a-key/pricing"), null);
   assertEquals(readPlayerBusinessBankingRoutePath("/players/me/business/formations/not-a-key/respond"), null);
   assertEquals(readPlayerBusinessBankingRoutePath(`/players/me/banking/loans/${key("lop", "e")}/payments`), null);
