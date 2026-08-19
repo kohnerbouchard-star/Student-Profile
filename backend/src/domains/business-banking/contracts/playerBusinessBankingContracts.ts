@@ -11,12 +11,14 @@ export type {
   PlayerEconomicContext,
 } from "../../business/index.ts";
 
-export type PlayerBusinessBankingRoute = PlayerBusinessRoute |
-  { readonly kind: "playerTransfer" } |
-  { readonly kind: "savingsTransfer" } |
-  { readonly kind: "loansRead" } |
-  { readonly kind: "loanApply"; readonly offerKey: string } |
-  { readonly kind: "loanRepay"; readonly loanKey: string };
+export type PlayerBankingRoute =
+  | { readonly kind: "playerTransfer" }
+  | { readonly kind: "savingsTransfer" }
+  | { readonly kind: "loansRead" }
+  | { readonly kind: "loanApply"; readonly offerKey: string }
+  | { readonly kind: "loanRepay"; readonly loanKey: string };
+
+export type PlayerBusinessBankingRoute = PlayerBusinessRoute | PlayerBankingRoute;
 
 export interface LoansSnapshotDto {
   readonly configured: boolean;
