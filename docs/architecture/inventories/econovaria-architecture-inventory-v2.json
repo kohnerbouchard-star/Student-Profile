@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1052,
+    "sourceFiles": 1053,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
@@ -88,7 +88,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 6,
+      "sourceFiles": 7,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -2558,9 +2558,9 @@
         ]
       },
       {
-        "file": "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
+        "file": "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
         "markers": [
-          "fallback"
+          "legacy"
         ]
       },
       {
