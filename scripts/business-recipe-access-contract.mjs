@@ -7,7 +7,7 @@ const accessMigrationPath = "backend/supabase/migrations/20260819064000_business
 const readMigrationPath = "backend/supabase/migrations/20260819064110_business_recipe_access_read_v2.sql";
 const handlerPath = "backend/src/domains/business/api/playerBusinessHttpHandler.ts";
 const routePath = "backend/src/domains/business/api/playerBusinessRoutePaths.ts";
-const repositoryPath = "backend/src/domains/business/infrastructure/supabaseBusinessPhysicalEconomyReadRepository.ts";
+const repositoryPath = "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts";
 
 const [accessSource, readSource, handlerSource, routeSource, repositorySource] = await Promise.all([
   readFile(accessMigrationPath, "utf8"),
@@ -51,7 +51,7 @@ assert.match(repositorySource, /read_owned_business_stockroom_v2/u);
 assert.match(repositorySource, /read_owned_business_recipes_v2/u);
 assert.match(repositorySource, /p_game_session_id: input\.gameSessionId/u);
 assert.match(repositorySource, /p_player_id: input\.playerId/u);
-assert.match(handlerSource, /supabaseBusinessPhysicalEconomyReadRepository\.ts/u);
+assert.match(handlerSource, /supabaseBusinessStockroomReadRepository\.ts/u);
 assert.match(handlerSource, /route\.resource === "recipes"[\s\S]{0,180}readBusinessRecipes\(client, publicScope\)/u);
 assert.match(handlerSource, /\{ recipes: await readBusinessRecipes\(client, publicScope\) \}/u);
 
