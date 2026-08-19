@@ -6,6 +6,7 @@ export {
   type BusinessCompanyDto,
   type BusinessProductDto,
   type BusinessSnapshotDto,
+  type BusinessStockroomItemDto,
   type PlayerBusinessRepository,
   type PlayerBusinessRoute,
   type PlayerEconomicContext,
