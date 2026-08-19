@@ -32,6 +32,14 @@ jobs:
       - run: node scripts/business-formation-authority-contract.mjs
       - run: node scripts/business-economy-authority-contract.mjs
       - run: node scripts/business-domain-boundary-contract.mjs
+      - name: Materialize architecture inventory for review
+        run: node scripts/architecture/build-architecture-inventory.mjs
+      - name: Upload architecture inventory candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-v2-architecture-inventory
+          path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          retention-days: 7
 
   backend-typecheck:
     name: Backend typecheck

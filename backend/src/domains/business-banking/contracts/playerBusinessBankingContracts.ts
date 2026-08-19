@@ -2,14 +2,14 @@ import {
   PlayerBusinessError,
   type PlayerBusinessRepository,
   type PlayerBusinessRoute,
-} from "../../business/contracts/playerBusinessContracts.ts";
+} from "../../business/index.ts";
 
 export type {
   BusinessCompanyDto,
   BusinessProductDto,
   BusinessSnapshotDto,
   PlayerEconomicContext,
-} from "../../business/contracts/playerBusinessContracts.ts";
+} from "../../business/index.ts";
 
 export type PlayerBusinessBankingRoute = PlayerBusinessRoute |
   { readonly kind: "playerTransfer" } |
