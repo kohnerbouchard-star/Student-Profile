@@ -9,6 +9,7 @@ import {
   type PlayerBusinessRoute,
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessContracts.ts";
+import { readBusinessRecipes } from "../infrastructure/supabaseBusinessRecipeReadRepository.ts";
 import { readBusinessStockroom } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
 
@@ -67,6 +68,9 @@ export async function handlePlayerBusinessRequest(
     if (route.kind === "businessRead") {
       if (route.resource === "stockroom") {
         return privateJson(200, { items: await readBusinessStockroom(client, publicScope) });
+      }
+      if (route.resource === "recipes") {
+        return privateJson(200, { recipes: await readBusinessRecipes(client, publicScope) });
       }
       return privateJson(200, await repository.readBusiness(publicScope));
     }
