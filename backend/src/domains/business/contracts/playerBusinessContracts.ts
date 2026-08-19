@@ -1,5 +1,6 @@
 export type PlayerBusinessRoute =
   | { readonly kind: "businessRead" }
+  | { readonly kind: "businessStockroomRead" }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
   | {
@@ -54,6 +55,20 @@ export interface BusinessProductDto {
   readonly version: number;
 }
 
+export interface BusinessStockroomItemDto {
+  readonly itemKey: string;
+  readonly canonicalKey: string;
+  readonly name: string;
+  readonly itemClass: string;
+  readonly subtype: string;
+  readonly quantityOwned: number;
+  readonly quantityReserved: number;
+  readonly quantityAvailable: number;
+  readonly averageUnitCost: number;
+  readonly costCurrencyCode: string | null;
+  readonly version: number;
+}
+
 export interface BusinessSnapshotDto {
   readonly configured: boolean;
   readonly company: BusinessCompanyDto;
@@ -103,6 +118,10 @@ export interface PlayerBusinessRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto>;
+  readStockroom(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<readonly BusinessStockroomItemDto[]>;
   execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
 }
 
@@ -120,6 +139,7 @@ export class PlayerBusinessError extends Error {
 
 const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessRead",
+  "businessStockroomRead",
   "businessCreate",
   "businessProductCreate",
   "businessInputPurchase",
