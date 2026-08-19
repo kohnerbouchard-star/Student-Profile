@@ -55,7 +55,7 @@ function endpointKey(route: PlayerBusinessRoute):
   | "businessHire"
   | "businessTerminate"
   | "businessStatus" {
-  if (route.kind === "businessRead" || route.kind === "businessStockroomRead") return "business";
+  if (route.kind === "businessRead") return "business";
   if (route.kind === "businessCreate") {
     if (route.operation === "formationPropose") return "businessFormationPropose";
     if (route.operation === "formationRespond") return "businessFormationRespond";
