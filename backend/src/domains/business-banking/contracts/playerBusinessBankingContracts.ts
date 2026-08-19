@@ -1,15 +1,10 @@
 import {
   PlayerBusinessError,
-  type PlayerBusinessRepository,
   type PlayerBusinessRoute,
+  type PlayerEconomicContext,
 } from "../../business/index.ts";
 
-export type {
-  BusinessCompanyDto,
-  BusinessProductDto,
-  BusinessSnapshotDto,
-  PlayerEconomicContext,
-} from "../../business/index.ts";
+export type { PlayerEconomicContext } from "../../business/index.ts";
 
 export type PlayerBankingRoute =
   | { readonly kind: "playerTransfer" }
@@ -63,11 +58,16 @@ export interface LoansSnapshotDto {
   }[];
 }
 
-export interface PlayerBusinessBankingRepository extends PlayerBusinessRepository {
+export interface PlayerBusinessBankingRepository {
+  readEconomicContext?(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<PlayerEconomicContext>;
   readLoans(input: {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<LoansSnapshotDto>;
+  execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
 }
 
 export class PlayerBusinessBankingError extends PlayerBusinessError {
