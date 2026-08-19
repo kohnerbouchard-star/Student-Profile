@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - "backend/supabase/migrations/20260819*.sql"
+      - "backend/src/domains/business/**"
       - "backend/src/domains/business-banking/**"
       - "player-terminal/src/pages/business-page.js"
       - "player-terminal/src/api/**"
       - "scripts/business-*-authority-contract.mjs"
+      - "scripts/business-domain-boundary-contract.mjs"
       - ".github/workflows/business-economy-v2.yml"
   workflow_dispatch:
 
@@ -29,6 +31,7 @@ jobs:
           node-version: 22
       - run: node scripts/business-formation-authority-contract.mjs
       - run: node scripts/business-economy-authority-contract.mjs
+      - run: node scripts/business-domain-boundary-contract.mjs
 
   backend-typecheck:
     name: Backend typecheck
