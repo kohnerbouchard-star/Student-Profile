@@ -12,6 +12,9 @@ export function readPlayerBusinessRoutePath(pathname: string): PlayerBusinessRou
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "stockroom") {
     return { kind: "businessRead", resource: "stockroom" };
   }
+  if (tail.length === 2 && tail[0] === "business" && tail[1] === "recipes") {
+    return { kind: "businessRead", resource: "recipes" };
+  }
   if (tail.length === 1 && tail[0] === "businesses") {
     return { kind: "businessCreate", operation: "directCreate" };
   }
