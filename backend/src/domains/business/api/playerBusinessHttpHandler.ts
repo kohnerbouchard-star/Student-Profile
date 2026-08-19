@@ -9,8 +9,10 @@ import {
   type PlayerBusinessRoute,
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessContracts.ts";
-import { readBusinessRecipes } from "../infrastructure/supabaseBusinessRecipeReadRepository.ts";
-import { readBusinessStockroom } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
+import {
+  readBusinessRecipes,
+  readBusinessStockroom,
+} from "../infrastructure/supabaseBusinessPhysicalEconomyReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
 
 const MAX_BODY_BYTES = 24_576;
