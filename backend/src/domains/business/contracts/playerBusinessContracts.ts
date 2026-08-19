@@ -1,6 +1,5 @@
 export type PlayerBusinessRoute =
-  | { readonly kind: "businessRead" }
-  | { readonly kind: "businessStockroomRead" }
+  | { readonly kind: "businessRead"; readonly resource?: "overview" | "stockroom" }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
   | {
@@ -135,7 +134,6 @@ export class PlayerBusinessError extends Error {
 
 const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessRead",
-  "businessStockroomRead",
   "businessCreate",
   "businessProductCreate",
   "businessInputPurchase",
