@@ -118,10 +118,6 @@ export interface PlayerBusinessRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto>;
-  readStockroom(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<readonly BusinessStockroomItemDto[]>;
   execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
 }
 
