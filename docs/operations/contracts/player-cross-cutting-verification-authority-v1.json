@@ -35,6 +35,7 @@
     "backend/supabase/migrations/20260819063000_business_governance_equity_v2.sql",
     "backend/supabase/migrations/20260819064000_business_recipe_access_v2.sql",
     "backend/supabase/migrations/20260819064100_business_stockroom_read_v2.sql",
+    "backend/supabase/migrations/20260819064110_business_recipe_access_read_v2.sql",
     "docs/architecture/business-system-audit-redesign-v1.md",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/button-action-coverage-v1.json",
