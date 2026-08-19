@@ -51,6 +51,7 @@
     "player-terminal/src/integrations/student-profile-capability-manifest.js",
     "player-terminal/tests/current-capability-manifest.mjs",
     "scripts/architecture/build-architecture-inventory.mjs",
+    "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/business-banking-runtime-contract.mjs",
     "scripts/business-domain-boundary-contract.mjs",
     "scripts/business-economy-authority-contract.mjs",
