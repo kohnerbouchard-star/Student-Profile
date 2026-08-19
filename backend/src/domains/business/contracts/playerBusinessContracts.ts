@@ -1,5 +1,5 @@
 export type PlayerBusinessRoute =
-  | { readonly kind: "businessRead"; readonly resource?: "overview" | "stockroom" }
+  | { readonly kind: "businessRead"; readonly resource?: "overview" | "stockroom" | "recipes" }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
   | {
@@ -66,6 +66,28 @@ export interface BusinessStockroomItemDto {
   readonly averageUnitCost: number;
   readonly costCurrencyCode: string | null;
   readonly version: number;
+}
+
+export interface BusinessRecipeAccessDto {
+  readonly accessKey: string;
+  readonly recipeKey: string;
+  readonly name: string;
+  readonly category: string;
+  readonly tier: number;
+  readonly workshopTier: number;
+  readonly baseDurationSeconds: number;
+  readonly difficultyProfile: string;
+  readonly description: string;
+  readonly availability: {
+    readonly enabled: boolean;
+    readonly availableInBusinessCountry: boolean;
+    readonly availableNow: boolean;
+    readonly scarcityBand: string;
+    readonly eventDurationMultiplier: number;
+    readonly routeDisruptionMultiplier: number;
+  };
+  readonly sourceType: string;
+  readonly grantedAt: string;
 }
 
 export interface BusinessSnapshotDto {
