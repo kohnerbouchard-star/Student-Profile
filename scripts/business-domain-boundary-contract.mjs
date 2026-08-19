@@ -12,6 +12,7 @@ const businessHandler = read("backend/src/domains/business/api/playerBusinessHtt
 const businessRepository = read("backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts");
 const mixedContracts = read("backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts");
 const mixedRoutes = read("backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts");
+const mixedHandler = read("backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts");
 
 assert.match(businessIndex, /readPlayerBusinessRoutePath/u, "Business must publish its route authority through index.ts.");
 assert.match(businessIndex, /handlePlayerBusinessRequest/u, "Business must publish its HTTP handler through index.ts.");
@@ -26,7 +27,13 @@ assert.doesNotMatch(businessHandler, /domains\/players|business-banking/iu, "Bus
 assert.doesNotMatch(businessRepository, /business-banking/iu, "Business repository must not depend on the mixed façade.");
 assert.match(businessRepository, /class SupabasePlayerBusinessRepository/u);
 assert.match(mixedContracts, /\.\.\/\.\.\/business\/index\.ts/u, "Mixed façade must consume the Business public boundary.");
+assert.match(mixedContracts, /export type PlayerBankingRoute/u, "Mixed façade must keep Banking routes explicit and separate.");
 assert.match(mixedRoutes, /\.\.\/\.\.\/business\/index\.ts/u, "Mixed façade must delegate through the Business public boundary.");
 assert.match(mixedRoutes, /DELEGATED_BUSINESS_ROUTE_CONTRACT/u, "Mixed façade must expose a bounded delegated route manifest until retirement.");
+assert.match(mixedHandler, /handlePlayerBusinessRequest/u, "Classroom compatibility handler must forward Business to the Business handler.");
+assert.match(mixedHandler, /isPlayerBusinessRoute\(route\)/u, "Business forwarding must occur by Business-owned route identity.");
+assert.match(mixedHandler, /return handlePlayerBusinessRequest\(request, route,/u, "Business routes must exit the mixed handler immediately.");
+assert.doesNotMatch(mixedHandler, /case "business(?:Create|ProductCreate|InputPurchase|Production|Price|Hire|Terminate|Status)"/u, "Mixed handler must not retain Business mutation execution cases.");
+assert.match(mixedHandler, /type PlayerBankingRoute/u, "Banking execution must be typed independently after Business forwarding.");
 
 console.log("Business Phase 1 domain-boundary contract passed.");
