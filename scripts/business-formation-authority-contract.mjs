@@ -6,7 +6,17 @@ const migrationPath = path.join(
   root,
   "backend/supabase/migrations/20260819062000_business_authority_foundation_v2.sql",
 );
+const compatibilityMigrationPath = path.join(
+  root,
+  "backend/supabase/migrations/20260819064120_business_legacy_creation_tax_compat_v2.sql",
+);
+const legacyCreationMigrationPath = path.join(
+  root,
+  "backend/supabase/migrations/20260721122200_fix_business_connected_banking_v1.sql",
+);
 const source = fs.readFileSync(migrationPath, "utf8");
+const compatibilitySource = fs.readFileSync(compatibilityMigrationPath, "utf8");
+const legacyCreationSource = fs.readFileSync(legacyCreationMigrationPath, "utf8");
 
 const checks = [
   ["LLC formation is supported", /'llc'/u],
@@ -30,6 +40,13 @@ const checks = [
   ["service role is the only table authority", /grant select, insert, update on table public\.business_formation_proposals to service_role/u],
   ["legacy businesses are backfilled into positions", /legacy-backfill:/u],
   ["ownership percentages are not stored as client-authored equity_percent", !/equity_percent/u.test(source)],
+  ["legacy creation still predates the V2 tax column", !/tax_classification/u.test(legacyCreationSource)],
+  ["legacy tax compatibility is enforced at the Business entity write boundary", /before insert on public\.business_entities/u.test(compatibilitySource)],
+  ["legacy tax compatibility runs only when classification is omitted", /when \(new\.tax_classification is null\)/u.test(compatibilitySource)],
+  ["legacy corporation maps to C-corporation tax classification", /when 'corporation' then 'c_corporation'/u.test(compatibilitySource)],
+  ["legacy cooperative maps to legacy cooperative tax classification", /when 'cooperative' then 'cooperative_legacy'/u.test(compatibilitySource)],
+  ["compatibility guard does not guess LLC tax treatment", !/when 'llc'/u.test(compatibilitySource)],
+  ["compatibility trigger function is not browser-invokable", /revoke all on function public\.fill_legacy_business_tax_classification_v2\(\) from public, anon, authenticated/u.test(compatibilitySource)],
 ];
 
 let failures = 0;
