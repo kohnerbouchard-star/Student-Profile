@@ -64,9 +64,11 @@ export async function handlePlayerBusinessRequest(
       ? dependencies.createRepository(client)
       : new SupabasePlayerBusinessRepository(client);
     const publicScope = { gameSessionId: scope.gameId, playerId: scope.playerUuid };
-    if (route.kind === "businessRead") return privateJson(200, await repository.readBusiness(publicScope));
-    if (route.kind === "businessStockroomRead") {
-      return privateJson(200, { items: await readBusinessStockroom(client, publicScope) });
+    if (route.kind === "businessRead") {
+      if (route.resource === "stockroom") {
+        return privateJson(200, { items: await readBusinessStockroom(client, publicScope) });
+      }
+      return privateJson(200, await repository.readBusiness(publicScope));
     }
     const context = await readEconomicContext(repository, publicScope);
     const result = await executeRoute(repository, route, body, publicScope, context);
@@ -88,7 +90,7 @@ export async function handlePlayerBusinessRequest(
 
 async function executeRoute(
   repository: PlayerBusinessRepository,
-  route: Exclude<PlayerBusinessRoute, { kind: "businessRead" | "businessStockroomRead" }>,
+  route: Exclude<PlayerBusinessRoute, { kind: "businessRead" }>,
   body: Record<string, unknown>,
   scope: { readonly gameSessionId: string; readonly playerId: string },
   context: PlayerEconomicContext,
@@ -237,9 +239,8 @@ function validateEnvelope(request: Request): void {
 }
 
 function validateMethodAndFields(route: PlayerBusinessRoute, method: string, body: Record<string, unknown>): void {
-  const readRoute = route.kind === "businessRead" || route.kind === "businessStockroomRead";
-  if (readRoute && method !== "GET") throw methodNotAllowed("Use GET for this resource.");
-  if (!readRoute && method !== "POST") throw methodNotAllowed("Use POST for this action.");
+  if (route.kind === "businessRead" && method !== "GET") throw methodNotAllowed("Use GET for this resource.");
+  if (route.kind !== "businessRead" && method !== "POST") throw methodNotAllowed("Use POST for this action.");
   const businessCreateFields = route.kind !== "businessCreate" ? []
     : route.operation === "formationPropose" ? ["legalName", "entityType", "industryCode", "owners", "idempotencyKey"]
     : route.operation === "formationRespond" ? ["decision", "idempotencyKey"]
@@ -247,7 +248,6 @@ function validateMethodAndFields(route: PlayerBusinessRoute, method: string, bod
     : ["legalName", "entityType", "industryCode", "capitalization", "acquireBusinessKey", "idempotencyKey"];
   const allowed: Record<PlayerBusinessRoute["kind"], readonly string[]> = {
     businessRead: [],
-    businessStockroomRead: [],
     businessCreate: businessCreateFields,
     businessProductCreate: ["businessKey", "name", "category", "unitPrice", "unitInputCost", "unitLaborCost", "capacityUnits", "baseDemandUnits", "qualityScore", "idempotencyKey"],
     businessInputPurchase: ["businessKey", "productKey", "quantity", "idempotencyKey"],
