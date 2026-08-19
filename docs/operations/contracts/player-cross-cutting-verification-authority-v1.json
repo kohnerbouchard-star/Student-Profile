@@ -37,6 +37,7 @@
     "player-terminal/src/api/endpoints.js",
     "player-terminal/src/integrations/student-profile-capability-manifest.js",
     "player-terminal/tests/current-capability-manifest.mjs",
+    "scripts/architecture/build-architecture-inventory.mjs",
     "scripts/business-domain-boundary-contract.mjs",
     "scripts/business-economy-authority-contract.mjs",
     "scripts/business-formation-authority-contract.mjs",

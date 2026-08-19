@@ -1,10 +1,10 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type { PlayerBusinessRoute } from "../contracts/playerBusinessContracts.ts";
 
 const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
+const PLAYER_EDGE_SERVICES = new Set(["player-api", "classroom-api"]);
 
 export function readPlayerBusinessRoutePath(pathname: string): PlayerBusinessRoute | null {
-  const segments = readPlayerApiRouteSegments(pathname);
+  const segments = readBusinessPlayerRouteSegments(pathname);
   if (!segments || segments[0] !== "players" || segments[1] !== "me") return null;
   const tail = segments.slice(2);
 
@@ -59,6 +59,19 @@ export function readPlayerBusinessRoutePath(pathname: string): PlayerBusinessRou
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "status") {
     return { kind: "businessStatus" };
   }
+  return null;
+}
+
+function readBusinessPlayerRouteSegments(pathname: string): readonly string[] | null {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] === "players") return segments;
+  if (PLAYER_EDGE_SERVICES.has(segments[0] || "") && segments[1] === "players") {
+    return segments.slice(1);
+  }
+  if (
+    segments[0] === "functions" && segments[1] === "v1" &&
+    PLAYER_EDGE_SERVICES.has(segments[2] || "") && segments[3] === "players"
+  ) return segments.slice(3);
   return null;
 }
 

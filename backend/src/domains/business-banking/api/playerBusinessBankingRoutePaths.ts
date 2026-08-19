@@ -4,7 +4,7 @@ import type { PlayerBusinessBankingRoute } from "../contracts/playerBusinessBank
 
 const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
 
-// Temporary compatibility manifest for static mixed-domain consumers. Business
+// Temporary delegated-route manifest for static mixed-domain consumers. Business
 // parsing itself is authoritative in domains/business and this list is removed
 // when the mixed Business/Banking facade retires.
 export const DELEGATED_BUSINESS_ROUTE_CONTRACT = Object.freeze([

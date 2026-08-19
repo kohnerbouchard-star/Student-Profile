@@ -27,6 +27,7 @@ const sourceFiles = (await Promise.all(SCAN_ROOTS.map(filesBelow))).flat().sort(
 const sources = new Map(await Promise.all(sourceFiles.map(async (file) => [file, await readFile(path.join(ROOT, file), "utf8")])));
 const lines = (source) => source.split(/\r?\n/u).length;
 const domainName = (file) => file.match(/^backend\/src\/domains\/([^/]+)\//u)?.[1] ?? null;
+const publicDomainBoundary = (file) => /^backend\/src\/domains\/[^/]+\/index\.(?:ts|js)$/u.test(file);
 const unique = (values) => [...new Set(values)].sort();
 
 const domainsRoot = path.join(ROOT, "backend/src/domains");
@@ -61,7 +62,7 @@ for (const [file, source] of sources) {
       if (!specifier.startsWith(".")) continue;
       const resolved = path.normalize(path.join(path.dirname(file), specifier)).split(path.sep).join("/");
       const importedDomain = domainName(resolved);
-      if (importedDomain && importedDomain !== owner) {
+      if (importedDomain && importedDomain !== owner && !publicDomainBoundary(resolved)) {
         crossDomainImports.push({ consumer: file, ownerDomain: owner, importedDomain, target: specifier });
       }
     }
@@ -121,6 +122,7 @@ const inventory = {
   caveats: [
     "Static inventory identifies candidates, not proof that each match is a live violation.",
     "SQL-defined cross-domain mutations and semantic state-machine duplication require the accompanying human audit.",
+    "Imports through another domain's explicit index.ts public boundary are not classified as deep imports.",
     "Generated Admin dist output and dependencies are excluded.",
   ],
 };
