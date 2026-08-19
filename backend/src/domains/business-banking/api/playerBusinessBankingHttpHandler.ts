@@ -51,7 +51,6 @@ export async function handlePlayerBusinessBankingRequest(
       createServiceClient: dependencies.createServiceClient,
       readEnvironment: dependencies.readEnvironment,
       resolveScope: dependencies.resolveScope ?? defaultResolveScope,
-      createRepository: dependencies.createRepository,
     });
   }
 
