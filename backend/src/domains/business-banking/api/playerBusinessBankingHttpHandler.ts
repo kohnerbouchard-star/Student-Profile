@@ -77,12 +77,12 @@ async function handleBankingRequest(
     }
     const client = dependencies.createServiceClient(environment.value);
     const scope = await (dependencies.resolveScope ?? defaultResolveScope)(request, client, body);
-    const repository = dependencies.createRepository
+    const repository: PlayerBusinessBankingRepository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerBusinessBankingRepository(client);
     const publicScope = { gameSessionId: scope.gameId, playerId: scope.playerUuid };
     if (route.kind === "loansRead") return privateJson(200, await repository.readLoans(publicScope));
-    const context = await repository.readEconomicContext(publicScope);
+    const context = await readEconomicContext(repository, publicScope);
     const result = await executeRoute(repository, route, body, publicScope, context);
     return privateJson(200, { ok: true, result, refreshRequired: true });
   } catch (error) {
@@ -147,6 +147,27 @@ async function executeRoute(
         p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
       });
   }
+}
+
+async function readEconomicContext(
+  repository: PlayerBusinessBankingRepository,
+  scope: { readonly gameSessionId: string; readonly playerId: string },
+): Promise<PlayerEconomicContext> {
+  if (repository.readEconomicContext) return repository.readEconomicContext(scope);
+  const context = await repository.execute("resolve_player_economic_context_v1", {
+    p_game_session_id: scope.gameSessionId,
+    p_player_id: scope.playerId,
+  });
+  const countryCode = typeof context.country_code === "string" ? context.country_code : "";
+  const currencyCode = typeof context.currency_code === "string" ? context.currency_code : "";
+  if (!countryCode || !currencyCode) {
+    throw invalidRequest(
+      "Player country and currency must be assigned before this action.",
+      409,
+      "player_economic_context_missing",
+    );
+  }
+  return { countryCode, currencyCode };
 }
 
 function defaultResolveScope(
