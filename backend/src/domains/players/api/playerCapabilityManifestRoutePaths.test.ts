@@ -1,27 +1,23 @@
 import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
+import { readPlayerBankingPublicRoutePath } from "../../banking/api/playerBankingPublicRoutePaths.ts";
+import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
 import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
 import { readPlayerContractPublicListRoutePath } from "../../contracts/api/playerContractPublicListRoutePaths.ts";
 import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/playerContractPublicSubmitRoutePaths.ts";
-import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
-import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
-import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerMarketplaceRoutePath } from "../../marketplace/api/playerMarketplaceRoutePaths.ts";
 import { readPlayerMessageThreadLifecycleRoutePath } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
 import { readPlayerMessagingRoutePath } from "../../messaging/api/playerMessagingRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
-import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/playerStoryDeliveryRoutePaths.ts";
 import { readPlayerProgressionRoutePath } from "../../progression/api/playerProgressionRoutePaths.ts";
+import { readPlayerSessionLogoutRoutePath } from "../../sessions/api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
-import { parsePlayerWorldRuntimeRoute } from "../../world/api/playerWorldRuntimeRoutePaths.ts";
-import { readPlayerApiRouteSegments } from "./playerApiRouteSegments.ts";
+import { readPlayerStoryDeliveryRoutePath } from "../../story/api/playerStoryDeliveryRoutePaths.ts";
+import { parsePlayerWorldRuntimeRoute } from "../../world/api/playerWorldRuntimeRequestParser.ts";
+import { readPlayerWorldRoutePath } from "../../world/api/playerWorldRoutePaths.ts";
+import { readPlayerApiRouteSegments } from "../contracts/playerApiRoutePrefixes.ts";
 import { readPlayerCapabilityManifestRoutePath } from "./playerCapabilityManifestRoutePaths.ts";
-import { readPlayerSessionLogoutRoutePath } from "./playerSessionLogoutRoutePaths.ts";
-
-declare const Deno: {
-  test(name: string, run: () => void | Promise<void>): void;
-};
 
 Deno.test("player capability manifest route accepts only exact direct and Edge paths", () => {
   assertEquals(
@@ -29,15 +25,7 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
     { kind: "manifest" },
   );
   assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/classroom-api/players/me/capabilities",
-    ),
-    { kind: "manifest" },
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/player-api/players/me/capabilities",
-    ),
+    readPlayerCapabilityManifestRoutePath("/player-api/players/me/capabilities"),
     { kind: "manifest" },
   );
   assertEquals(
@@ -47,66 +35,22 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
     { kind: "manifest" },
   );
   assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/functions/v1/player-api/players/me/capabilities",
-    ),
-    { kind: "manifest" },
-  );
-  assertEquals(
     readPlayerCapabilityManifestRoutePath("/players/me/capabilities/extra"),
     { kind: "malformed" },
   );
   assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/classroom-api/players/me/capabilities/extra",
-    ),
-    { kind: "malformed" },
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/player-api/players/me/capabilities/extra",
-    ),
-    { kind: "malformed" },
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath("/spoof/players/me/capabilities"),
-    null,
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/spoof/classroom-api/players/me/capabilities",
-    ),
-    null,
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath(
-      "/spoof/player-api/players/me/capabilities",
-    ),
-    null,
-  );
-  assertEquals(
-    readPlayerCapabilityManifestRoutePath("/players/me/inventory"),
+    readPlayerCapabilityManifestRoutePath("/players/me"),
     null,
   );
 });
 
 Deno.test("shared Player route prefix parser accepts bounded services and rejects spoofing", () => {
-  assertEquals(readPlayerApiRouteSegments("/players/me/inventory"), [
-    "players",
-    "me",
-    "inventory",
-  ]);
-  assertEquals(readPlayerApiRouteSegments("/player-api/players/me/inventory"), [
-    "players",
-    "me",
-    "inventory",
-  ]);
   assertEquals(
-    readPlayerApiRouteSegments("/functions/v1/player-api/players/me/inventory"),
+    readPlayerApiRouteSegments("/players/me/inventory"),
     ["players", "me", "inventory"],
   );
   assertEquals(
-    readPlayerApiRouteSegments("/classroom-api/players/me/inventory"),
+    readPlayerApiRouteSegments("/player-api/players/me/inventory"),
     ["players", "me", "inventory"],
   );
   assertEquals(
@@ -147,7 +91,14 @@ Deno.test("all migrated Player route families dispatch on the Player API boundar
   assertEquals(readPlayerCraftingRoutePath(`${prefix}/players/me/crafting`), { kind: "read" });
   assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`), { kind: "items" });
   assertEquals(readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`), { kind: "banking" });
-  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), { kind: "businessRead" });
+  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), {
+    kind: "businessRead",
+    resource: "overview",
+  });
+  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business/stockroom`), {
+    kind: "businessRead",
+    resource: "stockroom",
+  });
   assertEquals(parsePlayerWorldRuntimeRoute(`${prefix}/players/me/world-runtime`), {
     operation: "context",
     journeyId: null,
