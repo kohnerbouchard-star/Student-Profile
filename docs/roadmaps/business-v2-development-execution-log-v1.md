@@ -149,3 +149,203 @@ Additional broad Player browser/load workflows were still executing when Phase 0
 ### Next authorized step
 
 **Phase 1 — Business domain extraction is OPEN.** Begin with contracts/application/repository/API separation and compatibility forwarding only. Update this log at the first completed extraction checkpoint before moving to Phase 2.
+
+---
+
+## 2026-08-19 — Recovery correction: reported work reconciled to Git
+
+### Why this entry exists
+
+A prior execution narrative reported Phases 1–4 complete and Phase 5 underway, but inspection of PR #648 showed that those reported states were not durably present on the integration branch. Later extraction commits had also damaged `classroom-api`. The branch was therefore restored to the last known-good extraction lineage and the later phases were rebuilt from repository truth instead of trusting chat-state claims.
+
+### Durable recovery authority
+
+- Recovery note: `docs/roadmaps/business-v2-development-recovery-20260819.md`.
+- Restored known-good extraction source: `28ae44a1aefead1a9c7efc3fc174075115b81255`.
+- Recovery documentation commit: `f697f8a477f4447bb9c15f2a1db6bc85f124e3b0`.
+
+### Reporting rule established after recovery
+
+A phase is **not complete** unless all four conditions are true:
+
+1. implementation exists on the PR branch;
+2. an exact source commit is identified;
+3. required acceptance gates pass for that source state; and
+4. this execution log records the completion, evidence, blockers, decisions, and next authorized step.
+
+Anything short of those four conditions must be reported as **in progress**.
+
+---
+
+## 2026-08-19 — Phase 1 COMPLETE: Business domain boundary and Banking separation
+
+### Certified source head
+
+- **Certified implementation source:** `06867bb8bfd4c24c540a7f78ea4319d6ea9c9d4b`.
+- PR #648 remained open, draft, mergeable, and unmerged during certification.
+- The commit that adds this documentation entry is intentionally later than the certified source. Do not substitute the notes-only commit for the tested implementation SHA.
+
+### What is now authoritative
+
+- `backend/src/domains/business/` owns Player Business route parsing, Business contracts, Business HTTP handling, and Business persistence.
+- `business-banking` remains only as a compatibility routing façade for Business plus the actual Banking/Loans domain runtime.
+- The mixed handler recognizes a Business route and immediately forwards it to `handlePlayerBusinessRequest`; it does not execute Business mutation RPCs itself.
+- The mixed `SupabasePlayerBusinessBankingRepository` is now **Banking/Loans-only**. Dead Business creation/read/product/inventory/employee/production persistence was removed.
+- The mixed Banking repository is never injected into Business execution. The Business handler constructs/uses the Business-owned repository.
+- Player Business route parsing is self-contained and does not deep-import Players internals for URL interpretation.
+- Formation propose/respond/activate retain distinct Business operation identities through the extracted boundary.
+- Existing public Player URLs remain compatible. The large `classroom-api` composition was not rewritten to accomplish the separation.
+
+### Architecture enforcement added
+
+`scripts/business-domain-boundary-contract.mjs` now fails if any of the following regressions occur:
+
+- Business contracts depend back on `business-banking`;
+- Business route authority starts owning Banking/Loans URLs;
+- mixed handler regains direct Business mutation cases;
+- mixed handler injects its Banking repository into Business execution;
+- mixed repository regains Business persistence such as `readBusiness`, `assertBusinessCreationAllowed`, `business_products`, `business_inventory`, `business_employees`, or `business_production_runs`.
+
+The legacy Business/Banking runtime contract was also updated rather than weakened. It still validates Banking/Loans concurrency, idempotency, money/currency authority, repayment rules, Admin lifecycle guards, and Player adapter publication while validating Business behavior at the extracted Business boundary.
+
+### Blockers found and resolved during Phase 1
+
+1. **Corrupted classroom extraction history.** Recovered rather than layering more changes onto the bad head.
+2. **Stale runtime contract.** Old tests expected Business implementation inside the mixed handler. Rewritten to enforce forwarding plus the extracted authority.
+3. **Mixed persistence duplication.** Runtime forwarding initially left dead Business repository methods behind. Those were removed before declaring Phase 1 complete.
+4. **Architecture inventory drift.** Regenerated deterministically. The ratchet was not relaxed.
+5. **Accidental compatibility marker increase.** Removed the new marker instead of raising the baseline.
+6. **Capability-route regression during test maintenance.** An intermediate test edit guessed several import paths and failed typecheck. It was reverted to the known-good imports, then only the Business expectations were changed.
+7. **Cross-cutting PR scope allowlist.** Expanded only for the exact reviewed Business/Stockroom/recovery files; production deployment/mutation/secret authority remains false.
+
+### Architecture result
+
+- No architecture-ratchet baseline was raised.
+- Cross-domain deep imports remained at the repository maximum rather than increasing due to the Business extraction.
+- Compatibility-marker count remained at its existing maximum rather than increasing.
+- Repository Quality passed after committing the generator-produced architecture inventory.
+
+### Verification on certified source `06867bb8...`
+
+- **Business Economy V2 — PASS** (`32218265894`): backend typecheck plus formation, Business authority, Phase 1 domain-boundary, recipe-access, and Stockroom authority contracts all passed.
+- **Backend Typecheck — PASS** (`32218265960`): complete backend typecheck and backend smoke suite passed.
+- **Business Banking Runtime — PASS** (`32218265916`): deterministic simulations, formation contract, runtime/migration contract, complete Player Business surface, focused Player/Admin tests, Deno typecheck/Admin publication, and route-adapter syntax all passed.
+- **Repository Quality — PASS** (`32218265890`): full audit, deterministic architecture inventory, architecture ratchet, dependency checks, supply-chain checks, and backend dependency audit passed.
+- **Database Replay — PASS** (`32218266012`): complete migration ledger replayed from zero twice and rebuilt database lint passed.
+- **Player Terminal Verify — PASS** (`32218265909`): PR scope authority, Player boundary contracts, bounded read resilience, standalone Player verification, Chromium installation/runtime fixture, and full Chromium browser verification passed.
+- **Runtime Interaction Wiring — PASS** (`32218266011`).
+- **Button Action Coverage — PASS** (`32218265983`).
+
+### Phase 1 exit result
+
+- Business has a real domain boundary: **met**.
+- Banking behavior preserved: **met**.
+- Mixed namespace is a thin Business forwarding façade, not Business persistence authority: **met**.
+- Public Player URLs retained: **met**.
+- Architecture ratchet not relaxed: **met**.
+- Exact source/browser/database certification: **met**.
+
+### Next authorized step
+
+Phase 2 may continue, but only against the existing canonical physical-economy recipe authority. No Business recipe/BOM definition system may be added.
+
+---
+
+## 2026-08-19 — Phase 2 checkpoint A COMPLETE: Business-owned canonical recipe access foundation
+
+### Scope status
+
+**Checkpoint A is complete; Phase 2 itself remains OPEN.** The missing Phase 2 work is the browser-safe Business recipe read surface.
+
+### Implemented authority
+
+- `backend/supabase/migrations/20260819064000_business_recipe_access_v2.sql` creates `public.business_recipe_access`.
+- Business recipe access references `public.physical_economy_recipe_definitions` directly.
+- The Business layer does **not** create recipe definitions, input/BOM definitions, output definitions, variants, quality tiers, or custom product definitions.
+- `grant_business_recipe_access_v2` is a trusted service-role-only grant path using Business public key + canonical recipe key.
+- Recipe access is owned by the Business entity, so ownership changes/acquisition do not implicitly erase the company’s recipe knowledge.
+- No Player Crafting unlock is automatically inherited by a Business.
+
+### Decisions locked in this checkpoint
+
+- Businesses begin with **no implicit recipe inheritance** from a Player’s Crafting profile.
+- Recipe grants must come from an explicit trusted flow such as formation/content seed, contract, staff/admin, event, or acquisition.
+- Do not invent a research tree to solve recipe acquisition.
+- Do not expose internal recipe UUIDs to the Player browser.
+- For the upcoming read surface, mirror existing Crafting availability semantics: an empty availability `country_codes` array means global; current game availability/scarcity and Business country determine whether the recipe is usable now.
+- The read surface should preserve ownership visibility even when current scarcity/location makes manufacturing unavailable; temporary availability must not destroy the company’s recipe-access record.
+
+### Verification
+
+The canonical recipe-access contract passed as part of **Business Economy V2** on certified source `06867bb8...` (`32218265894`), and the migration participated in the successful **Database Replay** (`32218266012`).
+
+### Current blocker / next task
+
+`GET /players/me/business/recipes` does not yet exist. That read API is being implemented as the next Phase 2 tranche and must expose canonical recipe keys/operating metadata only, without copying BOM/output authority into Business tables.
+
+A stacked preparation branch was created from the certified source:
+
+- `feat/business-recipe-read-v2`
+
+Do not call Phase 2 complete until that read tranche is merged into #648, exact-head gates pass, and this log is updated again.
+
+---
+
+## 2026-08-19 — Phase 3 checkpoint A COMPLETE: canonical Business Stockroom read
+
+### Scope status
+
+**Stockroom read checkpoint is complete; Phase 3 procurement remains OPEN.** No Business procurement mutation is claimed complete by this entry.
+
+### Implemented authority
+
+- `backend/supabase/migrations/20260819064100_business_stockroom_read_v2.sql` adds `resolve_player_business_v2` and the canonical Stockroom read.
+- Business resolution uses active `business_ownership_positions` for V2 ownership and retains bounded model-v1 controller compatibility.
+- Multi-owner partnerships/LLCs therefore resolve through the ownership ledger rather than forcing every read through `business_entities.owner_player_id`.
+- Stockroom reads only the canonical ownership chain:
+  - `economic_parties`
+  - `inventory_accounts` with `account_kind='warehouse'`
+  - `inventory_holdings`
+  - `game_items`
+- Stockroom exposes canonical public item identity plus:
+  - quantity owned;
+  - quantity reserved;
+  - quantity available;
+  - average carried unit cost;
+  - cost currency;
+  - holding version.
+- `business_inventory` is explicitly rejected as Stockroom authority by `scripts/business-stockroom-authority-contract.mjs`.
+- The Player Business read surface recognizes `/players/me/business/stockroom` as a `businessRead` resource and keeps it under the existing read-only Business rate-limit/capability budget.
+- A dedicated `supabaseBusinessStockroomReadRepository.ts` isolates canonical Stockroom persistence from the legacy Business snapshot, which still has compatibility debt scheduled for later retirement.
+
+### Decisions and blockers resolved
+
+- Do not create a parallel Business stockroom table.
+- Do not make the legacy `business_inventory` compatibility projection authoritative again.
+- Do not introduce another Player capability merely for Stockroom; it is part of the Business read surface.
+- A partially introduced `businessStockroomRead` route kind caused broad type fallout. It was simplified to `businessRead` with a resource discriminator (`overview` / `stockroom`), preserving existing Edge dispatch maps and avoiding risky giant-entrypoint edits.
+- Exact cross-cutting allowlist coverage was added for the reviewed Stockroom migration/repository/tests without broadening production authority.
+
+### Verification
+
+The Stockroom authority contract passed as part of **Business Economy V2** on certified source `06867bb8...` (`32218265894`). The Stockroom migration participated in **Database Replay — PASS** (`32218266012`), and the published route survived **Backend Typecheck/Smoke — PASS** (`32218265960`), **Business Banking Runtime — PASS** (`32218265916`), **Repository Quality — PASS** (`32218265890`), **Player Terminal Chromium verification — PASS** (`32218265909`), and **Runtime Interaction Wiring — PASS** (`32218266011`).
+
+### Phase 3 procurement decision already resolved
+
+Current Store quote pricing is derived from Player country/currency. A Business procurement flow must **not** proxy a quote through an arbitrary owner Player, because multi-owner Businesses would then inherit the wrong geographic/currency authority.
+
+The Phase 3B procurement implementation must:
+
+- reuse the same authoritative Store pricing/scarcity policy;
+- derive pricing geography/currency from the Business’s own `country_code` / `currency_code`;
+- create a short-lived Business procurement quote;
+- settle Store canonical stock to the Business canonical warehouse atomically;
+- debit first-class Business cash through the Business money authority;
+- carry the actual acquisition price into warehouse average cost basis;
+- avoid a parallel wholesale/supplier catalog.
+
+### Next authorized step
+
+1. Complete the missing Phase 2 Business recipe read tranche on `feat/business-recipe-read-v2` and integrate it only after its checks pass.
+2. Then implement Phase 3B Business Store procurement using Business geography/currency and the canonical Store + Inventory + Business money authorities.
+3. Phase 4 workforce does **not** open until Phase 2 and Phase 3 are durably complete and logged.
