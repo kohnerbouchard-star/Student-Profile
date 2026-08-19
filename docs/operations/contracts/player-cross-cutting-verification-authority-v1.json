@@ -22,6 +22,8 @@
     "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
     "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
     "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+    "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
+    "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
     "backend/src/security/playerRateLimitDispatch.ts",
