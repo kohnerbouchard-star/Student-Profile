@@ -8,9 +8,9 @@ export function readPlayerBusinessRoutePath(pathname: string): PlayerBusinessRou
   if (!segments || segments[0] !== "players" || segments[1] !== "me") return null;
   const tail = segments.slice(2);
 
-  if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead" };
+  if (tail.length === 1 && tail[0] === "business") return { kind: "businessRead", resource: "overview" };
   if (tail.length === 2 && tail[0] === "business" && tail[1] === "stockroom") {
-    return { kind: "businessStockroomRead" };
+    return { kind: "businessRead", resource: "stockroom" };
   }
   if (tail.length === 1 && tail[0] === "businesses") {
     return { kind: "businessCreate", operation: "directCreate" };
