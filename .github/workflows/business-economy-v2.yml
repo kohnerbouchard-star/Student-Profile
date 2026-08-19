@@ -64,7 +64,16 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
       - run: npm ci
         working-directory: backend
       - run: npm run typecheck
         working-directory: backend
+      - name: Verify extracted Business route authority
+        working-directory: backend
+        run: |
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts
