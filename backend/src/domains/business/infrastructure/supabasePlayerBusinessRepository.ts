@@ -278,14 +278,14 @@ function emptyBusiness(): BusinessSnapshotDto {
   };
 }
 
-function text(value: unknown, fallback = ""): string {
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+function text(value: unknown, defaultValue = ""): string {
+  return typeof value === "string" && value.trim() ? value.trim() : defaultValue;
 }
-function number(value: unknown, fallback = 0): number {
+function number(value: unknown, defaultValue = 0): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  return Number.isFinite(parsed) ? parsed : defaultValue;
 }
-function integer(value: unknown, fallback = 0): number { return Math.trunc(number(value, fallback)); }
+function integer(value: unknown, defaultValue = 0): number { return Math.trunc(number(value, defaultValue)); }
 function round(value: number, digits = 2): number {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
