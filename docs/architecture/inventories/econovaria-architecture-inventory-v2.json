@@ -14,7 +14,7 @@
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 210,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 123
@@ -2559,12 +2559,6 @@
       },
       {
         "file": "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
-        "markers": [
-          "fallback"
-        ]
-      },
-      {
-        "file": "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts",
         "markers": [
           "fallback"
         ]
