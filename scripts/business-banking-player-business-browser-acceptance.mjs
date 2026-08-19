@@ -24,14 +24,34 @@ function adaptDisclosureInteraction(source) {
 }`;
 
   const after = `async function exposeForm(target) {
-  await target.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
-    element.querySelector(
-      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
-    )?.focus({ preventScroll: true });
-  });
-  await target.waitFor({ state: "visible", timeout: 30_000 });
+  await target.waitFor({ state: "attached", timeout: 30_000 });
+  const disclosure = target.locator("xpath=ancestor::details[1]");
+  if ((await disclosure.count()) < 1) {
+    await target.waitFor({ state: "visible", timeout: 30_000 });
+    return;
+  }
+
+  let formReady = false;
+  for (let attempt = 0; attempt < 4 && !formReady; attempt += 1) {
+    const disclosureOpen = await disclosure.evaluate((element) => element.open === true);
+    if (!disclosureOpen) {
+      await disclosure.locator("summary").first().click();
+    }
+    try {
+      await target.waitFor({ state: "visible", timeout: 5_000 });
+      const interactionTarget = target.locator(
+        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+      ).first();
+      if ((await interactionTarget.count()) > 0) {
+        await interactionTarget.waitFor({ state: "visible", timeout: 5_000 });
+        await interactionTarget.focus();
+      }
+      formReady = true;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
 }`;
 
   return replaceExactlyOnce(
