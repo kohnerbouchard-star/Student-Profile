@@ -13,6 +13,7 @@ on:
       - "player-terminal/src/api/**"
       - "scripts/business-*-authority-contract.mjs"
       - "scripts/business-domain-boundary-contract.mjs"
+      - "scripts/business-recipe-access-contract.mjs"
       - ".github/workflows/business-economy-v2.yml"
   workflow_dispatch:
 
@@ -35,6 +36,7 @@ jobs:
       - run: node scripts/business-formation-authority-contract.mjs
       - run: node scripts/business-economy-authority-contract.mjs
       - run: node scripts/business-domain-boundary-contract.mjs
+      - run: node scripts/business-recipe-access-contract.mjs
       - name: Materialize architecture inventory for review
         run: node scripts/architecture/build-architecture-inventory.mjs
       - name: Upload Business V2 review bundle
