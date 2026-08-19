@@ -133,6 +133,7 @@ import {
   readPlayerProgressionRoutePath,
 } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";
 import { dispatchClassroomMessagingRequest } from "../classroom-api/messagingDispatch.ts";
+import { dispatchPlayerBusinessRequest } from "../_shared/playerBusinessDispatch.ts";
 import {
   createServiceClient,
   readEdgeSupabaseEnv,
@@ -492,6 +493,12 @@ Deno.serve(async (request: Request) => {
       { createServiceClient },
     );
   }
+
+  const playerBusinessResponse = await dispatchPlayerBusinessRequest(
+    request,
+    { createServiceClient },
+  );
+  if (playerBusinessResponse) return playerBusinessResponse;
 
   const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
     url.pathname,
