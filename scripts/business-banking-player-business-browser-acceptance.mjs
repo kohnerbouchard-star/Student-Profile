@@ -49,7 +49,7 @@ function adaptDisclosureInteraction(source) {
       formReady = true;
     } catch (error) {
       if (attempt === 3) throw error;
-      await target.page().waitForTimeout(250);
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
 }`;
