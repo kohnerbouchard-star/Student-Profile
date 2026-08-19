@@ -13,6 +13,7 @@ const businessRepository = read("backend/src/domains/business/infrastructure/sup
 const mixedContracts = read("backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts");
 const mixedRoutes = read("backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts");
 const mixedHandler = read("backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts");
+const mixedRepository = read("backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts");
 
 assert.match(businessIndex, /readPlayerBusinessRoutePath/u, "Business must publish its route authority through index.ts.");
 assert.match(businessIndex, /handlePlayerBusinessRequest/u, "Business must publish its HTTP handler through index.ts.");
@@ -26,14 +27,35 @@ assert.doesNotMatch(businessContracts, /business-banking/iu, "Business contracts
 assert.doesNotMatch(businessHandler, /domains\/players|business-banking/iu, "Business handler must depend on injected scope and Business-owned contracts only.");
 assert.doesNotMatch(businessRepository, /business-banking/iu, "Business repository must not depend on the mixed façade.");
 assert.match(businessRepository, /class SupabasePlayerBusinessRepository/u);
+
 assert.match(mixedContracts, /\.\.\/\.\.\/business\/index\.ts/u, "Mixed façade must consume the Business public boundary.");
 assert.match(mixedContracts, /export type PlayerBankingRoute/u, "Mixed façade must keep Banking routes explicit and separate.");
+assert.doesNotMatch(mixedContracts, /extends PlayerBusinessRepository/u, "Mixed Banking repository must not inherit Business persistence authority.");
 assert.match(mixedRoutes, /\.\.\/\.\.\/business\/index\.ts/u, "Mixed façade must delegate through the Business public boundary.");
 assert.match(mixedRoutes, /DELEGATED_BUSINESS_ROUTE_CONTRACT/u, "Mixed façade must expose a bounded delegated route manifest until retirement.");
 assert.match(mixedHandler, /handlePlayerBusinessRequest/u, "Classroom compatibility handler must forward Business to the Business handler.");
 assert.match(mixedHandler, /isPlayerBusinessRoute\(route\)/u, "Business forwarding must occur by Business-owned route identity.");
 assert.match(mixedHandler, /return handlePlayerBusinessRequest\(request, route,/u, "Business routes must exit the mixed handler immediately.");
 assert.doesNotMatch(mixedHandler, /case "business(?:Create|ProductCreate|InputPurchase|Production|Price|Hire|Terminate|Status)"/u, "Mixed handler must not retain Business mutation execution cases.");
+assert.doesNotMatch(mixedHandler, /handlePlayerBusinessRequest[\s\S]{0,300}createRepository:/u, "Mixed Banking repository must never be injected into Business execution.");
 assert.match(mixedHandler, /type PlayerBankingRoute/u, "Banking execution must be typed independently after Business forwarding.");
+
+assert.match(mixedRepository, /class SupabasePlayerBusinessBankingRepository/u);
+assert.match(mixedRepository, /readLoans/u, "Mixed repository must retain Loans reads.");
+assert.match(mixedRepository, /resolve_player_economic_context_v1/u, "Mixed repository must retain Banking economic context resolution.");
+for (const removedBusinessAuthority of [
+  "assertBusinessCreationAllowed",
+  "readBusiness(",
+  "business_products",
+  "business_inventory",
+  "business_employees",
+  "business_production_runs",
+]) {
+  assert.doesNotMatch(
+    mixedRepository,
+    new RegExp(removedBusinessAuthority.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"),
+    `Mixed repository must not retain Business persistence authority: ${removedBusinessAuthority}`,
+  );
+}
 
 console.log("Business Phase 1 domain-boundary contract passed.");
