@@ -12,7 +12,7 @@ import {
 import {
   readBusinessRecipes,
   readBusinessStockroom,
-} from "../infrastructure/supabaseBusinessPhysicalEconomyReadRepository.ts";
+} from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
 
 const MAX_BODY_BYTES = 24_576;
