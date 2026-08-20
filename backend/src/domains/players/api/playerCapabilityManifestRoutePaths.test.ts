@@ -147,7 +147,14 @@ Deno.test("all migrated Player route families dispatch on the Player API boundar
   assertEquals(readPlayerCraftingRoutePath(`${prefix}/players/me/crafting`), { kind: "read" });
   assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`), { kind: "items" });
   assertEquals(readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`), { kind: "banking" });
-  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), { kind: "businessRead" });
+  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), {
+    kind: "businessRead",
+    resource: "overview",
+  });
+  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business/stockroom`), {
+    kind: "businessRead",
+    resource: "stockroom",
+  });
   assertEquals(parsePlayerWorldRuntimeRoute(`${prefix}/players/me/world-runtime`), {
     operation: "context",
     journeyId: null,

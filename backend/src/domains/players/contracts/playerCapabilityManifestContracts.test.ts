@@ -34,6 +34,9 @@ declare const Deno: {
 const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "business",
   "businessCreate",
+  "businessFormationPropose",
+  "businessFormationRespond",
+  "businessFormationActivate",
   "businessProductCreate",
   "businessInputPurchase",
   "businessProduction",
@@ -66,7 +69,8 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "contractSubmit", "inventoryUse", "marketOrder", "storePurchase",
     "storyDeliveryState", "arrivalClassSubmit", "travelQuote", "travelExecute",
     "travelComplete", "residencyRequest", "bankTransfer", "savingsTransfer",
-    "businessCreate", "businessProductCreate", "businessInputPurchase",
+    "businessCreate", "businessFormationPropose", "businessFormationRespond",
+    "businessFormationActivate", "businessProductCreate", "businessInputPurchase",
     "businessProduction", "businessPrice", "businessHire",
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
@@ -116,6 +120,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":threadId", `thr_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
+        .replace(":formationKey", `bfp_${"f".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
         .replace(":offerKey", `lop_${"a".repeat(32)}`)

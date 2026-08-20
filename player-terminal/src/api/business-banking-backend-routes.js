@@ -14,6 +14,32 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessCreate"),
     },
   }),
+  businessFormationPropose: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/formations",
+    payload: {
+      legalName: required(payload.legalName, "legalName", "businessFormationPropose"),
+      entityType: required(payload.entityType, "entityType", "businessFormationPropose"),
+      industryCode: required(payload.industryCode, "industryCode", "businessFormationPropose"),
+      owners: formationOwners(payload.owners),
+      idempotencyKey: key(payload, "businessFormationPropose"),
+    },
+  }),
+  businessFormationRespond: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/business/formations/${encodeURIComponent(required(params.formationId || payload.formationKey, "formationKey", "businessFormationRespond"))}/respond`,
+    payload: {
+      decision: required(payload.decision, "decision", "businessFormationRespond"),
+      idempotencyKey: key(payload, "businessFormationRespond"),
+    },
+  }),
+  businessFormationActivate: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/business/formations/${encodeURIComponent(required(params.formationId || payload.formationKey, "formationKey", "businessFormationActivate"))}/activate`,
+    payload: {
+      idempotencyKey: key(payload, "businessFormationActivate"),
+    },
+  }),
   businessProductCreate: ({ payload }) => ({
     method: "POST",
     path: "/players/me/business/products",
@@ -170,4 +196,23 @@ function number(value, field, endpointKey) {
 }
 function key(payload, endpointKey) {
   return required(payload.idempotencyKey, "idempotencyKey", endpointKey);
+}
+function formationOwners(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 16) {
+    throw new ApiRequestError("owners are invalid for businessFormationPropose.", {
+      body: { code: "player_route_formation_owners_invalid", endpointKey: "businessFormationPropose" },
+    });
+  }
+  return value.map((owner, index) => {
+    if (!owner || typeof owner !== "object" || Array.isArray(owner)) {
+      throw new ApiRequestError(`owners[${index}] is invalid for businessFormationPropose.`, {
+        body: { code: "player_route_formation_owner_invalid", endpointKey: "businessFormationPropose" },
+      });
+    }
+    return {
+      playerIdentifier: required(owner.playerIdentifier, `owners[${index}].playerIdentifier`, "businessFormationPropose"),
+      ownershipBasisPoints: number(owner.ownershipBasisPoints, `owners[${index}].ownershipBasisPoints`, "businessFormationPropose"),
+      capitalContribution: number(owner.capitalContribution ?? 0, `owners[${index}].capitalContribution`, "businessFormationPropose"),
+    };
+  });
 }

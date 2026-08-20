@@ -23,13 +23,16 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-07-23.2");
+assert.equal(manifest.manifestVersion, "2026-08-19.1");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "dashboard"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "craftingJobClaim"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "progressionClaim"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationPropose"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationRespond"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationActivate"));
 
 const resolved = resolveCapabilities({
   config: {},
@@ -38,8 +41,14 @@ const resolved = resolveCapabilities({
 });
 assert.equal(resolved.actions.marketplaceActivate, true);
 assert.equal(resolved.actions.marketplaceDispute, true);
+assert.equal(resolved.actions.businessFormationPropose, true);
+assert.equal(resolved.actions.businessFormationRespond, true);
+assert.equal(resolved.actions.businessFormationActivate, true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceActivate"), true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceDispute"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationPropose"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationRespond"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationActivate"), true);
 assert.equal(isEndpointEnabled(resolved, "messageThreadCreate"), true);
 assert.equal(isEndpointEnabled(resolved, "messageRead"), true);
 
@@ -87,4 +96,4 @@ assert.throws(
   "Core capability drift must remain fail closed with bounded diagnostics.",
 );
 
-console.log("Exact backend manifest, mutation capability aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
+console.log("Exact backend manifest, Business formation capabilities, mutation aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
