@@ -349,3 +349,80 @@ The Phase 3B procurement implementation must:
 1. Complete the missing Phase 2 Business recipe read tranche on `feat/business-recipe-read-v2` and integrate it only after its checks pass.
 2. Then implement Phase 3B Business Store procurement using Business geography/currency and the canonical Store + Inventory + Business money authorities.
 3. Phase 4 workforce does **not** open until Phase 2 and Phase 3 are durably complete and logged.
+
+---
+
+## 2026-08-20 — Phase 2 COMPLETE: canonical Business recipe read certified
+
+### Certified source head
+
+- **Certified implementation source:** `cd79b683f6a569b6e098e4ec56dbf8c3a6eb8ec4`.
+- PR #648 remained open, draft, mergeable, and unmerged during certification.
+- PR #649 was merged into the integration branch as the bounded Phase 2B tranche.
+- This documentation commit is later than the tested implementation source. It must not replace `cd79b683...` as the certification identity.
+- No Business V2 staging or production migration/deployment was performed.
+
+### What is now authoritative
+
+- `GET /players/me/business/recipes` is published through the extracted Business route parser and HTTP handler.
+- The read resolves only Business-owned `business_recipe_access` records joined to the existing canonical physical-economy recipe definitions and current game recipe availability.
+- Recipe availability is derived from the Business country, active game pack, enabled recipe availability, and current scarcity state.
+- Empty recipe `country_codes` remain globally available, matching the canonical Crafting availability rule.
+- The browser contract exposes public access and recipe keys plus bounded operating metadata; internal UUIDs, canonical BOM rows, and output-definition authority remain private.
+- No Business recipe-definition, Business BOM, Business input-definition, Business output-definition, variant, or quality-tier authority was introduced.
+- No Player Crafting unlock is inherited automatically by a Business.
+- The Phase 2B tranche intentionally did not change the Player Business workspace. Legacy Product Creator and abstract operating forms remain explicit compatibility debt for the later workspace convergence phase; they are not canonical physical-product authority and must not be expanded.
+
+### Exact-head verification
+
+All required gates passed on `cd79b683...`:
+
+- **Business Economy V2 — PASS** (`32310399944`): backend typecheck plus formation, Business authority, domain-boundary, canonical recipe-access, and Stockroom authority contracts passed.
+- **Database Replay — PASS** (`32310400111`): complete migration ledger replayed from zero twice and rebuilt database lint passed.
+- **Backend Typecheck — PASS** (`32310400051`): backend typecheck and smoke suite passed.
+- **Business Banking Runtime — PASS** (`32310400177`): deterministic simulations, Business runtime contracts, complete Player Business surface, focused Player/Admin tests, Deno typecheck, and route-adapter syntax passed.
+- **Player Terminal Verify — PASS** (`32310400015`): exact PR scope authorization, Player boundary contracts, read resilience, standalone verification, and Chromium browser verification passed.
+- **Repository Quality — PASS** (`32310400055`).
+- **Runtime Interaction Wiring — PASS** (`32310400075`).
+- **Button Action Coverage — PASS** (`32310400150`).
+- **Player Multiplayer and Load E2E — PASS** (`32310400030`): connected Business and World journeys completed; all 30 baseline Players and all 40 maximum Players were provisioned and active; 210/210 baseline reads and 280/280 maximum-load reads returned HTTP 200; server errors were zero.
+
+Immutable multiplayer/load artifact:
+
+- artifact ID: `9386509800`;
+- artifact name: `player-multiplayer-load-cd79b683f6a569b6e098e4ec56dbf8c3a6eb8ec4`;
+- artifact digest: `sha256:84563969bf25aaa812eadb994ac0364f3dbaed0e4fb393a0d7d7b93c3718abc0`;
+- 30-Player login p95: `2029.35 ms`;
+- 30-Player read p95: `1913 ms`;
+- 40-Player read p95: `2343.73 ms`;
+- maximum observed read: `4133.06 ms`;
+- server errors: `0`.
+
+### Phase 2 exit result
+
+- Business recipe ownership references the canonical recipe authority: **met**.
+- Browser-safe Business recipe read exists: **met**.
+- Current usability derives from canonical game/country/scarcity state: **met**.
+- Internal UUID and BOM/output authority remain private: **met**.
+- No duplicate Business recipe/BOM system exists: **met**.
+- No Player recipe inheritance exists: **met**.
+- Exact source/database/browser/40-Player certification exists: **met**.
+- No production deployment occurred: **met**.
+
+### Compatibility boundary
+
+The current legacy Business product, abstract input, immediate production, manual workforce, and status forms remain compatibility surfaces pending their ordered replacement. They must not be treated as the canonical Phase 2 recipe/product model, and they must not gain new physical-product authoring authority. Player workspace removal/replacement remains scheduled for Phase 12 after the new operating mechanics exist.
+
+### Next authorized step
+
+**Phase 3B — Business Store procurement is OPEN.** The implementation must:
+
+1. reuse the canonical Store catalog, stock, scarcity, and price policy;
+2. derive geography and currency from the Business rather than an arbitrary owner Player;
+3. create a short-lived server-authoritative Business procurement quote;
+4. atomically debit first-class Business cash and move canonical Store stock into the Business warehouse;
+5. carry the settled acquisition price into canonical warehouse average cost basis;
+6. preserve idempotency, cross-game isolation, public-key-only browser contracts, and exact audit evidence;
+7. avoid a parallel wholesale or supplier catalog.
+
+Phase 4 remains closed until Phase 3 procurement is implemented, exact-head certified, and recorded here.
