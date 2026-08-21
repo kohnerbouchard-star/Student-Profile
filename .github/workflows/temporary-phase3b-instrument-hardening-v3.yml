@@ -33,7 +33,10 @@ jobs:
           hardening = Path(".github/workflows/temporary-phase3b-ci-repair.yml")
           source = hardening.read_text(encoding="utf-8")
           if "Publish bounded hardening failure evidence" not in source:
-              hardening.write_text(source.rstrip() + reporter + "\n", encoding="utf-8")
+              hardening.write_text(
+                  source.rstrip() + reporter.rstrip() + "\n",
+                  encoding="utf-8",
+              )
 
           for temporary in (
               ".github/workflows/temporary-phase3b-finalize.yml",
@@ -41,7 +44,9 @@ jobs:
               ".github/workflows/temporary-phase3b-instrument-hardening.yml",
               ".github/workflows/temporary-phase3b-instrument-hardening-v2.yml",
               ".github/workflows/temporary-phase3b-instrument-hardening-v3.yml",
+              ".github/workflows/temporary-phase3b-instrument-hardening-v4.yml",
               ".github/phase3b-finalization-failure.md",
+              ".github/phase3b-instrumentation-failure.json",
           ):
               Path(temporary).unlink(missing_ok=True)
           PY
@@ -60,7 +65,9 @@ jobs:
             .github/workflows/temporary-phase3b-instrument-hardening.yml \
             .github/workflows/temporary-phase3b-instrument-hardening-v2.yml \
             .github/workflows/temporary-phase3b-instrument-hardening-v3.yml \
-            .github/phase3b-finalization-failure.md
+            .github/workflows/temporary-phase3b-instrument-hardening-v4.yml \
+            .github/phase3b-finalization-failure.md \
+            .github/phase3b-instrumentation-failure.json
           do
             if [[ -e "$path" ]] || git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
               git add -- "$path"
