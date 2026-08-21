@@ -1,0 +1,83 @@
+name: Temporary Phase 3B Hardening Instrumentation
+
+on:
+  push:
+    branches:
+      - feat/business-store-procurement-v2
+    paths:
+      - ".github/workflows/temporary-phase3b-instrument-hardening.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  instrument:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-store-procurement-v2
+          fetch-depth: 0
+
+      - name: Instrument native hardening and remove opaque runners
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path(".github/workflows/temporary-phase3b-ci-repair.yml")
+          source = path.read_text(encoding="utf-8")
+          marker = "Publish bounded hardening failure evidence"
+          if marker not in source:
+              source = source.rstrip() + r'''
+
+      - name: Publish bounded hardening failure evidence
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD
+          git clean -fd
+          cat > .github/phase3b-hardening-failure.json <<EOF
+          {
+            "workflow": "Temporary Phase 3B Settlement Hardening",
+            "runId": "${{ github.run_id }}",
+            "runAttempt": "${{ github.run_attempt }}",
+            "headSha": "${{ github.sha }}"
+          }
+          EOF
+          git config user.name "econovaria-phase3b-hardening-observer"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- .github/phase3b-hardening-failure.json
+          git commit -m "chore(ci): record Phase 3B hardening failure"
+          git push origin HEAD:feat/business-store-procurement-v2
+''' + "\n"
+              path.write_text(source, encoding="utf-8")
+
+          for temporary in (
+              ".github/workflows/temporary-phase3b-finalize.yml",
+              ".github/workflows/temporary-phase3b-finalize-observed.yml",
+              ".github/workflows/temporary-phase3b-instrument-hardening.yml",
+              ".github/phase3b-finalization-failure.md",
+          ):
+              Path(temporary).unlink(missing_ok=True)
+          PY
+
+          git diff --check
+
+      - name: Commit and trigger native hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-phase3b-instrumenter"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            .github/workflows/temporary-phase3b-ci-repair.yml \
+            .github/workflows/temporary-phase3b-finalize.yml \
+            .github/workflows/temporary-phase3b-finalize-observed.yml \
+            .github/workflows/temporary-phase3b-instrument-hardening.yml \
+            .github/phase3b-finalization-failure.md
+          git diff --cached --check
+          git commit -m "chore(ci): expose Phase 3B hardening failures"
+          git push origin HEAD:feat/business-store-procurement-v2
