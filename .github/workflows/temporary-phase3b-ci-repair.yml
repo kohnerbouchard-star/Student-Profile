@@ -17,7 +17,7 @@ concurrency:
 jobs:
   repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out exact feature branch
@@ -31,7 +31,9 @@ jobs:
         with:
           node-version: "22.23.1"
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
 
       - name: Pin npm
         run: npm install --global npm@10.9.8
@@ -51,42 +53,59 @@ jobs:
               path = Path(path_value)
               return path, path.read_text(encoding="utf-8").splitlines(keepends=True)
 
-          def insert_after_once(path_value: str, needle: str, additions: list[str]) -> None:
+          def ensure_after_once(path_value: str, needle: str, additions: list[str]) -> None:
               path, lines = read_lines(path_value)
-              matches = [index for index, line in enumerate(lines) if line.rstrip("\n") == needle]
+              normalized = [line.rstrip("\n") for line in lines]
+              matches = [index for index, line in enumerate(normalized) if line == needle]
               if len(matches) != 1:
                   raise SystemExit(
-                      f"Expected one insertion target in {path_value}; found {len(matches)}."
+                      f"Expected one insertion anchor in {path_value}; found {len(matches)}."
                   )
               index = matches[0]
+              existing = normalized[index + 1:index + 1 + len(additions)]
+              if existing == additions:
+                  return
+              for addition in additions:
+                  if addition in normalized:
+                      raise SystemExit(
+                          f"Repair line exists outside its reviewed position in {path_value}: {addition}"
+                      )
               lines[index + 1:index + 1] = [f"{line}\n" for line in additions]
               path.write_text("".join(lines), encoding="utf-8")
 
-          def remove_line_once(path_value: str, needle: str) -> None:
+          def remove_line_at_most_once(path_value: str, needle: str) -> None:
               path, lines = read_lines(path_value)
-              matches = [index for index, line in enumerate(lines) if line.rstrip("\n") == needle]
-              if len(matches) != 1:
+              matches = [
+                  index for index, line in enumerate(lines)
+                  if line.rstrip("\n") == needle
+              ]
+              if len(matches) > 1:
                   raise SystemExit(
-                      f"Expected one removal target in {path_value}; found {len(matches)}."
+                      f"Expected at most one removal target in {path_value}; found {len(matches)}."
                   )
-              del lines[matches[0]]
-              path.write_text("".join(lines), encoding="utf-8")
+              if matches:
+                  del lines[matches[0]]
+                  path.write_text("".join(lines), encoding="utf-8")
 
-          def replace_once(path_value: str, old: str, new: str) -> None:
+          def replace_or_verify(path_value: str, old: str, new: str) -> None:
               path = Path(path_value)
               source = path.read_text(encoding="utf-8")
-              count = source.count(old)
-              if count != 1:
-                  raise SystemExit(
-                      f"Expected one replacement target in {path_value}; found {count}."
-                  )
-              path.write_text(source.replace(old, new, 1), encoding="utf-8")
+              old_count = source.count(old)
+              new_count = source.count(new)
+              if old_count == 1 and new_count == 0:
+                  path.write_text(source.replace(old, new, 1), encoding="utf-8")
+                  return
+              if old_count == 0 and new_count == 1:
+                  return
+              raise SystemExit(
+                  f"Unexpected replacement state in {path_value}: old={old_count}, new={new_count}."
+              )
 
           for runtime_path in (
               "backend/supabase/functions/classroom-api/index.ts",
               "backend/supabase/functions/player-api/runtime.ts",
           ):
-              insert_after_once(
+              ensure_after_once(
                   runtime_path,
                   '      businessInputPurchase: "businessInputPurchase",',
                   [
@@ -95,18 +114,18 @@ jobs:
                   ],
               )
 
-          remove_line_once(
+          remove_line_at_most_once(
               "scripts/business-recipe-access-contract.mjs",
               r'assert.match(handlerSource, /\{ recipes: await readBusinessRecipes\(client, publicScope\) \}/u);',
           )
 
-          replace_once(
+          replace_or_verify(
               "backend/src/domains/progression/services/progressionIntegrationEventService.test.ts",
               'const NOW = new Date("2026-07-21T02:00:00.000Z");',
               'const NOW = new Date("2026-07-21T05:00:00.000Z");',
           )
 
-          insert_after_once(
+          ensure_after_once(
               "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
               '  { kind: "businessInputPurchase" },',
               [
@@ -118,8 +137,14 @@ jobs:
 
           git diff --check
 
+      - name: Install repository dependencies
+        run: npm ci
+
       - name: Install backend dependencies
         run: npm --prefix backend ci
+
+      - name: Regenerate architecture inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
 
       - name: Verify Business recipe authority contract
         run: node scripts/business-recipe-access-contract.mjs
@@ -129,6 +154,14 @@ jobs:
 
       - name: Verify Progression fixture clock
         run: npm --prefix backend run test:player-progression
+
+      - name: Verify generated inventory is stable
+        shell: bash
+        run: |
+          cp docs/architecture/inventories/econovaria-architecture-inventory-v2.json /tmp/phase3b-inventory.json
+          node scripts/architecture/build-architecture-inventory.mjs
+          cmp /tmp/phase3b-inventory.json docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --check
 
       - name: Commit and push verified repair
         shell: bash
@@ -140,7 +173,8 @@ jobs:
             backend/supabase/functions/player-api/runtime.ts \
             scripts/business-recipe-access-contract.mjs \
             backend/src/domains/progression/services/progressionIntegrationEventService.test.ts \
-            backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts
+            backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
           if git diff --cached --quiet; then
             echo "No repair changes remained to commit."
             exit 0
