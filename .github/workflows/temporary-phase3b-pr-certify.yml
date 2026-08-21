@@ -47,49 +47,12 @@ jobs:
       - name: Execute canonical Phase 3B certification sequence
         shell: bash
         run: |
-          ruby -ryaml <<'RUBY'
-          workflow_path = ".github/workflows/temporary-phase3b-ci-repair.yml"
-          workflow = YAML.load_file(workflow_path)
-          steps = workflow.fetch("jobs").fetch("harden").fetch("steps")
-          start = steps.index { |step| step["name"] == "Apply bounded Phase 3B hardening" }
-          abort("Phase 3B hardening step was not found.") unless start
-
-          output = [
-            "#!/usr/bin/env bash",
-            "set -euo pipefail",
-          ]
-
-          steps[start..].each do |step|
-            script = step["run"]
-            next unless script
-            name = step.fetch("name", "unnamed run step")
-            directory = step["working-directory"]
-            output << "echo '::group::#{name.gsub("'", "'\\''")}'"
-            output << "pushd #{directory.shellescape} >/dev/null" if directory
-            output << script
-            output << "popd >/dev/null" if directory
-            if name == "Apply bounded Phase 3B hardening"
-              output << "rm -f .github/workflows/temporary-phase3b-pr-certify.yml"
-            end
-            if name == "Commit and push verified Phase 3B hardening"
-              output.insert(-2, "git add -- .github/workflows/temporary-phase3b-pr-certify.yml")
-            end
-            output << "echo '::endgroup::'"
-          end
-
-          File.write("/tmp/phase3b-certify.sh", output.join("\n") + "\n")
-          RUBY
-
-          # Ruby's shell escaping helper is kept outside the generated repository tree.
-          ruby -r shellwords -ryaml <<'RUBY'
-          path = "/tmp/phase3b-certify.sh"
-          source = File.read(path)
-          # The first extraction pass only needs Shellwords when a step has a working directory.
-          # Current certification has one such step; regenerate safely with the helper loaded.
+          ruby -rshellwords -ryaml <<'RUBY'
           workflow = YAML.load_file(".github/workflows/temporary-phase3b-ci-repair.yml")
           steps = workflow.fetch("jobs").fetch("harden").fetch("steps")
           start = steps.index { |step| step["name"] == "Apply bounded Phase 3B hardening" }
           abort("Phase 3B hardening step was not found.") unless start
+
           output = ["#!/usr/bin/env bash", "set -euo pipefail"]
           steps[start..].each do |step|
             script = step["run"]
@@ -108,7 +71,7 @@ jobs:
             end
             output << "echo '::endgroup::'"
           end
-          File.write(path, output.join("\n") + "\n")
+          File.write("/tmp/phase3b-certify.sh", output.join("\n") + "\n")
           RUBY
 
           bash -n /tmp/phase3b-certify.sh
