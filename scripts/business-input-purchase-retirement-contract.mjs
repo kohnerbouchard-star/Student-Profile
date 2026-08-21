@@ -18,7 +18,7 @@ const files = Object.freeze({
   resourcePlan: "player-terminal/src/api/resource-plan.js",
   businessPage: "player-terminal/src/pages/business-page.js",
   buttonCoverage: "docs/operations/contracts/button-action-coverage-v1.json",
-  historicalMigration: "backend/supabase/migrations/20260721120000_add_business_banking_credit_runtime_v1.sql",
+  historicalMigration: "backend/supabase/migrations/20260721122400_fix_business_connected_settlement_v1.sql",
   procurementMigration: "backend/supabase/migrations/20260821060000_business_store_procurement_v2.sql",
 });
 
