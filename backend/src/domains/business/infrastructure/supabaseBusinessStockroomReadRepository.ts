@@ -1,7 +1,12 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
+  parseStockroomItems,
+  parseStockroomLocations,
+} from "../application/stockroom/businessStockroomResultParser.ts";
+import { buildBusinessStockroomSnapshot } from "../application/stockroom/businessStockroomSnapshot.ts";
+import {
   type BusinessRecipeAccessDto,
-  type BusinessStockroomItemDto,
+  type BusinessStockroomSnapshotDto,
   PlayerBusinessError,
 } from "../contracts/playerBusinessContracts.ts";
 
@@ -14,25 +19,33 @@ type BusinessReadScope = {
 export async function readBusinessStockroom(
   client: EdgeSupabaseClient,
   input: BusinessReadScope,
-): Promise<readonly BusinessStockroomItemDto[]> {
-  const response = await client.rpc<unknown>("read_owned_business_stockroom_v2", {
+): Promise<BusinessStockroomSnapshotDto> {
+  const args = {
     p_game_session_id: input.gameSessionId,
     p_player_id: input.playerId,
-  });
-  if (response.error) throw mapBusinessPhysicalEconomyReadError(response.error.message, "stockroom");
-  return arrayRows(response.data).map((row) => ({
-    itemKey: text(row.item_key),
-    canonicalKey: text(row.canonical_key),
-    name: text(row.item_name, "Unnamed item"),
-    itemClass: text(row.item_class, "legacy"),
-    subtype: text(row.item_subtype, "general"),
-    quantityOwned: number(row.quantity_owned),
-    quantityReserved: number(row.quantity_reserved),
-    quantityAvailable: number(row.quantity_available),
-    averageUnitCost: number(row.average_unit_cost),
-    costCurrencyCode: nullableText(row.cost_currency_code),
-    version: integer(row.holding_version, 1),
-  }));
+  };
+  const [locationResponse, itemResponse] = await Promise.all([
+    client.rpc<unknown>("read_owned_business_stockroom_locations_v2", args),
+    client.rpc<unknown>("read_owned_business_stockroom_v2", args),
+  ]);
+
+  if (locationResponse.error) {
+    throw mapBusinessPhysicalEconomyReadError(
+      locationResponse.error.message,
+      "stockroom",
+    );
+  }
+  if (itemResponse.error) {
+    throw mapBusinessPhysicalEconomyReadError(
+      itemResponse.error.message,
+      "stockroom",
+    );
+  }
+
+  return buildBusinessStockroomSnapshot(
+    parseStockroomLocations(locationResponse.data),
+    parseStockroomItems(itemResponse.data),
+  );
 }
 
 export async function readBusinessRecipes(
@@ -43,7 +56,9 @@ export async function readBusinessRecipes(
     p_game_session_id: input.gameSessionId,
     p_player_id: input.playerId,
   });
-  if (response.error) throw mapBusinessPhysicalEconomyReadError(response.error.message, "recipes");
+  if (response.error) {
+    throw mapBusinessPhysicalEconomyReadError(response.error.message, "recipes");
+  }
   return arrayRows(response.data).map((row) => ({
     accessKey: text(row.access_key),
     recipeKey: text(row.recipe_key),
@@ -71,11 +86,15 @@ function mapBusinessPhysicalEconomyReadError(
   message: string,
   resource: "stockroom" | "recipes",
 ): PlayerBusinessError {
-  const code = message.trim().split(/\s+/u)[0] || "BUSINESS_PHYSICAL_ECONOMY_READ_FAILED";
+  const code = message.trim().split(/\s+/u)[0] ||
+    "BUSINESS_PHYSICAL_ECONOMY_READ_FAILED";
   const mappings: Record<string, [number, string]> = {
     PLAYER_REQUIRED: [401, "Player session scope is required."],
     BUSINESS_NOT_FOUND: [404, "Business was not found for this player."],
-    BUSINESS_OWNERSHIP_AMBIGUOUS: [409, "Multiple active Business ownership positions require resolution."],
+    BUSINESS_OWNERSHIP_AMBIGUOUS: [
+      409,
+      "Multiple active Business ownership positions require resolution.",
+    ],
   };
   const mapped = mappings[code];
   return new PlayerBusinessError(
@@ -90,20 +109,20 @@ function mapBusinessPhysicalEconomyReadError(
 function arrayRows(value: unknown): Row[] {
   return Array.isArray(value) ? value.filter(isRow) : [];
 }
+
 function isRow(value: unknown): value is Row {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
+
 function text(value: unknown, defaultValue = ""): string {
   return typeof value === "string" && value.trim() ? value.trim() : defaultValue;
 }
-function nullableText(value: unknown): string | null {
-  const valueText = text(value);
-  return valueText || null;
-}
+
 function number(value: unknown, defaultValue = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : defaultValue;
 }
+
 function integer(value: unknown, defaultValue = 0): number {
   return Math.trunc(number(value, defaultValue));
 }
