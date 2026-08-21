@@ -128,13 +128,13 @@ jobs:
           log = log_path.read_text(encoding="utf-8")
           marker = "## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement"
           if marker not in log:
-              log_path.write_text(log.rstrip() + entry + "\n", encoding="utf-8")
+              log_path.write_text(log.rstrip() + entry.rstrip() + "\n", encoding="utf-8")
 
           workflow = workflow_path.read_text(encoding="utf-8")
           begin = workflow.index("\n  # BEGIN PHASE3B_CERTIFIER")
           end_marker = "\n  # END PHASE3B_CERTIFIER"
           end = workflow.index(end_marker, begin) + len(end_marker)
-          workflow_path.write_text(workflow[:begin] + workflow[end:] + "\n", encoding="utf-8")
+          workflow_path.write_text(workflow[:begin].rstrip() + "\n", encoding="utf-8")
 
           if helper_path.exists():
               helper_path.unlink()
