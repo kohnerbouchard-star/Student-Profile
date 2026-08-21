@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1057,
+    "sourceFiles": 1061,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 208,
     "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 123
@@ -85,10 +85,11 @@
       "name": "business",
       "layers": [
         "api",
+        "application",
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 11,
+      "sourceFiles": 15,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -2555,12 +2556,6 @@
         "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
         "markers": [
           "fallback"
-        ]
-      },
-      {
-        "file": "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
-        "markers": [
-          "legacy"
         ]
       },
       {
