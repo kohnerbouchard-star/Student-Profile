@@ -268,25 +268,26 @@ Exit: a Player cannot create or modify the definition/BOM of a physical product.
 
 ## Phase 3 — Stockroom and procurement
 
-**Status:** IN PROGRESS — checkpoints A, B, and C complete; legacy abstract input-purchase retirement remains open
+**Status:** COMPLETE — checkpoints A through D certified
 
 - [x] Add bounded Business Stockroom read model over canonical Inventory accounts.
 - [x] Materials/warehouse, WIP, Finished Goods, and In Transit are visible separately.
 - [x] Procurement delivers canonical items into Business stockroom with actual cost basis.
 - [x] Input/manufacturing cost derives from carried inventory basis.
-- [ ] Remove new reliance on abstract `unit_input_cost` purchasing.
+- [x] Remove new reliance on abstract `unit_input_cost` purchasing.
 
 Certified checkpoints:
 
 - **3A:** canonical warehouse Stockroom read.
 - **3B:** canonical Store procurement, certified source `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
 - **3C:** coherent location-complete canonical Business Stockroom read, certified source `6799c0b44025dd71b54ed75636dd8f2af3358150`.
+- **3D:** live abstract input-purchase authority retired while preserving authenticated `410 Gone` compatibility handling and historical records; certified implementation source `bd186ba86b4952bff7f4ab9b34c5e067dbd70116`, clean verification head `832c609679e4d423e968ee2e42bd810d7aa6a862`.
 
 Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished goods.
 
 ## Phase 4 — Workforce capacity and payroll
 
-**Status:** NOT STARTED
+**Status:** OPEN — Phase 3 complete; workforce/payroll is the next authorized phase
 
 - [ ] Preserve server-generated talent/candidate direction.
 - [ ] Add recipe labor-minute/headcount/role requirements.
