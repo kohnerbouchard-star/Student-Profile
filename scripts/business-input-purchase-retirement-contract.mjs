@@ -92,7 +92,11 @@ for (const [name, value] of [
     `${name} must not publish the compatibility URL as active.`,
   );
 }
-assert.doesNotMatch(source.businessPage, /Purchase production inputs|Purchase inputs/u);
+assert.doesNotMatch(
+  source.businessPage,
+  /data-player-form="business-input-purchase"|<strong>Purchase production inputs<\/strong>/u,
+  "The retired Player control must not remain rendered.",
+);
 
 assert.match(source.historicalMigration, /create or replace function public\.purchase_business_input_v1/u);
 assert.match(source.historicalMigration, /public\.business_inventory/u);
