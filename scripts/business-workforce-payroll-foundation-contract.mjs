@@ -279,7 +279,7 @@ assert.match(
 );
 assert.match(
   settlement,
-  /sum\(employee_row\.wage_per_cycle\)/u,
+  /sum\(emp\.wage_per_cycle\)/u,
 );
 assert.match(settlement, /'wage_expense'/u);
 
