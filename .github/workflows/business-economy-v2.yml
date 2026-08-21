@@ -43,6 +43,7 @@ jobs:
       - run: node scripts/business-recipe-access-contract.mjs
       - run: node scripts/business-stockroom-authority-contract.mjs
       - run: node scripts/business-store-procurement-authority-contract.mjs
+      - run: node scripts/business-input-purchase-retirement-contract.mjs
       - name: Materialize architecture inventory for review
         run: node scripts/architecture/build-architecture-inventory.mjs
       - name: Upload Business V2 review bundle
@@ -75,7 +76,7 @@ jobs:
         working-directory: backend
       - run: npm run typecheck
         working-directory: backend
-      - name: Verify extracted Business route, procurement, and Stockroom authority
+      - name: Verify extracted Business route, procurement, Stockroom, and retirement authority
         working-directory: backend
         run: |
           deno test --config supabase/functions/classroom-api/deno.json \
@@ -83,4 +84,253 @@ jobs:
             src/domains/business/api/playerBusinessRoutePaths.test.ts \
             src/domains/business/api/playerBusinessStoreProcurement.test.ts \
             src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts \
+            src/domains/business/api/playerBusinessInputPurchaseRetirement.test.ts \
             src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts
+
+  phase3d-converge:
+    name: Converge Phase 3D retirement surfaces
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 656
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: refactor/business-abstract-input-retirement-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Apply exact retirement convergence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          def load(path_value: str) -> tuple[Path, str]:
+              path = Path(path_value)
+              return path, path.read_text(encoding="utf-8")
+
+          def replace_once(path_value: str, old: str, new: str) -> None:
+              path, source = load(path_value)
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one exact target in {path_value}; found {count}")
+              path.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          def regex_once(path_value: str, pattern: str, replacement: str) -> None:
+              path, source = load(path_value)
+              updated, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f"Expected one regex target in {path_value}; found {count}: {pattern}")
+              path.write_text(updated, encoding="utf-8")
+
+          executor = "backend/src/domains/business/api/playerBusinessMutationExecutor.ts"
+          replace_once(
+              executor,
+              '  | { readonly kind: "businessStorePurchase" }\n>;',
+              '  | { readonly kind: "businessStorePurchase" }\n  | { readonly kind: "businessInputPurchase" }\n>;',
+          )
+          regex_once(
+              executor,
+              r'\n    case "businessInputPurchase":\n.*?\n    case "businessProduction":',
+              '\n    case "businessProduction":',
+          )
+
+          capability = "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+          replace_once(capability, '  "businessInputPurchase",\n', '')
+          regex_once(
+              capability,
+              r'\n  businessInputPurchase: \{\n    method: "POST",\n    path: "/players/me/business/inputs/purchases",\n    available: true,\n  \},',
+              '',
+          )
+          replace_once(capability, '  businessInputPurchase: "sensitive",\n', '')
+
+          rate_limit = "backend/src/security/playerRateLimitDispatch.ts"
+          replace_once(
+              rate_limit,
+              'export type ReviewedPlayerRateLimitEndpointKey =\n  | PlayerCapabilityEndpointKey\n  | "inventoryRedemption";',
+              'export type ReviewedPlayerRateLimitEndpointKey =\n  | PlayerCapabilityEndpointKey\n  | "inventoryRedemption"\n  | "businessInputPurchase";',
+          )
+          replace_once(
+              rate_limit,
+              'POST: operation("player.business.inputs.purchase", "sensitive"),',
+              'POST: operation("player.business.inputs.purchase.retired", "sensitive"),',
+          )
+
+          endpoints = "player-terminal/src/api/endpoints.js"
+          regex_once(
+              endpoints,
+              r'\n  businessInputPurchase: \{\n    method: "POST",\n    path: "/players/me/business/inputs/purchases",\n    available: true,\n  \},',
+              '',
+          )
+
+          browser_routes = "player-terminal/src/api/business-banking-backend-routes.js"
+          regex_once(
+              browser_routes,
+              r'\n  businessInputPurchase\(\) \{\n    return \{\n      path: PLAYER_ENDPOINTS\.businessInputPurchase\.path,\n      payload: preserveFields\(arguments\[0\] \|\| \{\}, \[\n        "businessKey", "productKey", "quantity", "idempotencyKey",\n      \]\),\n    \};\n  \},',
+              '',
+          )
+
+          browser_capabilities = "player-terminal/src/api/capabilities.js"
+          replace_once(browser_capabilities, '  "businessInputPurchase",\n', '')
+
+          browser_manifest = "player-terminal/src/integrations/student-profile-capability-manifest.js"
+          replace_once(
+              browser_manifest,
+              '  businessInputPurchase: ["POST /players/me/business/inputs/purchases"],\n',
+              '',
+          )
+          replace_once(
+              browser_manifest,
+              '  businessInputPurchase: ["businessInputPurchase"],\n',
+              '',
+          )
+
+          resource_plan = "player-terminal/src/api/resource-plan.js"
+          regex_once(
+              resource_plan,
+              r'\n  businessInputPurchase: \[\n    RESOURCE_KEYS\.business,\n    RESOURCE_KEYS\.banking,\n  \],',
+              '',
+          )
+
+          business_page = "player-terminal/src/pages/business-page.js"
+          regex_once(
+              business_page,
+              r'\nfunction inputPurchaseForm\(business\) \{.*?\n\}\n\nfunction employeeRows',
+              '\nfunction employeeRows',
+          )
+          replace_once(business_page, '        ${inputPurchaseForm(business)}\n', '')
+          replace_once(
+              business_page,
+              'Create a product before purchasing inputs or running production.',
+              'Create a product before running production.',
+          )
+
+          surface = "player-terminal/tests/business-banking-surface.mjs"
+          replace_once(surface, '  "businessInputPurchase",\n', '')
+          replace_once(
+              surface,
+              'assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);',
+              'assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);\nassert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);\nassert.equal(PLAYER_ENDPOINTS.businessInputPurchase, undefined);',
+          )
+
+          button_path = Path("docs/operations/contracts/button-action-coverage-v1.json")
+          button = json.loads(button_path.read_text(encoding="utf-8"))
+          removed = button.get("playerActions", {}).pop("businessInputPurchase", None)
+          if not removed:
+              raise SystemExit("button action ledger did not contain businessInputPurchase")
+          button_path.write_text(json.dumps(button, indent=2) + "\n", encoding="utf-8")
+
+          authority_path = Path("docs/operations/contracts/player-cross-cutting-verification-authority-v1.json")
+          authority = json.loads(authority_path.read_text(encoding="utf-8"))
+          authority["pullRequestNumber"] = 656
+          authority["baseRef"] = "feat/business-stockroom-locations-v2"
+          required_paths = {
+              ".github/workflows/business-economy-v2.yml",
+              "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+              "backend/src/domains/business/api/playerBusinessInputPurchaseRetirement.test.ts",
+              "backend/src/domains/business/api/playerBusinessMutationExecutor.ts",
+              "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
+              "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
+              "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+              "backend/src/security/playerRateLimitDispatch.ts",
+              "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
+              "docs/operations/contracts/button-action-coverage-v1.json",
+              "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+              "player-terminal/src/api/business-banking-backend-routes.js",
+              "player-terminal/src/api/capabilities.js",
+              "player-terminal/src/api/endpoints.js",
+              "player-terminal/src/api/resource-plan.js",
+              "player-terminal/src/integrations/student-profile-capability-manifest.js",
+              "player-terminal/src/pages/business-page.js",
+              "player-terminal/tests/business-banking-surface.mjs",
+              "scripts/business-input-purchase-retirement-contract.mjs",
+          }
+          authority["allowedPaths"] = sorted(set(authority.get("allowedPaths", [])) | required_paths)
+          authority_path.write_text(json.dumps(authority, indent=2) + "\n", encoding="utf-8")
+          PY
+          git diff --check
+      - name: Reject surviving active references
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          allowed = {
+              "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
+              "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+              "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+              "backend/src/domains/business/api/playerBusinessInputPurchaseRetirement.test.ts",
+              "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
+              "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
+              "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
+              "backend/src/domains/business/contracts/playerBusinessContracts.ts",
+              "backend/src/security/playerRateLimitDispatch.ts",
+              "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
+              "backend/supabase/functions/classroom-api/index.ts",
+              "backend/supabase/functions/player-api/runtime.ts",
+              "scripts/business-input-purchase-retirement-contract.mjs",
+          }
+          offenders = []
+          for root in (Path("backend"), Path("player-terminal"), Path("scripts"), Path("docs/operations/contracts")):
+              for path in root.rglob("*"):
+                  if not path.is_file():
+                      continue
+                  try:
+                      text = path.read_text(encoding="utf-8")
+                  except UnicodeDecodeError:
+                      continue
+                  if "businessInputPurchase" in text and path.as_posix() not in allowed:
+                      offenders.append(path.as_posix())
+          if offenders:
+              raise SystemExit("Unexpected active businessInputPurchase references:\n" + "\n".join(sorted(offenders)))
+          PY
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix backend ci
+      - name: Verify retirement contracts and types
+        run: |
+          node scripts/business-input-purchase-retirement-contract.mjs
+          npm --prefix backend run typecheck
+          deno test --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/business/api/playerBusinessInputPurchaseRetirement.test.ts \
+            backend/src/domains/business/api/playerBusinessRoutePaths.test.ts \
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts \
+            backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
+          node player-terminal/tests/business-banking-surface.mjs
+          node player-terminal/tests/current-capability-manifest.mjs
+      - name: Commit verified retirement convergence
+        shell: bash
+        run: |
+          git config user.name "econovaria-phase3d-convergence"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            backend/src/domains/business/api/playerBusinessMutationExecutor.ts \
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts \
+            backend/src/security/playerRateLimitDispatch.ts \
+            docs/operations/contracts/button-action-coverage-v1.json \
+            docs/operations/contracts/player-cross-cutting-verification-authority-v1.json \
+            player-terminal/src/api/business-banking-backend-routes.js \
+            player-terminal/src/api/capabilities.js \
+            player-terminal/src/api/endpoints.js \
+            player-terminal/src/api/resource-plan.js \
+            player-terminal/src/integrations/student-profile-capability-manifest.js \
+            player-terminal/src/pages/business-page.js \
+            player-terminal/tests/business-banking-surface.mjs
+          git commit -m "refactor(business): remove live abstract input purchase authority"
+          git push origin HEAD:refactor/business-abstract-input-retirement-v2
