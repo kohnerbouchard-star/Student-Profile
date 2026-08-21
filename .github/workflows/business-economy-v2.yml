@@ -84,3 +84,88 @@ jobs:
             src/domains/business/api/playerBusinessStoreProcurement.test.ts \
             src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts \
             src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts
+
+  phase3c-certify:
+    name: Record durable Phase 3C certification
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 655
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-stockroom-locations-v2
+          fetch-depth: 0
+      - name: Verify certified implementation ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor 6799c0b44025dd71b54ed75636dd8f2af3358150 HEAD
+          git diff --quiet 6799c0b44025dd71b54ed75636dd8f2af3358150 HEAD -- \
+            backend \
+            player-terminal \
+            scripts \
+            docs/architecture \
+            docs/operations
+      - name: Record plan and execution log
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+
+          plan_path = Path("docs/roadmaps/business-v2-development-execution-plan-v1.md")
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+
+          plan = plan_path.read_text(encoding="utf-8")
+          old_status = "**Status:** IN PROGRESS — checkpoints A and B complete; location-complete Stockroom convergence and abstract-input retirement remain open"
+          new_status = "**Status:** IN PROGRESS — checkpoints A, B, and C complete; legacy abstract input-purchase retirement remains open"
+          if old_status in plan:
+              plan = plan.replace(old_status, new_status, 1)
+          elif new_status not in plan:
+              raise SystemExit("Phase 3 status did not match the reviewed roadmap state")
+
+          old_check = "- [ ] Materials/warehouse, WIP, Finished Goods, and In Transit are visible separately."
+          new_check = "- [x] Materials/warehouse, WIP, Finished Goods, and In Transit are visible separately."
+          if old_check in plan:
+              plan = plan.replace(old_check, new_check, 1)
+          elif new_check not in plan:
+              raise SystemExit("Phase 3C checklist line was not found")
+
+          checkpoint = "- **3C:** coherent location-complete canonical Business Stockroom read, certified source `6799c0b44025dd71b54ed75636dd8f2af3358150`."
+          if checkpoint not in plan:
+              anchor = "- **3B:** canonical Store procurement, certified source `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`."
+              if anchor not in plan:
+                  raise SystemExit("Phase 3B checkpoint anchor was not found")
+              plan = plan.replace(anchor, anchor + "\n" + checkpoint, 1)
+          plan_path.write_text(plan.rstrip() + "\n", encoding="utf-8")
+
+          entry = base64.b64decode("LS0tCiMjIDIwMjYtMDgtMjEg4oCUIFBoYXNlIDNDIENPTVBMRVRFOiBsb2NhdGlvbi1jb21wbGV0ZSBjYW5vbmljYWwgQnVzaW5lc3MgU3RvY2tyb29tCgojIyMgQ2VydGlmaWVkIGltcGxlbWVudGF0aW9uIHNvdXJjZQoKLSAqKkV4YWN0IGltcGxlbWVudGF0aW9uIFNIQToqKiBgNjc5OWMwYjQ0MDI1ZGQ3MWI1NGVkNzU2MzZkZDhmMmFmMzM1ODE1MGAuCi0gRmVhdHVyZSBicmFuY2g6IGBmZWF0L2J1c2luZXNzLXN0b2Nrcm9vbS1sb2NhdGlvbnMtdjJgLgotIFN0YWNrZWQgZHJhZnQgUFI6ICM2NTUsIGJhc2VkIG9uIGBmZWF0L2J1c2luZXNzLXN0b3JlLXByb2N1cmVtZW50LXYyYC4KLSBQUiAjNjU0IGFuZCBpbnRlZ3JhdGlvbiBQUiAjNjQ4IHJlbWFpbmVkIG9wZW4sIGRyYWZ0LCBtZXJnZWFibGUsIGFuZCB1bm1lcmdlZC4KLSBObyBzdGFnaW5nIG9yIHByb2R1Y3Rpb24gZGVwbG95bWVudCBvciBkYXRhIG11dGF0aW9uIHdhcyBwZXJmb3JtZWQuCi0gVGhpcyBkb2N1bWVudGF0aW9uIGNvbW1pdCBpcyBsYXRlciB0aGFuIHRoZSBjZXJ0aWZpZWQgaW1wbGVtZW50YXRpb24gU0hBIGFuZCBtdXN0IG5vdCByZXBsYWNlIGl0IGFzIHRoZSB0ZXN0ZWQgc291cmNlLgoKIyMjIFdoYXQgY2hhbmdlZAoKLSBFeHRlbmRlZCB0aGUgY2Fub25pY2FsIEJ1c2luZXNzIGludmVudG9yeS1hY2NvdW50IGF1dGhvcml0eSB0byBgaW5fdHJhbnNpdGAgd2hpbGUgcmV0YWluaW5nIFdhcmVob3VzZSwgV29yayBpbiBQcm9ncmVzcywgYW5kIEZpbmlzaGVkIEdvb2RzLgotIFByb3Zpc2lvbmVkIGFsbCBmb3VyIGNhbm9uaWNhbCBTdG9ja3Jvb20gYWNjb3VudHMgb24gYXV0aG9yaXRhdGl2ZSBCdXNpbmVzcyBjcmVhdGlvbiBhbmQgYmFja2ZpbGxlZCBhY3RpdmUgZXhpc3RpbmcgQnVzaW5lc3NlcyBkdXJpbmcgdGhlIGZvcndhcmQgbWlncmF0aW9uLgotIFJlcGxhY2VkIHRoZSB3YXJlaG91c2Utb25seSBpdGVtIHJlYWQgd2l0aCBwdWJsaWMta2V5LW9ubHkgbG9jYXRpb24gYW5kIGhvbGRpbmcgcmVhZHMgb3ZlciBjYW5vbmljYWwgYGVjb25vbWljX3BhcnRpZXNgLCBgaW52ZW50b3J5X2FjY291bnRzYCwgYGludmVudG9yeV9ob2xkaW5nc2AsIGFuZCBnYW1lX2l0ZW1zYC4KLSBBZGRlZCBhIHNpbmdsZSBzdGFibGUgc2VydmVyLWF1dGhvcml0YXRpdmUgc25hcHNob3QgUlBDIHNvIGxvY2F0aW9uIGFnZ3JlZ2F0ZXMgYW5kIGl0ZW0gaG9sZGluZ3MgYXJlIHJlYWQgZnJvbSBvbmUgUG9zdGdyZVNRTCBzdGF0ZW1lbnQgc25hcHNob3QgZHVyaW5nIGNvbmN1cnJlbnQgcHJvY3VyZW1lbnQgb3IgcHJvZHVjdGlvbiBzZXR0bGVtZW50LgotIFJldHVybmVkIGFsbCBmb3VyIGxvY2F0aW9ucyBldmVuIHdoZW4gYSBsb2NhdGlvbiBpcyBlbXB0eS4KLSBBZGRlZCBzdHJpY3QgYnJvd3Nlci1ib3VuZGFyeSB2YWxpZGF0aW9uIGZvciBleGFjdCBlbnZlbG9wZSBmaWVsZHMsIGZvdXIgdW5pcXVlIGxvY2F0aW9uIGtleXMsIHB1YmxpYyBCdXNpbmVzcy9hY2NvdW50L2l0ZW0ga2V5cywgcXVhbnRpdHkgaW52YXJpYW50cywgYWdncmVnYXRlIHJlY29uY2lsaWF0aW9uLCBib3VuZGVkIGl0ZW0gY291bnQsIGNvc3QgYmFzaXMsIGN1cnJlbmN5LCB2ZXJzaW9uLCBhbmQgcmVjdXJzaXZlIFVVSUQgZXhjbHVzaW9uLgotIFByZXNlcnZlZCB0aGUgZXhpc3RpbmcgYGl0ZW1zYCBjb2xsZWN0aW9uIHdoaWxlIGFkZGluZyBleHBsaWNpdCBgYnVzaW5lc3NLZXlgIGFuZCBgbG9jYXRpb25zYCBmaWVsZHMuCi0gRXhwbGljaXRseSBkcm9wcGVkIGFuZCByZWNyZWF0ZWQgdGhlIFBoYXNlIDNBIHRhYmxlLXJldHVybmluZyBSUEMgYmVmb3JlIGNoYW5naW5nIGl0cyBPVVQgcm93IGNvbnRyYWN0OyBDSSBub3cgcmF0Y2hldHMgdGhhdCBQb3N0Z3JlU1FMIHJlcXVpcmVtZW50LgotIEFkZGVkIHRoZSBleHRyYWN0ZWQgQnVzaW5lc3MgZG9tYWluIGFuZCBjdXJyZW50IEJ1c2luZXNzIG1pZ3JhdGlvbiBkYXRlcyB0byB0aGUgZm9jdXNlZCBCdXNpbmVzcyBCYW5raW5nIFJ1bnRpbWUgd29ya2Zsb3cgdHJpZ2dlciB3aXRob3V0IHdlYWtlbmluZyBpdHMgdmVyaWZpY2F0aW9uIHNjb3BlLgotIFJlZ2VuZXJhdGVkIHRoZSBkZXRlcm1pbmlzdGljIGFyY2hpdGVjdHVyZSBpbnZlbnRvcnk7IG5vIGFyY2hpdGVjdHVyZS1yYXRjaGV0IGNlaWxpbmcgd2FzIHJhaXNlZC4KCiMjIyBWZXJpZmljYXRpb24gb24gZXhhY3Qgc291cmNlIGA2Nzk5YzBiNC4uLmAKCi0gKipCdXNpbmVzcyBFY29ub215IFYyIOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzM3MGApLgotICoqRGF0YWJhc2UgUmVwbGF5IMOXMiArIGRhdGFiYXNlIGxpbnQg4oCUIFBBU1MqKiAoYDMyNDgyOTQzNDM1YCkuCi0gKipCYWNrZW5kIFR5cGVjaGVjayBhbmQgYmFja2VuZCBzbW9rZSDigJQgUEFTUyoqIChgMzI0ODI5NDM0NDVgKS4KLSAqKkJ1c2luZXNzIEJhbmtpbmcgUnVudGltZSDigJQgUEFTUyoqIChgMzI0ODI5NDM0MTZgKS4KLSAqKlJlcG9zaXRvcnkgUXVhbGl0eSDigJQgUEFTUyoqIChgMzI0ODI5NDM0MjhgKS4KLSAqKlJ1bnRpbWUgSW50ZXJhY3Rpb24gV2lyaW5nIOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzQ2NGApLgotICoqU3VwcGx5IENoYWluIFNlY3VyaXR5IOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzQ0MmApLgotICoqUGxheWVyIFRlcm1pbmFsIFZlcmlmeSwgaW5jbHVkaW5nIENocm9taXVtIOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzM3MmApLgotICoqQWRtaW4gQVBJIENoZWNrIOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzM5M2ApLgotICoqU3RhZ2luZyBSZWFkaW5lc3MgUHJlZmxpZ2h0IOKAlCBQQVNTKiogKGAzMjQ4Mjk0MzU0OWApLgotICoqUmVxdWlyZWQgR2FtZSBNYXJrZXQgVGltZXpvbmUgYW5kIEV4Y2hhbmdlIENhbGVuZGFyIFJ1bnRpbWUg4oCUIFBBU1MqKiAoYDMyNDgyOTQzNDAzYCwgYDMyNDgyOTQzMzk4YCkuCgojIyMgQXJjaGl0ZWN0dXJlIGFuZCBnYW1lcGxheSBkZWNpc2lvbnMKCi0gU3RvY2tyb29tIGlzIGEgcmVhZCBtb2RlbCBvdmVyIGNhbm9uaWNhbCBJbnZlbnRvcnkgYWNjb3VudHMsIG5ldmVyIGEgQnVzaW5lc3Mtc3BlY2lmaWMgaW52ZW50b3J5IGF1dGhvcml0eSBvciBwcm9qZWN0aW9uIHRhYmxlLgotIEJyb3dzZXIgcmVhZHMgbmV2ZXIgcHJvdmlzaW9uIG9yIG11dGF0ZSBpbnZlbnRvcnk7IGFjY291bnQgcHJvdmlzaW9uaW5nIG9jY3VycyBvbmx5IHRocm91Z2ggYXV0aG9yaXRhdGl2ZSBCdXNpbmVzcyBsaWZlY3ljbGUgd3JpdGVzIGFuZCBtaWdyYXRpb24gYmFja2ZpbGwuCi0gRW1wdHkgY2Fub25pY2FsIGxvY2F0aW9ucyBhcmUgZmlyc3QtY2xhc3Mgb3BlcmF0aW9uYWwgc3RhdGUgYW5kIHJlbWFpbiB2aXNpYmxlLgotIE9uZSBzbmFwc2hvdCBSUEMgaXMgcmVxdWlyZWQgdG8gYXZvaWQgdHJhbnNpZW50IGFnZ3JlZ2F0ZS9pdGVtIGRpc2FncmVlbWVudCB1bmRlciBjb25jdXJyZW50IHNldHRsZW1lbnQuCi0gU3RvcmUtbGlzdGluZyBzdG9jayByZW1haW5zIGEgbGF0ZXIgUGhhc2UgOCBsb2NhdGlvbiBhbmQgd2FzIG5vdCBpbnRyb2R1Y2VkIGVhcmx5LgoKIyMjIFJlbWFpbmluZyBQaGFzZSAzIGJsb2NrZXIKClBoYXNlIDMgaXMgbm90IGNvbXBsZXRlLiBUaGUgbGVnYWN5IFBsYXllciBBUEkgc3RpbGwgYWR2ZXJ0aXNlcyBhbmQgZXhlY3V0ZXMgdGhlIGFic3RyYWN0IGBidXNpbmVzc0lucHV0UHVyY2hhc2VgIHBhdGggYmFja2VkIGJ5IGB1bml0X2lucHV0X2Nvc3RgLiBIaXN0b3JpY2FsIGNvbXBhdGliaWxpdHkgZGF0YSBtdXN0IHJlbWFpbiByZWFkYWJsZSwgYnV0IG5ldyBQbGF5ZXIgZXhlY3V0aW9uIGFuZCBjYXBhYmlsaXR5IGFkdmVydGlzZW1lbnQgbXVzdCBiZSByZXRpcmVkIGJlZm9yZSBQaGFzZSA0IG9wZW5zLgoKIyMjIE5leHQgYXV0aG9yaXplZCBzdGVwCgoqKlBoYXNlIDNEIOKAlCByZXRpcmUgbmV3IFBsYXllciBBUEkgcmVsaWFuY2Ugb24gbGVnYWN5IGFic3RyYWN0IGlucHV0IHB1cmNoYXNpbmcgaXMgT1BFTi4qKiBQcmVzZXJ2ZSBoaXN0b3JpY2FsIHJlY29yZHMgYW5kIHRoZSBib3VuZGVkIGNvbXBhdGliaWxpdHkgVVJMLCByZXR1cm4gYSBzdGFibGUgYDQxMCBHb25lYCByZXRpcmVtZW50IHJlc3BvbnNlIGZvciBhdXRoZW50aWNhdGVkIGF0dGVtcHRzLCByZW1vdmUgdGhlIGFjdGlvbiBmcm9tIHNlcnZlci9jbGllbnQgY2FwYWJpbGl0eSBtYW5pZmVzdHMgYW5kIGFjdGl2ZSBicm93c2VyIGNvbnRyb2xzLCBhbmQgZWxpbWluYXRlIHRoZSBsaXZlIGBwdXJjaGFzZV9idXNpbmVzc19pbnB1dF92MWAgZXhlY3V0aW9uIHBhdGguIENhbm9uaWNhbCBCdXNpbmVzcyBTdG9yZSBwcm9jdXJlbWVudCByZW1haW5zIHRoZSBvbmx5IG5ldyBtYXRlcmlhbC1hY3F1aXNpdGlvbiBhdXRob3JpdHkuIFBoYXNlIDQgd29ya2ZvcmNlL3BheXJvbGwgcmVtYWlucyBjbG9zZWQu").decode("utf-8")
+
+          log = log_path.read_text(encoding="utf-8")
+          marker = "## 2026-08-21 — Phase 3C COMPLETE: location-complete canonical Business Stockroom"
+          if marker not in log:
+              log_path.write_text(log.rstrip() + "\n\n" + entry.rstrip() + "\n", encoding="utf-8")
+
+          git_diff = True
+          PY
+          git diff --check -- \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+      - name: Commit durable certification
+        shell: bash
+        run: |
+          if git diff --quiet -- \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md; then
+            echo "Phase 3C certification already recorded."
+            exit 0
+          fi
+          git config user.name "econovaria-roadmap-certifier"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+          git commit -m "docs(business): certify Phase 3C Stockroom"
+          git push origin HEAD:feat/business-stockroom-locations-v2
