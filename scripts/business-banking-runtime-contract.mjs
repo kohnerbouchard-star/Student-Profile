@@ -146,7 +146,8 @@ for (const scopeGuard of [
 assert.match(source.playerScope, /invalid_player_session_scope/u);
 
 for (const routeKind of [
-  "businessCreate", "businessProductCreate", "businessInputPurchase",
+  "businessCreate", "businessProductCreate",
+  "businessInputPurchase",
   "businessProduction", "businessPrice", "businessHire", "businessTerminate",
   "businessStatus", "playerTransfer", "savingsTransfer", "loansRead",
   "loanApply", "loanRepay",
