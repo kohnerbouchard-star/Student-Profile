@@ -118,73 +118,16 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import base64
 
           log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
           workflow_path = Path(".github/workflows/business-economy-v2.yml")
           helper_path = Path(".github/workflows/phase3b-certification-once.yml")
+          entry = base64.b64decode("CgotLS0KCiMjIDIwMjYtMDgtMjEg4oCUIFBoYXNlIDNCIENPTVBMRVRFOiBjYW5vbmljYWwgQnVzaW5lc3MgU3RvcmUgcHJvY3VyZW1lbnQKCiMjIyBDZXJ0aWZpZWQgaW1wbGVtZW50YXRpb24gc291cmNlCgotICoqRXhhY3QgaW1wbGVtZW50YXRpb24gU0hBOioqIGBhY2JiZmYyMGE0YWZhODI5NmJkZmIzMGRiYzBjOGU4NGUzNzcwMmM5YC4KLSBGZWF0dXJlIGJyYW5jaDogYGZlYXQvYnVzaW5lc3Mtc3RvcmUtcHJvY3VyZW1lbnQtdjJgLgotIFN0YWNrZWQgZHJhZnQgUFI6ICM2NTQsIGJhc2VkIG9uIGByZWZhY3Rvci9idXNpbmVzcy11eC1tZWNoYW5pY3MtdjFgLgotIEludGVncmF0aW9uIFBSICM2NDggcmVtYWluZWQgb3BlbiwgZHJhZnQsIG1lcmdlYWJsZSwgYW5kIHVubWVyZ2VkLgotIE5vIHN0YWdpbmcgb3IgcHJvZHVjdGlvbiBkZXBsb3ltZW50IG9yIGRhdGEgbXV0YXRpb24gd2FzIHBlcmZvcm1lZC4KLSBUaGlzIGRvY3VtZW50YXRpb24gY29tbWl0IGlzIGxhdGVyIHRoYW4gdGhlIGNlcnRpZmllZCBpbXBsZW1lbnRhdGlvbiBTSEEgYW5kIG11c3Qgbm90IHJlcGxhY2UgaXQgYXMgdGhlIHRlc3RlZCBzb3VyY2UuCgojIyMgV2hhdCBjaGFuZ2VkCgotIEFkZGVkIHNob3J0LWxpdmVkLCBzZXJ2ZXItdGltZWQgQnVzaW5lc3MgcHJvY3VyZW1lbnQgcXVvdGVzIHVzaW5nIHRoZSBjYW5vbmljYWwgU3RvcmUgcXVvdGUtcHJpY2luZyByZXNvbHZlci4KLSBSZXVzZWQgdGhlIGNhbm9uaWNhbCBTdG9yZSBjYXRhbG9nLCBmaW5pdGUgU3RvcmUgc3RvY2ssIGNvdW50cnkgZWNvbm9taWMgc25hcHNob3QsIHNjYXJjaXR5LCBmb3JlaWduLWV4Y2hhbmdlLCBhbmQgcHJpY2luZy12ZXJzaW9uIGF1dGhvcml0eS4KLSBEZXJpdmVkIHF1b3RlIGdlb2dyYXBoeSBhbmQgc2V0dGxlbWVudCBjdXJyZW5jeSBmcm9tIHRoZSByZXNvbHZlZCBCdXNpbmVzcyBgY291bnRyeV9jb2RlYCBhbmQgYGN1cnJlbmN5X2NvZGVgOyBubyBvd25lciBQbGF5ZXIgc3VwcGxpZXMgdGhvc2Ugb3V0Y29tZXMuCi0gQWRkZWQgYXRvbWljIHB1cmNoYXNlIHNldHRsZW1lbnQgdGhhdCBsb2NrcyBTdG9yZSBzdG9jaywgdGhlIEJ1c2luZXNzIHdhcmVob3VzZSBob2xkaW5nLCBhbmQgZmlyc3QtY2xhc3MgQnVzaW5lc3MgY2FzaCBpbiBhIGZpeGVkIG9yZGVyLgotIERlYml0ZWQgQnVzaW5lc3MgY2FzaCB0aHJvdWdoIHRoZSBjYW5vbmljYWwgQnVzaW5lc3MgbGVkZ2VyIGFkYXB0ZXIuCi0gTW92ZWQgdGhlIGNhbm9uaWNhbCBTdG9yZSBpdGVtIGRpcmVjdGx5IGludG8gdGhlIGNhbm9uaWNhbCBCdXNpbmVzcyB3YXJlaG91c2UgdGhyb3VnaCBgZWNvbm9teV9wcml2YXRlLnBvc3RfaW52ZW50b3J5X3RyYW5zYWN0aW9uX3YyYDsgdGhlIG93bmVy4oCZcyBwZXJzb25hbCBJbnZlbnRvcnkgaXMgbmV2ZXIgdXNlZC4KLSBBcHBsaWVkIHRoZSBhY3R1YWwgc2V0dGxlZCB0b3RhbCBkaXZpZGVkIGJ5IHF1YW50aXR5IGFzIHRoZSB3YXJlaG91c2UgYWNxdWlzaXRpb24gdW5pdCBiYXNpcywgYWxsb3dpbmcgdGhlIGNhbm9uaWNhbCBJbnZlbnRvcnkgcG9zdGVyIHRvIG1haW50YWluIHdlaWdodGVkLWF2ZXJhZ2UgY29zdC4KLSBQcmVzZXJ2ZWQgZnJvemVuIHF1b3RlIGFuZCByZWNlaXB0IGV2aWRlbmNlLCBpbW11dGFibGUgQnVzaW5lc3MgYWN0aXZpdHkgZXZpZGVuY2UsIGdhbWUgaXNvbGF0aW9uLCBpZGVtcG90ZW5jeSBjb25mbGljdCBkZXRlY3Rpb24sIHJldHJ5IHNlbWFudGljcywgYW5kIGJyb3dzZXIgcmVzcG9uc2VzIGNvbnRhaW5pbmcgcHVibGljIGtleXMgb25seS4KLSBTcGxpdCB0aGUgb3ZlcnNpemVkIEJ1c2luZXNzIEhUVFAgYWRhcHRlciBpbnRvIGJvdW5kZWQgdmFsaWRhdGlvbiBhbmQgbXV0YXRpb24tZXhlY3V0aW9uIG1vZHVsZXMgd2l0aG91dCB3ZWFrZW5pbmcgdGhlIGFyY2hpdGVjdHVyZSByYXRjaGV0LgotIFJlbW92ZWQgYWxsIHRlbXBvcmFyeSByZXBhaXIgYW5kIHNvdXJjZS1leHBvcnQgc2NhZmZvbGRpbmcgYmVmb3JlIGNlcnRpZmljYXRpb24uCgojIyMgVmVyaWZpY2F0aW9uIG9uIGV4YWN0IHNvdXJjZSBgYWNiYmZmMjAuLi5gCgotICoqQnVzaW5lc3MgRWNvbm9teSBWMiDigJQgUEFTUyoqIChgMzI0NzYyOTgzMjZgKS4KLSAqKkRhdGFiYXNlIFJlcGxheSDDlzIgKyBkYXRhYmFzZSBsaW50IOKAlCBQQVNTKiogKGAzMjQ3NjI5ODYwMmApLgotICoqQmFja2VuZCBUeXBlY2hlY2sgYW5kIGJhY2tlbmQgc21va2Ug4oCUIFBBU1MqKiAoYDMyNDc2Mjk4NDU4YCkuCi0gKipCdXNpbmVzcyBCYW5raW5nIFJ1bnRpbWUg4oCUIFBBU1MqKiAoYDMyNDc2Mjk4NjE3YCkuCi0gKipSZXBvc2l0b3J5IFF1YWxpdHkg4oCUIFBBU1MqKiAoYDMyNDc2Mjk4MjUzYCkuCi0gKipSdW50aW1lIEludGVyYWN0aW9uIFdpcmluZyDigJQgUEFTUyoqIChgMzI0NzYyOTgzNzZgKS4KLSAqKlN1cHBseSBDaGFpbiBTZWN1cml0eSDigJQgUEFTUyoqIChgMzI0NzYyOTgyNDNgKS4KLSAqKlByb2dyZXNzaW9uIFJ1bnRpbWUg4oCUIFBBU1MqKiAoYDMyNDc2Mjk4MjczYCkuCi0gKipQbGF5ZXIgVGVybWluYWwgVmVyaWZ5LCBpbmNsdWRpbmcgQ2hyb21pdW0g4oCUIFBBU1MqKiAoYDMyNDc2Mjk4NjU4YCkuCi0gKipBZG1pbiBBUEkgQ2hlY2sg4oCUIFBBU1MqKiAoYDMyNDc2Mjk4MzU0YCkuCi0gKipCZXRhIFNlY3VyaXR5IENvbnRyYWN0IOKAlCBQQVNTKiogKGAzMjQ3NjI5ODM3NGApLgotICoqU3RhZ2luZyBSZWFkaW5lc3MgUHJlZmxpZ2h0IOKAlCBQQVNTKiogKGAzMjQ3NjI5ODI3N2ApLgotICoqV29ybGQgUnVudGltZSwgUmVxdWlyZWQgR2FtZSBNYXJrZXQgVGltZXpvbmUsIGFuZCBFeGNoYW5nZSBDYWxlbmRhciBSdW50aW1lIOKAlCBQQVNTKiogKGAzMjQ3NjI5ODUxN2AsIGAzMjQ3NjI5ODUyMmAsIGAzMjQ3NjI5ODI4OWApLgoKIyMjIEFyY2hpdGVjdHVyZSBhbmQgZ2FtZXBsYXkgZGVjaXNpb25zCgotIFF1b3RlIGFuZCByZWNlaXB0IHRhYmxlcyBhcmUgb3BlcmF0aW9uIGV2aWRlbmNlIG9ubHk7IHRoZXkgYXJlIG5vdCBhIHBhcmFsbGVsIGNhdGFsb2csIGludmVudG9yeSBhdXRob3JpdHksIG1vbmV5IGF1dGhvcml0eSwgc3VwcGxpZXIgY2F0YWxvZywgb3IgcHJpY2luZyBlbmdpbmUuCi0gTXVsdGktb3duZXIgQnVzaW5lc3NlcyB1c2UgdGhlIEJ1c2luZXNz4oCZcyBvd24gZ2VvZ3JhcGh5IGFuZCBjdXJyZW5jeS4gQW4gYXJiaXRyYXJ5IG93bmVyIFBsYXllciBjYW5ub3QgY2hhbmdlIHByb2N1cmVtZW50IHByaWNpbmcuCi0gTmV3IHBoeXNpY2FsIHByb2N1cmVtZW50IGRvZXMgbm90IGNhbGwgb3IgZXhwYW5kIGBwdXJjaGFzZV9idXNpbmVzc19pbnB1dF92MWAgYW5kIGRvZXMgbm90IHJvdXRlIG1hdGVyaWFsIHRocm91Z2ggcGVyc29uYWwgSW52ZW50b3J5LgotIEV4aXN0aW5nIGxlZ2FjeSBCdXNpbmVzcyBmb3JtcyByZW1haW4gY29tcGF0aWJpbGl0eSBkZWJ0IHVudGlsIHRoZWlyIG9yZGVyZWQgcmVwbGFjZW1lbnQgY2hlY2twb2ludC4KCiMjIyBSZW1haW5pbmcgUGhhc2UgMyBibG9ja2VycwoKUGhhc2UgMyBpcyBub3QgY29tcGxldGUuIFRoZSBjdXJyZW50IFN0b2Nrcm9vbSByZWFkIHN0aWxsIGV4cG9zZXMgdGhlIGNhbm9uaWNhbCB3YXJlaG91c2Ugb25seSwgd2hpbGUgdGhlIHJvYWRtYXAgcmVxdWlyZXMgc2VwYXJhdGUgTWF0ZXJpYWxzL1dhcmVob3VzZSwgV29yayBpbiBQcm9ncmVzcywgRmluaXNoZWQgR29vZHMsIGFuZCBJbiBUcmFuc2l0IGxvY2F0aW9ucy4gTmV3IHJlbGlhbmNlIG9uIHRoZSBsZWdhY3kgYWJzdHJhY3QgYHVuaXRfaW5wdXRfY29zdGAgcHVyY2hhc2UgcGF0aCBtdXN0IGFsc28gYmUgcmV0aXJlZCBiZWZvcmUgUGhhc2UgNCBvcGVucy4KCiMjIyBOZXh0IGF1dGhvcml6ZWQgc3RlcAoKKipQaGFzZSAzQyDigJQgbG9jYXRpb24tY29tcGxldGUgY2Fub25pY2FsIEJ1c2luZXNzIFN0b2Nrcm9vbSByZWFkIGlzIE9QRU4uKiogQnVpbGQgYSBib3VuZGVkIHJlYWQgbW9kZWwgb3ZlciBjYW5vbmljYWwgQnVzaW5lc3MgaW52ZW50b3J5IGFjY291bnRzIGZvciB3YXJlaG91c2UvbWF0ZXJpYWxzLCB3b3JrIGluIHByb2dyZXNzLCBmaW5pc2hlZCBnb29kcywgYW5kIGluIHRyYW5zaXQuIFByZXNlcnZlIHB1YmxpYy1rZXktb25seSBicm93c2VyIG91dHB1dCBhbmQgZG8gbm90IGludHJvZHVjZSBhIHBhcmFsbGVsIEJ1c2luZXNzIGludmVudG9yeSB0YWJsZS4gQWZ0ZXIgUGhhc2UgM0MgY2VydGlmaWNhdGlvbiwgcmV0aXJlIG5ldyBQbGF5ZXIgQVBJIHJlbGlhbmNlIG9uIHRoZSBsZWdhY3kgYWJzdHJhY3QgaW5wdXQtcHVyY2hhc2UgcGF0aCBhcyBhIHNlcGFyYXRlIGJvdW5kZWQgY2hlY2twb2ludC4gUGhhc2UgNCB3b3JrZm9yY2UvcGF5cm9sbCByZW1haW5zIGNsb3NlZC4K").decode("utf-8")
 
           log = log_path.read_text(encoding="utf-8")
           marker = "## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement"
           if marker not in log:
-              entry = r'''
-
----
-
-## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement
-
-### Certified implementation source
-
-- **Exact implementation SHA:** `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
-- Feature branch: `feat/business-store-procurement-v2`.
-- Stacked draft PR: #654, based on `refactor/business-ux-mechanics-v1`.
-- Integration PR #648 remained open, draft, mergeable, and unmerged.
-- No staging or production deployment or data mutation was performed.
-- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
-
-### What changed
-
-- Added short-lived, server-timed Business procurement quotes using the canonical Store quote-pricing resolver.
-- Reused the canonical Store catalog, finite Store stock, country economic snapshot, scarcity, foreign-exchange, and pricing-version authority.
-- Derived quote geography and settlement currency from the resolved Business `country_code` and `currency_code`; no owner Player supplies those outcomes.
-- Added atomic purchase settlement that locks Store stock, the Business warehouse holding, and first-class Business cash in a fixed order.
-- Debited Business cash through the canonical Business ledger adapter.
-- Moved the canonical Store item directly into the canonical Business warehouse through `economy_private.post_inventory_transaction_v2`; the owner’s personal Inventory is never used.
-- Applied the actual settled total divided by quantity as the warehouse acquisition unit basis, allowing the canonical Inventory poster to maintain weighted-average cost.
-- Preserved frozen quote and receipt evidence, immutable Business activity evidence, game isolation, idempotency conflict detection, retry semantics, and browser responses containing public keys only.
-- Split the oversized Business HTTP adapter into bounded validation and mutation-execution modules without weakening the architecture ratchet.
-- Removed all temporary repair and source-export scaffolding before certification.
-
-### Verification on exact source `acbbff20...`
-
-- **Business Economy V2 — PASS** (`32476298326`).
-- **Database Replay ×2 + database lint — PASS** (`32476298602`).
-- **Backend Typecheck and backend smoke — PASS** (`32476298458`).
-- **Business Banking Runtime — PASS** (`32476298617`).
-- **Repository Quality — PASS** (`32476298253`).
-- **Runtime Interaction Wiring — PASS** (`32476298376`).
-- **Supply Chain Security — PASS** (`32476298243`).
-- **Progression Runtime — PASS** (`32476298273`).
-- **Player Terminal Verify, including Chromium — PASS** (`32476298658`).
-- **Admin API Check — PASS** (`32476298354`).
-- **Beta Security Contract — PASS** (`32476298374`).
-- **Staging Readiness Preflight — PASS** (`32476298277`).
-- **World Runtime, Required Game Market Timezone, and Exchange Calendar Runtime — PASS** (`32476298517`, `32476298522`, `32476298289`).
-
-### Architecture and gameplay decisions
-
-- Quote and receipt tables are operation evidence only; they are not a parallel catalog, inventory authority, money authority, supplier catalog, or pricing engine.
-- Multi-owner Businesses use the Business’s own geography and currency. An arbitrary owner Player cannot change procurement pricing.
-- New physical procurement does not call or expand `purchase_business_input_v1` and does not route material through personal Inventory.
-- Existing legacy Business forms remain compatibility debt until their ordered replacement checkpoint.
-
-### Remaining Phase 3 blockers
-
-Phase 3 is not complete. The current Stockroom read still exposes the canonical warehouse only, while the roadmap requires separate Materials/Warehouse, Work in Progress, Finished Goods, and In Transit locations. New reliance on the legacy abstract `unit_input_cost` purchase path must also be retired before Phase 4 opens.
-
-### Next authorized step
-
-**Phase 3C — location-complete canonical Business Stockroom read is OPEN.** Build a bounded read model over canonical Business inventory accounts for warehouse/materials, work in progress, finished goods, and in transit. Preserve public-key-only browser output and do not introduce a parallel Business inventory table. After Phase 3C certification, retire new Player API reliance on the legacy abstract input-purchase path as a separate bounded checkpoint. Phase 4 workforce/payroll remains closed.
-'''
               log_path.write_text(log.rstrip() + entry + "\n", encoding="utf-8")
 
           workflow = workflow_path.read_text(encoding="utf-8")
