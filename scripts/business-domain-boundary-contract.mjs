@@ -9,6 +9,8 @@ const businessIndex = read("backend/src/domains/business/index.ts");
 const businessContracts = read("backend/src/domains/business/contracts/playerBusinessContracts.ts");
 const businessRoutes = read("backend/src/domains/business/api/playerBusinessRoutePaths.ts");
 const businessHandler = read("backend/src/domains/business/api/playerBusinessHttpHandler.ts");
+const businessValidation = read("backend/src/domains/business/api/playerBusinessRequestValidation.ts");
+const businessMutationExecutor = read("backend/src/domains/business/api/playerBusinessMutationExecutor.ts");
 const businessRepository = read("backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts");
 const mixedContracts = read("backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts");
 const mixedRoutes = read("backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts");
@@ -25,6 +27,15 @@ assert.doesNotMatch(businessRoutes, /\.\.\/\.\.\/players\//u, "Business route au
 assert.doesNotMatch(businessRoutes, /banking|loan|savings/iu, "Business route authority must not own Banking URLs.");
 assert.doesNotMatch(businessContracts, /business-banking/iu, "Business contracts must not depend on the mixed façade.");
 assert.doesNotMatch(businessHandler, /domains\/players|business-banking/iu, "Business handler must depend on injected scope and Business-owned contracts only.");
+assert.match(businessHandler, /playerBusinessRequestValidation\.ts/u, "Business request validation must be extracted from the HTTP orchestrator.");
+assert.match(businessHandler, /playerBusinessMutationExecutor\.ts/u, "Compatibility mutation execution must be extracted from the HTTP orchestrator.");
+assert.doesNotMatch(businessHandler, /LegacyBusinessMutationRoute|function readText|function readFormationOwners/u, "Business HTTP orchestration must not regain validation or mutation implementation debt.");
+assert.ok(businessHandler.split(/\r?\n/u).length < 300, "Business HTTP orchestration must remain below the oversized-source threshold.");
+assert.match(businessValidation, /validateBusinessRequestEnvelope/u);
+assert.match(businessValidation, /validateBusinessRequestMethodAndFields/u);
+assert.doesNotMatch(businessValidation, /business-banking|domains\/players/iu);
+assert.match(businessMutationExecutor, /executePlayerBusinessMutation/u);
+assert.doesNotMatch(businessMutationExecutor, /\bRequest\b|\bResponse\b|business-banking/iu);
 assert.doesNotMatch(businessRepository, /business-banking/iu, "Business repository must not depend on the mixed façade.");
 assert.match(businessRepository, /class SupabasePlayerBusinessRepository/u);
 

@@ -227,7 +227,7 @@ async function rpcMaybeRow(
 
 function mapDatabaseError(message: string): PlayerBusinessError {
   const code = message.trim().split(/\s+/u)[0] || "BUSINESS_FAILED";
-  const mappings: Record<string, [number, string]> = {
+  const mappings: Record<string, [number, string, boolean?]> = {
     PLAYER_SCOPE_REQUIRED: [401, "Player session scope is required."],
     PLAYER_NOT_FOUND: [404, "Player was not found in this game."],
     PLAYER_ECONOMIC_CONTEXT_REQUIRED: [409, "Player country and currency must be assigned first."],
@@ -252,12 +252,36 @@ function mapDatabaseError(message: string): PlayerBusinessError {
     BUSINESS_FORMATION_NOT_READY_FOR_CAPITALIZATION: [409, "This formation is not ready for capitalization."],
     BUSINESS_FORMATION_UNANIMOUS_APPROVAL_REQUIRED: [409, "All proposed owners must approve before activation."],
     BUSINESS_FORMATION_INSUFFICIENT_OWNER_FUNDS: [409, "One or more owners do not have enough funds for the agreed contribution."],
+    BUSINESS_OWNERSHIP_AMBIGUOUS: [409, "Multiple open Businesses are associated with this Player."],
+    STORE_ITEM_KEY_INVALID: [400, "Store item key is invalid."],
+    STORE_QUOTE_QUANTITY_INVALID: [400, "Store quote quantity is invalid."],
+    IDEMPOTENCY_KEY_REQUIRED: [400, "A valid idempotency key is required."],
+    STORE_ITEM_NOT_FOUND: [404, "Store item is not available."],
+    BUSINESS_COUNTRY_PROFILE_NOT_FOUND: [409, "The Business country is not configured for Store pricing."],
+    BUSINESS_CURRENCY_MISMATCH: [409, "The Business currency does not match this procurement quote."],
+    COUNTRY_PROFILE_NOT_FOUND: [409, "The Business country is not configured for Store pricing."],
+    COUNTRY_SNAPSHOT_NOT_FOUND: [409, "A current country economic snapshot is required for Store pricing."],
+    STORE_QUOTE_CURRENCY_INVALID: [409, "The Business settlement currency is invalid."],
+    INSUFFICIENT_STOCK: [409, "Store stock is insufficient for this purchase."],
+    QUOTE_NOT_FOUND: [404, "Business Store quote was not found."],
+    QUOTE_NOT_USABLE: [409, "Business Store quote can no longer be used."],
+    QUOTE_EXPIRED: [409, "Business Store quote has expired."],
+    INSUFFICIENT_BUSINESS_BALANCE: [409, "Business cash is insufficient for this purchase."],
+    ITEM_CANONICAL_CONTEXT_UNAVAILABLE: [409, "Store item is not connected to canonical inventory."],
+    BUSINESS_STOCKROOM_COST_CURRENCY_MISMATCH: [409, "Existing Stockroom cost basis uses another currency."],
+    INVENTORY_POSTING_RESULT_MISSING: [500, "Canonical inventory settlement did not produce a Stockroom result.", true],
+    IDEMPOTENCY_IN_PROGRESS: [409, "This Business Store purchase is still processing.", true],
+    GAME_SESSION_DISABLED: [409, "Business Store purchases are paused for this game.", true],
+    GAME_SESSION_ARCHIVED: [409, "Business Store purchases are closed because this game has ended."],
+    GAME_SESSION_NOT_ACTIVE: [409, "Business Store purchases are unavailable for this game."],
+    GAME_SESSION_NOT_FOUND: [409, "Business Store purchases are unavailable for this game."],
   };
   const mapped = mappings[code];
   return new PlayerBusinessError(
     code.toLowerCase(),
     mapped?.[1] ?? "The business operation could not be completed.",
     mapped?.[0] ?? 400,
+    mapped?.[2] ?? false,
   );
 }
 

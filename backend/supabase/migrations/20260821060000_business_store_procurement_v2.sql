@@ -54,6 +54,8 @@ create table public.business_store_purchase_quotes (
   constraint business_store_purchase_quotes_public_key_format
     check (public_key ~ '^bsq_[0-9a-f]{32}$'),
   constraint business_store_purchase_quotes_public_key_unique unique (public_key),
+  constraint business_store_purchase_quotes_scope_id_unique
+    unique (game_session_id, id),
   constraint business_store_purchase_quotes_idempotency_unique
     unique (game_session_id, business_id, idempotency_key),
   constraint business_store_purchase_quotes_quantity_positive
@@ -129,12 +131,14 @@ create table public.business_store_purchases (
   game_session_id uuid not null,
   business_id uuid not null,
   purchased_by_player_id uuid not null,
-  quote_id uuid not null references public.business_store_purchase_quotes(id),
+  quote_id uuid not null,
   store_item_id uuid not null,
   quantity integer not null,
   currency_code text not null,
   final_unit_price numeric(14, 2) not null,
   final_total_price numeric(14, 2) not null,
+  warehouse_quantity_owned integer null,
+  warehouse_average_unit_cost numeric(18, 4) null,
   ledger_entry_id uuid null references public.ledger_entries(id),
   inventory_transaction_id uuid null references public.inventory_transactions(id),
   idempotency_key text not null,
@@ -151,6 +155,9 @@ create table public.business_store_purchases (
   constraint business_store_purchases_actor_scope_fk
     foreign key (game_session_id, purchased_by_player_id)
     references public.players(game_session_id, id),
+  constraint business_store_purchases_quote_scope_fk
+    foreign key (game_session_id, quote_id)
+    references public.business_store_purchase_quotes(game_session_id, id),
   constraint business_store_purchases_item_scope_fk
     foreign key (game_session_id, store_item_id)
     references public.store_items(game_session_id, id),
@@ -166,6 +173,17 @@ create table public.business_store_purchases (
     check (currency_code ~ '^[A-Z0-9_]{3,16}$'),
   constraint business_store_purchases_prices_non_negative
     check (final_unit_price >= 0 and final_total_price >= 0),
+  constraint business_store_purchases_warehouse_result_non_negative
+    check (
+      (
+        warehouse_quantity_owned is null
+        and warehouse_average_unit_cost is null
+      )
+      or (
+        warehouse_quantity_owned >= 0
+        and warehouse_average_unit_cost >= 0
+      )
+    ),
   constraint business_store_purchases_idempotency_key_valid
     check (length(btrim(idempotency_key)) between 8 and 160),
   constraint business_store_purchases_request_hash_valid
@@ -179,11 +197,15 @@ create table public.business_store_purchases (
       (status = 'COMPLETED'
         and completed_at is not null
         and ledger_entry_id is not null
-        and inventory_transaction_id is not null)
+        and inventory_transaction_id is not null
+        and warehouse_quantity_owned is not null
+        and warehouse_average_unit_cost is not null)
       or (status = 'STARTED'
         and completed_at is null
         and ledger_entry_id is null
-        and inventory_transaction_id is null)
+        and inventory_transaction_id is null
+        and warehouse_quantity_owned is null
+        and warehouse_average_unit_cost is null)
     )
 );
 
@@ -202,6 +224,96 @@ create index business_store_purchases_item_created_idx
 
 comment on table public.business_store_purchases is
   'Immutable Business procurement receipt evidence. Business cash and warehouse holdings remain authoritative in the canonical ledger and inventory projections.';
+
+create or replace function public.guard_business_store_quote_evidence_v2()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'BUSINESS_STORE_QUOTE_IMMUTABLE' using errcode = '42501';
+  end if;
+
+  if old.status <> 'CREATED'
+    or new.status not in ('USED', 'EXPIRED', 'CANCELLED')
+  then
+    raise exception 'BUSINESS_STORE_QUOTE_TRANSITION_INVALID' using errcode = '42501';
+  end if;
+
+  if (
+    to_jsonb(new) - array['status', 'used_at', 'cancelled_at']
+  ) is distinct from (
+    to_jsonb(old) - array['status', 'used_at', 'cancelled_at']
+  ) then
+    raise exception 'BUSINESS_STORE_QUOTE_IMMUTABLE' using errcode = '42501';
+  end if;
+
+  if new.status = 'USED' then
+    if new.used_at is null or new.cancelled_at is not null then
+      raise exception 'BUSINESS_STORE_QUOTE_TRANSITION_INVALID' using errcode = '42501';
+    end if;
+  elsif new.status = 'CANCELLED' then
+    if new.cancelled_at is null or new.used_at is not null then
+      raise exception 'BUSINESS_STORE_QUOTE_TRANSITION_INVALID' using errcode = '42501';
+    end if;
+  elsif new.used_at is not null or new.cancelled_at is not null then
+    raise exception 'BUSINESS_STORE_QUOTE_TRANSITION_INVALID' using errcode = '42501';
+  end if;
+
+  return new;
+end
+$function$;
+
+create trigger guard_business_store_quote_evidence
+before update or delete on public.business_store_purchase_quotes
+for each row execute function public.guard_business_store_quote_evidence_v2();
+
+create or replace function public.guard_business_store_purchase_evidence_v2()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'BUSINESS_STORE_PURCHASE_IMMUTABLE' using errcode = '42501';
+  end if;
+
+  if old.status <> 'STARTED' or new.status <> 'COMPLETED' then
+    raise exception 'BUSINESS_STORE_PURCHASE_TRANSITION_INVALID' using errcode = '42501';
+  end if;
+
+  if (
+    to_jsonb(new) - array[
+      'ledger_entry_id',
+      'inventory_transaction_id',
+      'warehouse_quantity_owned',
+      'warehouse_average_unit_cost',
+      'status',
+      'completed_at'
+    ]
+  ) is distinct from (
+    to_jsonb(old) - array[
+      'ledger_entry_id',
+      'inventory_transaction_id',
+      'warehouse_quantity_owned',
+      'warehouse_average_unit_cost',
+      'status',
+      'completed_at'
+    ]
+  ) then
+    raise exception 'BUSINESS_STORE_PURCHASE_IMMUTABLE' using errcode = '42501';
+  end if;
+
+  return new;
+end
+$function$;
+
+create trigger guard_business_store_purchase_evidence
+before update or delete on public.business_store_purchases
+for each row execute function public.guard_business_store_purchase_evidence_v2();
 
 alter table public.business_store_purchase_quotes enable row level security;
 alter table public.business_store_purchases enable row level security;
@@ -282,6 +394,7 @@ begin
       jsonb_build_object(
         'gameSessionId', p_game_session_id,
         'businessId', v_business.business_id,
+        'playerId', p_player_id,
         'storeItemId', v_item.id,
         'quantity', p_quantity,
         'routeKey', 'players.me.business.store.quotes.v2'
@@ -507,6 +620,7 @@ declare
   v_inventory_transaction jsonb;
   v_warehouse_account_id uuid;
   v_holding public.inventory_holdings%rowtype;
+  v_settled_unit_cost numeric(18, 4);
   v_game_status text;
   v_request_hash text;
 begin
@@ -552,6 +666,7 @@ begin
       jsonb_build_object(
         'gameSessionId', p_game_session_id,
         'businessId', v_business.business_id,
+        'playerId', p_player_id,
         'quoteId', v_quote.id,
         'routeKey', 'players.me.business.store.purchases.v2'
       )::text,
@@ -576,23 +691,6 @@ begin
       raise exception 'IDEMPOTENCY_IN_PROGRESS' using errcode = 'P0001';
     end if;
 
-    v_warehouse_account_id := economy_private.ensure_business_inventory_account_v2(
-      p_game_session_id,
-      v_business.business_id,
-      'warehouse'
-    );
-
-    select holding_row.*
-    into v_holding
-    from public.inventory_holdings as holding_row
-    where holding_row.game_session_id = p_game_session_id
-      and holding_row.inventory_account_id = v_warehouse_account_id
-      and holding_row.game_item_id = (
-        select item_row.game_item_id
-        from public.store_items as item_row
-        where item_row.id = v_purchase.store_item_id
-      );
-
     return query
     select
       v_business.business_key,
@@ -604,8 +702,8 @@ begin
       v_purchase.final_unit_price,
       v_purchase.final_total_price,
       v_purchase.currency_code,
-      coalesce(v_holding.quantity_owned, 0),
-      coalesce(v_holding.average_unit_cost, 0),
+      v_purchase.warehouse_quantity_owned,
+      v_purchase.warehouse_average_unit_cost,
       v_purchase.completed_at,
       true
     from public.store_items as item_row
@@ -635,10 +733,10 @@ begin
     raise exception 'QUOTE_NOT_USABLE' using errcode = 'P0001';
   end if;
   if v_quote.expires_at <= v_now then
-    update public.business_store_purchase_quotes
-    set status = 'EXPIRED'
-    where id = v_quote.id;
     raise exception 'QUOTE_EXPIRED' using errcode = 'P0001';
+  end if;
+  if v_quote.settlement_currency_code <> upper(btrim(v_business.currency_code)) then
+    raise exception 'BUSINESS_CURRENCY_MISMATCH' using errcode = 'P0001';
   end if;
 
   select item_row.*
@@ -660,11 +758,73 @@ begin
     raise exception 'INSUFFICIENT_STOCK' using errcode = 'P0001';
   end if;
 
+  v_settled_unit_cost := round(
+    v_quote.final_total_price / v_quote.quantity,
+    4
+  );
+
+  -- Phase 3B lock order: Store item -> Business warehouse holding -> Business cash.
   v_warehouse_account_id := economy_private.ensure_business_inventory_account_v2(
     p_game_session_id,
     v_business.business_id,
     'warehouse'
   );
+
+  insert into public.inventory_holdings(
+    game_session_id,
+    inventory_account_id,
+    game_item_id,
+    quantity_owned,
+    quantity_reserved,
+    average_unit_cost,
+    cost_currency_code,
+    version
+  ) values (
+    p_game_session_id,
+    v_warehouse_account_id,
+    v_item.game_item_id,
+    0,
+    0,
+    0,
+    v_quote.settlement_currency_code,
+    1
+  )
+  on conflict on constraint inventory_holdings_account_item_unique do nothing;
+
+  select holding_row.*
+  into v_holding
+  from public.inventory_holdings as holding_row
+  where holding_row.game_session_id = p_game_session_id
+    and holding_row.inventory_account_id = v_warehouse_account_id
+    and holding_row.game_item_id = v_item.game_item_id
+  for update;
+  if not found then
+    raise exception 'INVENTORY_POSTING_RESULT_MISSING' using errcode = 'P0001';
+  end if;
+
+  if v_holding.quantity_owned > 0
+    and v_holding.cost_currency_code is distinct from v_quote.settlement_currency_code
+  then
+    raise exception 'BUSINESS_STOCKROOM_COST_CURRENCY_MISMATCH'
+      using errcode = 'P0001';
+  end if;
+
+  if v_holding.quantity_owned = 0
+    and (
+      v_holding.cost_currency_code is distinct from v_quote.settlement_currency_code
+      or v_holding.average_unit_cost <> 0
+    )
+  then
+    update public.inventory_holdings
+    set
+      average_unit_cost = 0,
+      cost_currency_code = v_quote.settlement_currency_code,
+      version = version + 1,
+      updated_at = v_now
+    where id = v_holding.id
+    returning * into v_holding;
+  end if;
+
   perform public.ensure_business_bank_account_v2(
     p_game_session_id,
     v_business.business_id
@@ -773,12 +933,13 @@ begin
         'gameItemId', v_item.game_item_id,
         'quantityDelta', v_quote.quantity,
         'reservationDelta', 0,
-        'unitCost', v_quote.final_unit_price,
+        'unitCost', v_settled_unit_cost,
         'currencyCode', v_quote.settlement_currency_code,
         'metadata', jsonb_build_object(
           'side', 'business_warehouse',
           'businessKey', v_business.business_key,
-          'settledAcquisitionPrice', v_quote.final_unit_price
+          'settledAcquisitionPrice', v_settled_unit_cost,
+          'settledTotalPrice', v_quote.final_total_price
         )
       )
     )
@@ -807,10 +968,46 @@ begin
   set
     ledger_entry_id = v_ledger.ledger_entry_id,
     inventory_transaction_id = (v_inventory_transaction->>'transactionId')::uuid,
+    warehouse_quantity_owned = v_holding.quantity_owned,
+    warehouse_average_unit_cost = v_holding.average_unit_cost,
     status = 'COMPLETED',
     completed_at = v_now
   where id = v_purchase.id
   returning * into v_purchase;
+
+  insert into public.business_activity_events(
+    game_session_id,
+    business_id,
+    formation_id,
+    actor_type,
+    actor_player_id,
+    event_type,
+    source_id,
+    reason_code,
+    metadata,
+    occurred_at
+  ) values (
+    p_game_session_id,
+    v_business.business_id,
+    null,
+    'player',
+    p_player_id,
+    'business.store.procurement.completed',
+    v_purchase.id,
+    'store_procurement_purchase',
+    jsonb_build_object(
+      'businessKey', v_business.business_key,
+      'receiptKey', v_purchase.public_key,
+      'quoteKey', v_quote.public_key,
+      'storeItemKey', v_item.item_key,
+      'quantity', v_purchase.quantity,
+      'settledUnitCost', v_settled_unit_cost,
+      'finalTotalPrice', v_purchase.final_total_price,
+      'currencyCode', v_purchase.currency_code,
+      'inventoryTransactionKey', v_inventory_transaction->>'transactionKey'
+    ),
+    v_now
+  );
 
   return query select
     v_business.business_key,
@@ -822,8 +1019,8 @@ begin
     v_purchase.final_unit_price,
     v_purchase.final_total_price,
     v_purchase.currency_code,
-    v_holding.quantity_owned,
-    v_holding.average_unit_cost,
+    v_purchase.warehouse_quantity_owned,
+    v_purchase.warehouse_average_unit_cost,
     v_purchase.completed_at,
     false;
 end
@@ -841,6 +1038,10 @@ comment on function public.purchase_business_store_quote_v2(
 revoke all on table public.business_store_purchase_quotes
   from public, anon, authenticated;
 revoke all on table public.business_store_purchases
+  from public, anon, authenticated;
+revoke all on function public.guard_business_store_quote_evidence_v2()
+  from public, anon, authenticated;
+revoke all on function public.guard_business_store_purchase_evidence_v2()
   from public, anon, authenticated;
 
 revoke all on function public.create_business_store_quote_v2(

@@ -9,7 +9,7 @@ const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
 const STORE_ITEM_KEY = /^[a-z0-9_-]{1,64}$/u;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9._:-]{8,160}$/u;
 const CURRENCY_CODE = /^[A-Z0-9_]{3,16}$/u;
-const COUNTRY_CODE = /^[A-Z0-9_-]{2,16}$/u;
+const COUNTRY_CODE = /^[A-Z][A-Z0-9_]{2,31}$/u;
 
 interface BusinessStoreScope {
   readonly gameSessionId: string;

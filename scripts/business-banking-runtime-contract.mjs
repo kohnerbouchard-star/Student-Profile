@@ -12,6 +12,8 @@ const files = {
   mixedRepository: "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
   mixedRoutes: "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
   businessHandler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+  businessMutationExecutor: "backend/src/domains/business/api/playerBusinessMutationExecutor.ts",
+  businessRequestValidation: "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
   businessRepository: "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts",
   businessRoutes: "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
   capabilities: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
@@ -101,11 +103,16 @@ for (const directBusinessRpc of [
   "transition_business_status_v1",
 ]) assert.doesNotMatch(source.mixedHandler, new RegExp(directBusinessRpc, "u"));
 
-assert.match(source.businessHandler, /assertBusinessCreationAllowed\?\./u);
-assert.match(source.businessHandler, /p_idempotency_key:\s*idempotencyKey/u);
 assert.match(source.businessHandler, /PlayerBusinessRequestScope/u);
 assert.match(source.businessHandler, /dependencies\.resolveScope/u);
-assert.doesNotMatch(source.businessHandler, /p_currency_code:\s*body\./u);
+assert.match(source.businessHandler, /executePlayerBusinessMutation/u);
+assert.match(source.businessHandler, /validateBusinessRequestMethodAndFields/u);
+assert.doesNotMatch(source.businessHandler, /assertBusinessCreationAllowed\?\.|p_currency_code:\s*body\./u);
+assert.match(source.businessMutationExecutor, /assertBusinessCreationAllowed\?\./u);
+assert.match(source.businessMutationExecutor, /p_idempotency_key:\s*idempotencyKey/u);
+assert.doesNotMatch(source.businessMutationExecutor, /p_currency_code:\s*body\./u);
+assert.match(source.businessRequestValidation, /validateBusinessRequestEnvelope/u);
+assert.match(source.businessRequestValidation, /validateBusinessRequestMethodAndFields/u);
 assert.match(source.businessRoutes, /readPlayerBusinessRoutePath/u);
 assert.match(source.businessRoutes, /resource:\s*"stockroom"/u);
 

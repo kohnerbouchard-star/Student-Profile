@@ -8,15 +8,15 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1054,
+    "sourceFiles": 1057,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 210,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
-    "oversizedSourceFiles": 101,
+    "oversizedSourceFiles": 100,
     "capabilityStrings": 123
   },
   "domains": [
@@ -88,7 +88,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 8,
+      "sourceFiles": 11,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -2558,12 +2558,6 @@
         ]
       },
       {
-        "file": "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
-        "markers": [
-          "legacybusinessmutationroute"
-        ]
-      },
-      {
         "file": "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
         "markers": [
           "legacy"
@@ -3444,10 +3438,6 @@
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementController.js",
         "lines": 773
-      },
-      {
-        "file": "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
-        "lines": 753
       },
       {
         "file": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
