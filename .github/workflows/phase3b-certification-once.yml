@@ -1,3 +1,4 @@
+# Triggered after exact-head gates and plan status reconciliation.
 name: One-time Business Phase 3B certification
 
 on:
