@@ -275,7 +275,7 @@ assert.match(
 );
 assert.match(
   production,
-  /record_business_ledger_entry_v2[\s\S]{0,900}'production_cost'/u,
+  /if v_labor_cost > 0 then[\s\S]{0,500}record_player_ledger_entry\([\s\S]{0,500}'production_labor'/u,
 );
 assert.match(
   settlement,
