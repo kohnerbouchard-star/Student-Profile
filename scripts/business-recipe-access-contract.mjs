@@ -47,7 +47,7 @@ assert.doesNotMatch(readSource, /\bbusiness_id\s+uuid\b/iu);
 
 assert.match(routeSource, /tail\[0\] === "business" && tail\[1\] === "recipes"/u);
 assert.match(routeSource, /kind: "businessRead", resource: "recipes"/u);
-assert.match(repositorySource, /read_owned_business_stockroom_v2/u);
+assert.match(repositorySource, /read_owned_business_stockroom_snapshot_v2/u);
 assert.match(repositorySource, /read_owned_business_recipes_v2/u);
 assert.match(repositorySource, /p_game_session_id: input\.gameSessionId/u);
 assert.match(repositorySource, /p_player_id: input\.playerId/u);
