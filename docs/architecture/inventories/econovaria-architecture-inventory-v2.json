@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1053,
+    "sourceFiles": 1057,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
@@ -88,7 +88,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 7,
+      "sourceFiles": 11,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -3397,7 +3397,7 @@
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 852
+        "lines": 854
       },
       {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
@@ -3516,10 +3516,6 @@
         "lines": 637
       },
       {
-        "file": "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts",
-        "lines": 636
-      },
-      {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
         "lines": 628
       },
@@ -3605,7 +3601,7 @@
       },
       {
         "file": "backend/supabase/functions/player-api/runtime.ts",
-        "lines": 574
+        "lines": 576
       },
       {
         "file": "admin/inventory-redemption-queue-surface.js",
@@ -3630,6 +3626,10 @@
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementApi.js",
         "lines": 556
+      },
+      {
+        "file": "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts",
+        "lines": 555
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts",

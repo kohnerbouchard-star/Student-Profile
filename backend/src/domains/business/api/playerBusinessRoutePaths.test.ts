@@ -21,6 +21,14 @@ Deno.test("Business route authority owns every Player Business URL", () => {
     kind: "businessRead",
     resource: "recipes",
   });
+  assertEquals(
+    readPlayerBusinessRoutePath("/players/me/business/store/quotes"),
+    { kind: "businessStoreQuote" },
+  );
+  assertEquals(
+    readPlayerBusinessRoutePath("/players/me/business/store/purchases"),
+    { kind: "businessStorePurchase" },
+  );
   assertEquals(readPlayerBusinessRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
     operation: "directCreate",
@@ -71,6 +79,16 @@ Deno.test("Business route authority recognizes Edge service prefixes", () => {
     kind: "businessRead",
     resource: "recipes",
   });
+  assertEquals(
+    readPlayerBusinessRoutePath("/player-api/players/me/business/store/quotes"),
+    { kind: "businessStoreQuote" },
+  );
+  assertEquals(
+    readPlayerBusinessRoutePath(
+      "/functions/v1/classroom-api/players/me/business/store/purchases",
+    ),
+    { kind: "businessStorePurchase" },
+  );
   assertEquals(readPlayerBusinessRoutePath("/functions/v1/classroom-api/players/me/business"), {
     kind: "businessRead",
     resource: "overview",
@@ -83,5 +101,7 @@ Deno.test("Business route authority rejects Banking and malformed URLs", () => {
   assertEquals(readPlayerBusinessRoutePath("/players/me/business/formations/not-a-key/respond"), null);
   assertEquals(readPlayerBusinessRoutePath("/players/me/business/stockroom/extra"), null);
   assertEquals(readPlayerBusinessRoutePath("/players/me/business/recipes/extra"), null);
+  assertEquals(readPlayerBusinessRoutePath("/players/me/business/store/quotes/extra"), null);
+  assertEquals(readPlayerBusinessRoutePath("/players/me/business/store/purchases/extra"), null);
   assertEquals(readPlayerBusinessRoutePath("/games/game/business"), null);
 });

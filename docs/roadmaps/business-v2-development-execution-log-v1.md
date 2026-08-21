@@ -426,3 +426,60 @@ The current legacy Business product, abstract input, immediate production, manua
 7. avoid a parallel wholesale or supplier catalog.
 
 Phase 4 remains closed until Phase 3 procurement is implemented, exact-head certified, and recorded here.
+
+---
+
+## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement
+
+### Certified implementation source
+
+- **Exact implementation SHA:** `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
+- Feature branch: `feat/business-store-procurement-v2`.
+- Stacked draft PR: #654, based on `refactor/business-ux-mechanics-v1`.
+- Integration PR #648 remained open, draft, mergeable, and unmerged.
+- No staging or production deployment or data mutation was performed.
+- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
+
+### What changed
+
+- Added short-lived, server-timed Business procurement quotes using the canonical Store quote-pricing resolver.
+- Reused the canonical Store catalog, finite Store stock, country economic snapshot, scarcity, foreign-exchange, and pricing-version authority.
+- Derived quote geography and settlement currency from the resolved Business `country_code` and `currency_code`; no owner Player supplies those outcomes.
+- Added atomic purchase settlement that locks Store stock, the Business warehouse holding, and first-class Business cash in a fixed order.
+- Debited Business cash through the canonical Business ledger adapter.
+- Moved the canonical Store item directly into the canonical Business warehouse through `economy_private.post_inventory_transaction_v2`; the owner’s personal Inventory is never used.
+- Applied the actual settled total divided by quantity as the warehouse acquisition unit basis, allowing the canonical Inventory poster to maintain weighted-average cost.
+- Preserved frozen quote and receipt evidence, immutable Business activity evidence, game isolation, idempotency conflict detection, retry semantics, and browser responses containing public keys only.
+- Split the oversized Business HTTP adapter into bounded validation and mutation-execution modules without weakening the architecture ratchet.
+- Removed all temporary repair and source-export scaffolding before certification.
+
+### Verification on exact source `acbbff20...`
+
+- **Business Economy V2 — PASS** (`32476298326`).
+- **Database Replay ×2 + database lint — PASS** (`32476298602`).
+- **Backend Typecheck and backend smoke — PASS** (`32476298458`).
+- **Business Banking Runtime — PASS** (`32476298617`).
+- **Repository Quality — PASS** (`32476298253`).
+- **Runtime Interaction Wiring — PASS** (`32476298376`).
+- **Supply Chain Security — PASS** (`32476298243`).
+- **Progression Runtime — PASS** (`32476298273`).
+- **Player Terminal Verify, including Chromium — PASS** (`32476298658`).
+- **Admin API Check — PASS** (`32476298354`).
+- **Beta Security Contract — PASS** (`32476298374`).
+- **Staging Readiness Preflight — PASS** (`32476298277`).
+- **World Runtime, Required Game Market Timezone, and Exchange Calendar Runtime — PASS** (`32476298517`, `32476298522`, `32476298289`).
+
+### Architecture and gameplay decisions
+
+- Quote and receipt tables are operation evidence only; they are not a parallel catalog, inventory authority, money authority, supplier catalog, or pricing engine.
+- Multi-owner Businesses use the Business’s own geography and currency. An arbitrary owner Player cannot change procurement pricing.
+- New physical procurement does not call or expand `purchase_business_input_v1` and does not route material through personal Inventory.
+- Existing legacy Business forms remain compatibility debt until their ordered replacement checkpoint.
+
+### Remaining Phase 3 blockers
+
+Phase 3 is not complete. The current Stockroom read still exposes the canonical warehouse only, while the roadmap requires separate Materials/Warehouse, Work in Progress, Finished Goods, and In Transit locations. New reliance on the legacy abstract `unit_input_cost` purchase path must also be retired before Phase 4 opens.
+
+### Next authorized step
+
+**Phase 3C — location-complete canonical Business Stockroom read is OPEN.** Build a bounded read model over canonical Business inventory accounts for warehouse/materials, work in progress, finished goods, and in transit. Preserve public-key-only browser output and do not introduce a parallel Business inventory table. After Phase 3C certification, retire new Player API reliance on the legacy abstract input-purchase path as a separate bounded checkpoint. Phase 4 workforce/payroll remains closed.

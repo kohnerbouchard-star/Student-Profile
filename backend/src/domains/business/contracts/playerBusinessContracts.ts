@@ -1,7 +1,13 @@
 export type PlayerBusinessRoute =
-  | { readonly kind: "businessRead"; readonly resource?: "overview" | "stockroom" | "recipes" }
+  | {
+    readonly kind: "businessRead";
+    readonly resource?: "overview" | "stockroom" | "recipes";
+  }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
-  | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
+  | {
+    readonly kind: "businessCreate";
+    readonly operation: "formationPropose";
+  }
   | {
     readonly kind: "businessCreate";
     readonly operation: "formationRespond";
@@ -12,6 +18,8 @@ export type PlayerBusinessRoute =
     readonly operation: "formationActivate";
     readonly formationKey: string;
   }
+  | { readonly kind: "businessStoreQuote" }
+  | { readonly kind: "businessStorePurchase" }
   | { readonly kind: "businessProductCreate" }
   | { readonly kind: "businessInputPurchase" }
   | { readonly kind: "businessProduction" }
@@ -90,6 +98,45 @@ export interface BusinessRecipeAccessDto {
   readonly grantedAt: string;
 }
 
+export interface BusinessStoreQuoteDto {
+  readonly businessKey: string;
+  readonly quoteKey: string;
+  readonly itemKey: string;
+  readonly itemName: string;
+  readonly quantity: number;
+  readonly countryCode: string;
+  readonly itemCurrencyCode: string;
+  readonly settlementCurrencyCode: string;
+  readonly baseUnitPrice: number;
+  readonly inflationMultiplier: number;
+  readonly locationMultiplier: number;
+  readonly scarcityMultiplier: number;
+  readonly itemLocalFinalUnitPrice: number;
+  readonly itemLocalFinalTotalPrice: number;
+  readonly exchangeRate: number;
+  readonly finalUnitPrice: number;
+  readonly finalTotalPrice: number;
+  readonly pricingVersion: string;
+  readonly expiresAt: string;
+  readonly replayed: boolean;
+}
+
+export interface BusinessStoreReceiptDto {
+  readonly businessKey: string;
+  readonly receiptKey: string;
+  readonly quoteKey: string;
+  readonly itemKey: string;
+  readonly itemName: string;
+  readonly quantity: number;
+  readonly finalUnitPrice: number;
+  readonly finalTotalPrice: number;
+  readonly currencyCode: string;
+  readonly warehouseQuantityOwned: number;
+  readonly warehouseAverageUnitCost: number;
+  readonly completedAt: string;
+  readonly alreadyCompleted: boolean;
+}
+
 export interface BusinessSnapshotDto {
   readonly configured: boolean;
   readonly company: BusinessCompanyDto;
@@ -139,7 +186,10 @@ export interface PlayerBusinessRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto>;
-  execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
+  execute(
+    command: string,
+    args: Readonly<Record<string, unknown>>,
+  ): Promise<Record<string, unknown>>;
 }
 
 export class PlayerBusinessError extends Error {
@@ -157,6 +207,8 @@ export class PlayerBusinessError extends Error {
 const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessRead",
   "businessCreate",
+  "businessStoreQuote",
+  "businessStorePurchase",
   "businessProductCreate",
   "businessInputPurchase",
   "businessProduction",
