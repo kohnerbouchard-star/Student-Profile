@@ -83,10 +83,18 @@ const locationRead = requiredSection(
   locations,
   /create or replace function public\.read_owned_business_stockroom_locations_v2/u,
 );
-const itemRead = requiredSection(
-  locations,
-  /create or replace function public\.read_owned_business_stockroom_v2/u,
+const itemReadPattern =
+  /create or replace function public\.read_owned_business_stockroom_v2/u;
+const itemRead = requiredSection(locations, itemReadPattern);
+const dropItemReadIndex = locations.search(
+  /drop function if exists public\.read_owned_business_stockroom_v2\(uuid, uuid\);/u,
 );
+const createItemReadIndex = locations.search(itemReadPattern);
+assert.ok(
+  dropItemReadIndex >= 0 && dropItemReadIndex < createItemReadIndex,
+  "Phase 3C must explicitly drop the Phase 3A Stockroom RPC before changing its OUT row type.",
+);
+
 for (const readSource of [locationRead, itemRead]) {
   assert.match(readSource, /public\.resolve_player_business_v2/u);
   assert.match(readSource, /public\.economic_parties/u);
