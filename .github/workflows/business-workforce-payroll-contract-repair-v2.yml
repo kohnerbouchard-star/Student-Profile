@@ -1,0 +1,86 @@
+name: Business Workforce Payroll Contract Repair V2
+
+on:
+  pull_request:
+    paths:
+      - "scripts/business-workforce-payroll-scope-hardening-contract.mjs"
+      - ".github/workflows/business-workforce-payroll-contract-repair.yml"
+      - ".github/workflows/business-workforce-payroll-contract-repair-v2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.number == 657
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Phase 4A branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-workforce-payroll-foundation-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+      - name: Apply idempotent grouped-GRANT repair
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/business-workforce-payroll-scope-hardening-contract.mjs")
+          source = path.read_text(encoding="utf-8")
+          marker = (
+              '  assert.ok(\n'
+              '    foundation.indexOf(`grant select, insert, update, delete\\n'
+              '  on table public.${tableName}`) >= 0,'
+          )
+          replacement = (
+              '  assert.match(\n'
+              '    foundation,\n'
+              '    new RegExp(\n'
+              '      `grant select, insert, update, delete[\\\\s\\\\S]{0,900}'
+              'public\\\\.${tableName}[\\\\s\\\\S]{0,300}to service_role`,\n'
+              '      "iu",\n'
+              '    ),\n'
+              '    `Foundation grant for ${tableName} was not found before the forward revoke.`,\n'
+              '  );'
+          )
+
+          if marker in source:
+              start = source.index(marker)
+              end_marker = '\n  );'
+              end = source.index(end_marker, start) + len(end_marker)
+              source = source[:start] + replacement + source[end:]
+          elif (
+              'grant select, insert, update, delete[\\\\s\\\\S]{0,900}'
+              not in source
+          ):
+              raise SystemExit("The Phase 4A grouped-GRANT assertion was not recognized")
+
+          path.write_text(source, encoding="utf-8")
+          PY
+
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Commit verified repair and remove temporary workflows
+        shell: bash
+        run: |
+          rm -f \
+            .github/workflows/business-workforce-payroll-contract-repair.yml \
+            .github/workflows/business-workforce-payroll-contract-repair-v2.yml
+          git config user.name "econovaria-phase4a-contract-repair"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            scripts/business-workforce-payroll-scope-hardening-contract.mjs \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git add -u -- \
+            .github/workflows/business-workforce-payroll-contract-repair.yml \
+            .github/workflows/business-workforce-payroll-contract-repair-v2.yml
+          git commit -m "fix(business): repair Phase 4A hardening contract"
+          git push origin HEAD:feat/business-workforce-payroll-foundation-v2
