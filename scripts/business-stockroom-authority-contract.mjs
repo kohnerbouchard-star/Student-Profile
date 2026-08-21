@@ -7,6 +7,8 @@ const foundationPath =
   "backend/supabase/migrations/20260819064100_business_stockroom_read_v2.sql";
 const locationsPath =
   "backend/supabase/migrations/20260821130000_business_stockroom_locations_v2.sql";
+const snapshotMigrationPath =
+  "backend/supabase/migrations/20260821131000_business_stockroom_snapshot_v2.sql";
 const contractsPath =
   "backend/src/domains/business/contracts/playerBusinessContracts.ts";
 const parserPath =
@@ -21,6 +23,7 @@ const handlerPath =
 const [
   foundation,
   locations,
+  snapshotMigration,
   contracts,
   parser,
   snapshot,
@@ -29,6 +32,7 @@ const [
 ] = await Promise.all([
   readFile(foundationPath, "utf8"),
   readFile(locationsPath, "utf8"),
+  readFile(snapshotMigrationPath, "utf8"),
   readFile(contractsPath, "utf8"),
   readFile(parserPath, "utf8"),
   readFile(snapshotPath, "utf8"),
@@ -128,6 +132,35 @@ assert.match(itemRead, /holding\.cost_currency_code/u);
 assert.match(itemRead, /holding\.version/u);
 assert.match(itemRead, /holding\.quantity_owned - holding\.quantity_reserved/u);
 
+assert.match(snapshotMigration.trim(), /^--[\s\S]*\nbegin;/u);
+assert.match(snapshotMigration.trim(), /commit;$/u);
+const coherentSnapshot = requiredSection(
+  snapshotMigration,
+  /create or replace function public\.read_owned_business_stockroom_snapshot_v2/u,
+);
+assert.match(coherentSnapshot, /\breturns jsonb\b/u);
+assert.match(coherentSnapshot, /\bstable\b/u);
+assert.match(coherentSnapshot, /security definer/u);
+assert.match(coherentSnapshot, /read_owned_business_stockroom_locations_v2/u);
+assert.match(coherentSnapshot, /read_owned_business_stockroom_v2/u);
+assert.match(coherentSnapshot, /jsonb_array_length\(v_locations\) <> 4/u);
+assert.match(coherentSnapshot, /BUSINESS_STOCKROOM_LOCATIONS_INCOMPLETE/u);
+assert.match(coherentSnapshot, /'business_key'/u);
+assert.match(coherentSnapshot, /'locations'/u);
+assert.match(coherentSnapshot, /'items'/u);
+assert.doesNotMatch(
+  coherentSnapshot,
+  /\binsert\s+into\b|\bupdate\b|\bdelete\s+from\b|ensure_business_/iu,
+);
+assert.match(
+  snapshotMigration,
+  /read_owned_business_stockroom_snapshot_v2\(\s*uuid,\s*uuid\s*\)[\s\S]{0,120}to service_role/iu,
+);
+assert.doesNotMatch(
+  snapshotMigration,
+  /grant execute on function public\.read_owned_business_stockroom_snapshot_v2[^;]+to (?:public|anon|authenticated)/iu,
+);
+
 for (const signature of [
   /read_owned_business_stockroom_locations_v2\(\s*uuid,\s*uuid\s*\)[\s\S]{0,120}to service_role/iu,
   /read_owned_business_stockroom_v2\(\s*uuid,\s*uuid\s*\)[\s\S]{0,120}to service_role/iu,
@@ -149,6 +182,8 @@ assert.match(
 );
 
 assert.match(parser, /MAX_STOCKROOM_ITEMS = 500/u);
+assert.match(parser, /SNAPSHOT_KEYS/u);
+assert.match(parser, /parseStockroomEnvelope/u);
 assert.match(parser, /BUSINESS_STOCKROOM_LOCATION_KEYS/u);
 assert.match(parser, /business_stockroom_result_invalid/u);
 assert.match(parser, /Stockroom quantity invariant failed/u);
@@ -158,12 +193,15 @@ assert.match(snapshot, /Stockroom item account does not match/u);
 assert.match(snapshot, /internal UUID/u);
 assert.match(snapshot, /Duplicate Stockroom holding/u);
 
-assert.match(repository, /read_owned_business_stockroom_locations_v2/u);
-assert.match(repository, /read_owned_business_stockroom_v2/u);
-assert.match(repository, /Promise\.all/u);
+assert.match(repository, /read_owned_business_stockroom_snapshot_v2/u);
+assert.match(repository, /parseStockroomEnvelope/u);
 assert.match(repository, /parseStockroomLocations/u);
 assert.match(repository, /parseStockroomItems/u);
 assert.match(repository, /buildBusinessStockroomSnapshot/u);
+assert.match(repository, /snapshot\.businessKey !== envelope\.businessKey/u);
+assert.doesNotMatch(repository, /Promise\.all/u);
+assert.doesNotMatch(repository, /"read_owned_business_stockroom_locations_v2"/u);
+assert.doesNotMatch(repository, /"read_owned_business_stockroom_v2"/u);
 
 assert.match(
   handler,
@@ -175,7 +213,7 @@ assert.doesNotMatch(
 );
 
 console.log(
-  "Business Phase 3C location-complete canonical Stockroom authority contract passed.",
+  "Business Phase 3C coherent location-complete Stockroom authority contract passed.",
 );
 
 function requiredSection(source, startPattern) {

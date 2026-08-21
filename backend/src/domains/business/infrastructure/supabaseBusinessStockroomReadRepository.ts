@@ -1,5 +1,7 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
+  invalidStockroomResult,
+  parseStockroomEnvelope,
   parseStockroomItems,
   parseStockroomLocations,
 } from "../application/stockroom/businessStockroomResultParser.ts";
@@ -20,32 +22,31 @@ export async function readBusinessStockroom(
   client: EdgeSupabaseClient,
   input: BusinessReadScope,
 ): Promise<BusinessStockroomSnapshotDto> {
-  const args = {
-    p_game_session_id: input.gameSessionId,
-    p_player_id: input.playerId,
-  };
-  const [locationResponse, itemResponse] = await Promise.all([
-    client.rpc<unknown>("read_owned_business_stockroom_locations_v2", args),
-    client.rpc<unknown>("read_owned_business_stockroom_v2", args),
-  ]);
-
-  if (locationResponse.error) {
-    throw mapBusinessPhysicalEconomyReadError(
-      locationResponse.error.message,
-      "stockroom",
-    );
-  }
-  if (itemResponse.error) {
-    throw mapBusinessPhysicalEconomyReadError(
-      itemResponse.error.message,
-      "stockroom",
-    );
-  }
-
-  return buildBusinessStockroomSnapshot(
-    parseStockroomLocations(locationResponse.data),
-    parseStockroomItems(itemResponse.data),
+  const response = await client.rpc<unknown>(
+    "read_owned_business_stockroom_snapshot_v2",
+    {
+      p_game_session_id: input.gameSessionId,
+      p_player_id: input.playerId,
+    },
   );
+  if (response.error) {
+    throw mapBusinessPhysicalEconomyReadError(
+      response.error.message,
+      "stockroom",
+    );
+  }
+
+  const envelope = parseStockroomEnvelope(response.data);
+  const snapshot = buildBusinessStockroomSnapshot(
+    parseStockroomLocations(envelope.locations),
+    parseStockroomItems(envelope.items),
+  );
+  if (snapshot.businessKey !== envelope.businessKey) {
+    throw invalidStockroomResult(
+      "Stockroom snapshot Business key does not match its holdings.",
+    );
+  }
+  return snapshot;
 }
 
 export async function readBusinessRecipes(
@@ -94,6 +95,10 @@ function mapBusinessPhysicalEconomyReadError(
     BUSINESS_OWNERSHIP_AMBIGUOUS: [
       409,
       "Multiple active Business ownership positions require resolution.",
+    ],
+    BUSINESS_STOCKROOM_LOCATIONS_INCOMPLETE: [
+      500,
+      "Canonical Business Stockroom locations are incomplete.",
     ],
   };
   const mapped = mappings[code];

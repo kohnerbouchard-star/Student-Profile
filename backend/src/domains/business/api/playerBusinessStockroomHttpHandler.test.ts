@@ -8,8 +8,8 @@ const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const PLAYER_ID = "00000000-0000-4000-8000-000000000002";
 const BUSINESS_KEY = `biz_${"a".repeat(32)}`;
 
-Deno.test("Business Stockroom HTTP response exposes four public locations without UUIDs", async () => {
-  const client = new FakeClient(locationRows(), itemRows());
+Deno.test("Business Stockroom HTTP response exposes one coherent public snapshot", async () => {
+  const client = new FakeClient(snapshotEnvelope());
   const response = await handlePlayerBusinessRequest(
     request(),
     { kind: "businessRead", resource: "stockroom" },
@@ -22,12 +22,16 @@ Deno.test("Business Stockroom HTTP response exposes four public locations withou
   assertEquals(body.locations.length, 4);
   assertEquals(body.locations[3].locationKey, "in_transit");
   assertEquals(body.items[0].locationKey, "warehouse");
+  assertEquals(client.calls, ["read_owned_business_stockroom_snapshot_v2"]);
   assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assertNoUuid(JSON.stringify(body));
 });
 
-Deno.test("Business Stockroom HTTP response fails closed for malformed canonical reads", async () => {
-  const client = new FakeClient(locationRows().slice(0, 3), itemRows());
+Deno.test("Business Stockroom HTTP response fails closed for malformed snapshot envelopes", async () => {
+  const client = new FakeClient({
+    ...snapshotEnvelope(),
+    locations: locationRows().slice(0, 3),
+  });
   const response = await handlePlayerBusinessRequest(
     request(),
     { kind: "businessRead", resource: "stockroom" },
@@ -66,11 +70,32 @@ function request(): Request {
     "https://example.test/players/me/business/stockroom",
     {
       method: "GET",
-      headers: {
-        "x-player-session-token": "session-token",
-      },
+      headers: { "x-player-session-token": "session-token" },
     },
   );
+}
+
+function snapshotEnvelope(): Record<string, unknown> {
+  return {
+    business_key: BUSINESS_KEY,
+    locations: locationRows(),
+    items: [{
+      business_key: BUSINESS_KEY,
+      account_key: `iac_${"1".repeat(32)}`,
+      location_key: "warehouse",
+      item_key: `itm_${"b".repeat(32)}`,
+      canonical_key: "material.steel.v1",
+      item_name: "Steel",
+      item_class: "material",
+      item_subtype: "metal",
+      quantity_owned: 6,
+      quantity_reserved: 1,
+      quantity_available: 5,
+      average_unit_cost: 12.5,
+      cost_currency_code: "NRC",
+      holding_version: 4,
+    }],
+  };
 }
 
 function locationRows(): Array<Record<string, unknown>> {
@@ -103,42 +128,15 @@ function location(
   };
 }
 
-function itemRows(): Array<Record<string, unknown>> {
-  return [{
-    business_key: BUSINESS_KEY,
-    account_key: `iac_${"1".repeat(32)}`,
-    location_key: "warehouse",
-    item_key: `itm_${"b".repeat(32)}`,
-    canonical_key: "material.steel.v1",
-    item_name: "Steel",
-    item_class: "material",
-    item_subtype: "metal",
-    quantity_owned: 6,
-    quantity_reserved: 1,
-    quantity_available: 5,
-    average_unit_cost: 12.5,
-    cost_currency_code: "NRC",
-    holding_version: 4,
-  }];
-}
-
 class FakeClient {
-  constructor(
-    private readonly locations: unknown,
-    private readonly items: unknown,
-  ) {}
+  readonly calls: string[] = [];
+  constructor(private readonly snapshot: unknown) {}
 
   rpc(name: string) {
-    if (name === "read_owned_business_stockroom_locations_v2") {
-      return Promise.resolve({ data: this.locations, error: null });
-    }
-    if (name === "read_owned_business_stockroom_v2") {
-      return Promise.resolve({ data: this.items, error: null });
-    }
-    return Promise.resolve({
-      data: null,
-      error: { message: `UNEXPECTED_RPC:${name}` },
-    });
+    this.calls.push(name);
+    return Promise.resolve(name === "read_owned_business_stockroom_snapshot_v2"
+      ? { data: this.snapshot, error: null }
+      : { data: null, error: { message: `UNEXPECTED_RPC:${name}` } });
   }
 }
 

@@ -15,18 +15,8 @@ const ACCOUNT_KEYS = {
   in_transit: `iac_${"4".repeat(32)}`,
 } as const;
 
-Deno.test("Business Stockroom returns four canonical locations and reconciled public holdings", async () => {
-  const client = new FakeClient({
-    read_owned_business_stockroom_locations_v2: {
-      data: locationRows(),
-      error: null,
-    },
-    read_owned_business_stockroom_v2: {
-      data: itemRows(),
-      error: null,
-    },
-  });
-
+Deno.test("Business Stockroom reads one coherent canonical snapshot", async () => {
+  const client = new FakeClient({ data: snapshotEnvelope(), error: null });
   const snapshot = await readBusinessStockroom(client as never, {
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
@@ -54,42 +44,35 @@ Deno.test("Business Stockroom returns four canonical locations and reconciled pu
       ["in_transit", "material.copper.v1"],
     ],
   );
-  assertEquals(client.calls, [
-    {
-      name: "read_owned_business_stockroom_locations_v2",
-      args: {
-        p_game_session_id: GAME_ID,
-        p_player_id: PLAYER_ID,
-      },
+  assertEquals(client.calls, [{
+    name: "read_owned_business_stockroom_snapshot_v2",
+    args: {
+      p_game_session_id: GAME_ID,
+      p_player_id: PLAYER_ID,
     },
-    {
-      name: "read_owned_business_stockroom_v2",
-      args: {
-        p_game_session_id: GAME_ID,
-        p_player_id: PLAYER_ID,
-      },
-    },
-  ]);
+  }]);
   assertNoUuid(JSON.stringify(snapshot));
 });
 
-Deno.test("Business Stockroom fails closed on invalid canonical rows", async () => {
-  const invalidResponses = [
-    { locations: locationRows().slice(0, 3), items: itemRows() },
+Deno.test("Business Stockroom fails closed on malformed snapshot envelopes", async () => {
+  const invalidEnvelopes = [
+    { ...snapshotEnvelope(), extra: true },
+    { ...snapshotEnvelope(), business_key: `biz_${"f".repeat(32)}` },
+    { ...snapshotEnvelope(), locations: locationRows().slice(0, 3) },
     {
+      ...snapshotEnvelope(),
       locations: locationRows().map((row, index) =>
         index === 3 ? { ...row, location_key: "warehouse" } : row
       ),
-      items: itemRows(),
     },
     {
+      ...snapshotEnvelope(),
       locations: locationRows().map((row, index) =>
         index === 0 ? { ...row, quantity_owned: 11 } : row
       ),
-      items: itemRows(),
     },
     {
-      locations: locationRows(),
+      ...snapshotEnvelope(),
       items: itemRows().map((row, index) =>
         index === 0
           ? { ...row, item_name: "00000000-0000-4000-8000-000000000099" }
@@ -98,17 +81,8 @@ Deno.test("Business Stockroom fails closed on invalid canonical rows", async () 
     },
   ];
 
-  for (const response of invalidResponses) {
-    const client = new FakeClient({
-      read_owned_business_stockroom_locations_v2: {
-        data: response.locations,
-        error: null,
-      },
-      read_owned_business_stockroom_v2: {
-        data: response.items,
-        error: null,
-      },
-    });
+  for (const envelope of invalidEnvelopes) {
+    const client = new FakeClient({ data: envelope, error: null });
     const error = await capture(() => readBusinessStockroom(client as never, {
       gameSessionId: GAME_ID,
       playerId: PLAYER_ID,
@@ -118,22 +92,32 @@ Deno.test("Business Stockroom fails closed on invalid canonical rows", async () 
   }
 });
 
-Deno.test("Business Stockroom preserves scoped domain errors", async () => {
-  const client = new FakeClient({
-    read_owned_business_stockroom_locations_v2: {
-      data: null,
-      error: { message: "BUSINESS_NOT_FOUND" },
-    },
-    read_owned_business_stockroom_v2: { data: [], error: null },
-  });
-
-  const error = await capture(() => readBusinessStockroom(client as never, {
-    gameSessionId: GAME_ID,
-    playerId: PLAYER_ID,
-  }));
-  assertEquals(error.code, "business_not_found");
-  assertEquals(error.status, 404);
+Deno.test("Business Stockroom preserves scoped and invariant RPC errors", async () => {
+  for (const [message, code, status] of [
+    ["BUSINESS_NOT_FOUND", "business_not_found", 404],
+    [
+      "BUSINESS_STOCKROOM_LOCATIONS_INCOMPLETE",
+      "business_stockroom_locations_incomplete",
+      500,
+    ],
+  ] as const) {
+    const client = new FakeClient({ data: null, error: { message } });
+    const error = await capture(() => readBusinessStockroom(client as never, {
+      gameSessionId: GAME_ID,
+      playerId: PLAYER_ID,
+    }));
+    assertEquals(error.code, code);
+    assertEquals(error.status, status);
+  }
 });
+
+function snapshotEnvelope(): Record<string, unknown> {
+  return {
+    business_key: BUSINESS_KEY,
+    locations: locationRows(),
+    items: itemRows(),
+  };
+}
 
 function locationRows(): Array<Record<string, unknown>> {
   return [
@@ -207,18 +191,20 @@ class FakeClient {
   readonly calls: Array<{ name: string; args: unknown }> = [];
 
   constructor(
-    private readonly responses: Record<
-      string,
-      { readonly data: unknown; readonly error: { readonly message: string } | null }
-    >,
+    private readonly response: {
+      readonly data: unknown;
+      readonly error: { readonly message: string } | null;
+    },
   ) {}
 
   rpc(name: string, args: unknown) {
     this.calls.push({ name, args });
-    return Promise.resolve(this.responses[name] ?? {
-      data: null,
-      error: { message: `UNEXPECTED_RPC:${name}` },
-    });
+    return Promise.resolve(name === "read_owned_business_stockroom_snapshot_v2"
+      ? this.response
+      : {
+        data: null,
+        error: { message: `UNEXPECTED_RPC:${name}` },
+      });
   }
 }
 

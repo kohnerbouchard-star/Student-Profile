@@ -16,6 +16,7 @@ const CURRENCY_CODE = /^[A-Z0-9_]{3,16}$/u;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
 const MAX_STOCKROOM_ITEMS = 500;
 const NUMBER_TOLERANCE = 0.0001;
+const SNAPSHOT_KEYS = ["business_key", "items", "locations"] as const;
 
 const LOCATION_LABELS: Readonly<Record<BusinessStockroomLocationKey, string>> =
   Object.freeze({
@@ -25,12 +26,36 @@ const LOCATION_LABELS: Readonly<Record<BusinessStockroomLocationKey, string>> =
     in_transit: "In Transit",
   });
 
+export interface ParsedStockroomEnvelope {
+  readonly businessKey: string;
+  readonly locations: unknown;
+  readonly items: unknown;
+}
+
 export interface ParsedStockroomLocation extends BusinessStockroomLocationDto {
   readonly businessKey: string;
 }
 
 export interface ParsedStockroomItem extends BusinessStockroomItemDto {
   readonly businessKey: string;
+}
+
+export function parseStockroomEnvelope(value: unknown): ParsedStockroomEnvelope {
+  if (!isRow(value) || containsInternalUuid(value)) {
+    throw invalidStockroomResult("Stockroom snapshot envelope is invalid.");
+  }
+  const keys = Object.keys(value).sort();
+  if (
+    keys.length !== SNAPSHOT_KEYS.length ||
+    keys.some((key, index) => key !== SNAPSHOT_KEYS[index])
+  ) {
+    throw invalidStockroomResult("Stockroom snapshot fields are invalid.");
+  }
+  return {
+    businessKey: publicKey(value.business_key, "business_key", BUSINESS_KEY),
+    locations: value.locations,
+    items: value.items,
+  };
 }
 
 export function parseStockroomLocations(
