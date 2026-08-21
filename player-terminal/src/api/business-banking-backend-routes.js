@@ -56,16 +56,6 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessProductCreate"),
     },
   }),
-  businessInputPurchase: ({ payload }) => ({
-    method: "POST",
-    path: "/players/me/business/inputs/purchases",
-    payload: {
-      businessKey: required(payload.businessKey, "businessKey", "businessInputPurchase"),
-      productKey: required(payload.productKey || payload.productId, "productKey", "businessInputPurchase"),
-      quantity: number(payload.quantity, "quantity", "businessInputPurchase"),
-      idempotencyKey: key(payload, "businessInputPurchase"),
-    },
-  }),
   businessProduction: ({ payload }) => ({
     method: "POST",
     path: "/players/me/business/production-runs",

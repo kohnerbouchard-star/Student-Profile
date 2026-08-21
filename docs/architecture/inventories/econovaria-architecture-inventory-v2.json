@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1061,
+    "sourceFiles": 1062,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 208,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 123
@@ -89,7 +89,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 16,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -2559,6 +2559,12 @@
         ]
       },
       {
+        "file": "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
         "file": "backend/src/domains/contracts/api/playerContractRoutePaths.test.ts",
         "markers": [
           "legacy"
@@ -3475,16 +3481,16 @@
         "lines": 658
       },
       {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 657
-      },
-      {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
         "lines": 649
       },
       {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
         "lines": 649
+      },
+      {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 647
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",

@@ -96,6 +96,15 @@ export async function handlePlayerBusinessRequest(
       return privateJson(200, await repository.readBusiness(publicScope));
     }
 
+    if (route.kind === "businessInputPurchase") {
+      return jsonError(410, {
+        code: "business_input_purchase_retired",
+        message:
+          "Legacy abstract Business input purchasing has been retired. Use Business Store procurement.",
+        retryable: false,
+      });
+    }
+
     if (route.kind === "businessStoreQuote") {
       return privateJson(200, {
         ok: true,

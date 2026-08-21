@@ -538,3 +538,66 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 3D — retire new Player API reliance on legacy abstract input purchasing is OPEN.** Preserve historical records and the bounded compatibility URL, return a stable `410 Gone` retirement response for authenticated attempts, remove the action from server/client capability manifests and active browser controls, and eliminate the live `purchase_business_input_v1` execution path. Canonical Business Store procurement remains the only new material-acquisition authority. Phase 4 workforce/payroll remains closed.
+
+---
+## 2026-08-22 — Phase 3D COMPLETE and Phase 3 COMPLETE: abstract input-purchase retirement
+
+### Certified implementation and verification sources
+
+- **Exact implementation SHA:** `bd186ba86b4952bff7f4ab9b34c5e067dbd70116`.
+- **Exact clean verification head:** `832c609679e4d423e968ee2e42bd810d7aa6a862`.
+- Feature branch: `refactor/business-abstract-input-retirement-v2`.
+- Stacked draft PR: #656, based on certified Phase 3C branch `feat/business-stockroom-locations-v2`.
+- PR #648, PR #654, PR #655, and PR #656 remained open, draft, mergeable, unmerged, and undeployed.
+- No staging or production deployment or data mutation was performed.
+- The clean verification head differs from the implementation SHA only by static workflow cleanup, a focused test assertion refinement, and deterministic architecture-inventory convergence; it does not change production runtime behavior.
+- This certification documentation is later than both tested SHAs and must not replace either as evidence.
+
+### What changed
+
+- Preserved the bounded URL `/players/me/business/inputs/purchases` so old clients receive an explicit retirement response rather than an ambiguous route failure.
+- Preserved normal Player authentication, scope derivation, request-envelope validation, method validation, and sensitive rate limiting before retirement handling.
+- Valid authenticated requests now return HTTP `410 Gone` with code `business_input_purchase_retired` and direct Players to canonical Business Store procurement.
+- Removed the live `businessInputPurchase` mutation case and all runtime execution of `purchase_business_input_v1` from the Player Business application path.
+- Preserved historical SQL functions, Business inventory records, ledger evidence, and audit history; no historical data was deleted or rewritten.
+- Removed `businessInputPurchase` from the server capability manifest and bumped the manifest version to `2026-08-21.2`.
+- Removed the action from Player endpoint resolution, Business route helpers, capability validation, write invalidation, Business controls, and button-action evidence.
+- Removed the connected-browser abstract input-purchase step while retaining the broader Business lifecycle regression through a zero-input-cost historical product fixture.
+- Kept canonical Business Store procurement as the only authority for new material acquisition.
+- Regenerated the deterministic architecture inventory and returned compatibility-marker debt to the existing maximum of `209`; no architecture-ratchet ceiling was raised.
+
+### Verification on clean head `832c6096...`
+
+- **Business Economy V2 — PASS** (`32521931016`).
+- **Business Banking Runtime — PASS** (`32521931181`).
+- **Repository Quality — PASS** (`32521931055`).
+- **Backend Typecheck and backend smoke — PASS** (`32521930987`).
+- **Player Terminal Verify, including Chromium — PASS** (`32521930935`).
+- **Progression Runtime, including Chromium, security, typecheck, and backend smoke — PASS** (`32521930881`).
+- **Environment Neutral Browser — PASS** (`32521930999`).
+- **Runtime Interaction Wiring — PASS** (`32521931005`).
+- **Supply Chain Security — PASS** (`32521931149`).
+- **Beta Security Contract — PASS** (`32521930924`).
+- **World Runtime — PASS** (`32521930953`).
+- **Staging Readiness Preflight — PASS** (`32521930969`).
+- **Required Game Market Timezone — PASS** (`32521931017`).
+- **Exchange Calendar Runtime — PASS** (`32521930901`).
+- No migration was added or modified in Phase 3D, so Database Replay was not a changed-path gate; retained historical SQL and the absence of new migration authority were covered by the retirement and Business runtime contracts.
+
+### Architecture and gameplay decisions
+
+- A retired mutation may remain as an authenticated compatibility route, but it must not remain advertised as a capability or reachable through an active browser control.
+- Retirement responses execute only after normal authentication and validation; the route is not an unauthenticated information oracle.
+- Historical Business products, abstract cost records, and ledger history remain readable for audit and migration safety, but they cannot be expanded through new Player execution.
+- Canonical Store procurement and canonical Inventory accounts are the sole new material-acquisition and stock authority.
+- Phase 3 is complete. No remaining Phase 3 blocker authorizes expansion of the retired abstract model.
+
+### Blockers and unresolved risks
+
+- No Phase 3 blocker remains.
+- Historical abstract Business data still exists by design and must remain compatibility-only until a later explicit data-retirement migration is separately planned and verified.
+- The integration stack remains draft and unmerged; release, staging deployment, production deployment, and data migration remain unauthorized.
+
+### Next authorized step
+
+**Phase 4 — workforce capacity and payroll is OPEN.** Begin with a bounded authority audit and foundation checkpoint: preserve server-generated candidates and roles, define recipe labor-minute/role requirements, model finite employee availability and reservations, preserve recurring payroll independent of utilization, prevent double-booking, and prohibit Player-authored productivity or economic outcomes. Do not widen this checkpoint into equipment, timed manufacturing, Store seller offers, IPO, merge, or deployment.
