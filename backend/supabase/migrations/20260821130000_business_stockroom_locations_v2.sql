@@ -247,6 +247,11 @@ begin
 end
 $function$;
 
+-- PostgreSQL cannot change a table-returning function's OUT row type in place.
+-- Drop the Phase 3A signature before recreating the same public function name
+-- with the location-complete, public-key-only Phase 3C contract.
+drop function if exists public.read_owned_business_stockroom_v2(uuid, uuid);
+
 create or replace function public.read_owned_business_stockroom_v2(
   p_game_session_id uuid,
   p_player_id uuid
