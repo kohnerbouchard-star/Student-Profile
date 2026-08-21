@@ -83,9 +83,10 @@ export async function handlePlayerBusinessRequest(
 
     if (route.kind === "businessRead") {
       if (route.resource === "stockroom") {
-        return privateJson(200, {
-          items: await readBusinessStockroom(client, publicScope),
-        });
+        return privateJson(
+          200,
+          await readBusinessStockroom(client, publicScope),
+        );
       }
       if (route.resource === "recipes") {
         return privateJson(200, {

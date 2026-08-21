@@ -62,7 +62,29 @@ export interface BusinessProductDto {
   readonly version: number;
 }
 
+export const BUSINESS_STOCKROOM_LOCATION_KEYS = [
+  "warehouse",
+  "work_in_progress",
+  "finished_goods",
+  "in_transit",
+] as const;
+
+export type BusinessStockroomLocationKey =
+  typeof BUSINESS_STOCKROOM_LOCATION_KEYS[number];
+
+export interface BusinessStockroomLocationDto {
+  readonly accountKey: string;
+  readonly locationKey: BusinessStockroomLocationKey;
+  readonly label: string;
+  readonly itemCount: number;
+  readonly quantityOwned: number;
+  readonly quantityReserved: number;
+  readonly quantityAvailable: number;
+}
+
 export interface BusinessStockroomItemDto {
+  readonly accountKey: string;
+  readonly locationKey: BusinessStockroomLocationKey;
   readonly itemKey: string;
   readonly canonicalKey: string;
   readonly name: string;
@@ -74,6 +96,12 @@ export interface BusinessStockroomItemDto {
   readonly averageUnitCost: number;
   readonly costCurrencyCode: string | null;
   readonly version: number;
+}
+
+export interface BusinessStockroomSnapshotDto {
+  readonly businessKey: string;
+  readonly locations: readonly BusinessStockroomLocationDto[];
+  readonly items: readonly BusinessStockroomItemDto[];
 }
 
 export interface BusinessRecipeAccessDto {

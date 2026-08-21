@@ -5,12 +5,16 @@ export {
 } from "./api/playerBusinessHttpHandler.ts";
 export { readPlayerBusinessRoutePath } from "./api/playerBusinessRoutePaths.ts";
 export {
+  BUSINESS_STOCKROOM_LOCATION_KEYS,
   isPlayerBusinessRoute,
   PlayerBusinessError,
   type BusinessCompanyDto,
   type BusinessProductDto,
   type BusinessSnapshotDto,
   type BusinessStockroomItemDto,
+  type BusinessStockroomLocationDto,
+  type BusinessStockroomLocationKey,
+  type BusinessStockroomSnapshotDto,
   type BusinessStoreQuoteDto,
   type BusinessStoreReceiptDto,
   type PlayerBusinessRepository,

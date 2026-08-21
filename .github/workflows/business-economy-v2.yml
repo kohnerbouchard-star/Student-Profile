@@ -75,10 +75,12 @@ jobs:
         working-directory: backend
       - run: npm run typecheck
         working-directory: backend
-      - name: Verify extracted Business route and procurement authority
+      - name: Verify extracted Business route, procurement, and Stockroom authority
         working-directory: backend
         run: |
           deno test --config supabase/functions/classroom-api/deno.json \
             --lock=supabase/functions/deno.lock --frozen \
             src/domains/business/api/playerBusinessRoutePaths.test.ts \
-            src/domains/business/api/playerBusinessStoreProcurement.test.ts
+            src/domains/business/api/playerBusinessStoreProcurement.test.ts \
+            src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts \
+            src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts

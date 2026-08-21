@@ -268,10 +268,10 @@ Exit: a Player cannot create or modify the definition/BOM of a physical product.
 
 ## Phase 3 — Stockroom and procurement
 
-**Status:** IN PROGRESS — checkpoints A and B complete; location-complete Stockroom convergence and abstract-input retirement remain open
+**Status:** IN PROGRESS — checkpoints A, B, and C complete; legacy abstract input-purchase retirement remains open
 
 - [x] Add bounded Business Stockroom read model over canonical Inventory accounts.
-- [ ] Materials/warehouse, WIP, Finished Goods, and In Transit are visible separately.
+- [x] Materials/warehouse, WIP, Finished Goods, and In Transit are visible separately.
 - [x] Procurement delivers canonical items into Business stockroom with actual cost basis.
 - [x] Input/manufacturing cost derives from carried inventory basis.
 - [ ] Remove new reliance on abstract `unit_input_cost` purchasing.
@@ -280,6 +280,7 @@ Certified checkpoints:
 
 - **3A:** canonical warehouse Stockroom read.
 - **3B:** canonical Store procurement, certified source `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
+- **3C:** coherent location-complete canonical Business Stockroom read, certified source `6799c0b44025dd71b54ed75636dd8f2af3358150`.
 
 Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished goods.
 
