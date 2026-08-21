@@ -3,6 +3,7 @@ name: Business Banking Runtime
 on:
   pull_request:
     paths:
+      - "backend/src/domains/business/**"
       - "backend/src/domains/business-banking/**"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
@@ -11,6 +12,8 @@ on:
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "backend/supabase/migrations/20260819*.sql"
+      - "backend/supabase/migrations/20260820*.sql"
+      - "backend/supabase/migrations/20260821*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
@@ -30,6 +33,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "backend/src/domains/business/**"
       - "backend/src/domains/business-banking/**"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
@@ -38,6 +42,8 @@ on:
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "backend/supabase/migrations/20260819*.sql"
+      - "backend/supabase/migrations/20260820*.sql"
+      - "backend/supabase/migrations/20260821*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
