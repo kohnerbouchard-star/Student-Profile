@@ -1,4 +1,4 @@
-name: Temporary Phase 3B Hardening Instrumentation V3
+name: Temporary Phase 3B Hardening Instrumentation V3.1
 
 on:
   push:
@@ -86,7 +86,7 @@ jobs:
           git clean -fd
           cat > .github/phase3b-instrumentation-failure.json <<EOF
           {
-            "workflow": "Temporary Phase 3B Hardening Instrumentation V3",
+            "workflow": "Temporary Phase 3B Hardening Instrumentation V3.1",
             "runId": "${{ github.run_id }}",
             "runAttempt": "${{ github.run_attempt }}",
             "headSha": "${{ github.sha }}"
