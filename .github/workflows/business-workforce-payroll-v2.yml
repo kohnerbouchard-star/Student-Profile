@@ -1,0 +1,110 @@
+name: Business Workforce Payroll V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/20260822*.sql"
+      - "backend/src/domains/business/**"
+      - "scripts/business-workforce-payroll-foundation-contract.mjs"
+      - "scripts/business-banking-runtime-contract.mjs"
+      - "docs/architecture/business-workforce-payroll-authority-audit-v2.md"
+      - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
+      - ".github/workflows/business-workforce-payroll-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-workforce-payroll-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authority-contract:
+    name: Workforce and payroll authority contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+      - name: Validate Phase 4A authority foundation
+        run: |
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - name: Upload Phase 4A review bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-workforce-payroll-v2-review
+          path: |
+            backend/supabase/migrations/20260822090000_business_workforce_payroll_foundation_v2.sql
+            scripts/business-workforce-payroll-foundation-contract.mjs
+            docs/architecture/business-workforce-payroll-authority-audit-v2.md
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          retention-days: 7
+
+  backend-typecheck:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm ci
+        working-directory: backend
+      - run: npm run typecheck
+        working-directory: backend
+
+  phase4a-inventory-converge:
+    name: Converge Phase 4A architecture inventory
+    if: >-
+      github.event_name == 'pull_request'
+      && github.head_ref == 'feat/business-workforce-payroll-foundation-v2'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Phase 4A branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-workforce-payroll-foundation-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+      - name: Validate authority before inventory convergence
+        run: |
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+      - name: Regenerate and ratchet architecture inventory
+        run: |
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --check
+      - name: Commit deterministic architecture inventory
+        shell: bash
+        run: |
+          if git diff --quiet -- \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json; then
+            echo "Architecture inventory is already current."
+            exit 0
+          fi
+          git config user.name "econovaria-phase4a-inventory"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "docs(architecture): converge Phase 4A inventory"
+          git push origin HEAD:feat/business-workforce-payroll-foundation-v2
