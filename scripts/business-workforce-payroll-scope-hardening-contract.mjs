@@ -97,8 +97,12 @@ for (const tableName of [
     "iu",
   );
   assert.match(hardening, revoke);
-  assert.ok(
-    foundation.indexOf(`grant select, insert, update, delete\n  on table public.${tableName}`) >= 0,
+  assert.match(
+    foundation,
+    new RegExp(
+      `grant select, insert, update, delete[\\s\\S]{0,900}public\\.${tableName}[\\s\\S]{0,300}to service_role`,
+      "iu",
+    ),
     `Foundation grant for ${tableName} was not found before the forward revoke.`,
   );
 }
