@@ -8,6 +8,7 @@ declare const Deno: { test(name: string, run: () => void | Promise<void>): void 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const EVENT = `pev_${"a".repeat(32)}`;
+const NOW = new Date("2026-07-21T02:00:00.000Z");
 
 Deno.test("trusted Progression event maps versioned public contract without UUID output", async () => {
   const client = successfulClient({
@@ -26,7 +27,7 @@ Deno.test("trusted Progression event maps versioned public contract without UUID
     sourcePublicId: "contract_completion_arrival_orientation_001",
     idempotencyKey: "contract-completion:001",
     occurredAt: "2026-07-21T01:00:00.000Z",
-  });
+  }, { now: NOW });
   assertEquals(result, {
     outcome: "applied",
     eventId: EVENT,
@@ -67,7 +68,7 @@ Deno.test("trusted Progression event preserves replay outcome", async () => {
     sourcePublicId: "contract_completion_arrival_orientation_001",
     idempotencyKey: "contract-completion:001",
     occurredAt: "2026-07-21T01:00:00.000Z",
-  });
+  }, { now: NOW });
   assertEquals(result.outcome, "replayed");
 });
 
@@ -85,7 +86,7 @@ Deno.test("stable predecessor fixtures remain explicit and consumable without pr
       gameId: GAME,
       playerUuid: PLAYER,
       ...fixture,
-    });
+    }, { now: NOW });
     assertEquals(client.calls[0], {
       name: "record_progression_integration_event_v1",
       args: {
@@ -123,7 +124,7 @@ Deno.test("trusted Progression contract accepts bounded World and Messaging even
       sourcePublicId,
       idempotencyKey: `${sourceDomain}:${sourcePublicId}`,
       occurredAt: "2026-07-21T01:00:00.000Z",
-    });
+    }, { now: NOW });
     assertEquals((client.calls[0]?.args as { p_source_domain?: string }).p_source_domain, sourceDomain);
     assertEquals((client.calls[0]?.args as { p_event_type?: string }).p_event_type, eventType);
   }
@@ -139,7 +140,7 @@ Deno.test("trusted Progression event rejects source and event mismatches before 
     sourcePublicId: "story_chapter_completion_fixture_001",
     idempotencyKey: "story.chapter.completed:fixture:001",
     occurredAt: "2026-07-21T01:00:00.000Z",
-  }));
+  }, { now: NOW }));
   assertEquals(errors.code, "progression_event_invalid");
   assertEquals(errors.status, 400);
   assertEquals(client.calls.length, 0);
@@ -155,7 +156,7 @@ Deno.test("trusted Progression event rejects client-shaped event types before RP
     sourcePublicId: "event",
     idempotencyKey: "event:001",
     occurredAt: "2026-07-21T01:00:00.000Z",
-  }));
+  }, { now: NOW }));
   assertEquals(errors.code, "progression_event_invalid");
   assertEquals(client.calls.length, 0);
 });
@@ -167,7 +168,7 @@ Deno.test("source-event mutation conflicts fail closed with a stable public erro
     gameId: GAME,
     playerUuid: PLAYER,
     ...fixture,
-  }));
+  }, { now: NOW }));
   assertEquals(errors.code, "progression_source_event_conflict");
   assertEquals(errors.status, 409);
   assertEquals(errors.retryable, false);
