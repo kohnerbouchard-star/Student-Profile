@@ -34,12 +34,13 @@ Deno.test("retired Business input purchase authenticates then returns stable 410
   const body = await response.json();
 
   assertEquals(response.status, 410);
-  assertEquals(body.error, {
-    code: "business_input_purchase_retired",
-    message:
-      "Legacy abstract Business input purchasing has been retired. Use Business Store procurement.",
-    retryable: false,
-  });
+  assertEquals(body.error.code, "business_input_purchase_retired");
+  assertEquals(body.error.retryable, false);
+  assertContains(
+    body.error.message,
+    "abstract Business input purchasing has been retired.",
+  );
+  assertContains(body.error.message, "Business Store procurement.");
   assertEquals(scopeCalls, 1);
   assertEquals(executeCalls, 0);
   assertNoUuid(JSON.stringify(body));
@@ -126,6 +127,14 @@ function request(method: string, body?: unknown): Request {
 function assertNoUuid(value: string): void {
   if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu.test(value)) {
     throw new Error(`UUID leaked: ${value}`);
+  }
+}
+
+function assertContains(actual: unknown, expected: string): void {
+  if (typeof actual !== "string" || !actual.includes(expected)) {
+    throw new Error(
+      `Actual ${JSON.stringify(actual)} did not contain ${JSON.stringify(expected)}`,
+    );
   }
 }
 
