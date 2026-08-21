@@ -128,7 +128,7 @@ jobs:
               path, source = load(path_value)
               count = source.count(old)
               if count != 1:
-                  raise SystemExit(f"Expected one exact target in {path_value}; found {count}")
+                  raise SystemExit(f"Expected one exact target in {path_value}; found {count}: {old!r}")
               path.write_text(source.replace(old, new, 1), encoding="utf-8")
 
           def regex_once(path_value: str, pattern: str, replacement: str) -> None:
@@ -152,12 +152,12 @@ jobs:
 
           capability = "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
           replace_once(capability, '  "businessInputPurchase",\n', '')
+          replace_once(capability, '  | "businessInputPurchase"\n', '')
           regex_once(
               capability,
-              r'\n  businessInputPurchase: \{\n    method: "POST",\n    path: "/players/me/business/inputs/purchases",\n    available: true,\n  \},',
+              r'\n  \{\n    key: "businessInputPurchase",\n    operations: \[\{\n      method: "POST",\n      pathTemplate: "/players/me/business/inputs/purchases",\n    \}\],\n    actionCapabilities: \["businessInputPurchase"\],\n  \},',
               '',
           )
-          replace_once(capability, '  businessInputPurchase: "sensitive",\n', '')
 
           rate_limit = "backend/src/security/playerRateLimitDispatch.ts"
           replace_once(
@@ -172,16 +172,16 @@ jobs:
           )
 
           endpoints = "player-terminal/src/api/endpoints.js"
-          regex_once(
+          replace_once(
               endpoints,
-              r'\n  businessInputPurchase: \{\n    method: "POST",\n    path: "/players/me/business/inputs/purchases",\n    available: true,\n  \},',
+              '  businessInputPurchase: { method: "POST", path: "/business/inputs/purchases" },\n',
               '',
           )
 
           browser_routes = "player-terminal/src/api/business-banking-backend-routes.js"
           regex_once(
               browser_routes,
-              r'\n  businessInputPurchase\(\) \{\n    return \{\n      path: PLAYER_ENDPOINTS\.businessInputPurchase\.path,\n      payload: preserveFields\(arguments\[0\] \|\| \{\}, \[\n        "businessKey", "productKey", "quantity", "idempotencyKey",\n      \]\),\n    \};\n  \},',
+              r'\n  businessInputPurchase: \(\{ payload \}\) => \(\{\n    endpointKey: "businessInputPurchase",\n    method: "POST",\n    path: "/players/me/business/inputs/purchases",\n    payload: pickPayload\(payload, \[\n      "businessKey", "productKey", "quantity", "idempotencyKey",\n    \]\),\n  \}\),',
               '',
           )
 
@@ -201,11 +201,14 @@ jobs:
           )
 
           resource_plan = "player-terminal/src/api/resource-plan.js"
-          regex_once(
+          replace_once(
               resource_plan,
-              r'\n  businessInputPurchase: \[\n    RESOURCE_KEYS\.business,\n    RESOURCE_KEYS\.banking,\n  \],',
+              '  businessInputPurchase: [RESOURCE_KEYS.business, RESOURCE_KEYS.banking],\n',
               '',
           )
+
+          backend_routes_core = "player-terminal/src/api/backend-routes-core.js"
+          replace_once(backend_routes_core, '  "businessInputPurchase",\n', '')
 
           business_page = "player-terminal/src/pages/business-page.js"
           regex_once(
@@ -226,6 +229,37 @@ jobs:
               surface,
               'assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);',
               'assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);\nassert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);\nassert.equal(PLAYER_ENDPOINTS.businessInputPurchase, undefined);',
+          )
+
+          browser_acceptance = "scripts/business-banking-player-business-browser-acceptance.core.mjs"
+          replace_once(browser_acceptance, '    inputPurchased: false,\n    inputPersisted: false,\n', '')
+          replace_once(
+              browser_acceptance,
+              '    await target.locator(\'[name="unitInputCost"]\').fill("1");',
+              '    await target.locator(\'[name="unitInputCost"]\').fill("0");',
+          )
+          regex_once(
+              browser_acceptance,
+              r'\nasync function purchaseInputs\(page\) \{.*?\n\}\n\nasync function runProduction',
+              '\nasync function runProduction',
+          )
+          replace_once(browser_acceptance, '  await purchaseInputs(player.page);\n', '')
+
+          runtime_contract = "scripts/business-banking-runtime-contract.mjs"
+          regex_once(
+              runtime_contract,
+              r'(const actionCapabilities = \[.*?)(    "businessInputPurchase",\n)',
+              r'\1',
+          )
+          regex_once(
+              runtime_contract,
+              r'(const endpointKeys = \[.*?)(    "businessInputPurchase",\n)',
+              r'\1',
+          )
+          replace_once(
+              runtime_contract,
+              'assert.equal(routeKinds.has("businessInputPurchase"), true);',
+              'assert.equal(routeKinds.has("businessInputPurchase"), true);\nassert.match(extractedHandler, /business_input_purchase_retired/);\nassert.doesNotMatch(extractedExecutor, /businessInputPurchase|purchase_business_input_v1/);',
           )
 
           button_path = Path("docs/operations/contracts/button-action-coverage-v1.json")
@@ -251,6 +285,7 @@ jobs:
               "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
               "docs/operations/contracts/button-action-coverage-v1.json",
               "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+              "player-terminal/src/api/backend-routes-core.js",
               "player-terminal/src/api/business-banking-backend-routes.js",
               "player-terminal/src/api/capabilities.js",
               "player-terminal/src/api/endpoints.js",
@@ -258,6 +293,8 @@ jobs:
               "player-terminal/src/integrations/student-profile-capability-manifest.js",
               "player-terminal/src/pages/business-page.js",
               "player-terminal/tests/business-banking-surface.mjs",
+              "scripts/business-banking-player-business-browser-acceptance.core.mjs",
+              "scripts/business-banking-runtime-contract.mjs",
               "scripts/business-input-purchase-retirement-contract.mjs",
           }
           authority["allowedPaths"] = sorted(set(authority.get("allowedPaths", [])) | required_paths)
@@ -314,6 +351,7 @@ jobs:
             backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
           node player-terminal/tests/business-banking-surface.mjs
           node player-terminal/tests/current-capability-manifest.mjs
+          node scripts/business-banking-runtime-contract.mjs
       - name: Commit verified retirement convergence
         shell: bash
         run: |
@@ -325,12 +363,15 @@ jobs:
             backend/src/security/playerRateLimitDispatch.ts \
             docs/operations/contracts/button-action-coverage-v1.json \
             docs/operations/contracts/player-cross-cutting-verification-authority-v1.json \
+            player-terminal/src/api/backend-routes-core.js \
             player-terminal/src/api/business-banking-backend-routes.js \
             player-terminal/src/api/capabilities.js \
             player-terminal/src/api/endpoints.js \
             player-terminal/src/api/resource-plan.js \
             player-terminal/src/integrations/student-profile-capability-manifest.js \
             player-terminal/src/pages/business-page.js \
-            player-terminal/tests/business-banking-surface.mjs
+            player-terminal/tests/business-banking-surface.mjs \
+            scripts/business-banking-player-business-browser-acceptance.core.mjs \
+            scripts/business-banking-runtime-contract.mjs
           git commit -m "refactor(business): remove live abstract input purchase authority"
           git push origin HEAD:refactor/business-abstract-input-retirement-v2
