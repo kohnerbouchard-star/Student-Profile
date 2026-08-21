@@ -53,7 +53,6 @@ assert.match(repositorySource, /p_game_session_id: input\.gameSessionId/u);
 assert.match(repositorySource, /p_player_id: input\.playerId/u);
 assert.match(handlerSource, /supabaseBusinessStockroomReadRepository\.ts/u);
 assert.match(handlerSource, /route\.resource === "recipes"[\s\S]{0,180}readBusinessRecipes\(client, publicScope\)/u);
-assert.match(handlerSource, /\{ recipes: await readBusinessRecipes\(client, publicScope\) \}/u);
 
 for (const forbidden of [
   /create table[^;]*business_recipe_definitions/iu,

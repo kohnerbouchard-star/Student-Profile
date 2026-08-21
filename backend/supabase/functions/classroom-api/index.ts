@@ -598,6 +598,8 @@ Deno.serve(async (request) => {
       businessCreate: "businessCreate",
       businessProductCreate: "businessProductCreate",
       businessInputPurchase: "businessInputPurchase",
+      businessStoreQuote: "storeQuote",
+      businessStorePurchase: "storePurchase",
       businessProduction: "businessProduction",
       businessPrice: "businessPrice",
       businessHire: "businessHire",

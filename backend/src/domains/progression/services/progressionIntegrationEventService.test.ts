@@ -8,7 +8,7 @@ declare const Deno: { test(name: string, run: () => void | Promise<void>): void 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const EVENT = `pev_${"a".repeat(32)}`;
-const NOW = new Date("2026-07-21T02:00:00.000Z");
+const NOW = new Date("2026-07-21T05:00:00.000Z");
 
 Deno.test("trusted Progression event maps versioned public contract without UUID output", async () => {
   const client = successfulClient({
