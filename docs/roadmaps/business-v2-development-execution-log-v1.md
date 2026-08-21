@@ -483,3 +483,58 @@ Phase 3 is not complete. The current Stockroom read still exposes the canonical 
 ### Next authorized step
 
 **Phase 3C — location-complete canonical Business Stockroom read is OPEN.** Build a bounded read model over canonical Business inventory accounts for warehouse/materials, work in progress, finished goods, and in transit. Preserve public-key-only browser output and do not introduce a parallel Business inventory table. After Phase 3C certification, retire new Player API reliance on the legacy abstract input-purchase path as a separate bounded checkpoint. Phase 4 workforce/payroll remains closed.
+
+---
+## 2026-08-21 — Phase 3C COMPLETE: location-complete canonical Business Stockroom
+
+### Certified implementation source
+
+- **Exact implementation SHA:** `6799c0b44025dd71b54ed75636dd8f2af3358150`.
+- Feature branch: `feat/business-stockroom-locations-v2`.
+- Stacked draft PR: #655, based on `feat/business-store-procurement-v2`.
+- PR #654 and integration PR #648 remained open, draft, mergeable, and unmerged.
+- No staging or production deployment or data mutation was performed.
+- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
+
+### What changed
+
+- Extended the canonical Business inventory-account authority to `in_transit` while retaining Warehouse, Work in Progress, and Finished Goods.
+- Provisioned all four canonical Stockroom accounts on authoritative Business creation and backfilled active existing Businesses during the forward migration.
+- Replaced the warehouse-only item read with public-key-only location and holding reads over canonical `economic_parties`, `inventory_accounts`, `inventory_holdings`, and game_items`.
+- Added a single stable server-authoritative snapshot RPC so location aggregates and item holdings are read from one PostgreSQL statement snapshot during concurrent procurement or production settlement.
+- Returned all four locations even when a location is empty.
+- Added strict browser-boundary validation for exact envelope fields, four unique location keys, public Business/account/item keys, quantity invariants, aggregate reconciliation, bounded item count, cost basis, currency, version, and recursive UUID exclusion.
+- Preserved the existing `items` collection while adding explicit `businessKey` and `locations` fields.
+- Explicitly dropped and recreated the Phase 3A table-returning RPC before changing its OUT row contract; CI now ratchets that PostgreSQL requirement.
+- Added the extracted Business domain and current Business migration dates to the focused Business Banking Runtime workflow trigger without weakening its verification scope.
+- Regenerated the deterministic architecture inventory; no architecture-ratchet ceiling was raised.
+
+### Verification on exact source `6799c0b4...`
+
+- **Business Economy V2 — PASS** (`32482943370`).
+- **Database Replay ×2 + database lint — PASS** (`32482943435`).
+- **Backend Typecheck and backend smoke — PASS** (`32482943445`).
+- **Business Banking Runtime — PASS** (`32482943416`).
+- **Repository Quality — PASS** (`32482943428`).
+- **Runtime Interaction Wiring — PASS** (`32482943464`).
+- **Supply Chain Security — PASS** (`32482943442`).
+- **Player Terminal Verify, including Chromium — PASS** (`32482943372`).
+- **Admin API Check — PASS** (`32482943393`).
+- **Staging Readiness Preflight — PASS** (`32482943549`).
+- **Required Game Market Timezone and Exchange Calendar Runtime — PASS** (`32482943403`, `32482943398`).
+
+### Architecture and gameplay decisions
+
+- Stockroom is a read model over canonical Inventory accounts, never a Business-specific inventory authority or projection table.
+- Browser reads never provision or mutate inventory; account provisioning occurs only through authoritative Business lifecycle writes and migration backfill.
+- Empty canonical locations are first-class operational state and remain visible.
+- One snapshot RPC is required to avoid transient aggregate/item disagreement under concurrent settlement.
+- Store-listing stock remains a later Phase 8 location and was not introduced early.
+
+### Remaining Phase 3 blocker
+
+Phase 3 is not complete. The legacy Player API still advertises and executes the abstract `businessInputPurchase` path backed by `unit_input_cost`. Historical compatibility data must remain readable, but new Player execution and capability advertisement must be retired before Phase 4 opens.
+
+### Next authorized step
+
+**Phase 3D — retire new Player API reliance on legacy abstract input purchasing is OPEN.** Preserve historical records and the bounded compatibility URL, return a stable `410 Gone` retirement response for authenticated attempts, remove the action from server/client capability manifests and active browser controls, and eliminate the live `purchase_business_input_v1` execution path. Canonical Business Store procurement remains the only new material-acquisition authority. Phase 4 workforce/payroll remains closed.
