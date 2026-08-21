@@ -26,6 +26,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  source-archive:
+    name: Exact feature source archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/business-store-procurement-v2
+          fetch-depth: 1
+      - name: Archive exact feature head
+        run: git archive --format=tar.gz --output=/tmp/econovaria-phase3b-source.tgz HEAD
+      - name: Upload exact feature source
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-phase3b-exact-source
+          path: /tmp/econovaria-phase3b-source.tgz
+          if-no-files-found: error
+          retention-days: 1
+
   authority-contract:
     name: Business economy authority contract
     runs-on: ubuntu-latest
