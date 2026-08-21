@@ -1,0 +1,70 @@
+name: Business Workforce Payroll Contract Repair
+
+on:
+  pull_request:
+    paths:
+      - "scripts/business-workforce-payroll-scope-hardening-contract.mjs"
+      - ".github/workflows/business-workforce-payroll-contract-repair.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.number == 657
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Phase 4A branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-workforce-payroll-foundation-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+      - name: Repair grouped-GRANT assertion
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/business-workforce-payroll-scope-hardening-contract.mjs")
+          source = path.read_text(encoding="utf-8")
+          old = '''  assert.ok(
+            foundation.indexOf(`grant select, insert, update, delete\\n  on table public.${tableName}`) >= 0,
+            `Foundation grant for ${tableName} was not found before the forward revoke.`,
+          );'''
+          new = '''  assert.match(
+            foundation,
+            new RegExp(
+              `grant select, insert, update, delete[\\\\s\\\\S]{0,900}public\\\\.${tableName}[\\\\s\\\\S]{0,300}to service_role`,
+              "iu",
+            ),
+            `Foundation grant for ${tableName} was not found before the forward revoke.`,
+          );'''
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif new not in source:
+              raise SystemExit("The grouped-GRANT assertion did not match the reviewed contract state")
+          path.write_text(source, encoding="utf-8")
+          PY
+
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Commit verified repair and remove one-off workflow
+        shell: bash
+        run: |
+          rm .github/workflows/business-workforce-payroll-contract-repair.yml
+          git config user.name "econovaria-phase4a-contract-repair"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            scripts/business-workforce-payroll-scope-hardening-contract.mjs \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git add -u -- \
+            .github/workflows/business-workforce-payroll-contract-repair.yml
+          git commit -m "fix(business): repair Phase 4A hardening contract"
+          git push origin HEAD:feat/business-workforce-payroll-foundation-v2
