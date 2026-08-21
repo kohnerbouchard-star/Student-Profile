@@ -42,7 +42,8 @@ export interface ReviewedPlayerRateLimitOperation {
 
 export type ReviewedPlayerRateLimitEndpointKey =
   | PlayerCapabilityEndpointKey
-  | "inventoryRedemption";
+  | "inventoryRedemption"
+  | "businessInputPurchase";
 
 export interface PlayerRateLimitDispatchDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -132,7 +133,7 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     POST: operation("player.business.employees.hire", "sensitive"),
   }),
   businessInputPurchase: byMethod({
-    POST: operation("player.business.inputs.purchase", "sensitive"),
+    POST: operation("player.business.inputs.purchase.retired", "sensitive"),
   }),
   businessPrice: byMethod({
     POST: operation("player.business.pricing.write", "write"),

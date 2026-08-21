@@ -24,6 +24,7 @@ type BusinessMutationRoute = Exclude<
   | { readonly kind: "businessRead" }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
+  | { readonly kind: "businessInputPurchase" }
 >;
 
 export async function executePlayerBusinessMutation(
@@ -141,14 +142,6 @@ export async function executePlayerBusinessMutation(
           0,
           100,
         ),
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
-      });
-    case "businessInputPurchase":
-      return repository.execute("purchase_business_input_v1", {
-        ...base,
-        p_business_key: readKey(body.businessKey, "businessKey", "biz"),
-        p_product_key: readKey(body.productKey, "productKey", "bpr"),
-        p_quantity: readInteger(body.quantity, "quantity", 1, 100_000),
         p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
       });
     case "businessProduction":

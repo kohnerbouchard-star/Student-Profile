@@ -57,15 +57,6 @@ function productCreationForm(business) {
   </form></details>`;
 }
 
-function inputPurchaseForm(business) {
-  return `<details class="player-terminal-disclosure"><summary><span>${icon("inventory")}</span><div><strong>Purchase production inputs</strong><small>Inputs are priced and settled by the authoritative business service</small></div>${icon("chevronRight")}</summary><form data-player-form="business-input-purchase" data-endpoint="businessInputPurchase">
-    ${hiddenBusinessKey(business)}
-    <label>PRODUCT<select name="productKey" required ${business.products.length ? "" : "disabled"}>${business.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)}</option>`).join("") || `<option value="">Create a product first</option>`}</select></label>
-    <label>QUANTITY<input name="quantity" type="number" min="1" max="100000" step="1" value="10" required /></label>
-    <button class="player-terminal-secondary-button" type="submit" ${business.products.length ? "" : "disabled"}>${icon("inventory")} Purchase inputs</button>
-  </form></details>`;
-}
-
 function employeeRows(business, code) {
   const activeEmployees = (business.employees || []).filter((employee) => String(employee.status).toLowerCase() === "active");
   if (!activeEmployees.length) {
@@ -146,13 +137,12 @@ export function renderBusinessPage(data) {
           <button class="player-terminal-secondary-button" type="submit">${icon("users")} Hire employee</button>
         </form></details>
         ${productCreationForm(business)}
-        ${inputPurchaseForm(business)}
         ${statusForm(business)}
       </section>
 
       <section class="player-terminal-panel player-terminal-business-products">
         <header class="player-terminal-panel-header"><div><span>PRODUCT LINE</span><strong>${escapeHtml(business.products.length)} active products</strong></div><small>Pricing changes apply only after confirmation</small></header>
-        <div>${business.products.length ? business.products.map((product) => productRow(product, business, code)).join("") : renderEmptyState({ title: "No products configured", detail: "Create a product before purchasing inputs or running production.", iconName: "business" })}</div>
+        <div>${business.products.length ? business.products.map((product) => productRow(product, business, code)).join("") : renderEmptyState({ title: "No products configured", detail: "Create a product before running production.", iconName: "business" })}</div>
       </section>
 
       <section class="player-terminal-panel player-terminal-business-products">

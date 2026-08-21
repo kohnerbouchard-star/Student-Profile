@@ -24,7 +24,6 @@ export const PLAYER_ENDPOINTS = Object.freeze({
     path: "/business/formations/:formationId/activate",
   },
   businessProductCreate: { method: "POST", path: "/business/products" },
-  businessInputPurchase: { method: "POST", path: "/business/inputs/purchases" },
   businessProduction: { method: "POST", path: "/business/production-runs" },
   businessPrice: {
     method: "POST",

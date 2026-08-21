@@ -118,7 +118,6 @@ const data = {
 const markup = renderBusinessPage(data);
 for (const endpoint of [
   "businessProductCreate",
-  "businessInputPurchase",
   "businessProduction",
   "businessPrice",
   "businessHire",
@@ -135,6 +134,8 @@ assert.match(markup, /name="wagePerCycle"/);
 assert.match(markup, /name="productivityIndex"/);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
+assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);
+assert.equal(PLAYER_ENDPOINTS.businessInputPurchase, undefined);
 
 const unconfigured = renderBusinessPage({
   session: { currencyCode: "LUM" },

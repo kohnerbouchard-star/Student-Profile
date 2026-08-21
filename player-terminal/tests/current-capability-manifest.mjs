@@ -23,7 +23,7 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-08-19.1");
+assert.equal(manifest.manifestVersion, "2026-08-21.2");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);
@@ -33,6 +33,8 @@ assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "progressionCla
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationPropose"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationRespond"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationActivate"));
+assert.equal("businessInputPurchase" in manifest.capabilities.actions, false);
+assert.equal(manifest.endpoints.some((endpoint) => endpoint.key === "businessInputPurchase"), false);
 
 const resolved = resolveCapabilities({
   config: {},

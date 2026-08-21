@@ -227,7 +227,6 @@ const BUSINESS_BANKING_ROUTE_KEYS = Object.freeze([
   "business",
   "businessCreate",
   "businessProductCreate",
-  "businessInputPurchase",
   "businessProduction",
   "businessPrice",
   "businessHire",

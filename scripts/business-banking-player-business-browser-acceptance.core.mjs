@@ -50,8 +50,6 @@ const evidence = {
     productPersisted: false,
     productApproved: false,
     productApprovalPersisted: false,
-    inputPurchased: false,
-    inputPersisted: false,
     productionRun: false,
     productionPersisted: false,
     priceUpdated: false,
@@ -521,7 +519,7 @@ async function createProduct(page, admin) {
     await target.locator('[name="name"]').fill(PRODUCT_NAME);
     await target.locator('[name="category"]').fill("classroom_equipment");
     await target.locator('[name="unitPrice"]').fill("12");
-    await target.locator('[name="unitInputCost"]').fill("1");
+    await target.locator('[name="unitInputCost"]').fill("0");
     await target.locator('[name="unitLaborCost"]').fill("0");
     await target.locator('[name="capacityUnits"]').fill("100");
     await target.locator('[name="baseDemandUnits"]').fill("20");
@@ -537,17 +535,6 @@ async function createProduct(page, admin) {
   await approveProduct(admin, productKey);
   await reloadBusiness(page);
   await requireText(page, PRODUCT_NAME);
-}
-
-async function purchaseInputs(page) {
-  await submitMutation(page, "businessInputPurchase", /\/players\/me\/business\/inputs\/purchases$/, async (target) => {
-    await target.locator('[name="quantity"]').fill("50");
-  });
-  evidence.mutations.inputPurchased = true;
-  await reloadBusiness(page);
-  const inventoryRows = page.locator(".player-terminal-business-suppliers article");
-  if ((await inventoryRows.count()) < 1) throw new Error("Purchased Business inputs were not rendered.");
-  evidence.mutations.inputPersisted = true;
 }
 
 async function runProduction(page) {
@@ -680,7 +667,6 @@ try {
     throw new Error(`Business request capitalization was ${evidence.businessRequest?.capitalization} instead of ${CAPITALIZATION}.`);
   }
   await createProduct(player.page, admin);
-  await purchaseInputs(player.page);
   await runProduction(player.page);
   await updatePrice(player.page);
   await hireEmployee(player.page);

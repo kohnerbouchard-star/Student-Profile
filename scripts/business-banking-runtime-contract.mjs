@@ -157,12 +157,15 @@ for (const routeKind of [
   `missing route kind ${routeKind}`,
 );
 
+assert.match(source.businessHandler, /business_input_purchase_retired/u);
+assert.doesNotMatch(source.businessMutationExecutor, /case "businessInputPurchase"|purchase_business_input_v1/u);
+
 for (const routeCapability of ["business", "loans"]) {
   assert.match(source.capabilities, new RegExp(`['"]${routeCapability}['"]`, "u"));
 }
 for (const actionCapability of [
   "bankTransfer", "savingsTransfer", "businessCreate",
-  "businessEmployeeTerminate", "businessHire", "businessInputPurchase",
+  "businessEmployeeTerminate", "businessHire",
   "businessPrice", "businessProductCreate", "businessProduction",
   "businessStatus", "loanApply", "loanRepay",
 ]) {
@@ -170,7 +173,7 @@ for (const actionCapability of [
   assert.match(source.playerCapabilities, new RegExp(`['"]${actionCapability}['"]`, "u"));
 }
 for (const endpoint of [
-  "businessCreate", "businessProductCreate", "businessInputPurchase",
+  "businessCreate", "businessProductCreate",
   "businessProduction", "businessPrice", "businessHire", "businessTerminate",
   "businessStatus", "bankTransfer", "savingsTransfer", "loanApply", "loanRepay",
 ]) {
