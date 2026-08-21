@@ -47,37 +47,57 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
+          def read_lines(path_value: str) -> tuple[Path, list[str]]:
+              path = Path(path_value)
+              return path, path.read_text(encoding="utf-8").splitlines(keepends=True)
+
+          def insert_after_once(path_value: str, needle: str, additions: list[str]) -> None:
+              path, lines = read_lines(path_value)
+              matches = [index for index, line in enumerate(lines) if line.rstrip("\n") == needle]
+              if len(matches) != 1:
+                  raise SystemExit(
+                      f"Expected one insertion target in {path_value}; found {len(matches)}."
+                  )
+              index = matches[0]
+              lines[index + 1:index + 1] = [f"{line}\n" for line in additions]
+              path.write_text("".join(lines), encoding="utf-8")
+
+          def remove_line_once(path_value: str, needle: str) -> None:
+              path, lines = read_lines(path_value)
+              matches = [index for index, line in enumerate(lines) if line.rstrip("\n") == needle]
+              if len(matches) != 1:
+                  raise SystemExit(
+                      f"Expected one removal target in {path_value}; found {len(matches)}."
+                  )
+              del lines[matches[0]]
+              path.write_text("".join(lines), encoding="utf-8")
+
           def replace_once(path_value: str, old: str, new: str) -> None:
               path = Path(path_value)
               source = path.read_text(encoding="utf-8")
               count = source.count(old)
               if count != 1:
                   raise SystemExit(
-                      f"Expected exactly one repair target in {path_value}; found {count}."
+                      f"Expected one replacement target in {path_value}; found {count}."
                   )
               path.write_text(source.replace(old, new, 1), encoding="utf-8")
-
-          runtime_old = '''      businessProductCreate: "businessProductCreate",
-                businessInputPurchase: "businessInputPurchase",
-                businessProduction: "businessProduction",
-          '''
-          runtime_new = '''      businessProductCreate: "businessProductCreate",
-                businessInputPurchase: "businessInputPurchase",
-                businessStoreQuote: "storeQuote",
-                businessStorePurchase: "storePurchase",
-                businessProduction: "businessProduction",
-          '''
 
           for runtime_path in (
               "backend/supabase/functions/classroom-api/index.ts",
               "backend/supabase/functions/player-api/runtime.ts",
           ):
-              replace_once(runtime_path, runtime_old, runtime_new)
+              insert_after_once(
+                  runtime_path,
+                  '      businessInputPurchase: "businessInputPurchase",',
+                  [
+                      '      businessStoreQuote: "storeQuote",',
+                      '      businessStorePurchase: "storePurchase",',
+                  ],
+              )
 
-          replace_once(
+          remove_line_once(
               "scripts/business-recipe-access-contract.mjs",
-              'assert.match(handlerSource, /\\{ recipes: await readBusinessRecipes\\(client, publicScope\\) \\}/u);\n',
-              "",
+              r'assert.match(handlerSource, /\{ recipes: await readBusinessRecipes\(client, publicScope\) \}/u);',
           )
 
           replace_once(
@@ -86,18 +106,13 @@ jobs:
               'const NOW = new Date("2026-07-21T05:00:00.000Z");',
           )
 
-          replace_once(
+          insert_after_once(
               "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
-              '''  { kind: "businessProductCreate" },
-                { kind: "businessInputPurchase" },
-                { kind: "businessProduction" },
-          ''',
-              '''  { kind: "businessProductCreate" },
-                { kind: "businessInputPurchase" },
-                { kind: "businessStoreQuote" },
-                { kind: "businessStorePurchase" },
-                { kind: "businessProduction" },
-          ''',
+              '  { kind: "businessInputPurchase" },',
+              [
+                  '  { kind: "businessStoreQuote" },',
+                  '  { kind: "businessStorePurchase" },',
+              ],
           )
           PY
 
