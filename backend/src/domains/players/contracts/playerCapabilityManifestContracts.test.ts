@@ -38,7 +38,6 @@ const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "businessFormationRespond",
   "businessFormationActivate",
   "businessProductCreate",
-  "businessInputPurchase",
   "businessProduction",
   "businessPrice",
   "businessHire",
@@ -70,7 +69,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "storyDeliveryState", "arrivalClassSubmit", "travelQuote", "travelExecute",
     "travelComplete", "residencyRequest", "bankTransfer", "savingsTransfer",
     "businessCreate", "businessFormationPropose", "businessFormationRespond",
-    "businessFormationActivate", "businessProductCreate", "businessInputPurchase",
+    "businessFormationActivate", "businessProductCreate",
     "businessProduction", "businessPrice", "businessHire",
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
@@ -79,6 +78,14 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
 
   assertEquals(manifest.capabilities.actions.messageAttachment, false);
+  assertEquals(
+    "businessInputPurchase" in manifest.capabilities.actions,
+    false,
+  );
+  assertEquals(
+    JSON.stringify(manifest.endpoints).includes('"businessInputPurchase"'),
+    false,
+  );
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
