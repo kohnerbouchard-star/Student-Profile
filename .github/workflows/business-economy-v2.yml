@@ -82,3 +82,131 @@ jobs:
             --lock=supabase/functions/deno.lock --frozen \
             src/domains/business/api/playerBusinessRoutePaths.test.ts \
             src/domains/business/api/playerBusinessStoreProcurement.test.ts
+
+  # BEGIN PHASE3B_CERTIFIER
+  phase3b-certify:
+    name: Record durable Phase 3B certification
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 654
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-store-procurement-v2
+          fetch-depth: 0
+
+      - name: Verify certified implementation ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor acbbff20a4afa8296bdfb30dbc0c8e84e37702c9 HEAD
+          git diff --quiet acbbff20a4afa8296bdfb30dbc0c8e84e37702c9 HEAD -- \
+            backend/src/domains/business \
+            backend/src/domains/business-banking \
+            backend/src/domains/store \
+            backend/supabase/functions \
+            backend/supabase/migrations \
+            scripts/business-store-procurement-authority-contract.mjs \
+            scripts/business-domain-boundary-contract.mjs \
+            scripts/business-recipe-access-contract.mjs \
+            scripts/business-stockroom-authority-contract.mjs
+
+      - name: Append certification and remove temporary hooks
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+          workflow_path = Path(".github/workflows/business-economy-v2.yml")
+          helper_path = Path(".github/workflows/phase3b-certification-once.yml")
+
+          log = log_path.read_text(encoding="utf-8")
+          marker = "## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement"
+          if marker not in log:
+              entry = r'''
+
+---
+
+## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement
+
+### Certified implementation source
+
+- **Exact implementation SHA:** `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
+- Feature branch: `feat/business-store-procurement-v2`.
+- Stacked draft PR: #654, based on `refactor/business-ux-mechanics-v1`.
+- Integration PR #648 remained open, draft, mergeable, and unmerged.
+- No staging or production deployment or data mutation was performed.
+- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
+
+### What changed
+
+- Added short-lived, server-timed Business procurement quotes using the canonical Store quote-pricing resolver.
+- Reused the canonical Store catalog, finite Store stock, country economic snapshot, scarcity, foreign-exchange, and pricing-version authority.
+- Derived quote geography and settlement currency from the resolved Business `country_code` and `currency_code`; no owner Player supplies those outcomes.
+- Added atomic purchase settlement that locks Store stock, the Business warehouse holding, and first-class Business cash in a fixed order.
+- Debited Business cash through the canonical Business ledger adapter.
+- Moved the canonical Store item directly into the canonical Business warehouse through `economy_private.post_inventory_transaction_v2`; the owner’s personal Inventory is never used.
+- Applied the actual settled total divided by quantity as the warehouse acquisition unit basis, allowing the canonical Inventory poster to maintain weighted-average cost.
+- Preserved frozen quote and receipt evidence, immutable Business activity evidence, game isolation, idempotency conflict detection, retry semantics, and browser responses containing public keys only.
+- Split the oversized Business HTTP adapter into bounded validation and mutation-execution modules without weakening the architecture ratchet.
+- Removed all temporary repair and source-export scaffolding before certification.
+
+### Verification on exact source `acbbff20...`
+
+- **Business Economy V2 — PASS** (`32476298326`).
+- **Database Replay ×2 + database lint — PASS** (`32476298602`).
+- **Backend Typecheck and backend smoke — PASS** (`32476298458`).
+- **Business Banking Runtime — PASS** (`32476298617`).
+- **Repository Quality — PASS** (`32476298253`).
+- **Runtime Interaction Wiring — PASS** (`32476298376`).
+- **Supply Chain Security — PASS** (`32476298243`).
+- **Progression Runtime — PASS** (`32476298273`).
+- **Player Terminal Verify, including Chromium — PASS** (`32476298658`).
+- **Admin API Check — PASS** (`32476298354`).
+- **Beta Security Contract — PASS** (`32476298374`).
+- **Staging Readiness Preflight — PASS** (`32476298277`).
+- **World Runtime, Required Game Market Timezone, and Exchange Calendar Runtime — PASS** (`32476298517`, `32476298522`, `32476298289`).
+
+### Architecture and gameplay decisions
+
+- Quote and receipt tables are operation evidence only; they are not a parallel catalog, inventory authority, money authority, supplier catalog, or pricing engine.
+- Multi-owner Businesses use the Business’s own geography and currency. An arbitrary owner Player cannot change procurement pricing.
+- New physical procurement does not call or expand `purchase_business_input_v1` and does not route material through personal Inventory.
+- Existing legacy Business forms remain compatibility debt until their ordered replacement checkpoint.
+
+### Remaining Phase 3 blockers
+
+Phase 3 is not complete. The current Stockroom read still exposes the canonical warehouse only, while the roadmap requires separate Materials/Warehouse, Work in Progress, Finished Goods, and In Transit locations. New reliance on the legacy abstract `unit_input_cost` purchase path must also be retired before Phase 4 opens.
+
+### Next authorized step
+
+**Phase 3C — location-complete canonical Business Stockroom read is OPEN.** Build a bounded read model over canonical Business inventory accounts for warehouse/materials, work in progress, finished goods, and in transit. Preserve public-key-only browser output and do not introduce a parallel Business inventory table. After Phase 3C certification, retire new Player API reliance on the legacy abstract input-purchase path as a separate bounded checkpoint. Phase 4 workforce/payroll remains closed.
+'''
+              log_path.write_text(log.rstrip() + entry + "\n", encoding="utf-8")
+
+          workflow = workflow_path.read_text(encoding="utf-8")
+          begin = workflow.index("\n  # BEGIN PHASE3B_CERTIFIER")
+          end_marker = "\n  # END PHASE3B_CERTIFIER"
+          end = workflow.index(end_marker, begin) + len(end_marker)
+          workflow_path.write_text(workflow[:begin] + workflow[end:] + "\n", encoding="utf-8")
+
+          if helper_path.exists():
+              helper_path.unlink()
+          PY
+          git diff --check
+
+      - name: Commit durable certification
+        shell: bash
+        run: |
+          git config user.name "econovaria-roadmap-certifier"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            docs/roadmaps/business-v2-development-execution-log-v1.md \
+            .github/workflows/business-economy-v2.yml \
+            .github/workflows/phase3b-certification-once.yml
+          git commit -m "docs(business): certify Phase 3B procurement"
+          git push origin HEAD:feat/business-store-procurement-v2
+  # END PHASE3B_CERTIFIER
