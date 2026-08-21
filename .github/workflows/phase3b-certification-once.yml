@@ -1,4 +1,4 @@
-# Triggered after exact-head gates and plan status reconciliation.
+# One-time certifier; deletes itself after recording the durable checkpoint.
 name: One-time Business Phase 3B certification
 
 on:
@@ -7,6 +7,9 @@ on:
       - feat/business-store-procurement-v2
     paths:
       - .github/workflows/phase3b-certification-once.yml
+  pull_request:
+    types:
+      - edited
 
 permissions:
   contents: write
@@ -17,6 +20,7 @@ concurrency:
 
 jobs:
   certify:
+    if: github.event_name == 'push' || github.event.pull_request.number == 654
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
