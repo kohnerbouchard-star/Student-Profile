@@ -47,11 +47,17 @@ assert.match(
   "Retired requests must authenticate before receiving 410 Gone.",
 );
 
-assert.doesNotMatch(source.executor, /businessInputPurchase/u);
+assert.doesNotMatch(source.executor, /case "businessInputPurchase"/u);
 assert.doesNotMatch(source.executor, /purchase_business_input_v1/u);
 assert.match(
   source.dispatch,
-  /route\.kind === "businessInputPurchase"[\s\S]{0,80}return "businessInputPurchase"/u,
+  /\| "businessInputPurchase"/u,
+  "The compatibility route must remain an explicit reviewed dispatch key.",
+);
+assert.match(
+  source.dispatch,
+  /businessInputPurchase:\s*"businessInputPurchase"/u,
+  "The compatibility route must retain its reviewed rate-limit dispatch mapping.",
 );
 assert.match(
   source.rateLimit,
