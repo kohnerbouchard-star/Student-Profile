@@ -23,6 +23,8 @@
     "backend/supabase/migrations/20260823100400_business_production_equipment_capacity_v2.sql",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "docs/roadmaps/business-phase5-equipment-capacity-scope-v1.md",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
     "scripts/business-phase5-equipment-capacity-simulation.mjs",
     "scripts/business-phase5-equipment-foundation-contract.mjs",
     "scripts/business-phase5-equipment-production-contract.mjs",
