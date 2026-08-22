@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/business-banking-runtime.yml",
     ".github/workflows/business-equipment-capacity-v2.yml",
     "backend/supabase/migrations/20260823100000_business_equipment_ownership_profiles_v2.sql",
     "backend/supabase/migrations/20260823100100_business_recipe_equipment_requirements_v2.sql",
