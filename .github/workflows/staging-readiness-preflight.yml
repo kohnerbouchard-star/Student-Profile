@@ -1,4 +1,3 @@
-# Temporary Phase 4A exact-head trigger; the certifier restores this file.
 name: Staging Readiness Preflight
 
 on:
