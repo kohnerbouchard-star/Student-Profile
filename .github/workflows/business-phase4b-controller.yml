@@ -1,0 +1,178 @@
+name: Business Phase 4B Guarded Controller
+
+on:
+  push:
+    branches:
+      - feat/business-workforce-hiring-v2
+    paths:
+      - ".github/workflows/business-phase4b-controller.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase4b-implement
+  cancel-in-progress: true
+
+jobs:
+  controller:
+    if: ${{ !contains(github.event.head_commit.message, 'Phase 4B guarded result') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/business-workforce-hiring-v2
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Materialize implementation if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f backend/supabase/migrations/20260822120000_business_workforce_candidate_hiring_v2.sql ]]; then
+            test -f scripts/business-phase4b-payload.py
+            python3 scripts/business-phase4b-payload.py
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          contracts = Path("backend/src/domains/business/contracts/playerBusinessContracts.ts")
+          text = contracts.read_text(encoding="utf-8")
+          text = text.replace(
+              "  readWorkforceCandidates(input: {\n",
+              "  readWorkforceCandidates?(input: {\n",
+              1,
+          )
+          contracts.write_text(text, encoding="utf-8")
+
+          api = Path("backend/src/domains/business/api/playerBusinessWorkforce.ts")
+          text = api.read_text(encoding="utf-8")
+          if "PlayerBusinessError," not in text:
+              text = text.replace(
+                  '  type PlayerBusinessRepository,\n} from "../contracts/playerBusinessContracts.ts";',
+                  '  PlayerBusinessError,\n  type PlayerBusinessRepository,\n} from "../contracts/playerBusinessContracts.ts";',
+                  1,
+              )
+          if "business_workforce_unavailable" not in text:
+              text = text.replace(
+                  "  return repository.readWorkforceCandidates(scope);",
+                  '''  if (!repository.readWorkforceCandidates) {
+    throw new PlayerBusinessError(
+      "business_workforce_unavailable",
+      "The Business workforce market is not available.",
+      503,
+      true,
+    );
+  }
+  return repository.readWorkforceCandidates(scope);''',
+                  1,
+              )
+          api.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Regenerate architecture inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+          npm --prefix player-terminal ci --no-audit --no-fund
+
+      - name: Run guarded verification
+        id: verify
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          : > "$RUNNER_TEMP/phase4b-status.tsv"
+          run_gate() {
+            name="$1"; shift
+            echo "===== $name =====" | tee -a "$RUNNER_TEMP/phase4b.log"
+            "$@" >> "$RUNNER_TEMP/phase4b.log" 2>&1
+            status=$?
+            printf '%s\t%s\n' "$name" "$status" >> "$RUNNER_TEMP/phase4b-status.tsv"
+            echo "$name=$status" | tee -a "$RUNNER_TEMP/phase4b.log"
+          }
+          run_gate authority node scripts/business-workforce-hiring-contract.mjs
+          run_gate migrations node scripts/validate-supabase-migrations.mjs
+          run_gate repository npm test
+          run_gate backend-typecheck npm --prefix backend run typecheck
+          run_gate backend-focused bash -lc 'cd backend && deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/business/api/playerBusinessWorkforceHiring.test.ts src/domains/business/api/playerBusinessRoutePaths.test.ts'
+          run_gate player-check npm --prefix player-terminal run check
+          run_gate player-business node player-terminal/tests/business-banking-surface.mjs
+          run_gate player-adapter npm --prefix player-terminal run adapter
+          run_gate capability npm --prefix player-terminal run capability-manifest-current
+          run_gate runtime npm --prefix player-terminal run runtime-integration
+          run_gate diff-check git diff --check
+          if awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' "$RUNNER_TEMP/phase4b-status.tsv"; then
+            exit 0
+          fi
+          exit 1
+
+      - name: Record diagnostics on failure
+        if: steps.verify.outcome != 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '# Business V2 Phase 4B implementation diagnostics'
+            echo
+            echo '- Branch: `feat/business-workforce-hiring-v2`.'
+            echo '- Controller source: `${{ github.sha }}`.'
+            echo '- No implementation completion is claimed.'
+            echo '- No merge, deployment, or live data mutation occurred.'
+            echo
+            echo '## Gate status'
+            echo
+            while IFS=$'\t' read -r name status; do
+              if [[ "$status" == 0 ]]; then result=PASS; else result=FAIL; fi
+              echo "- **$name — $result** (exit $status)."
+            done < "$RUNNER_TEMP/phase4b-status.tsv"
+            echo
+            echo '## Diagnostic tail'
+            echo
+            echo '```text'
+            tail -n 240 "$RUNNER_TEMP/phase4b.log"
+            echo '```'
+          } > docs/roadmaps/business-phase4b-implementation-diagnostics.md
+          git config user.name "econovaria-phase4b-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(business): record Phase 4B guarded result failure"
+          git push origin HEAD:feat/business-workforce-hiring-v2
+
+      - name: Publish verified implementation
+        if: steps.verify.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f docs/roadmaps/business-phase4b-implementation-diagnostics.md
+          rm -f scripts/business-phase4b-payload.py
+          rm -f .github/workflows/business-phase4b-implement.yml
+          rm -f .github/workflows/business-phase4b-implement-v2.yml
+          rm -f .github/workflows/business-phase4b-controller.yml
+          rm -f .github/workflows/business-phase4b-source-bundle.yml
+          git diff --check
+          git config user.name "econovaria-phase4b-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(business): implement Phase 4B workforce hiring"
+          git push origin HEAD:feat/business-workforce-hiring-v2
