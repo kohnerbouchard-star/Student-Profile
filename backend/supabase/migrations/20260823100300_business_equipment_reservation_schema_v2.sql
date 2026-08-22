@@ -156,6 +156,10 @@ begin
       or new.idempotency_key is distinct from old.idempotency_key
       or new.request_hash is distinct from old.request_hash
       or new.created_at is distinct from old.created_at
+      or (
+        old.production_run_id is not null
+        and new.production_run_id is distinct from old.production_run_id
+      )
     then
       raise exception 'BUSINESS_EQUIPMENT_RESERVATION_IDENTITY_IMMUTABLE' using errcode = '42501';
     end if;
