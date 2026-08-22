@@ -140,7 +140,7 @@ export function renderBusinessPage(data) {
           <div><dt>PRODUCTION</dt><dd>${escapeHtml(formatNumber(business.operations.output))} units</dd></div>
           <div><dt>BACKLOG</dt><dd>${escapeHtml(formatNumber(business.operations.backlog))} units</dd></div>
         </dl>
-        <div class="player-terminal-capacity-block"><div><small>LEGACY UNIT CAPACITY</small><strong>${escapeHtml(business.operations.capacityUse)}%</strong></div><div class="player-terminal-progress-track is-${capacityTone}"><i style="width:${Math.min(100,business.operations.capacityUse)}%"></i></div><p>${escapeHtml(business.operations.capacityNote)}</p></div>
+        <div class="player-terminal-capacity-block"><div><small>PRODUCT UNIT CAPACITY</small><strong>${escapeHtml(business.operations.capacityUse)}%</strong></div><div class="player-terminal-progress-track is-${capacityTone}"><i style="width:${Math.min(100,business.operations.capacityUse)}%"></i></div><p>${escapeHtml(business.operations.capacityNote)}</p></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-business-actions">
