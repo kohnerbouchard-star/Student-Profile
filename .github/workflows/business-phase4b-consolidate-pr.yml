@@ -55,6 +55,49 @@ jobs:
           python3 scripts/business-phase4b-consolidate.py
           python3 scripts/business-phase4b-ratchet-normalize.py
 
+      - name: Normalize generated TypeScript contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          hiring_test = Path("backend/src/domains/business/api/playerBusinessWorkforceHiring.test.ts")
+          text = hiring_test.read_text(encoding="utf-8")
+          old = 'import { assert, assertEquals } from "jsr:@std/assert@1";\n'
+          new = '''function assert(condition: unknown, message = "Assertion failed"): asserts condition {
+            if (!condition) throw new Error(message);
+          }
+
+          function assertEquals(actual: unknown, expected: unknown): void {
+            const actualJson = JSON.stringify(actual);
+            const expectedJson = JSON.stringify(expected);
+            if (actualJson !== expectedJson) {
+              throw new Error(`Actual: ${actualJson} Expected: ${expectedJson}`);
+            }
+          }
+          '''
+          if text.count(old) != 1:
+            raise SystemExit("generated workforce hiring test import marker missing")
+          hiring_test.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          capability_test = Path(
+            "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts"
+          )
+          text = capability_test.read_text(encoding="utf-8")
+          replacements = [
+            ('  "business",\n  "businessCreate",', '  "business",\n  "businessWorkforce",\n  "businessCreate",'),
+            ('  "businessHire",', '  "businessCandidateHire",'),
+            ('    "businessProduction", "businessPrice", "businessHire",', '    "businessProduction", "businessPrice", "businessCandidateHire",'),
+            ('        .replace(":employeeKey", `emp_${"a".repeat(32)}`)', '        .replace(":candidateKey", `wfc_${"d".repeat(32)}`)\n        .replace(":employeeKey", `emp_${"a".repeat(32)}`)'),
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f"capability test marker missing: {old!r}")
+            text = text.replace(old, new, 1)
+          capability_test.write_text(text, encoding="utf-8")
+          PY
+
       - name: Remove one-use orchestration residue
         shell: bash
         run: |
