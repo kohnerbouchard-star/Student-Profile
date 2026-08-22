@@ -8,6 +8,7 @@ on:
       - "docs/architecture/business-workforce-payroll-*.md"
       - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
       - ".github/workflows/business-workforce-payroll-phase4a-finalize.yml"
+      - "package.json"
 
 permissions:
   actions: read
@@ -27,6 +28,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
       FEATURE_BRANCH: feat/business-workforce-payroll-foundation-v2
+      IMMUTABLE_SOURCE_SHA: f72626f055004007823eb8de22569035ac897797
     steps:
       - name: Check out exact feature branch
         uses: actions/checkout@v7
@@ -34,19 +36,42 @@ jobs:
           ref: feat/business-workforce-payroll-foundation-v2
           fetch-depth: 0
 
-      - name: Resolve certification source
+      - name: Resolve immutable implementation and verification heads
         id: source
         shell: bash
         run: |
           set -euo pipefail
           workflow=.github/workflows/business-workforce-payroll-phase4a-finalize.yml
-          certification_commit=$(git log -1 --format=%H -- "$workflow")
-          test -n "$certification_commit"
-          source_sha=$(git rev-parse "${certification_commit}^")
+          workflow_add_commit=$(
+            git log --diff-filter=A --format=%H -- "$workflow" | tail -n 1
+          )
+          test -n "$workflow_add_commit"
+          source_sha=$(git rev-parse "${workflow_add_commit}^")
+          verification_sha=$(git rev-parse "$workflow_add_commit")
           current_sha=$(git rev-parse HEAD)
-          changed=$(git diff --name-only "$source_sha" "$current_sha")
-          test "$changed" = "$workflow"
+
+          test "$source_sha" = "$IMMUTABLE_SOURCE_SHA"
+
+          source_delta=$(git diff --name-only "$source_sha" "$verification_sha")
+          test "$source_delta" = "$workflow"
+
+          current_delta=$(
+            git diff --name-only "$verification_sha" "$current_sha"
+          )
+          while IFS= read -r changed_path; do
+            test -z "$changed_path" && continue
+            case "$changed_path" in
+              "$workflow"|package.json) ;;
+              *)
+                echo "Unexpected post-verification change: $changed_path" >&2
+                exit 1
+                ;;
+            esac
+          done <<< "$current_delta"
+          grep -qx "$workflow" <<< "$current_delta"
+
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "verification_sha=$verification_sha" >> "$GITHUB_OUTPUT"
           echo "current_sha=$current_sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v7
@@ -125,7 +150,7 @@ jobs:
 
       - name: Wait for required exact-head workflows
         env:
-          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          VERIFICATION_SHA: ${{ steps.source.outputs.verification_sha }}
           CURRENT_SHA: ${{ steps.source.outputs.current_sha }}
         shell: bash
         run: |
@@ -138,7 +163,10 @@ jobs:
 
           repository = os.environ["REPOSITORY"]
           token = os.environ["GH_TOKEN"]
-          heads = [os.environ["SOURCE_SHA"], os.environ["CURRENT_SHA"]]
+          heads = [
+              os.environ["VERIFICATION_SHA"],
+              os.environ["CURRENT_SHA"],
+          ]
           required = [
               "Business Workforce Payroll V2",
               "Database Replay",
@@ -178,7 +206,10 @@ jobs:
 
               state = {}
               for name in required:
-                  candidates = [run for run in runs if run.get("name") == name]
+                  candidates = [
+                      run for run in runs
+                      if run.get("name") == name
+                  ]
                   candidates.sort(
                       key=lambda run: (
                           run.get("created_at") or "",
@@ -205,13 +236,25 @@ jobs:
                   state[name] = {
                       "ok": successful is not None,
                       "active": active is not None,
-                      "runId": successful.get("id") if successful else None,
-                      "latestStatus": latest.get("status") if latest else "missing",
-                      "latestConclusion": latest.get("conclusion") if latest else None,
+                      "runId": (
+                          successful.get("id") if successful else None
+                      ),
+                      "headSha": (
+                          successful.get("head_sha") if successful else None
+                      ),
+                      "latestStatus": (
+                          latest.get("status") if latest else "missing"
+                      ),
+                      "latestConclusion": (
+                          latest.get("conclusion") if latest else None
+                      ),
                   }
 
               if state != last_state:
-                  print(json.dumps(state, indent=2, sort_keys=True), flush=True)
+                  print(
+                      json.dumps(state, indent=2, sort_keys=True),
+                      flush=True,
+                  )
                   last_state = state
 
               if all(item["ok"] for item in state.values()):
@@ -227,7 +270,8 @@ jobs:
                   if not item["ok"]
                   and not item["active"]
                   and item["latestStatus"] == "completed"
-                  and item["latestConclusion"] not in (None, "success", "cancelled")
+                  and item["latestConclusion"]
+                  not in (None, "success", "cancelled", "action_required")
               ]
               if terminal_failures:
                   raise SystemExit(
@@ -245,6 +289,7 @@ jobs:
       - name: Record durable Phase 4A certification
         env:
           SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          VERIFICATION_SHA: ${{ steps.source.outputs.verification_sha }}
           CURRENT_SHA: ${{ steps.source.outputs.current_sha }}
           CERTIFICATION_RUN_ID: ${{ github.run_id }}
         shell: bash
@@ -258,6 +303,7 @@ jobs:
           from pathlib import Path
 
           source_sha = os.environ["SOURCE_SHA"]
+          verification_sha = os.environ["VERIFICATION_SHA"]
           current_sha = os.environ["CURRENT_SHA"]
           certification_run_id = os.environ["CERTIFICATION_RUN_ID"]
           gates = json.loads(
@@ -281,7 +327,10 @@ jobs:
           phase = plan[phase_start:phase_end]
           phase, count = re.subn(
               r"\*\*Status:\*\*[^\n]*",
-              "**Status:** IN PROGRESS — checkpoint A complete; candidate pools and server-owned hiring remain open",
+              (
+                  "**Status:** IN PROGRESS — checkpoint A complete; "
+                  "candidate pools and server-owned hiring remain open"
+              ),
               phase,
               count=1,
           )
@@ -289,8 +338,8 @@ jobs:
               raise SystemExit("Phase 4 roadmap status was not found")
 
           checkpoint = (
-              f"- **4A:** canonical workforce/payroll authority foundation and "
-              f"scope hardening, certified source `{source_sha}`."
+              "- **4A:** canonical workforce/payroll authority foundation "
+              f"and scope hardening, certified source `{source_sha}`."
           )
           if checkpoint not in phase:
               anchor = "\nExit:"
@@ -307,7 +356,10 @@ jobs:
 
           if source_sha not in log_path.read_text(encoding="utf-8"):
               verification_lines = "\n".join(
-                  f"- **{name} — PASS** (`{item['runId']}`)."
+                  (
+                      f"- **{name} — PASS** (`{item['runId']}`, "
+                      f"head `{item['headSha']}`)."
+                  )
                   for name, item in gates.items()
               )
               entry = f"""
@@ -315,14 +367,16 @@ jobs:
 ---
 ## {date.today().isoformat()} — Phase 4A COMPLETE: workforce and payroll authority foundation
 
-### Certified implementation source
+### Certified implementation and verification sources
 
 - **Exact implementation SHA:** `{source_sha}`.
+- **Exact workflow verification SHA:** `{verification_sha}`.
+- **Exact trigger-only verification SHA:** `{current_sha}`.
 - Feature branch: `feat/business-workforce-payroll-foundation-v2`.
 - Stacked draft PR: #657, based on `refactor/business-abstract-input-retirement-v2`.
 - Integration PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.
 - No staging or production deployment or live data mutation was performed.
-- Certification workflow source `{current_sha}` differs from the certified implementation only by the temporary certification workflow and must not replace the implementation SHA.
+- The verification heads differ from the implementation only by one-use certification orchestration and a temporary package metadata trigger; neither replaces the implementation SHA.
 
 ### What changed
 
@@ -334,7 +388,7 @@ jobs:
 - Revoked direct service-role DELETE authority from durable workforce and payroll evidence tables; status transitions remain the operational lifecycle.
 - Preserved browser denial, service-role-only function authority, stable public keys, game isolation, immutable payroll-entry checksums, and the Phase 4A no-settlement/no-production-integration boundary.
 
-### Verification on exact source `{source_sha[:12]}...`
+### Exact-head verification
 
 {verification_lines}
 - **Repository source tests, migration validation, architecture inventory, and backend typecheck — PASS** in certification run `{certification_run_id}`.
@@ -360,6 +414,7 @@ Phase 4 is not complete. Candidate-pool reads and server-owned hiring remain ope
                   handle.write(entry.rstrip() + "\n")
           PY
 
+          git checkout "$SOURCE_SHA" -- package.json
           rm .github/workflows/business-workforce-payroll-phase4a-finalize.yml
           git diff --check
           git fetch origin "$FEATURE_BRANCH"
@@ -368,7 +423,8 @@ Phase 4 is not complete. Candidate-pool reads and server-owned hiring remain ope
           git config user.email "actions@users.noreply.github.com"
           git add -- \
             docs/roadmaps/business-v2-development-execution-plan-v1.md \
-            docs/roadmaps/business-v2-development-execution-log-v1.md
+            docs/roadmaps/business-v2-development-execution-log-v1.md \
+            package.json
           git add -u -- \
             .github/workflows/business-workforce-payroll-phase4a-finalize.yml
           git commit -m "docs(business): certify Phase 4A workforce foundation"
