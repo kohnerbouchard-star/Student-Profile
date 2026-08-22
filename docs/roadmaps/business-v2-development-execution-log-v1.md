@@ -648,3 +648,78 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 4B — candidate pools and server-owned hiring is OPEN.** Expose role-grouped, game-scoped candidates; derive wage, skill, productivity, capacity, country, and currency from server-owned candidate rows; atomically reserve candidates; prevent duplicate active hires; and retire new Player execution through the legacy free-text hiring RPC.
+
+---
+
+## 2026-08-22 — Phase 4B COMPLETE: candidate pools and server-owned hiring
+
+### Certified source and repository state
+
+- **Exact certified implementation source:** `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`.
+- Initial generated implementation source: `fd83a17779254ac4ed386ef3ea65fe9c774ee3d2`.
+- Generator and error-envelope correction: `054c2d3e86928fc44e17b4872830b8b1fee5d111`.
+- Feature branch: `feat/business-workforce-hiring-v2`; stacked draft PR #658.
+- PR #658 and integration PR #648 remain open, draft, unmerged, and undeployed.
+- No staging or production migration, deployment, secret change, or live database mutation was performed.
+- This documentation commit is later than the tested implementation source and must not replace `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf` as certification evidence.
+
+### What is now authoritative
+
+- The Player reads a public-key-only workforce candidate pool scoped to the authenticated game and an owned Business.
+- Candidate availability is filtered server-side by status, availability window, active role, Business country, and Business currency.
+- The browser submits only Business public key, candidate public key, and idempotency intent.
+- Role, wage, labor minutes, skill, productivity, contract type, country, and currency are copied from trusted candidate authority inside the hiring transaction.
+- Hiring locks the Business and candidate, rejects unavailable, expired, self, country-mismatched, currency-mismatched, and duplicate candidate-backed employment, advances the candidate state, creates the canonical employee, and records audit evidence.
+- Matching idempotency retries replay the original receipt; conflicting reuse is rejected.
+- The legacy free-text employee-creation URL remains authenticated compatibility-only and returns HTTP `410 Gone` with `business_free_text_hiring_retired`.
+- Payroll settlement and production-labor integration remain outside Phase 4B and are not claimed complete.
+
+### Canonical-gate corrections completed before certification
+
+- Added a real candidate fixture and candidate-selection assertions to the complete Player Business surface contract.
+- Removed stale browser expectations for Player-authored wage, role, and productivity fields.
+- Replaced the Phase 3D retirement contract's brittle regex-distance assertion with an explicit source-order invariant.
+- Bound cross-cutting Player verification authority to PR #658, its exact stacked base, and the reviewed Phase 4B paths.
+- Corrected shared and mixed Player Edge dispatch to use `businessCandidateHire` and `businessRetiredHire` rate-limit identities.
+- Advanced the Phase 4A payroll-foundation contract to validate the Phase 4B hiring cutover rather than require the retired free-text mutation.
+- Preserved the deterministic architecture inventory without raising an architecture-ratchet ceiling.
+
+### Exact-source verification on `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`
+
+- **Business Workforce Hiring V2 — PASS** (`32566581956`).
+- **Business Workforce Payroll V2 — PASS** (`32566581952`).
+- **Player Terminal Verify, including Chromium — PASS** (`32566581998`).
+- **Database Replay from zero twice plus rebuilt-database lint — PASS** (`32566582036`).
+- **Repository Quality — PASS** (`32566581981`).
+- **Backend Typecheck — PASS** (`32566581994`).
+- **Beta Security Contract, including all Edge typechecks — PASS** (`32566581975`).
+- **Business Banking Runtime — PASS** (`32566581978`).
+- **Business Economy V2 — PASS** (`32566581948`).
+- **Progression Runtime, including browser verification, backend smoke, and credential scan — PASS** (`32566582024`).
+- **Runtime Interaction Wiring — PASS** (`32566581990`).
+- **Environment Neutral Browser — PASS** (`32566581924`).
+- **Supply Chain Security — PASS** (`32566582026`).
+- **Admin API Check — PASS** (`32566582016`).
+- **World Runtime, Staging Readiness, market-timezone, and exchange-calendar gates — PASS** (`32566581965`, `32566582004`, `32566582034`, `32566582020`).
+
+### Phase 4B exit result
+
+- Authoritative candidate pool: **met**.
+- Candidate-only server-owned hiring: **met**.
+- Browser-authored employee economics retired: **met**.
+- Business ownership, cross-game isolation, public-key privacy, concurrency, and idempotency boundaries: **met**.
+- Canonical repository, database, backend, security, static Player, and Chromium gates: **met**.
+- Exact source and durable execution-log evidence: **met**.
+
+### Carry-forward scope
+
+1. Bind production orders to eligible role-specific labor requirements and finite employee minutes.
+2. Reserve, activate, consume, release, and recover labor without double booking.
+3. Remove the immediate synthetic production wage debit while retaining labor allocation in production cost basis.
+4. Create deterministic payroll runs and employee entries from authoritative employment state, independent of production utilization.
+5. Settle payroll through Business Checking with explicit completed, partially paid, and unpaid outcomes plus idempotent recovery.
+6. Publish utilization and idle-capacity read models without exposing internal identifiers.
+
+### Next authorized step
+
+**Phase 4C — production-labor integration and deterministic payroll settlement is OPEN.** Build it on a stacked branch from this certified Phase 4B lineage. Do not widen the tranche into equipment, timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment. Do not declare Phase 4C complete until implementation, exact source, required gates, and a durable execution-log entry all exist.
