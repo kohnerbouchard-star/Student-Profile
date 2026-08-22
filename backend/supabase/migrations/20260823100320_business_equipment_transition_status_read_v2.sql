@@ -60,6 +60,22 @@ begin
     if not found then
       raise exception 'BUSINESS_EQUIPMENT_PRODUCTION_RUN_NOT_FOUND' using errcode = 'P0001';
     end if;
+    if v_reservation.production_run_id is not null
+      and v_reservation.production_run_id is distinct from v_run.id
+    then
+      raise exception 'BUSINESS_EQUIPMENT_PRODUCTION_RUN_CONFLICT' using errcode = 'P0001';
+    end if;
+  elsif v_reservation.production_run_id is not null then
+    select run_row.*
+    into v_run
+    from public.business_production_runs as run_row
+    where run_row.game_session_id = p_game_session_id
+      and run_row.id = v_reservation.production_run_id
+      and run_row.business_id = v_reservation.business_id
+    for share;
+    if not found then
+      raise exception 'BUSINESS_EQUIPMENT_PRODUCTION_RUN_NOT_FOUND' using errcode = 'P0001';
+    end if;
   end if;
 
   if v_reservation.status = v_target then
