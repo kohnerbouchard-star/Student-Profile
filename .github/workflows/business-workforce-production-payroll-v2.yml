@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "backend/supabase/migrations/20260822140*.sql"
-      - "scripts/business-phase4c-payroll-*.mjs"
+      - "scripts/business-phase4c-*.mjs"
       - "scripts/business-workforce-payroll-foundation-contract.mjs"
       - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
       - "docs/roadmaps/business-phase4c-production-labor-payroll-scope-v1.md"
@@ -13,7 +13,7 @@ on:
     branches: [main]
     paths:
       - "backend/supabase/migrations/20260822140*.sql"
-      - "scripts/business-phase4c-payroll-*.mjs"
+      - "scripts/business-phase4c-*.mjs"
       - "scripts/business-workforce-payroll-foundation-contract.mjs"
       - ".github/workflows/business-workforce-production-payroll-v2.yml"
 
@@ -39,8 +39,10 @@ jobs:
           deno-version: v2.9.3
       - run: npm install --global npm@10.9.8
       - run: npm ci --ignore-scripts
-      - name: Verify payroll authority and deterministic behavior
+      - name: Verify production labor, payroll authority, and deterministic behavior
         run: |
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
           node scripts/business-phase4c-payroll-settlement-contract.mjs
           node scripts/business-phase4c-payroll-simulation.mjs
           node scripts/business-workforce-payroll-foundation-contract.mjs
