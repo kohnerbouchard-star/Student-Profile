@@ -1,187 +1,90 @@
-name: Business Workforce Hiring V2 Certification
+name: Business Workforce Hiring V2
 
 on:
-  push:
-    branches:
-      - feat/business-workforce-hiring-v2
-    paths:
-      - ".github/workflows/business-workforce-hiring-v2.yml"
   pull_request:
     paths:
+      - "backend/src/domains/business/**"
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/migrations/20260822*.sql"
+      - "player-terminal/src/api/**"
+      - "player-terminal/src/data/empty-read-models.js"
+      - "player-terminal/src/pages/business*.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "scripts/business-workforce-hiring-contract.mjs"
+      - "scripts/business-banking-runtime-contract.mjs"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
+      - ".github/workflows/business-workforce-hiring-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/domains/business/**"
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/migrations/20260822*.sql"
+      - "player-terminal/src/api/**"
+      - "player-terminal/src/data/empty-read-models.js"
+      - "player-terminal/src/pages/business*.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "scripts/business-workforce-hiring-contract.mjs"
+      - "scripts/business-banking-runtime-contract.mjs"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
       - ".github/workflows/business-workforce-hiring-v2.yml"
 
 permissions:
-  contents: write
-  pull-requests: read
-
-concurrency:
-  group: business-phase4b-certification
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  certify:
-    if: github.event_name == 'push' || github.event.pull_request.number == 658
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      FEATURE_BRANCH: feat/business-workforce-hiring-v2
-      SOURCE_SHA: 73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf
+    timeout-minutes: 30
     steps:
-      - name: Check out exact Phase 4B branch
-        uses: actions/checkout@v7
-        with:
-          ref: feat/business-workforce-hiring-v2
-          fetch-depth: 0
-
-      - name: Verify certification-only starting tree
-        id: start
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
-          unexpected="$(git diff --name-only "$SOURCE_SHA" HEAD | grep -v '^.github/workflows/business-workforce-hiring-v2.yml$' || true)"
-          test -z "$unexpected"
-
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22.23.1
-
-      - name: Record exact Phase 4B completion
-        shell: bash
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Validate Phase 4B authority and migrations
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source_sha = "73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf"
-
-          plan_path = Path("docs/roadmaps/business-v2-development-execution-plan-v1.md")
-          plan = plan_path.read_text(encoding="utf-8")
-          old_status = "**Status:** IN PROGRESS — checkpoint A complete; candidate pools and server-owned hiring remain open"
-          new_status = "**Status:** IN PROGRESS — checkpoints A and B complete; production-labor integration and deterministic payroll settlement remain open"
-          if plan.count(old_status) != 1:
-            raise SystemExit("Phase 4 status marker missing or duplicated")
-          plan = plan.replace(old_status, new_status, 1)
-
-          checkpoint_a = "- **4A:** canonical workforce/payroll authority foundation and scope hardening, certified source `f72626f055004007823eb8de22569035ac897797`."
-          checkpoint_b = f"- **4B:** public candidate pools and candidate-only server-owned hiring, with browser-authored employee economics retired; certified source `{source_sha}`."
-          if checkpoint_b not in plan:
-            if plan.count(checkpoint_a) != 1:
-              raise SystemExit("Phase 4A checkpoint marker missing or duplicated")
-            plan = plan.replace(checkpoint_a, checkpoint_a + "\n" + checkpoint_b, 1)
-          plan_path.write_text(plan, encoding="utf-8")
-
-          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
-          log = log_path.read_text(encoding="utf-8").rstrip()
-          heading = "## 2026-08-22 — Phase 4B COMPLETE: candidate pools and server-owned hiring"
-          if heading in log:
-            raise SystemExit("Phase 4B completion entry already exists")
-
-          entry = f'''\n\n---\n\n{heading}
-
-### Certified source and repository state
-
-- **Exact certified implementation source:** `{source_sha}`.
-- Initial generated implementation source: `fd83a17779254ac4ed386ef3ea65fe9c774ee3d2`.
-- Generator and error-envelope correction: `054c2d3e86928fc44e17b4872830b8b1fee5d111`.
-- Feature branch: `feat/business-workforce-hiring-v2`; stacked draft PR #658.
-- PR #658 and integration PR #648 remain open, draft, unmerged, and undeployed.
-- No staging or production migration, deployment, secret change, or live database mutation was performed.
-- This documentation commit is later than the tested implementation source and must not replace `{source_sha}` as certification evidence.
-
-### What is now authoritative
-
-- The Player reads a public-key-only workforce candidate pool scoped to the authenticated game and an owned Business.
-- Candidate availability is filtered server-side by status, availability window, active role, Business country, and Business currency.
-- The browser submits only Business public key, candidate public key, and idempotency intent.
-- Role, wage, labor minutes, skill, productivity, contract type, country, and currency are copied from trusted candidate authority inside the hiring transaction.
-- Hiring locks the Business and candidate, rejects unavailable, expired, self, country-mismatched, currency-mismatched, and duplicate candidate-backed employment, advances the candidate state, creates the canonical employee, and records audit evidence.
-- Matching idempotency retries replay the original receipt; conflicting reuse is rejected.
-- The legacy free-text employee-creation URL remains authenticated compatibility-only and returns HTTP `410 Gone` with `business_free_text_hiring_retired`.
-- Payroll settlement and production-labor integration remain outside Phase 4B and are not claimed complete.
-
-### Canonical-gate corrections completed before certification
-
-- Added a real candidate fixture and candidate-selection assertions to the complete Player Business surface contract.
-- Removed stale browser expectations for Player-authored wage, role, and productivity fields.
-- Replaced the Phase 3D retirement contract's brittle regex-distance assertion with an explicit source-order invariant.
-- Bound cross-cutting Player verification authority to PR #658, its exact stacked base, and the reviewed Phase 4B paths.
-- Corrected shared and mixed Player Edge dispatch to use `businessCandidateHire` and `businessRetiredHire` rate-limit identities.
-- Advanced the Phase 4A payroll-foundation contract to validate the Phase 4B hiring cutover rather than require the retired free-text mutation.
-- Preserved the deterministic architecture inventory without raising an architecture-ratchet ceiling.
-
-### Exact-source verification on `{source_sha}`
-
-- **Business Workforce Hiring V2 — PASS** (`32566581956`).
-- **Business Workforce Payroll V2 — PASS** (`32566581952`).
-- **Player Terminal Verify, including Chromium — PASS** (`32566581998`).
-- **Database Replay from zero twice plus rebuilt-database lint — PASS** (`32566582036`).
-- **Repository Quality — PASS** (`32566581981`).
-- **Backend Typecheck — PASS** (`32566581994`).
-- **Beta Security Contract, including all Edge typechecks — PASS** (`32566581975`).
-- **Business Banking Runtime — PASS** (`32566581978`).
-- **Business Economy V2 — PASS** (`32566581948`).
-- **Progression Runtime, including browser verification, backend smoke, and credential scan — PASS** (`32566582024`).
-- **Runtime Interaction Wiring — PASS** (`32566581990`).
-- **Environment Neutral Browser — PASS** (`32566581924`).
-- **Supply Chain Security — PASS** (`32566582026`).
-- **Admin API Check — PASS** (`32566582016`).
-- **World Runtime, Staging Readiness, market-timezone, and exchange-calendar gates — PASS** (`32566581965`, `32566582004`, `32566582034`, `32566582020`).
-
-### Phase 4B exit result
-
-- Authoritative candidate pool: **met**.
-- Candidate-only server-owned hiring: **met**.
-- Browser-authored employee economics retired: **met**.
-- Business ownership, cross-game isolation, public-key privacy, concurrency, and idempotency boundaries: **met**.
-- Canonical repository, database, backend, security, static Player, and Chromium gates: **met**.
-- Exact source and durable execution-log evidence: **met**.
-
-### Carry-forward scope
-
-1. Bind production orders to eligible role-specific labor requirements and finite employee minutes.
-2. Reserve, activate, consume, release, and recover labor without double booking.
-3. Remove the immediate synthetic production wage debit while retaining labor allocation in production cost basis.
-4. Create deterministic payroll runs and employee entries from authoritative employment state, independent of production utilization.
-5. Settle payroll through Business Checking with explicit completed, partially paid, and unpaid outcomes plus idempotent recovery.
-6. Publish utilization and idle-capacity read models without exposing internal identifiers.
-
-### Next authorized step
-
-**Phase 4C — production-labor integration and deterministic payroll settlement is OPEN.** Build it on a stacked branch from this certified Phase 4B lineage. Do not widen the tranche into equipment, timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment. Do not declare Phase 4C complete until implementation, exact source, required gates, and a durable execution-log entry all exist.
-'''
-          log_path.write_text(log + entry + "\n", encoding="utf-8")
-          PY
-
-      - name: Restore canonical Phase 4B workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show "$SOURCE_SHA":.github/workflows/business-workforce-hiring-v2.yml \
-            > .github/workflows/business-workforce-hiring-v2.yml
-
-      - name: Verify retained source contracts and documentation diff
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm ci --ignore-scripts
           node scripts/business-workforce-hiring-contract.mjs
-          node scripts/business-workforce-payroll-foundation-contract.mjs
           node scripts/business-banking-runtime-contract.mjs
           node scripts/validate-supabase-migrations.mjs
-          git diff --check
-
-      - name: Commit durable Phase 4B certification
-        env:
-          START_SHA: ${{ steps.start.outputs.sha }}
-        shell: bash
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - name: Run repository quality
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify backend candidate hiring
+        working-directory: backend
         run: |
-          set -euo pipefail
-          git fetch origin "$FEATURE_BRANCH"
-          test "$(git rev-parse origin/$FEATURE_BRANCH)" = "$START_SHA"
-          git config user.name econovaria-phase4b-certifier
-          git config user.email actions@users.noreply.github.com
-          git add -A
-          git commit -m "docs(business): certify Phase 4B workforce hiring"
-          git push origin HEAD:"$FEATURE_BRANCH"
+          npm run typecheck
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessWorkforceHiring.test.ts \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify Player candidate market
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
