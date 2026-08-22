@@ -259,11 +259,12 @@ assert.doesNotMatch(
   /grant (?:select|insert|update|delete|all)[\s\S]{0,180}to (?:anon|authenticated)/iu,
 );
 
-// Phase 4A is intentionally additive. These assertions keep the remaining
-// Phase 4B cutover debt explicit rather than silently claiming it is solved.
+// Phase 4B retires browser-authored employee economics while retaining a
+// bounded compatibility request shape so authenticated callers receive stable 410.
+assert.doesNotMatch(liveMutation, /case "businessHire"/u);
 assert.match(
-  liveMutation,
-  /case "businessHire"[\s\S]{0,1800}p_role_name[\s\S]{0,600}p_wage_per_cycle[\s\S]{0,600}p_productivity_index/u,
+  liveValidation,
+  /businessCandidateHire:[\s\S]{0,220}"businessKey"[\s\S]{0,220}"idempotencyKey"/u,
 );
 assert.match(
   liveValidation,
@@ -284,5 +285,5 @@ assert.match(
 assert.match(settlement, /'wage_expense'/u);
 
 console.log(
-  "Business Phase 4A workforce/payroll authority foundation passed; live hiring, production labor charging, and payroll settlement cutover remain explicitly deferred.",
+  "Business workforce/payroll foundation and Phase 4B hiring cutover passed; production labor charging and payroll settlement remain explicitly deferred.",
 );
