@@ -1,7 +1,7 @@
 export type PlayerBusinessRoute =
   | {
     readonly kind: "businessRead";
-    readonly resource?: "overview" | "stockroom" | "recipes";
+    readonly resource?: "overview" | "stockroom" | "recipes" | "workforceCandidates";
   }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | {
@@ -20,6 +20,7 @@ export type PlayerBusinessRoute =
   }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
+  | { readonly kind: "businessCandidateHire"; readonly candidateKey: string }
   | { readonly kind: "businessProductCreate" }
   | { readonly kind: "businessInputPurchase" }
   | { readonly kind: "businessProduction" }
@@ -165,6 +166,46 @@ export interface BusinessStoreReceiptDto {
   readonly alreadyCompleted: boolean;
 }
 
+export interface BusinessWorkforceCandidateDto {
+  readonly candidateKey: string;
+  readonly roleKey: string;
+  readonly roleName: string;
+  readonly laborClass: string;
+  readonly displayLabel: string;
+  readonly countryCode: string;
+  readonly currencyCode: string;
+  readonly wagePerCycle: number;
+  readonly laborMinutesPerCycle: number;
+  readonly skillBasisPoints: number;
+  readonly productivityIndex: number;
+  readonly contractType: string;
+  readonly availabilityEndsAt: string | null;
+  readonly version: number;
+}
+
+export interface BusinessWorkforceSnapshotDto {
+  readonly businessKey: string;
+  readonly generatedAt: string;
+  readonly candidates: readonly BusinessWorkforceCandidateDto[];
+}
+
+export interface BusinessCandidateHireReceiptDto {
+  readonly businessKey: string;
+  readonly employeeKey: string;
+  readonly candidateKey: string;
+  readonly roleKey: string;
+  readonly roleName: string;
+  readonly contractType: string;
+  readonly wagePerCycle: number;
+  readonly currencyCode: string;
+  readonly laborMinutesPerCycle: number;
+  readonly skillBasisPoints: number;
+  readonly productivityIndex: number;
+  readonly status: string;
+  readonly hiredAt: string;
+  readonly replayed: boolean;
+}
+
 export interface BusinessSnapshotDto {
   readonly configured: boolean;
   readonly company: BusinessCompanyDto;
@@ -214,6 +255,10 @@ export interface PlayerBusinessRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto>;
+  readWorkforceCandidates?(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<BusinessWorkforceSnapshotDto>;
   execute(
     command: string,
     args: Readonly<Record<string, unknown>>,
@@ -237,6 +282,7 @@ const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessCreate",
   "businessStoreQuote",
   "businessStorePurchase",
+  "businessCandidateHire",
   "businessProductCreate",
   "businessInputPurchase",
   "businessProduction",

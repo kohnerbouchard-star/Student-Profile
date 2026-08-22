@@ -287,10 +287,10 @@ Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished go
 
 ## Phase 4 — Workforce capacity and payroll
 
-**Status:** IN PROGRESS — checkpoint A complete; candidate pools and server-owned hiring remain open
+**Status:** IN PROGRESS — checkpoints A and B complete; production-labor integration and deterministic payroll settlement remain open
 
-- [ ] Preserve server-generated talent/candidate direction.
-- [ ] Add recipe labor-minute/headcount/role requirements.
+- [x] Preserve server-generated talent/candidate direction.
+- [x] Add recipe labor-minute/headcount/role requirements.
 - [ ] Add finite employee labor availability/reservations for production jobs.
 - [ ] Prevent double-booking labor.
 - [ ] Keep recurring payroll independent of production utilization.
@@ -301,6 +301,7 @@ Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished go
 Certified checkpoints:
 
 - **4A:** canonical workforce/payroll authority foundation and scope hardening, certified source `f72626f055004007823eb8de22569035ac897797`.
+- **4B:** public candidate pools and candidate-only server-owned hiring, with browser-authored employee economics retired; certified source `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`.
 
 Exit: labor constrains production and payroll is economically correct with zero-production scenarios.
 

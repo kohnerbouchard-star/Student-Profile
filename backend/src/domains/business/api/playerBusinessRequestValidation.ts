@@ -112,6 +112,7 @@ export function validateBusinessRequestMethodAndFields(
       "idempotencyKey",
       "clientSubmittedAt",
     ],
+    businessCandidateHire: ["businessKey", "idempotencyKey"],
     businessProductCreate: [
       "businessKey",
       "name",

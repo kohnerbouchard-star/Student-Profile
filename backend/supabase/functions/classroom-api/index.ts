@@ -593,7 +593,11 @@ Deno.serve(async (request) => {
   );
 
   if (playerBusinessBankingRoute) {
-    const endpointKey = ({
+    const endpointKey =
+      playerBusinessBankingRoute.kind === "businessRead" &&
+        playerBusinessBankingRoute.resource === "workforceCandidates"
+        ? "businessWorkforce"
+        : ({
       businessRead: "business",
       businessCreate: "businessCreate",
       businessProductCreate: "businessProductCreate",
@@ -602,7 +606,8 @@ Deno.serve(async (request) => {
       businessStorePurchase: "storePurchase",
       businessProduction: "businessProduction",
       businessPrice: "businessPrice",
-      businessHire: "businessHire",
+      businessCandidateHire: "businessCandidateHire",
+      businessHire: "businessRetiredHire",
       businessTerminate: "businessTerminate",
       businessStatus: "businessStatus",
       playerTransfer: "bankTransfer",

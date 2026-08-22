@@ -10,6 +10,7 @@ import { renderLoansPage } from "../src/pages/loans-page.js";
 const businessKey = `biz_${"a".repeat(32)}`;
 const productKey = `bpr_${"b".repeat(32)}`;
 const employeeKey = `emp_${"c".repeat(32)}`;
+const candidateKey = `wfc_${"f".repeat(32)}`;
 const loanOfferKey = `lop_${"d".repeat(32)}`;
 const loanKey = `lon_${"e".repeat(32)}`;
 const data = {
@@ -61,6 +62,26 @@ const data = {
       status: "Active",
     }],
     inventory: [{ itemKey: "machine-steel-billet", kind: "input", quantity: 10, unitCost: 2 }],
+  },
+  businessWorkforce: {
+    businessKey,
+    generatedAt: "2026-08-22T00:00:00.000Z",
+    candidates: [{
+      candidateKey,
+      roleKey: "production.specialist",
+      roleName: "Production Specialist",
+      laborClass: "manufacturing",
+      displayLabel: "Lumenor Production Candidate",
+      countryCode: "LUMENOR",
+      currencyCode: "LUM",
+      wagePerCycle: 25,
+      laborMinutesPerCycle: 480,
+      skillBasisPoints: 7500,
+      productivityIndex: 1,
+      contractType: "cycle",
+      availabilityEndsAt: null,
+      version: 1,
+    }],
   },
   banking: {
     checking: { accountId: "checking", balance: 1000, available: 1000, currencyCode: "LUM" },
@@ -120,7 +141,6 @@ for (const endpoint of [
   "businessProductCreate",
   "businessProduction",
   "businessPrice",
-  "businessHire",
   "businessTerminate",
   "businessStatus",
 ]) {
@@ -128,10 +148,26 @@ for (const endpoint of [
   assert.ok(WRITE_INVALIDATIONS[endpoint]?.includes("business"), `missing ${endpoint} Business invalidation`);
   assertAccessibleForm(markup, endpoint);
 }
+assert.match(markup, /data-endpoint="businessCandidateHire"/);
+assert.ok(
+  WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"),
+  "missing businessCandidateHire Business invalidation",
+);
+assert.match(markup, new RegExp(`data-candidate-id="${candidateKey}"`));
+assert.match(
+  markup,
+  new RegExp(`name="candidateKey" type="hidden" value="${candidateKey}"`),
+);
+assert.match(
+  markup,
+  /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S]*?<button[^>]*type="submit"/u,
+);
 assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${businessKey}"`));
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
-assert.match(markup, /name="wagePerCycle"/);
-assert.match(markup, /name="productivityIndex"/);
+assert.doesNotMatch(
+  markup,
+  /name="wagePerCycle"|name="productivityIndex"|name="roleName"/u,
+);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
 assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);

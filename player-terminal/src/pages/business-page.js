@@ -1,4 +1,5 @@
 import { escapeHtml, formatCurrency, formatNumber, formatPercent } from "../core/format.js";
+import { renderBusinessWorkforceMarket } from "./business-workforce-market.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderMetric, renderStatusPill } from "../components/ui.js";
 
@@ -127,15 +128,7 @@ export function renderBusinessPage(data) {
           <label>PRIORITY<select name="priority"><option value="standard">Standard</option><option value="expedite">Expedite</option></select></label>
           <button class="player-terminal-primary-button" type="submit" ${business.products.length && business.operations.maxRun > 0 ? "" : "disabled"}>${icon("factory")} Start production</button>
         </form></details>
-        <details class="player-terminal-disclosure"><summary><span>${icon("users")}</span><div><strong>Hire an employee</strong><small>Add capacity only when operations require it</small></div>${icon("chevronRight")}</summary><form data-player-form="business-hire" data-endpoint="businessHire">
-          ${hiddenBusinessKey(business)}
-          <label>PLAYER ID <small>Optional</small><input name="employeePlayerIdentifier" maxlength="160" /></label>
-          <label>ROLE<input name="role" maxlength="120" value="Production Specialist" required /></label>
-          <label>CONTRACT<select name="contractType"><option value="cycle">One cycle</option><option value="permanent">Permanent</option></select></label>
-          <label>WAGE PER CYCLE<input name="wagePerCycle" type="number" min="0.01" max="1000000" step="0.01" required /></label>
-          <label>PRODUCTIVITY INDEX<input name="productivityIndex" type="number" min="0.25" max="3" step="0.05" value="1" required /></label>
-          <button class="player-terminal-secondary-button" type="submit">${icon("users")} Hire employee</button>
-        </form></details>
+        <details class="player-terminal-disclosure"><summary><span>${icon("users")}</span><div><strong>Workforce candidates</strong><small>Select from server-priced, role-grouped candidates</small></div>${icon("chevronRight")}</summary><div class="player-terminal-workforce-market">${renderBusinessWorkforceMarket(data.businessWorkforce, business, code)}</div></details>
         ${productCreationForm(business)}
         ${statusForm(business)}
       </section>

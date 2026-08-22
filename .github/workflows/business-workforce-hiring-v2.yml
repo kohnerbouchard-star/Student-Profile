@@ -1,0 +1,90 @@
+name: Business Workforce Hiring V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/domains/business/**"
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/migrations/20260822*.sql"
+      - "player-terminal/src/api/**"
+      - "player-terminal/src/data/empty-read-models.js"
+      - "player-terminal/src/pages/business*.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "scripts/business-workforce-hiring-contract.mjs"
+      - "scripts/business-banking-runtime-contract.mjs"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
+      - ".github/workflows/business-workforce-hiring-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/domains/business/**"
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/migrations/20260822*.sql"
+      - "player-terminal/src/api/**"
+      - "player-terminal/src/data/empty-read-models.js"
+      - "player-terminal/src/pages/business*.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "scripts/business-workforce-hiring-contract.mjs"
+      - "scripts/business-banking-runtime-contract.mjs"
+      - "docs/operations/contracts/button-action-coverage-v1.json"
+      - ".github/workflows/business-workforce-hiring-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Validate Phase 4B authority and migrations
+        run: |
+          node scripts/business-workforce-hiring-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - name: Run repository quality
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify backend candidate hiring
+        working-directory: backend
+        run: |
+          npm run typecheck
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessWorkforceHiring.test.ts \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify Player candidate market
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration

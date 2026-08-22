@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1062,
+    "sourceFiles": 1066,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 123
+    "capabilityStrings": 124
   },
   "domains": [
     {
@@ -89,7 +89,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 16,
+      "sourceFiles": 19,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -3393,12 +3393,12 @@
         "lines": 860
       },
       {
-        "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
-        "lines": 856
+        "file": "backend/supabase/functions/classroom-api/index.ts",
+        "lines": 859
       },
       {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 854
+        "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
+        "lines": 856
       },
       {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
@@ -3481,16 +3481,16 @@
         "lines": 658
       },
       {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 657
+      },
+      {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
         "lines": 649
       },
       {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
         "lines": 649
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 647
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
@@ -4602,6 +4602,12 @@
         "capability": "valuation.v1",
         "locations": [
           "backend/src/domains/markets/calculations/bondMath.ts"
+        ]
+      },
+      {
+        "capability": "workforce.other",
+        "locations": [
+          "player-terminal/src/pages/business-workforce-market.js"
         ]
       },
       {

@@ -9,7 +9,7 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "businessFormationActivate",
   "businessFormationPropose",
   "businessFormationRespond",
-  "businessHire",
+  "businessCandidateHire",
   "businessPrice",
   "businessProductCreate",
   "businessProduction",

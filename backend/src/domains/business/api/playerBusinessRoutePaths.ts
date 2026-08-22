@@ -26,6 +26,12 @@ export function readPlayerBusinessRoutePath(
   ) {
     return { kind: "businessRead", resource: "recipes" };
   }
+  if (
+    tail.length === 3 && tail[0] === "business" &&
+    tail[1] === "workforce" && tail[2] === "candidates"
+  ) {
+    return { kind: "businessRead", resource: "workforceCandidates" };
+  }
   if (tail.length === 1 && tail[0] === "businesses") {
     return { kind: "businessCreate", operation: "directCreate" };
   }
@@ -92,6 +98,16 @@ export function readPlayerBusinessRoutePath(
     validKey(tail[2], "bpr")
   ) {
     return { kind: "businessPrice", productKey: tail[2].toLowerCase() };
+  }
+  if (
+    tail.length === 5 && tail[0] === "business" &&
+    tail[1] === "workforce" && tail[2] === "candidates" &&
+    tail[4] === "hire" && validKey(tail[3], "wfc")
+  ) {
+    return {
+      kind: "businessCandidateHire",
+      candidateKey: tail[3].toLowerCase(),
+    };
   }
   if (
     tail.length === 3 && tail[0] === "business" &&

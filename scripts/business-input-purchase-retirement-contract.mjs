@@ -41,9 +41,15 @@ assert.match(source.handler, /route\.kind === "businessInputPurchase"/u);
 assert.match(source.handler, /jsonError\(410/u);
 assert.match(source.handler, /business_input_purchase_retired/u);
 assert.match(source.handler, /Use Business Store procurement/u);
-assert.match(
-  source.handler,
-  /resolveScope\(request, client, body\)[\s\S]{0,900}route\.kind === "businessInputPurchase"/u,
+const resolvedScopeIndex = source.handler.indexOf(
+  "const scope = await dependencies.resolveScope(request, client, body);",
+);
+const retiredInputIndex = source.handler.indexOf(
+  'if (route.kind === "businessInputPurchase")',
+);
+assert.ok(resolvedScopeIndex >= 0, "Business scope resolution must remain present.");
+assert.ok(
+  retiredInputIndex > resolvedScopeIndex,
   "Retired requests must authenticate before receiving 410 Gone.",
 );
 

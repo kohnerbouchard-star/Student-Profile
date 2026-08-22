@@ -44,7 +44,7 @@
       "evidence": "contract_only",
       "domain": "business"
     },
-    "businessHire": {
+    "businessCandidateHire": {
       "evidence": "connected_browser",
       "domain": "business"
     },
