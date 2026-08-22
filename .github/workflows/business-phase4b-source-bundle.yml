@@ -1,9 +1,7 @@
 name: Business Phase 4B Source Bundle
 
 on:
-  push:
-    branches:
-      - feat/business-workforce-hiring-v2
+  pull_request:
     paths:
       - ".github/workflows/business-phase4b-source-bundle.yml"
 
@@ -12,6 +10,7 @@ permissions:
 
 jobs:
   bundle:
+    if: github.event.pull_request.number == 658
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
