@@ -8,10 +8,12 @@ on:
       - "docs/architecture/business-workforce-payroll-*.md"
       - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
       - ".github/workflows/business-workforce-payroll-phase4a-finalize.yml"
-      - "package.json"
+      - ".github/workflows/business-banking-runtime.yml"
+      - ".github/workflows/runtime-interaction-wiring.yml"
+      - ".github/workflows/staging-readiness-preflight.yml"
 
 permissions:
-  actions: read
+  actions: write
   contents: write
   pull-requests: read
 
@@ -61,7 +63,7 @@ jobs:
           while IFS= read -r changed_path; do
             test -z "$changed_path" && continue
             case "$changed_path" in
-              "$workflow"|package.json) ;;
+              "$workflow"|.github/workflows/business-banking-runtime.yml|.github/workflows/runtime-interaction-wiring.yml|.github/workflows/staging-readiness-preflight.yml) ;;
               *)
                 echo "Unexpected post-verification change: $changed_path" >&2
                 exit 1
@@ -147,6 +149,45 @@ jobs:
       - name: Run Chromium Player verification
         working-directory: player-terminal
         run: npm run browser
+
+      - name: Dispatch exact-head path-filtered workflows
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          branch = os.environ["FEATURE_BRANCH"]
+          workflows = [
+              "business-banking-runtime.yml",
+              "runtime-interaction-wiring.yml",
+          ]
+          for workflow in workflows:
+              url = (
+                  f"https://api.github.com/repos/{repository}/actions/"
+                  f"workflows/{workflow}/dispatches"
+              )
+              request = urllib.request.Request(
+                  url,
+                  data=json.dumps({"ref": branch}).encode("utf-8"),
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  if response.status != 204:
+                      raise SystemExit(
+                          f"Unexpected dispatch response for {workflow}: "
+                          f"{response.status}"
+                      )
+          PY
 
       - name: Wait for required exact-head workflows
         env:
@@ -376,7 +417,7 @@ jobs:
 - Stacked draft PR: #657, based on `refactor/business-abstract-input-retirement-v2`.
 - Integration PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.
 - No staging or production deployment or live data mutation was performed.
-- The verification heads differ from the implementation only by one-use certification orchestration and a temporary package metadata trigger; neither replaces the implementation SHA.
+- The verification heads differ from the implementation only by one-use certification orchestration and temporary workflow-dispatch triggers; neither replaces the implementation SHA.
 
 ### What changed
 
@@ -414,7 +455,10 @@ Phase 4 is not complete. Candidate-pool reads and server-owned hiring remain ope
                   handle.write(entry.rstrip() + "\n")
           PY
 
-          git checkout "$SOURCE_SHA" -- package.json
+          git checkout "$VERIFICATION_SHA" -- \
+            .github/workflows/business-banking-runtime.yml \
+            .github/workflows/runtime-interaction-wiring.yml \
+            .github/workflows/staging-readiness-preflight.yml
           rm .github/workflows/business-workforce-payroll-phase4a-finalize.yml
           git diff --check
           git fetch origin "$FEATURE_BRANCH"
@@ -424,7 +468,9 @@ Phase 4 is not complete. Candidate-pool reads and server-owned hiring remain ope
           git add -- \
             docs/roadmaps/business-v2-development-execution-plan-v1.md \
             docs/roadmaps/business-v2-development-execution-log-v1.md \
-            package.json
+            .github/workflows/business-banking-runtime.yml \
+            .github/workflows/runtime-interaction-wiring.yml \
+            .github/workflows/staging-readiness-preflight.yml
           git add -u -- \
             .github/workflows/business-workforce-payroll-phase4a-finalize.yml
           git commit -m "docs(business): certify Phase 4A workforce foundation"
