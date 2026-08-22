@@ -287,7 +287,7 @@ Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished go
 
 ## Phase 4 — Workforce capacity and payroll
 
-**Status:** OPEN — Phase 3 complete; workforce/payroll is the next authorized phase
+**Status:** IN PROGRESS — checkpoint A complete; candidate pools and server-owned hiring remain open
 
 - [ ] Preserve server-generated talent/candidate direction.
 - [ ] Add recipe labor-minute/headcount/role requirements.
@@ -297,6 +297,10 @@ Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished go
 - [ ] Ensure production does not debit payroll again.
 - [ ] Allocate labor into production cost basis without a second cash movement.
 - [ ] Add utilization/idle-capacity read model.
+
+Certified checkpoints:
+
+- **4A:** canonical workforce/payroll authority foundation and scope hardening, certified source `f72626f055004007823eb8de22569035ac897797`.
 
 Exit: labor constrains production and payroll is economically correct with zero-production scenarios.
 

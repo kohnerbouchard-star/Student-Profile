@@ -601,3 +601,50 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 4 — workforce capacity and payroll is OPEN.** Begin with a bounded authority audit and foundation checkpoint: preserve server-generated candidates and roles, define recipe labor-minute/role requirements, model finite employee availability and reservations, preserve recurring payroll independent of utilization, prevent double-booking, and prohibit Player-authored productivity or economic outcomes. Do not widen this checkpoint into equipment, timed manufacturing, Store seller offers, IPO, merge, or deployment.
+
+---
+## 2026-08-22 — Phase 4A COMPLETE: workforce and payroll authority foundation
+
+### Certified state
+
+- **Exact implementation SHA:** `f72626f055004007823eb8de22569035ac897797`.
+- **Exact required-gate head:** `1c405c86d773d133fb13da268a95a32eb46a9bd7`.
+- **Certification workflow source:** `102ef444d39cd4722a5c4ef190bf0ad58f804864`.
+- Feature branch: `feat/business-workforce-payroll-foundation-v2`; stacked draft PR #657.
+- PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.
+- No staging or production deployment or live data mutation was performed.
+
+### What changed
+
+- Added canonical workforce roles, game-scoped candidate offers, recipe labor requirements, finite labor reservations, payroll runs, and payroll entries.
+- Bound labor and payroll evidence to one Business, employee, role, run, game, country, and currency scope.
+- Preserved service-owned economics, public-key browser contracts, game isolation, immutable payroll evidence, and the no-settlement/no-production-integration boundary.
+
+### Exact-head verification
+
+- **Business Workforce Payroll V2 — PASS** (`32544375317`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Database Replay — PASS** (`32544375343`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Backend Typecheck — PASS** (`32544375326`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Business Banking Runtime — PASS** (`32545599820`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Repository Quality — PASS** (`32544375307`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Runtime Interaction Wiring — PASS** (`32545600548`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Supply Chain Security — PASS** (`32544375335`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Admin API Check — PASS** (`32544375332`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Staging Readiness Preflight — PASS** (`32544375337`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Required Game Market Timezone — PASS** (`32544375325`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Exchange Calendar Runtime — PASS** (`32544375304`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Player Terminal Verify and Chromium browser verification — PASS** in finalizer run `32544375336` attempt 2.
+
+### Blocker resolution
+
+- The original finalizer passed all implementation, browser, and exact-head gates but failed in its workflow-file cleanup/certification write.
+- This bounded docs-only certifier independently revalidated every required exact-head run and recorded the certification without weakening any gate or ratchet.
+
+### Decisions and remaining work
+
+- Workforce economics and finite capacity remain server authority; Phase 4A records payroll evidence but performs no settlement and no production-labor integration.
+- Phase 4 remains incomplete. Payroll settlement and production-labor integration remain closed.
+
+### Next authorized step
+
+**Phase 4B — candidate pools and server-owned hiring is OPEN.** Expose role-grouped, game-scoped candidates; derive wage, skill, productivity, capacity, country, and currency from server-owned candidate rows; atomically reserve candidates; prevent duplicate active hires; and retire new Player execution through the legacy free-text hiring RPC.
