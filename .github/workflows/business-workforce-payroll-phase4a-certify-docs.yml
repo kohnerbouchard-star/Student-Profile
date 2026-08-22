@@ -10,15 +10,11 @@ permissions:
   contents: write
   pull-requests: read
 
-concurrency:
-  group: business-workforce-payroll-phase4a-certify-docs-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   certify-docs:
     if: github.event.pull_request.number == 657
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
@@ -26,232 +22,115 @@ jobs:
       IMPLEMENTATION_SHA: f72626f055004007823eb8de22569035ac897797
       EXACT_HEAD_SHA: 1c405c86d773d133fb13da268a95a32eb46a9bd7
     steps:
-      - name: Check out exact feature branch
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: feat/business-workforce-payroll-foundation-v2
           fetch-depth: 0
 
-      - name: Verify bounded certification delta
-        id: boundary
+      - name: Verify gates and record certification
         shell: bash
         run: |
           set -euo pipefail
           current_sha=$(git rev-parse HEAD)
           git merge-base --is-ancestor "$IMPLEMENTATION_SHA" "$EXACT_HEAD_SHA"
           git merge-base --is-ancestor "$EXACT_HEAD_SHA" "$current_sha"
-          delta=$(git diff --name-only "$EXACT_HEAD_SHA" "$current_sha")
-          test "$delta" = ".github/workflows/business-workforce-payroll-phase4a-certify-docs.yml"
-          echo "current_sha=$current_sha" >> "$GITHUB_OUTPUT"
+          test "$(git diff --name-only "$EXACT_HEAD_SHA" "$current_sha")" = ".github/workflows/business-workforce-payroll-phase4a-certify-docs.yml"
 
-      - name: Verify required exact-head gates
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.request
+          CURRENT_SHA="$current_sha" python3 - <<'PY'
+          import json, os, re, urllib.request
+          from datetime import date
           from pathlib import Path
 
-          repository = os.environ["REPOSITORY"]
+          repo = os.environ["REPOSITORY"]
           token = os.environ["GH_TOKEN"]
-          exact_head = os.environ["EXACT_HEAD_SHA"]
+          impl = os.environ["IMPLEMENTATION_SHA"]
+          exact = os.environ["EXACT_HEAD_SHA"]
+          current = os.environ["CURRENT_SHA"]
           required = [
-              "Business Workforce Payroll V2",
-              "Database Replay",
-              "Backend Typecheck",
-              "Business Banking Runtime",
-              "Repository Quality",
-              "Runtime Interaction Wiring",
-              "Supply Chain Security",
-              "Admin API Check",
+              "Business Workforce Payroll V2", "Database Replay",
+              "Backend Typecheck", "Business Banking Runtime",
+              "Repository Quality", "Runtime Interaction Wiring",
+              "Supply Chain Security", "Admin API Check",
               "Staging Readiness Preflight",
-              "Required Game Market Timezone",
-              "Exchange Calendar Runtime",
+              "Required Game Market Timezone", "Exchange Calendar Runtime",
           ]
-
-          request = urllib.request.Request(
-              (
-                  f"https://api.github.com/repos/{repository}/actions/runs"
-                  f"?head_sha={exact_head}&per_page=100"
-              ),
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/runs?head_sha={exact}&per_page=100",
               headers={
                   "Accept": "application/vnd.github+json",
                   "Authorization": f"Bearer {token}",
                   "X-GitHub-Api-Version": "2022-11-28",
               },
           )
-          with urllib.request.urlopen(request, timeout=30) as response:
+          with urllib.request.urlopen(req, timeout=30) as response:
               runs = json.load(response).get("workflow_runs", [])
-
           evidence = {}
           for name in required:
-              candidates = [
-                  run for run in runs
-                  if run.get("name") == name
-                  and run.get("head_sha") == exact_head
-                  and run.get("status") == "completed"
-                  and run.get("conclusion") == "success"
-              ]
-              candidates.sort(
-                  key=lambda run: (
-                      run.get("created_at") or "",
-                      int(run.get("run_attempt") or 0),
-                  ),
-                  reverse=True,
-              )
-              if not candidates:
-                  raise SystemExit(
-                      f"Missing successful exact-head workflow: {name}"
-                  )
-              run = candidates[0]
-              evidence[name] = {
-                  "runId": run["id"],
-                  "headSha": run["head_sha"],
-              }
+              ok = [r for r in runs if r.get("name") == name and
+                    r.get("head_sha") == exact and
+                    r.get("status") == "completed" and
+                    r.get("conclusion") == "success"]
+              if not ok:
+                  raise SystemExit(f"Missing successful exact-head gate: {name}")
+              ok.sort(key=lambda r: (r.get("created_at") or "", r.get("run_attempt") or 0), reverse=True)
+              evidence[name] = ok[0]["id"]
 
-          Path("/tmp/phase4a-gates.json").write_text(
-              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-          print(json.dumps(evidence, indent=2, sort_keys=True))
-          PY
-
-      - name: Record durable Phase 4A certification
-        env:
-          CURRENT_SHA: ${{ steps.boundary.outputs.current_sha }}
-          CERTIFICATION_RUN_ID: ${{ github.run_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          import re
-          from datetime import date
-          from pathlib import Path
-
-          implementation_sha = os.environ["IMPLEMENTATION_SHA"]
-          exact_head_sha = os.environ["EXACT_HEAD_SHA"]
-          certification_workflow_sha = os.environ["CURRENT_SHA"]
-          certification_run_id = os.environ["CERTIFICATION_RUN_ID"]
-          gates = json.loads(
-              Path("/tmp/phase4a-gates.json").read_text(encoding="utf-8")
-          )
-
-          plan_path = Path(
-              "docs/roadmaps/business-v2-development-execution-plan-v1.md"
-          )
-          log_path = Path(
-              "docs/roadmaps/business-v2-development-execution-log-v1.md"
-          )
-
+          plan_path = Path("docs/roadmaps/business-v2-development-execution-plan-v1.md")
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
           plan = plan_path.read_text(encoding="utf-8")
-          phase_start = plan.index("## Phase 4 — Workforce capacity and payroll")
-          phase_end = plan.index("\n## Phase 5 — Equipment capacity", phase_start)
-          phase = plan[phase_start:phase_end]
+          start = plan.index("## Phase 4 — Workforce capacity and payroll")
+          end = plan.index("\n## Phase 5 — Equipment capacity", start)
+          phase = plan[start:end]
           phase, count = re.subn(
               r"\*\*Status:\*\*[^\n]*",
-              (
-                  "**Status:** IN PROGRESS — checkpoint A complete; "
-                  "candidate pools and server-owned hiring remain open"
-              ),
-              phase,
-              count=1,
+              "**Status:** IN PROGRESS — checkpoint A complete; candidate pools and server-owned hiring remain open",
+              phase, count=1,
           )
           if count != 1:
-              raise SystemExit("Phase 4 roadmap status was not found")
-
-          checkpoint = (
-              "- **4A:** canonical workforce/payroll authority foundation "
-              f"and scope hardening, certified source `{implementation_sha}`."
-          )
+              raise SystemExit("Phase 4 status not found")
+          checkpoint = f"- **4A:** canonical workforce/payroll authority foundation and scope hardening, certified source `{impl}`."
           if checkpoint not in phase:
-              anchor = "\nExit:"
-              if anchor not in phase:
-                  raise SystemExit("Phase 4 exit anchor was not found")
-              phase = phase.replace(
-                  anchor,
-                  "\nCertified checkpoints:\n\n" + checkpoint + "\n" + anchor,
-                  1,
-              )
-
-          plan = plan[:phase_start] + phase + plan[phase_end:]
-          plan_path.write_text(plan.rstrip() + "\n", encoding="utf-8")
+              phase = phase.replace("\nExit:", "\nCertified checkpoints:\n\n" + checkpoint + "\n\nExit:", 1)
+          plan_path.write_text((plan[:start] + phase + plan[end:]).rstrip() + "\n", encoding="utf-8")
 
           log = log_path.read_text(encoding="utf-8")
-          if implementation_sha not in log:
-              verification_lines = "\n".join(
-                  (
-                      f"- **{name} — PASS** (`{item['runId']}`, "
-                      f"head `{item['headSha']}`)."
-                  )
-                  for name, item in gates.items()
-              )
-              entry = f"""
-
----
-## {date.today().isoformat()} — Phase 4A COMPLETE: workforce and payroll authority foundation
-
-### Certified implementation and verification sources
-
-- **Exact implementation SHA:** `{implementation_sha}`.
-- **Exact required-gate head:** `{exact_head_sha}`.
-- **Certification workflow source:** `{certification_workflow_sha}`.
-- Feature branch: `feat/business-workforce-payroll-foundation-v2`.
-- Stacked draft PR: #657, based on `refactor/business-abstract-input-retirement-v2`.
-- Integration PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.
-- No staging or production deployment or live data mutation was performed.
-- The later heads contain only one-use certification orchestration and temporary workflow triggers; neither replaces the immutable implementation SHA.
-
-### What changed
-
-- Added canonical workforce-role definitions, game-scoped candidate offers, recipe labor requirements, finite labor reservations, payroll runs, and payroll entries.
-- Migrated active legacy employees into canonical workforce roles with integer productivity basis points, skill basis points, and finite labor capacity.
-- Added server-authoritative functions for role publication, candidate publication, recipe labor configuration, labor reservation/consumption/release, and payroll evidence recording.
-- Added forward hardening that binds labor reservations and payroll entries to one Business, employee, role, run, and currency scope through composite foreign keys.
-- Enforced canonical role skill floors for candidate offers, recipe labor requirements, and later role-minimum increases.
-- Revoked direct service-role DELETE authority from durable workforce and payroll evidence tables; status transitions remain the operational lifecycle.
-- Preserved browser denial, service-role-only function authority, stable public keys, game isolation, immutable payroll-entry checksums, and the Phase 4A no-settlement/no-production-integration boundary.
-
-### Exact-head verification
-
-{verification_lines}
-- **Repository source tests, migration validation, architecture inventory, backend typecheck, Player Terminal Verify, and Chromium browser verification — PASS** in certification run `{certification_run_id}` and predecessor finalizer attempt `32544375336`.
-
-### Blocker resolution
-
-- The initial one-use finalizer passed all implementation, browser, and exact-head gates but failed while attempting to push a commit that also modified workflow files.
-- Certification was completed through this bounded docs-only workflow after independently re-verifying every required successful run on exact head `{exact_head_sha}`.
-- No gate, authorization check, architecture ratchet, or verification scope was weakened.
-
-### Architecture and gameplay decisions
-
-- Workforce roles, candidate economics, finite capacity, recipe labor requirements, and payroll evidence are database authority, not browser-authored state.
-- Phase 4A records payroll evidence but does not debit Business cash, post ledger entries, or execute payroll settlement.
-- Phase 4A provides labor-reservation authority but does not yet attach it to production execution.
-- Relational scope is enforced by composite foreign keys rather than application-only checks.
-- Durable workforce and payroll evidence is retired through status transitions, not direct service-role deletion.
-
-### Remaining Phase 4 work
-
-Phase 4 is not complete. Candidate-pool reads and server-owned hiring remain open, followed by bounded payroll settlement and production-labor integration.
-
-### Next authorized step
-
-**Phase 4B — candidate pools and server-owned hiring is OPEN.** Expose role-grouped, game-scoped candidates; derive wage, skill, productivity, capacity, country, and currency exclusively from server-owned candidate rows; reserve a candidate atomically before hire; prevent duplicate active hires; and retire new Player execution through the legacy free-text hiring RPC. Payroll settlement and production-labor integration remain closed.
-"""
-              with log_path.open("a", encoding="utf-8") as handle:
-                  handle.write(entry.rstrip() + "\n")
+          if impl not in log:
+              lines = [
+                  "", "---",
+                  f"## {date.today().isoformat()} — Phase 4A COMPLETE: workforce and payroll authority foundation",
+                  "", "### Certified state", "",
+                  f"- **Exact implementation SHA:** `{impl}`.",
+                  f"- **Exact required-gate head:** `{exact}`.",
+                  f"- **Certification workflow source:** `{current}`.",
+                  "- Feature branch: `feat/business-workforce-payroll-foundation-v2`; stacked draft PR #657.",
+                  "- PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.",
+                  "- No staging or production deployment or live data mutation was performed.",
+                  "", "### What changed", "",
+                  "- Added canonical workforce roles, game-scoped candidate offers, recipe labor requirements, finite labor reservations, payroll runs, and payroll entries.",
+                  "- Bound labor and payroll evidence to one Business, employee, role, run, game, country, and currency scope.",
+                  "- Preserved service-owned economics, public-key browser contracts, game isolation, immutable payroll evidence, and the no-settlement/no-production-integration boundary.",
+                  "", "### Exact-head verification", "",
+              ]
+              lines += [f"- **{name} — PASS** (`{evidence[name]}`, head `{exact}`)." for name in required]
+              lines += [
+                  "- **Player Terminal Verify and Chromium browser verification — PASS** in finalizer run `32544375336` attempt 2.",
+                  "", "### Blocker resolution", "",
+                  "- The original finalizer passed all implementation, browser, and exact-head gates but failed in its workflow-file cleanup/certification write.",
+                  "- This bounded docs-only certifier independently revalidated every required exact-head run and recorded the certification without weakening any gate or ratchet.",
+                  "", "### Decisions and remaining work", "",
+                  "- Workforce economics and finite capacity remain server authority; Phase 4A records payroll evidence but performs no settlement and no production-labor integration.",
+                  "- Phase 4 remains incomplete. Payroll settlement and production-labor integration remain closed.",
+                  "", "### Next authorized step", "",
+                  "**Phase 4B — candidate pools and server-owned hiring is OPEN.** Expose role-grouped, game-scoped candidates; derive wage, skill, productivity, capacity, country, and currency from server-owned candidate rows; atomically reserve candidates; prevent duplicate active hires; and retire new Player execution through the legacy free-text hiring RPC.",
+              ]
+              log_path.write_text(log.rstrip() + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
           PY
 
           git diff --check
           git fetch origin "$FEATURE_BRANCH"
-          test "$(git rev-parse origin/$FEATURE_BRANCH)" = "$CURRENT_SHA"
+          test "$(git rev-parse origin/$FEATURE_BRANCH)" = "$current_sha"
           git config user.name "econovaria-phase4a-certifier"
           git config user.email "actions@users.noreply.github.com"
-          git add -- \
-            docs/roadmaps/business-v2-development-execution-plan-v1.md \
-            docs/roadmaps/business-v2-development-execution-log-v1.md
+          git add docs/roadmaps/business-v2-development-execution-plan-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
           git commit -m "docs(business): certify Phase 4A workforce foundation"
           git push origin HEAD:feat/business-workforce-payroll-foundation-v2
