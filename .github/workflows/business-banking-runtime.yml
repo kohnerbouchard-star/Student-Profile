@@ -30,7 +30,6 @@ on:
       - "docs/architecture/business-system-audit-redesign-v1.md"
       - ".github/workflows/business-banking-runtime.yml"
       - "package.json"
-  workflow_dispatch:
   push:
     branches: [main]
     paths:
