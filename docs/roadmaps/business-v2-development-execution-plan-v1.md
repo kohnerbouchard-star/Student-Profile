@@ -287,27 +287,28 @@ Exit: real materials flow supplier -> transit -> warehouse -> WIP -> finished go
 
 ## Phase 4 — Workforce capacity and payroll
 
-**Status:** IN PROGRESS — checkpoints A and B complete; production-labor integration and deterministic payroll settlement remain open
+**Status:** COMPLETE — checkpoints A through C certified
 
 - [x] Preserve server-generated talent/candidate direction.
 - [x] Add recipe labor-minute/headcount/role requirements.
-- [ ] Add finite employee labor availability/reservations for production jobs.
-- [ ] Prevent double-booking labor.
-- [ ] Keep recurring payroll independent of production utilization.
-- [ ] Ensure production does not debit payroll again.
-- [ ] Allocate labor into production cost basis without a second cash movement.
-- [ ] Add utilization/idle-capacity read model.
+- [x] Add finite employee labor availability/reservations for production jobs.
+- [x] Prevent double-booking labor.
+- [x] Keep recurring payroll independent of production utilization.
+- [x] Ensure production does not debit payroll again.
+- [x] Allocate labor into production cost basis without a second cash movement.
+- [x] Add utilization/idle-capacity read model.
 
 Certified checkpoints:
 
 - **4A:** canonical workforce/payroll authority foundation and scope hardening, certified source `f72626f055004007823eb8de22569035ac897797`.
 - **4B:** public candidate pools and candidate-only server-owned hiring, with browser-authored employee economics retired; certified source `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`.
+- **4C:** production labor reservations, deterministic recurring payroll settlement and recovery, no second production wage debit, and public workforce utilization/idle-capacity read; certified implementation and exact-head verification source `857ab6ec77bf02ad619092632e2def80f12d4329`.
 
 Exit: labor constrains production and payroll is economically correct with zero-production scenarios.
 
 ## Phase 5 — Equipment capacity
 
-**Status:** NOT STARTED
+**Status:** OPEN — canonical-equipment authority audit authorized; implementation not started
 
 - [ ] Validate canonical equipment profiles/items.
 - [ ] Add recipe equipment capability/time requirements.
@@ -556,3 +557,40 @@ If work is committed directly to the existing integration branch because of exec
 ### Next step
 
 - Execute Phase 0 schema/runtime convergence on the exact current #648 branch, update this log with findings/fixes/tests, then proceed to domain extraction only after the Phase 0 exit criteria are met.
+
+---
+
+## 2026-08-23 — Phase 4C COMPLETE and Phase 4 COMPLETE
+
+### Certified state
+
+- Exact certified implementation and verification source: `857ab6ec77bf02ad619092632e2def80f12d4329`.
+- Feature branch: `feat/business-workforce-production-labor-v2`.
+- Stacked draft PR: #659, based on certified Phase 4B branch `feat/business-workforce-hiring-v2`.
+- PR #659 and integration PR #648 remain open, draft, unmerged, and undeployed.
+- The certification documentation is later than the tested source and must not replace `857ab6ec77bf02ad619092632e2def80f12d4329` as the implementation identity.
+
+### Completed authority
+
+- Canonical recipe labor requirements now constrain production by role, headcount, skill, and finite payroll-period employee minutes.
+- Labor reservations are deterministic, concurrency-safe, idempotent, and consumed or recoverable exactly once.
+- Production no longer performs a synthetic wage cash debit; authoritative wage/capacity terms remain available as managerial production cost basis.
+- Recurring payroll creates deterministic employee evidence even with zero production.
+- Business Checking settlement supports completed, partially paid, and unpaid outcomes with exact-once recovery.
+- Player-linked employees are credited through canonical ledger authority; system candidates retain evidence without fake Player accounts.
+- Public-key-only utilization, idle-capacity, payroll due/paid/unpaid, and employee status data are published to the Player Business surface.
+
+### Exact-head verification
+
+All required workflows passed on the certified source, including Business Workforce Production Payroll V2 (`32601382383`), Business Workforce Payroll V2 (`32601382371`), Business Workforce Hiring V2 (`32601382382`), Database Replay (`32601382380`), Backend Typecheck (`32601382359`), Repository Quality (`32601382340`), Player Terminal Verify with Chromium (`32601382375`), Business Banking Runtime (`32601382366`), Business Economy V2 (`32601382376`), security and environment-neutral browser gates, and the retained Admin, World, market-timezone, exchange-calendar, progression, and interaction-wiring regressions.
+
+### Decisions and remaining risks
+
+- Phase 4 is complete. No remaining workforce/payroll blocker authorizes expanding Phase 4C further.
+- Existing instant production remains a bounded compatibility lifecycle until Phase 6 replaces it with authoritative timed manufacturing.
+- Equipment authority remains absent by design and is the next required production-capacity dependency.
+- No merge, staging deployment, production deployment, secret change, or live data mutation was authorized or performed.
+
+### Next authorized step
+
+**Phase 5 — equipment capacity is OPEN.** Begin with a bounded audit of canonical equipment items/capabilities, existing recipe/equipment metadata, ownership/installation semantics, finite equipment-time reservations, condition/maintenance boundaries, and double-booking prevention. Do not widen this tranche into timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment.
