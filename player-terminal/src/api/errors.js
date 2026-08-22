@@ -25,6 +25,12 @@ const STATUS_MESSAGES = Object.freeze({
 
 const CODE_MESSAGES = Object.freeze({
   ACTION_COOLDOWN: "That action was just submitted. Wait a moment before trying again.",
+  BUSINESS_LABOR_CAPACITY_UNAVAILABLE: "The required workers do not have enough labor minutes left in the current payroll period. Reduce the production run or wait for the next payroll period.",
+  BUSINESS_LABOR_REQUIREMENT_INVALID: "This recipe's labor requirement is not currently usable. Choose another product or contact the game administrator.",
+  BUSINESS_LABOR_RESERVATION_CONSUMPTION_CONFLICT: "Workforce capacity changed while production was settling. Refresh the Business page before retrying.",
+  BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE: "This recipe needs more active workers in a required role. Hire an eligible candidate before producing.",
+  BUSINESS_LABOR_SKILL_UNAVAILABLE: "Your active workforce does not meet this recipe's skill requirement. Hire a sufficiently skilled candidate before producing.",
+  BUSINESS_PRODUCTION_RECIPE_AMBIGUOUS: "This product is linked to more than one canonical recipe. Production is unavailable until the recipe mapping is corrected.",
   INVALID_RESPONSE: "This section received incomplete data and could not be opened safely.",
   NETWORK_ERROR: "The player terminal could not reach the game service.",
   OFFLINE: "The device appears to be offline. Reconnect and try again.",

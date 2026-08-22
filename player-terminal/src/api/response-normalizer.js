@@ -126,9 +126,7 @@ function applySafeDefaults(endpointKey, value) {
     endpointKey === "progression" &&
     !Number.isSafeInteger(value.currentLevelXp) &&
     Number.isSafeInteger(value.xp) && value.xp >= 0
-  ) {
-    value.currentLevelXp = 0;
-  }
+  ) value.currentLevelXp = 0;
   return value;
 }
 
@@ -150,6 +148,45 @@ function validateWorldRuntime(value, context) {
   }
 }
 
+function validateBusinessWorkforceUtilization(value, context) {
+  const utilization = value.workforceUtilization;
+  if (utilization === undefined || utilization === null) return;
+  if (
+    typeof utilization !== "object" || Array.isArray(utilization) ||
+    UUID.test(JSON.stringify(utilization)) ||
+    !/^biz_[0-9a-f]{32}$/u.test(String(utilization.businessKey || "")) ||
+    !/^payroll:[1-9][0-9]*$/u.test(String(utilization.payrollPeriodKey || "")) ||
+    !utilization.payroll || typeof utilization.payroll !== "object" || Array.isArray(utilization.payroll) ||
+    !Array.isArray(utilization.employees)
+  ) throw invalidResponse("business", context.requestId, context.path);
+
+  for (const employee of utilization.employees) {
+    if (
+      !employee || typeof employee !== "object" || Array.isArray(employee) ||
+      !/^emp_[0-9a-f]{32}$/u.test(String(employee.employeeKey || ""))
+    ) throw invalidResponse("business", context.requestId, context.path);
+    for (const key of [
+      "capacityMinutes",
+      "reservedMinutes",
+      "consumedMinutes",
+      "utilizedMinutes",
+      "availableMinutes",
+      "idleMinutes",
+      "utilizationBasisPoints",
+    ]) {
+      if (!Number.isSafeInteger(employee[key]) || employee[key] < 0) {
+        throw invalidResponse("business", context.requestId, context.path);
+      }
+    }
+    if (
+      employee.utilizationBasisPoints > 10000 ||
+      employee.utilizedMinutes !== employee.reservedMinutes + employee.consumedMinutes ||
+      employee.availableMinutes > employee.capacityMinutes ||
+      employee.idleMinutes !== employee.availableMinutes
+    ) throw invalidResponse("business", context.requestId, context.path);
+  }
+}
+
 function validateEndpointShape(endpointKey, value, context) {
   for (const key of REQUIRED_ARRAY_FIELDS[endpointKey] || []) {
     if (!Array.isArray(value[key])) throw invalidResponse(endpointKey, context.requestId, context.path);
@@ -160,10 +197,10 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
   if (endpointKey === "worldRuntime") validateWorldRuntime(value, context);
-  if (
-    endpointKey === "businessWorkforce" &&
-    UUID.test(JSON.stringify(value))
-  ) throw invalidResponse(endpointKey, context.requestId, context.path);
+  if (endpointKey === "business") validateBusinessWorkforceUtilization(value, context);
+  if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) {
+    throw invalidResponse(endpointKey, context.requestId, context.path);
+  }
   if (endpointKey === "progression") {
     if (
       !Number.isSafeInteger(value.level) || value.level < 1 || value.level > 20 ||
@@ -172,12 +209,8 @@ function validateEndpointShape(endpointKey, value, context) {
       value.currentLevelXp > value.xp ||
       !Number.isSafeInteger(value.nextLevelXp) || value.nextLevelXp < value.xp ||
       !Number.isSafeInteger(value.skillPoints) || value.skillPoints < 0 || value.skillPoints > 200 ||
-      typeof value.playerName !== "string" ||
-      typeof value.title !== "string" ||
-      typeof value.summary !== "string"
-    ) {
-      throw invalidResponse(endpointKey, context.requestId, context.path);
-    }
+      typeof value.playerName !== "string" || typeof value.title !== "string" || typeof value.summary !== "string"
+    ) throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "notificationsPage") {
     const unreadCount = value.summary.unreadCount;
@@ -199,9 +232,6 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "session") {
-    // Internal game/session UUIDs are intentionally omitted from browser-safe
-    // session bootstrap responses. The terminal only requires player-facing
-    // identity and currency data to establish the local read model.
     for (const key of ["displayName", "currencyCode"]) {
       if (typeof value[key] !== "string" || !value[key].trim()) throw invalidResponse(endpointKey, context.requestId, context.path);
     }

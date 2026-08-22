@@ -4,6 +4,14 @@ on:
   pull_request:
     paths:
       - "backend/supabase/migrations/20260822140*.sql"
+      - "backend/src/domains/business/contracts/playerBusinessContracts.ts"
+      - "backend/src/domains/business/application/workforce/businessWorkforceResultParser.ts"
+      - "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts"
+      - "player-terminal/src/api/errors.js"
+      - "player-terminal/src/api/response-normalizer.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "player-terminal/tests/browser/player-terminal-skeletons.spec.mjs"
       - "scripts/business-phase4c-*.mjs"
       - "scripts/business-workforce-payroll-foundation-contract.mjs"
       - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
@@ -13,6 +21,13 @@ on:
     branches: [main]
     paths:
       - "backend/supabase/migrations/20260822140*.sql"
+      - "backend/src/domains/business/contracts/playerBusinessContracts.ts"
+      - "backend/src/domains/business/application/workforce/businessWorkforceResultParser.ts"
+      - "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts"
+      - "player-terminal/src/api/errors.js"
+      - "player-terminal/src/api/response-normalizer.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
       - "scripts/business-phase4c-*.mjs"
       - "scripts/business-workforce-payroll-foundation-contract.mjs"
       - ".github/workflows/business-workforce-production-payroll-v2.yml"
@@ -39,12 +54,13 @@ jobs:
           deno-version: v2.9.3
       - run: npm install --global npm@10.9.8
       - run: npm ci --ignore-scripts
-      - name: Verify production labor, payroll authority, and deterministic behavior
+      - name: Verify production labor, payroll authority, Player recovery, and deterministic behavior
         run: |
           node scripts/business-phase4c-production-labor-contract.mjs
           node scripts/business-phase4c-labor-reservation-simulation.mjs
           node scripts/business-phase4c-payroll-settlement-contract.mjs
           node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-phase4c-player-recovery-contract.mjs
           node scripts/business-workforce-payroll-foundation-contract.mjs
           node scripts/business-workforce-hiring-contract.mjs
           node scripts/business-banking-runtime-contract.mjs

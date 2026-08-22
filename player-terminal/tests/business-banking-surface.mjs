@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { resolveBusinessBankingBackendRequest } from "../src/api/business-banking-backend-routes.js";
 import { PLAYER_ENDPOINTS } from "../src/api/endpoints.js";
+import { playerSafeErrorMessage } from "../src/api/errors.js";
 import { WRITE_INVALIDATIONS } from "../src/api/resource-plan.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { renderBusinessPage } from "../src/pages/business-page.js";
@@ -11,6 +12,7 @@ const businessKey = `biz_${"a".repeat(32)}`;
 const productKey = `bpr_${"b".repeat(32)}`;
 const employeeKey = `emp_${"c".repeat(32)}`;
 const candidateKey = `wfc_${"f".repeat(32)}`;
+const payrollRunKey = `pay_${"9".repeat(32)}`;
 const loanOfferKey = `lop_${"d".repeat(32)}`;
 const loanKey = `lon_${"e".repeat(32)}`;
 const data = {
@@ -62,6 +64,41 @@ const data = {
       status: "Active",
     }],
     inventory: [{ itemKey: "machine-steel-billet", kind: "input", quantity: 10, unitCost: 2 }],
+    workforceUtilization: {
+      businessKey,
+      payrollPeriodKey: "payroll:1",
+      generatedAt: "2026-08-23T00:00:00.000Z",
+      payroll: {
+        payrollRunKey,
+        periodKey: "payroll:1",
+        status: "partially_paid",
+        employeeCount: 1,
+        wageDue: 25,
+        wagePaid: 15,
+        wageUnpaid: 10,
+        currencyCode: "LUM",
+        completedAt: "2026-08-23T00:00:00.000Z",
+      },
+      employees: [{
+        employeeKey,
+        roleKey: "production.specialist",
+        roleName: "Production Specialist",
+        status: "active",
+        workforceSource: "candidate_v2",
+        capacityMinutes: 480,
+        reservedMinutes: 0,
+        consumedMinutes: 120,
+        utilizedMinutes: 120,
+        availableMinutes: 360,
+        idleMinutes: 360,
+        utilizationBasisPoints: 2500,
+        latestPayrollStatus: "partially_paid",
+        wageDue: 25,
+        wagePaid: 15,
+        wageUnpaid: 10,
+        currencyCode: "LUM",
+      }],
+    },
   },
   businessWorkforce: {
     businessKey,
@@ -149,29 +186,30 @@ for (const endpoint of [
   assertAccessibleForm(markup, endpoint);
 }
 assert.match(markup, /data-endpoint="businessCandidateHire"/);
-assert.ok(
-  WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"),
-  "missing businessCandidateHire Business invalidation",
-);
+assert.ok(WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"), "missing businessCandidateHire Business invalidation");
+assert.match(markup, /data-business-workforce-utilization/);
+assert.match(markup, /payroll:1/);
+assert.match(markup, /25% utilization/);
+assert.match(markup, /360 minutes available/);
+assert.match(markup, new RegExp(`data-workforce-employee-id="${employeeKey}"`));
 assert.match(markup, new RegExp(`data-candidate-id="${candidateKey}"`));
-assert.match(
-  markup,
-  new RegExp(`name="candidateKey" type="hidden" value="${candidateKey}"`),
-);
-assert.match(
-  markup,
-  /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S]*?<button[^>]*type="submit"/u,
-);
+assert.match(markup, new RegExp(`name="candidateKey" type="hidden" value="${candidateKey}"`));
+assert.match(markup, /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S]*?<button[^>]*type="submit"/u);
 assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${businessKey}"`));
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
-assert.doesNotMatch(
-  markup,
-  /name="wagePerCycle"|name="productivityIndex"|name="roleName"/u,
-);
+assert.doesNotMatch(markup, /name="wagePerCycle"|name="productivityIndex"|name="roleName"|name="unitLaborCost"/u);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
 assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);
 assert.equal(PLAYER_ENDPOINTS.businessInputPurchase, undefined);
+assert.match(
+  playerSafeErrorMessage({ status: 409, code: "BUSINESS_LABOR_CAPACITY_UNAVAILABLE" }),
+  /labor minutes left in the current payroll period/u,
+);
+assert.match(
+  playerSafeErrorMessage({ status: 409, code: "BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE" }),
+  /Hire an eligible candidate/u,
+);
 
 const unconfigured = renderBusinessPage({
   session: { currencyCode: "LUM" },
@@ -179,7 +217,7 @@ const unconfigured = renderBusinessPage({
     ...data.business,
     configured: false,
     company: { ...data.business.company, id: "" },
-    products: [], employees: [], inventory: [],
+    products: [], employees: [], inventory: [], workforceUtilization: null,
   },
 });
 assert.match(unconfigured, /data-endpoint="businessCreate"/);
@@ -193,7 +231,7 @@ const assignedCountryCurrency = renderBusinessPage({
     ...data.business,
     configured: false,
     company: { ...data.business.company, id: "" },
-    products: [], employees: [], inventory: [],
+    products: [], employees: [], inventory: [], workforceUtilization: null,
   },
 });
 assert.match(assignedCountryCurrency, /STARTING CAPITAL \(YRC\)/);
@@ -244,14 +282,11 @@ const termination = resolveBusinessBankingBackendRequest({
     idempotencyKey: "business-terminate-0001",
   },
 });
-assert.equal(
-  termination.path,
-  `/players/me/business/employees/${employeeKey}/terminate`,
-);
+assert.equal(termination.path, `/players/me/business/employees/${employeeKey}/terminate`);
 assert.equal(termination.payload.businessKey, businessKey);
 assert.equal(termination.payload.reason, "Role no longer required");
 
-console.log("Player Business, checking/savings Banking, and Loans surface contract passed.");
+console.log("Player Business workforce utilization, checking/savings Banking, and Loans surface contract passed.");
 
 function assertAccessibleForm(source, endpoint) {
   const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>([\\s\\S]*?)<\\/form>`, "u"));

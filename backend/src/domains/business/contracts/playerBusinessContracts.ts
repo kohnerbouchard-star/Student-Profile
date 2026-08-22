@@ -4,20 +4,9 @@ export type PlayerBusinessRoute =
     readonly resource?: "overview" | "stockroom" | "recipes" | "workforceCandidates";
   }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
-  | {
-    readonly kind: "businessCreate";
-    readonly operation: "formationPropose";
-  }
-  | {
-    readonly kind: "businessCreate";
-    readonly operation: "formationRespond";
-    readonly formationKey: string;
-  }
-  | {
-    readonly kind: "businessCreate";
-    readonly operation: "formationActivate";
-    readonly formationKey: string;
-  }
+  | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
+  | { readonly kind: "businessCreate"; readonly operation: "formationRespond"; readonly formationKey: string }
+  | { readonly kind: "businessCreate"; readonly operation: "formationActivate"; readonly formationKey: string }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
   | { readonly kind: "businessCandidateHire"; readonly candidateKey: string }
@@ -70,8 +59,7 @@ export const BUSINESS_STOCKROOM_LOCATION_KEYS = [
   "in_transit",
 ] as const;
 
-export type BusinessStockroomLocationKey =
-  typeof BUSINESS_STOCKROOM_LOCATION_KEYS[number];
+export type BusinessStockroomLocationKey = typeof BUSINESS_STOCKROOM_LOCATION_KEYS[number];
 
 export interface BusinessStockroomLocationDto {
   readonly accountKey: string;
@@ -189,6 +177,46 @@ export interface BusinessWorkforceSnapshotDto {
   readonly candidates: readonly BusinessWorkforceCandidateDto[];
 }
 
+export interface BusinessWorkforcePayrollDto {
+  readonly payrollRunKey: string | null;
+  readonly periodKey: string | null;
+  readonly status: string;
+  readonly employeeCount: number;
+  readonly wageDue: number;
+  readonly wagePaid: number;
+  readonly wageUnpaid: number;
+  readonly currencyCode: string;
+  readonly completedAt: string | null;
+}
+
+export interface BusinessWorkforceUtilizationEmployeeDto {
+  readonly employeeKey: string;
+  readonly roleKey: string;
+  readonly roleName: string;
+  readonly status: string;
+  readonly workforceSource: string;
+  readonly capacityMinutes: number;
+  readonly reservedMinutes: number;
+  readonly consumedMinutes: number;
+  readonly utilizedMinutes: number;
+  readonly availableMinutes: number;
+  readonly idleMinutes: number;
+  readonly utilizationBasisPoints: number;
+  readonly latestPayrollStatus: string;
+  readonly wageDue: number;
+  readonly wagePaid: number;
+  readonly wageUnpaid: number;
+  readonly currencyCode: string;
+}
+
+export interface BusinessWorkforceUtilizationDto {
+  readonly businessKey: string;
+  readonly payrollPeriodKey: string;
+  readonly generatedAt: string;
+  readonly payroll: BusinessWorkforcePayrollDto;
+  readonly employees: readonly BusinessWorkforceUtilizationEmployeeDto[];
+}
+
 export interface BusinessCandidateHireReceiptDto {
   readonly businessKey: string;
   readonly employeeKey: string;
@@ -233,6 +261,7 @@ export interface BusinessSnapshotDto {
     readonly quantity: number;
     readonly unitCost: number;
   }[];
+  readonly workforceUtilization: BusinessWorkforceUtilizationDto | null;
   readonly compliance?: readonly {
     readonly requirement: string;
     readonly status: string;
@@ -242,27 +271,11 @@ export interface BusinessSnapshotDto {
 }
 
 export interface PlayerBusinessRepository {
-  readEconomicContext?(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<PlayerEconomicContext>;
-  assertBusinessCreationAllowed?(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-    readonly idempotencyKey: string;
-  }): Promise<void>;
-  readBusiness(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<BusinessSnapshotDto>;
-  readWorkforceCandidates?(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<BusinessWorkforceSnapshotDto>;
-  execute(
-    command: string,
-    args: Readonly<Record<string, unknown>>,
-  ): Promise<Record<string, unknown>>;
+  readEconomicContext?(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<PlayerEconomicContext>;
+  assertBusinessCreationAllowed?(input: { readonly gameSessionId: string; readonly playerId: string; readonly idempotencyKey: string }): Promise<void>;
+  readBusiness(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<BusinessSnapshotDto>;
+  readWorkforceCandidates?(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<BusinessWorkforceSnapshotDto>;
+  execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
 }
 
 export class PlayerBusinessError extends Error {
@@ -292,8 +305,6 @@ const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessStatus",
 ]);
 
-export function isPlayerBusinessRoute(
-  route: { readonly kind: string },
-): route is PlayerBusinessRoute {
+export function isPlayerBusinessRoute(route: { readonly kind: string }): route is PlayerBusinessRoute {
   return BUSINESS_ROUTE_KINDS.has(route.kind as PlayerBusinessRoute["kind"]);
 }

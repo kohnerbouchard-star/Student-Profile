@@ -6,7 +6,10 @@ import {
   type PlayerBusinessRepository,
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessContracts.ts";
-import { parseBusinessWorkforceSnapshot } from "../application/workforce/businessWorkforceResultParser.ts";
+import {
+  parseBusinessWorkforceSnapshot,
+  parseBusinessWorkforceUtilization,
+} from "../application/workforce/businessWorkforceResultParser.ts";
 
 type Row = Record<string, unknown>;
 
@@ -92,7 +95,7 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
     if (!business) return emptyBusiness();
 
     const businessId = text(business.id);
-    const [products, employees, inventory, runs, balanceRows] = await Promise.all([
+    const [products, employees, inventory, runs, balanceRows, utilization] = await Promise.all([
       rows(this.client.from("business_products").select("*")
         .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
         .order("created_at", { ascending: true })),
@@ -107,6 +110,10 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
         .order("created_at", { ascending: false }).limit(100)),
       rows(this.client.from("account_balances").select("*")
         .eq("game_session_id", input.gameSessionId).eq("player_id", input.playerId)),
+      rpcMaybeRow(this.client, "read_owned_business_workforce_utilization_v2", {
+        p_game_session_id: input.gameSessionId,
+        p_player_id: input.playerId,
+      }),
     ]);
 
     const businessAccount = `business:${text(business.public_key).toLowerCase()}`;
@@ -183,6 +190,9 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
         quantity: number(row.quantity),
         unitCost: number(row.unit_cost),
       })),
+      workforceUtilization: utilization
+        ? parseBusinessWorkforceUtilization(utilization)
+        : null,
     };
   }
 
@@ -243,7 +253,8 @@ async function rpcMaybeRow(
 }
 
 function mapDatabaseError(message: string): PlayerBusinessError {
-  const code = message.trim().split(/\s+/u)[0] || "BUSINESS_FAILED";
+  const token = message.trim().split(/\s+/u)[0] || "BUSINESS_FAILED";
+  const code = token.split(":", 1)[0] || "BUSINESS_FAILED";
   const mappings: Record<string, [number, string, boolean?]> = {
     PLAYER_SCOPE_REQUIRED: [401, "Player session scope is required."],
     PLAYER_NOT_FOUND: [404, "Player was not found in this game."],
@@ -254,6 +265,12 @@ function mapDatabaseError(message: string): PlayerBusinessError {
     CAPACITY_EXCEEDED: [409, "The production run exceeds available capacity."],
     PRODUCTION_UNAFFORDABLE: [409, "Business funds are insufficient for this production run."],
     INSUFFICIENT_INPUT_INVENTORY: [409, "Business input inventory is insufficient."],
+    BUSINESS_PRODUCTION_RECIPE_AMBIGUOUS: [409, "This product matches more than one canonical Business recipe."],
+    BUSINESS_LABOR_REQUIREMENT_INVALID: [409, "The recipe labor requirement is not currently valid."],
+    BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE: [409, "The Business does not have enough active workers in a required production role."],
+    BUSINESS_LABOR_SKILL_UNAVAILABLE: [409, "The active workforce does not meet this recipe's skill requirement."],
+    BUSINESS_LABOR_CAPACITY_UNAVAILABLE: [409, "The required workers do not have enough labor minutes available in the current payroll period."],
+    BUSINESS_LABOR_RESERVATION_CONSUMPTION_CONFLICT: [409, "Production labor changed during settlement. Refresh before retrying.", true],
     WAGE_UNAFFORDABLE: [409, "The business cannot afford the proposed wage."],
     STALE_PRODUCT_VERSION: [409, "Product pricing changed. Reload before retrying."],
     CLOSED_BUSINESS_IMMUTABLE: [409, "A closed business cannot be reopened through this action."],
@@ -327,7 +344,7 @@ function emptyBusiness(): BusinessSnapshotDto {
       employees: 0, output: 0, backlog: 0, capacityUse: 0, maxRun: 0,
       capacityNote: "No production capacity is configured.",
     },
-    products: [], suppliers: [], employees: [], inventory: [],
+    products: [], suppliers: [], employees: [], inventory: [], workforceUtilization: null,
   };
 }
 

@@ -44,13 +44,12 @@ function createBusinessPanel(code) {
 }
 
 function productCreationForm(business) {
-  return `<details class="player-terminal-disclosure"><summary><span>${icon("factory")}</span><div><strong>Create a product</strong><small>Configure price, cost, capacity, demand, and quality</small></div>${icon("chevronRight")}</summary><form data-player-form="business-product-create" data-endpoint="businessProductCreate">
+  return `<details class="player-terminal-disclosure"><summary><span>${icon("factory")}</span><div><strong>Create a product</strong><small>Configure the product shell; workforce cost is server-owned</small></div>${icon("chevronRight")}</summary><form data-player-form="business-product-create" data-endpoint="businessProductCreate">
     ${hiddenBusinessKey(business)}
     <label>PRODUCT NAME<input name="name" maxlength="120" required /></label>
     <label>CATEGORY<input name="category" maxlength="80" value="general" required /></label>
     <label>UNIT PRICE<input name="unitPrice" type="number" min="0.01" max="1000000" step="0.01" required /></label>
     <label>INPUT COST<input name="unitInputCost" type="number" min="0" max="1000000" step="0.01" value="0" required /></label>
-    <label>LABOR COST<input name="unitLaborCost" type="number" min="0" max="1000000" step="0.01" value="0" required /></label>
     <label>CAPACITY UNITS<input name="capacityUnits" type="number" min="1" max="100000" step="1" value="100" required /></label>
     <label>BASE DEMAND<input name="baseDemandUnits" type="number" min="0" max="100000" step="1" value="20" required /></label>
     <label>QUALITY SCORE<input name="qualityScore" type="number" min="0" max="100" step="1" value="50" required /></label>
@@ -65,7 +64,7 @@ function employeeRows(business, code) {
   }
   return activeEmployees.map((employee) => `<article class="player-terminal-business-product">
     <span class="player-terminal-product-icon">${icon("users")}</span>
-    <div><small>${escapeHtml(employee.contractType)}</small><strong>${escapeHtml(employee.role)}</strong><p>${escapeHtml(formatCurrency(employee.wage, code))} per cycle · ${escapeHtml(employee.productivity)}× productivity</p></div>
+    <div><small>${escapeHtml(employee.contractType)}</small><strong>${escapeHtml(employee.role)}</strong><p>${escapeHtml(formatCurrency(employee.wage, code))} per payroll period</p></div>
     <form data-player-form="business-terminate" data-endpoint="businessTerminate" data-employee-id="${escapeHtml(employee.id)}">
       ${hiddenBusinessKey(business)}
       <input name="employeeKey" type="hidden" value="${escapeHtml(employee.id)}" />
@@ -73,6 +72,31 @@ function employeeRows(business, code) {
       <button class="player-terminal-compact-button" type="submit">Terminate</button>
     </form>
   </article>`).join("");
+}
+
+function workforceUtilizationPanel(business, fallbackCurrency) {
+  const utilization = business.workforceUtilization;
+  const employees = Array.isArray(utilization?.employees) ? utilization.employees : [];
+  const payroll = utilization?.payroll;
+  if (!utilization?.businessKey || !utilization?.payrollPeriodKey || !payroll) {
+    return renderEmptyState({
+      title: "Workforce utilization unavailable",
+      detail: "Production still uses server-authoritative labor checks even when this readout is unavailable.",
+      iconName: "users"
+    });
+  }
+  const currency = payroll.currencyCode || fallbackCurrency;
+  return `<div data-business-workforce-utilization>
+    <div class="player-terminal-business-metrics">
+      ${renderMetric({ label: "Payroll period", value: utilization.payrollPeriodKey, meta: String(payroll.status || "not_settled").replace(/[_-]+/g, " "), tone: "cyan", iconName: "users" })}
+      ${renderMetric({ label: "Wages due", value: formatCurrency(payroll.wageDue || 0, currency), meta: `${formatCurrency(payroll.wagePaid || 0, currency)} paid`, tone: "amber", iconName: "wallet" })}
+      ${renderMetric({ label: "Unpaid wages", value: formatCurrency(payroll.wageUnpaid || 0, currency), meta: `${formatNumber(payroll.employeeCount || 0)} workers`, tone: payroll.wageUnpaid > 0 ? "red" : "green", iconName: "warning" })}
+    </div>
+    <div>${employees.length ? employees.map((employee) => `<article class="player-terminal-business-product" data-workforce-employee-id="${escapeHtml(employee.employeeKey)}">
+      <span class="player-terminal-product-icon">${icon("users")}</span>
+      <div><small>${escapeHtml(employee.roleKey)} · ${escapeHtml(employee.latestPayrollStatus)}</small><strong>${escapeHtml(employee.roleName || "Workforce")}</strong><p>${escapeHtml(formatNumber(employee.utilizedMinutes))} / ${escapeHtml(formatNumber(employee.capacityMinutes))} minutes used · ${escapeHtml(formatPercent((employee.utilizationBasisPoints || 0) / 100, 0))} utilization · ${escapeHtml(formatNumber(employee.availableMinutes))} minutes available</p><p>${escapeHtml(formatCurrency(employee.wagePaid || 0, employee.currencyCode || currency))} paid · ${escapeHtml(formatCurrency(employee.wageUnpaid || 0, employee.currencyCode || currency))} unpaid</p></div>
+    </article>`).join("") : renderEmptyState({ title: "No active workers", detail: "Hire a server-listed candidate before running recipes that require workforce labor.", iconName: "users" })}</div>
+  </div>`;
 }
 
 function statusForm(business) {
@@ -116,18 +140,19 @@ export function renderBusinessPage(data) {
           <div><dt>PRODUCTION</dt><dd>${escapeHtml(formatNumber(business.operations.output))} units</dd></div>
           <div><dt>BACKLOG</dt><dd>${escapeHtml(formatNumber(business.operations.backlog))} units</dd></div>
         </dl>
-        <div class="player-terminal-capacity-block"><div><small>CAPACITY UTILIZATION</small><strong>${escapeHtml(business.operations.capacityUse)}%</strong></div><div class="player-terminal-progress-track is-${capacityTone}"><i style="width:${Math.min(100,business.operations.capacityUse)}%"></i></div><p>${escapeHtml(business.operations.capacityNote)}</p></div>
+        <div class="player-terminal-capacity-block"><div><small>LEGACY UNIT CAPACITY</small><strong>${escapeHtml(business.operations.capacityUse)}%</strong></div><div class="player-terminal-progress-track is-${capacityTone}"><i style="width:${Math.min(100,business.operations.capacityUse)}%"></i></div><p>${escapeHtml(business.operations.capacityNote)}</p></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-business-actions">
         <header class="player-terminal-panel-header"><div><span>OPERATIONS</span><strong>Run the company</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
-        <details class="player-terminal-disclosure" open><summary><span>${icon("factory")}</span><div><strong>Start a production run</strong><small>Choose a product, run size, and priority</small></div>${icon("chevronRight")}</summary><form data-player-form="business-production" data-endpoint="businessProduction">
+        <details class="player-terminal-disclosure" open><summary><span>${icon("factory")}</span><div><strong>Start a production run</strong><small>Recipe labor minutes are enforced server-side for the current payroll period</small></div>${icon("chevronRight")}</summary><form data-player-form="business-production" data-endpoint="businessProduction">
           ${hiddenBusinessKey(business)}
           <label>PRODUCT<select name="productId" required ${business.products.length ? "" : "disabled"}>${business.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)}</option>`).join("") || `<option value="">No products configured</option>`}</select></label>
           <label>RUN SIZE<input name="quantity" type="number" min="1" max="${escapeHtml(business.operations.maxRun)}" value="10" required /></label>
           <label>PRIORITY<select name="priority"><option value="standard">Standard</option><option value="expedite">Expedite</option></select></label>
           <button class="player-terminal-primary-button" type="submit" ${business.products.length && business.operations.maxRun > 0 ? "" : "disabled"}>${icon("factory")} Start production</button>
         </form></details>
+        <details class="player-terminal-disclosure" open><summary><span>${icon("users")}</span><div><strong>Workforce utilization & payroll</strong><small>Finite labor minutes and recurring wage settlement</small></div>${icon("chevronRight")}</summary>${workforceUtilizationPanel(business, code)}</details>
         <details class="player-terminal-disclosure"><summary><span>${icon("users")}</span><div><strong>Workforce candidates</strong><small>Select from server-priced, role-grouped candidates</small></div>${icon("chevronRight")}</summary><div class="player-terminal-workforce-market">${renderBusinessWorkforceMarket(data.businessWorkforce, business, code)}</div></details>
         ${productCreationForm(business)}
         ${statusForm(business)}
@@ -139,7 +164,7 @@ export function renderBusinessPage(data) {
       </section>
 
       <section class="player-terminal-panel player-terminal-business-products">
-        <header class="player-terminal-panel-header"><div><span>EMPLOYMENT</span><strong>${escapeHtml((business.employees || []).filter((employee) => String(employee.status).toLowerCase() === "active").length)} active employees</strong></div><small>Wages settle through the business ledger</small></header>
+        <header class="player-terminal-panel-header"><div><span>EMPLOYMENT</span><strong>${escapeHtml((business.employees || []).filter((employee) => String(employee.status).toLowerCase() === "active").length)} active employees</strong></div><small>Wages settle through recurring Business payroll</small></header>
         <div>${employeeRows(business, code)}</div>
       </section>
 
