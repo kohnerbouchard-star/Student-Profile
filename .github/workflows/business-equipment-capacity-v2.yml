@@ -40,6 +40,8 @@ jobs:
         run: |
           node scripts/business-phase5-equipment-foundation-contract.mjs
           node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
           node scripts/business-phase4c-production-labor-contract.mjs
           node scripts/business-phase4c-labor-reservation-simulation.mjs
           node scripts/business-phase4c-payroll-settlement-contract.mjs
