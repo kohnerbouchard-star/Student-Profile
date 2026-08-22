@@ -53,13 +53,15 @@ function endpointKey(route: PlayerBusinessRoute):
   | "businessFormationPropose"
   | "businessFormationRespond"
   | "businessFormationActivate"
+  | "businessWorkforce"
+  | "businessCandidateHire"
+  | "businessRetiredHire"
   | "storeQuote"
   | "storePurchase"
   | "businessProductCreate"
   | "businessInputPurchase"
   | "businessProduction"
   | "businessPrice"
-  | "businessHire"
   | "businessTerminate"
   | "businessStatus" {
   if (route.kind === "businessRead") return "business";
@@ -78,11 +80,13 @@ function endpointKey(route: PlayerBusinessRoute):
   if (route.kind === "businessStoreQuote") return "storeQuote";
   if (route.kind === "businessStorePurchase") return "storePurchase";
   return ({
+    businessWorkforce: "businessWorkforce",
+    businessCandidateHire: "businessCandidateHire",
     businessProductCreate: "businessProductCreate",
     businessInputPurchase: "businessInputPurchase",
     businessProduction: "businessProduction",
     businessPrice: "businessPrice",
-    businessHire: "businessHire",
+    businessHire: "businessRetiredHire",
     businessTerminate: "businessTerminate",
     businessStatus: "businessStatus",
   } as const)[route.kind];
