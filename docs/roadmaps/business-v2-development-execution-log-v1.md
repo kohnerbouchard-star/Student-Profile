@@ -723,3 +723,98 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 4C — production-labor integration and deterministic payroll settlement is OPEN.** Build it on a stacked branch from this certified Phase 4B lineage. Do not widen the tranche into equipment, timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment. Do not declare Phase 4C complete until implementation, exact source, required gates, and a durable execution-log entry all exist.
+
+---
+
+## 2026-08-23 — Phase 4C COMPLETE and Phase 4 COMPLETE: production labor and deterministic payroll
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `857ab6ec77bf02ad619092632e2def80f12d4329`.
+- Feature branch: `feat/business-workforce-production-labor-v2`.
+- Stacked draft PR: #659, based on certified Phase 4B branch `feat/business-workforce-hiring-v2`.
+- PR #659 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged.
+- No staging or production migration, deployment, secret change, or live database mutation was performed.
+- The documentation commits that record this certification are later than the tested implementation source and must not replace `857ab6ec77bf02ad619092632e2def80f12d4329` as certification evidence.
+
+### What is now authoritative
+
+- Production resolves one exact Business-owned canonical recipe and its active role, headcount, minimum-skill, fixed-minute, and per-unit labor requirements server-side.
+- The current payroll period is derived from authoritative game/cycle state.
+- Eligible employees are selected and locked in deterministic order from the same game, Business, active employment, role, and skill scope.
+- Finite employee minutes are reserved against one payroll period and one production run, preventing concurrent double booking.
+- Matching production retries replay the original run without new labor reservations, material movement, or output settlement; conflicting idempotency reuse fails closed.
+- Successful instant compatibility production consumes its reservations exactly once. Explicit recovery can release or consume unresolved reservations without duplicating capacity.
+- Production no longer performs an immediate synthetic wage cash debit. Labor allocation remains recorded as managerial production cost basis from authoritative wage and capacity terms.
+- Recurring payroll creates one deterministic run and one entry per eligible employee even when production utilization is zero.
+- Business Checking payroll settlement supports completed, partially paid, and unpaid outcomes rather than rolling back an underfunded cycle.
+- Partial-payment recovery settles only remaining unpaid wages exactly once.
+- Player-linked employees are credited through canonical Player Checking ledger authority; system candidates retain payroll evidence without invented Player accounts.
+- The Player Business read model exposes public Business, employee, role, payroll-run and period keys; capacity, reserved, consumed, available and idle minutes; utilization basis points; and wage due, paid and unpaid without internal UUIDs.
+- The Player Business UI renders workforce utilization and payroll state and maps stable labor/payroll errors to bounded player-safe messages.
+
+### Focused contracts and simulations
+
+- `business-phase4c-production-labor-contract.mjs` verifies canonical recipe/labor scope, finite capacity, no synthetic wage debit, cost-basis allocation, idempotency, recovery and browser-safe publication.
+- `business-phase4c-labor-reservation-simulation.mjs` verifies double-book prevention, replay, conflict and capacity behavior.
+- `business-phase4c-payroll-settlement-contract.mjs` verifies deterministic payroll authority, canonical ledger settlement and partial/unpaid states.
+- `business-phase4c-payroll-simulation.mjs` verifies payroll clock, zero-production payroll, partial funding, replay and recovery.
+- `business-phase4c-player-recovery-contract.mjs` verifies Player utilization publication, stable recovery errors and bounded browser contracts.
+
+### Exact-head verification on `857ab6ec77bf02ad619092632e2def80f12d4329`
+
+- **Business Workforce Production Payroll V2 — PASS** (`32601382383`).
+- **Business Workforce Payroll V2 — PASS** (`32601382371`).
+- **Business Workforce Hiring V2 — PASS** (`32601382382`).
+- **Database Replay from zero twice and rebuilt-database lint — PASS** (`32601382380`).
+- **Backend Typecheck and backend smoke — PASS** (`32601382359`).
+- **Repository Quality — PASS** (`32601382340`).
+- **Player Terminal Verify, including Chromium browser verification — PASS** (`32601382375`).
+- **Business Banking Runtime — PASS** (`32601382366`).
+- **Business Economy V2 — PASS** (`32601382376`).
+- **Progression Runtime — PASS** (`32601382338`).
+- **Environment Neutral Browser — PASS** (`32601382374`).
+- **Supply Chain Security — PASS** (`32601382337`).
+- **Runtime Interaction Wiring — PASS** (`32601382351`).
+- **Admin API Check — PASS** (`32601382356`).
+- **World Runtime — PASS** (`32601382370`).
+- **Staging Readiness Preflight — PASS** (`32601382342`).
+- **Required Game Market Timezone — PASS** (`32601382363`).
+- **Exchange Calendar Runtime — PASS** (`32601382357`).
+
+### Phase 4C exit result
+
+- Canonical production-labor authority: **met**.
+- Finite employee-minute reservation and double-book prevention: **met**.
+- Exact-once reservation consumption/recovery: **met**.
+- No second wage cash debit from production: **met**.
+- Labor cost-basis allocation without duplicate money movement: **met**.
+- Deterministic recurring payroll independent of utilization: **met**.
+- Completed, partially paid and unpaid payroll settlement: **met**.
+- Exact-once unpaid-wage recovery: **met**.
+- Player-linked and system-candidate payroll evidence: **met**.
+- Public-key-only utilization and idle-capacity read model: **met**.
+- Database, backend, Edge, repository, security, Player and Chromium gates: **met**.
+- Exact implementation source and durable plan/log evidence: **met**.
+- No production deployment: **met**.
+
+### Architecture and gameplay decisions
+
+- Existing instant production remains a bounded compatibility lifecycle until Phase 6 replaces it with authoritative timed manufacturing; Phase 4C does not claim a job queue or browser-declared completion authority.
+- Labor capacity is authoritative even if an older noncanonical product remains in compatibility mode. Compatibility production makes no false canonical workforce claim.
+- Recurring payroll is owed because the employee is employed, not because production used the employee.
+- Labor allocation may enter inventory/production managerial cost basis but is never a second payroll ledger debit.
+- Equipment authority was deliberately not introduced early.
+- No architecture-ratchet ceiling was raised to certify Phase 4C.
+
+### Blockers and unresolved risks
+
+- No Phase 4 workforce/payroll blocker remains.
+- Equipment requirements, installation, finite equipment-time reservations, condition/maintenance and double-booking prevention remain absent and are required before timed manufacturing.
+- Physical production is still instant compatibility behavior; Phase 6 must replace it only after Phase 5 equipment authority is certified.
+- The stacked PR chain remains draft and unmerged; release, staging deployment, production deployment and live migration remain unauthorized.
+
+### Next authorized step
+
+**Phase 5 — equipment capacity is OPEN.** Begin with a bounded canonical-equipment authority audit and scope lock: identify canonical equipment items/capabilities, define Business ownership and installation semantics, attach equipment capability/time requirements to canonical recipes without creating another item catalog, model finite equipment-time reservations, prevent concurrent double booking, and keep condition/maintenance behavior server-owned. Do not widen this tranche into timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment.
