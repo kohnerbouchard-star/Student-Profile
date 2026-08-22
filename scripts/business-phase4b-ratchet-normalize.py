@@ -29,6 +29,11 @@ for path, old, new in [
     ),
     (
         "backend/src/domains/business/api/playerBusinessWorkforceHiring.test.ts",
+        "(await response.json()).code",
+        "(await response.json()).error.code",
+    ),
+    (
+        "backend/src/domains/business/api/playerBusinessWorkforceHiring.test.ts",
         "business_legacy_hiring_retired",
         "business_free_text_hiring_retired",
     ),
