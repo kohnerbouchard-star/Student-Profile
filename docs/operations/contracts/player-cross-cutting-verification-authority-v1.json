@@ -90,6 +90,7 @@
     "scripts/business-stockroom-authority-contract.mjs",
     "scripts/business-store-procurement-authority-contract.mjs",
     "scripts/business-workforce-hiring-contract.mjs",
+    "scripts/business-workforce-payroll-foundation-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
