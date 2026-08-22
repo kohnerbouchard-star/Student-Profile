@@ -335,7 +335,7 @@ Deno.serve(async (request: Request) => {
       request,
       "logout",
       () => handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -373,7 +373,7 @@ Deno.serve(async (request: Request) => {
       request,
       endpointKey,
       () => handlePlayerStorePublicRequest(request, playerStoreRoute, {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -427,8 +427,8 @@ Deno.serve(async (request: Request) => {
       request,
       "contracts",
       () => handlePlayerContractPublicListRequest(request, {
-        createServiceClient,
-      }),
+        createServiceClient },
+      ),
       { createServiceClient },
     );
   }
@@ -445,7 +445,7 @@ Deno.serve(async (request: Request) => {
       request,
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_portfolio", {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -456,7 +456,7 @@ Deno.serve(async (request: Request) => {
       request,
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_holdings", {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -468,7 +468,7 @@ Deno.serve(async (request: Request) => {
         request,
         "marketOrder",
         () => handlePlayerStockMarketTradingRequest(request, {
-          createServiceClient,
+          createServiceClient },
         }),
         { createServiceClient },
       );
@@ -477,8 +477,8 @@ Deno.serve(async (request: Request) => {
       request,
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_orders", {
-        createServiceClient,
-      }),
+        createServiceClient },
+      ),
       { createServiceClient },
     );
   }
@@ -488,8 +488,8 @@ Deno.serve(async (request: Request) => {
       request,
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_trades", {
-        createServiceClient,
-      }),
+        createServiceClient },
+      ),
       { createServiceClient },
     );
   }
@@ -511,9 +511,10 @@ Deno.serve(async (request: Request) => {
       businessInputPurchase: "businessInputPurchase",
       businessStoreQuote: "storeQuote",
       businessStorePurchase: "storePurchase",
+      businessCandidateHire: "businessCandidateHire",
       businessProduction: "businessProduction",
       businessPrice: "businessPrice",
-      businessHire: "businessHire",
+      businessHire: "businessRetiredHire",
       businessTerminate: "businessTerminate",
       businessStatus: "businessStatus",
       playerTransfer: "bankTransfer",
