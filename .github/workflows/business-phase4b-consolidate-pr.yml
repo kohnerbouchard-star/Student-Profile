@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/business-phase4b-consolidate-pr.yml"
+      - "scripts/business-phase4b-ratchet-normalize.py"
 
 permissions:
   contents: write
@@ -49,7 +50,10 @@ jobs:
         run: npm install --global npm@10.9.8
 
       - name: Materialize normalized Phase 4B source
-        run: python3 scripts/business-phase4b-consolidate.py
+        shell: bash
+        run: |
+          python3 scripts/business-phase4b-consolidate.py
+          python3 scripts/business-phase4b-ratchet-normalize.py
 
       - name: Remove one-use orchestration residue
         shell: bash
@@ -58,6 +62,7 @@ jobs:
           rm -f docs/roadmaps/business-phase4b-implementation-diagnostics.md
           rm -f scripts/business-phase4b-payload.py
           rm -f scripts/business-phase4b-consolidate.py
+          rm -f scripts/business-phase4b-ratchet-normalize.py
           rm -f .github/workflows/business-phase4b-source-bundle.yml
           rm -f .github/workflows/business-phase4b-implement.yml
           rm -f .github/workflows/business-phase4b-implement-v2.yml
