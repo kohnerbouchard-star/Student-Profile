@@ -1,0 +1,485 @@
+name: Business Phase 4B Consolidate V4
+
+on:
+  push:
+    branches:
+      - feat/business-workforce-hiring-v2
+    paths:
+      - ".github/workflows/business-phase4b-consolidate-v4.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase4b-consolidate-v4
+  cancel-in-progress: false
+
+jobs:
+  consolidate:
+    if: ${{ !contains(github.event.head_commit.message, 'Phase 4B consolidated source') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      FEATURE_BRANCH: feat/business-workforce-hiring-v2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/business-workforce-hiring-v2
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Materialize and normalize Phase 4B source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f backend/supabase/migrations/20260822120000_business_workforce_candidate_hiring_v2.sql ]]; then
+            test -f scripts/business-phase4b-payload.py
+            python3 scripts/business-phase4b-payload.py
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_all(path, old, new):
+              file = Path(path)
+              if not file.exists():
+                  return
+              text = file.read_text(encoding="utf-8")
+              if old in text:
+                  file.write_text(text.replace(old, new), encoding="utf-8")
+
+          contracts = Path("backend/src/domains/business/contracts/playerBusinessContracts.ts")
+          text = contracts.read_text(encoding="utf-8")
+          text = text.replace("  readWorkforceCandidates(input: {\n", "  readWorkforceCandidates?(input: {\n", 1)
+          contracts.write_text(text, encoding="utf-8")
+
+          workforce_api = Path("backend/src/domains/business/api/playerBusinessWorkforce.ts")
+          text = workforce_api.read_text(encoding="utf-8")
+          if "PlayerBusinessError," not in text:
+              text = text.replace(
+                  '  type PlayerBusinessRepository,\n} from "../contracts/playerBusinessContracts.ts";',
+                  '  PlayerBusinessError,\n  type PlayerBusinessRepository,\n} from "../contracts/playerBusinessContracts.ts";',
+                  1,
+              )
+          if "business_workforce_unavailable" not in text:
+              text = text.replace(
+                  "  return repository.readWorkforceCandidates(scope);",
+                  '''  if (!repository.readWorkforceCandidates) {
+    throw new PlayerBusinessError(
+      "business_workforce_unavailable",
+      "The Business workforce market is not available.",
+      503,
+      true,
+    );
+  }
+  return repository.readWorkforceCandidates(scope);''',
+                  1,
+              )
+          workforce_api.write_text(text, encoding="utf-8")
+
+          page = Path("player-terminal/src/pages/business-page.js")
+          page_text = page.read_text(encoding="utf-8")
+          module = Path("player-terminal/src/pages/business-workforce-market.js")
+          if "function workforceMarket(" in page_text:
+              match = re.search(
+                  r'function workforceMarket\(workforce, business, code\) \{.*?\n\}\n\nfunction statusForm',
+                  page_text,
+                  flags=re.S,
+              )
+              if not match:
+                  raise SystemExit("Could not isolate workforce market renderer")
+              body = match.group(0).removesuffix("\n\nfunction statusForm")
+              body = body.replace("function workforceMarket", "export function renderBusinessWorkforceMarket", 1)
+              module.write_text(
+                  'import { escapeHtml, formatCurrency, formatNumber, formatPercent } from "../core/format.js";\n'
+                  'import { icon } from "../components/icons.js";\n'
+                  'import { renderEmptyState } from "../components/ui.js";\n\n'
+                  'function hiddenBusinessKey(business) {\n'
+                  '  return `<input name="businessKey" type="hidden" value="${escapeHtml(business.company.id)}" />`;\n'
+                  '}\n\n'
+                  + body + "\n",
+                  encoding="utf-8",
+              )
+              page_text = page_text[:match.start()] + "function statusForm" + page_text[match.end():]
+          if module.exists():
+              import_line = 'import { renderBusinessWorkforceMarket } from "./business-workforce-market.js";\n'
+              if import_line not in page_text:
+                  first_break = page_text.find("\n") + 1
+                  page_text = page_text[:first_break] + import_line + page_text[first_break:]
+              page_text = page_text.replace(
+                  "${workforceMarket(data.businessWorkforce, business, code)}",
+                  "${renderBusinessWorkforceMarket(data.businessWorkforce, business, code)}",
+              )
+          page.write_text(page_text, encoding="utf-8")
+
+          contract = Path("scripts/business-workforce-hiring-contract.mjs")
+          contract_text = contract.read_text(encoding="utf-8")
+          contract_text = contract_text.replace(
+              'const businessPage = fs.readFileSync(\n  "player-terminal/src/pages/business-page.js",\n  "utf8",\n);',
+              '''const businessPage = [
+  fs.readFileSync("player-terminal/src/pages/business-page.js", "utf8"),
+  fs.readFileSync("player-terminal/src/pages/business-workforce-market.js", "utf8"),
+].join("\\n");''',
+          )
+          contract.write_text(contract_text, encoding="utf-8")
+
+          for path in [
+              "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+              "player-terminal/src/api/capabilities.js",
+              "player-terminal/src/api/endpoints.js",
+              "player-terminal/src/api/backend-routes-core.js",
+              "player-terminal/src/api/business-banking-backend-routes.js",
+              "player-terminal/src/integrations/student-profile-capability-manifest.js",
+              "player-terminal/tests/current-capability-manifest.mjs",
+              "player-terminal/tests/student-profile-adapter.mjs",
+              "player-terminal/tests/business-banking-surface.mjs",
+              "docs/operations/contracts/button-action-coverage-v1.json",
+          ]:
+              replace_all(path, "businessHire", "businessCandidateHire")
+              replace_all(path, "/players/me/business/employees/hire", "/players/me/business/workforce/candidates/:candidateKey/hire")
+              replace_all(path, "2026-08-21.2", "2026-08-22.1")
+
+          runtime = Path("scripts/business-banking-runtime-contract.mjs")
+          runtime_text = runtime.read_text(encoding="utf-8")
+          runtime_text = runtime_text.replace("businessHire", "businessCandidateHire")
+          runtime_text = re.sub(
+              r'assert\.(?:match|ok|equal|deepEqual)\([^;]*hire_business_employee_v1[^;]*;\s*',
+              "",
+              runtime_text,
+              flags=re.S,
+          )
+          if "phase4bWorkforceHiringSource" not in runtime_text:
+              runtime_text = runtime_text.rstrip() + '''
+
+const phase4bWorkforceHiringSource = readFileSync(
+  "backend/src/domains/business/api/playerBusinessWorkforce.ts",
+  "utf8",
+);
+assert.match(
+  phase4bWorkforceHiringSource,
+  /hire_business_workforce_candidate_v2/u,
+  "Candidate-only workforce hiring must remain wired to the Phase 4B RPC.",
+);
+'''
+          runtime.write_text(runtime_text, encoding="utf-8")
+
+          surface = Path("player-terminal/tests/business-banking-surface.mjs")
+          surface_text = surface.read_text(encoding="utf-8")
+          surface_text = re.sub(
+              r'candidateKey:\s*["\'][^"\']*["\']',
+              'candidateKey: "wfc_' + ('d' * 32) + '"',
+              surface_text,
+          )
+          surface.write_text(surface_text, encoding="utf-8")
+
+          page_text = page.read_text(encoding="utf-8")
+          for prohibited in [
+              'name="employeePlayerIdentifier"',
+              'name="role"',
+              'name="wagePerCycle"',
+              'name="productivityIndex"',
+          ]:
+              if prohibited in page_text:
+                  raise SystemExit(f"Legacy hiring control remains: {prohibited}")
+          PY
+
+      - name: Remove all one-use orchestration residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f docs/roadmaps/business-phase4b-implementation-diagnostics.md
+          rm -f scripts/business-phase4b-payload.py
+          rm -f .github/workflows/business-phase4b-source-bundle.yml
+          rm -f .github/workflows/business-phase4b-implement.yml
+          rm -f .github/workflows/business-phase4b-implement-v2.yml
+          rm -f .github/workflows/business-phase4b-controller.yml
+          rm -f .github/workflows/business-phase4b-remediate.yml
+          rm -f .github/workflows/business-phase4b-converge.yml
+          rm -f .github/workflows/business-phase4b-finalize.yml
+          rm -f .github/workflows/business-phase4b-finalize-v2.yml
+          rm -f .github/workflows/business-phase4b-finalize-v3.yml
+          rm -f .github/workflows/business-phase4c-bootstrap.yml
+          rm -f .github/workflows/business-phase4c-bootstrap-v2.yml
+          test -f .github/workflows/business-workforce-hiring-v2.yml
+
+      - name: Regenerate architecture inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+          npm --prefix player-terminal ci --no-audit --no-fund
+
+      - name: Verify consolidated implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-workforce-hiring-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          npm test
+          npm --prefix backend run typecheck
+          cd backend
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessWorkforceHiring.test.ts \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts
+          cd ../player-terminal
+          npm run verify
+          cd ..
+          git diff --check
+
+      - name: Commit immutable Phase 4B source
+        id: source_commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/business-phase4b-consolidate-v4.yml
+          git diff --check
+          git config user.name econovaria-phase4b-consolidator
+          git config user.email actions@users.noreply.github.com
+          git add -A
+          git commit -m "feat(business): Phase 4B consolidated source"
+          git push origin HEAD:"$FEATURE_BRANCH"
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Add exact-head trigger commit
+        id: trigger_commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          paths = [
+              ".github/workflows/business-banking-runtime.yml",
+              ".github/workflows/runtime-interaction-wiring.yml",
+              ".github/workflows/staging-readiness-preflight.yml",
+              ".github/workflows/admin-api-check.yml",
+              ".github/workflows/required-game-market-timezone.yml",
+              ".github/workflows/exchange-calendar-runtime.yml",
+          ]
+          for raw in paths:
+              path = Path(raw)
+              if not path.exists():
+                  raise SystemExit(f"Required workflow missing: {raw}")
+              text = path.read_text(encoding="utf-8")
+              marker = "# Phase 4B exact-head trigger; restored by certifier.\n"
+              if not text.startswith(marker):
+                  path.write_text(marker + text, encoding="utf-8")
+          PY
+          git add .github/workflows/business-banking-runtime.yml \
+            .github/workflows/runtime-interaction-wiring.yml \
+            .github/workflows/staging-readiness-preflight.yml \
+            .github/workflows/admin-api-check.yml \
+            .github/workflows/required-game-market-timezone.yml \
+            .github/workflows/exchange-calendar-runtime.yml
+          git commit -m "ci(business): trigger Phase 4B exact-head gates"
+          git push origin HEAD:"$FEATURE_BRANCH"
+          echo "trigger_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Add clean finalizer
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.source_commit.outputs.source_sha }}
+          TRIGGER_SHA: ${{ steps.trigger_commit.outputs.trigger_sha }}
+        run: |
+          set -euo pipefail
+          cat > .github/workflows/business-phase4b-finalize-v4.yml <<EOF
+          name: Business Phase 4B Finalize V4
+
+          on:
+            pull_request:
+              paths:
+                - ".github/workflows/business-phase4b-finalize-v4.yml"
+
+          permissions:
+            actions: read
+            contents: write
+            pull-requests: write
+
+          concurrency:
+            group: business-phase4b-finalize-\\${{ github.event.pull_request.number }}
+            cancel-in-progress: true
+
+          jobs:
+            certify:
+              if: github.event.pull_request.number == 658
+              runs-on: ubuntu-latest
+              timeout-minutes: 70
+              env:
+                GH_TOKEN: \\${{ github.token }}
+                REPOSITORY: \\${{ github.repository }}
+                FEATURE_BRANCH: feat/business-workforce-hiring-v2
+                SOURCE_SHA: $SOURCE_SHA
+                TRIGGER_SHA: $TRIGGER_SHA
+              steps:
+                - uses: actions/checkout@v7
+                  with:
+                    ref: feat/business-workforce-hiring-v2
+                    fetch-depth: 0
+                - name: Verify branch lineage
+                  id: heads
+                  run: |
+                    set -euo pipefail
+                    current_sha=\$(git rev-parse HEAD)
+                    test "\$(git rev-parse HEAD^)" = "\$TRIGGER_SHA"
+                    test "\$(git rev-parse \$TRIGGER_SHA^)" = "\$SOURCE_SHA"
+                    test "\$(git diff --name-only \$TRIGGER_SHA \$current_sha)" = ".github/workflows/business-phase4b-finalize-v4.yml"
+                    echo "current_sha=\$current_sha" >> "\$GITHUB_OUTPUT"
+                - uses: actions/setup-node@v7
+                  with:
+                    node-version: 22.23.1
+                    cache: npm
+                    cache-dependency-path: |
+                      package-lock.json
+                      backend/package-lock.json
+                      player-terminal/package-lock.json
+                - uses: denoland/setup-deno@v2
+                  with:
+                    deno-version: v2.9.3
+                - run: npm install --global npm@10.9.8
+                - name: Install dependencies
+                  run: |
+                    npm ci --ignore-scripts
+                    npm --prefix backend ci --ignore-scripts
+                    npm --prefix player-terminal ci --no-audit --no-fund
+                - name: Verify exact implementation
+                  run: |
+                    set -euo pipefail
+                    node scripts/business-workforce-hiring-contract.mjs
+                    node scripts/business-banking-runtime-contract.mjs
+                    node scripts/validate-supabase-migrations.mjs
+                    node scripts/architecture/build-architecture-inventory.mjs
+                    git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+                    npm test
+                    npm --prefix backend run typecheck
+                    cd backend
+                    deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/business/api/playerBusinessWorkforceHiring.test.ts src/domains/business/api/playerBusinessRoutePaths.test.ts
+                    cd ../player-terminal
+                    npm run verify
+                - name: Install Chromium
+                  working-directory: player-terminal
+                  run: npx playwright install --with-deps chromium
+                - name: Materialize runtime fixture
+                  run: |
+                    mkdir -p player-terminal/frontend/src/core
+                    cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+                    cat > player-terminal/runtime-config.env.js <<'FIXTURE'
+                    window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+                      environment: "development",
+                      projectRef: "runtimefixture123456",
+                      supabaseUrl: "https://runtimefixture123456.supabase.co",
+                      supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+                    });
+                    FIXTURE
+                - name: Run Chromium
+                  working-directory: player-terminal
+                  run: npm run browser
+                - name: Wait for required exact-head workflows
+                  run: |
+                    python3 - <<'PY'
+                    import json, os, time, urllib.request
+                    from pathlib import Path
+                    repo=os.environ['REPOSITORY']; token=os.environ['GH_TOKEN']
+                    heads=[os.environ['SOURCE_SHA'],os.environ['TRIGGER_SHA']]
+                    required=['Business Workforce Hiring V2','Business Workforce Payroll V2','Database Replay','Backend Typecheck','Business Banking Runtime','Repository Quality','Runtime Interaction Wiring','Supply Chain Security','Admin API Check','Staging Readiness Preflight','Required Game Market Timezone','Exchange Calendar Runtime']
+                    def load():
+                      runs=[]
+                      for head in heads:
+                        req=urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/runs?head_sha={head}&per_page=100',headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28'})
+                        with urllib.request.urlopen(req,timeout=30) as response: runs.extend(json.load(response).get('workflow_runs',[]))
+                      return runs
+                    deadline=time.time()+48*60; last=None
+                    while time.time()<deadline:
+                      runs=load(); evidence={}
+                      for name in required:
+                        candidates=[r for r in runs if r.get('name')==name]
+                        candidates.sort(key=lambda r:(r.get('created_at') or '',int(r.get('run_attempt') or 0)),reverse=True)
+                        success=next((r for r in candidates if r.get('status')=='completed' and r.get('conclusion')=='success'),None)
+                        active=next((r for r in candidates if r.get('status')!='completed'),None)
+                        latest=candidates[0] if candidates else None
+                        evidence[name]={'ok':success is not None,'active':active is not None,'runId':success.get('id') if success else None,'headSha':success.get('head_sha') if success else None,'latestStatus':latest.get('status') if latest else 'missing','latestConclusion':latest.get('conclusion') if latest else None}
+                      if evidence!=last: print(json.dumps(evidence,indent=2,sort_keys=True),flush=True); last=evidence
+                      if all(item['ok'] for item in evidence.values()):
+                        Path('/tmp/phase4b-gates.json').write_text(json.dumps(evidence,indent=2,sort_keys=True)+'\n'); break
+                      failed=[name for name,item in evidence.items() if not item['ok'] and not item['active'] and item['latestStatus']=='completed' and item['latestConclusion'] not in (None,'success','cancelled','action_required')]
+                      if failed: raise SystemExit('Required exact-head workflows failed: '+', '.join(failed))
+                      time.sleep(20)
+                    else: raise SystemExit('Timed out waiting for exact-head workflows: '+json.dumps(last,sort_keys=True))
+                    PY
+                - name: Record certification and bootstrap Phase 4C
+                  env:
+                    CURRENT_SHA: \\${{ steps.heads.outputs.current_sha }}
+                    RUN_ID: \\${{ github.run_id }}
+                  run: |
+                    set -euo pipefail
+                    python3 - <<'PY'
+                    import json,os,re
+                    from datetime import date
+                    from pathlib import Path
+                    source=os.environ['SOURCE_SHA']; current=os.environ['CURRENT_SHA']; run_id=os.environ['RUN_ID']
+                    evidence=json.loads(Path('/tmp/phase4b-gates.json').read_text())
+                    plan_path=Path('docs/roadmaps/business-v2-development-execution-plan-v1.md'); log_path=Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+                    plan=plan_path.read_text(); start=plan.index('## Phase 4 — Workforce capacity and payroll'); end=plan.index('\n## Phase 5 — Equipment capacity',start); phase=plan[start:end]
+                    phase,count=re.subn(r'\*\*Status:\*\*[^\n]*','**Status:** IN PROGRESS — checkpoints A and B complete; payroll settlement and production-labor integration remain open',phase,count=1)
+                    if count!=1: raise SystemExit('Phase 4 status missing')
+                    checkpoint=f'- **4B:** public candidate pools and atomic server-owned hiring, certified source `{source}`.'
+                    if checkpoint not in phase: phase=phase.replace('\nExit:',checkpoint+'\n\nExit:',1)
+                    plan_path.write_text((plan[:start]+phase+plan[end:]).rstrip()+'\n')
+                    log=log_path.read_text()
+                    if source not in log:
+                      gates='\n'.join(f"- **{name} — PASS** (`{item['runId']}`, head `{item['headSha']}`)." for name,item in evidence.items())
+                      entry=f'''\n\n---\n## {date.today().isoformat()} — Phase 4B COMPLETE: candidate pools and server-owned hiring\n\n### Certified state\n\n- **Exact implementation SHA:** `{source}`.\n- **Finalizer verification SHA:** `{current}`.\n- Feature branch: `feat/business-workforce-hiring-v2`; stacked draft PR #658.\n- PR #648 and all parent Business V2 PRs remained open, draft, and unmerged.\n- No staging or production deployment or live data mutation was performed.\n\n### Authority delivered\n\n- Public-key-only, role-grouped candidates are filtered by Business country and currency.\n- Atomic candidate hiring derives all labor economics and contract terms from trusted server rows.\n- Idempotency, candidate-reuse prevention, duplicate active employment prevention, ownership, availability, game isolation, and immutable audit evidence are enforced.\n- The legacy free-text hiring URL returns authenticated `410 Gone` and is absent from current browser controls and capabilities.\n- Payroll settlement and production-labor integration remain closed.\n\n### Verification\n\n{gates}\n- **Source contracts, migration validation, repository suite, backend typecheck, focused Deno tests, complete Player Terminal Verify, and Chromium — PASS** in finalizer run `{run_id}`.\n\n### Next authorized step\n\n**Phase 4C — bounded recurring payroll settlement is OPEN.** Create exactly one payroll run per Business and period, derive obligations from active candidate-backed employees, settle through first-class Business cash and canonical ledger authority, preserve explicit unpaid/partial outcomes, and never charge production for payroll a second time. Production-labor integration remains closed.\n'''
+                      log_path.write_text(log.rstrip()+entry.rstrip()+'\n')
+                    PY
+                    git checkout "\$SOURCE_SHA" -- .github/workflows/business-banking-runtime.yml .github/workflows/runtime-interaction-wiring.yml .github/workflows/staging-readiness-preflight.yml .github/workflows/admin-api-check.yml .github/workflows/required-game-market-timezone.yml .github/workflows/exchange-calendar-runtime.yml
+                    rm .github/workflows/business-phase4b-finalize-v4.yml
+                    git diff --check
+                    git fetch origin "\$FEATURE_BRANCH"
+                    test "\$(git rev-parse origin/\$FEATURE_BRANCH)" = "\$CURRENT_SHA"
+                    git config user.name econovaria-phase4b-certifier
+                    git config user.email actions@users.noreply.github.com
+                    git add -A
+                    git commit -m "docs(business): certify Phase 4B workforce hiring"
+                    git push origin HEAD:"\$FEATURE_BRANCH"
+                    certification_sha=\$(git rev-parse HEAD)
+                    git branch -f feat/business-payroll-settlement-v2 "\$certification_sha"
+                    git push origin feat/business-payroll-settlement-v2 --force-with-lease || git push origin feat/business-payroll-settlement-v2
+                    python3 - <<'PY'
+                    import json,os,urllib.error,urllib.request
+                    repo=os.environ['REPOSITORY']; token=os.environ['GH_TOKEN']; owner=repo.split('/')[0]
+                    headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'}
+                    def request(url,method='GET',payload=None):
+                      req=urllib.request.Request(url,data=json.dumps(payload).encode() if payload is not None else None,method=method,headers=headers)
+                      try:
+                        with urllib.request.urlopen(req,timeout=30) as response: return response.status,json.load(response) if response.status!=204 else None
+                      except urllib.error.HTTPError as error: return error.code,error.read().decode('utf-8','replace')
+                    status,pulls=request(f'https://api.github.com/repos/{repo}/pulls?state=open&head={owner}:feat/business-payroll-settlement-v2&base=feat/business-workforce-hiring-v2')
+                    if status!=200: raise SystemExit(f'PR lookup failed: {status}')
+                    if not pulls:
+                      body='''## Scope\n\nPhase 4C implements bounded recurring payroll settlement, stacked on durably certified Phase 4B.\n\nThis PR remains **draft, open, unmerged, and undeployed**. No staging or production deployment or live data mutation is authorized.\n\n## Required authority boundary\n\n- exactly one payroll run per Business and period;\n- obligations derived only from active candidate-backed employees;\n- first-class Business cash settlement through canonical ledger authority;\n- explicit paid, partially paid, and unpaid outcomes;\n- idempotency, concurrency safety, currency/game/Business scope, and immutable evidence;\n- employees paid every cycle regardless of production utilization;\n- no second payroll debit during production;\n- production-labor integration remains closed.\n\n## Merge and release boundary\n\nPR #648 and all stacked Business V2 PRs remain draft and unmerged. No deployment or live mutation is authorized.'''
+                      status,result=request(f'https://api.github.com/repos/{repo}/pulls','POST',{'title':'Draft: Business V2 Phase 4C recurring payroll settlement','head':'feat/business-payroll-settlement-v2','base':'feat/business-workforce-hiring-v2','body':body,'draft':True})
+                      if status!=201: raise SystemExit(f'PR create failed: {status} {result}')
+                    PY
+          EOF
+          sed -i 's/^          //' .github/workflows/business-phase4b-finalize-v4.yml
+          git add .github/workflows/business-phase4b-finalize-v4.yml
+          git commit -m "ci(business): add Phase 4B finalizer v4"
+          git push origin HEAD:"$FEATURE_BRANCH"
