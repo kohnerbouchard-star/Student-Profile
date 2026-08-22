@@ -1,6 +1,11 @@
 name: Business Workforce Hiring V2 Certification
 
 on:
+  push:
+    branches:
+      - feat/business-workforce-hiring-v2
+    paths:
+      - ".github/workflows/business-workforce-hiring-v2.yml"
   pull_request:
     paths:
       - ".github/workflows/business-workforce-hiring-v2.yml"
@@ -10,12 +15,12 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: business-phase4b-certification-${{ github.event.pull_request.number }}
+  group: business-phase4b-certification
   cancel-in-progress: false
 
 jobs:
   certify:
-    if: github.event.pull_request.number == 658
+    if: github.event_name == 'push' || github.event.pull_request.number == 658
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -34,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          test "$(git rev-parse HEAD^)" = "$SOURCE_SHA"
+          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
           unexpected="$(git diff --name-only "$SOURCE_SHA" HEAD | grep -v '^.github/workflows/business-workforce-hiring-v2.yml$' || true)"
           test -z "$unexpected"
 
