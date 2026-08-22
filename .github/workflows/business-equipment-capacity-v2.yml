@@ -83,90 +83,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      - name: Append durable Phase 5 certification once
+      - name: Append durable Phase 5 certification
         shell: bash
         run: |
-          if grep -q "Phase 5 COMPLETE: canonical equipment capacity" docs/roadmaps/business-v2-development-execution-log-v1.md; then
-            echo "Phase 5 certification already exists."
-          else
-            cat >> docs/roadmaps/business-v2-development-execution-log-v1.md <<'EOF'
-
----
-
-## 2026-08-23 — Phase 5 COMPLETE: canonical equipment capacity
-
-### Certified source and repository state
-
-- **Exact certified implementation and verification source:** `6f936abd61c6cd903f6e839790ceab24ed570748`.
-- Feature branch: `feat/business-equipment-capacity-v2`.
-- Stacked draft PR: #660, based on the Phase 4 certification branch `feat/business-workforce-production-labor-v2`.
-- PR #660 remained open, draft, mergeable, unmerged, and undeployed at certification.
-- Integration PR #648 remained open, draft, and unmerged.
-- No staging or production migration, deployment, secret change, or live database mutation was performed.
-- Documentation commits after the tested source record certification only and must not replace `6f936abd61c6cd903f6e839790ceab24ed570748` as implementation evidence.
-
-### What is now authoritative
-
-- Canonical `physical_economy_item_definitions`, `game_items`, `equipment_instances`, economic parties, inventory accounts, and inventory holdings remain the sole equipment/item/ownership authorities.
-- `equipment_instances.player_id` is nullable compatibility provenance: Player equipment remains bound to the Player personal account, while Business equipment is bound to the same-game Business warehouse account and has no Player loadout slot.
-- Business equipment materialization is idempotent and cannot create more serialized instances than canonical warehouse ownership supports.
-- One Business installation row owns operational state for one Business-owned equipment instance. Duplicate, cross-game, cross-Business, and Player-owned installation attempts fail closed.
-- Server-derived capacity profiles use canonical equipment definitions and normalized capability/tool tags; Players cannot author capacity, condition, capability, or maintenance outcomes.
-- Canonical recipe `required_tools` synchronizes into bounded Business equipment-time requirements without creating another recipe or tool catalog.
-- Finite equipment minutes are reserved in deterministic installation order against one authoritative operating period and production intent.
-- Reserved, active, and consumed minutes count against capacity; released minutes do not. Matching retries replay, conflicting idempotency reuse fails, and terminal transitions cannot be repeated into another outcome.
-- Existing physical production reserves every required installed-equipment capability before material/labor settlement and consumes the exact reservations only after successful settlement. A failed transaction rolls the equipment reservations back atomically.
-- The public Business equipment read exposes only public keys, canonical item identity, capability tags, installation state, capacity, reserved/consumed/available/idle minutes, utilization basis points, and explicit unsupported durability/repair flags.
-
-### Exact-head verification on `6f936abd61c6cd903f6e839790ceab24ed570748`
-
-- **Business Equipment Capacity V2 — PASS** (`32605009671`).
-- **Database Replay from zero twice and rebuilt-database lint — PASS** (`32605009709`).
-- **Backend Typecheck and backend smoke — PASS** (`32605009722`).
-- **Player Terminal Verify, including Chromium browser verification — PASS** (`32605009756`).
-- **Business Banking Runtime — PASS** (`32605009647`).
-- **Business Economy V2 — PASS** (`32605009635`).
-- **Business Workforce Production Payroll V2 — PASS** (`32605009705`).
-- **Repository Quality — PASS** (`32605009728`).
-- **Supply Chain Security — PASS** (`32605009711`).
-- **Admin API Check — PASS** (`32605009682`).
-- **Staging Readiness Preflight — PASS** (`32605009637`).
-- **Required Game Market Timezone — PASS** (`32605009732`).
-- **Exchange Calendar Runtime — PASS** (`32605009702`).
-
-### Phase 5 exit result
-
-- Canonical equipment ownership and serialized instance authority: **met**.
-- Business installation authority and Player-loadout separation: **met**.
-- Canonical recipe equipment requirement synchronization: **met**.
-- Finite equipment-time reservation and double-book prevention: **met**.
-- Production-side equipment enforcement and exact-once settlement: **met**.
-- Server-owned operational state with durability/repair disabled: **met**.
-- Public-key-only equipment utilization read: **met**.
-- Database, backend, Edge, repository, security, Player, and Chromium gates: **met**.
-- Exact implementation source and durable scope/plan/log evidence: **met**.
-- No production deployment: **met**.
-
-### Architecture and gameplay decisions
-
-- Equipment definitions and unique instances remain canonical physical-economy/economic-asset authority; Business adds only ownership-compatible installation and finite utilization state.
-- Equipment capacity is a server-derived operating constraint, not a Player-authored stat.
-- Current instant production is only a compatibility bridge proving material, labor, and equipment prerequisites can settle atomically. It is not the target manufacturing lifecycle.
-- Durability decay, random failure, repair pricing, and maintenance settlement remain disabled until separately scoped and reviewed.
-- No architecture-ratchet ceiling was raised to certify Phase 5.
-
-### Blockers and unresolved risks
-
-- No Phase 5 equipment-capacity blocker remains.
-- Physical production still completes in one request. It does not yet retain material, labor, and equipment reservations across server time.
-- A bounded shared worker, due-job claiming, completion/failure/cancellation transitions, WIP settlement, and exact-once capacity release remain required in Phase 6.
-- Store seller offers, Store-listing inventory, withdrawal safety, automatic sales convergence, equity/IPO, merge, staging, and production deployment remain unauthorized.
-
-### Next authorized step
-
-**Phase 6 — timed manufacturing is OPEN.** Start with a bounded lifecycle foundation on a stacked branch from the certified Phase 5 lineage: create server-owned production jobs, validate one exact Business-owned canonical recipe and output, reserve canonical BOM materials into WIP, reserve labor and installed equipment across the job lifetime, derive completion time server-side, and define exact-once due-job completion/cancellation/failure recovery. Do not widen the first checkpoint into Store seller offers, Store-listing stock, sales convergence, IPO, merge, staging, or production deployment.
-EOF
+          if ! grep -q "Phase 5 COMPLETE: canonical equipment capacity" docs/roadmaps/business-v2-development-execution-log-v1.md; then
+            cat docs/roadmaps/.business-phase5-certification-fragment.md >> docs/roadmaps/business-v2-development-execution-log-v1.md
           fi
+          rm -f docs/roadmaps/.business-phase5-certification-fragment.md
           rm -f .github/workflows/business-phase5-certification-writer.yml
       - name: Commit durable certification
         shell: bash
@@ -177,6 +100,6 @@ EOF
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/roadmaps/business-v2-development-execution-log-v1.md .github/workflows/business-phase5-certification-writer.yml
+          git add docs/roadmaps/business-v2-development-execution-log-v1.md docs/roadmaps/.business-phase5-certification-fragment.md .github/workflows/business-phase5-certification-writer.yml
           git commit -m "docs(business): certify Phase 5 equipment capacity"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
