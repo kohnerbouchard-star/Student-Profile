@@ -139,7 +139,6 @@ import {
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
-
 interface EdgeHealthBody {
   readonly ok: true;
   readonly service: "player-api";
@@ -211,7 +210,7 @@ Deno.serve(async (request: Request) => {
       request,
       playerWorldRoute.kind,
       () => handlePlayerWorldReadRequest(request, playerWorldRoute, {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -266,7 +265,7 @@ Deno.serve(async (request: Request) => {
       request,
       endpointKey,
       () => handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -289,7 +288,7 @@ Deno.serve(async (request: Request) => {
       request,
       endpointKey,
       () => handlePlayerProgressionRequest(request, playerProgressionRoute, {
-        createServiceClient,
+        createServiceClient },
       }),
       { createServiceClient },
     );
@@ -374,7 +373,7 @@ Deno.serve(async (request: Request) => {
       endpointKey,
       () => handlePlayerStorePublicRequest(request, playerStoreRoute, {
         createServiceClient },
-      }),
+      ),
       { createServiceClient },
     );
   }
@@ -478,7 +477,7 @@ Deno.serve(async (request: Request) => {
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_orders", {
         createServiceClient },
-      ),
+      }),
       { createServiceClient },
     );
   }
@@ -489,7 +488,7 @@ Deno.serve(async (request: Request) => {
       "portfolio",
       () => handlePlayerStockMarketReadRequest(request, "read_trades", {
         createServiceClient },
-      ),
+      }),
       { createServiceClient },
     );
   }
