@@ -75,7 +75,10 @@ jobs:
           test -f .github/workflows/business-workforce-hiring-v2.yml
 
       - name: Regenerate deterministic architecture inventory
-        run: node scripts/architecture/build-architecture-inventory.mjs
+        shell: bash
+        run: |
+          node scripts/architecture/build-architecture-inventory.mjs
+          git add docs/architecture/inventories/econovaria-architecture-inventory-v2.json
 
       - name: Install dependencies
         shell: bash
