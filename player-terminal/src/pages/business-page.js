@@ -74,7 +74,7 @@ function employeeRows(business, code) {
   </article>`).join("");
 }
 
-function workforceUtilizationPanel(business, fallbackCurrency) {
+function workforceUtilizationPanel(business, displayCurrency) {
   const utilization = business.workforceUtilization;
   const employees = Array.isArray(utilization?.employees) ? utilization.employees : [];
   const payroll = utilization?.payroll;
@@ -85,7 +85,7 @@ function workforceUtilizationPanel(business, fallbackCurrency) {
       iconName: "users"
     });
   }
-  const currency = payroll.currencyCode || fallbackCurrency;
+  const currency = payroll.currencyCode || displayCurrency;
   return `<div data-business-workforce-utilization>
     <div class="player-terminal-business-metrics">
       ${renderMetric({ label: "Payroll period", value: utilization.payrollPeriodKey, meta: String(payroll.status || "not_settled").replace(/[_-]+/g, " "), tone: "cyan", iconName: "users" })}
