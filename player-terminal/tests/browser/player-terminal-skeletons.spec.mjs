@@ -46,6 +46,45 @@ async function openTerminal(page, route) {
   await expect(page.locator(".player-terminal-route-skeleton")).toHaveCount(0);
 }
 
+async function captureLoadedGeometry(page, route, selector) {
+  return page.evaluate(async ({ currentRoute, selector }) => {
+    const deadline = performance.now() + 5000;
+    const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+    const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    while (performance.now() < deadline) {
+      const terminal = globalThis.Econovaria?.playerTerminal;
+      const state = terminal?.getState?.();
+      const target = document.querySelector(selector);
+      const ready = Boolean(
+        state?.status === "ready" &&
+        state?.route === currentRoute &&
+        target &&
+        target.getClientRects().length &&
+        !document.querySelector(".player-terminal-route-skeleton")
+      );
+      if (ready) {
+        await nextPaint();
+        const settledState = globalThis.Econovaria?.playerTerminal?.getState?.();
+        const settledTarget = document.querySelector(selector);
+        if (
+          settledState?.status === "ready" &&
+          settledState?.route === currentRoute &&
+          settledTarget &&
+          settledTarget.getClientRects().length &&
+          !document.querySelector(".player-terminal-route-skeleton")
+        ) {
+          const rect = settledTarget.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            return { width: rect.width, height: rect.height };
+          }
+        }
+      }
+      await sleep(50);
+    }
+    return null;
+  }, { currentRoute: route, selector });
+}
+
 async function inspectMountedSkeleton(page, route) {
   return page.evaluate(async (currentRoute) => {
     const { renderRouteSkeleton } = await import("/src/components/route-skeletons.js");
@@ -97,9 +136,7 @@ test("card-level skeletons preserve the principal container width", async ({ pag
   for (const route of ROUTES) {
     await openTerminal(page, route);
     const selector = GEOMETRY_TARGETS[route];
-    const loadedTarget = page.locator(selector).first();
-    await expect(loadedTarget).toBeVisible();
-    const loadedBox = await loadedTarget.boundingBox();
+    const loadedBox = await captureLoadedGeometry(page, route, selector);
 
     const measured = await page.evaluate(async ({ currentRoute, selector }) => {
       const { renderRouteSkeleton } = await import("/src/components/route-skeletons.js");
