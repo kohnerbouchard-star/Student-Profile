@@ -148,7 +148,7 @@ assert.match(source.playerScope, /invalid_player_session_scope/u);
 for (const routeKind of [
   "businessCreate", "businessProductCreate",
   "businessInputPurchase",
-  "businessProduction", "businessPrice", "businessHire", "businessTerminate",
+  "businessProduction", "businessPrice", "businessCandidateHire", "businessTerminate",
   "businessStatus", "playerTransfer", "savingsTransfer", "loansRead",
   "loanApply", "loanRepay",
 ]) assert.equal(
@@ -165,7 +165,7 @@ for (const routeCapability of ["business", "loans"]) {
 }
 for (const actionCapability of [
   "bankTransfer", "savingsTransfer", "businessCreate",
-  "businessEmployeeTerminate", "businessHire",
+  "businessEmployeeTerminate", "businessCandidateHire",
   "businessPrice", "businessProductCreate", "businessProduction",
   "businessStatus", "loanApply", "loanRepay",
 ]) {
@@ -174,7 +174,7 @@ for (const actionCapability of [
 }
 for (const endpoint of [
   "businessCreate", "businessProductCreate",
-  "businessProduction", "businessPrice", "businessHire", "businessTerminate",
+  "businessProduction", "businessPrice", "businessCandidateHire", "businessTerminate",
   "businessStatus", "bankTransfer", "savingsTransfer", "loanApply", "loanRepay",
 ]) {
   assert.match(source.playerEndpoints, new RegExp(`\\b${endpoint}:`, "u"));
@@ -256,3 +256,13 @@ function assertBefore(sourceText, first, second, message) {
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
+
+const phase4bWorkforceHiringSource = await readFile(
+  "backend/src/domains/business/api/playerBusinessWorkforce.ts",
+  "utf8",
+);
+assert.match(
+  phase4bWorkforceHiringSource,
+  /hire_business_workforce_candidate_v2/u,
+  "Candidate-only workforce hiring must remain wired to the Phase 4B RPC.",
+);

@@ -11,6 +11,7 @@ const READ_ENDPOINTS = new Set([
   "market",
   "portfolio",
   "business",
+  "businessWorkforce",
   "store",
   "marketplace",
   "contracts",
@@ -30,6 +31,7 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
   market: Object.freeze(["sectors", "assets"]),
   portfolio: Object.freeze(["history", "allocation", "countryExposure"]),
   business: Object.freeze(["products", "suppliers"]),
+  businessWorkforce: Object.freeze(["candidates"]),
   store: Object.freeze(["categories", "items"]),
   marketplace: Object.freeze(["categories", "listings", "myListings"]),
   contracts: Object.freeze(["tabs", "lifecycle", "items"]),
@@ -158,6 +160,10 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
   if (endpointKey === "worldRuntime") validateWorldRuntime(value, context);
+  if (
+    endpointKey === "businessWorkforce" &&
+    UUID.test(JSON.stringify(value))
+  ) throw invalidResponse(endpointKey, context.requestId, context.path);
   if (endpointKey === "progression") {
     if (
       !Number.isSafeInteger(value.level) || value.level < 1 || value.level > 20 ||

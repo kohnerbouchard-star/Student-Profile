@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-21.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-22.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -26,7 +26,7 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "bankTransfer",
   "businessCreate",
   "businessEmployeeTerminate", "businessFormationActivate", "businessFormationPropose", "businessFormationRespond",
-  "businessHire",
+  "businessCandidateHire",
   "businessPrice",
   "businessProductCreate",
   "businessProduction",
@@ -74,8 +74,9 @@ export type PlayerCapabilityEndpointKey =
   | "banking"
   | "bankTransfer"
   | "business"
+  | "businessWorkforce"
   | "businessCreate" | "businessFormationActivate" | "businessFormationPropose" | "businessFormationRespond"
-  | "businessHire"
+  | "businessCandidateHire"
   | "businessPrice"
   | "businessProductCreate"
   | "businessProduction"
@@ -239,6 +240,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
     routeCapabilities: ["business"],
   },
+  {
+    key: "businessWorkforce",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/business/workforce/candidates",
+    }],
+    routeCapabilities: ["business"],
+  },
   { key: "businessCreate", operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }], actionCapabilities: ["businessCreate"] },
   { key: "businessFormationPropose", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations" }], actionCapabilities: ["businessFormationPropose"] },
   { key: "businessFormationRespond", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations/:formationKey/respond" }], actionCapabilities: ["businessFormationRespond"] },
@@ -269,12 +278,13 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     actionCapabilities: ["businessPrice"],
   },
   {
-    key: "businessHire",
+    key: "businessCandidateHire",
     operations: [{
       method: "POST",
-      pathTemplate: "/players/me/business/employees/hire",
+      pathTemplate:
+        "/players/me/business/workforce/candidates/:candidateKey/hire",
     }],
-    actionCapabilities: ["businessHire"],
+    actionCapabilities: ["businessCandidateHire"],
   },
   {
     key: "businessTerminate",

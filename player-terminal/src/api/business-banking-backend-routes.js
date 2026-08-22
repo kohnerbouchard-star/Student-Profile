@@ -2,6 +2,10 @@ import { ApiRequestError } from "./errors.js";
 
 const ROUTES = Object.freeze({
   business: () => ({ method: "GET", path: "/players/me/business" }),
+  businessWorkforce: () => ({
+    method: "GET",
+    path: "/players/me/business/workforce/candidates",
+  }),
   businessCreate: ({ payload }) => ({
     method: "POST",
     path: "/players/me/businesses",
@@ -79,17 +83,12 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessPrice"),
     },
   }),
-  businessHire: ({ payload }) => ({
+  businessCandidateHire: ({ params, payload }) => ({
     method: "POST",
-    path: "/players/me/business/employees/hire",
+    path: `/players/me/business/workforce/candidates/${encodeURIComponent(required(params.candidateId || payload.candidateKey, "candidateKey", "businessCandidateHire"))}/hire`,
     payload: {
-      businessKey: required(payload.businessKey, "businessKey", "businessHire"),
-      employeePlayerIdentifier: optional(payload.employeePlayerIdentifier),
-      role: required(payload.role || payload.roleName, "role", "businessHire"),
-      contractType: payload.contractType || "cycle",
-      wagePerCycle: number(payload.wagePerCycle, "wagePerCycle", "businessHire"),
-      productivityIndex: number(payload.productivityIndex ?? 1, "productivityIndex", "businessHire"),
-      idempotencyKey: key(payload, "businessHire"),
+      businessKey: required(payload.businessKey, "businessKey", "businessCandidateHire"),
+      idempotencyKey: key(payload, "businessCandidateHire"),
     },
   }),
   businessTerminate: ({ params, payload }) => ({

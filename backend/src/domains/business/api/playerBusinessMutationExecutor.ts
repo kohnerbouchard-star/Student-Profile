@@ -12,10 +12,8 @@ import {
   readInteger,
   readKey,
   readMoney,
-  readNumber,
   readOptionalInteger,
   readOptionalKey,
-  readOptionalText,
   readText,
 } from "./playerBusinessRequestValidation.ts";
 
@@ -25,6 +23,8 @@ type BusinessMutationRoute = Exclude<
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
   | { readonly kind: "businessInputPurchase" }
+  | { readonly kind: "businessCandidateHire" }
+  | { readonly kind: "businessHire" }
 >;
 
 export async function executePlayerBusinessMutation(
@@ -171,34 +171,6 @@ export async function executePlayerBusinessMutation(
           "expectedVersion",
           1,
           2_147_483_647,
-        ),
-        p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
-      });
-    case "businessHire":
-      return repository.execute("hire_business_employee_v1", {
-        ...base,
-        p_business_key: readKey(body.businessKey, "businessKey", "biz"),
-        p_employee_player_identifier: readOptionalText(
-          body.employeePlayerIdentifier,
-          160,
-        ),
-        p_role_name: readText(body.role ?? body.roleName, "role", 2, 120),
-        p_contract_type: readEnum(
-          body.contractType ?? "cycle",
-          "contractType",
-          ["cycle", "permanent"],
-        ),
-        p_wage_per_cycle: readMoney(
-          body.wagePerCycle,
-          "wagePerCycle",
-          0.01,
-          1_000_000,
-        ),
-        p_productivity_index: readNumber(
-          body.productivityIndex ?? 1,
-          "productivityIndex",
-          0.25,
-          3,
         ),
         p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
       });

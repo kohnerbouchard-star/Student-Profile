@@ -14,6 +14,7 @@ export const DELEGATED_BUSINESS_ROUTE_CONTRACT = Object.freeze([
   { kind: "businessInputPurchase" },
   { kind: "businessStoreQuote" },
   { kind: "businessStorePurchase" },
+  { kind: "businessCandidateHire" },
   { kind: "businessProduction" },
   { kind: "businessPrice" },
   { kind: "businessHire" },

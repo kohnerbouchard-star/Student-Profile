@@ -120,7 +120,7 @@ for (const endpoint of [
   "businessProductCreate",
   "businessProduction",
   "businessPrice",
-  "businessHire",
+  "businessCandidateHire",
   "businessTerminate",
   "businessStatus",
 ]) {

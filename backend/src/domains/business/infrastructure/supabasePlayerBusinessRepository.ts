@@ -1,10 +1,12 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   type BusinessSnapshotDto,
+  type BusinessWorkforceSnapshotDto,
   PlayerBusinessError,
   type PlayerBusinessRepository,
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessContracts.ts";
+import { parseBusinessWorkforceSnapshot } from "../application/workforce/businessWorkforceResultParser.ts";
 
 type Row = Record<string, unknown>;
 
@@ -184,6 +186,21 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
     };
   }
 
+  async readWorkforceCandidates(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<BusinessWorkforceSnapshotDto> {
+    const response = await this.client.rpc<unknown>(
+      "read_owned_business_workforce_candidates_v2",
+      {
+        p_game_session_id: input.gameSessionId,
+        p_player_id: input.playerId,
+      },
+    );
+    if (response.error) throw mapDatabaseError(response.error.message);
+    return parseBusinessWorkforceSnapshot(response.data);
+  }
+
   async execute(
     command: string,
     args: Readonly<Record<string, unknown>>,
@@ -253,6 +270,18 @@ function mapDatabaseError(message: string): PlayerBusinessError {
     BUSINESS_FORMATION_UNANIMOUS_APPROVAL_REQUIRED: [409, "All proposed owners must approve before activation."],
     BUSINESS_FORMATION_INSUFFICIENT_OWNER_FUNDS: [409, "One or more owners do not have enough funds for the agreed contribution."],
     BUSINESS_OWNERSHIP_AMBIGUOUS: [409, "Multiple open Businesses are associated with this Player."],
+    BUSINESS_NOT_ACTIVE: [409, "The Business must be active before hiring."],
+    BUSINESS_WORKFORCE_CANDIDATE_KEY_INVALID: [400, "Workforce candidate key is invalid."],
+    BUSINESS_WORKFORCE_CANDIDATE_NOT_FOUND: [404, "Workforce candidate was not found."],
+    BUSINESS_WORKFORCE_CANDIDATE_NOT_AVAILABLE: [409, "Workforce candidate is no longer available."],
+    BUSINESS_WORKFORCE_CANDIDATE_EXPIRED: [409, "Workforce candidate availability has expired."],
+    BUSINESS_WORKFORCE_CANDIDATE_COUNTRY_MISMATCH: [409, "Workforce candidate is not available in the Business country."],
+    BUSINESS_WORKFORCE_CANDIDATE_CURRENCY_MISMATCH: [409, "Workforce candidate wage currency does not match the Business."],
+    BUSINESS_WORKFORCE_ROLE_NOT_ACTIVE: [409, "The workforce role is not active."],
+    BUSINESS_WORKFORCE_PLAYER_ALREADY_EMPLOYED: [409, "This candidate is already actively employed by the Business."],
+    BUSINESS_OWNER_CANNOT_HIRE_SELF: [409, "The Business owner cannot hire themselves through the candidate market."],
+    BUSINESS_WORKFORCE_HIRE_CONFLICT: [409, "The workforce candidate was hired by another request."],
+    BUSINESS_WORKFORCE_HIRE_REPLAY_MISSING: [500, "Workforce hire replay evidence is incomplete.", true],
     STORE_ITEM_KEY_INVALID: [400, "Store item key is invalid."],
     STORE_QUOTE_QUANTITY_INVALID: [400, "Store quote quantity is invalid."],
     IDEMPOTENCY_KEY_REQUIRED: [400, "A valid idempotency key is required."],

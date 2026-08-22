@@ -26,6 +26,11 @@ export function createEmptyReadModels() {
       allocation: [],
       countryExposure: []
     },
+    businessWorkforce: {
+      businessKey: "",
+      generatedAt: "",
+      candidates: []
+    },
     business: {
       company: {
         name: "Business not configured",

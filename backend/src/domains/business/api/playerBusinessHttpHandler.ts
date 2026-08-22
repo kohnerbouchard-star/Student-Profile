@@ -30,6 +30,10 @@ import {
   createBusinessStoreQuote,
   purchaseBusinessStoreQuote,
 } from "./playerBusinessStoreProcurement.ts";
+import {
+  hireBusinessWorkforceCandidate,
+  readBusinessWorkforceCandidates,
+} from "./playerBusinessWorkforce.ts";
 
 export interface PlayerBusinessRequestScope {
   readonly gameId: string;
@@ -93,6 +97,12 @@ export async function handlePlayerBusinessRequest(
           recipes: await readBusinessRecipes(client, publicScope),
         });
       }
+      if (route.resource === "workforceCandidates") {
+        return privateJson(
+          200,
+          await readBusinessWorkforceCandidates(repository, publicScope),
+        );
+      }
       return privateJson(200, await repository.readBusiness(publicScope));
     }
 
@@ -102,6 +112,28 @@ export async function handlePlayerBusinessRequest(
         message:
           "Legacy abstract Business input purchasing has been retired. Use Business Store procurement.",
         retryable: false,
+      });
+    }
+
+    if (route.kind === "businessHire") {
+      return jsonError(410, {
+        code: "business_free_text_hiring_retired",
+        message:
+          "Free-text Business hiring has been retired. Select an available workforce candidate.",
+        retryable: false,
+      });
+    }
+
+    if (route.kind === "businessCandidateHire") {
+      return privateJson(200, {
+        ok: true,
+        receipt: await hireBusinessWorkforceCandidate(
+          repository,
+          publicScope,
+          route.candidateKey,
+          body,
+        ),
+        refreshRequired: true,
       });
     }
 

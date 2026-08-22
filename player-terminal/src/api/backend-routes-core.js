@@ -225,11 +225,12 @@ const ROUTE_BUILDERS = Object.freeze({
 const CORE_PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(Object.keys(ROUTE_BUILDERS));
 const BUSINESS_BANKING_ROUTE_KEYS = Object.freeze([
   "business",
+  "businessWorkforce",
   "businessCreate",
   "businessProductCreate",
   "businessProduction",
   "businessPrice",
-  "businessHire",
+  "businessCandidateHire",
   "businessTerminate",
   "businessStatus",
   "bankTransfer",

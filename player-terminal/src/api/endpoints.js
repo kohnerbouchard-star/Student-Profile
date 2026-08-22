@@ -13,6 +13,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   residencyRequest: { method: "POST", path: "/residency" },
   portfolio: { method: "GET", path: "/portfolio" },
   business: { method: "GET", path: "/business" },
+  businessWorkforce: { method: "GET", path: "/business/workforce/candidates" },
   businessCreate: { method: "POST", path: "/businesses" },
   businessFormationPropose: { method: "POST", path: "/business/formations" },
   businessFormationRespond: {
@@ -29,7 +30,10 @@ export const PLAYER_ENDPOINTS = Object.freeze({
     method: "POST",
     path: "/business/products/:productId/pricing",
   },
-  businessHire: { method: "POST", path: "/business/employees/hire" },
+  businessCandidateHire: {
+    method: "POST",
+    path: "/business/workforce/candidates/:candidateId/hire",
+  },
   businessTerminate: { method: "POST", path: "/business/employees/terminate" },
   businessStatus: { method: "POST", path: "/business/status" },
   market: { method: "GET", path: "/market/assets" },
