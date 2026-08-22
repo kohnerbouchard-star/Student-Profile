@@ -15,7 +15,7 @@ on:
       - ".github/workflows/business-equipment-capacity-v2.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify-equipment:
@@ -71,35 +71,3 @@ jobs:
           npm run adapter
           npm run capability-manifest-current
           npm run runtime-integration
-
-  certify-phase5:
-    if: github.actor != 'github-actions[bot]'
-    needs: verify-equipment
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out exact Phase 5 head branch
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-      - name: Append durable Phase 5 certification
-        shell: bash
-        run: |
-          if ! grep -q "Phase 5 COMPLETE: canonical equipment capacity" docs/roadmaps/business-v2-development-execution-log-v1.md; then
-            cat docs/roadmaps/.business-phase5-certification-fragment.md >> docs/roadmaps/business-v2-development-execution-log-v1.md
-          fi
-          rm -f docs/roadmaps/.business-phase5-certification-fragment.md
-          rm -f .github/workflows/business-phase5-certification-writer.yml
-      - name: Commit durable certification
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No certification changes required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/roadmaps/business-v2-development-execution-log-v1.md docs/roadmaps/.business-phase5-certification-fragment.md .github/workflows/business-phase5-certification-writer.yml
-          git commit -m "docs(business): certify Phase 5 equipment capacity"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
