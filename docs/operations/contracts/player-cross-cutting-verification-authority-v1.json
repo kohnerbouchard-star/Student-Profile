@@ -12,6 +12,7 @@
     ".github/workflows/business-equipment-capacity-v2.yml",
     "backend/supabase/migrations/20260823100000_business_equipment_ownership_profiles_v2.sql",
     "backend/supabase/migrations/20260823100100_business_recipe_equipment_requirements_v2.sql",
+    "backend/supabase/migrations/20260823100110_business_recipe_equipment_requirement_sync_v2.sql",
     "backend/supabase/migrations/20260823100200_business_equipment_installation_schema_v2.sql",
     "backend/supabase/migrations/20260823100210_business_equipment_materialization_v2.sql",
     "backend/supabase/migrations/20260823100220_business_equipment_install_command_v2.sql",
@@ -25,6 +26,7 @@
     "scripts/business-phase5-equipment-foundation-contract.mjs",
     "scripts/business-phase5-equipment-production-contract.mjs",
     "scripts/business-phase5-equipment-production-simulation.mjs",
+    "scripts/business-phase5-equipment-recipe-sync-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
