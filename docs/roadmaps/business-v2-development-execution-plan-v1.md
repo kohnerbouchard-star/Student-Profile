@@ -308,24 +308,28 @@ Exit: labor constrains production and payroll is economically correct with zero-
 
 ## Phase 5 — Equipment capacity
 
-**Status:** OPEN — canonical-equipment authority audit authorized; implementation not started
+**Status:** COMPLETE — canonical equipment ownership, installation, finite capacity, production enforcement, and public read certified
 
-- [ ] Validate canonical equipment profiles/items.
-- [ ] Add recipe equipment capability/time requirements.
-- [ ] Add equipment-time reservations or equivalent concurrent-capacity authority.
-- [ ] Prevent equipment double-booking.
-- [ ] Keep equipment condition/maintenance behavior bounded and server-owned.
+- [x] Validate canonical equipment profiles/items.
+- [x] Add recipe equipment capability/time requirements.
+- [x] Add equipment-time reservations and deterministic concurrent-capacity authority.
+- [x] Prevent equipment double-booking.
+- [x] Keep equipment operational state bounded and server-owned while durability/repair remain disabled.
 
-Exit: concurrent jobs cannot exceed installed operational equipment capacity.
+Certified checkpoint:
+
+- **5:** canonical equipment-instance ownership through canonical Inventory/economic parties; trusted Business materialization and installation; server-derived capacity profiles and canonical recipe equipment requirements with future recipe synchronization; finite deterministic equipment reservations; exact-once consume/release transitions; production-side equipment capacity enforcement; and public-key-only equipment utilization read. **Certified implementation and exact-head verification source:** `6f936abd61c6cd903f6e839790ceab24ed570748`.
+
+Exit: concurrent production attempts cannot exceed installed operational equipment capacity. **MET.**
 
 ## Phase 6 — Timed manufacturing
 
-**Status:** NOT STARTED
+**Status:** OPEN — next authorized phase
 
 - [ ] Replace legacy instant physical production with V2 production jobs.
 - [ ] Validate exact recipe/material/labor/equipment prerequisites.
 - [ ] Atomically reserve/move BOM materials to WIP.
-- [ ] Reserve labor/equipment capacity.
+- [ ] Reserve labor/equipment capacity across the job lifecycle.
 - [ ] Calculate server completion time.
 - [ ] Complete through bounded shared worker, never client timer.
 - [ ] Consume WIP and post exact catalog output into Finished Goods.
@@ -485,7 +489,7 @@ Form Business
 - [ ] Cross-game isolation.
 - [ ] Materials cannot be double-spent.
 - [ ] Labor cannot be double-booked.
-- [ ] Equipment cannot be double-booked.
+- [x] Equipment cannot be double-booked.
 - [ ] Payroll executes with zero production.
 - [ ] Production never double-debits payroll.
 - [ ] Input cost derives from actual inventory basis.
@@ -594,3 +598,57 @@ All required workflows passed on the certified source, including Business Workfo
 ### Next authorized step
 
 **Phase 5 — equipment capacity is OPEN.** Begin with a bounded audit of canonical equipment items/capabilities, existing recipe/equipment metadata, ownership/installation semantics, finite equipment-time reservations, condition/maintenance boundaries, and double-booking prevention. Do not widen this tranche into timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment.
+
+---
+
+## 2026-08-23 — Phase 5 COMPLETE: canonical equipment capacity
+
+### Certified state
+
+- **Exact certified implementation and verification source:** `6f936abd61c6cd903f6e839790ceab24ed570748`.
+- Feature branch: `feat/business-equipment-capacity-v2`.
+- Stacked draft PR: #660, based on the Phase 4 certification head `213557d2028b7152562f7a23c167d9532d469203`.
+- PR #660 and integration PR #648 remain open, draft, unmerged, and undeployed.
+- Later certification commits are documentation/security-manifest only and must not replace `6f936abd61c6cd903f6e839790ceab24ed570748` as implementation evidence.
+
+### Completed authority
+
+- Canonical `equipment_instances`, `game_items`, equipment definitions, Inventory accounts and economic parties remain the equipment/ownership authority; no Business equipment catalog or shadow inventory was created.
+- Business-owned serialized equipment is represented by a canonical Business warehouse account with `player_id = null`, while Player-owned equipment retains personal-account and Player provenance behavior.
+- Server-owned capacity profiles derive capabilities and minutes from trusted equipment definitions.
+- Canonical recipe `required_tools` derive finite Business equipment requirements and remain synchronized after future recipe/tool/duration/status changes.
+- Trusted materialization creates at most one unique Business equipment instance per exact canonical warehouse unit and cannot fabricate instances beyond owned quantity.
+- Business installation state is explicit, same-game/same-Business, audited and separate from Player equipped slots.
+- Equipment reservations use a server-derived period, deterministic public-key ordering, exact minutes, idempotent replay/conflict checks and exact-once consume/release transitions.
+- Production now reserves required equipment before Phase 4 material/labor settlement, consumes equipment reservations only after committed success, and rolls reservations back automatically if settlement fails.
+- Matching production replay does not reserve or consume equipment twice.
+- Public Business equipment reads expose only public Business/installation/equipment/item keys and bounded utilization/capacity fields; internal UUIDs and inventory-account IDs remain private.
+- Durability/repair, random failure and maintenance settlement remain disabled; offline/retired equipment contributes zero capacity.
+
+### Exact-head verification
+
+- **Business Equipment Capacity V2 — PASS** (`32605009671`).
+- **Database Replay ×2 + rebuilt-database lint — PASS** (`32605009709`).
+- **Backend Typecheck — PASS** (`32605009722`).
+- **Business Banking Runtime — PASS** (`32605009647`).
+- **Business Economy V2 — PASS** (`32605009635`).
+- **Business Workforce Production Payroll V2 — PASS** (`32605009705`).
+- **Repository Quality — PASS** (`32605009728`).
+- **Supply Chain Security — PASS** (`32605009711`).
+- **Player Terminal Verify, including Chromium — PASS** (`32605009756`).
+- **Admin API Check — PASS** (`32605009682`).
+- **Staging Readiness Preflight — PASS** (`32605009637`).
+- **Required Game Market Timezone — PASS** (`32605009732`).
+- **Exchange Calendar Runtime — PASS** (`32605009702`).
+
+### Decisions and remaining risks
+
+- Phase 5 is complete. No equipment-capacity blocker remains before Phase 6.
+- The overlapping early 08:xx equipment draft migrations discovered during implementation were removed; PR #660 contains one canonical equipment authority only.
+- Equipment requirements and capacity remain server-owned; the Player cannot author equipment minutes, capabilities, condition or maintenance outcomes.
+- Existing production is still instant compatibility behavior. Phase 6 must convert physical production to a server-timed lifecycle while reusing the certified material, labor and equipment reservations.
+- No merge, staging deployment, production deployment, secret change, or live database mutation was authorized or performed.
+
+### Next authorized step
+
+**Phase 6 — timed manufacturing is OPEN.** Build a bounded production-job lifecycle that atomically reserves/moves BOM materials to WIP, retains certified labor/equipment capacity across server time, calculates completion server-side, completes through a bounded worker, posts exact catalog output to Finished Goods, and releases/consumes capacity exactly once. Do not widen into Store seller offers, IPO, merge, staging, or production deployment.
