@@ -10,7 +10,6 @@ on:
       - "scripts/runtime-interaction-wiring-audit.mjs"
       - "package.json"
       - ".github/workflows/runtime-interaction-wiring.yml"
-  workflow_dispatch:
   push:
     branches:
       - main
