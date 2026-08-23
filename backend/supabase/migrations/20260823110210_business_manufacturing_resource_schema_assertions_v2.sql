@@ -42,6 +42,23 @@ begin
   limit 0;
 
   perform
+    material.game_session_id,
+    material.job_id,
+    material.recipe_line_key,
+    material.game_item_id,
+    material.warehouse_account_id,
+    material.wip_account_id,
+    material.staged_quantity,
+    material.staged_unit_cost,
+    material.cost_currency_code,
+    material.inventory_transaction_id,
+    material.status,
+    material.consumed_at,
+    material.released_at
+  from public.business_manufacturing_job_materials as material
+  limit 0;
+
+  perform
     account.game_session_id,
     account.party_id,
     account.account_kind,
