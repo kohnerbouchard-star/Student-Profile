@@ -70,7 +70,7 @@ export async function restartLocalEdgeRuntime({
       }
     }));
 
-    if (lastStatuses.every((status) => status === 204)) {
+    if (lastStatuses.every((status) => status === 200 || status === 204)) {
       consecutiveReadyWaves += 1;
       if (consecutiveReadyWaves >= stableWaves) {
         if (settleMs > 0) await sleep(settleMs);

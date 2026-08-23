@@ -20,7 +20,7 @@ function executable(names = "supabase_edge_runtime_backend\n") {
   return { execFile, calls };
 }
 
-test("restarts the only local Edge runtime and requires stable Player readiness", async () => {
+test("restarts the only local Edge runtime and accepts gateway-normalized Player readiness", async () => {
   const { execFile, calls } = executable();
   const requests = [];
   const sleeps = [];
@@ -30,7 +30,7 @@ test("restarts the only local Edge runtime and requires stable Player readiness"
     readFileImpl: async () => CONFIG,
     fetchImpl: async (url, init) => {
       requests.push({ url, method: init.method, apikey: init.headers.apikey });
-      return new Response(null, { status: 204 });
+      return new Response(null, { status: 200 });
     },
     sleep: async (milliseconds) => sleeps.push(milliseconds),
     log: (value) => logs.push(value),
@@ -57,13 +57,13 @@ test("restarts the only local Edge runtime and requires stable Player readiness"
   assert.equal(logs.some((value) => value.includes("sb_publishable_")), false);
 });
 
-test("resets the readiness streak after an unhealthy wave", async () => {
+test("resets the readiness streak after an unhealthy wave while accepting direct and gateway preflights", async () => {
   const { execFile } = executable();
   const statuses = [
-    204, 204,
+    200, 204,
     503, 204,
-    204, 204,
-    204, 204,
+    204, 200,
+    200, 204,
   ];
   const sleeps = [];
   const result = await restartLocalEdgeRuntime({
