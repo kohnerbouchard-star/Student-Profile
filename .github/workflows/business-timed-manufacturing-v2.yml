@@ -113,10 +113,7 @@ jobs:
       - name: Align retained Phase 4-6 contracts
         run: |
           python3 .github/scripts/phase6_align_retained_contracts.py
-          git show e6c9ffe6701853e1c71173789f85dc269e9a3c4b:.github/workflows/business-timed-manufacturing-v2.yml > .github/workflows/business-timed-manufacturing-v2.yml
           rm -f .github/scripts/phase6_align_retained_contracts.py
-          rm -f .github/workflows/business-phase6-contract-alignment.yml
-          rm -f .github/workflows/business-phase6-contract-alignment-pr.yml
       - name: Install dependencies
         run: |
           npm ci --ignore-scripts
@@ -141,9 +138,6 @@ jobs:
             player-terminal/tests/business-banking-surface.mjs \
             scripts/business-phase4c-player-recovery-contract.mjs \
             docs/operations/contracts/player-cross-cutting-verification-authority-v1.json \
-            .github/scripts/phase6_align_retained_contracts.py \
-            .github/workflows/business-timed-manufacturing-v2.yml \
-            .github/workflows/business-phase6-contract-alignment.yml \
-            .github/workflows/business-phase6-contract-alignment-pr.yml
+            .github/scripts/phase6_align_retained_contracts.py
           git commit -m "fix(business): align retained contracts with timed manufacturing"
           git push origin HEAD:feat/business-timed-manufacturing-v2
