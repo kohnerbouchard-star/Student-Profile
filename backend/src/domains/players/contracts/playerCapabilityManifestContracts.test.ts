@@ -25,13 +25,14 @@ import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockA
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
+import { readPlayerBusinessRoutePath } from "../../business/api/playerBusinessRoutePaths.ts";
 import { readPlayerProgressionRoutePath } from "../../progression/api/playerProgressionRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
+const BUSINESS_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "business",
   "businessWorkforce",
   "businessCreate",
@@ -47,6 +48,9 @@ const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "businessCandidateHire",
   "businessTerminate",
   "businessStatus",
+]);
+
+const BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "bankTransfer",
   "savingsTransfer",
   "loans",
@@ -102,7 +106,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
     "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
-    "messageRead", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_BANKING_ENDPOINTS,
+    "messageRead", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_ENDPOINTS, ...BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -153,7 +157,9 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       ? readPlayerCapabilityManifestRoutePath(operation.path)
       : ["worldRuntime", "arrivalClass", "travelQuote", "travelExecute", "travelComplete", "residencyRequest"].includes(operation.key)
       ? parsePlayerWorldRuntimeRoute(operation.path)
-      : BUSINESS_BANKING_ENDPOINTS.has(operation.key)
+      : BUSINESS_ENDPOINTS.has(operation.key)
+      ? readPlayerBusinessRoutePath(operation.path)
+      : BANKING_ENDPOINTS.has(operation.key)
       ? readPlayerBusinessBankingRoutePath(operation.path)
       : operation.key === "banking"
       ? readPlayerBankingPublicRoutePath(operation.path)

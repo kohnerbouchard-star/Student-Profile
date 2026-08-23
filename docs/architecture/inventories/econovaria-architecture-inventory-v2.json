@@ -12,7 +12,7 @@
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
-    "crossDomainDeepImports": 168,
+    "crossDomainDeepImports": 169,
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
@@ -1536,6 +1536,12 @@
         "ownerDomain": "players",
         "importedDomain": "business-banking",
         "target": "../../business-banking/api/playerBusinessBankingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "business",
+        "target": "../../business/api/playerBusinessRoutePaths.ts"
       },
       {
         "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
@@ -3390,7 +3396,7 @@
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 865
+        "lines": 866
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",

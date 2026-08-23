@@ -41,6 +41,7 @@ import {
 import {
   readPlayerBusinessBankingRoutePath,
 } from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
+import { dispatchPlayerBusinessRequest } from "../_shared/playerBusinessDispatch.ts";
 import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
@@ -588,6 +589,12 @@ Deno.serve(async (request) => {
     );
   }
 
+  const playerBusinessResponse = await dispatchPlayerBusinessRequest(
+    request,
+    { createServiceClient },
+  );
+  if (playerBusinessResponse) return playerBusinessResponse;
+
   const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
     url.pathname,
   );
@@ -597,12 +604,6 @@ Deno.serve(async (request) => {
       playerBusinessBankingRoute.kind === "businessRead" &&
         playerBusinessBankingRoute.resource === "workforceCandidates"
         ? "businessWorkforce"
-        : playerBusinessBankingRoute.kind === "businessManufacturingCollection"
-        ? request.method === "GET"
-          ? "businessManufacturingJobs"
-          : "businessManufacturingStart"
-        : playerBusinessBankingRoute.kind === "businessManufacturingCancel"
-        ? "businessManufacturingCancel"
         : ({
       businessRead: "business",
       businessCreate: "businessCreate",
