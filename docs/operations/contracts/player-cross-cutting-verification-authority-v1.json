@@ -46,6 +46,7 @@
     "player-terminal/src/api/resource-plan.js",
     "player-terminal/src/api/response-normalizer.js",
     "player-terminal/src/app.js",
+    "player-terminal/src/integrations/student-profile-capability-manifest.js",
     "player-terminal/src/pages/business-page.js",
     "player-terminal/tests/business-banking-surface.mjs",
     "player-terminal/tests/current-capability-manifest.mjs",
