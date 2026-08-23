@@ -20,6 +20,8 @@ import {
 type BusinessMutationRoute = Exclude<
   PlayerBusinessRoute,
   | { readonly kind: "businessRead" }
+  | { readonly kind: "businessManufacturingCollection" }
+  | { readonly kind: "businessManufacturingCancel" }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
   | { readonly kind: "businessInputPurchase" }
@@ -195,6 +197,12 @@ export async function executePlayerBusinessMutation(
         p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
       });
   }
+
+  throw new PlayerBusinessError(
+    "unsupported_business_mutation",
+    "This Business operation is not supported by the legacy mutation executor.",
+    405,
+  );
 }
 
 async function readEconomicContext(

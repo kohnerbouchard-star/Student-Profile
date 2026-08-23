@@ -19,32 +19,35 @@ import {
   resolveProgressionBackendRequest,
 } from "./progression-backend-routes.js";
 
-// Phase 0 formation operations are implemented by the Business/Banking adapter,
-// while the core route-key list predates them. Keep this bounded bridge until
-// Phase 1 extracts Business into its own composed backend-route module.
-const BUSINESS_FORMATION_BACKEND_ROUTE_KEYS = Object.freeze([
+// These operations are implemented by the Business/Banking adapter, while the
+// core route-key list predates their public endpoint identities. Keep the
+// bridge exact and bounded until Business owns a composed backend-route module.
+const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
   "businessFormationPropose",
   "businessFormationRespond",
   "businessFormationActivate",
+  "businessManufacturingJobs",
+  "businessManufacturingStart",
+  "businessManufacturingCancel",
 ]);
 
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
   ...CORE_PLAYER_BACKEND_ROUTE_KEYS,
-  ...BUSINESS_FORMATION_BACKEND_ROUTE_KEYS.filter((key) =>
+  ...BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key)
   ),
   ...CRAFTING_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
-    !BUSINESS_FORMATION_BACKEND_ROUTE_KEYS.includes(key)
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key)
   ),
   ...MESSAGING_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
-    !BUSINESS_FORMATION_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
     !CRAFTING_BACKEND_ROUTE_KEYS.includes(key)
   ),
   ...PROGRESSION_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
-    !BUSINESS_FORMATION_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
     !CRAFTING_BACKEND_ROUTE_KEYS.includes(key) &&
     !MESSAGING_BACKEND_ROUTE_KEYS.includes(key)
   ),
@@ -52,7 +55,7 @@ export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
 
 export function hasPlayerBackendRoute(endpointKey) {
   return hasCorePlayerBackendRoute(endpointKey) ||
-    BUSINESS_FORMATION_BACKEND_ROUTE_KEYS.includes(endpointKey) ||
+    BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(endpointKey) ||
     hasCraftingBackendRoute(endpointKey) ||
     hasMessagingBackendRoute(endpointKey) ||
     hasProgressionBackendRoute(endpointKey);
@@ -68,7 +71,7 @@ export function resolvePlayerBackendRequest(input) {
   if (hasCraftingBackendRoute(input.endpointKey)) {
     return resolveCraftingBackendRequest(input);
   }
-  // The core resolver already delegates these keys to the Business/Banking
-  // adapter; Phase 1 will replace this bridge with the extracted Business module.
+  // The core resolver delegates Business/Banking adapter keys after its own
+  // route lookup, preserving one request-normalization path.
   return resolveCorePlayerBackendRequest(input);
 }
