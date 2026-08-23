@@ -200,7 +200,7 @@ export async function executePlayerBusinessMutation(
 
   throw new PlayerBusinessError(
     "unsupported_business_mutation",
-    "This Business operation is not supported by the legacy mutation executor.",
+    "This Business operation is not supported by the retained mutation executor.",
     405,
   );
 }
