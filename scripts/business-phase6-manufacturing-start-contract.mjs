@@ -93,6 +93,38 @@ requireTokens(assertions, "Database Replay schema assertions", [
   "start_business_manufacturing_job_v2(uuid,uuid,text,text,integer,text,text)",
 ]);
 
+const laborAssertionEnd = assertions.indexOf("from public.business_labor_reservations as reservation");
+if (laborAssertionEnd < 0) throw new Error("Unable to isolate labor reservation schema assertion.");
+const laborAssertionStart = assertions.lastIndexOf("perform", laborAssertionEnd);
+if (laborAssertionStart < 0) throw new Error("Unable to locate labor reservation assertion start.");
+const laborAssertion = assertions.slice(laborAssertionStart, laborAssertionEnd);
+requireTokens(laborAssertion, "Canonical labor reservation schema assertion", [
+  "reservation.employee_id",
+  "reservation.role_definition_id",
+  "reservation.reservation_kind",
+  "reservation.source_reference_key",
+]);
+forbidTokens(laborAssertion, "Canonical labor reservation schema assertion", [
+  "reservation.requirement_id",
+  "reservation.intent_ref",
+]);
+
+const equipmentAssertionEnd = assertions.indexOf("from public.business_equipment_reservations as reservation");
+if (equipmentAssertionEnd < 0) throw new Error("Unable to isolate equipment reservation schema assertion.");
+const equipmentAssertionStart = assertions.lastIndexOf("perform", equipmentAssertionEnd);
+if (equipmentAssertionStart < 0) throw new Error("Unable to locate equipment reservation assertion start.");
+const equipmentAssertion = assertions.slice(equipmentAssertionStart, equipmentAssertionEnd);
+requireTokens(equipmentAssertion, "Canonical equipment reservation schema assertion", [
+  "reservation.installation_id",
+  "reservation.requirement_id",
+  "reservation.intent_ref",
+]);
+forbidTokens(equipmentAssertion, "Canonical equipment reservation schema assertion", [
+  "reservation.role_definition_id",
+  "reservation.reservation_kind",
+  "reservation.source_reference_key",
+]);
+
 const signatureStart = sql.indexOf("create or replace function public.start_business_manufacturing_job_v2");
 const language = sql.indexOf("language plpgsql", signatureStart);
 if (signatureStart < 0 || language <= signatureStart) throw new Error("Unable to isolate manufacturing start signature.");
