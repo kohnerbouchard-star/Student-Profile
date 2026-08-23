@@ -22,6 +22,7 @@
     "backend/src/domains/business/contracts/playerBusinessContracts.ts",
     "backend/src/domains/business/contracts/playerBusinessManufacturingContracts.ts",
     "backend/src/domains/business/index.ts",
+    "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
     "backend/src/security/playerRateLimitDispatch.ts",
     "backend/supabase/functions/classroom-api/index.ts",
