@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/business-manufacturing-classroom-load-isolation-v2.yml",
     ".github/workflows/business-manufacturing-completion-v2.yml",
     ".github/workflows/business-manufacturing-recovery-v2.yml",
     ".github/workflows/business-manufacturing-resource-hold-v2.yml",
@@ -73,6 +74,7 @@
     "scripts/business-phase5-equipment-production-contract.mjs",
     "scripts/business-phase5-equipment-production-simulation.mjs",
     "scripts/business-phase5-equipment-recipe-sync-contract.mjs",
+    "scripts/business-phase6-manufacturing-classroom-load-isolation.mjs",
     "scripts/business-phase6-manufacturing-completion-contract.mjs",
     "scripts/business-phase6-manufacturing-completion-simulation.mjs",
     "scripts/business-phase6-manufacturing-foundation-contract.mjs",
@@ -100,6 +102,6 @@
     "player-production-secret-provision-contract",
     "player-api-read-resilience",
     "database-replay",
-    "player-multiplayer-and-load-e2e"
+    "business-manufacturing-classroom-load-isolation-v2"
   ]
 }
