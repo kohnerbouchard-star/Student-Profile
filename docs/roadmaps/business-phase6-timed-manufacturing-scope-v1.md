@@ -1,6 +1,6 @@
 # Business V2 Phase 6 — Timed Manufacturing Scope v1
 
-**Status:** IN PROGRESS — Phase 6A certified; Phase 6B atomic start/resource-hold implementation under exact-head verification  
+**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present but not yet certified; Player cutover not started
 **Branch:** `feat/business-timed-manufacturing-v2`  
 **Parent branch:** `feat/business-equipment-capacity-v2`  
 **Certified Phase 5 implementation:** `6f936abd61c6cd903f6e839790ceab24ed570748`  
@@ -49,6 +49,8 @@ Phase 6A deliberately does not expose a Player job-creation route or a completio
 
 ## Phase 6B — atomic manufacturing start and resource hold
 
+**Phase 6B — atomic manufacturing start and resource hold is OPEN.**
+
 The Phase 6B implementation now adds one service-owned atomic start transaction. Exact-head certification is pending the full required gate set.
 
 The command:
@@ -71,6 +73,10 @@ The command:
 - rolls the complete transaction back when any material, labor, equipment, ownership, recipe, or reconciliation check fails.
 
 The live Player route remains unchanged while this checkpoint is verified. Legacy instant production is not retired until the authenticated API cutover and completion/recovery path are both complete.
+
+## Player cutover
+
+Player cutover is **NOT STARTED** on this source. PR #661 does not yet contain the authenticated manufacturing start/cancel routes or the connected Player Business workspace. Those changes remain a later Phase 6 checkpoint and may not be represented as complete until their exact-head API, browser, replay, load, and two-game isolation gates pass.
 
 ## Locked lifecycle
 
@@ -195,4 +201,4 @@ Phase 6 is not complete until all of the following are durable:
 
 ## Next authorized checkpoint
 
-**Phase 6C — exact-once due-job completion and Finished Goods settlement is next after Phase 6B certification.** Consume exact WIP, create exact canonical output in Finished Goods, consume labor/equipment reservations, and commit the completed transition under the existing due-job lease. Do not add Store seller offers, sales, durability/repair, or deployment.
+**Immediate checkpoint:** certify the existing Phase 6B–6D source on one replayable exact head, then implement Phase 6E authenticated Player API and workspace cutover. Do not open Store seller offers, sales, durability/repair, IPO, merge, or deployment before the full Phase 6 completion rule is satisfied.

@@ -430,7 +430,6 @@ declare
   v_business_row public.business_entities%rowtype;
   v_product public.business_products%rowtype;
   v_recipe public.physical_economy_recipe_definitions%rowtype;
-  v_output public.game_items%rowtype;
   v_recipe_matches integer := 0;
   v_party public.economic_parties%rowtype;
   v_warehouse public.inventory_accounts%rowtype;
@@ -545,8 +544,8 @@ begin
       using errcode = 'P0001';
   end if;
 
-  select recipe, output_item
-  into v_recipe, v_output
+  select recipe.*
+  into v_recipe
   from public.business_recipe_access as access
   join public.physical_economy_recipe_definitions as recipe
     on recipe.id = access.recipe_id
@@ -577,7 +576,7 @@ begin
     extensions.digest(
       concat_ws(
         '|', p_game_session_id, p_player_id, v_business.business_id,
-        v_product.id, v_recipe.id, v_output.id, p_quantity,
+        v_product.id, v_recipe.id, v_product.output_game_item_id, p_quantity,
         lower(btrim(p_priority))
       ),
       'sha256'
@@ -694,7 +693,7 @@ begin
     v_business.business_id,
     v_product.id,
     v_recipe.id,
-    v_output.id,
+    v_product.output_game_item_id,
     p_player_id,
     btrim(p_idempotency_key),
     v_hash,
