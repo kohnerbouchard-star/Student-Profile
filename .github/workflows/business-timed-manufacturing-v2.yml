@@ -1,14 +1,79 @@
-name: Business Timed Manufacturing V2 Source Correction
+name: Business Timed Manufacturing V2
 
 on:
   pull_request:
     paths:
+      - "backend/supabase/migrations/2026082311*.sql"
+      - "scripts/business-phase6-manufacturing-*.mjs"
+      - "docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md"
+      - ".github/workflows/business-timed-manufacturing-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/supabase/migrations/2026082311*.sql"
+      - "scripts/business-phase6-manufacturing-*.mjs"
       - ".github/workflows/business-timed-manufacturing-v2.yml"
 
 permissions:
   contents: write
 
 jobs:
+  verify-manufacturing-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Verify timed manufacturing foundation and retained authorities
+        run: |
+          node scripts/business-phase6-manufacturing-foundation-contract.mjs
+          node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
+          node scripts/business-phase6-manufacturing-start-contract.mjs
+          node scripts/business-phase6-manufacturing-start-simulation.mjs
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Run repository quality suite
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify all backend and Edge TypeScript
+        working-directory: backend
+        run: npm run typecheck:all
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify retained Player Business surface
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
+
   correct-source:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
@@ -28,81 +93,84 @@ jobs:
           path = Path("backend/supabase/migrations/20260823110300_business_manufacturing_atomic_start_v2.sql")
           source = path.read_text()
           old = """  select recipe.*, recipe_output.*
-  into v_recipe, v_output_line
-  from public.business_recipe_access as access
-  join public.physical_economy_recipe_definitions as recipe
-    on recipe.id = access.recipe_id
-   and recipe.status = 'active'
-  join public.physical_economy_recipe_outputs as recipe_output
-    on recipe_output.recipe_id = recipe.id
-   and recipe_output.item_key = v_output_item.canonical_key
-  join public.game_session_recipe_availability as availability
-    on availability.game_session_id = access.game_session_id
-   and availability.recipe_id = recipe.id
-   and availability.enabled = true
-   and availability.scarcity_band <> 'unavailable'
-  join public.game_session_physical_economy_packs as pack_scope
-    on pack_scope.game_session_id = access.game_session_id
-   and pack_scope.pack_id = recipe.pack_id
-   and pack_scope.status = 'active'
-  where access.game_session_id = p_game_session_id
-    and access.business_id = v_business.id
-    and access.revoked_at is null
-    and (
-      cardinality(availability.country_codes) = 0
-      or v_business.country_code = any(availability.country_codes)
-    )
-  limit 1;
-"""
+          into v_recipe, v_output_line
+          from public.business_recipe_access as access
+          join public.physical_economy_recipe_definitions as recipe
+            on recipe.id = access.recipe_id
+           and recipe.status = 'active'
+          join public.physical_economy_recipe_outputs as recipe_output
+            on recipe_output.recipe_id = recipe.id
+           and recipe_output.item_key = v_output_item.canonical_key
+          join public.game_session_recipe_availability as availability
+            on availability.game_session_id = access.game_session_id
+           and availability.recipe_id = recipe.id
+           and availability.enabled = true
+           and availability.scarcity_band <> 'unavailable'
+          join public.game_session_physical_economy_packs as pack_scope
+            on pack_scope.game_session_id = access.game_session_id
+           and pack_scope.pack_id = recipe.pack_id
+           and pack_scope.status = 'active'
+          where access.game_session_id = p_game_session_id
+            and access.business_id = v_business.id
+            and access.revoked_at is null
+            and (
+              cardinality(availability.country_codes) = 0
+              or v_business.country_code = any(availability.country_codes)
+            )
+          limit 1;
+          """
+          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines()) + "\n"
           new = """  select recipe.*
-  into v_recipe
-  from public.business_recipe_access as access
-  join public.physical_economy_recipe_definitions as recipe
-    on recipe.id = access.recipe_id
-   and recipe.status = 'active'
-  join public.physical_economy_recipe_outputs as recipe_output
-    on recipe_output.recipe_id = recipe.id
-   and recipe_output.item_key = v_output_item.canonical_key
-  join public.game_session_recipe_availability as availability
-    on availability.game_session_id = access.game_session_id
-   and availability.recipe_id = recipe.id
-   and availability.enabled = true
-   and availability.scarcity_band <> 'unavailable'
-  join public.game_session_physical_economy_packs as pack_scope
-    on pack_scope.game_session_id = access.game_session_id
-   and pack_scope.pack_id = recipe.pack_id
-   and pack_scope.status = 'active'
-  where access.game_session_id = p_game_session_id
-    and access.business_id = v_business.id
-    and access.revoked_at is null
-    and (
-      cardinality(availability.country_codes) = 0
-      or v_business.country_code = any(availability.country_codes)
-    )
-  limit 1;
+          into v_recipe
+          from public.business_recipe_access as access
+          join public.physical_economy_recipe_definitions as recipe
+            on recipe.id = access.recipe_id
+           and recipe.status = 'active'
+          join public.physical_economy_recipe_outputs as recipe_output
+            on recipe_output.recipe_id = recipe.id
+           and recipe_output.item_key = v_output_item.canonical_key
+          join public.game_session_recipe_availability as availability
+            on availability.game_session_id = access.game_session_id
+           and availability.recipe_id = recipe.id
+           and availability.enabled = true
+           and availability.scarcity_band <> 'unavailable'
+          join public.game_session_physical_economy_packs as pack_scope
+            on pack_scope.game_session_id = access.game_session_id
+           and pack_scope.pack_id = recipe.pack_id
+           and pack_scope.status = 'active'
+          where access.game_session_id = p_game_session_id
+            and access.business_id = v_business.id
+            and access.revoked_at is null
+            and (
+              cardinality(availability.country_codes) = 0
+              or v_business.country_code = any(availability.country_codes)
+            )
+          limit 1;
 
-  select recipe_output.*
-  into v_output_line
-  from public.physical_economy_recipe_outputs as recipe_output
-  where recipe_output.recipe_id = v_recipe.id
-    and recipe_output.item_key = v_output_item.canonical_key
-  limit 1;
-  if not found then
-    raise exception 'BUSINESS_MANUFACTURING_OUTPUT_INVALID'
-      using errcode = 'P0001';
-  end if;
-"""
+          select recipe_output.*
+          into v_output_line
+          from public.physical_economy_recipe_outputs as recipe_output
+          where recipe_output.recipe_id = v_recipe.id
+            and recipe_output.item_key = v_output_item.canonical_key
+          limit 1;
+          if not found then
+            raise exception 'BUSINESS_MANUFACTURING_OUTPUT_INVALID'
+              using errcode = 'P0001';
+          end if;
+          """
+          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines()) + "\n"
           if source.count(old) != 1:
               raise SystemExit("Expected one composite recipe/output assignment block.")
           path.write_text(source.replace(old, new))
           PY
           git show 3c7cfb645d28735ce510741800e863c9742a4430:.github/workflows/business-timed-manufacturing-v2.yml > .github/workflows/business-timed-manufacturing-v2.yml
           rm -f .github/workflows/business-phase6-source-correction.yml
-      - name: Commit corrected source and restored workflow
+          rm -f docs/roadmaps/.phase6-head-correction-trigger
+      - name: Commit corrected source and restore normal workflow
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/supabase/migrations/20260823110300_business_manufacturing_atomic_start_v2.sql .github/workflows/business-timed-manufacturing-v2.yml .github/workflows/business-phase6-source-correction.yml
+          git add backend/supabase/migrations/20260823110300_business_manufacturing_atomic_start_v2.sql .github/workflows/business-timed-manufacturing-v2.yml .github/workflows/business-phase6-source-correction.yml docs/roadmaps/.phase6-head-correction-trigger
           git commit -m "fix(business): separate manufacturing recipe output lookup"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
