@@ -66,7 +66,7 @@ for (const token of [
 for (const token of [
   "Workforce utilization & payroll",
   "data-business-workforce-utilization",
-  "Recipe labor minutes are enforced server-side",
+  "The server reserves exact materials, labor, equipment, and completion time",
   "recurring Business payroll",
 ]) requireToken(source.page, token, "Player Business UI");
 if (/name="unitLaborCost"/u.test(source.page)) {

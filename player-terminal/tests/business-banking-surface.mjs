@@ -10,6 +10,7 @@ import { renderLoansPage } from "../src/pages/loans-page.js";
 
 const businessKey = `biz_${"a".repeat(32)}`;
 const productKey = `bpr_${"b".repeat(32)}`;
+const manufacturingJobKey = `mfg_${"7".repeat(32)}`;
 const employeeKey = `emp_${"c".repeat(32)}`;
 const candidateKey = `wfc_${"f".repeat(32)}`;
 const payrollRunKey = `pay_${"9".repeat(32)}`;
@@ -64,6 +65,25 @@ const data = {
       status: "Active",
     }],
     inventory: [{ itemKey: "machine-steel-billet", kind: "input", quantity: 10, unitCost: 2 }],
+    manufacturingJobs: [{
+      jobKey: manufacturingJobKey,
+      businessKey,
+      productKey,
+      productName: "Utility Module",
+      status: "in_progress",
+      resourceState: "reserved",
+      priority: "standard",
+      quantity: 10,
+      completedOutputQuantity: 0,
+      queuedAt: "2026-08-23T00:00:00.000Z",
+      startedAt: "2026-08-23T00:01:00.000Z",
+      completesAt: "2026-08-23T00:11:00.000Z",
+      completedAt: null,
+      cancelledAt: null,
+      failedAt: null,
+      failureCode: null,
+      canCancel: true,
+    }],
     workforceUtilization: {
       businessKey,
       payrollPeriodKey: "payroll:1",
@@ -176,7 +196,7 @@ const data = {
 const markup = renderBusinessPage(data);
 for (const endpoint of [
   "businessProductCreate",
-  "businessProduction",
+  "businessManufacturingStart",
   "businessPrice",
   "businessTerminate",
   "businessStatus",
@@ -185,6 +205,21 @@ for (const endpoint of [
   assert.ok(WRITE_INVALIDATIONS[endpoint]?.includes("business"), `missing ${endpoint} Business invalidation`);
   assertAccessibleForm(markup, endpoint);
 }
+assert.match(markup, /data-endpoint="businessManufacturingCancel"/);
+assert.match(markup, new RegExp(`data-business-manufacturing-job="${manufacturingJobKey}"`));
+assert.ok(
+  WRITE_INVALIDATIONS.businessManufacturingCancel?.includes("business"),
+  "missing businessManufacturingCancel Business invalidation",
+);
+assert.doesNotMatch(markup, /data-endpoint="businessProduction"/);
+assert.equal(
+  PLAYER_ENDPOINTS.businessManufacturingStart.path,
+  "/businesses/:businessId/manufacturing/jobs",
+);
+assert.equal(
+  PLAYER_ENDPOINTS.businessManufacturingCancel.path,
+  "/businesses/:businessId/manufacturing/jobs/:jobId/cancel",
+);
 assert.match(markup, /data-endpoint="businessCandidateHire"/);
 assert.ok(WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"), "missing businessCandidateHire Business invalidation");
 assert.match(markup, /data-business-workforce-utilization/);

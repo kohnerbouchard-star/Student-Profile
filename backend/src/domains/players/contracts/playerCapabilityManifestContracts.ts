@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-22.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-23.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -80,6 +80,9 @@ export type PlayerCapabilityEndpointKey =
   | "businessPrice"
   | "businessProductCreate"
   | "businessProduction"
+  | "businessManufacturingJobs"
+  | "businessManufacturingStart"
+  | "businessManufacturingCancel"
   | "businessStatus"
   | "businessTerminate"
   | "contractAccept"
@@ -266,6 +269,30 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{
       method: "POST",
       pathTemplate: "/players/me/business/production-runs",
+    }],
+    actionCapabilities: ["businessProduction"],
+  },
+  {
+    key: "businessManufacturingJobs",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/businesses/:businessKey/manufacturing/jobs",
+    }],
+    routeCapabilities: ["business"],
+  },
+  {
+    key: "businessManufacturingStart",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/businesses/:businessKey/manufacturing/jobs",
+    }],
+    actionCapabilities: ["businessProduction"],
+  },
+  {
+    key: "businessManufacturingCancel",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/businesses/:businessKey/manufacturing/jobs/:jobKey/cancel",
     }],
     actionCapabilities: ["businessProduction"],
   },

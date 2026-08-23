@@ -151,6 +151,15 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   businessProduction: byMethod({
     POST: operation("player.business.production.run", "sensitive"),
   }),
+  businessManufacturingJobs: byMethod({
+    GET: operation("player.business.manufacturing.jobs.read", "read"),
+  }),
+  businessManufacturingStart: byMethod({
+    POST: operation("player.business.manufacturing.jobs.start", "sensitive"),
+  }),
+  businessManufacturingCancel: byMethod({
+    POST: operation("player.business.manufacturing.jobs.cancel", "sensitive"),
+  }),
   businessStatus: byMethod({
     POST: operation("player.business.status.write", "sensitive"),
   }),

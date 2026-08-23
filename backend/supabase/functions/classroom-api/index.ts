@@ -597,6 +597,12 @@ Deno.serve(async (request) => {
       playerBusinessBankingRoute.kind === "businessRead" &&
         playerBusinessBankingRoute.resource === "workforceCandidates"
         ? "businessWorkforce"
+        : playerBusinessBankingRoute.kind === "businessManufacturingCollection"
+        ? request.method === "GET"
+          ? "businessManufacturingJobs"
+          : "businessManufacturingStart"
+        : playerBusinessBankingRoute.kind === "businessManufacturingCancel"
+        ? "businessManufacturingCancel"
         : ({
       businessRead: "business",
       businessCreate: "businessCreate",
