@@ -1,3 +1,4 @@
+// Phase 6 exact-head acceptance synchronization marker.
 import assert from "node:assert/strict";
 
 import { buildPlayerCraftingCapabilityResponse } from "../../backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts";
