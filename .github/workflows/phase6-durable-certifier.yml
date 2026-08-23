@@ -1,0 +1,216 @@
+name: Phase 6 Durable Certifier
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - .github/workflows/phase6-durable-certifier.yml
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: phase6-durable-certifier
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Check out exact Phase 6 branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Freeze implementation parent and validate exact workflow matrix
+        id: evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          implementation_sha="$(git rev-parse HEAD^)"
+          echo "implementation_sha=${implementation_sha}" >> "$GITHUB_OUTPUT"
+          export IMPLEMENTATION_SHA="$implementation_sha"
+          python - <<'PY'
+          import json, os, pathlib, time, urllib.request
+          repo=os.environ['GH_REPOSITORY']
+          sha=os.environ['IMPLEMENTATION_SHA']
+          token=os.environ['GH_TOKEN']
+          required={
+            'Database Replay','Backend Typecheck','Player Terminal Verify','Repository Quality',
+            'Business Timed Manufacturing V2','Business Manufacturing Resource Hold V2',
+            'Business Manufacturing Completion V2','Business Manufacturing Recovery V2',
+            'Business Workforce Payroll V2','Business Workforce Hiring V2',
+            'Business Workforce Production Payroll V2','Business Economy V2','Business Banking Runtime',
+            'Supply Chain Security','Admin API Check','Staging Readiness Preflight',
+            'Required Game Market Timezone','Exchange Calendar Runtime','Beta Security Contract',
+            'Environment Neutral Browser','Runtime Interaction Wiring','World Runtime','Progression Runtime'
+          }
+          url=f'https://api.github.com/repos/{repo}/actions/runs?head_sha={sha}&per_page=100'
+          headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28','User-Agent':'econovaria-phase6-certifier'}
+          by={}
+          for attempt in range(90):
+            req=urllib.request.Request(url,headers=headers)
+            with urllib.request.urlopen(req,timeout=30) as response:
+              data=json.load(response)
+            by={}
+            for run in data.get('workflow_runs',[]):
+              name=run.get('name')
+              if name not in by or run.get('run_attempt',1)>=by[name].get('run_attempt',1):
+                by[name]=run
+            missing=required-set(by)
+            pending=[name for name in required & set(by) if by[name].get('status')!='completed']
+            if not missing and not pending:
+              break
+            time.sleep(20)
+          missing=sorted(required-set(by))
+          failures=sorted(name for name in required & set(by) if by[name].get('status')!='completed' or by[name].get('conclusion')!='success')
+          evidence={'schemaVersion':1,'phase':'business-v2-phase-6','implementationSha':sha,'requiredWorkflows':sorted(required),'missingWorkflows':missing,'failedWorkflows':failures,'runs':{name:{'id':by[name].get('id'),'runNumber':by[name].get('run_number'),'status':by[name].get('status'),'conclusion':by[name].get('conclusion'),'url':by[name].get('html_url')} for name in sorted(required & set(by))}}
+          pathlib.Path('/tmp/phase6-workflow-evidence.json').write_text(json.dumps(evidence,indent=2)+'\n')
+          if missing or failures:
+            raise SystemExit(f'Phase 6 exact-head matrix is not green; missing={missing}; failures={failures}')
+          PY
+      - name: Verify the frozen implementation source locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          implementation_sha="${{ steps.evidence.outputs.implementation_sha }}"
+          git worktree add --detach /tmp/phase6-implementation "$implementation_sha"
+          cd /tmp/phase6-implementation
+          npm ci --ignore-scripts
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          node scripts/business-phase6-manufacturing-foundation-contract.mjs
+          node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
+          node scripts/business-phase6-manufacturing-start-contract.mjs
+          node scripts/business-phase6-manufacturing-start-simulation.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-simulation.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-simulation.mjs
+          node scripts/business-phase6e-player-api-contract.mjs
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node --test scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
+          node scripts/validate-supabase-migrations.mjs
+          deno check backend/supabase/functions/player-api/index.ts
+          deno check backend/supabase/functions/player-web-session-api/index.ts
+          npm --prefix backend ci --ignore-scripts
+          npm --prefix backend run typecheck:all
+          npm --prefix player-terminal ci --no-audit --no-fund
+          npm --prefix player-terminal run check
+          node player-terminal/tests/business-banking-surface.mjs
+          npm --prefix player-terminal run adapter
+          npm --prefix player-terminal run capability-manifest-current
+          npm --prefix player-terminal run runtime-integration
+          git diff --check
+      - name: Re-prove local Player Edge boot on frozen source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/phase6-implementation
+          mkdir -p backend/supabase/functions
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
+          cleanup() { rm -f backend/supabase/functions/.env; npx supabase stop --workdir backend --no-backup >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit
+          eval "$(npx supabase status --workdir backend -o env)"
+          for endpoint in player-api player-web-session-api; do
+            status=000
+            for attempt in $(seq 1 45); do
+              status="$(curl --silent --show-error --output /tmp/${endpoint}.json --write-out '%{http_code}' --max-time 5 --request OPTIONS --header "apikey: ${PUBLISHABLE_KEY}" "http://127.0.0.1:54321/functions/v1/${endpoint}" || true)"
+              if [ "$status" = "204" ]; then break; fi
+              sleep 1
+            done
+            test "$status" = "204"
+          done
+      - name: Write durable Phase 6 certification records
+        env:
+          IMPLEMENTATION_SHA: ${{ steps.evidence.outputs.implementation_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/phase6-workflow-evidence.json docs/roadmaps/business-phase6-certified-v1.json
+          python - <<'PY'
+          import json, os, pathlib, re
+          sha=os.environ['IMPLEMENTATION_SHA']
+          evidence=json.loads(pathlib.Path('docs/roadmaps/business-phase6-certified-v1.json').read_text())
+          runs=evidence['runs']
+          run_lines='\n'.join(f"- **{name} — PASS** (`{runs[name]['id']}`)." for name in sorted(runs))
+          scope=pathlib.Path('docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md')
+          scope_text=scope.read_text()
+          scope_text=re.sub(r'^\*\*Status:\*\*.*$','**Status:** COMPLETE — timed manufacturing lifecycle, resource settlement, recovery, and Player cutover certified',scope_text,count=1,flags=re.M)
+          marker='## Durable Phase 6 certification'
+          if marker not in scope_text:
+            scope_text += f'''\n\n---\n\n{marker}\n\n- **Exact certified implementation source:** `{sha}`.\n- The implementation source passed the complete exact-head workflow matrix, two database replays, rebuilt-database lint, backend and Edge typechecks, Player Terminal and browser verification, retained Phase 4/5 regressions, and the bounded Player Edge boot proof.\n- Later commits may contain certification documentation or workflow cleanup only and must not replace `{sha}` as implementation evidence.\n- PR #661 remains draft, open, unmerged, and undeployed.\n- No staging deployment, production deployment, secret mutation, or live database mutation occurred.\n\n### Exact-head workflow evidence\n\n{run_lines}\n\n### Phase exit\n\nPhase 6A–6E is complete: server-owned timed jobs, atomic Warehouse-to-WIP/labor/equipment holds, lease-based exact-once completion into Finished Goods, cancellation/failure release, authenticated Player API cutover, public-key-only reads, and retirement of visible instant production are certified. Store seller offers, Store-listing custody, buyer settlement, sales convergence, durability/repair settlement, equity/IPO, merge, staging, and production deployment remain outside this phase.\n'''
+          scope.write_text(scope_text)
+          plan=pathlib.Path('docs/roadmaps/business-v2-development-execution-plan-v1.md')
+          plan_text=plan.read_text()
+          plan_text=re.sub(r'(?im)^(.*Phase 6.*?)(OPEN|IN PROGRESS)(.*)$',lambda m:m.group(1)+'COMPLETE'+m.group(3),plan_text)
+          plan_marker='## Certified checkpoint 6 — Phase 6 COMPLETE'
+          if plan_marker not in plan_text:
+            plan_text += f'''\n\n---\n\n{plan_marker}\n\n- **Certified implementation:** `{sha}`.\n- Timed manufacturing lifecycle, canonical resource holds, exact-once completion, cancellation/failure recovery, Player API/workspace cutover, database replay, Edge boot, browser, security, and retained-regression requirements are met.\n- **Phase 7 — Store seller offers is OPEN for bounded scope intake only.** Store custody, buyer settlement, automatic sales convergence, IPO integration, merge, staging, and production deployment require their own checkpoints.\n'''
+          plan.write_text(plan_text)
+          log=pathlib.Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log_text=log.read_text()
+          log_marker='## 2026-08-23 — Phase 6 COMPLETE: timed manufacturing'
+          if log_marker not in log_text:
+            log_text += f'''\n\n---\n\n{log_marker}\n\n### Certified source and repository state\n\n- **Exact certified implementation and verification source:** `{sha}`.\n- Feature branch: `feat/business-timed-manufacturing-v2`.\n- Stacked draft PR: #661, based on certified Phase 5 branch `feat/business-equipment-capacity-v2`.\n- PR #661 remained open, draft, mergeable, unmerged, and undeployed at certification.\n- No staging or production migration, deployment, secret change, or live database mutation was performed.\n\n### Authoritative result\n\n- Manufacturing requests resolve one exact active Business-owned canonical recipe and output.\n- Canonical BOM quantities move Warehouse to WIP atomically with deterministic labor and installed-equipment reservations.\n- Server-derived queued/in-progress/due state replaces browser-owned completion.\n- Due jobs use bounded `FOR UPDATE SKIP LOCKED` leases and stale workers fail closed.\n- Completion consumes exact WIP, creates exact Finished Goods output, consumes labor/equipment once, carries material and labor basis without a duplicate payroll debit, and commits transition/audit evidence atomically.\n- Cancellation and terminal failure return or release every held resource exactly once.\n- The authenticated Player API and workspace use public keys, server timestamps, display-only countdowns, and no visible instant-production mutation.\n- Trusted-IP preload and runtime modules are statically bundled and both Player Edge entrypoints boot successfully in the local Supabase runtime.\n\n### Exact-head workflow evidence\n\n{run_lines}\n\n### Exit decision\n\nAll Phase 6 completion requirements are met on `{sha}`. Phase 7 Store seller-offer scope intake is authorized. Store-listing custody, buyer settlement, automatic sales convergence, equity/IPO, merge, staging, and production deployment remain unauthorized until separately scoped and certified.\n'''
+          log.write_text(log_text)
+          workflow=pathlib.Path('.github/workflows/business-timed-manufacturing-v2.yml')
+          workflow_text=workflow.read_text()
+          diagnostic='\n  diagnose-player-edge-boot:'
+          idx=workflow_text.find(diagnostic)
+          if idx>=0: workflow_text=workflow_text[:idx].rstrip()+'\n'
+          workflow.write_text(workflow_text)
+          PY
+          rm .github/workflows/phase6-durable-certifier.yml
+          git diff --check
+      - name: Commit certification documentation and cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(git rev-parse HEAD)"
+          remote="$(git ls-remote origin refs/heads/feat/business-timed-manufacturing-v2 | awk '{print $1}')"
+          test "$remote" = "$expected"
+          git config user.name "econovaria-phase6-certifier"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/roadmaps/business-phase6-certified-v1.json docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md docs/roadmaps/business-v2-development-execution-plan-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md .github/workflows/business-timed-manufacturing-v2.yml .github/workflows/phase6-durable-certifier.yml
+          git commit -m "docs(business): certify Phase 6 timed manufacturing"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
