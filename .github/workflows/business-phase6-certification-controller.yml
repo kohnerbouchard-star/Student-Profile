@@ -1,0 +1,250 @@
+name: Business Phase 6 Certification Controller
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - ".github/workflows/business-phase6-certification-controller.yml"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  certify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out Phase 6 branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+      - name: Freeze the reviewed implementation source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMPLEMENTATION_SHA="$(git log -1 --format=%H --grep='fix(player): converge static Edge manufacturing boundary')"
+          test -n "$IMPLEMENTATION_SHA"
+          git merge-base --is-ancestor "$IMPLEMENTATION_SHA" HEAD
+          test ! -e .github/workflows/business-phase6-edge-convergence.yml
+          echo "sha=$IMPLEMENTATION_SHA" >> "$GITHUB_OUTPUT"
+          echo "Frozen Phase 6 implementation source: $IMPLEMENTATION_SHA"
+      - name: Require exact-source workflow convergence
+        id: gates
+        shell: bash
+        env:
+          IMPLEMENTATION_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          REQUIRED_NAMES=(
+            "Admin API Check"
+            "Backend Typecheck"
+            "Beta Security Contract"
+            "Business Banking Runtime"
+            "Business Economy V2"
+            "Business Manufacturing Completion V2"
+            "Business Manufacturing Recovery V2"
+            "Business Manufacturing Resource Hold V2"
+            "Business Timed Manufacturing V2"
+            "Business Workforce Hiring V2"
+            "Business Workforce Payroll V2"
+            "Business Workforce Production Payroll V2"
+            "Database Replay"
+            "Environment Neutral Browser"
+            "Exchange Calendar Runtime"
+            "Player Terminal Verify"
+            "Progression Runtime"
+            "Repository Quality"
+            "Required Game Market Timezone"
+            "Runtime Interaction Wiring"
+            "Staging Readiness Preflight"
+            "Supply Chain Security"
+            "World Runtime"
+          )
+
+          mkdir -p /tmp/phase6-certification
+          rerun_attempted=0
+          ready=0
+          for attempt in $(seq 1 150); do
+            gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs" \
+              -f head_sha="$IMPLEMENTATION_SHA" \
+              -f event=pull_request \
+              -f per_page=100 \
+              > /tmp/phase6-certification/runs.json
+
+            jq '[.workflow_runs | sort_by(.created_at) | group_by(.name)[] | .[-1]]' \
+              /tmp/phase6-certification/runs.json \
+              > /tmp/phase6-certification/latest.json
+
+            missing=0
+            pending=0
+            failed=0
+            : > /tmp/phase6-certification/status.tsv
+            for name in "${REQUIRED_NAMES[@]}"; do
+              row="$(jq -c --arg name "$name" '.[] | select(.name == $name)' /tmp/phase6-certification/latest.json | tail -n 1)"
+              if [ -z "$row" ]; then
+                printf '%s\tmissing\t\n' "$name" >> /tmp/phase6-certification/status.tsv
+                missing=$((missing + 1))
+                continue
+              fi
+              status="$(jq -r '.status' <<<"$row")"
+              conclusion="$(jq -r '.conclusion // ""' <<<"$row")"
+              run_id="$(jq -r '.id' <<<"$row")"
+              printf '%s\t%s\t%s\n' "$name" "${conclusion:-$status}" "$run_id" >> /tmp/phase6-certification/status.tsv
+              if [ "$status" != "completed" ]; then
+                pending=$((pending + 1))
+              elif [ "$conclusion" != "success" ]; then
+                failed=$((failed + 1))
+              fi
+            done
+
+            load_row="$(jq -c '[.[] | select(.name | test("(multiplayer|load|40[ -]?player|two[ -]?game)"; "i"))] | sort_by(.created_at) | .[-1] // empty' /tmp/phase6-certification/latest.json)"
+            if [ -z "$load_row" ]; then
+              printf '%s\tmissing\t\n' "Protected multiplayer/load acceptance" >> /tmp/phase6-certification/status.tsv
+              missing=$((missing + 1))
+            else
+              load_status="$(jq -r '.status' <<<"$load_row")"
+              load_conclusion="$(jq -r '.conclusion // ""' <<<"$load_row")"
+              load_id="$(jq -r '.id' <<<"$load_row")"
+              load_name="$(jq -r '.name' <<<"$load_row")"
+              printf '%s\t%s\t%s\n' "$load_name" "${load_conclusion:-$load_status}" "$load_id" >> /tmp/phase6-certification/status.tsv
+              if [ "$load_status" != "completed" ]; then
+                pending=$((pending + 1))
+              elif [ "$load_conclusion" != "success" ]; then
+                failed=$((failed + 1))
+              fi
+            fi
+
+            if [ "$missing" -eq 0 ] && [ "$pending" -eq 0 ] && [ "$failed" -eq 0 ]; then
+              ready=1
+              break
+            fi
+
+            if [ "$pending" -eq 0 ] && [ "$failed" -gt 0 ] && [ "$rerun_attempted" -eq 0 ]; then
+              while IFS=$'\t' read -r name state run_id; do
+                if [ -n "$run_id" ] && [ "$state" != "success" ] && [ "$state" != "missing" ]; then
+                  gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/rerun-failed-jobs" || true
+                fi
+              done < /tmp/phase6-certification/status.tsv
+              rerun_attempted=1
+            fi
+            sleep 10
+          done
+
+          cat /tmp/phase6-certification/status.tsv
+          if [ "$ready" -ne 1 ]; then
+            echo "Phase 6 exact-source certification gates did not converge." >&2
+            exit 1
+          fi
+
+          cp /tmp/phase6-certification/status.tsv /tmp/phase6-certification/final-status.tsv
+          echo "status_file=/tmp/phase6-certification/final-status.tsv" >> "$GITHUB_OUTPUT"
+      - name: Write durable Phase 6 certification
+        shell: bash
+        env:
+          IMPLEMENTATION_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import os, re, json
+
+          implementation_sha = os.environ['IMPLEMENTATION_SHA']
+          status_path = Path('/tmp/phase6-certification/final-status.tsv')
+          checks = []
+          for line in status_path.read_text().splitlines():
+              name, conclusion, run_id = line.split('\t')
+              checks.append({'name': name, 'conclusion': conclusion, 'runId': int(run_id)})
+
+          scope_path = Path('docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md')
+          scope = scope_path.read_text()
+          scope = re.sub(
+              r'(?m)^\*\*Status:\*\*.*$',
+              '**Status:** COMPLETE — exact-source timed manufacturing lifecycle certified',
+              scope,
+              count=1,
+          )
+          marker = '## Durable Phase 6 certification'
+          if marker not in scope:
+              scope += f'''\n\n{marker}\n\n- **Exact certified implementation source:** `{implementation_sha}`.\n- The authenticated Player path uses server-owned timed jobs; the retired instant-production URL remains fail-closed.\n- Warehouse-to-WIP material holds, finite labor/equipment reservations, server-derived completion time, exact-once Finished Goods settlement, cancellation, failure recovery, and public-key-only reads are certified together.\n- All required exact-source database, backend, Edge, security, Player, browser, manufacturing, payroll, and multiplayer/load gates passed.\n- No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred.\n\n**Next authorized phase:** Phase 7 — Store seller-offer authority.\n'''
+          scope_path.write_text(scope)
+
+          plan_path = Path('docs/roadmaps/business-v2-development-execution-plan-v1.md')
+          plan = plan_path.read_text()
+          phase6_match = re.search(r'(?ims)(^#{1,6}\s+Phase\s+6\b.*?)(?=^#{1,6}\s+Phase\s+7\b|\Z)', plan)
+          if phase6_match:
+              section = phase6_match.group(1)
+              section = re.sub(r'(?mi)^\*\*Status:\*\*.*$', '**Status:** COMPLETE', section, count=1)
+              if implementation_sha not in section:
+                  section += f'\n- Certified implementation source: `{implementation_sha}`.\n'
+              plan = plan[:phase6_match.start(1)] + section + plan[phase6_match.end(1):]
+          if 'Phase 7 — Store seller-offer authority is OPEN' not in plan:
+              plan += '\n\n## Authorized continuation\n\n**Phase 7 — Store seller-offer authority is OPEN.**\n'
+          plan_path.write_text(plan)
+
+          log_path = Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log = log_path.read_text()
+          log_marker = f'Phase 6 COMPLETE — `{implementation_sha}`'
+          if log_marker not in log:
+              lines = '\n'.join(
+                  f'- **{check["name"]} — PASS** (run `{check["runId"]}`).'
+                  for check in checks
+              )
+              log += f'''\n\n---\n\n## 2026-08-23 — {log_marker}\n\n### Certified repository state\n\n- Branch: `feat/business-timed-manufacturing-v2`.\n- Draft PR: #661, stacked on certified Phase 5.\n- Exact implementation and verification source: `{implementation_sha}`.\n- PR remained open, draft, mergeable, unmerged, and undeployed during certification.\n- No staging or production deployment, secret mutation, or live database mutation occurred.\n\n### Certified authority\n\n- Manufacturing starts only after exact canonical Warehouse-to-WIP material movement and finite labor/equipment reservations commit atomically.\n- Queue start and due completion are server-owned; browser countdowns are display-only.\n- Completion consumes WIP and reservations exactly once and creates canonical Finished Goods with material and labor cost basis without a second payroll cash debit.\n- Cancellation and bounded failure recovery release held resources exactly once.\n- Authenticated Player routes expose only public keys and reviewed intent; internal UUIDs, leases, ownership metadata, and settlement authority remain private.\n- The legacy instant-production Player route is retired and fail-closed.\n\n### Exact-source workflow evidence\n\n{lines}\n\n### Exit result\n\nPhase 6 is complete. Phase 7 seller-offer authority is the next authorized work. Store settlement, listing withdrawal, automatic sales convergence, equity/IPO, merge, staging, and production deployment remain separately gated.\n'''
+          log_path.write_text(log)
+
+          evidence_path = Path('docs/operations/evidence/business-phase6-certified-v1.json')
+          evidence_path.parent.mkdir(parents=True, exist_ok=True)
+          evidence_path.write_text(json.dumps({
+              'schemaVersion': 1,
+              'phase': 'business-v2-phase6',
+              'status': 'complete',
+              'implementationSha': implementation_sha,
+              'checks': checks,
+              'prNumber': 661,
+              'branch': 'feat/business-timed-manufacturing-v2',
+              'merged': False,
+              'deployed': False,
+              'liveMutationPerformed': False,
+          }, indent=2) + '\n')
+          PY
+
+          rm .github/workflows/business-phase6-certification-controller.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(business): certify Phase 6 timed manufacturing"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
+      - name: Update draft PR certification metadata
+        shell: bash
+        env:
+          IMPLEMENTATION_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          cat > /tmp/phase6-pr-body.md <<EOF
+          ## Certified scope
+
+          Phase 6 replaces instant physical Business production with an authoritative server-timed manufacturing lifecycle, stacked on certified Phase 5.
+
+          **Exact certified implementation and verification source:** `${IMPLEMENTATION_SHA}`.
+
+          The certified boundary includes atomic Warehouse-to-WIP material holds, eligible labor and installed-equipment reservations, server-derived timing, bounded queue and completion leases, exact-once Finished Goods settlement, cancellation/failure recovery, authenticated Player API cutover, public-key-only reads, and a display-only Player countdown. The legacy instant-production Player route remains retired and fail-closed.
+
+          All required exact-source database, backend, Edge, security, Player, Chromium, manufacturing, payroll, and protected multiplayer/load gates passed. Detailed run IDs are recorded in the durable execution log and `docs/operations/evidence/business-phase6-certified-v1.json`.
+
+          This PR remains intentionally **draft, open, unmerged, and undeployed**. No staging deployment, production deployment, secret mutation, or live database mutation is authorized by this certification.
+
+          **Next authorized phase:** Phase 7 — Store seller-offer authority.
+          EOF
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/pulls/661" \
+            -f title='Draft: Business V2 Phase 6 timed manufacturing — certified' \
+            -F body=@/tmp/phase6-pr-body.md
