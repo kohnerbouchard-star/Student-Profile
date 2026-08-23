@@ -3,56 +3,60 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  AUTHORITY_ID_PATTERN,
   DEFAULT_AUTHORITY_PATH,
-  EXPECTED_AUTHORITY_ID,
   verifyAuthority,
 } from "./verify-player-cross-cutting-authority.mjs";
 
-const AUTHORIZED_PR = 483;
+const AUTHORIZED_PR = 661;
+const AUTHORIZED_BASE = "feat/business-equipment-capacity-v2";
+const AUTHORITY_ID = `econovaria.business-timed-manufacturing-pr-${AUTHORIZED_PR}.v1`;
 
 function manifest() {
   const paths = [
-    ".github/workflows/stock-market-production-promote.yml",
-    ".github/workflows/stock-market-staging-candidate.yml",
-    "backend/supabase/functions/stock-market-player-read/index.ts",
-    "backend/supabase/functions/stock-market-read/index.ts",
-    "backend/supabase/stock-market-edge-function-manifest.json",
+    ".github/workflows/business-timed-manufacturing-v2.yml",
+    "backend/supabase/functions/player-api/index.ts",
+    "backend/supabase/functions/player-web-session-api/index.ts",
     DEFAULT_AUTHORITY_PATH,
-    "scripts/auth-boundary-contract.test.mjs",
-    "scripts/high-priority-boundary-ratchet.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
   ];
   return {
     schemaVersion: 1,
-    authorityId: EXPECTED_AUTHORITY_ID,
+    authorityId: AUTHORITY_ID,
     purpose: "authorize-cross-cutting-player-verification",
     pullRequestNumber: AUTHORIZED_PR,
-    baseRef: "main",
+    baseRef: AUTHORIZED_BASE,
     scopeLock: "exact-path-allowlist",
     productionDeploymentAllowed: false,
     productionMutationAllowed: false,
     secretValuesAllowed: false,
     allowedPaths: paths,
-    requiredFiles: [...paths],
+    requiredFiles: [
+      DEFAULT_AUTHORITY_PATH,
+      "scripts/player-cross-cutting-authority.test.mjs",
+      "scripts/verify-player-cross-cutting-authority.mjs",
+    ],
     requiredChecks: [
       "player-terminal-verify",
       "player-edge-trusted-ip-entrypoint-contract",
       "player-production-secret-provision-contract",
       "player-api-read-resilience",
-      "player-bff-retry-classification",
-      "local-edge-runtime-isolation",
+      "database-replay",
+      "player-multiplayer-and-load-e2e",
     ],
   };
 }
 
 test("cross-cutting Player authority accepts only its PR-bound exact scope", () => {
   const value = manifest();
+  assert.match(value.authorityId, AUTHORITY_ID_PATTERN);
   const result = verifyAuthority({
     manifest: value,
     changedPaths: [...value.allowedPaths],
     pullRequestNumber: AUTHORIZED_PR,
-    baseRef: "main",
+    baseRef: AUTHORIZED_BASE,
   });
   assert.equal(result.changedPathCount, value.allowedPaths.length);
 });
@@ -64,20 +68,44 @@ test("cross-cutting Player authority rejects an unreviewed path", () => {
       manifest: value,
       changedPaths: [...value.allowedPaths, "scripts/unreviewed-production-step.mjs"],
       pullRequestNumber: AUTHORIZED_PR,
-      baseRef: "main",
+      baseRef: AUTHORIZED_BASE,
     }),
     /does not allow changed path/u,
   );
 });
 
 test("cross-cutting Player authority rejects identity and production drift", () => {
+  const wrongId = manifest();
+  wrongId.authorityId = "econovaria.stock-market-runtime-pr-483.v1";
+  assert.throws(
+    () => verifyAuthority({
+      manifest: wrongId,
+      changedPaths: wrongId.allowedPaths,
+      pullRequestNumber: AUTHORIZED_PR,
+      baseRef: AUTHORIZED_BASE,
+    }),
+    /identifier is not bound to this pull request/u,
+  );
+
+  const malformedId = manifest();
+  malformedId.authorityId = "unscoped-authority";
+  assert.throws(
+    () => verifyAuthority({
+      manifest: malformedId,
+      changedPaths: malformedId.allowedPaths,
+      pullRequestNumber: AUTHORIZED_PR,
+      baseRef: AUTHORIZED_BASE,
+    }),
+    /Unexpected Player authority identifier/u,
+  );
+
   const wrongPr = manifest();
   assert.throws(
     () => verifyAuthority({
       manifest: wrongPr,
       changedPaths: wrongPr.allowedPaths,
       pullRequestNumber: AUTHORIZED_PR + 1,
-      baseRef: "main",
+      baseRef: AUTHORIZED_BASE,
     }),
     /not bound to this pull request/u,
   );
@@ -89,7 +117,7 @@ test("cross-cutting Player authority rejects identity and production drift", () 
       manifest: productionEnabled,
       changedPaths: productionEnabled.allowedPaths,
       pullRequestNumber: AUTHORIZED_PR,
-      baseRef: "main",
+      baseRef: AUTHORIZED_BASE,
     }),
     /deny production mutation/u,
   );

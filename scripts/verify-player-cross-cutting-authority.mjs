@@ -5,8 +5,8 @@ import { pathToFileURL } from "node:url";
 
 export const DEFAULT_AUTHORITY_PATH =
   "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json";
-export const EXPECTED_AUTHORITY_ID =
-  "econovaria.stock-market-runtime-pr-483.v1";
+export const AUTHORITY_ID_PATTERN =
+  /^econovaria\.[a-z0-9]+(?:-[a-z0-9]+)*-pr-(\d+)\.v1$/u;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -22,9 +22,12 @@ function uniqueStrings(value, label) {
 
 export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, baseRef }) {
   assert(manifest?.schemaVersion === 1, "Unsupported Player authority schema version.");
+  const authorityId = String(manifest.authorityId || "").trim();
+  const authorityMatch = authorityId.match(AUTHORITY_ID_PATTERN);
+  assert(authorityMatch, "Unexpected Player authority identifier.");
   assert(
-    manifest.authorityId === EXPECTED_AUTHORITY_ID,
-    "Unexpected Player authority identifier.",
+    Number(authorityMatch[1]) === Number(pullRequestNumber),
+    "Player authority identifier is not bound to this pull request.",
   );
   assert(
     manifest.purpose === "authorize-cross-cutting-player-verification",
