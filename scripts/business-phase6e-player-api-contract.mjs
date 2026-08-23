@@ -18,6 +18,7 @@ const routePaths = read("backend/src/domains/business/api/playerBusinessRoutePat
 const validation = read("backend/src/domains/business/api/playerBusinessRequestValidation.ts");
 const handler = read("backend/src/domains/business/api/playerBusinessHttpHandler.ts");
 const adapter = read("backend/src/domains/business/api/playerBusinessManufacturing.ts");
+const dispatch = read("backend/supabase/functions/_shared/playerBusinessDispatch.ts");
 const legacyMutationExecutor = read("backend/src/domains/business/api/playerBusinessMutationExecutor.ts");
 const sql = read("backend/supabase/migrations/20260823110500_business_manufacturing_player_api_v2.sql");
 const endpoints = read("player-terminal/src/api/endpoints.js");
@@ -66,6 +67,15 @@ requireTokens(adapter, "manufacturing application adapter", [
   "cancel_player_business_manufacturing_job_v2",
   "playerBusinessManufacturingJobsSchema.safeParse",
 ]);
+requireTokens(dispatch, "manufacturing rate-limit dispatch", [
+  "endpointKey(route, request.method)",
+  'route.kind === "businessManufacturingCollection"',
+  'method === "GET"',
+  '"businessManufacturingJobs"',
+  '"businessManufacturingStart"',
+  'route.kind === "businessManufacturingCancel"',
+  '"businessManufacturingCancel"',
+]);
 requireTokens(legacyMutationExecutor, "legacy executor fail-closed boundary", [
   '| { readonly kind: "businessManufacturingCollection" }',
   '| { readonly kind: "businessManufacturingCancel" }',
@@ -113,10 +123,16 @@ for (const required of [
   "backend/src/domains/business/api/playerBusinessManufacturingRoutePaths.ts",
   "backend/src/domains/business/api/playerBusinessMutationExecutor.ts",
   "backend/src/domains/business/contracts/playerBusinessManufacturingContracts.ts",
+  "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
+  "backend/supabase/functions/player-api/index.ts",
+  "backend/supabase/functions/player-api/trustedClientIpServe.ts",
+  "backend/supabase/functions/player-web-session-api/index.ts",
+  "backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts",
   "backend/supabase/migrations/20260823110500_business_manufacturing_player_api_v2.sql",
   "player-terminal/src/api/backend-routes.js",
   "player-terminal/src/pages/business-page.js",
   "scripts/business-phase6e-player-api-contract.mjs",
+  "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
 ]) {
   if (!authority.allowedPaths.includes(required)) {
     throw new Error(`Player verification authority missing Phase 6E path: ${required}`);

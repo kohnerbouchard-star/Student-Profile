@@ -25,7 +25,12 @@
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
     "backend/src/security/playerRateLimitDispatch.ts",
+    "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
     "backend/supabase/functions/classroom-api/index.ts",
+    "backend/supabase/functions/player-api/index.ts",
+    "backend/supabase/functions/player-api/trustedClientIpServe.ts",
+    "backend/supabase/functions/player-web-session-api/index.ts",
+    "backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts",
     "backend/supabase/migrations/20260823110000_business_manufacturing_job_foundation_v2.sql",
     "backend/supabase/migrations/20260823110100_business_manufacturing_worker_and_read_v2.sql",
     "backend/supabase/migrations/20260823110200_business_manufacturing_start_resources_v2.sql",
@@ -61,6 +66,7 @@
     "scripts/business-phase6-manufacturing-start-simulation.mjs",
     "scripts/business-phase6e-player-api-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [

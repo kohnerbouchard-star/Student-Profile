@@ -12,19 +12,35 @@ const isolatedBffAcceptances = [
 ];
 
 for (const functionName of functions) {
-  test(`${functionName} binds gateway client IP before loading its runtime`, async () => {
+  test(`${functionName} installs trusted-IP binding before statically loading its runtime`, async () => {
     const root = `backend/supabase/functions/${functionName}`;
     const entrypoint = await readFile(`${root}/index.ts`, "utf8");
+    const trustedServe = await readFile(`${root}/trustedClientIpServe.ts`, "utf8");
     const runtime = await readFile(`${root}/runtime.ts`, "utf8");
 
-    const binder = entrypoint.indexOf("bindGatewayTrustedClientIp(");
-    const runtimeImport = entrypoint.indexOf('await import("./runtime.ts")');
+    const trustedServeImport = entrypoint.indexOf(
+      'import "./trustedClientIpServe.ts";',
+    );
+    const runtimeImport = entrypoint.indexOf('import "./runtime.ts";');
 
-    assert.ok(binder >= 0, "entrypoint must bind the reviewed gateway client IP");
-    assert.ok(runtimeImport > binder, "runtime must load only after trusted-IP binding is installed");
-    assert.match(entrypoint, /ECONOVARIA_TRUSTED_CLIENT_IP_HEADER/u);
+    assert.ok(
+      trustedServeImport >= 0,
+      "entrypoint must statically preload the reviewed trusted-IP serve binding",
+    );
+    assert.ok(
+      runtimeImport > trustedServeImport,
+      "runtime must load only after the trusted-IP serve binding",
+    );
+    assert.doesNotMatch(entrypoint, /await import\(/u);
+    assert.match(trustedServe, /bindGatewayTrustedClientIp\(/u);
+    assert.match(trustedServe, /ECONOVARIA_TRUSTED_CLIENT_IP_HEADER/u);
     assert.match(runtime, /Deno\.serve\(/u);
     assert.doesNotMatch(runtime, /raw\.githubusercontent\.com/u);
+
+    if (functionName === "player-web-session-api") {
+      assert.match(trustedServe, /materializeBoundedRequestBody/u);
+      assert.match(trustedServe, /MAX_MATERIALIZED_BODY_BYTES/u);
+    }
   });
 }
 

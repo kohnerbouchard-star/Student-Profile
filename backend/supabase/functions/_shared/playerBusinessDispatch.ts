@@ -25,7 +25,7 @@ export async function dispatchPlayerBusinessRequest(
   if (!route) return null;
   return dispatchRateLimitedReviewedPlayerRequest(
     request,
-    endpointKey(route),
+    endpointKey(route, request.method),
     () =>
       handlePlayerBusinessRequest(request, route, {
         createServiceClient: dependencies.createServiceClient,
@@ -47,7 +47,10 @@ async function resolveBusinessScope(
   }, { body });
 }
 
-function endpointKey(route: PlayerBusinessRoute):
+function endpointKey(
+  route: PlayerBusinessRoute,
+  method: string,
+):
   | "business"
   | "businessCreate"
   | "businessFormationPropose"
@@ -61,6 +64,9 @@ function endpointKey(route: PlayerBusinessRoute):
   | "businessProductCreate"
   | "businessInputPurchase"
   | "businessProduction"
+  | "businessManufacturingJobs"
+  | "businessManufacturingStart"
+  | "businessManufacturingCancel"
   | "businessPrice"
   | "businessTerminate"
   | "businessStatus" {
@@ -76,6 +82,14 @@ function endpointKey(route: PlayerBusinessRoute):
       return "businessFormationActivate";
     }
     return "businessCreate";
+  }
+  if (route.kind === "businessManufacturingCollection") {
+    return method === "GET"
+      ? "businessManufacturingJobs"
+      : "businessManufacturingStart";
+  }
+  if (route.kind === "businessManufacturingCancel") {
+    return "businessManufacturingCancel";
   }
   if (route.kind === "businessStoreQuote") return "storeQuote";
   if (route.kind === "businessStorePurchase") return "storePurchase";
