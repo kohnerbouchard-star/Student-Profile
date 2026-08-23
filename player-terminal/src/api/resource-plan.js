@@ -32,6 +32,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   businessCreate: Object.freeze(["dashboard", "business", "banking"]),
   businessProductCreate: Object.freeze(["business"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
+  businessManufacturingStart: Object.freeze(["dashboard", "business", "inventory"]),
+  businessManufacturingCancel: Object.freeze(["dashboard", "business", "inventory"]),
   businessPrice: Object.freeze(["business"]),
   businessCandidateHire: Object.freeze(["dashboard", "business", "businessWorkforce", "banking"]),
   businessTerminate: Object.freeze(["dashboard", "business", "banking"]),

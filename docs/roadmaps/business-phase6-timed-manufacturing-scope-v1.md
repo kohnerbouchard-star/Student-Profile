@@ -1,6 +1,6 @@
 # Business V2 Phase 6 — Timed Manufacturing Scope v1
 
-**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present but not yet certified; Player cutover not started
+**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present; Phase 6E authenticated Player cutover implemented and pending exact-head certification
 **Branch:** `feat/business-timed-manufacturing-v2`  
 **Parent branch:** `feat/business-equipment-capacity-v2`  
 **Certified Phase 5 implementation:** `6f936abd61c6cd903f6e839790ceab24ed570748`  

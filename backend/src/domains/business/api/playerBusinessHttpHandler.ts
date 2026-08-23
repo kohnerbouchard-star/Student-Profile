@@ -34,6 +34,11 @@ import {
   hireBusinessWorkforceCandidate,
   readBusinessWorkforceCandidates,
 } from "./playerBusinessWorkforce.ts";
+import {
+  cancelPlayerBusinessManufacturingJob,
+  readPlayerBusinessManufacturingJobs,
+  startPlayerBusinessManufacturingJob,
+} from "./playerBusinessManufacturing.ts";
 
 export interface PlayerBusinessRequestScope {
   readonly gameId: string;
@@ -62,7 +67,9 @@ export async function handlePlayerBusinessRequest(
     validateBusinessRequestEnvelope(request);
     const body = await readBusinessRequestBody(
       request,
-      route.kind === "businessRead",
+      route.kind === "businessRead" ||
+        (route.kind === "businessManufacturingCollection" &&
+          request.method === "GET"),
     );
     validateBusinessRequestMethodAndFields(route, request.method, body);
 
@@ -103,7 +110,61 @@ export async function handlePlayerBusinessRequest(
           await readBusinessWorkforceCandidates(repository, publicScope),
         );
       }
-      return privateJson(200, await repository.readBusiness(publicScope));
+      const snapshot = await repository.readBusiness(publicScope);
+      const manufacturingJobs =
+        snapshot.configured && snapshot.company.id
+          ? await readPlayerBusinessManufacturingJobs(
+            client,
+            publicScope,
+            snapshot.company.id,
+          )
+          : [];
+      return privateJson(200, { ...snapshot, manufacturingJobs });
+    }
+
+    if (route.kind === "businessManufacturingCollection") {
+      if (request.method === "GET") {
+        return privateJson(200, {
+          jobs: await readPlayerBusinessManufacturingJobs(
+            client,
+            publicScope,
+            route.businessKey,
+          ),
+        });
+      }
+      return privateJson(200, {
+        ok: true,
+        result: await startPlayerBusinessManufacturingJob(
+          client,
+          publicScope,
+          route.businessKey,
+          body,
+        ),
+        refreshRequired: true,
+      });
+    }
+
+    if (route.kind === "businessManufacturingCancel") {
+      return privateJson(200, {
+        ok: true,
+        result: await cancelPlayerBusinessManufacturingJob(
+          client,
+          publicScope,
+          route.businessKey,
+          route.jobKey,
+          body,
+        ),
+        refreshRequired: true,
+      });
+    }
+
+    if (route.kind === "businessProduction") {
+      return jsonError(410, {
+        code: "business_instant_production_retired",
+        message:
+          "Instant Business production has been retired. Use server-timed manufacturing.",
+        retryable: false,
+      });
     }
 
     if (route.kind === "businessInputPurchase") {

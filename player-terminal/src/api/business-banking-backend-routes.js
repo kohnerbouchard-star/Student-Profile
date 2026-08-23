@@ -71,6 +71,27 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessProduction"),
     },
   }),
+  businessManufacturingJobs: ({ params, payload }) => ({
+    method: "GET",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingJobs"))}/manufacturing/jobs`,
+  }),
+  businessManufacturingStart: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingStart"))}/manufacturing/jobs`,
+    payload: {
+      productKey: required(payload.productKey || payload.productId, "productKey", "businessManufacturingStart"),
+      quantity: number(payload.quantity, "quantity", "businessManufacturingStart"),
+      priority: payload.priority || "standard",
+      idempotencyKey: key(payload, "businessManufacturingStart"),
+    },
+  }),
+  businessManufacturingCancel: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingCancel"))}/manufacturing/jobs/${encodeURIComponent(required(params.jobId || payload.jobId || payload.jobKey, "jobId", "businessManufacturingCancel"))}/cancel`,
+    payload: {
+      idempotencyKey: key(payload, "businessManufacturingCancel"),
+    },
+  }),
   businessPrice: ({ params, payload }) => ({
     method: "POST",
     path: `/players/me/business/products/${encodeURIComponent(required(params.productId || payload.productKey, "productKey", "businessPrice"))}/pricing`,

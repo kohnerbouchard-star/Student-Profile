@@ -99,6 +99,42 @@ function workforceUtilizationPanel(business, displayCurrency) {
   </div>`;
 }
 
+function manufacturingTimestamp(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed);
+}
+
+function manufacturingJobsPanel(business) {
+  const jobs = Array.isArray(business.manufacturingJobs)
+    ? business.manufacturingJobs
+    : [];
+  if (!jobs.length) {
+    return renderEmptyState({
+      title: "No manufacturing jobs",
+      detail: "Start an exact catalog recipe when materials, labor, and installed equipment are ready.",
+      iconName: "factory",
+    });
+  }
+  return jobs.map((job) => {
+    const status = String(job.status || "queued").replace(/_/g, " ");
+    const due = job.completedAt || job.cancelledAt || job.failedAt ||
+      job.completesAt || job.startedAt || job.queuedAt;
+    return `<article class="player-terminal-business-product" data-business-manufacturing-job="${escapeHtml(job.jobKey)}">
+      <span class="player-terminal-product-icon">${icon("factory")}</span>
+      <div><small>${escapeHtml(status.toUpperCase())} · ${escapeHtml(job.priority)}</small><strong>${escapeHtml(job.productName)}</strong><p>${escapeHtml(formatNumber(job.quantity))} units · ${escapeHtml(job.resourceState.replace(/_/g, " "))} · ${escapeHtml(manufacturingTimestamp(due))}</p>${job.failureCode ? `<p>${escapeHtml(job.failureCode)}</p>` : ""}</div>
+      ${job.canCancel ? `<form data-player-form="business-manufacturing-cancel" data-endpoint="businessManufacturingCancel" data-business-id="${escapeHtml(job.businessKey)}" data-job-id="${escapeHtml(job.jobKey)}"><button class="player-terminal-compact-button" type="submit">Cancel job</button></form>` : renderStatusPill(status.toUpperCase(), job.status === "completed" ? "green" : job.status === "failed" ? "red" : "cyan")}
+    </article>`;
+  }).join("");
+}
+
 function statusForm(business) {
   return `<details class="player-terminal-disclosure"><summary><span>${icon("warning")}</span><div><strong>Change business status</strong><small>Restructure, recover, or permanently close</small></div>${icon("chevronRight")}</summary><form data-player-form="business-status" data-endpoint="businessStatus">
     ${hiddenBusinessKey(business)}
@@ -145,13 +181,12 @@ export function renderBusinessPage(data) {
 
       <section class="player-terminal-panel player-terminal-business-actions">
         <header class="player-terminal-panel-header"><div><span>OPERATIONS</span><strong>Run the company</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
-        <details class="player-terminal-disclosure" open><summary><span>${icon("factory")}</span><div><strong>Start a production run</strong><small>Recipe labor minutes are enforced server-side for the current payroll period</small></div>${icon("chevronRight")}</summary><form data-player-form="business-production" data-endpoint="businessProduction">
-          ${hiddenBusinessKey(business)}
-          <label>PRODUCT<select name="productId" required ${business.products.length ? "" : "disabled"}>${business.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)}</option>`).join("") || `<option value="">No products configured</option>`}</select></label>
-          <label>RUN SIZE<input name="quantity" type="number" min="1" max="${escapeHtml(business.operations.maxRun)}" value="10" required /></label>
+        <details class="player-terminal-disclosure" open><summary><span>${icon("factory")}</span><div><strong>Start manufacturing</strong><small>The server reserves exact materials, labor, equipment, and completion time</small></div>${icon("chevronRight")}</summary><form data-player-form="business-manufacturing-start" data-endpoint="businessManufacturingStart" data-business-id="${escapeHtml(business.company.id)}">
+          <label>PRODUCT<select name="productKey" required ${business.products.length ? "" : "disabled"}>${business.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)}</option>`).join("") || `<option value="">No exact catalog products available</option>`}</select></label>
+          <label>RUN SIZE<input name="quantity" type="number" min="1" max="${escapeHtml(Math.min(10000, Math.max(1, business.operations.maxRun || 1)))}" value="10" required /></label>
           <label>PRIORITY<select name="priority"><option value="standard">Standard</option><option value="expedite">Expedite</option></select></label>
-          <button class="player-terminal-primary-button" type="submit" ${business.products.length && business.operations.maxRun > 0 ? "" : "disabled"}>${icon("factory")} Start production</button>
-        </form></details>
+          <button class="player-terminal-primary-button" type="submit" ${business.products.length && business.operations.maxRun > 0 ? "" : "disabled"}>${icon("factory")} Start manufacturing</button>
+        </form><div data-business-manufacturing-jobs>${manufacturingJobsPanel(business)}</div></details>
         <details class="player-terminal-disclosure" open><summary><span>${icon("users")}</span><div><strong>Workforce utilization & payroll</strong><small>Finite labor minutes and recurring wage settlement</small></div>${icon("chevronRight")}</summary>${workforceUtilizationPanel(business, code)}</details>
         <details class="player-terminal-disclosure"><summary><span>${icon("users")}</span><div><strong>Workforce candidates</strong><small>Select from server-priced, role-grouped candidates</small></div>${icon("chevronRight")}</summary><div class="player-terminal-workforce-market">${renderBusinessWorkforceMarket(data.businessWorkforce, business, code)}</div></details>
         ${productCreationForm(business)}

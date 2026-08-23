@@ -3,6 +3,15 @@ export type PlayerBusinessRoute =
     readonly kind: "businessRead";
     readonly resource?: "overview" | "stockroom" | "recipes" | "workforceCandidates";
   }
+  | {
+    readonly kind: "businessManufacturingCollection";
+    readonly businessKey: string;
+  }
+  | {
+    readonly kind: "businessManufacturingCancel";
+    readonly businessKey: string;
+    readonly jobKey: string;
+  }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
   | { readonly kind: "businessCreate"; readonly operation: "formationRespond"; readonly formationKey: string }
@@ -292,6 +301,8 @@ export class PlayerBusinessError extends Error {
 
 const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessRead",
+  "businessManufacturingCollection",
+  "businessManufacturingCancel",
   "businessCreate",
   "businessStoreQuote",
   "businessStorePurchase",

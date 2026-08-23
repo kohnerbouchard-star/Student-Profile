@@ -1,4 +1,8 @@
 import type { PlayerBusinessRoute } from "../contracts/playerBusinessContracts.ts";
+import {
+  matchPlayerBusinessManufacturingCancellationPath,
+  matchPlayerBusinessManufacturingCollectionPath,
+} from "./playerBusinessManufacturingRoutePaths.ts";
 
 const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
 const PLAYER_EDGE_SERVICES = new Set(["player-api", "classroom-api"]);
@@ -10,6 +14,25 @@ export function readPlayerBusinessRoutePath(
   if (!segments || segments[0] !== "players" || segments[1] !== "me") {
     return null;
   }
+  const canonicalPath = `/${segments.join("/")}`;
+  const manufacturingCancellation =
+    matchPlayerBusinessManufacturingCancellationPath(canonicalPath);
+  if (manufacturingCancellation) {
+    return {
+      kind: "businessManufacturingCancel",
+      businessKey: manufacturingCancellation.businessKey,
+      jobKey: manufacturingCancellation.jobKey,
+    };
+  }
+  const manufacturingCollection =
+    matchPlayerBusinessManufacturingCollectionPath(canonicalPath);
+  if (manufacturingCollection) {
+    return {
+      kind: "businessManufacturingCollection",
+      businessKey: manufacturingCollection.businessKey,
+    };
+  }
+
   const tail = segments.slice(2);
 
   if (tail.length === 1 && tail[0] === "business") {

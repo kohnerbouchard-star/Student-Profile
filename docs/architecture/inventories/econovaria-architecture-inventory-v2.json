@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1066,
+    "sourceFiles": 1069,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
@@ -89,7 +89,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 22,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -3349,12 +3349,12 @@
         "lines": 1078
       },
       {
-        "file": "backend/supabase/functions/web-session-api/index.ts",
-        "lines": 1018
+        "file": "player-terminal/src/app.js",
+        "lines": 1019
       },
       {
-        "file": "player-terminal/src/app.js",
-        "lines": 1012
+        "file": "backend/supabase/functions/web-session-api/index.ts",
+        "lines": 1018
       },
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",

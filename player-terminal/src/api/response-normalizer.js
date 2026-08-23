@@ -119,6 +119,9 @@ function unwrap(endpointKey, raw) {
 }
 
 function applySafeDefaults(endpointKey, value) {
+  if (endpointKey === "business" && !Array.isArray(value.manufacturingJobs)) {
+    value.manufacturingJobs = [];
+  }
   if (endpointKey === "news" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "store" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "market" && !Array.isArray(value.sectors)) value.sectors = ["All"];
@@ -145,6 +148,28 @@ function validateWorldRuntime(value, context) {
   ))) throw invalidResponse("worldRuntime", context.requestId, context.path);
   if (!(value.travel.state === null || (typeof value.travel.state === "object" && !Array.isArray(value.travel.state)))) {
     throw invalidResponse("worldRuntime", context.requestId, context.path);
+  }
+}
+
+function validateBusinessManufacturingJobs(value, context) {
+  if (!Array.isArray(value.manufacturingJobs)) {
+    throw invalidResponse("business", context.requestId, context.path);
+  }
+  for (const job of value.manufacturingJobs) {
+    if (
+      !job || typeof job !== "object" || Array.isArray(job) ||
+      UUID.test(JSON.stringify(job)) ||
+      !/^mfg_[0-9a-f]{32}$/u.test(String(job.jobKey || "")) ||
+      !/^biz_[0-9a-f]{32}$/u.test(String(job.businessKey || "")) ||
+      !/^bpr_[0-9a-f]{32}$/u.test(String(job.productKey || "")) ||
+      !new Set(["queued", "in_progress", "completed", "cancelled", "failed"]).has(String(job.status || "")) ||
+      !Number.isSafeInteger(job.quantity) || job.quantity < 1 ||
+      !Number.isSafeInteger(job.completedOutputQuantity) ||
+      job.completedOutputQuantity < 0 ||
+      typeof job.canCancel !== "boolean"
+    ) {
+      throw invalidResponse("business", context.requestId, context.path);
+    }
   }
 }
 
@@ -197,7 +222,10 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
   if (endpointKey === "worldRuntime") validateWorldRuntime(value, context);
-  if (endpointKey === "business") validateBusinessWorkforceUtilization(value, context);
+  if (endpointKey === "business") {
+    validateBusinessManufacturingJobs(value, context);
+    validateBusinessWorkforceUtilization(value, context);
+  }
   if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
   }

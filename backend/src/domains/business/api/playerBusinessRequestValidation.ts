@@ -79,10 +79,23 @@ export function validateBusinessRequestMethodAndFields(
   method: string,
   body: Record<string, unknown>,
 ): void {
+  const isManufacturingCollection =
+    route.kind === "businessManufacturingCollection";
   if (route.kind === "businessRead" && method !== "GET") {
     throw methodNotAllowed("Use GET for this resource.");
   }
-  if (route.kind !== "businessRead" && method !== "POST") {
+  if (
+    isManufacturingCollection &&
+    method !== "GET" &&
+    method !== "POST"
+  ) {
+    throw methodNotAllowed("Use GET to read jobs or POST to start a job.");
+  }
+  if (
+    route.kind !== "businessRead" &&
+    !isManufacturingCollection &&
+    method !== "POST"
+  ) {
     throw methodNotAllowed("Use POST for this action.");
   }
 
@@ -105,6 +118,10 @@ export function validateBusinessRequestMethodAndFields(
 
   const allowed: Record<PlayerBusinessRoute["kind"], readonly string[]> = {
     businessRead: [],
+    businessManufacturingCollection: method === "GET"
+      ? []
+      : ["productKey", "quantity", "priority", "idempotencyKey"],
+    businessManufacturingCancel: ["idempotencyKey"],
     businessCreate: businessCreateFields,
     businessStoreQuote: ["itemKey", "quantity", "idempotencyKey"],
     businessStorePurchase: [

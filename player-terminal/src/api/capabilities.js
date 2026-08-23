@@ -64,6 +64,8 @@ const ENDPOINT_ACTIONS = Object.freeze({
   ),
   arrivalClass: "arrivalClassSubmit",
   businessTerminate: "businessEmployeeTerminate",
+  businessManufacturingStart: "businessProduction",
+  businessManufacturingCancel: "businessProduction",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
   storeQuote: "storePurchase",

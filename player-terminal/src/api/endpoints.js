@@ -26,6 +26,18 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   },
   businessProductCreate: { method: "POST", path: "/business/products" },
   businessProduction: { method: "POST", path: "/business/production-runs" },
+  businessManufacturingJobs: {
+    method: "GET",
+    path: "/businesses/:businessId/manufacturing/jobs",
+  },
+  businessManufacturingStart: {
+    method: "POST",
+    path: "/businesses/:businessId/manufacturing/jobs",
+  },
+  businessManufacturingCancel: {
+    method: "POST",
+    path: "/businesses/:businessId/manufacturing/jobs/:jobId/cancel",
+  },
   businessPrice: {
     method: "POST",
     path: "/business/products/:productId/pricing",

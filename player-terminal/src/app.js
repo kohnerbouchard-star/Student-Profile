@@ -851,6 +851,13 @@ export function createPlayerTerminal({ mount, config }) {
     const params = {};
     if (endpointKey === "contractSubmit") params.contractId = form.dataset.contractId || payload.contractId;
     if (endpointKey === "businessPrice") params.productId = form.dataset.productId;
+    if (endpointKey === "businessManufacturingStart") {
+      params.businessId = form.dataset.businessId || payload.businessId || payload.businessKey;
+    }
+    if (endpointKey === "businessManufacturingCancel") {
+      params.businessId = form.dataset.businessId || payload.businessId || payload.businessKey;
+      params.jobId = form.dataset.jobId || payload.jobId || payload.jobKey;
+    }
     if (endpointKey === "marketplacePurchase") params.listingId = form.dataset.listingId;
     if (endpointKey === "craftItem") params.recipeId = form.dataset.recipeId;
     if (endpointKey === "loanApply") params.offerId = form.dataset.offerId;
