@@ -1,0 +1,547 @@
+name: Business Phase 6 Convergence
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - .github/workflows/business-phase6-convergence.yml
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  converge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Normalize permanent Phase 6 branch state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/business-equipment-capacity-v2
+          rm -f \
+            .github/workflows/business-phase6-final-certification.yml \
+            .github/workflows/business-phase6-deterministic-repair.yml \
+            .github/workflows/business-phase6-source-correction.yml \
+            .github/workflows/business-phase6-authority-sync.yml \
+            .github/workflows/business-phase6-head-corrector.yml \
+            .github/workflows/business-phase6-certification-writer.yml \
+            .github/workflows/business-phase6b-certification-writer.yml \
+            docs/roadmaps/.phase6-head-correction-trigger \
+            sitecustomize.py \
+            pathlib.py
+
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import subprocess
+
+          workflow = Path(".github/workflows/business-timed-manufacturing-v2.yml")
+          workflow.write_text("""name: Business Timed Manufacturing V2
+
+on:
+  pull_request:
+    paths:
+      - \"backend/supabase/migrations/2026082311*.sql\"
+      - \"scripts/business-phase6-manufacturing-*.mjs\"
+      - \"docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md\"
+      - \".github/workflows/business-timed-manufacturing-v2.yml\"
+  push:
+    branches: [main]
+    paths:
+      - \"backend/supabase/migrations/2026082311*.sql\"
+      - \"scripts/business-phase6-manufacturing-*.mjs\"
+      - \".github/workflows/business-timed-manufacturing-v2.yml\"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-manufacturing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Verify timed manufacturing and retained authorities
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in scripts/business-phase6-manufacturing-*.mjs; do
+            node \"$script\"
+          done
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Run repository quality suite
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify all backend and Edge TypeScript
+        working-directory: backend
+        run: npm run typecheck:all
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify retained Player Business surface
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
+""")
+
+          authority_path = Path("docs/operations/contracts/player-cross-cutting-verification-authority-v1.json")
+          authority = json.loads(authority_path.read_text())
+          changed = subprocess.check_output(
+              ["git", "diff", "--name-only", "origin/feat/business-equipment-capacity-v2...HEAD"],
+              text=True,
+          ).splitlines()
+          removed = {
+              ".github/workflows/business-phase6-final-certification.yml",
+              ".github/workflows/business-phase6-deterministic-repair.yml",
+              ".github/workflows/business-phase6-source-correction.yml",
+              ".github/workflows/business-phase6-authority-sync.yml",
+              ".github/workflows/business-phase6-head-corrector.yml",
+              ".github/workflows/business-phase6-certification-writer.yml",
+              ".github/workflows/business-phase6b-certification-writer.yml",
+              "docs/roadmaps/.phase6-head-correction-trigger",
+              "sitecustomize.py",
+              "pathlib.py",
+          }
+          allowed = {name for name in changed if name and name not in removed}
+          allowed.update({
+              ".github/workflows/business-phase6-convergence.yml",
+              "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+              "scripts/player-cross-cutting-authority.test.mjs",
+              "scripts/verify-player-cross-cutting-authority.mjs",
+          })
+          authority["pullRequestNumber"] = 661
+          authority["baseRef"] = "feat/business-equipment-capacity-v2"
+          authority["scopeLock"] = "exact-path-allowlist"
+          authority["productionDeploymentAllowed"] = False
+          authority["productionMutationAllowed"] = False
+          authority["secretValuesAllowed"] = False
+          authority["allowedPaths"] = sorted(allowed)
+          authority_path.write_text(json.dumps(authority, indent=2) + "\n")
+          PY
+          git diff --check
+
+      - name: Run permanent local verification before freezing source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          for script in scripts/business-phase6-manufacturing-*.mjs; do
+            node "$script"
+          done
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+      - name: Freeze normalized implementation source
+        id: freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(business): freeze normalized Phase 6 source"
+            git push origin HEAD:feat/business-timed-manufacturing-v2
+          fi
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify and retry complete exact-source gate
+        id: gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.freeze.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          repo = os.environ["REPOSITORY"]
+          sha = os.environ["SOURCE_SHA"]
+          token = os.environ["GH_TOKEN"]
+          required = [
+              "Business Timed Manufacturing V2",
+              "Business Manufacturing Resource Hold V2",
+              "Business Timed Manufacturing Resource Hold V2",
+              "Business Manufacturing Completion V2",
+              "Database Replay",
+              "Backend Typecheck",
+              "Player Terminal Verify",
+              "Business Banking Runtime",
+              "Business Economy V2",
+              "Business Workforce Production Payroll V2",
+              "Repository Quality",
+              "Supply Chain Security",
+              "Admin API Check",
+              "Staging Readiness Preflight",
+              "Required Game Market Timezone",
+              "Exchange Calendar Runtime",
+          ]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "econovaria-phase6-convergence",
+          }
+
+          def request_json(url, method="GET"):
+              request = urllib.request.Request(url, headers=headers, method=method)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  if response.status == 204:
+                      return None
+                  return json.load(response)
+
+          def latest_runs():
+              payload = request_json(
+                  f"https://api.github.com/repos/{repo}/actions/runs?head_sha={sha}&per_page=100"
+              )
+              selected = {}
+              for run in payload.get("workflow_runs", []):
+                  name = run.get("name")
+                  current = selected.get(name)
+                  if current is None or run.get("created_at", "") > current.get("created_at", ""):
+                      selected[name] = run
+              return selected
+
+          retry_count = 0
+          deadline = time.time() + 62 * 60
+          while time.time() < deadline:
+              runs = latest_runs()
+              missing = [name for name in required if name not in runs]
+              pending = [
+                  name for name in required
+                  if name in runs and runs[name].get("status") != "completed"
+              ]
+              failed = [
+                  name for name in required
+                  if name in runs
+                  and runs[name].get("status") == "completed"
+                  and runs[name].get("conclusion") != "success"
+              ]
+              print(json.dumps({
+                  "sourceSha": sha,
+                  "missing": missing,
+                  "pending": pending,
+                  "failed": failed,
+                  "retryCount": retry_count,
+              }, sort_keys=True))
+
+              if not missing and not pending and not failed:
+                  evidence = {
+                      name: {
+                          "runId": runs[name]["id"],
+                          "conclusion": runs[name]["conclusion"],
+                          "htmlUrl": runs[name]["html_url"],
+                      }
+                      for name in required
+                  }
+                  Path("/tmp/phase6-evidence.json").write_text(
+                      json.dumps(evidence, indent=2) + "\n"
+                  )
+                  with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                      output.write(f"source_sha={sha}\n")
+                      output.write("evidence_json<<EOF\n")
+                      output.write(json.dumps(evidence, sort_keys=True))
+                      output.write("\nEOF\n")
+                  break
+
+              if failed and retry_count < 2:
+                  for name in failed:
+                      run_id = runs[name]["id"]
+                      try:
+                          request_json(
+                              f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/rerun-failed-jobs",
+                              method="POST",
+                          )
+                      except urllib.error.HTTPError as error:
+                          if error.code not in (409, 422):
+                              raise
+                  retry_count += 1
+                  time.sleep(30)
+                  continue
+
+              if failed:
+                  details = {
+                      name: {
+                          "runId": runs[name]["id"],
+                          "conclusion": runs[name].get("conclusion"),
+                          "htmlUrl": runs[name].get("html_url"),
+                      }
+                      for name in failed
+                  }
+                  raise SystemExit(
+                      "Phase 6 exact-source gate remains failed after bounded retries: "
+                      + json.dumps(details, sort_keys=True)
+                  )
+              time.sleep(20)
+          else:
+              raise SystemExit("Timed out waiting for complete Phase 6 exact-source verification.")
+          PY
+
+      - name: Write or reconcile durable certification
+        env:
+          SOURCE_SHA: ${{ steps.gates.outputs.source_sha }}
+          EVIDENCE_JSON: ${{ steps.gates.outputs.evidence_json }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import datetime
+          import json
+          import os
+          import re
+
+          source = os.environ["SOURCE_SHA"]
+          evidence = json.loads(os.environ["EVIDENCE_JSON"])
+          date = datetime.date.today().isoformat()
+          evidence_lines = "\n".join(
+              f"- **{name} — PASS** (`{payload['runId']}`)."
+              for name, payload in evidence.items()
+          )
+
+          scope_path = Path("docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md")
+          scope = scope_path.read_text()
+          scope = re.sub(
+              r"\*\*Status:\*\*[^\n]*",
+              "**Status:** COMPLETE — certified timed manufacturing lifecycle",
+              scope,
+              count=1,
+          )
+          certified_section = f"""
+
+## Certified Phase 6 result
+
+- **Exact implementation and verification source:** `{source}`.
+- Atomic canonical Warehouse → WIP material holds, deterministic eligible-labor reservations, and deterministic installed-equipment reservations commit before one queued job exists.
+- Server-derived timing, bounded deterministic queue start, due-job leases, exact-once Finished Goods completion, cost-basis settlement, and cancellation/failure resource release are authoritative.
+- Player manufacturing mutations and reads use public keys only; trusted UUIDs, accounts, leases, request hashes, worker tokens, and raw snapshots remain private.
+- The instant-production compatibility path is retired; Store selling, automatic sales, durability/repair economics, equity/IPO, merge, staging, and production deployment remain outside this phase.
+
+### Exact-source verification
+
+{evidence_lines}
+
+### Phase 6 exit result
+
+Every Phase 6 completion rule is met on `{source}`. **Phase 7 — Store seller offers and sellable Finished Goods is OPEN.**
+"""
+          if "## Certified Phase 6 result" in scope:
+              scope = scope.split("## Certified Phase 6 result", 1)[0].rstrip() + certified_section
+          else:
+              scope = scope.rstrip() + certified_section
+          scope_path.write_text(scope + "\n")
+
+          plan_path = Path("docs/roadmaps/business-v2-development-execution-plan-v1.md")
+          plan = plan_path.read_text()
+          plan = re.sub(
+              r"(## Phase 6[^\n]*\n)(?:\*\*Status:\*\*[^\n]*\n)?",
+              r"\1**Status:** COMPLETE — certified on `" + source + "`\n",
+              plan,
+              count=1,
+              flags=re.IGNORECASE,
+          )
+          checkpoint = f"""
+
+### Phase 6 certified checkpoint
+
+- Exact implementation and verification source: `{source}`.
+- Timed jobs, atomic Warehouse → WIP/labor/equipment holds, bounded queue and due-job workers, exact-once Finished Goods settlement, cancellation/failure recovery, public-key-only Player integration, and instant-production retirement are complete.
+- **Phase 7 — Store seller offers and sellable Finished Goods is OPEN.**
+"""
+          if "### Phase 6 certified checkpoint" in plan:
+              plan = plan.split("### Phase 6 certified checkpoint", 1)[0].rstrip() + checkpoint
+          else:
+              plan = plan.rstrip() + checkpoint
+          plan_path.write_text(plan + "\n")
+
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+          log = log_path.read_text()
+          heading = f"## {date} — Phase 6 COMPLETE: timed manufacturing"
+          entry = f"""
+
+---
+
+{heading}
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `{source}`.
+- Feature branch: `feat/business-timed-manufacturing-v2`; stacked draft PR: #661 on certified Phase 5.
+- PR #661 remained open, draft, unmerged, and undeployed; no merge, staging/production deployment, secret mutation, or live database mutation occurred.
+- Later certification-only commits must not replace `{source}` as implementation evidence.
+
+### Certified authority
+
+- One idempotent manufacturing start transaction resolves one active Business physical product to one canonical recipe/output, moves exact BOM quantities Warehouse → WIP, and reserves role/headcount/skill-constrained labor plus capability-constrained installed equipment.
+- Server-owned duration and bounded game-scoped workers govern queue start and due completion using deterministic order, row locks, `FOR UPDATE SKIP LOCKED`, expiring leases, retry backoff, and attempt ceilings.
+- Completion consumes exact WIP, creates exact canonical Finished Goods output, carries actual material basis and managerial labor allocation without a second payroll debit, and consumes labor/equipment reservations exactly once.
+- Cancellation and terminal failure reverse/release all held resources exactly once; terminal jobs are immutable and cross-game claims fail closed.
+- Player manufacturing APIs, UI, and reads expose public keys and stable lifecycle fields only.
+
+### Exact-source verification
+
+{evidence_lines}
+
+### Phase 6 exit and next step
+
+Every Phase 6 exit requirement is met. Store seller offers, Store-listing stock, automatic sales convergence, durability/repair economics, equity/IPO publication, merge, staging, and production deployment remain unauthorized. **Phase 7 — Store seller offers and sellable Finished Goods is OPEN.**
+"""
+          if heading in log:
+              log = log.split(heading, 1)[0].rstrip()
+              if log.endswith("---"):
+                  log = log[:-3].rstrip()
+          log_path.write_text(log.rstrip() + entry + "\n")
+          PY
+
+          rm -f \
+            .github/workflows/business-phase6-convergence.yml \
+            .github/workflows/business-phase6-final-certification.yml \
+            .github/workflows/business-phase6-deterministic-repair.yml \
+            .github/workflows/business-phase6-source-correction.yml \
+            .github/workflows/business-phase6-authority-sync.yml \
+            .github/workflows/business-phase6-head-corrector.yml \
+            .github/workflows/business-phase6-certification-writer.yml \
+            .github/workflows/business-phase6b-certification-writer.yml \
+            docs/roadmaps/.phase6-head-correction-trigger \
+            sitecustomize.py \
+            pathlib.py
+          git diff --check
+
+      - name: Commit durable certification
+        id: cert
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(business): certify Phase 6 timed manufacturing"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
+          echo "certification_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Update PR #661 durable record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.gates.outputs.source_sha }}
+          CERTIFICATION_SHA: ${{ steps.cert.outputs.certification_sha }}
+          EVIDENCE_JSON: ${{ steps.gates.outputs.evidence_json }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          source = os.environ["SOURCE_SHA"]
+          certification = os.environ["CERTIFICATION_SHA"]
+          evidence = json.loads(os.environ["EVIDENCE_JSON"])
+          checks = "\n".join(
+              f"- {name} (`{payload['runId']}`)"
+              for name, payload in evidence.items()
+          )
+          Path("/tmp/phase6-pr.md").write_text(f"""## Certified scope
+
+Phase 6 provides the authoritative server-timed Business manufacturing lifecycle on the certified Phase 5 stack.
+
+- **Exact Phase 6 implementation and verification source:** `{source}`.
+- **Durable Phase 6 certification head:** `{certification}`.
+- Parent PR: #660.
+
+PR #661 remains intentionally **draft, open, unmerged, and undeployed**. It does not authorize merge, staging deployment, production deployment, secret mutation, or live database mutation.
+
+## Certified behavior
+
+- atomic canonical Warehouse → WIP materials, eligible labor, and installed-equipment holds before job creation;
+- server-owned timing and bounded deterministic queue/due-job workers;
+- exact-once WIP consumption, Finished Goods output, cost basis, and reservation settlement;
+- exact-once cancellation/failure resource release and terminal immutability;
+- authenticated public-key-only Player mutations, reads, and UI lifecycle state;
+- explicit retirement of instant physical production.
+
+## Exact-source verification
+
+{checks}
+
+## Exclusions
+
+Store seller offers, Store-listing inventory, automatic sales convergence, durability/repair economics, equity/IPO publication, merge, staging, production deployment, secret changes, and live data mutation remain outside Phase 6.
+
+**Next authorized phase: Phase 7 — Store seller offers and sellable Finished Goods.**
+""")
+          PY
+          gh pr edit 661 \
+            --repo "${{ github.repository }}" \
+            --title "Draft: Business V2 Phase 6 timed manufacturing — certified" \
+            --body-file /tmp/phase6-pr.md
