@@ -1,10 +1,7 @@
 name: Business Phase 6 Convergence Writer
 
-# Existing-workflow trigger v2.
 on:
-  push:
-    branches:
-      - feat/business-timed-manufacturing-v2
+  pull_request:
     paths:
       - ".github/workflows/business-phase6-convergence-writer.yml"
 
@@ -19,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: feat/business-timed-manufacturing-v2
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - name: Materialize canonical completion and patch retained sources
         shell: bash
@@ -71,4 +68,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(business): converge Phase 6 manufacturing authority"
-          git push origin HEAD:feat/business-timed-manufacturing-v2
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
