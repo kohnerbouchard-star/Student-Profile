@@ -50,6 +50,8 @@ requireTokens(sql, "Atomic manufacturing start", [
   "physical_economy_recipe_outputs",
   "game_session_recipe_availability",
   "scarcity_band <> 'unavailable'",
+  "select recipe.*",
+  "v_product.output_game_item_id",
   "BUSINESS_MANUFACTURING_IDEMPOTENCY_CONFLICT",
   "derive_business_manufacturing_duration_seconds_v2",
   "post_inventory_transaction_v2",
@@ -57,6 +59,11 @@ requireTokens(sql, "Atomic manufacturing start", [
   "'location', 'warehouse'",
   "'location', 'work_in_progress'",
   "coalesce(v_inventory_post->>'status', '') <> 'committed'",
+]);
+
+forbidTokens(sql, "Replay-safe composite assignment", [
+  "select recipe, output_item\n  into v_recipe, v_output",
+  "v_output public.game_items%rowtype",
 ]);
 
 requireTokens(sql, "Deterministic finite reservations", [
