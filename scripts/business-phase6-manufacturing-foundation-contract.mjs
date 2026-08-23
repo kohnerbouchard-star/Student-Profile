@@ -181,7 +181,9 @@ forbidTokens(lower, "Phase 6A live-cutover exclusions", [
 ]);
 
 requireTokens(scope, "Phase 6 scope lock", [
-  "Status:** IN PROGRESS",
+  "Status:** COMPLETE",
+  "Certified Phase 6 exact-head source:** `739f5540234b20e16ba34f69f0d741d986030113`",
+  "Phase 7 checkpoint 7A opened",
   "Phase 6A",
   "Phase 6B — atomic manufacturing start and resource hold is IMPLEMENTED",
   "Phase 6E — authenticated Player cutover is IMPLEMENTED",
