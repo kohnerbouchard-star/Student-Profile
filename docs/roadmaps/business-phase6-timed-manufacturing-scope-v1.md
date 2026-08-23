@@ -1,19 +1,22 @@
 # Business V2 Phase 6 — Timed Manufacturing Scope v1
 
-**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present; Phase 6E authenticated Player cutover implemented and pending exact-head certification
+**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6E integrated on immutable implementation source `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`; exact-head certification pending  
 **Branch:** `feat/business-timed-manufacturing-v2`  
 **Parent branch:** `feat/business-equipment-capacity-v2`  
 **Certified Phase 5 implementation:** `6f936abd61c6cd903f6e839790ceab24ed570748`  
 **Phase 5 durable certification head:** `614be4f7d4eee2848e2c6140b643893fbac23834`  
 **Certified Phase 6A source:** `0589e8015736a8b770622be6ad0e5abedda24c26`  
+**Phase 6B–6E implementation source:** `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`  
 
 ## Purpose
 
-Phase 6 replaces instant physical Business production with an authoritative server-timed manufacturing lifecycle. The browser may request a quantity and priority, but it never declares recipe identity, material cost, labor time, equipment time, start time, completion time, output quantity, success, failure, or settlement.
+Phase 6 replaces instant physical Business production with an authoritative server-timed manufacturing lifecycle. The browser may request a product, quantity, and bounded priority, but it never declares recipe identity, material cost, labor time, equipment time, start time, completion time, output quantity, success, failure, or settlement.
 
 The governing rule is:
 
 > A manufacturing job exists only after exact canonical materials, eligible labor, and installed equipment are reserved. The server starts it, the server decides when it is due, and a bounded worker settles it exactly once.
+
+A later documentation or certification commit must not replace `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff` as the immutable Phase 6B–6E implementation identity.
 
 ## Certified dependencies
 
@@ -26,34 +29,30 @@ Phase 6 builds only on already certified authorities:
 - append-only canonical Inventory transaction posting;
 - first-class Business money and audit authority.
 
-No duplicate recipe, inventory, labor, equipment, money, or Store authority is permitted.
+No duplicate recipe, inventory, labor, equipment, money, Store, or Player-identity authority is permitted.
 
 ## Phase 6A — lifecycle and worker foundation
 
-Phase 6A is implemented and exact-head verified on `0589e8015736a8b770622be6ad0e5abedda24c26`.
+Phase 6A is certified on `0589e8015736a8b770622be6ad0e5abedda24c26`.
 
-It adds:
+It establishes:
 
-- a game-scoped `business_manufacturing_jobs` lifecycle with public `mfg_...` identity;
-- exact Business, product, canonical recipe, output item, and requesting Player scope;
-- server-derived duration from canonical recipe duration, game difficulty, current recipe availability, route/event multipliers, quantity, and bounded priority policy;
-- immutable request identity and server-owned recipe/timing snapshot;
+- game-scoped `business_manufacturing_jobs` with public `mfg_...` identity;
+- exact Business, physical product, canonical recipe, output item, and requesting Player scope;
+- server-derived duration from canonical recipe duration, game difficulty, recipe availability, route/event multipliers, quantity, and bounded priority;
+- immutable request identity and server-owned recipe/timing snapshots;
 - lifecycle states `queued`, `in_progress`, `completed`, `cancelled`, and `failed`;
-- resource-state invariants requiring held resources before queue/start, consumed resources before completion, and released resources before cancellation/failure;
+- resource states `reserved`, `consumed`, and `released`;
 - append-only transition evidence;
-- deterministic same-game queue start using row locks;
-- due-job completion leases using `FOR UPDATE SKIP LOCKED`, bounded batches, lease expiry, retry backoff, and attempt limits;
-- a public-key-only Player read model that excludes internal UUIDs, request hashes, leases, and trusted ownership metadata.
-
-Phase 6A deliberately does not expose a Player job-creation route or a completion settlement function. This prevents a partially implemented lifecycle from accepting jobs without canonical resources or marking output complete without WIP settlement.
+- deterministic queue start;
+- due-job completion leases with `FOR UPDATE SKIP LOCKED`, lease expiry, bounded retry backoff, and attempt ceilings;
+- public-key-only Player reads that exclude internal UUIDs, lease tokens, request hashes, and reservation ownership metadata.
 
 ## Phase 6B — atomic manufacturing start and resource hold
 
-**Phase 6B — atomic manufacturing start and resource hold is OPEN.**
+**Phase 6B — atomic manufacturing start and resource hold is IMPLEMENTED.**
 
-The Phase 6B implementation now adds one service-owned atomic start transaction. Exact-head certification is pending the full required gate set.
-
-The command:
+The service-owned atomic start transaction:
 
 - resolves the authenticated Player's exact active Business;
 - accepts only public Business/product keys, quantity, bounded priority, and idempotency intent;
@@ -62,29 +61,75 @@ The command:
 - derives duration server-side through the Phase 6A timing authority;
 - resolves canonical Business Warehouse and Work in Progress accounts;
 - moves exact canonical BOM quantities `Warehouse -> WIP` through `economy_private.post_inventory_transaction_v2`;
-- records exact immutable material line, quantity, carried cost, and currency evidence;
-- extends the existing labor and equipment reservation authorities with a mutually exclusive manufacturing-job binding rather than adding parallel capacity tables;
+- records immutable material-line quantity, carried cost, and currency evidence;
+- binds the existing labor and equipment reservation authorities to one manufacturing job instead of adding parallel capacity tables;
 - reserves eligible role/headcount/skill employee minutes in deterministic employee public-key order;
 - reserves installed equipment capability/time in deterministic installation public-key order;
-- inserts one queued manufacturing job and append-only Player/audit evidence within the same transaction;
+- inserts one queued job and append-only Player/audit evidence in the same transaction;
 - replays matching idempotency without moving or reserving resources again;
 - rejects conflicting idempotency reuse;
-- uses a deferred exact-resource constraint so no queued/running job can commit with missing or extra BOM, labor, or equipment holds;
-- rolls the complete transaction back when any material, labor, equipment, ownership, recipe, or reconciliation check fails.
+- uses deferred exact-resource validation so no queued or running job can commit with missing or extra BOM, labor, or equipment holds;
+- rolls back the complete transaction when any material, labor, equipment, ownership, recipe, or reconciliation check fails.
 
-The live Player route remains unchanged while this checkpoint is verified. Legacy instant production is not retired until the authenticated API cutover and completion/recovery path are both complete.
+## Phase 6C — exact-once completion and Finished Goods settlement
 
-## Player cutover
+**Phase 6C — exact-once completion is IMPLEMENTED.**
 
-Player cutover is **NOT STARTED** on this source. PR #661 does not yet contain the authenticated manufacturing start/cancel routes or the connected Player Business workspace. Those changes remain a later Phase 6 checkpoint and may not be represented as complete until their exact-head API, browser, replay, load, and two-game isolation gates pass.
+The due-job settlement authority:
+
+- accepts only a valid, unexpired completion lease for an `in_progress` job whose server-derived `completes_at` has passed;
+- locks the job, staged WIP materials, labor reservations, equipment reservations, and canonical output holding in deterministic order;
+- consumes exact WIP quantities through canonical Inventory journal authority;
+- creates the exact canonical output quantity in Business Finished Goods;
+- carries actual material basis plus bounded labor allocation into finished-goods cost basis without another payroll cash debit;
+- consumes labor and equipment reservations exactly once;
+- writes append-only transition and audit evidence;
+- marks `completed` only after output and resource settlement commit atomically;
+- rejects replay, stale leases, mismatched leases, early completion, and terminal mutation.
+
+## Phase 6D — cancellation, failure, and terminal recovery
+
+**Phase 6D — exact-once recovery is IMPLEMENTED.**
+
+Recovery authority:
+
+- validates Player cancellation ownership and worker failure authority;
+- permits cancellation only from eligible nonterminal lifecycle states;
+- reverses staged material from WIP to Warehouse through canonical Inventory authority;
+- releases labor and equipment reservations exactly once;
+- records stable public terminal error state without exposing internal failure metadata;
+- prevents a stale worker from releasing or completing another worker's job;
+- preserves terminal immutability and replay safety;
+- fails closed when the reviewed completion-attempt ceiling is exhausted without leaking held resources.
+
+## Phase 6E — authenticated Player API and workspace cutover
+
+**Phase 6E — authenticated Player cutover is IMPLEMENTED.**
+
+Immutable implementation source: `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`.
+
+The cutover:
+
+- adds authenticated public-key-only manufacturing collection and cancellation route parsing;
+- exposes owned-Business manufacturing reads through the canonical Business Player API;
+- accepts Player intent through server-validated start and cancellation requests;
+- derives game, Player, Business ownership, canonical recipe, output, timing, materials, labor, and equipment authority server-side;
+- validates every database result through bounded manufacturing contracts before returning it to the browser;
+- adds same-origin Player BFF endpoint identities for manufacturing read, start, and cancellation;
+- adds manufacturing resources to the Player resource plan and refresh invalidation boundary;
+- connects the Player Business workspace to server-timed manufacturing jobs and status;
+- removes the legacy instant-production form from the connected workspace;
+- returns stable authenticated HTTP `410 Gone` with `business_instant_production_retired` for the legacy instant-production route;
+- keeps service-owned manufacturing wrapper functions unavailable to browser database roles;
+- preserves public-key-only browser contracts, cross-game isolation, idempotency, and audit evidence.
+
+Phase 6E does not make a browser timer authoritative. The UI displays server state and timestamps only.
 
 ## Locked lifecycle
 
-Target lifecycle:
-
 ```text
-request intent
-  -> validate exact Business-owned canonical recipe and output
+Player intent
+  -> validate exact owned Business, canonical product, recipe, quantity, and priority
   -> reserve/move exact BOM materials Warehouse -> WIP
   -> reserve eligible employee minutes
   -> reserve installed equipment minutes
@@ -97,63 +142,33 @@ request intent
   -> completed with resource_state=consumed
 ```
 
-Failure/cancellation path:
+Cancellation/failure path:
 
 ```text
 queued or in_progress
-  -> validate cancellation/failure authority
-  -> release or reverse canonical material reservation/WIP state
+  -> validate cancellation or failure authority
+  -> reverse canonical WIP material state
   -> release labor/equipment reservations exactly once
   -> cancelled or failed with resource_state=released
 ```
 
-## Phase 6B verification requirements
-
-Phase 6B is not certified until all of the following pass on one exact source:
-
-- focused authority contract and rollback/concurrency simulation;
-- complete database replay from zero twice and rebuilt-database lint;
-- Backend and all Edge typechecks;
-- retained Phase 4 labor/payroll and Phase 5 equipment gates;
-- Business Economy and Business Banking gates;
-- Repository Quality and Supply Chain Security;
-- Player Terminal Verify including Chromium;
-- cross-game/public-key privacy checks;
-- durable plan/log checkpoint evidence.
-
-## Required completion worker
-
-The next Phase 6 checkpoint must:
-
-- claim only due `in_progress` jobs with an unexpired exclusive lease;
-- reject stale or mismatched leases;
-- lock the job, WIP holdings, labor reservations, equipment reservations, and output holding in deterministic order;
-- consume exact WIP quantities through canonical Inventory journal authority;
-- create the exact canonical output quantity in Business Finished Goods;
-- carry actual material basis plus labor allocation into finished-goods cost basis without a second payroll cash debit;
-- consume labor and equipment reservations exactly once;
-- write append-only transition and audit evidence;
-- mark `completed` only after all settlement is committed;
-- roll back the entire transaction on any failure;
-- release the lease with bounded retry timing for retryable failures;
-- fail closed after the reviewed attempt ceiling without leaking held resources.
-
 ## Concurrency and recovery requirements
 
-Phase 6 must prove:
+Phase 6 must prove on one exact source that:
 
 - two requests cannot reserve the same material, labor, or equipment capacity;
 - matching idempotency retries create one job;
 - conflicting idempotency reuse is rejected;
 - queue workers cannot start the same job twice;
 - completion workers cannot lease the same due job concurrently;
-- an expired lease can be reclaimed, while an unexpired lease cannot;
+- an expired lease can be reclaimed while an unexpired lease cannot;
 - stale workers cannot complete or release another worker's job;
 - completion cannot occur before `completes_at`;
 - output and resource consumption occur exactly once;
 - cancellation/failure releases every held resource exactly once;
 - terminal jobs are immutable;
-- two simultaneous games cannot claim or settle one another's jobs.
+- two simultaneous games cannot claim, mutate, or settle one another's jobs;
+- a browser cannot submit trusted ownership, game, recipe, material, labor, equipment, timing, or completion outcomes.
 
 ## Public read boundary
 
@@ -172,6 +187,22 @@ Player-visible manufacturing data may include only:
 
 It must not expose internal UUIDs, inventory account IDs, holding IDs, employee IDs, equipment installation IDs, lease tokens, request hashes, raw snapshots, service metadata, or trusted ownership fields.
 
+## Exact-head certification requirements
+
+Phase 6B–6E are not certified until all required checks pass on one frozen exact source, including:
+
+- Phase 6 foundation, lifecycle, start, completion, recovery, and authenticated Player API contracts;
+- focused rollback, concurrency, idempotency, lease, and recovery simulations;
+- complete database replay from zero twice and rebuilt-database lint;
+- Backend and all Edge typechecks;
+- retained Phase 4 labor/payroll and Phase 5 equipment gates;
+- Business Economy and Business Banking gates;
+- Repository Quality and Supply Chain Security;
+- Player Terminal verification including Chromium;
+- environment-neutral browser and runtime interaction wiring;
+- 40-Player classroom load and two-game isolation acceptance;
+- durable execution-plan and execution-log certification evidence.
+
 ## Explicit exclusions
 
 Phase 6 does not authorize:
@@ -180,13 +211,14 @@ Phase 6 does not authorize:
 - client-side timers as authority;
 - Store seller offers or Store-listing inventory;
 - automatic sales or revenue settlement;
+- five-minute Store withdrawal processing;
 - durability decay, random equipment failure, repair pricing, or maintenance settlement;
 - corporate equity, IPO, or Financial Market publication;
 - merge, staging deployment, production deployment, secret mutation, or live database mutation.
 
 ## Completion rule
 
-Phase 6 is not complete until all of the following are durable:
+Phase 6 is complete only when all of the following are durable:
 
 1. atomic job-start command with material/WIP, labor, and equipment reservations;
 2. authenticated Player API cutover and explicit instant-production compatibility retirement;
@@ -196,9 +228,11 @@ Phase 6 is not complete until all of the following are durable:
 6. public-key-only Player manufacturing read and connected UI state;
 7. focused concurrency/idempotency simulations and database integration tests;
 8. database replay from zero twice and rebuilt-database lint;
-9. backend, all Edge, security, repository, Player, Chromium, and 40-Player/two-game regressions;
+9. backend, all Edge, security, repository, Player, Chromium, 40-Player, and two-game regressions;
 10. exact implementation source and durable execution-plan/log certification.
+
+Implementation requirements 1–7 are present on `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`. Requirements 8–10 remain certification gates and may not be represented as complete until the exact-head evidence is green and durably recorded.
 
 ## Next authorized checkpoint
 
-**Immediate checkpoint:** certify the existing Phase 6B–6D source on one replayable exact head, then implement Phase 6E authenticated Player API and workspace cutover. Do not open Store seller offers, sales, durability/repair, IPO, merge, or deployment before the full Phase 6 completion rule is satisfied.
+**Immediate checkpoint:** run and reconcile the complete exact-head Phase 6 acceptance suite against the frozen Phase 6E implementation, then write durable certification evidence. Phase 7 Store seller offers remains closed until Phase 6 satisfies the completion rule. No merge or deployment is authorized.

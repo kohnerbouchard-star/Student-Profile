@@ -183,7 +183,8 @@ forbidTokens(lower, "Phase 6A live-cutover exclusions", [
 requireTokens(scope, "Phase 6 scope lock", [
   "Status:** IN PROGRESS",
   "Phase 6A",
-  "Phase 6B — atomic manufacturing start and resource hold is OPEN",
+  "Phase 6B — atomic manufacturing start and resource hold is IMPLEMENTED",
+  "Phase 6E — authenticated Player cutover is IMPLEMENTED",
   "server starts it",
   "FOR UPDATE SKIP LOCKED",
   "Store seller offers or Store-listing inventory",
