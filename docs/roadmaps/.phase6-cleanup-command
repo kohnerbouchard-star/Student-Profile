@@ -1,3 +1,0 @@
-delete .github/scripts/phase6_repair_and_certify.py
-delete docs/roadmaps/.phase6-repair-trigger
-delete docs/roadmaps/.phase6-cleanup-intent
