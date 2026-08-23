@@ -52,7 +52,6 @@ begin
     material.staged_quantity,
     material.staged_unit_cost,
     material.cost_currency_code,
-    material.inventory_transaction_id,
     material.status,
     material.consumed_at,
     material.released_at
