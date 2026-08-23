@@ -53,6 +53,74 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repair-player-runtime-syntax:
+    name: Repair Phase 6 Player runtime syntax
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 661 &&
+      github.actor != 'github-actions[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Phase 6 branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - name: Repair malformed service-client properties
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('backend/supabase/functions/player-api/runtime.ts')
+          source = path.read_text()
+          repaired, count = re.subn(
+              r'(?m)^(\s*)createServiceClient \},$',
+              r'\1createServiceClient,',
+              source,
+          )
+          if count < 1:
+              raise SystemExit('No malformed createServiceClient property lines were found.')
+          path.write_text(repaired)
+          print(f'Repaired {count} malformed service-client property line(s).')
+          PY
+      - name: Restore permanent gate, authenticate preflight, and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show f205b1c9fc8d2172c6aba6fb08c2d332751c8014:.github/workflows/business-timed-manufacturing-v2.yml \
+            > .github/workflows/business-timed-manufacturing-v2.yml
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/business-timed-manufacturing-v2.yml')
+          source = path.read_text()
+          needle = '                --header "apikey: ${PUBLISHABLE_KEY}" \\\n'
+          replacement = (
+              '                --header "apikey: ${PUBLISHABLE_KEY}" \\\n'
+              '                --header "Authorization: Bearer ${PUBLISHABLE_KEY}" \\\n'
+          )
+          if source.count(needle) != 1:
+              raise SystemExit('Expected one Player Edge preflight API-key header.')
+          path.write_text(source.replace(needle, replacement))
+          PY
+          rm -f .github/workflows/business-phase6-player-runtime-syntax-repair.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            backend/supabase/functions/player-api/runtime.ts \
+            .github/workflows/business-timed-manufacturing-v2.yml \
+            .github/workflows/business-phase6-player-runtime-syntax-repair.yml
+          git commit -m "fix(player): repair Player Edge runtime boot"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
+
   materialize-inventory:
     name: Materialize Phase 6 architecture inventory
     if: >-
