@@ -1,4 +1,5 @@
 name: Business Phase 6 Retained Contract Alignment
+# Branch-local one-shot alignment trigger.
 
 on:
   push:
