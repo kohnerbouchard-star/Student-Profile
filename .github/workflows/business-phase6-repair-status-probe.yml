@@ -1,0 +1,78 @@
+name: Business Phase 6 Repair Status Probe
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - .github/workflows/business-phase6-repair-status-probe.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  probe:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - name: Snapshot latest bounded repair run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import urllib.request
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "econovaria-phase6-status-probe",
+          }
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPOSITORY']}/actions/runs?branch=feat%2Fbusiness-timed-manufacturing-v2&per_page=100",
+              headers=headers,
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+          candidates = [
+              run for run in payload.get("workflow_runs", [])
+              if run.get("name") == "Business Phase 6 Bounded Repair"
+          ]
+          candidates.sort(key=lambda run: run.get("created_at", ""), reverse=True)
+          if candidates:
+              run = candidates[0]
+              status = {
+                  "schemaVersion": 1,
+                  "found": True,
+                  "runId": run.get("id"),
+                  "status": run.get("status"),
+                  "conclusion": run.get("conclusion"),
+                  "headSha": run.get("head_sha"),
+                  "createdAt": run.get("created_at"),
+                  "updatedAt": run.get("updated_at"),
+                  "htmlUrl": run.get("html_url"),
+              }
+          else:
+              status = {"schemaVersion": 1, "found": False}
+          Path("docs/roadmaps/business-phase6-bounded-repair-status-v1.json").write_text(
+              json.dumps(status, indent=2, sort_keys=True) + "\n"
+          )
+          PY
+          rm .github/workflows/business-phase6-repair-status-probe.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(business): snapshot bounded Phase 6 repair status"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
