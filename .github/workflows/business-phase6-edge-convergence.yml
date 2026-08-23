@@ -1,0 +1,363 @@
+name: Business Phase 6 Edge Convergence
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - ".github/workflows/business-phase6-edge-convergence.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact Phase 6 branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Materialize the reviewed static Player Edge boundary
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          root = Path('.')
+
+          (root / 'backend/supabase/functions/player-api/index.ts').write_text(
+              'import "./trustedClientIpServe.ts";\nimport "./runtime.ts";\n'
+          )
+          (root / 'backend/supabase/functions/player-api/trustedClientIpServe.ts').write_text('''import { bindGatewayTrustedClientIp } from "../../../src/security/edgeGatewayClientIp.ts";
+
+const originalServe = Deno.serve.bind(Deno);
+
+(Deno as unknown as { serve: typeof Deno.serve }).serve = ((handler: (
+  request: Request,
+  info?: unknown,
+) => Response | Promise<Response>) =>
+  originalServe((incomingRequest: Request, info: unknown) =>
+    handler(
+      bindGatewayTrustedClientIp(
+        incomingRequest,
+        Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),
+      ),
+      info,
+    )
+  )) as typeof Deno.serve;
+''')
+
+          (root / 'backend/supabase/functions/player-web-session-api/index.ts').write_text(
+              'import "./trustedClientIpServe.ts";\nimport "./runtime.ts";\n'
+          )
+          (root / 'backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts').write_text('''import { bindGatewayTrustedClientIp } from "../../../src/security/edgeGatewayClientIp.ts";
+
+const MAX_MATERIALIZED_BODY_BYTES = 1_048_577;
+const originalServe = Deno.serve.bind(Deno);
+
+async function materializeBoundedRequestBody(request: Request): Promise<Request> {
+  const method = request.method.toUpperCase();
+  if (
+    request.body === null ||
+    method === "GET" ||
+    method === "HEAD" ||
+    method === "OPTIONS"
+  ) {
+    return request;
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.byteLength) continue;
+      const remainingBytes = MAX_MATERIALIZED_BODY_BYTES - totalBytes;
+      const chunk = value.byteLength > remainingBytes
+        ? value.subarray(0, remainingBytes)
+        : value;
+      chunks.push(chunk);
+      totalBytes += chunk.byteLength;
+      if (totalBytes >= MAX_MATERIALIZED_BODY_BYTES) {
+        await reader.cancel("Player request body capture limit reached").catch(() => {});
+        break;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    body,
+    signal: request.signal,
+  });
+}
+
+(Deno as unknown as { serve: typeof Deno.serve }).serve = ((handler: (
+  request: Request,
+  info?: unknown,
+) => Response | Promise<Response>) =>
+  originalServe(async (incomingRequest: Request, info: unknown) => {
+    const materializedRequest = await materializeBoundedRequestBody(incomingRequest);
+    return handler(
+      bindGatewayTrustedClientIp(
+        materializedRequest,
+        Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),
+      ),
+      info,
+    );
+  })) as typeof Deno.serve;
+''')
+
+          dispatch = root / 'backend/supabase/functions/_shared/playerBusinessDispatch.ts'
+          source = dispatch.read_text()
+          source = source.replace('endpointKey(route),', 'endpointKey(route, request.method),')
+          source = source.replace(
+              'function endpointKey(route: PlayerBusinessRoute):',
+              'function endpointKey(\n  route: PlayerBusinessRoute,\n  method: string,\n):'
+          )
+          if '| "businessManufacturingJobs"' not in source:
+              source = source.replace(
+                  '  | "businessProduction"\n',
+                  '  | "businessProduction"\n  | "businessManufacturingJobs"\n  | "businessManufacturingStart"\n  | "businessManufacturingCancel"\n'
+              )
+          if 'route.kind === "businessManufacturingCollection"' not in source:
+              marker = '  if (route.kind === "businessStoreQuote") return "storeQuote";'
+              block = '''  if (route.kind === "businessManufacturingCollection") {
+    return method === "GET"
+      ? "businessManufacturingJobs"
+      : "businessManufacturingStart";
+  }
+  if (route.kind === "businessManufacturingCancel") {
+    return "businessManufacturingCancel";
+  }
+'''
+              source = source.replace(marker, block + marker)
+          dispatch.write_text(source)
+
+          authority_path = root / 'docs/operations/contracts/player-cross-cutting-verification-authority-v1.json'
+          authority = json.loads(authority_path.read_text())
+          required_paths = [
+              'backend/supabase/functions/_shared/playerBusinessDispatch.ts',
+              'backend/supabase/functions/player-api/index.ts',
+              'backend/supabase/functions/player-api/runtime.ts',
+              'backend/supabase/functions/player-api/trustedClientIpServe.ts',
+              'backend/supabase/functions/player-web-session-api/index.ts',
+              'backend/supabase/functions/player-web-session-api/runtime.ts',
+              'backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts',
+              'scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs',
+          ]
+          authority['allowedPaths'] = sorted(set(authority['allowedPaths']) | set(required_paths))
+          authority_path.write_text(json.dumps(authority, indent=2) + '\n')
+
+          workflow = root / '.github/workflows/business-timed-manufacturing-v2.yml'
+          workflow.write_text('''name: Business Timed Manufacturing V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/2026082311*.sql"
+      - "backend/src/domains/business/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/_shared/playerBusinessDispatch.ts"
+      - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/player-web-session-api/**"
+      - "player-terminal/**"
+      - "scripts/business-phase6*.mjs"
+      - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
+      - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
+      - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+      - "docs/roadmaps/business-phase6*.md"
+      - ".github/workflows/business-*-manufacturing-*.yml"
+      - ".github/workflows/business-timed-manufacturing-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/supabase/migrations/2026082311*.sql"
+      - "backend/src/domains/business/**"
+      - "backend/supabase/functions/player-api/**"
+      - "backend/supabase/functions/player-web-session-api/**"
+      - "scripts/business-phase6*.mjs"
+      - ".github/workflows/business-timed-manufacturing-v2.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-timed-manufacturing-v2-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify-manufacturing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Verify timed manufacturing authority and regressions
+        run: |
+          node scripts/business-phase6-manufacturing-foundation-contract.mjs
+          node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
+          node scripts/business-phase6-manufacturing-start-contract.mjs
+          node scripts/business-phase6-manufacturing-start-simulation.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-simulation.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-simulation.mjs
+          node scripts/business-phase6e-player-api-contract.mjs
+          node --test scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Verify deterministic architecture inventory
+        run: |
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - name: Run repository quality suite
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify backend, all Edge TypeScript, and static Player entrypoints
+        working-directory: backend
+        run: |
+          npm run typecheck:all
+          deno check supabase/functions/player-api/index.ts
+          deno check supabase/functions/player-web-session-api/index.ts
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify retained Player Business surface
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
+
+  verify-player-edge-boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Start minimal local Supabase Edge stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p backend/supabase/functions
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\\n')"
+            printf '%s\\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit
+      - name: Verify static Player Edge entrypoints boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(npx supabase status --workdir backend -o env)"
+          for FUNCTION in player-api player-web-session-api; do
+            STATUS=000
+            for ATTEMPT in $(seq 1 30); do
+              STATUS="$(curl --silent --show-error --output /tmp/${FUNCTION}.json --write-out '%{http_code}' --max-time 5 --request OPTIONS --header "apikey: ${PUBLISHABLE_KEY}" "http://127.0.0.1:54321/functions/v1/${FUNCTION}" || true)"
+              if [ "$STATUS" = "204" ]; then break; fi
+              sleep 1
+            done
+            if [ "$STATUS" != "204" ]; then
+              echo "${FUNCTION} failed static boot with HTTP ${STATUS}." >&2
+              head -c 2000 "/tmp/${FUNCTION}.json" >&2 || true
+              exit 1
+            fi
+          done
+      - name: Stop local stack
+        if: always()
+        run: |
+          rm -f backend/supabase/functions/.env
+          npx supabase stop --workdir backend --no-backup || true
+''')
+          PY
+      - name: Regenerate deterministic architecture evidence
+        run: node scripts/architecture/build-architecture-inventory.mjs
+      - name: Run bounded source checks
+        run: |
+          node scripts/business-phase6e-player-api-contract.mjs
+          node --test scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Remove controller and commit convergence
+        shell: bash
+        run: |
+          rm .github/workflows/business-phase6-edge-convergence.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Phase 6 Edge boundary already converged."
+            exit 0
+          fi
+          git commit -m "fix(player): converge static Edge manufacturing boundary"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
