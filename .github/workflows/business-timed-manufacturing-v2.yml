@@ -4,23 +4,29 @@ on:
   pull_request:
     paths:
       - "backend/supabase/migrations/2026082311*.sql"
-      - "scripts/business-phase6-manufacturing-*.mjs"
-      - "docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md"
+      - "backend/src/domains/business/api/playerBusinessManufacturing*.ts"
+      - "backend/src/domains/business/api/playerBusinessRoutePaths.ts"
+      - "backend/src/domains/business/api/playerBusinessHttpHandler.ts"
+      - "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts"
+      - "scripts/business-phase6*.mjs"
+      - "docs/roadmaps/business-phase6*.md"
+      - ".github/workflows/business-*-manufacturing-*.yml"
       - ".github/workflows/business-timed-manufacturing-v2.yml"
   push:
     branches: [main]
     paths:
       - "backend/supabase/migrations/2026082311*.sql"
-      - "scripts/business-phase6-manufacturing-*.mjs"
+      - "backend/src/domains/business/api/playerBusinessManufacturing*.ts"
+      - "scripts/business-phase6*.mjs"
       - ".github/workflows/business-timed-manufacturing-v2.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  verify-manufacturing-foundation:
+  verify-manufacturing:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,12 +42,19 @@ jobs:
           deno-version: v2.9.3
       - run: npm install --global npm@10.9.8
       - run: npm ci --ignore-scripts
-      - name: Verify timed manufacturing foundation and retained authorities
+      - name: Verify timed manufacturing authority and regressions
         run: |
           node scripts/business-phase6-manufacturing-foundation-contract.mjs
           node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
           node scripts/business-phase6-manufacturing-start-contract.mjs
           node scripts/business-phase6-manufacturing-start-simulation.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-simulation.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-simulation.mjs
+          if test -f scripts/business-phase6e-player-api-contract.mjs; then
+            node scripts/business-phase6e-player-api-contract.mjs
+          fi
           node scripts/business-phase5-equipment-foundation-contract.mjs
           node scripts/business-phase5-equipment-capacity-simulation.mjs
           node scripts/business-phase5-equipment-recipe-sync-contract.mjs
@@ -73,62 +86,3 @@ jobs:
           npm run adapter
           npm run capability-manifest-current
           npm run runtime-integration
-
-  correct-source:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out exact Phase 6 head branch
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-      - name: Correct composite recipe/output assignment
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("backend/supabase/migrations/20260823110300_business_manufacturing_atomic_start_v2.sql")
-          source = path.read_text()
-          marker = "  select recipe.*, recipe_output.*\n  into v_recipe, v_output_line\n"
-          start = source.find(marker)
-          if start < 0:
-              raise SystemExit("Composite recipe/output assignment marker was not found.")
-          end = source.find("  limit 1;\n", start)
-          if end < 0:
-              raise SystemExit("Composite recipe/output assignment terminator was not found.")
-          end += len("  limit 1;\n")
-          original = source[start:end]
-          recipe_lookup = original.replace(
-              marker,
-              "  select recipe.*\n  into v_recipe\n",
-              1,
-          )
-          output_lookup = """
-
-  select recipe_output.*
-  into v_output_line
-  from public.physical_economy_recipe_outputs as recipe_output
-  where recipe_output.recipe_id = v_recipe.id
-    and recipe_output.item_key = v_output_item.canonical_key
-  limit 1;
-  if not found then
-    raise exception 'BUSINESS_MANUFACTURING_OUTPUT_INVALID'
-      using errcode = 'P0001';
-  end if;
-"""
-          path.write_text(source[:start] + recipe_lookup + output_lookup + source[end:])
-          PY
-          git show 3c7cfb645d28735ce510741800e863c9742a4430:.github/workflows/business-timed-manufacturing-v2.yml > .github/workflows/business-timed-manufacturing-v2.yml
-          rm -f .github/workflows/business-phase6-source-correction.yml
-          rm -f docs/roadmaps/.phase6-head-correction-trigger
-      - name: Commit corrected source and restore normal workflow
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/supabase/migrations/20260823110300_business_manufacturing_atomic_start_v2.sql .github/workflows/business-timed-manufacturing-v2.yml .github/workflows/business-phase6-source-correction.yml docs/roadmaps/.phase6-head-correction-trigger
-          git commit -m "fix(business): separate manufacturing recipe output lookup"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
