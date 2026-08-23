@@ -21,6 +21,7 @@
     "backend/supabase/migrations/20260823110310_business_manufacturing_completion_schema_assertions_v2.sql",
     "backend/supabase/migrations/20260823110400_business_manufacturing_recovery_v2.sql",
     "backend/supabase/migrations/20260823110410_business_manufacturing_recovery_schema_assertions_v2.sql",
+    "backend/supabase/migrations/20260823115900_business_manufacturing_manifest_trigger_fix_v2.sql",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
     "docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md",
     "scripts/business-phase6-manufacturing-completion-contract.mjs",
@@ -30,7 +31,9 @@
     "scripts/business-phase6-manufacturing-recovery-contract.mjs",
     "scripts/business-phase6-manufacturing-recovery-simulation.mjs",
     "scripts/business-phase6-manufacturing-start-contract.mjs",
-    "scripts/business-phase6-manufacturing-start-simulation.mjs"
+    "scripts/business-phase6-manufacturing-start-simulation.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
