@@ -893,3 +893,80 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 6 — timed manufacturing is OPEN.** Start with a bounded lifecycle foundation on a stacked branch from the certified Phase 5 lineage: create server-owned production jobs, validate one exact Business-owned canonical recipe and output, reserve canonical BOM materials into WIP, reserve labor and installed equipment across the job lifetime, derive completion time server-side, and define exact-once due-job completion/cancellation/failure recovery. Do not widen the first checkpoint into Store seller offers, Store-listing stock, sales convergence, IPO, merge, staging, or production deployment.
+
+---
+
+## 2026-08-24 — Phase 6 COMPLETE: authoritative timed manufacturing
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `739f5540234b20e16ba34f69f0d741d986030113`.
+- Core Phase 6B–6E implementation identity retained as `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`.
+- Feature branch: `feat/business-timed-manufacturing-v2`.
+- Stacked draft PR: #661, based on certified Phase 5 branch `feat/business-equipment-capacity-v2`.
+- PR #661 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, mergeable, and unmerged on `refactor/business-ux-mechanics-v1` at `de9d0bc944e4668b276a3ee06651ee5964e0507c`.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- Later documentation commits record certification only and must not replace `739f5540234b20e16ba34f69f0d741d986030113` as the exact tested source.
+
+### What is now authoritative
+
+- A Player can request only an owned Business, exact canonical product, quantity, bounded priority, and idempotency intent; game, Player, recipe, output, timing, material, labor, and equipment authority are server derived.
+- Starting a job atomically moves exact canonical BOM quantities from Business Warehouse to WIP and reserves eligible employee minutes plus installed operational equipment minutes.
+- Job duration, queue start, due time, completion leases, retry state, and terminal outcome are server owned.
+- Bounded workers start and complete jobs; the browser can display server timestamps/countdown state but cannot author completion.
+- Completion consumes exact WIP, creates the exact canonical output in Business Finished Goods, and consumes labor/equipment reservations exactly once.
+- Cancellation/failure returns staged materials and releases reservations exactly once; completion and recovery serialize on the same authoritative job state.
+- Legacy instant production is compatibility-only and returns authenticated HTTP `410 Gone` with `business_instant_production_retired`.
+- Public reads remain game scoped and public-key only; internal UUIDs, holding/account IDs, employee/equipment IDs, lease tokens, request hashes, and trusted snapshots remain private.
+
+### Exact-head verification on `739f5540234b20e16ba34f69f0d741d986030113`
+
+- **Business Timed Manufacturing V2 — PASS** (`32673084291`), including Phase 6 contracts/simulations, retained Phase 4/5 regressions, backend/all Edge TypeScript, Player Business surface, and local Player Edge entrypoint boot/preflight.
+- **Business Manufacturing Resource Hold V2 — PASS** (`32673084215`).
+- **Business Manufacturing Completion V2 — PASS** (`32673084379`).
+- **Business Manufacturing Recovery V2 — PASS** (`32673084284`).
+- **Business Manufacturing Classroom Load Isolation V2 — PASS** (`32673084315`): 40 Players, two games, 403 start attempts, 41 unique jobs, 411 completion attempts, exact-once replay behavior, and cross-game denial.
+- **Database Replay — PASS** (`32673084245`): complete replay from zero twice plus rebuilt-database lint.
+- **Backend Typecheck — PASS** (`32673084260`): backend typecheck and backend smoke.
+- **Beta Security Contract — PASS** (`32673084257`): all security-surface/Edge typechecks, boundary contracts, and credential scan.
+- **Player Terminal Verify — PASS** (`32673084176`): standalone verification and Chromium browser verification.
+- **Business Economy V2 — PASS** (`32673084344`).
+- **Business Banking Runtime — PASS** (`32673084304`).
+- **Business Workforce Hiring V2 — PASS** (`32673084318`).
+- **Business Workforce Payroll V2 — PASS** (`32673084244`).
+- **Business Workforce Production Payroll V2 — PASS** (`32673084339`).
+- **Repository Quality — PASS** (`32673084218`).
+- **Supply Chain Security — PASS** (`32673084349`).
+- **Runtime Interaction Wiring — PASS** (`32673084383`).
+- **Environment Neutral Browser — PASS** (`32673084241`).
+- **Progression Runtime — PASS** (`32673084337`).
+- **World Runtime — PASS** (`32673084292`).
+- **Admin API Check — PASS** (`32673084283`).
+- **Staging Readiness Preflight — PASS** (`32673084287`).
+- **Required Game Market Timezone — PASS** (`32673084221`).
+- **Exchange Calendar Runtime — PASS** (`32673084224`).
+
+### Phase 6 exit result
+
+- Atomic canonical job start and resource reservation: **met**.
+- Server-derived timing and worker-owned lifecycle: **met**.
+- Exact-once Finished Goods completion: **met**.
+- Exact-once cancellation/failure recovery: **met**.
+- Legacy instant-production compatibility retirement: **met**.
+- Payroll remains recurring and is not double debited by production: **met**.
+- Material, labor, and equipment double-spend/double-book prevention: **met**.
+- Database, backend, all Edge, repository, security, Player, Chromium, 40-Player, and two-game gates: **met**.
+- Exact source and durable plan/log/scope/evidence record: **met**.
+- No deployment or live mutation: **met**.
+
+### Decisions and cleanup
+
+- The five permanent Phase 6 workflows are the timed-manufacturing, resource-hold, completion, recovery, and classroom load/isolation gates.
+- Temporary repair/certifier/finalizer/convergence workflows are not part of PR #661's final changed-file set. The one-time durable-record finalizer used to write this entry must be deleted immediately after its successful docs commit.
+- The historical `automation/phase6-repair-trigger-20260823` branch has no pull request and is non-authoritative; it will be neutralized to the clean certified lineage after finalizer removal.
+- Phase 6 remains unmerged and undeployed. Certification authorizes development continuation only.
+
+### Next authorized step
+
+**Phase 7 checkpoint 7A — seller-offer authority and multi-offer catalog aggregation is OPEN.** Create a stacked draft branch/PR from the durably certified Phase 6 lineage. Reuse canonical Store/catalog, Business, Inventory, money, and economic-party authorities. Keep offer identity separate from catalog identity. Do not include physical Store custody, listing-stock transfer, withdrawal processing, buyer payment/inventory settlement, automatic demand/sales convergence, equity/IPO, merge, or deployment in checkpoint 7A.

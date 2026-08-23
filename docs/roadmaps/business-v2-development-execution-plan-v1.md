@@ -324,23 +324,33 @@ Exit: concurrent production attempts cannot exceed installed operational equipme
 
 ## Phase 6 — Timed manufacturing
 
-**Status:** OPEN — next authorized phase
+**Status:** COMPLETE — certified exact-head source `739f5540234b20e16ba34f69f0d741d986030113`; core Phase 6B–6E implementation source `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`
 
-- [ ] Replace legacy instant physical production with V2 production jobs.
-- [ ] Validate exact recipe/material/labor/equipment prerequisites.
-- [ ] Atomically reserve/move BOM materials to WIP.
-- [ ] Reserve labor/equipment capacity across the job lifecycle.
-- [ ] Calculate server completion time.
-- [ ] Complete through bounded shared worker, never client timer.
-- [ ] Consume WIP and post exact catalog output into Finished Goods.
-- [ ] Release capacity exactly once.
-- [ ] Add cancellation/failure handling and replay protection.
+- [x] Replace legacy instant physical production with V2 production jobs.
+- [x] Validate exact recipe/material/labor/equipment prerequisites.
+- [x] Atomically reserve/move BOM materials to WIP.
+- [x] Reserve labor/equipment capacity across the job lifecycle.
+- [x] Calculate server completion time.
+- [x] Complete through bounded shared worker, never client timer.
+- [x] Consume WIP and post exact catalog output into Finished Goods.
+- [x] Release capacity exactly once.
+- [x] Add cancellation/failure handling and replay protection.
 
-Exit: one end-to-end manufactured catalog item reliably reaches Finished Goods after authoritative server time.
+Certified checkpoints:
 
+- **6A:** server-owned lifecycle, timing, queue-start, due-job leasing, retry and public-read foundation; certified source `0589e8015736a8b770622be6ad0e5abedda24c26`.
+- **6B:** atomic canonical Warehouse-to-WIP material staging plus finite eligible labor and installed-equipment reservation.
+- **6C:** exact-once worker completion into canonical Finished Goods with WIP consumption and reservation consumption.
+- **6D:** exact-once cancellation/failure recovery returning staged materials and releasing labor/equipment.
+- **6E:** authenticated Player API/workspace cutover with browser-safe countdown state and explicit HTTP `410 Gone` retirement of instant production.
+- **Final certification:** exact source `739f5540234b20e16ba34f69f0d741d986030113` passed the complete database, backend, Edge, Business, workforce/payroll, equipment, manufacturing, repository, security, Player, Chromium, 40-Player, and two-game isolation matrix recorded in `business-phase6-final-certification-inventory-v1.md`.
+
+Exit: one end-to-end manufactured catalog item reliably reaches Finished Goods after authoritative server time. **MET.**
 ## Phase 7 — Store seller offers and multi-offer catalog presentation
 
-**Status:** NOT STARTED
+**Status:** OPEN — bounded checkpoint 7A authorized
+
+**Checkpoint 7A boundary:** establish seller-offer identity, lifecycle/version invariants, and catalog aggregation reads by reusing canonical Store, Business, Inventory, money, and economic-party authorities. Physical Store custody, listing-stock transfer, withdrawal safety, buyer settlement, automatic sales convergence, and IPO/equity remain closed for later phases.
 
 - [ ] Introduce seller-offer authority separate from catalog item identity.
 - [ ] Seeded/NPC and Business sellers share one catalog product presentation.

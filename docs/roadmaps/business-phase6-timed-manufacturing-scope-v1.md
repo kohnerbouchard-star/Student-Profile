@@ -1,12 +1,13 @@
 # Business V2 Phase 6 — Timed Manufacturing Scope v1
 
-**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6E integrated on immutable implementation source `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`; exact-head certification pending  
+**Status:** COMPLETE — exact-head certified on `739f5540234b20e16ba34f69f0d741d986030113`; Phase 7 checkpoint 7A opened
 **Branch:** `feat/business-timed-manufacturing-v2`  
 **Parent branch:** `feat/business-equipment-capacity-v2`  
 **Certified Phase 5 implementation:** `6f936abd61c6cd903f6e839790ceab24ed570748`  
 **Phase 5 durable certification head:** `614be4f7d4eee2848e2c6140b643893fbac23834`  
 **Certified Phase 6A source:** `0589e8015736a8b770622be6ad0e5abedda24c26`  
 **Phase 6B–6E implementation source:** `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`  
+**Certified Phase 6 exact-head source:** `739f5540234b20e16ba34f69f0d741d986030113`
 
 ## Purpose
 
@@ -189,7 +190,7 @@ It must not expose internal UUIDs, inventory account IDs, holding IDs, employee 
 
 ## Exact-head certification requirements
 
-Phase 6B–6E are not certified until all required checks pass on one frozen exact source, including:
+Phase 6B–6E are certified on frozen exact source `739f5540234b20e16ba34f69f0d741d986030113`. The passing matrix included:
 
 - Phase 6 foundation, lifecycle, start, completion, recovery, and authenticated Player API contracts;
 - focused rollback, concurrency, idempotency, lease, and recovery simulations;
@@ -231,8 +232,14 @@ Phase 6 is complete only when all of the following are durable:
 9. backend, all Edge, security, repository, Player, Chromium, 40-Player, and two-game regressions;
 10. exact implementation source and durable execution-plan/log certification.
 
-Implementation requirements 1–7 are present on `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`. Requirements 8–10 remain certification gates and may not be represented as complete until the exact-head evidence is green and durably recorded.
+Implementation requirements 1–7 remain rooted in `bee7a5c6a98389ed9f238fc7191f8c4621f6e1ff`. Requirements 8–10 were satisfied on exact source `739f5540234b20e16ba34f69f0d741d986030113` through replay-twice/database lint, backend/all Edge, security, repository, Player/Chromium, 40-Player, two-game isolation, and durable plan/log/evidence certification.
+
+## Final certification result
+
+Phase 6 is durably complete on exact tested source `739f5540234b20e16ba34f69f0d741d986030113`. The authoritative evidence matrix is recorded in `business-phase6-final-certification-inventory-v1.md` and the execution log. The exact-head suite passed every required manufacturing, database, backend, Edge, Business, workforce/payroll, equipment, repository, security, Player, Chromium, 40-Player, and two-game isolation gate.
+
+Permanent Phase 6 workflows remain as ordinary regression gates. Temporary repair/certification machinery is not part of the final PR diff and the one-time durable-record finalizer must be removed immediately after its successful docs commit. No merge, staging deployment, production deployment, secret mutation, or live database mutation is authorized by this certification.
 
 ## Next authorized checkpoint
 
-**Immediate checkpoint:** run and reconcile the complete exact-head Phase 6 acceptance suite against the frozen Phase 6E implementation, then write durable certification evidence. Phase 7 Store seller offers remains closed until Phase 6 satisfies the completion rule. No merge or deployment is authorized.
+**Phase 7 checkpoint 7A — seller-offer authority and multi-offer catalog aggregation is OPEN.** Build a stacked draft branch/PR from the certified Phase 6 lineage. Reuse canonical Store/catalog, Business, Inventory, money, and economic-party authorities. Keep seller offers separate from catalog identity. Physical Store custody, Store-listing inventory movement, withdrawal safety, buyer settlement, automatic sales convergence, equity/IPO, merge, and deployment remain closed.
