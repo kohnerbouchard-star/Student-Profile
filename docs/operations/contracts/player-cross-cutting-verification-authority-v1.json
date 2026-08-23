@@ -22,6 +22,8 @@
     "backend/src/domains/business/contracts/playerBusinessContracts.ts",
     "backend/src/domains/business/contracts/playerBusinessManufacturingContracts.ts",
     "backend/src/domains/business/index.ts",
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
     "backend/src/security/playerRateLimitDispatch.ts",
