@@ -48,6 +48,7 @@
     "player-terminal/src/app.js",
     "player-terminal/src/pages/business-page.js",
     "player-terminal/tests/business-banking-surface.mjs",
+    "player-terminal/tests/current-capability-manifest.mjs",
     "scripts/business-phase4c-player-recovery-contract.mjs",
     "scripts/business-phase6-manufacturing-completion-contract.mjs",
     "scripts/business-phase6-manufacturing-completion-simulation.mjs",
