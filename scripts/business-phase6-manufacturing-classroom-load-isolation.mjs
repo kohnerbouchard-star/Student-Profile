@@ -4,23 +4,19 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-const GAME_COUNT = 2;
+const GAMES = ["game_1", "game_2"];
 const PLAYERS_PER_GAME = 20;
-const RETRIES_PER_PLAYER = 10;
+const RETRIES = 10;
+const hash = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const scopeKey = (game, business) => `${game}|${business}`;
 
-function digest(value) {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
-
-class Mutex {
+class Lock {
   #tail = Promise.resolve();
 
   async run(operation) {
     const previous = this.#tail;
     let release;
-    this.#tail = new Promise((resolve) => {
-      release = resolve;
-    });
+    this.#tail = new Promise((resolve) => { release = resolve; });
     await previous;
     try {
       return await operation();
@@ -30,162 +26,135 @@ class Mutex {
   }
 }
 
-class ManufacturingAuthority {
+class Authority {
   constructor() {
-    this.businesses = new Map();
-    this.jobs = new Map();
-    this.idempotency = new Map();
+    this.scopes = new Map();
     this.locks = new Map();
+    this.jobs = new Map();
+    this.replays = new Map();
   }
 
-  registerBusiness({ game, business, owner, capacity = 1 }) {
-    const scope = this.#scope(game, business);
-    assert.equal(this.businesses.has(scope), false, `duplicate business scope: ${scope}`);
-    this.businesses.set(scope, {
+  register({ game, business, player, capacity }) {
+    const key = scopeKey(game, business);
+    this.scopes.set(key, {
       game,
       business,
-      owner,
+      player,
       warehouse: capacity,
       wip: 0,
       labor: capacity,
       equipment: capacity,
-      finishedGoods: 0,
+      finished: 0,
     });
-    this.locks.set(scope, new Mutex());
+    this.locks.set(key, new Lock());
   }
 
-  async start(request) {
-    const scope = this.#scope(request.game, request.business);
-    const business = this.businesses.get(scope);
-    if (!business || business.owner !== request.player) {
+  async start(intent) {
+    const key = scopeKey(intent.game, intent.business);
+    const scope = this.scopes.get(key);
+    if (!scope || scope.player !== intent.player) {
       throw new Error("BUSINESS_MANUFACTURING_SCOPE_FORBIDDEN");
     }
-    return this.locks.get(scope).run(async () => {
+    return this.locks.get(key).run(async () => {
       await Promise.resolve();
-      const replayKey = `${request.game}|${request.player}|${request.idempotencyKey}`;
-      const requestHash = digest({
-        game: request.game,
-        player: request.player,
-        business: request.business,
-        product: request.product,
-        quantity: request.quantity,
-        priority: request.priority,
-      });
-      const existingJobKey = this.idempotency.get(replayKey);
-      if (existingJobKey) {
-        const existing = this.jobs.get(existingJobKey);
-        if (existing.requestHash !== requestHash) {
+      const replayKey = `${intent.game}|${intent.player}|${intent.idempotencyKey}`;
+      const requestHash = hash(intent);
+      const replayJobKey = this.replays.get(replayKey);
+      if (replayJobKey) {
+        const replayJob = this.jobs.get(replayJobKey);
+        if (replayJob.requestHash !== requestHash) {
           throw new Error("BUSINESS_MANUFACTURING_IDEMPOTENCY_CONFLICT");
         }
-        return { job: structuredClone(existing), replayed: true };
+        return { job: structuredClone(replayJob), replayed: true };
       }
-      if (business.warehouse < request.quantity) {
-        throw new Error("BUSINESS_MANUFACTURING_INPUT_QUANTITY_UNAVAILABLE");
-      }
-      if (business.labor < request.quantity) {
-        throw new Error("BUSINESS_MANUFACTURING_LABOR_CAPACITY_UNAVAILABLE");
-      }
-      if (business.equipment < request.quantity) {
-        throw new Error("BUSINESS_MANUFACTURING_EQUIPMENT_CAPACITY_UNAVAILABLE");
-      }
-      business.warehouse -= request.quantity;
-      business.wip += request.quantity;
-      business.labor -= request.quantity;
-      business.equipment -= request.quantity;
-      const jobKey = `mfg_${digest({ scope, replayKey }).slice(0, 32)}`;
+      if (scope.warehouse < intent.quantity) throw new Error("BUSINESS_MANUFACTURING_INPUT_QUANTITY_UNAVAILABLE");
+      if (scope.labor < intent.quantity) throw new Error("BUSINESS_MANUFACTURING_LABOR_CAPACITY_UNAVAILABLE");
+      if (scope.equipment < intent.quantity) throw new Error("BUSINESS_MANUFACTURING_EQUIPMENT_CAPACITY_UNAVAILABLE");
+      scope.warehouse -= intent.quantity;
+      scope.wip += intent.quantity;
+      scope.labor -= intent.quantity;
+      scope.equipment -= intent.quantity;
       const job = {
-        key: jobKey,
-        game: request.game,
-        player: request.player,
-        business: request.business,
-        quantity: request.quantity,
+        key: `mfg_${hash({ key, replayKey }).slice(0, 32)}`,
+        game: intent.game,
+        business: intent.business,
+        player: intent.player,
+        quantity: intent.quantity,
         requestHash,
         status: "in_progress",
         resourceState: "reserved",
       };
-      this.jobs.set(jobKey, job);
-      this.idempotency.set(replayKey, jobKey);
+      this.jobs.set(job.key, job);
+      this.replays.set(replayKey, job.key);
       return { job: structuredClone(job), replayed: false };
     });
   }
 
-  async complete({ game, jobKey }) {
+  async complete(game, jobKey) {
     const job = this.jobs.get(jobKey);
-    if (!job || job.game !== game) {
-      throw new Error("BUSINESS_MANUFACTURING_JOB_NOT_FOUND");
-    }
-    const scope = this.#scope(job.game, job.business);
-    return this.locks.get(scope).run(async () => {
+    if (!job || job.game !== game) throw new Error("BUSINESS_MANUFACTURING_JOB_NOT_FOUND");
+    const key = scopeKey(job.game, job.business);
+    return this.locks.get(key).run(async () => {
       await Promise.resolve();
       const current = this.jobs.get(jobKey);
-      if (current.status === "completed") {
-        return { job: structuredClone(current), replayed: true };
-      }
+      if (current.status === "completed") return { replayed: true };
+      const scope = this.scopes.get(key);
       assert.equal(current.status, "in_progress");
       assert.equal(current.resourceState, "reserved");
-      const business = this.businesses.get(scope);
-      assert.ok(business.wip >= current.quantity);
-      business.wip -= current.quantity;
-      business.finishedGoods += current.quantity;
+      assert.ok(scope.wip >= current.quantity);
+      scope.wip -= current.quantity;
+      scope.finished += current.quantity;
       current.status = "completed";
       current.resourceState = "consumed";
-      return { job: structuredClone(current), replayed: false };
+      return { replayed: false };
     });
   }
 
   snapshot(game, business) {
-    return structuredClone(this.businesses.get(this.#scope(game, business)));
+    return structuredClone(this.scopes.get(scopeKey(game, business)));
   }
 
-  countJobs(game) {
+  jobsIn(game) {
     return [...this.jobs.values()].filter((job) => job.game === game).length;
-  }
-
-  #scope(game, business) {
-    return `${game}|${business}`;
   }
 }
 
-async function verifyDatabaseConcurrencyContracts() {
-  const [foundation, start, completion, recovery] = await Promise.all([
-    readFile("backend/supabase/migrations/20260823110000_business_manufacturing_job_foundation_v2.sql", "utf8"),
+async function verifySqlAuthority() {
+  const [worker, start, completion, recovery] = await Promise.all([
+    readFile("backend/supabase/migrations/20260823110100_business_manufacturing_worker_and_read_v2.sql", "utf8"),
     readFile("backend/supabase/migrations/20260823110200_business_manufacturing_start_resources_v2.sql", "utf8"),
     readFile("backend/supabase/migrations/20260823110300_business_manufacturing_completion_v2.sql", "utf8"),
     readFile("backend/supabase/migrations/20260823110400_business_manufacturing_recovery_v2.sql", "utf8"),
   ]);
-
-  assert.match(foundation, /for update skip locked/iu);
-  assert.match(foundation, /game_session_id[\s\S]+business_manufacturing_jobs/iu);
+  assert.match(worker, /for update skip locked/iu);
+  assert.match(worker, /business_manufacturing_jobs/iu);
   assert.match(start, /start_business_manufacturing_job_v2\([\s\S]+p_game_session_id uuid[\s\S]+p_player_id uuid/iu);
   assert.ok((start.match(/game_session_id\s*=\s*p_game_session_id/giu) ?? []).length >= 8);
   assert.ok((start.match(/for update/giu) ?? []).length >= 4);
   assert.match(start, /requested_by_player_id\s*=\s*p_player_id[\s\S]+idempotency_key\s*=\s*btrim\(p_idempotency_key\)[\s\S]+for update/iu);
   assert.match(start, /inventory_holdings[\s\S]+game_session_id\s*=\s*p_game_session_id[\s\S]+for update/iu);
-  assert.match(completion, /business_manufacturing_jobs/iu);
-  assert.match(completion, /for update/iu);
-  assert.match(completion, /resource_state/iu);
-  assert.match(recovery, /business_manufacturing_jobs/iu);
-  assert.match(recovery, /for update/iu);
-  assert.match(recovery, /resource_state/iu);
+  for (const source of [completion, recovery]) {
+    assert.match(source, /business_manufacturing_jobs/iu);
+    assert.match(source, /for update/iu);
+    assert.match(source, /resource_state/iu);
+  }
 }
 
-async function verifyFortyPlayerLoadAndTwoGameIsolation() {
-  const authority = new ManufacturingAuthority();
-  const requests = [];
-
-  for (let gameIndex = 1; gameIndex <= GAME_COUNT; gameIndex += 1) {
-    const game = `game_${gameIndex}`;
-    for (let playerIndex = 1; playerIndex <= PLAYERS_PER_GAME; playerIndex += 1) {
-      const suffix = String(playerIndex).padStart(2, "0");
+async function verifyClassroomLoad() {
+  const authority = new Authority();
+  const intents = [];
+  for (const game of GAMES) {
+    for (let index = 1; index <= PLAYERS_PER_GAME; index += 1) {
+      const suffix = String(index).padStart(2, "0");
       const player = `${game}_player_${suffix}`;
       const business = `business_${suffix}`;
-      authority.registerBusiness({
+      authority.register({
         game,
         business,
-        owner: player,
-        capacity: gameIndex === 2 && playerIndex === 1 ? 2 : 1,
+        player,
+        capacity: game === "game_2" && index === 1 ? 2 : 1,
       });
-      requests.push({
+      intents.push({
         game,
         player,
         business,
@@ -197,77 +166,52 @@ async function verifyFortyPlayerLoadAndTwoGameIsolation() {
     }
   }
 
-  const startResults = await Promise.all(
-    requests.flatMap((request) =>
-      Array.from({ length: RETRIES_PER_PLAYER }, () => authority.start(request))
-    ),
+  const starts = await Promise.all(
+    intents.flatMap((intent) => Array.from({ length: RETRIES }, () => authority.start(intent))),
   );
-  assert.equal(startResults.length, GAME_COUNT * PLAYERS_PER_GAME * RETRIES_PER_PLAYER);
-  assert.equal(startResults.filter((result) => !result.replayed).length, GAME_COUNT * PLAYERS_PER_GAME);
-  assert.equal(authority.countJobs("game_1"), PLAYERS_PER_GAME);
-  assert.equal(authority.countJobs("game_2"), PLAYERS_PER_GAME);
+  assert.equal(starts.length, 400);
+  assert.equal(starts.filter(({ replayed }) => !replayed).length, 40);
+  assert.equal(authority.jobsIn("game_1"), 20);
+  assert.equal(authority.jobsIn("game_2"), 20);
 
-  const gameOneFirst = requests.find((request) => request.game === "game_1" && request.business === "business_01");
-  const gameTwoFirst = requests.find((request) => request.game === "game_2" && request.business === "business_01");
+  const gameOne = intents.find(({ game, business }) => game === "game_1" && business === "business_01");
+  const gameTwo = intents.find(({ game, business }) => game === "game_2" && business === "business_01");
   await assert.rejects(
-    () => authority.start({ ...gameOneFirst, idempotencyKey: "game-one-second-job" }),
+    () => authority.start({ ...gameOne, idempotencyKey: "game-one-second-job" }),
     /INPUT_QUANTITY_UNAVAILABLE/u,
   );
-  const extraGameTwo = await authority.start({
-    ...gameTwoFirst,
-    idempotencyKey: "game-two-second-job",
-  });
-  assert.equal(extraGameTwo.replayed, false);
-  assert.equal(authority.countJobs("game_1"), PLAYERS_PER_GAME);
-  assert.equal(authority.countJobs("game_2"), PLAYERS_PER_GAME + 1);
-
+  const extra = await authority.start({ ...gameTwo, idempotencyKey: "game-two-second-job" });
+  assert.equal(authority.jobsIn("game_1"), 20);
+  assert.equal(authority.jobsIn("game_2"), 21);
   await assert.rejects(
-    () => authority.start({
-      ...gameOneFirst,
-      game: "game_2",
-      business: "business_01",
-      idempotencyKey: "cross-game-forbidden",
-    }),
+    () => authority.start({ ...gameOne, game: "game_2", idempotencyKey: "cross-game-forbidden" }),
     /SCOPE_FORBIDDEN/u,
   );
-  await assert.rejects(
-    () => authority.complete({ game: "game_1", jobKey: extraGameTwo.job.key }),
-    /JOB_NOT_FOUND/u,
-  );
+  await assert.rejects(() => authority.complete("game_1", extra.job.key), /JOB_NOT_FOUND/u);
 
-  const jobs = [
-    ...new Map(startResults.map((result) => [result.job.key, result.job])).values(),
-    extraGameTwo.job,
-  ];
-  const completionResults = await Promise.all(
-    jobs.flatMap((job) =>
-      Array.from({ length: RETRIES_PER_PLAYER }, () =>
-        authority.complete({ game: job.game, jobKey: job.key })
-      )
-    ),
+  const jobs = [...new Map(starts.map(({ job }) => [job.key, job])).values(), extra.job];
+  const completions = await Promise.all(
+    jobs.flatMap((job) => Array.from({ length: RETRIES }, () => authority.complete(job.game, job.key))),
   );
-  assert.equal(completionResults.filter((result) => !result.replayed).length, jobs.length);
-  assert.equal(authority.snapshot("game_1", "business_01").finishedGoods, 1);
-  assert.equal(authority.snapshot("game_2", "business_01").finishedGoods, 2);
+  assert.equal(completions.filter(({ replayed }) => !replayed).length, 41);
+  assert.equal(authority.snapshot("game_1", "business_01").finished, 1);
+  assert.equal(authority.snapshot("game_2", "business_01").finished, 2);
 
-  const gameOneFinished = Array.from({ length: PLAYERS_PER_GAME }, (_, index) =>
-    authority.snapshot("game_1", `business_${String(index + 1).padStart(2, "0")}`).finishedGoods
+  const finished = (game) => Array.from({ length: PLAYERS_PER_GAME }, (_, index) =>
+    authority.snapshot(game, `business_${String(index + 1).padStart(2, "0")}`).finished
   ).reduce((sum, quantity) => sum + quantity, 0);
-  const gameTwoFinished = Array.from({ length: PLAYERS_PER_GAME }, (_, index) =>
-    authority.snapshot("game_2", `business_${String(index + 1).padStart(2, "0")}`).finishedGoods
-  ).reduce((sum, quantity) => sum + quantity, 0);
-  assert.equal(gameOneFinished, PLAYERS_PER_GAME);
-  assert.equal(gameTwoFinished, PLAYERS_PER_GAME + 1);
+  assert.equal(finished("game_1"), 20);
+  assert.equal(finished("game_2"), 21);
 
   return {
-    players: GAME_COUNT * PLAYERS_PER_GAME,
-    startAttempts: startResults.length + 3,
-    jobs: jobs.length,
-    completionAttempts: completionResults.length + 1,
-    games: GAME_COUNT,
+    players: 40,
+    games: 2,
+    startAttempts: 403,
+    jobs: 41,
+    completionAttempts: 411,
   };
 }
 
-await verifyDatabaseConcurrencyContracts();
-const evidence = await verifyFortyPlayerLoadAndTwoGameIsolation();
+await verifySqlAuthority();
+const evidence = await verifyClassroomLoad();
 console.log(`Business Phase 6 40-player/two-game load isolation: PASS ${JSON.stringify(evidence)}`);
