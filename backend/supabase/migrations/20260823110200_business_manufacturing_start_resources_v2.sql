@@ -545,7 +545,7 @@ begin
       using errcode = 'P0001';
   end if;
 
-  select recipe.*, output_item.*
+  select recipe, output_item
   into v_recipe, v_output
   from public.business_recipe_access as access
   join public.physical_economy_recipe_definitions as recipe
@@ -801,7 +801,7 @@ begin
       )
     );
 
-    if coalesce(v_inventory_post->>'committed', 'false') <> 'true' then
+    if coalesce(v_inventory_post->>'status', '') <> 'committed' then
       raise exception 'BUSINESS_MANUFACTURING_MATERIAL_POST_FAILED:%',
         v_input.line_key using errcode = 'P0001';
     end if;

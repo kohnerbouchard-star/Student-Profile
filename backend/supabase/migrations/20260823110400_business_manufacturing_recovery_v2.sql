@@ -223,7 +223,7 @@ begin
       ),
       v_inventory_lines
     );
-    if coalesce(v_inventory_post->>'committed', 'false') <> 'true' then
+    if coalesce(v_inventory_post->>'status', '') <> 'committed' then
       raise exception 'BUSINESS_MANUFACTURING_RESOURCE_RELEASE_POST_FAILED'
         using errcode = 'P0001';
     end if;
