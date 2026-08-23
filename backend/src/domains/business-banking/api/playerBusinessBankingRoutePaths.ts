@@ -1,6 +1,12 @@
-import { readPlayerBusinessRoutePath } from "../../business/index.ts";
+import {
+  readPlayerBusinessRoutePath,
+  type PlayerBusinessRoute,
+} from "../../business/index.ts";
 import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
-import type { PlayerBusinessBankingRoute } from "../contracts/playerBusinessBankingContracts.ts";
+import type {
+  DelegatedPlayerBusinessRoute,
+  PlayerBusinessBankingRoute,
+} from "../contracts/playerBusinessBankingContracts.ts";
 
 const PUBLIC_KEY = /^[a-z]{3}_[0-9a-f]{32}$/u;
 
@@ -20,13 +26,19 @@ export const DELEGATED_BUSINESS_ROUTE_CONTRACT = Object.freeze([
   { kind: "businessHire" },
   { kind: "businessTerminate" },
   { kind: "businessStatus" },
-]);
+] as const);
+
+const DELEGATED_BUSINESS_ROUTE_KINDS = new Set<string>(
+  DELEGATED_BUSINESS_ROUTE_CONTRACT.map(({ kind }) => kind),
+);
 
 export function readPlayerBusinessBankingRoutePath(
   pathname: string,
 ): PlayerBusinessBankingRoute | null {
   const businessRoute = readPlayerBusinessRoutePath(pathname);
-  if (businessRoute) return businessRoute;
+  if (businessRoute && isDelegatedBusinessRoute(businessRoute)) {
+    return businessRoute;
+  }
 
   const segments = readPlayerApiRouteSegments(pathname);
   if (!segments || segments[0] !== "players" || segments[1] !== "me") return null;
@@ -51,6 +63,12 @@ export function readPlayerBusinessBankingRoutePath(
     tail[3] === "payments" && validKey(tail[2], "lon")
   ) return { kind: "loanRepay", loanKey: tail[2].toLowerCase() };
   return null;
+}
+
+function isDelegatedBusinessRoute(
+  route: PlayerBusinessRoute,
+): route is DelegatedPlayerBusinessRoute {
+  return DELEGATED_BUSINESS_ROUTE_KINDS.has(route.kind);
 }
 
 function validKey(value: string | undefined, prefix: string): boolean {
