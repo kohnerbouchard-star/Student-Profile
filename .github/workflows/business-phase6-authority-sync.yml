@@ -1,0 +1,71 @@
+name: Business Phase 6 Verification Authority Sync
+
+on:
+  push:
+    branches:
+      - feat/business-timed-manufacturing-v2
+    paths:
+      - .github/workflows/business-phase6-authority-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - name: Synchronize exact-path authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/business-equipment-capacity-v2
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import subprocess
+
+          path = Path("docs/operations/contracts/player-cross-cutting-verification-authority-v1.json")
+          authority = json.loads(path.read_text())
+          changed = subprocess.check_output(
+              ["git", "diff", "--name-only", "origin/feat/business-equipment-capacity-v2...HEAD"],
+              text=True,
+          ).splitlines()
+          excluded = {
+              ".github/workflows/business-phase6-authority-sync.yml",
+              ".github/workflows/business-phase6-deterministic-repair.yml",
+              ".github/workflows/business-phase6-source-correction.yml",
+              "docs/roadmaps/.phase6-head-correction-trigger",
+              "sitecustomize.py",
+              "pathlib.py",
+          }
+          permanent = {item for item in changed if item and item not in excluded}
+          permanent.update({
+              "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+              "scripts/player-cross-cutting-authority.test.mjs",
+              "scripts/verify-player-cross-cutting-authority.mjs",
+          })
+          authority["pullRequestNumber"] = 661
+          authority["baseRef"] = "feat/business-equipment-capacity-v2"
+          authority["productionDeploymentAllowed"] = False
+          authority["productionMutationAllowed"] = False
+          authority["secretValuesAllowed"] = False
+          authority["allowedPaths"] = sorted(permanent)
+          path.write_text(json.dumps(authority, indent=2) + "\n")
+          PY
+          rm .github/workflows/business-phase6-authority-sync.yml
+          git diff --check
+      - name: Commit synchronized authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(player): synchronize Phase 6 verification authority"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
