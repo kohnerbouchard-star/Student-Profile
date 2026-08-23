@@ -13,6 +13,8 @@
     ".github/workflows/business-manufacturing-recovery-v2.yml",
     ".github/workflows/business-manufacturing-resource-hold-v2.yml",
     ".github/workflows/business-timed-manufacturing-v2.yml",
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
     "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
     "backend/src/domains/business/api/playerBusinessManufacturing.ts",
     "backend/src/domains/business/api/playerBusinessManufacturingRoutePaths.ts",
@@ -22,8 +24,6 @@
     "backend/src/domains/business/contracts/playerBusinessContracts.ts",
     "backend/src/domains/business/contracts/playerBusinessManufacturingContracts.ts",
     "backend/src/domains/business/index.ts",
-    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
-    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
     "backend/src/security/playerRateLimitDispatch.ts",
@@ -70,6 +70,7 @@
     "scripts/business-phase6e-player-api-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
+    "scripts/security-audit-remediation-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
