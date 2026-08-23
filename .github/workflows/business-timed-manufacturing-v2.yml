@@ -53,6 +53,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repair-runtime-closures:
+    name: Repair two malformed Player runtime closures
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 661 &&
+      github.actor != 'github-actions[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Phase 6 branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/business-timed-manufacturing-v2
+          fetch-depth: 0
+      - name: Repair exact malformed closures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/supabase/functions/player-api/runtime.ts')
+          source = path.read_text()
+          malformed = '        createServiceClient,\n      ),'
+          repaired = '        createServiceClient,\n      }),'
+          count = source.count(malformed)
+          if count != 2:
+              raise SystemExit(f'Expected exactly two malformed closures, found {count}.')
+          path.write_text(source.replace(malformed, repaired))
+          PY
+          git show 032b93678f192252b7992a4df86c5e0d25eea670:.github/workflows/business-timed-manufacturing-v2.yml \
+            > .github/workflows/business-timed-manufacturing-v2.yml
+          git diff --check
+      - name: Commit repaired runtime and restored permanent gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            backend/supabase/functions/player-api/runtime.ts \
+            .github/workflows/business-timed-manufacturing-v2.yml
+          git commit -m "fix(player): close reviewed Player API dependency objects"
+          git push origin HEAD:feat/business-timed-manufacturing-v2
+
   materialize-inventory:
     name: Materialize Phase 6 architecture inventory
     if: >-
