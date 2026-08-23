@@ -13,7 +13,15 @@ export type PlayerBankingRoute =
   | { readonly kind: "loanApply"; readonly offerKey: string }
   | { readonly kind: "loanRepay"; readonly loanKey: string };
 
-export type PlayerBusinessBankingRoute = PlayerBusinessRoute | PlayerBankingRoute;
+export type DelegatedPlayerBusinessRoute = Exclude<
+  PlayerBusinessRoute,
+  | { readonly kind: "businessManufacturingCollection" }
+  | { readonly kind: "businessManufacturingCancel" }
+>;
+
+export type PlayerBusinessBankingRoute =
+  | DelegatedPlayerBusinessRoute
+  | PlayerBankingRoute;
 
 export interface LoansSnapshotDto {
   readonly configured: boolean;
