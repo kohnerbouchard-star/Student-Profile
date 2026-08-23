@@ -3389,12 +3389,12 @@
         "lines": 866
       },
       {
-        "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
-        "lines": 860
+        "file": "backend/supabase/functions/classroom-api/index.ts",
+        "lines": 865
       },
       {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 859
+        "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+        "lines": 860
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
@@ -3465,6 +3465,10 @@
         "lines": 695
       },
       {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 684
+      },
+      {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
         "lines": 683
       },
@@ -3479,10 +3483,6 @@
       {
         "file": "admin/admin-auth.js",
         "lines": 658
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 657
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
