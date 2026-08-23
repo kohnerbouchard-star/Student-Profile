@@ -28,6 +28,7 @@
     "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
     "backend/supabase/functions/classroom-api/index.ts",
     "backend/supabase/functions/player-api/index.ts",
+    "backend/supabase/functions/player-api/runtime.ts",
     "backend/supabase/functions/player-api/trustedClientIpServe.ts",
     "backend/supabase/functions/player-web-session-api/index.ts",
     "backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts",
