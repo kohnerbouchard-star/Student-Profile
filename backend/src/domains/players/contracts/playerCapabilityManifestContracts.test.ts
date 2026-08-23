@@ -40,6 +40,9 @@ const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "businessFormationActivate",
   "businessProductCreate",
   "businessProduction",
+  "businessManufacturingJobs",
+  "businessManufacturingStart",
+  "businessManufacturingCancel",
   "businessPrice",
   "businessCandidateHire",
   "businessTerminate",
@@ -129,6 +132,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
         .replace(":formationKey", `bfp_${"f".repeat(32)}`)
+        .replace(":businessKey", `biz_${"e".repeat(32)}`)
+        .replace(":jobKey", `mfg_${"7".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":candidateKey", `wfc_${"d".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
