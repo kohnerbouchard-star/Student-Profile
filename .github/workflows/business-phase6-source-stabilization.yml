@@ -63,7 +63,7 @@ jobs:
           scope_path = Path("docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md")
           scope = scope_path.read_text()
           old_status = "**Status:** IN PROGRESS — Phase 6A certified; Phase 6B atomic start/resource-hold implementation under exact-head verification  "
-          new_status = "**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present but not yet certified; Player cutover not started  "
+          new_status = "**Status:** IN PROGRESS — Phase 6A certified; Phase 6B–6D implementation present but not yet certified; Player cutover not started"
           if scope.count(old_status) != 1:
               raise SystemExit("Unexpected Phase 6 status header")
           scope = scope.replace(old_status, new_status, 1)
