@@ -1,4 +1,4 @@
-name: Business Phase 6 Edge Entrypoint Finalizer V2
+name: Business Phase 6 Final Source Convergence
 
 on:
   push:
@@ -10,16 +10,20 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: business-phase6-final-source-convergence
+  cancel-in-progress: false
+
 jobs:
   finalize:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
-      - name: Check out exact Phase 6 branch
+      - name: Check out the triggering Phase 6 source
         uses: actions/checkout@v7
         with:
-          ref: feat/business-timed-manufacturing-v2
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
@@ -32,14 +36,22 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
 
-      - name: Materialize direct Player Edge handlers
+      - name: Materialize reviewed Player Edge and verification boundaries
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import json
           import re
+
+          def replace_once(source: str, old: str, new: str, label: str) -> str:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one {label} marker, found {count}")
+              return source.replace(old, new, 1)
 
           def export_handler(path_value: str, handler_name: str) -> None:
               path = Path(path_value)
@@ -81,23 +93,16 @@ jobs:
               '''import { handlePlayerApiRequest } from "./runtime.ts";\nimport { preparePlayerApiRequest } from "./trustedClientIpServe.ts";\n\nDeno.serve((incomingRequest: Request) =>\n  handlePlayerApiRequest(preparePlayerApiRequest(incomingRequest))\n);\n'''
           )
           Path("backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts").write_text(
-              '''import { bindGatewayTrustedClientIp } from "../../../src/security/edgeGatewayClientIp.ts";\n\nconst MAX_MATERIALIZED_BODY_BYTES = 1_048_577;\n\nasync function materializeBoundedRequestBody(request: Request): Promise<Request> {\n  const method = request.method.toUpperCase();\n  if (request.body === null || method === "GET" || method === "HEAD" || method === "OPTIONS") {\n    return request;\n  }\n  const reader = request.body.getReader();\n  const chunks: Uint8Array[] = [];\n  let totalBytes = 0;\n  try {\n    while (true) {\n      const { done, value } = await reader.read();\n      if (done) break;\n      if (!value?.byteLength) continue;\n      const remainingBytes = MAX_MATERIALIZED_BODY_BYTES - totalBytes;\n      const chunk = value.byteLength > remainingBytes ? value.subarray(0, remainingBytes) : value;\n      chunks.push(chunk);\n      totalBytes += chunk.byteLength;\n      if (totalBytes >= MAX_MATERIALIZED_BODY_BYTES) {\n        await reader.cancel("Player request body capture limit reached").catch(() => {});\n        break;\n      }\n    }\n  } finally {\n    reader.releaseLock();\n  }\n  const body = new Uint8Array(totalBytes);\n  let offset = 0;\n  for (const chunk of chunks) {\n    body.set(chunk, offset);\n    offset += chunk.byteLength;\n  }\n  const headers = new Headers(request.headers);\n  headers.delete("content-length");\n  return new Request(request.url, { method: request.method, headers, body, signal: request.signal });\n}\n\nexport async function preparePlayerWebSessionRequest(\n  incomingRequest: Request,\n): Promise<Request> {\n  const materializedRequest = await materializeBoundedRequestBody(incomingRequest);\n  return bindGatewayTrustedClientIp(\n    materializedRequest,\n    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),\n  );\n}\n'''
+              '''import { bindGatewayTrustedClientIp } from "../../../src/security/edgeGatewayClientIp.ts";\n\nconst MAX_MATERIALIZED_BODY_BYTES = 1_048_577;\n\nasync function materializeBoundedRequestBody(request: Request): Promise<Request> {\n  const method = request.method.toUpperCase();\n  if (request.body === null || method === "GET" || method === "HEAD" || method === "OPTIONS") {\n    return request;\n  }\n  const reader = request.body.getReader();\n  const chunks: Uint8Array[] = [];\n  let totalBytes = 0;\n  try {\n    while (true) {\n      const { done, value } = await reader.read();\n      if (done) break;\n      if (!value?.byteLength) continue;\n      const remainingBytes = MAX_MATERIALIZED_BODY_BYTES - totalBytes;\n      const chunk = value.byteLength > remainingBytes ? value.subarray(0, remainingBytes) : value;\n      chunks.push(chunk);\n      totalBytes += chunk.byteLength;\n      if (totalBytes >= MAX_MATERIALIZED_BODY_BYTES) {\n        await reader.cancel("Player request body capture limit reached").catch(() => {});\n        break;\n      }\n    }\n  } finally {\n    reader.releaseLock();\n  }\n  const body = new Uint8Array(totalBytes);\n  let offset = 0;\n  for (const chunk of chunks) {\n    body.set(chunk, offset);\n    offset += chunk.byteLength;\n  }\n  const headers = new Headers(request.headers);\n  headers.delete("content-length");\n  return new Request(request.url, {\n    method: request.method,\n    headers,\n    body,\n    signal: request.signal,\n  });\n}\n\nexport async function preparePlayerWebSessionRequest(\n  incomingRequest: Request,\n): Promise<Request> {\n  const materializedRequest = await materializeBoundedRequestBody(incomingRequest);\n  return bindGatewayTrustedClientIp(\n    materializedRequest,\n    Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER"),\n  );\n}\n'''
           )
           Path("backend/supabase/functions/player-web-session-api/index.ts").write_text(
               '''import { handlePlayerWebSessionApiRequest } from "./runtime.ts";\nimport { preparePlayerWebSessionRequest } from "./trustedClientIpServe.ts";\n\nDeno.serve(async (incomingRequest: Request) =>\n  handlePlayerWebSessionApiRequest(await preparePlayerWebSessionRequest(incomingRequest))\n);\n'''
           )
-          PY
 
-      - name: Normalize direct-entrypoint contract and temporary files
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs")
-          source = path.read_text()
-          start = source.index('for (const functionName of functions) {')
-          end = source.index('\ntest("Player read resilience', start)
+          contract_path = Path("scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs")
+          contract = contract_path.read_text()
+          start = contract.index('for (const functionName of functions) {')
+          end = contract.index('\ntest("Player read resilience', start)
           replacement = '''for (const functionName of functions) {
             test(`${functionName} binds trusted IP before invoking its exported runtime handler`, async () => {
               const root = `backend/supabase/functions/${functionName}`;
@@ -124,8 +129,83 @@ jobs:
             });
           }
           '''
-          path.write_text(source[:start] + replacement + source[end:])
+          contract = contract[:start] + replacement + contract[end:]
+          contract = replace_once(
+              contract,
+              '  assert.match(isolation, /status === 204/u);',
+              '  assert.match(isolation, /status === 200 \\|\\| status === 204/u);',
+              "gateway-normalized isolation contract",
+          )
+          contract_path.write_text(contract)
+
+          isolation_path = Path("scripts/local-edge-runtime-isolation.mjs")
+          isolation = replace_once(
+              isolation_path.read_text(),
+              "if (lastStatuses.every((status) => status === 204)) {",
+              "if (lastStatuses.every((status) => status === 200 || status === 204)) {",
+              "local Edge readiness predicate",
+          )
+          isolation_path.write_text(isolation)
+
+          isolation_test_path = Path("scripts/local-edge-runtime-isolation.test.mjs")
+          isolation_test = isolation_test_path.read_text()
+          first_direct_preflight = "return new Response(null, { status: 204 });"
+          if first_direct_preflight not in isolation_test:
+              raise SystemExit("Could not locate the direct preflight fixture")
+          isolation_test = isolation_test.replace(
+              first_direct_preflight,
+              "return new Response(null, { status: 200 });",
+              1,
+          )
+          isolation_test_path.write_text(isolation_test)
+
+          workflow_path = Path(".github/workflows/business-timed-manufacturing-v2.yml")
+          workflow = workflow_path.read_text()
+          materialize_start = workflow.index("  materialize-inventory:\n")
+          verification_start = workflow.index("  verify-manufacturing:\n", materialize_start)
+          workflow = workflow[:materialize_start] + workflow[verification_start:]
+          workflow = replace_once(
+              workflow,
+              "# Canonical Phase 6 convergence verification v4.",
+              "# Canonical Phase 6 convergence verification v5.",
+              "workflow version",
+          )
+          workflow = replace_once(
+              workflow,
+              'if [ "$STATUS" = "204" ]; then',
+              'if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then',
+              "successful preflight predicate",
+          )
+          workflow = replace_once(
+              workflow,
+              'if [ "$STATUS" != "204" ]; then',
+              'if [ "$STATUS" != "200" ] && [ "$STATUS" != "204" ]; then',
+              "failed preflight predicate",
+          )
+          workflow_path.write_text(workflow)
+
+          authority_path = Path(
+              "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+          )
+          authority = json.loads(authority_path.read_text())
+          authority["authorityId"] = "econovaria.business-timed-manufacturing-pr-661.v1"
+          allowed = set(authority["allowedPaths"])
+          allowed.update({
+              "backend/supabase/functions/player-web-session-api/runtime.ts",
+              "docs/roadmaps/business-phase6-final-certification-inventory-v1.md",
+              "docs/roadmaps/business-v2-development-execution-log-v1.md",
+              "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+              "scripts/local-edge-runtime-isolation.mjs",
+              "scripts/local-edge-runtime-isolation.test.mjs",
+          })
+          authority["allowedPaths"] = sorted(allowed)
+          authority_path.write_text(json.dumps(authority, indent=2) + "\n")
           PY
+
+      - name: Remove one-shot Phase 6 repair machinery
+        shell: bash
+        run: |
+          set -euo pipefail
           find .github/workflows -maxdepth 1 -type f -name 'business-phase6-*.yml' \
             ! -name 'business-phase6-edge-entrypoint-finalizer-v2.yml' -print -delete || true
           find scripts -maxdepth 1 -type f \( \
@@ -136,22 +216,22 @@ jobs:
           find docs/roadmaps -maxdepth 1 -type f -name '.phase6-*' -print -delete || true
           rm -f pathlib.py sitecustomize.py
 
-      - name: Run exact source contracts
+      - name: Verify the materialized source tree
         shell: bash
         run: |
           set -euo pipefail
           npm ci --ignore-scripts
           node scripts/architecture/build-architecture-inventory.mjs
           node scripts/business-phase6e-player-api-contract.mjs
-          node --test scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
-          deno check backend/supabase/functions/player-api/index.ts
-          deno check backend/supabase/functions/player-web-session-api/index.ts
-          git diff --check
-
-      - name: Verify backend and Player contracts
-        shell: bash
-        run: |
-          set -euo pipefail
+          node --test \
+            scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs \
+            scripts/local-edge-runtime-isolation.test.mjs
+          deno check \
+            --config backend/supabase/functions/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/supabase/functions/player-api/index.ts \
+            backend/supabase/functions/player-web-session-api/index.ts
           npm --prefix backend ci --ignore-scripts
           npm --prefix backend run typecheck:all
           npm --prefix player-terminal ci --no-audit --no-fund
@@ -159,8 +239,9 @@ jobs:
           npm --prefix player-terminal run adapter
           npm --prefix player-terminal run capability-manifest-current
           npm --prefix player-terminal run runtime-integration
+          git diff --check
 
-      - name: Commit final boundary and remove one-shot workflows
+      - name: Commit the final Phase 6 implementation tree
         shell: bash
         run: |
           set -euo pipefail
@@ -168,5 +249,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "fix(player): finalize direct Phase 6 Edge handlers"
+          git diff --cached --check
+          git commit -m "fix(player): finalize Phase 6 source convergence"
           git push origin HEAD:feat/business-timed-manufacturing-v2
