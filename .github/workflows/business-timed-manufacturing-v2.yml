@@ -1,5 +1,6 @@
 name: Business Timed Manufacturing V2
 
+# Canonical Phase 6 convergence verification v1.
 on:
   pull_request:
     paths:
