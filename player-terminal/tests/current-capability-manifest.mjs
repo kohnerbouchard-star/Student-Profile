@@ -23,7 +23,7 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-08-22.1");
+assert.equal(manifest.manifestVersion, "2026-08-23.1");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);
@@ -33,6 +33,9 @@ assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "progressionCla
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationPropose"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationRespond"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationActivate"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingJobs"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingStart"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingCancel"));
 assert.equal("businessInputPurchase" in manifest.capabilities.actions, false);
 assert.equal(manifest.endpoints.some((endpoint) => endpoint.key === "businessInputPurchase"), false);
 
@@ -46,11 +49,14 @@ assert.equal(resolved.actions.marketplaceDispute, true);
 assert.equal(resolved.actions.businessFormationPropose, true);
 assert.equal(resolved.actions.businessFormationRespond, true);
 assert.equal(resolved.actions.businessFormationActivate, true);
+assert.equal(resolved.actions.businessProduction, true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceActivate"), true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceDispute"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationPropose"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationRespond"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationActivate"), true);
+assert.equal(isEndpointEnabled(resolved, "businessManufacturingStart"), true);
+assert.equal(isEndpointEnabled(resolved, "businessManufacturingCancel"), true);
 assert.equal(isEndpointEnabled(resolved, "messageThreadCreate"), true);
 assert.equal(isEndpointEnabled(resolved, "messageRead"), true);
 
@@ -98,4 +104,4 @@ assert.throws(
   "Core capability drift must remain fail closed with bounded diagnostics.",
 );
 
-console.log("Exact backend manifest, Business formation capabilities, mutation aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
+console.log("Exact backend manifest, Business formation and manufacturing capabilities, mutation aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
