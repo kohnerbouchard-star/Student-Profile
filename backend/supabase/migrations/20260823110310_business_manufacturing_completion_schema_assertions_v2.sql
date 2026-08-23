@@ -70,7 +70,7 @@ begin
   perform
     output.recipe_id,
     output.item_key,
-    output.base_quantity
+    output.quantity
   from public.physical_economy_recipe_outputs as output
   limit 0;
 
