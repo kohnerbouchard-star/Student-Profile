@@ -1,0 +1,79 @@
+{
+  "branch": "feat/business-timed-manufacturing-v2",
+  "deploymentAuthorized": false,
+  "durableScopePlanLog": false,
+  "failedWorkflows": [],
+  "mergeAuthorized": false,
+  "missingWorkflows": [
+    "Business Timed Manufacturing V2",
+    "Business Manufacturing Resource Hold V2",
+    "Business Timed Manufacturing Resource Hold V2",
+    "Business Manufacturing Completion V2"
+  ],
+  "prNumber": 661,
+  "schemaVersion": 1,
+  "sourceSha": "6f936abd61c6cd903f6e839790ceab24ed570748",
+  "status": "PENDING",
+  "workflows": {
+    "Admin API Check": {
+      "conclusion": "success",
+      "runId": 32605009682,
+      "status": "completed"
+    },
+    "Backend Typecheck": {
+      "conclusion": "success",
+      "runId": 32605009722,
+      "status": "completed"
+    },
+    "Business Banking Runtime": {
+      "conclusion": "success",
+      "runId": 32605009647,
+      "status": "completed"
+    },
+    "Business Economy V2": {
+      "conclusion": "success",
+      "runId": 32605009635,
+      "status": "completed"
+    },
+    "Business Workforce Production Payroll V2": {
+      "conclusion": "success",
+      "runId": 32605009705,
+      "status": "completed"
+    },
+    "Database Replay": {
+      "conclusion": "success",
+      "runId": 32605009709,
+      "status": "completed"
+    },
+    "Exchange Calendar Runtime": {
+      "conclusion": "success",
+      "runId": 32605009702,
+      "status": "completed"
+    },
+    "Player Terminal Verify": {
+      "conclusion": "success",
+      "runId": 32605009756,
+      "status": "completed"
+    },
+    "Repository Quality": {
+      "conclusion": "success",
+      "runId": 32605009728,
+      "status": "completed"
+    },
+    "Required Game Market Timezone": {
+      "conclusion": "success",
+      "runId": 32605009732,
+      "status": "completed"
+    },
+    "Staging Readiness Preflight": {
+      "conclusion": "success",
+      "runId": 32605009637,
+      "status": "completed"
+    },
+    "Supply Chain Security": {
+      "conclusion": "success",
+      "runId": 32605009711,
+      "status": "completed"
+    }
+  }
+}
