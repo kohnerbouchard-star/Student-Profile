@@ -76,7 +76,8 @@ requireTokens(sql, "Player cancellation", [
   "BUSINESS_MANUFACTURING_CANCEL_STATE_INVALID",
   "BUSINESS_MANUFACTURING_TERMINAL_IDEMPOTENCY_CONFLICT",
   "'player_cancelled'",
-  "'player:cancel:' || substr(v_hash, 1, 48)",
+  "terminal_idempotency_key = btrim(p_idempotency_key)",
+  "terminal_actor_type = 'player'",
   "business.manufacturing.cancelled",
   "completion_lease_token = null",
   "resource_state = 'released'",
@@ -86,9 +87,9 @@ requireTokens(sql, "System failure recovery", [
   "fail_business_manufacturing_job_v2",
   "BUSINESS_MANUFACTURING_COMPLETION_LEASE_ACTIVE",
   "BUSINESS_MANUFACTURING_ATTEMPTS_NOT_EXHAUSTED",
+  "terminal_idempotency_key = btrim(p_idempotency_key)",
   "terminal_actor_type = 'system'",
   "business.manufacturing.failed",
-  "'system:fail:' || substr(v_hash, 1, 48)",
 ]);
 
 requireTokens(sql, "Exhausted-attempt processor", [
