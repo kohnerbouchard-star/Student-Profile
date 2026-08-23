@@ -25,7 +25,7 @@ import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockA
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
-import { readPlayerBusinessRoutePath } from "../../business/api/playerBusinessRoutePaths.ts";
+import { readPlayerBusinessRoutePath } from "../../business/index.ts";
 import { readPlayerProgressionRoutePath } from "../../progression/api/playerProgressionRoutePaths.ts";
 
 declare const Deno: {
