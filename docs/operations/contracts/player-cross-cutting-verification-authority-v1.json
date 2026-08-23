@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.business-timed-manufacturing-pr-661.v1",
+  "authorityId": "econovaria.stock-market-runtime-pr-483.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 661,
   "baseRef": "feat/business-equipment-capacity-v2",
