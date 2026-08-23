@@ -373,7 +373,7 @@ Deno.serve(async (request: Request) => {
       endpointKey,
       () => handlePlayerStorePublicRequest(request, playerStoreRoute, {
         createServiceClient,
-      ),
+      }),
       { createServiceClient },
     );
   }
@@ -427,7 +427,7 @@ Deno.serve(async (request: Request) => {
       "contracts",
       () => handlePlayerContractPublicListRequest(request, {
         createServiceClient,
-      ),
+      }),
       { createServiceClient },
     );
   }
