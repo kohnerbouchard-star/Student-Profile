@@ -60,6 +60,31 @@ jobs:
 
           python3 /tmp/business-phase6-finalize.py
 
+          python3 <<'NORMALIZE'
+          from pathlib import Path
+
+          source_sha = '739f5540234b20e16ba34f69f0d741d986030113'
+          scope_path = Path('docs/roadmaps/business-phase6-timed-manufacturing-scope-v1.md')
+          scope = scope_path.read_text(encoding='utf-8')
+          scope = scope.replace(
+              f'**Status:** COMPLETE — exact-head certified on `{source_sha}`; Phase 7 checkpoint 7A opened  \n',
+              f'**Status:** COMPLETE — exact-head certified on `{source_sha}`; Phase 7 checkpoint 7A opened\n',
+          )
+          scope = scope.replace(
+              f'**Certified Phase 6 exact-head source:** `{source_sha}`  \n',
+              f'**Certified Phase 6 exact-head source:** `{source_sha}`\n',
+          )
+          scope_path.write_text(scope, encoding='utf-8')
+
+          inventory_path = Path('docs/roadmaps/business-phase6-final-certification-inventory-v1.md')
+          inventory = inventory_path.read_text(encoding='utf-8')
+          inventory_path.write_text(
+              '\n'.join(line.rstrip() for line in inventory.splitlines()) + '\n',
+              encoding='utf-8',
+          )
+          NORMALIZE
+
+          git add -N docs/roadmaps/business-phase6-final-certification-inventory-v1.md
           git diff --check
           git status --short
           git diff --name-only | sort > /tmp/phase6-doc-paths.txt
