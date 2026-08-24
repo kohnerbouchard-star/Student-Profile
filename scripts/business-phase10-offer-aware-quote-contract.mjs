@@ -34,6 +34,8 @@ requireTokens(text.schema, "quote schema", [
   "default ('quote_' || encode(gen_random_bytes(16), 'hex'))",
   "store_offer_purchase_quotes_idempotency_unique",
   "business-offer-fixed-price-v2",
+  "expires_at = created_at + interval '2 minutes'",
+  "new.used_at < old.expires_at",
   "force row level security",
   "STORE_OFFER_QUOTE_IDENTITY_IMMUTABLE",
   "STORE_OFFER_QUOTE_DELETE_FORBIDDEN",

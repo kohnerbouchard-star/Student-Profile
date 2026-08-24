@@ -97,7 +97,7 @@ create table public.store_offer_purchase_quotes (
       or (status = 'cancelled' and used_at is null and expired_at is null and cancelled_at is not null)
     ),
   constraint store_offer_purchase_quotes_expiry_check
-    check (expires_at > created_at and expires_at <= created_at + interval '10 minutes'),
+    check (expires_at = created_at + interval '2 minutes'),
   constraint store_offer_purchase_quotes_idempotency_check
     check (length(btrim(request_idempotency_key)) between 8 and 160),
   constraint store_offer_purchase_quotes_hash_check
@@ -167,14 +167,21 @@ begin
     raise exception 'STORE_OFFER_QUOTE_VERSION_INVALID' using errcode = 'P0001';
   end if;
   v_transition := old.status || '->' || new.status;
-  if v_transition = 'created->used' and new.used_at is not null
-    and new.expired_at is null and new.cancelled_at is null then
+  if v_transition = 'created->used'
+    and new.used_at >= old.created_at
+    and new.used_at < old.expires_at
+    and new.expired_at is null
+    and new.cancelled_at is null
+  then
     null;
   elsif v_transition = 'created->expired' and new.used_at is null
     and new.expired_at >= old.expires_at and new.cancelled_at is null then
     null;
-  elsif v_transition = 'created->cancelled' and new.used_at is null
-    and new.expired_at is null and new.cancelled_at is not null then
+  elsif v_transition = 'created->cancelled'
+    and new.used_at is null
+    and new.expired_at is null
+    and new.cancelled_at >= old.created_at
+  then
     null;
   else
     raise exception 'STORE_OFFER_QUOTE_TRANSITION_INVALID:%', v_transition

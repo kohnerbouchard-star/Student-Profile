@@ -66,7 +66,7 @@ const PATTERNS = {
   canonicalItemKey: /^[a-z0-9][a-z0-9._-]{0,159}$/u,
   storeItemKey: /^[a-z0-9_-]{1,64}$/u,
   buyerCountryCode: /^[A-Z][A-Z0-9_]{2,31}$/u,
-  currency: /^[A-Z0-9_]{3,16}$/u,
+  currency: /^[A-Z0-9]{3,16}$/u,
 } as const;
 
 export function normalizeBusinessStoreOfferQuoteCommand(
@@ -78,7 +78,7 @@ export function normalizeBusinessStoreOfferQuoteCommand(
   if (idempotencyKey.length < 8 || idempotencyKey.length > 160) {
     fail("invalid_store_offer_quote_command", "idempotencyKey must contain 8 to 160 characters.");
   }
-  const quantity = integer(value.quantity, "quantity", true);
+  const quantity = commandInteger(value.quantity, "quantity", true);
   if (quantity > 1_000_000) {
     fail("invalid_store_offer_quote_command", "quantity must not exceed 1000000.");
   }
@@ -87,7 +87,7 @@ export function normalizeBusinessStoreOfferQuoteCommand(
     buyerPlayerId: commandPattern(value.buyerPlayerId, UUID, "buyerPlayerId"),
     offerKey: commandPattern(value.offerKey, PATTERNS.offerKey, "offerKey"),
     quantity,
-    expectedOfferVersion: integer(
+    expectedOfferVersion: commandInteger(
       value.expectedOfferVersion,
       "expectedOfferVersion",
       true,
@@ -128,7 +128,7 @@ export function parseBusinessStoreOfferQuote(
   const createdAt = timestamp(row.createdAt, "createdAt");
   const expiresAt = timestamp(row.expiresAt, "expiresAt");
   const lifetime = Date.parse(expiresAt) - Date.parse(createdAt);
-  if (lifetime <= 0 || lifetime > 600_000) resultFail("Quote expiry is invalid.");
+  if (lifetime !== 120_000) resultFail("Quote lifetime must be exactly two minutes.");
 
   return {
     quoteKey: pattern(row.quoteKey, PATTERNS.quoteKey, "quoteKey"),
@@ -181,6 +181,16 @@ function pattern(value: unknown, regex: RegExp, label: string): string {
   const text = typeof value === "string" ? value.trim() : "";
   if (!regex.test(text)) fail("invalid_store_offer_quote_contract", `${label} has an invalid public format.`);
   return text;
+}
+function commandInteger(value: unknown, label: string, positive = false): number {
+  const numberValue = Number(value);
+  if (!Number.isSafeInteger(numberValue) || numberValue < (positive ? 1 : 0)) {
+    fail(
+      "invalid_store_offer_quote_command",
+      `${label} must be ${positive ? "a positive" : "a non-negative"} integer.`,
+    );
+  }
+  return numberValue;
 }
 function integer(value: unknown, label: string, positive = false): number {
   const numberValue = Number(value);

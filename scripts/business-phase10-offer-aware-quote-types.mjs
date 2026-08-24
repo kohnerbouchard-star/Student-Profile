@@ -5,6 +5,7 @@ import {
   BUSINESS_STORE_OFFER_QUOTE_PRICING_VERSION,
   normalizeBusinessStoreOfferQuoteCommand,
   parseBusinessStoreOfferQuote,
+  StoreOfferQuoteContractError,
 } from "../backend/src/domains/store/contracts/storeOfferQuoteContracts.ts";
 
 const command = normalizeBusinessStoreOfferQuoteCommand({
@@ -25,7 +26,9 @@ assert.equal(
 
 assert.throws(
   () => normalizeBusinessStoreOfferQuoteCommand({ ...command, quantity: 0 }),
-  /positive integer/u,
+  (error) => error instanceof StoreOfferQuoteContractError &&
+    error.code === "invalid_store_offer_quote_command" &&
+    /positive integer/u.test(error.message),
 );
 assert.throws(
   () => normalizeBusinessStoreOfferQuoteCommand({ ...command, quantity: 1_000_001 }),
@@ -89,6 +92,17 @@ assert.throws(
 assert.throws(
   () => parseBusinessStoreOfferQuote({ ...quote, pricingVersion: "other" }),
   /not the fixed Business offer policy/u,
+);
+assert.throws(
+  () => parseBusinessStoreOfferQuote({
+    ...quote,
+    expiresAt: "2026-08-25T01:03:00.000Z",
+  }),
+  /exactly two minutes/u,
+);
+assert.throws(
+  () => parseBusinessStoreOfferQuote({ ...quote, buyerCurrencyCode: "N_RC" }),
+  /invalid public format/u,
 );
 
 console.log("Business Phase 10A.2 offer-aware quote typed contract: PASS");
