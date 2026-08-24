@@ -54,6 +54,22 @@ jobs:
           Path('/tmp/business-phase7a-finalize.py').write_text('\n'.join(body) + '\n')
           PYEXTRACT
           python3 /tmp/business-phase7a-finalize.py
+          python3 - <<'PYFORMAT'
+          from pathlib import Path
+
+          implementation_sha = '04db81436e75cea6c52d0c720508c3ea12baab05'
+          scope_path = Path('docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md')
+          scope = scope_path.read_text()
+          scope = scope.replace(
+              f'**Exact certified implementation SHA:** `{implementation_sha}`  \n',
+              f'**Exact certified implementation SHA:** `{implementation_sha}`\n',
+              1,
+          )
+          scope_path.write_text(scope)
+
+          log_path = Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log_path.write_text(log_path.read_text().rstrip() + '\n')
+          PYFORMAT
           git diff --check
 
       - name: Commit durable records and remove temporary finalizers
