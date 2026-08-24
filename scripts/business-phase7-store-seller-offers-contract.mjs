@@ -25,6 +25,10 @@ const files = {
     root,
     "backend/supabase/migrations/20260824100040_store_seller_offer_schema_assertions_v2.sql",
   ),
+  identityAssertions: path.join(
+    root,
+    "backend/supabase/migrations/20260824100041_store_seller_offer_identity_assertions_v2.sql",
+  ),
   scope: path.join(
     root,
     "docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md",
@@ -52,6 +56,7 @@ const migration = [
 ].map((file) => fs.readFileSync(file, "utf8")).join("\n");
 const lower = migration.toLowerCase();
 const assertions = fs.readFileSync(files.assertions, "utf8");
+const identityAssertions = fs.readFileSync(files.identityAssertions, "utf8");
 const scope = fs.readFileSync(files.scope, "utf8");
 const contracts = fs.readFileSync(files.contracts, "utf8");
 const repository = fs.readFileSync(files.repository, "utf8");
@@ -97,16 +102,20 @@ requireTokens(migration, "Store seller-offer guard", [
   "STORE_SELLER_OFFER_IDENTITY_IMMUTABLE",
   "STORE_SELLER_OFFER_CUSTODY_BINDING_IMMUTABLE",
   "STORE_SELLER_OFFER_VERSION_INVALID",
+  "if old.status = 'retired' then",
   "STORE_SELLER_OFFER_RETIRED_TERMINAL",
   "STORE_SELLER_OFFER_TRANSITION_INVALID",
 ]);
 
 requireTokens(migration, "Seeded compatibility convergence", [
+  "guard_store_item_offer_identity_v2",
+  "STORE_SELLER_OFFER_STORE_ITEM_IDENTITY_IMMUTABLE",
+  "STORE_SELLER_OFFER_CURRENCY_CHANGE_BLOCKED",
   "sync_seeded_store_seller_offer_v2",
   "seller_kind = 'seeded'",
   "'canonical_supply'",
   "compatibilitySource",
-  "on public.store_items",
+  "after insert or update of\n  price,\n  currency_code,\n  status,\n  visibility",
   "version = public.store_seller_offers.version + 1",
 ]);
 
@@ -188,6 +197,15 @@ requireTokens(assertions, "Phase 7A schema assertions", [
   "STORE_SELLER_OFFER_RLS_NOT_FORCED",
   "STORE_SELLER_OFFER_BROWSER_FUNCTION_PRIVILEGE_FORBIDDEN",
   "STORE_SELLER_OFFER_SEEDED_BACKFILL_INCOMPLETE",
+]);
+
+requireTokens(identityAssertions, "Phase 7A identity assertions", [
+  "STORE_SELLER_OFFER_STORE_ITEM_GUARD_FUNCTION_MISSING",
+  "STORE_SELLER_OFFER_STORE_ITEM_GUARD_MISSING",
+  "STORE_SELLER_OFFER_TERMINAL_GUARD_MISSING",
+  "STORE_SELLER_OFFER_STORE_ITEM_GUARD_INCOMPLETE",
+  "STORE_SELLER_OFFER_STORE_ITEM_IDENTITY_IMMUTABLE",
+  "STORE_SELLER_OFFER_CURRENCY_CHANGE_BLOCKED",
 ]);
 
 requireTokens(scope, "Phase 7A scope lock", [
