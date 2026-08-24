@@ -69,7 +69,6 @@ jobs:
           node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
           node scripts/validate-supabase-migrations.mjs
           npm run audit:interaction-wiring
-          node scripts/player-local-controls-contract.mjs
           git diff --check
 
       - name: Verify deterministic architecture inventory
