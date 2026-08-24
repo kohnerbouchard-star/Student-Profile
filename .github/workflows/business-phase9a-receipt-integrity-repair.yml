@@ -1,22 +1,20 @@
-name: Business Phase 9A Receipt and Cost Integrity Repair
+name: Business Phase 9A Source Repair
 
 on:
   pull_request:
     types: [synchronize]
     paths:
       - ".github/workflows/business-phase9a-receipt-integrity-repair.yml"
-      - ".github/workflows/business-phase9a-receipt-runner-fix.yml"
-      - ".github/workflows/business-phase9a-receipt-integrity-executor.yml"
 
 permissions:
   contents: write
 
 concurrency:
-  group: business-phase9a-receipt-integrity-repair
+  group: business-phase9a-source-repair
   cancel-in-progress: false
 
 jobs:
-  repair:
+  repair-source:
     if: >-
       github.event.pull_request.number == 664 &&
       github.event.pull_request.head.ref == 'feat/business-store-withdrawal-safety-v2'
@@ -29,15 +27,13 @@ jobs:
           ref: feat/business-store-withdrawal-safety-v2
           fetch-depth: 0
 
-      - name: Verify bounded temporary lineage
+      - name: Verify exact repair trigger and lineage
         shell: bash
         run: |
           set -euo pipefail
-          SOURCE_HEAD="9aa3595be3376069a6005e713c982705cf449883"
-          git merge-base --is-ancestor "$SOURCE_HEAD" HEAD
-          ALLOWED='^\.github/workflows/business-phase9a-(receipt-integrity-repair|receipt-runner-fix|receipt-integrity-executor)\.yml$'
-          UNEXPECTED="$(git diff --name-only "$SOURCE_HEAD" HEAD -- . | grep -Ev "$ALLOWED" || true)"
-          test -z "$UNEXPECTED" || { printf 'Unexpected temporary delta:\n%s\n' "$UNEXPECTED" >&2; exit 1; }
+          test "$(git log -1 --format=%s)" = "ops(business): apply Phase 9A source repair"
+          git merge-base --is-ancestor \
+            9aa3595be3376069a6005e713c982705cf449883 HEAD
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -51,41 +47,72 @@ jobs:
           npm install --global npm@10.9.8
           npm ci --ignore-scripts
 
-      - name: Execute corrected reviewed transformation
+      - name: Apply reviewed receipt and cost-integrity transformation
         shell: bash
         run: |
           set -euo pipefail
-          git show HEAD^:.github/workflows/business-phase9a-receipt-integrity-repair.yml \
-            > /tmp/business-phase9a-receipt-parent.yml
+          git show \
+            78d63a793045437cb00d298af9c99d539797a3d2:.github/workflows/business-phase9a-receipt-integrity-repair.yml \
+            > /tmp/receipt-source.yml
           python3 - <<'PYEXTRACT'
           from pathlib import Path
+          import re
 
-          source_path = Path('/tmp/business-phase9a-receipt-parent.yml')
-          text = source_path.read_text()
-          old = '''              2,
-              "recorded replay receipt",
-'''
-          new = '''              1,
-              "recorded replay receipt",
-'''
+          text = Path('/tmp/receipt-source.yml').read_text()
+          old = "              2,\n              \"recorded replay receipt\",\n"
+          new = "              1,\n              \"recorded replay receipt\",\n"
           if text.count(old) != 1:
-              raise SystemExit('receipt repair match-count target is not unique')
-          text = text.replace(old, new, 1)
-          source = text.splitlines()
-          start = next(i for i, line in enumerate(source) if line.strip() == "python3 - <<'PY'")
-          end = next(i for i in range(start + 1, len(source)) if source[i].strip() == 'PY')
+              raise SystemExit('receipt match-count target is not unique')
+          lines = text.replace(old, new, 1).splitlines()
+          start = next(
+              i for i, line in enumerate(lines)
+              if line.strip() == "python3 - <<'PY'"
+          )
+          end = next(
+              i for i in range(start + 1, len(lines))
+              if lines[i].strip() == 'PY'
+          )
           body = [
               line[10:] if line.startswith('          ') else line
-              for line in source[start + 1:end]
+              for line in lines[start + 1:end]
           ]
-          Path('/tmp/business-phase9a-receipt-hardening.py').write_text(
-              '\n'.join(body) + '\n'
+          script = '\n'.join(body) + '\n'
+          stale_pattern = re.compile(
+              r'\nreplace_once\(\n    contract,\n.*?\n'
+              r'    "structural receipt authority",\n\)\n',
+              re.S,
           )
+          script, count = stale_pattern.subn('\n', script, count=1)
+          if count != 1:
+              raise SystemExit('stale structural receipt block was not unique')
+          Path('/tmp/receipt-hardening.py').write_text(script)
           PYEXTRACT
-          python3 /tmp/business-phase9a-receipt-hardening.py
+          python3 /tmp/receipt-hardening.py
+          python3 - <<'PYPATCH'
+          from pathlib import Path
+
+          path = Path('scripts/business-phase9-store-withdrawal-safety-contract.mjs')
+          text = path.read_text()
+          old = (
+              '  "status in (\'pending\',\'completed\')",\n'
+              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
+          )
+          new = (
+              '  "status in (\'pending\',\'completed\')",\n'
+              '  "offer_version_at_request bigint not null",\n'
+              '  "completion_offer_status text null",\n'
+              '  "completion_offer_version bigint null",\n'
+              '  "store_offer_withdrawals_receipt_check",\n'
+              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit('current structural receipt anchor is not unique')
+          path.write_text(text.replace(old, new, 1))
+          PYPATCH
+          node scripts/architecture/build-architecture-inventory.mjs
           git diff --check
 
-      - name: Verify receipt and cost-integrity hardening
+      - name: Verify hardened source authority
         shell: bash
         run: |
           set -euo pipefail
@@ -100,19 +127,16 @@ jobs:
           node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
           node scripts/validate-supabase-migrations.mjs
           node scripts/architecture/build-architecture-inventory.mjs
-          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --exit-code -- \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
           git diff --check
 
-      - name: Commit hardening and remove temporary workflows
+      - name: Commit source-only hardened candidate
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "econovaria-automation"
           git config user.email "econovaria-automation@users.noreply.github.com"
-          git rm -f \
-            .github/workflows/business-phase9a-receipt-integrity-repair.yml \
-            .github/workflows/business-phase9a-receipt-runner-fix.yml \
-            .github/workflows/business-phase9a-receipt-integrity-executor.yml
           git add \
             backend/supabase/migrations/20260824120000_store_offer_withdrawal_foundation_v2.sql \
             backend/supabase/migrations/20260824120010_store_offer_withdrawal_request_command_v2.sql \
@@ -121,6 +145,6 @@ jobs:
             scripts/business-phase9-store-withdrawal-safety-contract.mjs \
             scripts/business-phase9-store-withdrawal-safety-simulation.mjs \
             docs/architecture/inventories/econovaria-architecture-inventory-v2.json
-          git diff --cached --quiet && { echo "No receipt or cost-integrity changes were produced." >&2; exit 1; }
+          git diff --cached --quiet && { echo "No hardened source delta." >&2; exit 1; }
           git commit -m "fix(store): harden withdrawal receipts and cost integrity"
           git push origin HEAD:feat/business-store-withdrawal-safety-v2
