@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git log -1 --format=%s)" = "ops(business): run minimal Phase 9A receipt repair"
+          test "$(git log -1 --format=%s)" = "ops(business): execute valid Phase 9A receipt repair"
           git merge-base --is-ancestor \
             9aa3595be3376069a6005e713c982705cf449883 HEAD
 
@@ -51,17 +51,19 @@ jobs:
           from pathlib import Path
 
           text = Path('/tmp/receipt-source.yml').read_text()
-          old = '''              2,
-              "recorded replay receipt",
-'''
-          new = '''              1,
-              "recorded replay receipt",
-'''
+          old = "              2,\n              \"recorded replay receipt\",\n"
+          new = "              1,\n              \"recorded replay receipt\",\n"
           if text.count(old) != 1:
               raise SystemExit('receipt match-count target is not unique')
           lines = text.replace(old, new, 1).splitlines()
-          start = next(i for i, line in enumerate(lines) if line.strip() == "python3 - <<'PY'")
-          end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == 'PY')
+          start = next(
+              i for i, line in enumerate(lines)
+              if line.strip() == "python3 - <<'PY'"
+          )
+          end = next(
+              i for i in range(start + 1, len(lines))
+              if lines[i].strip() == 'PY'
+          )
           body = [
               line[10:] if line.startswith('          ') else line
               for line in lines[start + 1:end]
