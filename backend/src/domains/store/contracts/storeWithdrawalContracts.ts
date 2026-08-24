@@ -1,3 +1,23 @@
+import {
+  contractError,
+  invalidCommand,
+  readBoolean,
+  readNonNegativeInteger,
+  readNullableNonNegativeInteger,
+  readNullablePattern,
+  readNullablePositiveInteger,
+  readNullableTimestamp,
+  readPattern,
+  readPositiveInteger,
+  readText,
+  readTimestamp,
+  requireCommandPattern,
+  requireCommandPositiveInteger,
+  requireRecord,
+} from "./storeWithdrawalContractPrimitives.ts";
+
+export { StoreWithdrawalContractError } from "./storeWithdrawalContractPrimitives.ts";
+
 export type StoreWithdrawalMode = "full" | "reduce";
 export type StoreWithdrawalRequestStatus = "pending" | "completed";
 export type StoreWithdrawalOfferStatus =
@@ -79,16 +99,6 @@ export interface StoreWithdrawalRepository {
   processDueWithdrawals(
     command: ProcessDueStoreWithdrawalsCommand,
   ): Promise<ProcessDueStoreWithdrawalsResult>;
-}
-
-export class StoreWithdrawalContractError extends Error {
-  readonly code: string;
-
-  constructor(code: string, message: string) {
-    super(message);
-    this.name = "StoreWithdrawalContractError";
-    this.code = code;
-  }
 }
 
 export function normalizeStoreWithdrawalRequestCommand(
@@ -379,128 +389,6 @@ function parseProcessItem(value: unknown): StoreWithdrawalProcessItem {
   };
 }
 
-function requireRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} must be an object.`,
-    );
-  }
-  return value as Record<string, unknown>;
-}
-
-function requireCommandPattern(
-  value: unknown,
-  pattern: RegExp,
-  label: string,
-): string {
-  const text = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (!pattern.test(text)) invalidCommand(`${label} has an invalid public format.`);
-  return text;
-}
-
-function requireCommandPositiveInteger(value: unknown, label: string): number {
-  const numberValue = Number(value);
-  if (!Number.isInteger(numberValue) || numberValue < 1) {
-    invalidCommand(`${label} must be a positive integer.`);
-  }
-  return numberValue;
-}
-
-function readText(value: unknown, label: string): string {
-  const text = typeof value === "string" ? value.trim() : "";
-  if (!text) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} is required.`,
-    );
-  }
-  return text;
-}
-
-function readPattern(value: unknown, pattern: RegExp, label: string): string {
-  const text = readText(value, label);
-  if (!pattern.test(text)) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} has an invalid public format.`,
-    );
-  }
-  return text;
-}
-
-function readNullablePattern(
-  value: unknown,
-  pattern: RegExp,
-  label: string,
-): string | null {
-  if (value === null || value === undefined) return null;
-  return readPattern(value, pattern, label);
-}
-
-function readPositiveInteger(value: unknown, label: string): number {
-  const numberValue = Number(value);
-  if (!Number.isInteger(numberValue) || numberValue < 1) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} must be a positive integer.`,
-    );
-  }
-  return numberValue;
-}
-
-function readNonNegativeInteger(value: unknown, label: string): number {
-  const numberValue = Number(value);
-  if (!Number.isInteger(numberValue) || numberValue < 0) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} must be a non-negative integer.`,
-    );
-  }
-  return numberValue;
-}
-
-function readNullablePositiveInteger(
-  value: unknown,
-  label: string,
-): number | null {
-  if (value === null || value === undefined) return null;
-  return readPositiveInteger(value, label);
-}
-
-function readNullableNonNegativeInteger(
-  value: unknown,
-  label: string,
-): number | null {
-  if (value === null || value === undefined) return null;
-  return readNonNegativeInteger(value, label);
-}
-
-function readTimestamp(value: unknown, label: string): string {
-  const text = readText(value, label);
-  if (!Number.isFinite(Date.parse(text))) {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} must be an ISO timestamp.`,
-    );
-  }
-  return new Date(text).toISOString();
-}
-
-function readNullableTimestamp(value: unknown, label: string): string | null {
-  if (value === null || value === undefined) return null;
-  return readTimestamp(value, label);
-}
-
-function readBoolean(value: unknown, label: string): boolean {
-  if (typeof value !== "boolean") {
-    throw contractError(
-      "invalid_store_withdrawal_contract",
-      `${label} must be boolean.`,
-    );
-  }
-  return value;
-}
 
 function readMode(value: unknown): StoreWithdrawalMode {
   if (value === "full" || value === "reduce") return value;
@@ -529,15 +417,4 @@ function readOfferStatus(value: unknown): StoreWithdrawalOfferStatus {
     "invalid_store_withdrawal_contract",
     "offerStatus is invalid.",
   );
-}
-
-function invalidCommand(message: string): never {
-  throw contractError("invalid_store_withdrawal_command", message);
-}
-
-function contractError(
-  code: string,
-  message: string,
-): StoreWithdrawalContractError {
-  return new StoreWithdrawalContractError(code, message);
 }
