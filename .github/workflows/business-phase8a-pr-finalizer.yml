@@ -55,6 +55,12 @@ jobs:
           Path('/tmp/business-phase8a-finalize.py').write_text('\n'.join(body) + '\n')
           PYEXTRACT
           python3 /tmp/business-phase8a-finalize.py
+          python3 - <<'PYFORMAT'
+          from pathlib import Path
+
+          log_path = Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log_path.write_text(log_path.read_text().rstrip() + '\n')
+          PYFORMAT
           git diff --check
 
       - name: Commit durable records and remove temporary finalizers
