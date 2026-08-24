@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git log -1 --format=%s)" = "ops(business): execute valid Phase 9A receipt repair"
+          test "$(git log -1 --format=%s)" = "ops(business): execute resilient Phase 9A receipt repair"
           git merge-base --is-ancestor \
             9aa3595be3376069a6005e713c982705cf449883 HEAD
 
@@ -49,6 +49,7 @@ jobs:
             > /tmp/receipt-source.yml
           python3 - <<'PYEXTRACT'
           from pathlib import Path
+          import re
 
           text = Path('/tmp/receipt-source.yml').read_text()
           old = "              2,\n              \"recorded replay receipt\",\n"
@@ -68,9 +69,39 @@ jobs:
               line[10:] if line.startswith('          ') else line
               for line in lines[start + 1:end]
           ]
-          Path('/tmp/receipt-hardening.py').write_text('\n'.join(body) + '\n')
+          script = '\n'.join(body) + '\n'
+          stale_pattern = re.compile(
+              r'\nreplace_once\(\n    contract,\n.*?\n'
+              r'    "structural receipt authority",\n\)\n',
+              re.S,
+          )
+          script, count = stale_pattern.subn('\n', script, count=1)
+          if count != 1:
+              raise SystemExit('stale structural receipt block was not unique')
+          Path('/tmp/receipt-hardening.py').write_text(script)
           PYEXTRACT
           python3 /tmp/receipt-hardening.py
+          python3 - <<'PYPATCH'
+          from pathlib import Path
+
+          path = Path('scripts/business-phase9-store-withdrawal-safety-contract.mjs')
+          text = path.read_text()
+          old = (
+              '  "status in (\'pending\',\'completed\')",\n'
+              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
+          )
+          new = (
+              '  "status in (\'pending\',\'completed\')",\n'
+              '  "offer_version_at_request bigint not null",\n'
+              '  "completion_offer_status text null",\n'
+              '  "completion_offer_version bigint null",\n'
+              '  "store_offer_withdrawals_receipt_check",\n'
+              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit('current structural receipt anchor is not unique')
+          path.write_text(text.replace(old, new, 1))
+          PYPATCH
 
       - name: Restore permanent workflow and remove temporary files
         shell: bash
