@@ -1,8 +1,9 @@
 name: Business Phase 8A Durable Finalizer
 
 on:
-  pull_request:
-    types: [synchronize]
+  push:
+    branches:
+      - feat/business-store-listing-inventory-v2
     paths:
       - ".github/workflows/business-phase8a-durable-finalizer.yml"
 
@@ -15,9 +16,7 @@ concurrency:
 
 jobs:
   finalize:
-    if: >-
-      github.event.pull_request.number == 663 &&
-      github.event.pull_request.head.ref == 'feat/business-store-listing-inventory-v2'
+    if: github.event.head_commit.message == 'ops(business): trigger Phase 8A durable finalizer'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
