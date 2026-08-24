@@ -112,6 +112,17 @@ begin
     raise exception 'STORE_LISTING_STOCK_FUNCTION_INCOMPLETE';
   end if;
 
+  if position('from public.business_inventory as inventory_row' in v_definition) = 0
+    or position('inventory_row.inventory_kind = ''finished_good''' in v_definition) = 0
+    or position('STORE_LISTING_STOCK_FINISHED_PROJECTION_MISMATCH' in v_definition) = 0
+    or position('STORE_LISTING_STOCK_REPLAY_FINISHED_PROJECTION_MISMATCH' in v_definition) = 0
+    or position('quantity = v_source_holding_after.quantity_owned' in v_definition) = 0
+    or position('unit_cost = v_source_holding_after.average_unit_cost' in v_definition) = 0
+    or position('STORE_LISTING_STOCK_FINISHED_PROJECTION_UPDATE_INVALID' in v_definition) = 0
+  then
+    raise exception 'STORE_LISTING_STOCK_PROJECTION_SYNC_MISSING';
+  end if;
+
   if exists (
     select 1
     from information_schema.columns
