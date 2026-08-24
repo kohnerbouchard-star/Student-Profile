@@ -3,9 +3,9 @@ name: Business Store Seller Offers V2
 on:
   pull_request:
     paths:
-      - "backend/src/domains/store/contracts/storeSellerOfferContracts.ts"
-      - "backend/src/domains/store/infrastructure/supabaseStoreSellerOfferRepository.ts"
-      - "backend/src/domains/store/index.ts"
+      - "backend/package.json"
+      - "backend/src/domains/store/**"
+      - "backend/src/domains/inventory/**"
       - "backend/supabase/migrations/20260824100000_store_seller_offer_foundation_v2.sql"
       - "backend/supabase/migrations/20260824100010_store_seeded_offer_compatibility_v2.sql"
       - "backend/supabase/migrations/20260824100020_store_seller_offer_commands_v2.sql"
@@ -21,9 +21,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "backend/src/domains/store/contracts/storeSellerOfferContracts.ts"
-      - "backend/src/domains/store/infrastructure/supabaseStoreSellerOfferRepository.ts"
-      - "backend/src/domains/store/index.ts"
+      - "backend/package.json"
+      - "backend/src/domains/store/**"
+      - "backend/src/domains/inventory/**"
       - "backend/supabase/migrations/20260824100000_store_seller_offer_foundation_v2.sql"
       - "backend/supabase/migrations/20260824100010_store_seeded_offer_compatibility_v2.sql"
       - "backend/supabase/migrations/20260824100020_store_seller_offer_commands_v2.sql"
@@ -122,7 +122,8 @@ jobs:
           node scripts/business-formation-authority-contract.mjs
           node scripts/business-banking-runtime-contract.mjs
           node player-terminal/tests/business-banking-surface.mjs
-          node scripts/business-phase3b-store-procurement-contract.mjs
+          npm --prefix backend run test:player-store-public
+          npm --prefix backend run test:player-inventory
 
       - name: Verify focused Business Banking runtime
         working-directory: backend
