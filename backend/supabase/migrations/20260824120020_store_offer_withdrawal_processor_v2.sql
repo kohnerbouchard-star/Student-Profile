@@ -26,8 +26,9 @@ declare
   v_finished_holding public.inventory_holdings%rowtype;
   v_finished_holding_after public.inventory_holdings%rowtype;
   v_projection public.business_inventory%rowtype;
-  v_transaction public.inventory_transactions%rowtype;
   v_finished_account_id uuid;
+  v_transaction_id uuid;
+  v_transaction_key text;
   v_return_quantity integer;
   v_cost_currency text;
   v_next_status text;
@@ -238,7 +239,8 @@ begin
         using errcode = 'P0001';
     end if;
 
-    v_transaction := null;
+    v_transaction_id := null;
+    v_transaction_key := null;
     if v_return_quantity > 0 then
       v_metadata := jsonb_build_object(
         'authority', 'store_withdrawal_v2',
@@ -290,8 +292,8 @@ begin
         v_lines
       );
 
-      select transaction_row.*
-      into v_transaction
+      select transaction_row.id, transaction_row.public_key
+      into v_transaction_id, v_transaction_key
       from public.inventory_transactions as transaction_row
       where transaction_row.game_session_id = v_request.game_session_id
         and transaction_row.public_key = v_posting->>'transactionKey'
@@ -368,7 +370,7 @@ begin
       attempt_count = request_row.attempt_count + 1,
       completed_at = v_now,
       returned_quantity = v_return_quantity,
-      inventory_transaction_id = v_transaction.id,
+      inventory_transaction_id = v_transaction_id,
       version = request_row.version + 1
     where request_row.id = v_request.id
     returning * into v_request;
@@ -410,10 +412,7 @@ begin
       'offerStatus', v_offer.status,
       'offerVersion', v_offer.version,
       'inventoryAccountKey', v_listing_account.public_key,
-      'transactionKey', case
-        when v_transaction.id is null then null
-        else v_transaction.public_key
-      end,
+      'transactionKey', v_transaction_key,
       'completedAt', v_request.completed_at
     ));
   end loop;
