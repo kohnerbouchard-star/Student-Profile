@@ -384,24 +384,28 @@ Exit: offer availability equals actual canonical inventory held in its Store-lis
 
 ## Phase 9 — Five-minute Store withdrawal safety
 
-**Status:** OPEN — bounded checkpoint 9A authorized
+**Status:** COMPLETE — checkpoint 9A certified exact-head source `bf17e2493654620229d1acdeaae0fbaba21caf63`
 
-- [ ] Add `withdrawal_pending` lifecycle/state.
-- [ ] Store `withdrawal_requested_at` and `withdrawal_effective_at`.
-- [ ] Disable purchase eligibility immediately when cancellation/reduction begins.
-- [ ] Enforce a minimum five-minute cooling-off period.
-- [ ] Serialize purchase and withdrawal against the same offer row/version.
-- [ ] Add bounded due-withdrawal processor.
-- [ ] Verify unresolved accepted purchases before returning stock.
-- [ ] Return only remaining unsold stock to Finished Goods.
-- [ ] Apply the same safety to quantity reductions.
-- [ ] Keep ordinary price changes immediate with optimistic concurrency.
+- [x] Add `withdrawal_pending` lifecycle/state and durable public `swr_...` request identity.
+- [x] Store server-derived `withdrawal_requested_at` and `withdrawal_effective_at` with a minimum five-minute boundary.
+- [x] Disable future offer-aware purchase eligibility immediately and exclude pending offers from active aggregation.
+- [x] Preserve one pending request per offer, immutable request identity, optimistic offer versions, and authoritative replay receipts.
+- [x] Add a bounded deterministic due-withdrawal processor using request-first locking and `FOR UPDATE SKIP LOCKED`.
+- [x] Treat positive canonical Store-listing reservations as unresolved accepted-purchase evidence and defer the entire return.
+- [x] Return only remaining unsold stock `Store Listing -> Finished Goods`, including bounded quantity reductions.
+- [x] Preserve average cost, currency, canonical Inventory provenance, retained stockroom convergence, and exact-once completion.
+- [x] Keep ordinary price/lifecycle mutation immediate outside `withdrawal_pending`; reject stock, price, custody, and lifecycle mutation while pending.
+- [x] Establish the offer-first purchase lock boundary and deterministic purchase-first/withdrawal-first contract required by Phase 10.
 
-Exit: buyer/seller inventory cannot be lost in purchase-vs-withdrawal races.
+Certified checkpoint:
+
+- **9A:** Store-owned withdrawal requests and self-describing pending offer state; immediate non-purchasability; five-minute server-time cooling-off; bounded reservation-safe due processing; exact canonical Store Listing-to-Finished Goods return; immutable pending/completion receipts; replay-before-active-state validation; request/offer deadlock prevention; cost/provenance and retained stockroom convergence; typed Store contracts/repository; deterministic time, concurrency, replay, reservation, rollback, bounded-batch, catalog-resume, and two-game tests. **Certified implementation and exact-head verification source:** `bf17e2493654620229d1acdeaae0fbaba21caf63`. Dedicated workflow: `32729827704`.
+
+Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 must use the same offer-first lock boundary and prove both race orderings while atomically settling buyer money, seller money, and inventory.
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** NOT STARTED
+**Status:** OPEN — bounded checkpoint 10A authorized
 
 - [ ] Lock offer and validate purchasable state.
 - [ ] Lock/check buyer balance and listing inventory.

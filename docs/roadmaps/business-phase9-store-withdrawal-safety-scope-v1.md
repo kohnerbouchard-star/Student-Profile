@@ -1,6 +1,9 @@
 # Business V2 Phase 9 — Store Withdrawal Safety Scope v1
 
-**Status:** IN PROGRESS — checkpoint 9A scope locked; implementation not certified
+**Status:** COMPLETE — checkpoint 9A certified
+**Certified implementation and exact-head verification source:** `bf17e2493654620229d1acdeaae0fbaba21caf63`
+**Dedicated certification workflow:** `32729827704`
+**Certification date:** 2026-08-24
 **Branch:** `feat/business-store-withdrawal-safety-v2`
 **Parent branch:** `feat/business-store-listing-inventory-v2`
 **Parent draft PR:** #663
@@ -223,6 +226,30 @@ One frozen implementation SHA must pass:
 - standalone Player Terminal and Chromium regression verification;
 - `git diff --check`.
 
+## Certification evidence
+
+**Exact certified implementation SHA:** `bf17e2493654620229d1acdeaae0fbaba21caf63`
+**Dedicated workflow:** Business Store Withdrawal Safety V2 `32729827704`
+
+- Store-owned withdrawal lifecycle, durable request receipts, immediate aggregation exclusion, five-minute server-time boundary, bounded `SKIP LOCKED` processing, unresolved-reservation deferral, exact return quantity, cost/provenance preservation, retained stockroom convergence, idempotency, duplicate-worker safety, and two-game isolation: **PASS**;
+- durable replay remains authoritative after later Business/seller/catalog/offer changes and returns the recorded pending/completion offer state rather than mutable live state: **PASS**;
+- retained Phase 8A listing-custody and Phase 7A seller-offer/Banking contracts: **PASS** (`32729827682`, `32729827726`);
+- canonical Store quote/purchase and Inventory lifecycle/negative-state tests plus all Backend/Edge TypeScript: **PASS** in the dedicated Phase 9A workflow;
+- standalone Player Terminal and Chromium: **PASS** in the Phase 9A, Phase 8A, and Phase 7A workflows;
+- Database Replay from zero twice and rebuilt-database lint: **PASS** (`32729827754`);
+- Backend Typecheck and backend smoke: **PASS** (`32729827707`);
+- retained equipment, workforce-production/payroll, timed-manufacturing, resource, completion, recovery, Player Business, and local Edge boot/preflight regressions: **PASS** (`32729827688`);
+- Business Workforce Payroll V2: **PASS** (`32729827714`);
+- Business Economy V2: **PASS** (`32729827695`);
+- Repository Quality and deterministic architecture ratchet: **PASS** (`32729827698`);
+- Supply Chain Security: **PASS** (`32729827697`);
+- Runtime Interaction Wiring: **PASS** (`32729827753`);
+- Admin API Check: **PASS** (`32729827814`);
+- Required Game Market Timezone: **PASS** (`32729827687`);
+- Exchange Calendar Runtime: **PASS** (`32729827743`).
+
+The certified head contains only the permanent Phase 9A workflow and implementation artifacts. Temporary repair, executor, runner, and contract-split workflows have zero net presence. No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred. Later documentation-only commits do not replace `bf17e2493654620229d1acdeaae0fbaba21caf63` as the exact certified implementation source.
+
 ## Completion rule
 
 Checkpoint 9A is complete only when:
@@ -234,6 +261,6 @@ Checkpoint 9A is complete only when:
 5. temporary repair/finalizer artifacts have zero net presence;
 6. the PR remains draft, unmerged, and undeployed.
 
-## Next step after scope lock
+## Next authorized step
 
-Implement the bounded Store-owned withdrawal-request authority, immediate pending transition, five-minute server-time gate, reservation-safe bounded due processor, exact Store Listing-to-Finished Goods transfer, retained stockroom convergence, typed contracts, simulations, assertions, and dedicated CI. Do not widen checkpoint 9A into buyer settlement or Player routes/UI.
+Checkpoint 9A is complete. Open a bounded Phase 10 checkpoint for atomic seller-offer purchase settlement. Reuse the canonical Player Checking ledger, first-class Business cash ledger, seller-offer identity/version authority, canonical Store-listing Inventory custody, buyer Inventory account, existing Store pricing/quote evidence, and canonical Inventory poster. The first checkpoint must lock the offer before inventory and money, preserve purchase-first and withdrawal-first ordering, and make payment, seller credit, Inventory transfer, revenue/COGS evidence, and idempotent receipt state converge atomically. Player Store read/UI cutover, automatic demand/sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain unauthorized until separately certified.

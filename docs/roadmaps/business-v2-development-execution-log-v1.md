@@ -1095,3 +1095,76 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 9 checkpoint 9A — five-minute Store withdrawal safety is OPEN.** Create a stacked draft branch/PR from the durably certified Phase 8A lineage. Introduce withdrawal-pending state and timestamps, disable purchase eligibility immediately, serialize request and due processing on the offer row/version, and return only remaining unsold units `Store Listing -> Finished Goods` after the minimum cooling-off period while preserving cost/provenance, retained stockroom convergence, idempotency, and two-game isolation. Do not include offer-aware buyer settlement, Player routes/UI, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation.
+
+---
+
+## 2026-08-24 — Phase 9A COMPLETE: five-minute Store withdrawal safety
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `bf17e2493654620229d1acdeaae0fbaba21caf63`.
+- Feature branch: `feat/business-store-withdrawal-safety-v2`.
+- Stacked draft PR: #664, based on the durably certified Phase 8A handoff `42e52c38eea7402aefadb4ec3fad0b6743a22588` / PR #663.
+- PR #664 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged on `refactor/business-ux-mechanics-v1`.
+- The exact certified changed-file surface contains one permanent read-only Phase 9A workflow plus Store-domain contracts/repository, four forward migrations, deterministic tests, the architecture inventory, and this scope document. Temporary repair, executor, runner, receipt-integrity, and contract-split workflows have zero net presence.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- Later documentation-only commits record certification and do not replace `bf17e2493654620229d1acdeaae0fbaba21caf63` as the exact tested source.
+
+### What is now authoritative
+
+- Business seller offers may enter `withdrawal_pending` only through Store-owned service authority. The transition creates one durable public `swr_...` request, records the pre-withdrawal status, request mode/quantity, exact offer version, server request time, and an effective time no earlier than five minutes later.
+- `withdrawal_pending` is non-purchasable and is excluded immediately from active multi-offer aggregation. Ordinary offer and stock mutations fail closed while the request is pending.
+- Request creation uses bounded idempotency and optimistic concurrency. A matching committed retry resolves from durable request identity before active Business/seller and current offer-version validation.
+- Pending and completed retries return the recorded offer status/version receipt rather than mutable live offer state. They remain truthful after later Business, seller, catalog, or offer changes.
+- Replay does not lock the request row before the offer; the due processor owns request-to-offer lock ordering. This removes replay-versus-processor lock inversion while retaining deterministic idempotency serialization.
+- The due processor selects a bounded deterministic batch with `FOR UPDATE SKIP LOCKED`, validates server time, locks request then offer and custody, and tolerates duplicate workers without duplicate returns.
+- Any positive canonical Store-listing reservation defers the entire request and records a bounded retry time. No reserved unit is returned.
+- Eligible completion returns `full` remaining quantity or `min(requested reduction, remaining owned quantity)` through one canonical Inventory transfer from the offer account into Business Finished Goods.
+- Average cost, cost currency, public Business/offer/request provenance, append-only transaction evidence, and the retained `business_inventory` projection converge in the same transaction. Currency drift between canonical Finished Goods and the Business is rejected before mutation.
+- Full withdrawal completes paused. Reduction resumes the recorded draft/active/paused state only when catalog and stock eligibility still permit it; otherwise it finishes paused.
+- Withdrawal does not debit or credit cash, create revenue, recognize COGS, charge tax, or deliver buyer Inventory. Those remain Phase 10 authority.
+- The Store withdrawal typed contract was split into a bounded public contract and private parsing primitives so Repository Quality remains within the existing oversized-source ratchet.
+
+### Exact-head verification on `bf17e2493654620229d1acdeaae0fbaba21caf63`
+
+- **Business Store Withdrawal Safety V2 — PASS** (`32729827704`): Phase 9A structural/type contracts, server-time boundary, replay, reservation, cost/projection, rollback, bounded-batch, duplicate-worker and two-game simulations; deterministic architecture inventory; retained Store/Inventory/Business runtime; all Backend/Edge TypeScript; standalone Player Terminal; Chromium.
+- **Business Store Listing Inventory V2 — PASS** (`32729827682`): retained Phase 8A custody, stock placement, canonical/retained projection convergence, Store/Inventory/Business runtime, Player Terminal, and Chromium.
+- **Business Store Seller Offers V2 — PASS** (`32729827726`): retained Phase 7A seller-offer aggregation, Business Banking, Store/Inventory/Business contracts, Player Terminal, and Chromium.
+- **Database Replay — PASS** (`32729827754`): complete replay from zero twice plus rebuilt-database lint.
+- **Backend Typecheck — PASS** (`32729827707`): backend typecheck and backend smoke.
+- **Business Timed Manufacturing V2 — PASS** (`32729827688`): retained equipment, workforce-production/payroll, material/labor/equipment reservation, manufacturing start/completion/recovery, all Backend/Edge TypeScript, Player Business surface, and local Edge boot/preflight.
+- **Business Workforce Payroll V2 — PASS** (`32729827714`).
+- **Business Economy V2 — PASS** (`32729827695`).
+- **Repository Quality — PASS** (`32729827698`): repository audit, deterministic architecture ratchet, credential/package/signature checks, and backend dependency audit.
+- **Supply Chain Security — PASS** (`32729827697`).
+- **Runtime Interaction Wiring — PASS** (`32729827753`).
+- **Admin API Check — PASS** (`32729827814`).
+- **Required Game Market Timezone — PASS** (`32729827687`).
+- **Exchange Calendar Runtime — PASS** (`32729827743`).
+
+### Phase 9A exit result
+
+- Immediate withdrawal-pending non-purchasability and aggregation exclusion: **met**.
+- Server-derived five-minute minimum and immutable request timing: **met**.
+- Full/reduction request identity, idempotency, optimistic versioning, and one-pending-request invariant: **met**.
+- Reservation-safe bounded due processing and duplicate-worker exact-once behavior: **met**.
+- Exact remaining-unsold Store Listing-to-Finished Goods transfer: **met**.
+- Average cost, currency, canonical transaction provenance, and retained stockroom convergence: **met**.
+- Authoritative pending/completion replay after later lifecycle changes: **met**.
+- Offer/request lock-order hardening and future offer-first purchase boundary: **met**.
+- Deterministic time, concurrency, rollback, catalog-resume, bounded-batch, and two-game tests: **met**.
+- Database, backend, all Edge, retained Banking/Store/Inventory/workforce/equipment/manufacturing, repository, security, Player, and Chromium gates: **met**.
+- Temporary machinery zero net, PR draft/unmerged, no deployment/live mutation: **met**.
+
+### Decisions and unresolved boundaries
+
+- A positive listing reservation is the only Phase 9A unresolved accepted-purchase signal. Any positive amount blocks the entire withdrawal rather than returning only the unreserved portion.
+- The purchase path must lock the seller offer first, before listing Inventory and money. A purchase that obtains the offer lock first may reserve/settle; a withdrawal that obtains it first changes the offer to `withdrawal_pending` and prevents a new purchase.
+- Phase 9A deliberately does not create buyer quotes, debit Player Checking, credit Business cash, transfer Inventory to the buyer, recognize revenue/COGS, or migrate Player Store reads and UI.
+- The retained Store purchase compatibility channel remains active for seeded Store stock only until Phase 10 can bind displayed seller offer, quote, payment, seller credit, and transferred Inventory to one immutable receipt.
+- Automatic consumer/NPC sales convergence, Player Business workspace controls, equity/IPO, merge, staging, and production remain unauthorized.
+
+### Next authorized step
+
+**Phase 10 checkpoint 10A — atomic Store purchase settlement is OPEN.** Create a stacked draft branch/PR from the clean Phase 9A durable handoff. Reuse canonical Player Checking, first-class Business cash, Store seller-offer identity/version, offer-scoped Store-listing Inventory, buyer Inventory, Store pricing/quote evidence, Business activity evidence, and the canonical Inventory poster. Plan a bounded first checkpoint before coding. It must define one immutable public purchase receipt and one offer-first lock order, prove purchase-first and withdrawal-first races, and keep buyer debit, seller credit, Inventory transfer, revenue/COGS evidence, and idempotency within one transaction. Do not include Player Store read/UI cutover, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation unless separately authorized.
