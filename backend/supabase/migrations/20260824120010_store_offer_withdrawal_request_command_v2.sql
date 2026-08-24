@@ -113,13 +113,15 @@ begin
   );
   perform pg_advisory_xact_lock(v_lock_key);
 
+  -- The offer row is already locked. Do not lock the request row here:
+  -- due processors intentionally lock request -> offer, and an idempotent
+  -- replay-side request lock would invert that order and permit a deadlock.
   select request_row.*
   into v_request
   from public.store_offer_withdrawal_requests as request_row
   where request_row.game_session_id = p_game_session_id
     and request_row.seller_party_id = v_party.id
-    and request_row.request_idempotency_key = btrim(p_idempotency_key)
-  for update;
+    and request_row.request_idempotency_key = btrim(p_idempotency_key);
   if found then
     if v_request.offer_id is distinct from v_offer.id
       or v_request.request_hash is distinct from v_hash

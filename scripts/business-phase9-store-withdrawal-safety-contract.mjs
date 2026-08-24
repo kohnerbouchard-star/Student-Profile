@@ -122,6 +122,19 @@ if (
     "Withdrawal idempotent replay must resolve before current offer-version rejection.",
   );
 }
+const replayLookupEnd = source.request.indexOf("if found then", replayIndex);
+if (
+  replayLookupEnd < 0 ||
+  source.request.slice(replayIndex, replayLookupEnd).includes("for update")
+) {
+  throw new Error(
+    "Withdrawal replay must not lock the request row after locking the offer.",
+  );
+}
+requireTokens(source.request, "Replay lock-order boundary", [
+  "due processors intentionally lock request -> offer",
+  "replay-side request lock would invert that order and permit a deadlock",
+]);
 
 requireTokens(source.processor, "Bounded due withdrawal processor", [
   "process_due_store_offer_withdrawals_v2",

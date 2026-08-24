@@ -831,6 +831,54 @@ assert.equal(recoveredMismatch.results[0].requestKey, mismatch.requestKey);
 assert.equal(authority.getRequest(mismatch.requestKey).status, "completed");
 assert.equal(authority.getListing(gameFive, offerFive).owned, 0);
 
+const replayWorkerGame = "game_replay_worker";
+const replayWorkerBusiness = literalKey("biz", "0");
+const replayWorkerOffer = literalKey("sof", "0");
+authority.registerOffer({
+  game: replayWorkerGame,
+  businessKey: replayWorkerBusiness,
+  partyKey: literalKey("pty", "b"),
+  offerKey: replayWorkerOffer,
+  itemKey: item,
+  status: "active",
+  listedOwned: 2,
+  listedCost: 6,
+});
+const replayWorkerCommand = {
+  game: replayWorkerGame,
+  businessKey: replayWorkerBusiness,
+  offerKey: replayWorkerOffer,
+  mode: "full",
+  quantity: null,
+  expectedOfferVersion: 1,
+  idempotencyKey: "withdraw-replay-worker-0006",
+};
+const replayWorkerRequest = await authority.requestWithdrawal(
+  replayWorkerCommand,
+  t0 + 5_000_000,
+);
+const transactionsBeforeReplayWorkerRace = authority.transactionCount();
+const [replayDuringProcessing, replayWorkerProcessing] = await Promise.all([
+  authority.requestWithdrawal(
+    replayWorkerCommand,
+    replayWorkerRequest.effectiveAtUs,
+  ),
+  authority.processDue(replayWorkerRequest.effectiveAtUs, 25),
+]);
+assert.equal(replayDuringProcessing.replayed, true);
+assert.equal(replayDuringProcessing.requestKey, replayWorkerRequest.requestKey);
+assert.equal(replayWorkerProcessing.completedCount, 1);
+assert.equal(
+  authority.transactionCount(),
+  transactionsBeforeReplayWorkerRace + 1,
+  "Concurrent replay and due processing must settle once without a lock cycle.",
+);
+assert.equal(
+  authority.getRequest(replayWorkerRequest.requestKey).status,
+  "completed",
+);
+assert.equal(authority.getOffer(replayWorkerGame, replayWorkerOffer).version, 3);
+
 const gameSix = "game_six";
 const batchOffers = [
   [literalKey("biz", "b"), literalKey("pty", "c"), literalKey("sof", "f"), 0],
