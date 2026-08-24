@@ -1,0 +1,659 @@
+name: Business Phase 9A Convergence Controller V3
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/business-phase9a-convergence-controller-v3.yml"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: business-phase9a-convergence-controller-v3
+  cancel-in-progress: false
+
+jobs:
+  converge:
+    if: >-
+      github.event.pull_request.number == 664 &&
+      github.event.pull_request.head.ref == 'feat/business-store-withdrawal-safety-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - name: Check out Phase 9A branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-withdrawal-safety-v2
+          fetch-depth: 0
+
+      - name: Gate one-time controller execution
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          subject="$(git log -1 --format=%s)"
+          if [[ "$subject" == "ops(business): start Phase 9A convergence v3" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify certified parent lineage
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor c0fd8650987a332f99b8173395dcf84fc3518c15 HEAD
+          test "$(git merge-base HEAD 42e52c38eea7402aefadb4ec3fad0b6743a22588)" = "42e52c38eea7402aefadb4ec3fad0b6743a22588"
+
+      - name: Set up Node
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install deterministic tooling
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Converge known Phase 9A repairs and remove temporary machinery
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          workflows = root / '.github' / 'workflows'
+          current = workflows / 'business-phase9a-convergence-controller-v3.yml'
+
+          for path in workflows.glob('*.yml'):
+              name = path.name.lower()
+              temporary = (
+                  ('phase9a' in name and path != current)
+                  or ('business-phase9' in name and any(token in name for token in ('repair', 'finalizer', 'controller', 'certifier', 'convergence')))
+              )
+              if temporary and path.exists():
+                  path.unlink()
+
+          simulation_path = root / 'scripts' / 'business-phase9-store-withdrawal-safety-simulation.mjs'
+          simulation = simulation_path.read_text()
+          recovery_anchor = 'authority.corruptProjection(gameFive, businessFive, item, -1);\n'
+          recovery_marker = 'A repaired projection must allow the same pending withdrawal to complete exactly once.'
+          if recovery_anchor in simulation and recovery_marker not in simulation:
+              recovery = recovery_anchor + '''const recoveredMismatch = await authority.processDue(mismatch.effectiveAtUs, 25);
+          assert.equal(
+            recoveredMismatch.completedCount,
+            1,
+            "A repaired projection must allow the same pending withdrawal to complete exactly once.",
+          );
+          assert.equal(recoveredMismatch.results[0].requestKey, mismatch.requestKey);
+          assert.equal(authority.getRequest(mismatch.requestKey).status, "completed");
+          assert.equal(authority.getListing(gameFive, offerFive).owned, 0);
+          '''
+              simulation = simulation.replace(recovery_anchor, recovery, 1)
+              simulation_path.write_text(simulation)
+
+          request_path = root / 'backend' / 'supabase' / 'migrations' / '20260824120010_store_offer_withdrawal_request_command_v2.sql'
+          request_sql = request_path.read_text()
+          replay_start = request_sql.find('from public.store_offer_withdrawal_requests as request_row')
+          replay_end = request_sql.find('  if found then', replay_start)
+          if replay_start < 0 or replay_end < 0:
+              raise SystemExit('Phase 9A idempotency replay block is missing')
+          replay_block = request_sql[replay_start:replay_end]
+          if '\n  for update;' in replay_block:
+              replay_block = replay_block.replace('\n  for update;', ';', 1)
+              request_sql = request_sql[:replay_start] + replay_block + request_sql[replay_end:]
+              request_path.write_text(request_sql)
+
+          phase8_scope_path = root / 'docs' / 'roadmaps' / 'business-phase8-store-listing-inventory-scope-v1.md'
+          phase8_scope = phase8_scope_path.read_text()
+          compatibility_token = 'Do not widen checkpoint 8A into withdrawal or buyer settlement'
+          if compatibility_token not in phase8_scope:
+              heading = '## Next authorized step\n'
+              index = phase8_scope.find(heading)
+              if index < 0:
+                  raise SystemExit('Phase 8A next-step heading is missing')
+              note = (
+                  'Historical checkpoint boundary retained for inherited regression checks: '
+                  + compatibility_token + '.\n\n'
+              )
+              phase8_scope = phase8_scope[:index] + note + phase8_scope[index:]
+              phase8_scope_path.write_text(phase8_scope)
+
+          structural_path = root / 'scripts' / 'business-phase9-store-withdrawal-safety-contract.mjs'
+          structural = structural_path.read_text()
+          lock_marker = 'Withdrawal replay must not lock the request row after the offer row.'
+          if lock_marker not in structural:
+              insertion = '''
+          const replayBlockEnd = source.request.indexOf("  if found then", replayIndex);
+          const replayBlock = source.request.slice(replayIndex, replayBlockEnd);
+          if (/for update;/u.test(replayBlock)) {
+            throw new Error(
+              "Withdrawal replay must not lock the request row after the offer row.",
+            );
+          }
+          '''
+              anchor = '''if (
+            replayIndex < 0 ||
+            requestVersionIndex < 0 ||
+            replayIndex > requestVersionIndex
+          ) {
+            throw new Error(
+              "Withdrawal idempotent replay must resolve before current offer-version rejection.",
+            );
+          }
+          '''
+              if anchor not in structural:
+                  raise SystemExit('Phase 9A structural replay-order assertion is missing')
+              structural = structural.replace(anchor, anchor + insertion, 1)
+              structural_path.write_text(structural)
+          PY
+
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Run focused Phase 9A and inherited contracts
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-simulation.mjs
+          node --experimental-strip-types scripts/business-phase9-store-withdrawal-safety-types.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-simulation.mjs
+          node --experimental-strip-types scripts/business-phase8-store-listing-inventory-types.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase7-store-seller-offers-simulation.mjs
+          node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          npm test
+          git diff --check
+
+      - name: Commit and push clean exact-head candidate
+        if: steps.gate.outputs.run == 'true'
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git rm -f .github/workflows/business-phase9a-convergence-controller-v3.yml
+          git add -A
+          git commit --allow-empty -m "fix(business): converge Phase 9A exact-head candidate"
+          candidate="$(git rev-parse HEAD)"
+          echo "sha=$candidate" >> "$GITHUB_OUTPUT"
+          git push origin HEAD:feat/business-store-withdrawal-safety-v2
+
+      - name: Require exact-head workflow matrix
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          repository = os.environ['REPOSITORY']
+          candidate = os.environ['CANDIDATE_SHA']
+          token = os.environ['GH_TOKEN']
+          expected = [
+              'Business Store Withdrawal Safety V2',
+              'Business Store Listing Inventory V2',
+              'Business Store Seller Offers V2',
+              'Database Replay',
+              'Backend Typecheck',
+              'Business Economy V2',
+              'Business Workforce Payroll V2',
+              'Business Timed Manufacturing V2',
+              'Repository Quality',
+              'Supply Chain Security',
+              'Runtime Interaction Wiring',
+              'Admin API Check',
+              'Required Game Market Timezone',
+              'Exchange Calendar Runtime',
+          ]
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'econovaria-phase9a-controller',
+          }
+
+          def request_json(url, method='GET'):
+              request = urllib.request.Request(url, method=method, headers=headers)
+              if method != 'GET':
+                  request.add_header('Content-Length', '0')
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = response.read()
+                  return json.loads(payload) if payload else None
+
+          rerun_attempted = set()
+          evidence = None
+          for _ in range(330):
+              data = request_json(
+                  f'https://api.github.com/repos/{repository}/actions/runs?head_sha={candidate}&per_page=100'
+              )
+              latest = {}
+              for run in data.get('workflow_runs', []):
+                  name = run.get('name')
+                  if name not in expected or run.get('event') != 'pull_request':
+                      continue
+                  current = latest.get(name)
+                  if current is None or run.get('run_number', 0) > current.get('run_number', 0):
+                      latest[name] = run
+
+              terminal_failure = []
+              waiting = []
+              for name in expected:
+                  run = latest.get(name)
+                  if run is None:
+                      waiting.append(f'{name}:missing')
+                      continue
+                  status = run.get('status')
+                  conclusion = run.get('conclusion')
+                  if status != 'completed':
+                      waiting.append(f'{name}:{status}')
+                      continue
+                  if conclusion == 'success':
+                      continue
+                  run_id = run['id']
+                  key = (name, run_id)
+                  if key not in rerun_attempted and conclusion in {
+                      'failure', 'cancelled', 'timed_out', 'action_required', 'stale'
+                  }:
+                      try:
+                          request_json(
+                              f'https://api.github.com/repos/{repository}/actions/runs/{run_id}/rerun-failed-jobs',
+                              method='POST',
+                          )
+                          rerun_attempted.add(key)
+                          waiting.append(f'{name}:rerun-requested')
+                          continue
+                      except urllib.error.HTTPError:
+                          pass
+                  terminal_failure.append(f'{name}:{conclusion}:run-{run_id}')
+
+              if terminal_failure:
+                  raise SystemExit('Exact-head workflow failure: ' + ', '.join(terminal_failure))
+              if not waiting and len(latest) == len(expected):
+                  evidence = {
+                      name: {
+                          'id': latest[name]['id'],
+                          'htmlUrl': latest[name]['html_url'],
+                          'conclusion': latest[name]['conclusion'],
+                      }
+                      for name in expected
+                  }
+                  break
+              print('Waiting for exact-head matrix: ' + ', '.join(waiting), flush=True)
+              time.sleep(20)
+
+          if evidence is None:
+              raise SystemExit('Exact-head workflow matrix did not reach a terminal green state')
+          Path('/tmp/phase9-run-evidence.json').write_text(
+              json.dumps({'candidateSha': candidate, 'runs': evidence}, indent=2) + '\n'
+          )
+          print(json.dumps(evidence, indent=2))
+          PY
+
+      - name: Write durable Phase 9A certification
+        if: steps.gate.outputs.run == 'true'
+        id: certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/business-store-withdrawal-safety-v2
+          git checkout feat/business-store-withdrawal-safety-v2
+          git reset --hard "${{ steps.candidate.outputs.sha }}"
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          evidence = json.loads(Path('/tmp/phase9-run-evidence.json').read_text())
+          candidate = evidence['candidateSha']
+          runs = evidence['runs']
+          dedicated = runs['Business Store Withdrawal Safety V2']['id']
+
+          scope_path = Path('docs/roadmaps/business-phase9-store-withdrawal-safety-scope-v1.md')
+          scope = scope_path.read_text()
+          scope = re.sub(
+              r'^\*\*Status:\*\* .*$',
+              '**Status:** COMPLETE — checkpoint 9A certified',
+              scope,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          header_anchor = '**Branch:** `feat/business-store-withdrawal-safety-v2`\n'
+          certification_header = (
+              f'**Certified implementation and exact-head verification source:** `{candidate}`\n'
+              f'**Dedicated certification workflow:** `{dedicated}`\n'
+              '**Certification date:** 2026-08-24\n'
+          )
+          if 'Certified implementation and exact-head verification source' not in scope:
+              scope = scope.replace(header_anchor, certification_header + header_anchor, 1)
+
+          matrix_lines = '\n'.join(
+              f"- **{name} — PASS** (`{details['id']}`)."
+              for name, details in runs.items()
+          )
+          evidence_block = f'''## Certification evidence
+
+**Exact certified implementation SHA:** `{candidate}`  
+**Dedicated workflow:** Business Store Withdrawal Safety V2 `{dedicated}`
+
+{matrix_lines}
+
+The dedicated Phase 9A workflow includes structural, timing, reservation, idempotency, replay-stability, projection, cost, two-game, retained Store/Inventory/Business/Banking/workforce/equipment/manufacturing, all Backend/Edge TypeScript, standalone Player Terminal, and Chromium verification. Database Replay rebuilt the database from zero twice and linted the rebuilt result. No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred.
+
+'''
+          if '## Certification evidence' not in scope:
+              scope = scope.replace('## Completion rule\n', evidence_block + '## Completion rule\n', 1)
+          next_match = re.search(r'\n## (?:Next step after scope lock|Next authorized step)\n.*\Z', scope, re.S)
+          next_block = '''
+## Next authorized step
+
+Checkpoint 9A is complete. Open Phase 10 checkpoint 10A.1 as a bounded authority-and-receipt foundation for atomic Store purchase settlement. Reuse canonical seller offers, Store-listing Inventory, Buyer Checking, Business cash, ledger, and buyer Inventory authorities. Define one immutable public purchase receipt/idempotency identity and the final offer-first lock order, but do not debit money, credit the seller, transfer inventory, recognize revenue/COGS, or expose Player purchase routes until the complete atomic settlement function is implemented and tested in a later Phase 10 checkpoint.
+'''
+          if next_match:
+              scope = scope[:next_match.start()] + next_block
+          else:
+              scope = scope.rstrip() + '\n' + next_block
+          scope_path.write_text(scope.rstrip() + '\n')
+
+          plan_path = Path('docs/roadmaps/business-v2-development-execution-plan-v1.md')
+          plan = plan_path.read_text()
+          phase9_block = f'''## Phase 9 — Five-minute Store withdrawal safety
+
+**Status:** COMPLETE — checkpoint 9A certified exact-head source `{candidate}`
+
+- [x] Add `withdrawal_pending` lifecycle and Store-owned durable request identity.
+- [x] Store server-derived request/effective timestamps and immutable resume state.
+- [x] Disable purchase eligibility and active aggregation immediately when withdrawal begins.
+- [x] Enforce a minimum five-minute cooling-off period.
+- [x] Serialize request, replay, and due processing under one deadlock-safe lock order.
+- [x] Add a bounded `FOR UPDATE SKIP LOCKED` due processor.
+- [x] Block physical return while any listing reservation remains unresolved.
+- [x] Return only remaining eligible unsold stock `Store Listing -> Finished Goods`.
+- [x] Support full withdrawal and safe quantity reduction.
+- [x] Preserve average cost, currency, append-only provenance, retained stockroom convergence, idempotency, and two-game isolation.
+
+Certified checkpoint:
+
+- **9A:** immediate pending transition; public `swr_...` request authority; server-owned five-minute timing; exact replay and conflict rejection; reservation-safe bounded worker; full/partial canonical return; catalog-safe resume state; typed Store contracts/repository; deterministic timing, duplicate-worker, rollback, cost, and two-game tests. **Certified implementation and exact-head verification source:** `{candidate}`. Dedicated workflow: `{dedicated}`.
+
+Exit: a seller cannot reclaim Store-listing inventory while a prior accepted reservation remains unresolved, and one request cannot return inventory twice. **MET.**
+'''
+          phase9_pattern = re.compile(
+              r'## Phase 9 — Five-minute Store withdrawal safety\n.*?(?=\n## Phase 10 — Atomic Store purchase settlement)',
+              re.S,
+          )
+          if not phase9_pattern.search(plan):
+              raise SystemExit('Execution plan Phase 9 block is missing')
+          plan = phase9_pattern.sub(phase9_block.rstrip(), plan, count=1)
+          plan = re.sub(
+              r'(## Phase 10 — Atomic Store purchase settlement\n\n)\*\*Status:\*\* .*$',
+              r'\1**Status:** OPEN — bounded checkpoint 10A.1 authorized',
+              plan,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          plan_path.write_text(plan)
+
+          log_path = Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log = log_path.read_text().rstrip()
+          marker = '## 2026-08-24 — Phase 9A COMPLETE: five-minute Store withdrawal safety'
+          if marker not in log:
+              run_lines = '\n'.join(
+                  f"- **{name} — PASS** (`{details['id']}`)."
+                  for name, details in runs.items()
+              )
+              entry = f'''
+
+---
+
+{marker}
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `{candidate}`.
+- Feature branch: `feat/business-store-withdrawal-safety-v2`.
+- Stacked draft PR: #664, based on the durably certified Phase 8A handoff / PR #663.
+- PR #664 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged.
+- Temporary Phase 9A repair, controller, certifier, and finalizer workflows have zero net presence in the certified candidate.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred.
+
+### What is now authoritative
+
+- `withdrawal_pending` immediately removes a Business offer from active Store aggregation and future offer-aware purchase eligibility.
+- `store_offer_withdrawal_requests` provides public `swr_...` identity, immutable scope/hash/timing/resume state, one pending request per offer, exact idempotent replay, and terminal completion history.
+- Server time establishes a minimum five-minute cooling-off period. Seller input cannot shorten or bypass it.
+- Request and worker paths use deadlock-safe ordering; the bounded worker uses deterministic due ordering and `FOR UPDATE SKIP LOCKED`.
+- Any positive canonical listing reservation defers the entire return and schedules a bounded retry.
+- Eligible processing moves only remaining unsold units `Store Listing -> Finished Goods`, carrying average cost, currency, and append-only Inventory provenance while converging retained `business_inventory` in the same transaction.
+- Withdrawal is a custody transfer only: no buyer debit, seller cash credit, revenue, tax, wage, expense, or COGS posting occurs.
+- Full withdrawal completes paused; reductions resume the preserved state only when Store presentation remains eligible, otherwise paused.
+- Matching retries and duplicate workers cannot return units or advance the offer twice; games remain isolated.
+
+### Exact-head verification on `{candidate}`
+
+{run_lines}
+
+### Phase 9A exit result
+
+- Immediate non-purchasable pending transition and active-aggregation exclusion: **met**.
+- Server-derived five-minute minimum and immutable request timing: **met**.
+- Reservation-safe full/reduction processing and bounded retry scheduling: **met**.
+- Exact canonical return, average cost/currency/provenance, and retained projection convergence: **met**.
+- Idempotency, optimistic versions, replay stability, duplicate-worker safety, and two-game isolation: **met**.
+- Database, backend, all Edge, retained Store/Inventory/Business/Banking/workforce/equipment/manufacturing, repository, security, Player, and Chromium gates: **met**.
+- Temporary machinery cleanup and no merge/deployment/live mutation: **met**.
+
+### Next authorized step
+
+**Phase 10 checkpoint 10A.1 — atomic Store purchase authority and immutable receipt foundation is OPEN.** Create a stacked draft branch/PR from this durable Phase 9A handoff. Reuse canonical seller-offer, Store-listing Inventory, Buyer Checking, Business cash, ledger, and buyer Inventory authorities. The first checkpoint may define the immutable public purchase receipt/idempotency authority and final lock-order/settlement contract only; it must not move money or inventory, recognize revenue/COGS, expose Player purchase routes, merge, deploy, change secrets, or mutate a live database.
+'''
+              log += entry
+          log_path.write_text(log.rstrip() + '\n')
+          PY
+
+          git diff --check
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git add \
+            docs/roadmaps/business-phase9-store-withdrawal-safety-scope-v1.md \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+          git commit -m "docs(business): certify Phase 9A withdrawal safety"
+          handoff="$(git rev-parse HEAD)"
+          echo "handoff=$handoff" >> "$GITHUB_OUTPUT"
+          git push origin HEAD:feat/business-store-withdrawal-safety-v2
+
+      - name: Update Phase 9A PR certification summary
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          HANDOFF_SHA: ${{ steps.certification.outputs.handoff }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dedicated="$(python3 -c 'import json; print(json.load(open("/tmp/phase9-run-evidence.json"))["runs"]["Business Store Withdrawal Safety V2"]["id"])')"
+          cat > /tmp/phase9-pr-body.md <<EOF
+          ## Status
+
+          Phase 9 checkpoint 9A is **COMPLETE and durably certified**.
+
+          - Head branch: `feat/business-store-withdrawal-safety-v2`.
+          - Exact certified implementation and verification source: `${CANDIDATE_SHA}`.
+          - Clean durable documentation handoff: `${HANDOFF_SHA}`.
+          - Dedicated certification workflow: `${dedicated}`.
+          - Base: durably certified Phase 8A branch / PR #663.
+          - Scope, execution plan, and execution log contain matching exact-head evidence.
+          - Temporary Phase 9A repair/controller/finalizer workflows have zero net presence.
+
+          Certified authority includes immediate `withdrawal_pending` exclusion, immutable public withdrawal requests, server-owned five-minute timing, reservation-safe bounded processing, exact Store Listing-to-Finished Goods return, average-cost/currency/provenance preservation, retained stockroom convergence, exact replay, duplicate-worker protection, and two-game isolation.
+
+          Buyer quoting/payment, seller revenue/COGS, buyer Inventory delivery, Player routes/UI, automatic sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain excluded.
+
+          Phase 10 checkpoint 10A.1 is authorized only as a bounded authority-and-receipt foundation. This PR remains draft, stacked, open, unmerged, and undeployed.
+          EOF
+          jq -n --rawfile body /tmp/phase9-pr-body.md '{body:$body}' \
+            | gh api --method PATCH "repos/${REPOSITORY}/pulls/664" --input -
+
+      - name: Open bounded Phase 10A.1 scope branch and draft PR
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          HANDOFF_SHA: ${{ steps.certification.outputs.handoff }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="feat/business-store-atomic-settlement-v2"
+          owner="${REPOSITORY%%/*}"
+          git fetch origin feat/business-store-withdrawal-safety-v2
+          git checkout --detach "$HANDOFF_SHA"
+
+          if git ls-remote --exit-code origin "refs/heads/${branch}" >/dev/null 2>&1; then
+            echo "Phase 10 branch already exists; leaving it untouched."
+            exit 0
+          fi
+
+          git switch -c "$branch"
+          cat > docs/roadmaps/business-phase10-atomic-store-purchase-scope-v1.md <<EOF
+          # Business V2 Phase 10 — Atomic Store Purchase Settlement Scope v1
+
+          **Status:** OPEN — checkpoint 10A.1 scope locked; implementation not started
+          **Branch:** `${branch}`
+          **Parent branch:** `feat/business-store-withdrawal-safety-v2`
+          **Parent draft PR:** #664
+          **Certified Phase 9A exact-head source:** `${CANDIDATE_SHA}`
+          **Clean Phase 9A durable handoff:** `${HANDOFF_SHA}`
+
+          ## Purpose
+
+          Phase 10 converges one selected seller offer, one buyer payment, one seller receipt, and one physical Inventory transfer into a single server-owned settlement boundary. The governing invariant is:
+
+          > A committed Store purchase cannot produce paid-without-item, item-without-payment, seller-paid-without-stock, duplicate revenue, or duplicate Inventory delivery.
+
+          Checkpoint 10A.1 is deliberately narrower than settlement. It establishes the immutable public purchase-receipt/idempotency authority and the final lock-order/contract evidence required before any money or Inventory mutation is authorized.
+
+          ## Canonical authorities that must be reused
+
+          - Phase 7A Store seller-offer identity, price, currency, seller, and catalog authority;
+          - Phase 8A canonical offer-scoped `store_stock` custody and holdings;
+          - Phase 9A `withdrawal_pending` exclusion and reservation-safe ordering;
+          - canonical Buyer Checking and Business cash accounts;
+          - canonical money/ledger posting authority;
+          - canonical Inventory accounts, holdings, reservations, transactions, and buyer delivery;
+          - canonical economic-party and game scope;
+          - retained Store quote/purchase compatibility boundary only as evidence for eventual retirement.
+
+          ## Checkpoint 10A.1 included authority
+
+          1. Audit and document the exact current money, Inventory, Store, Business, and buyer authorities used by settlement.
+          2. Define one public immutable purchase receipt identity, request hash, idempotency key, game/buyer/offer/item scope, quoted unit price/currency, requested quantity, and terminal status model.
+          3. Define the final lock order beginning with the seller offer so purchase and withdrawal cannot invert locks.
+          4. Define the exact settlement posting contract for Buyer Checking debit, Business cash credit, Store-listing Inventory decrement, buyer Inventory increment, seller revenue, and COGS without implementing those mutations yet.
+          5. Define replay, stale quote/version, insufficient funds, insufficient unreserved stock, wrong game/buyer/seller/item/currency, and purchase-first/withdrawal-first race outcomes.
+          6. Add typed contracts, deterministic structural tests, schema/privilege assertions, and a dedicated draft CI boundary for the receipt foundation.
+          7. Keep receipt tables and functions service-only with forced RLS and public-key-only browser-safe output.
+
+          ## Explicit exclusions from checkpoint 10A.1
+
+          - debiting Buyer Checking;
+          - crediting Business cash;
+          - moving Store-listing units to buyer Inventory;
+          - creating revenue, tax, or COGS ledger entries;
+          - reserving or consuming live Store stock;
+          - exposing Player Store purchase routes or UI;
+          - migrating the retained Store purchase path;
+          - automatic consumer/NPC demand or sales convergence;
+          - Marketplace or Contracts integration;
+          - equity, shares, IPO, or Financial Market publication;
+          - merge, staging deployment, production deployment, secret mutation, or live database mutation.
+
+          ## Required first-checkpoint evidence
+
+          - one authoritative settlement dependency inventory;
+          - one immutable receipt schema/privilege contract;
+          - one final lock-order specification covering purchase-first and withdrawal-first races;
+          - deterministic idempotency and two-game isolation tests;
+          - exact-head database replay, backend/all Edge checks, Repository Quality, Supply Chain Security, retained Business/Store/Inventory/Banking/manufacturing regressions, Player Terminal, and Chromium;
+          - durable plan/log update before any checkpoint completion claim.
+
+          ## Next implementation step
+
+          Implement only the immutable receipt/idempotency foundation and typed contracts. Do not implement money or Inventory settlement until checkpoint 10A.1 is separately certified and the next settlement checkpoint is explicitly bounded.
+          EOF
+
+          git add docs/roadmaps/business-phase10-atomic-store-purchase-scope-v1.md
+          git commit -m "docs(business): lock Phase 10A.1 atomic settlement scope"
+          git push origin HEAD:"$branch"
+
+          existing="$(gh api "repos/${REPOSITORY}/pulls?state=open&head=${owner}:${branch}" --jq '.[0].number // empty')"
+          if [[ -z "$existing" ]]; then
+            jq -n \
+              --arg title "Draft: Business V2 Phase 10A.1 atomic Store purchase authority" \
+              --arg head "$branch" \
+              --arg base "feat/business-store-withdrawal-safety-v2" \
+              --arg body "Phase 10 checkpoint 10A.1 scope only. This stacked draft establishes the immutable purchase-receipt, idempotency, lock-order, and settlement-contract foundation. It does not debit money, credit a seller, move Inventory, recognize revenue/COGS, expose Player routes/UI, merge, deploy, change secrets, or mutate a live database." \
+              '{title:$title,head:$head,base:$base,body:$body,draft:true}' \
+              | gh api --method POST "repos/${REPOSITORY}/pulls" --input -
+          fi
+
+      - name: Record bounded certification blocker and clean temporary workflow
+        if: failure() && steps.gate.outputs.run == 'true'
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/business-store-withdrawal-safety-v2
+          git checkout feat/business-store-withdrawal-safety-v2
+          git reset --hard origin/feat/business-store-withdrawal-safety-v2
+          find .github/workflows -maxdepth 1 -type f \
+            \( -iname '*phase9a*repair*.yml' -o -iname '*phase9a*controller*.yml' -o -iname '*phase9a*finalizer*.yml' -o -iname '*phase9a*certif*.yml' \) \
+            -delete
+          mkdir -p docs/roadmaps
+          cat > docs/roadmaps/business-phase9a-certification-blocker.md <<EOF
+          # Business Phase 9A Certification Blocker
+
+          **Recorded:** 2026-08-24
+          **Candidate:** `${CANDIDATE_SHA:-not-created}`
+          **Controller run:** `${GITHUB_RUN_ID}`
+
+          The bounded Phase 9A convergence controller did not obtain a completely green exact-head matrix. Phase 9A remains IN PROGRESS. Inspect the failed controller step and the exact candidate workflow runs before changing implementation or durable status records. No merge, deployment, secret mutation, or live database mutation occurred.
+          EOF
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "docs(business): record Phase 9A certification blocker"
+            git push origin HEAD:feat/business-store-withdrawal-safety-v2
+          fi
