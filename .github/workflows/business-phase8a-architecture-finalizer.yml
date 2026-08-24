@@ -1,5 +1,6 @@
 name: Business Phase 8A Architecture Finalizer
 
+# One-time deterministic inventory refresh for the bounded Phase 8A branch.
 on:
   push:
     branches:
