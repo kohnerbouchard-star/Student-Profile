@@ -1,5 +1,6 @@
 name: Business Store Listing Inventory V2
 
+# Exact-head Phase 8A verification after deterministic architecture refresh.
 on:
   pull_request:
     paths:
