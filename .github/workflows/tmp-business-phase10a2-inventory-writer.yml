@@ -1,0 +1,44 @@
+name: Temporary Business Phase 10A.2 Inventory Writer
+
+on:
+  push:
+    branches:
+      - feat/business-store-offer-aware-quote-v2
+    paths:
+      - ".github/workflows/tmp-business-phase10a2-inventory-writer.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-business-phase10a2-inventory-writer
+  cancel-in-progress: false
+
+jobs:
+  refresh-inventory:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-offer-aware-quote-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm install --global npm@10.9.8 && npm ci --ignore-scripts
+      - name: Generate and commit deterministic architecture inventory
+        run: |
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+          if git diff --quiet -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json; then
+            echo "Architecture inventory is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "chore(architecture): refresh inventory for offer quotes"
+          git push origin HEAD:feat/business-store-offer-aware-quote-v2

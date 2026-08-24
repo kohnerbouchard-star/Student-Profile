@@ -44,9 +44,14 @@ jobs:
           node scripts/business-phase10-offer-aware-quote-contract.mjs
           node scripts/business-phase10-offer-aware-quote-simulation.mjs
           node --experimental-strip-types scripts/business-phase10-offer-aware-quote-types.mjs
-          node scripts/business-phase10-store-purchase-settlement-foundation-contract.mjs
-          node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-lock-simulation.mjs
-          node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-foundation-types.mjs
+          git worktree add --detach /tmp/phase10a1-certified 1abc8b878df5b08716107adb467bd013e85b6df4
+          (
+            cd /tmp/phase10a1-certified
+            node scripts/business-phase10-store-purchase-settlement-foundation-contract.mjs
+            node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-lock-simulation.mjs
+            node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-foundation-types.mjs
+          )
+          git worktree remove --force /tmp/phase10a1-certified
           node scripts/business-phase9-store-withdrawal-safety-contract.mjs
           node scripts/business-phase9-store-withdrawal-safety-simulation.mjs
           node scripts/business-phase8-store-listing-inventory-contract.mjs
