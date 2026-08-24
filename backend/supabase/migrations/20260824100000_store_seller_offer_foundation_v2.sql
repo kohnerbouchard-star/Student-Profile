@@ -221,6 +221,11 @@ begin
   end if;
 
   if tg_op = 'UPDATE' then
+    if old.status = 'retired' then
+      raise exception 'STORE_SELLER_OFFER_RETIRED_TERMINAL'
+        using errcode = 'P0001';
+    end if;
+
     if new.id is distinct from old.id
       or new.public_key is distinct from old.public_key
       or new.game_session_id is distinct from old.game_session_id
@@ -248,17 +253,11 @@ begin
         using errcode = 'P0001';
     end if;
 
-    if old.status = 'retired' and new.status <> 'retired' then
-      raise exception 'STORE_SELLER_OFFER_RETIRED_TERMINAL'
-        using errcode = 'P0001';
-    end if;
-
     v_transition := old.status || '->' || new.status;
     if v_transition not in (
       'draft->draft','draft->active','draft->retired',
       'active->active','active->paused','active->retired',
-      'paused->paused','paused->active','paused->retired',
-      'retired->retired'
+      'paused->paused','paused->active','paused->retired'
     ) then
       raise exception 'STORE_SELLER_OFFER_TRANSITION_INVALID:%', v_transition
         using errcode = 'P0001';
