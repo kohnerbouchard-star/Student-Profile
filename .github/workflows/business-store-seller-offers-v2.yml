@@ -1,0 +1,78 @@
+name: Business Store Seller Offers V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/domains/store/contracts/storeSellerOfferContracts.ts"
+      - "backend/src/domains/store/infrastructure/supabaseStoreSellerOfferRepository.ts"
+      - "backend/src/domains/store/index.ts"
+      - "backend/supabase/migrations/20260824100000_store_seller_offer_foundation_v2.sql"
+      - "backend/supabase/migrations/20260824100010_store_seeded_offer_compatibility_v2.sql"
+      - "backend/supabase/migrations/20260824100020_store_seller_offer_commands_v2.sql"
+      - "backend/supabase/migrations/20260824100030_store_seller_offer_aggregation_v2.sql"
+      - "backend/supabase/migrations/20260824100040_store_seller_offer_schema_assertions_v2.sql"
+      - "docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md"
+      - "scripts/business-phase7-store-seller-offers-contract.mjs"
+      - "scripts/business-phase7-store-seller-offers-simulation.mjs"
+      - "scripts/business-phase7-store-seller-offers-types.mjs"
+      - ".github/workflows/business-store-seller-offers-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/domains/store/contracts/storeSellerOfferContracts.ts"
+      - "backend/src/domains/store/infrastructure/supabaseStoreSellerOfferRepository.ts"
+      - "backend/src/domains/store/index.ts"
+      - "backend/supabase/migrations/20260824100000_store_seller_offer_foundation_v2.sql"
+      - "backend/supabase/migrations/20260824100010_store_seeded_offer_compatibility_v2.sql"
+      - "backend/supabase/migrations/20260824100020_store_seller_offer_commands_v2.sql"
+      - "backend/supabase/migrations/20260824100030_store_seller_offer_aggregation_v2.sql"
+      - "backend/supabase/migrations/20260824100040_store_seller_offer_schema_assertions_v2.sql"
+      - "scripts/business-phase7-store-seller-offers-contract.mjs"
+      - "scripts/business-phase7-store-seller-offers-simulation.mjs"
+      - "scripts/business-phase7-store-seller-offers-types.mjs"
+      - ".github/workflows/business-store-seller-offers-v2.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-store-seller-offers-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-store-seller-offers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify seller-offer authority and deterministic concurrency
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase7-store-seller-offers-simulation.mjs
+          node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+      - name: Run repository quality suite
+        run: npm test
