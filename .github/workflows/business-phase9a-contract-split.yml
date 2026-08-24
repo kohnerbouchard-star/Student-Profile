@@ -1,0 +1,301 @@
+name: Business Phase 9A Contract Split
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/business-phase9a-contract-split.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase9a-contract-split
+  cancel-in-progress: false
+
+jobs:
+  split-contract:
+    if: >-
+      github.event.pull_request.number == 664 &&
+      github.event.pull_request.head.ref == 'feat/business-store-withdrawal-safety-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out Phase 9A branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-withdrawal-safety-v2
+          fetch-depth: 0
+
+      - name: Verify exact bounded trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git log -1 --format=%s)" = "ops(business): split Phase 9A contract primitives"
+          git merge-base --is-ancestor \
+            7dd690f81b1265ff8f569f03a5ae66cb38595158 HEAD
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install deterministic tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Extract reusable contract primitives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/src/domains/store/contracts/storeWithdrawalContracts.ts')
+          text = path.read_text()
+          if 'storeWithdrawalContractPrimitives.ts' in text:
+              raise SystemExit('contract primitives are already split')
+
+          import_block = '''import {
+            contractError,
+            invalidCommand,
+            readBoolean,
+            readNonNegativeInteger,
+            readNullableNonNegativeInteger,
+            readNullablePattern,
+            readNullablePositiveInteger,
+            readNullableTimestamp,
+            readPattern,
+            readPositiveInteger,
+            readText,
+            readTimestamp,
+            requireCommandPattern,
+            requireCommandPositiveInteger,
+            requireRecord,
+          } from "./storeWithdrawalContractPrimitives.ts";
+
+          export { StoreWithdrawalContractError } from "./storeWithdrawalContractPrimitives.ts";
+
+          '''
+          if not text.startswith('export type StoreWithdrawalMode'):
+              raise SystemExit('unexpected contract file header')
+          text = import_block + text
+
+          class_start = text.index('export class StoreWithdrawalContractError')
+          class_end = text.index(
+              '\n\nexport function normalizeStoreWithdrawalRequestCommand',
+              class_start,
+          )
+          text = text[:class_start] + text[class_end + 2:]
+
+          generic_start = text.index('\nfunction requireRecord(')
+          domain_start = text.index('\nfunction readMode(', generic_start)
+          text = text[:generic_start] + '\n' + text[domain_start:]
+
+          invalid_start = text.index('\nfunction invalidCommand(')
+          text = text[:invalid_start].rstrip() + '\n'
+          path.write_text(text)
+
+          helper = '''export class StoreWithdrawalContractError extends Error {
+            readonly code: string;
+
+            constructor(code: string, message: string) {
+              super(message);
+              this.name = "StoreWithdrawalContractError";
+              this.code = code;
+            }
+          }
+
+          export function requireRecord(
+            value: unknown,
+            label: string,
+          ): Record<string, unknown> {
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} must be an object.`,
+              );
+            }
+            return value as Record<string, unknown>;
+          }
+
+          export function requireCommandPattern(
+            value: unknown,
+            pattern: RegExp,
+            label: string,
+          ): string {
+            const text = typeof value === "string" ? value.trim().toLowerCase() : "";
+            if (!pattern.test(text)) {
+              invalidCommand(`${label} has an invalid public format.`);
+            }
+            return text;
+          }
+
+          export function requireCommandPositiveInteger(
+            value: unknown,
+            label: string,
+          ): number {
+            const numberValue = Number(value);
+            if (!Number.isInteger(numberValue) || numberValue < 1) {
+              invalidCommand(`${label} must be a positive integer.`);
+            }
+            return numberValue;
+          }
+
+          export function readText(value: unknown, label: string): string {
+            const text = typeof value === "string" ? value.trim() : "";
+            if (!text) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} is required.`,
+              );
+            }
+            return text;
+          }
+
+          export function readPattern(
+            value: unknown,
+            pattern: RegExp,
+            label: string,
+          ): string {
+            const text = readText(value, label);
+            if (!pattern.test(text)) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} has an invalid public format.`,
+              );
+            }
+            return text;
+          }
+
+          export function readNullablePattern(
+            value: unknown,
+            pattern: RegExp,
+            label: string,
+          ): string | null {
+            if (value === null || value === undefined) return null;
+            return readPattern(value, pattern, label);
+          }
+
+          export function readPositiveInteger(value: unknown, label: string): number {
+            const numberValue = Number(value);
+            if (!Number.isInteger(numberValue) || numberValue < 1) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} must be a positive integer.`,
+              );
+            }
+            return numberValue;
+          }
+
+          export function readNonNegativeInteger(
+            value: unknown,
+            label: string,
+          ): number {
+            const numberValue = Number(value);
+            if (!Number.isInteger(numberValue) || numberValue < 0) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} must be a non-negative integer.`,
+              );
+            }
+            return numberValue;
+          }
+
+          export function readNullablePositiveInteger(
+            value: unknown,
+            label: string,
+          ): number | null {
+            if (value === null || value === undefined) return null;
+            return readPositiveInteger(value, label);
+          }
+
+          export function readNullableNonNegativeInteger(
+            value: unknown,
+            label: string,
+          ): number | null {
+            if (value === null || value === undefined) return null;
+            return readNonNegativeInteger(value, label);
+          }
+
+          export function readTimestamp(value: unknown, label: string): string {
+            const text = readText(value, label);
+            if (!Number.isFinite(Date.parse(text))) {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} must be an ISO timestamp.`,
+              );
+            }
+            return new Date(text).toISOString();
+          }
+
+          export function readNullableTimestamp(
+            value: unknown,
+            label: string,
+          ): string | null {
+            if (value === null || value === undefined) return null;
+            return readTimestamp(value, label);
+          }
+
+          export function readBoolean(value: unknown, label: string): boolean {
+            if (typeof value !== "boolean") {
+              throw contractError(
+                "invalid_store_withdrawal_contract",
+                `${label} must be boolean.`,
+              );
+            }
+            return value;
+          }
+
+          export function invalidCommand(message: string): never {
+            throw contractError("invalid_store_withdrawal_command", message);
+          }
+
+          export function contractError(
+            code: string,
+            message: string,
+          ): StoreWithdrawalContractError {
+            return new StoreWithdrawalContractError(code, message);
+          }
+          '''
+          helper = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in helper.splitlines()
+          ).strip() + '\n'
+          Path(
+              'backend/src/domains/store/contracts/storeWithdrawalContractPrimitives.ts'
+          ).write_text(helper)
+          PY
+
+          test "$(wc -l < backend/src/domains/store/contracts/storeWithdrawalContracts.ts)" -lt 500
+          test "$(wc -l < backend/src/domains/store/contracts/storeWithdrawalContractPrimitives.ts)" -lt 500
+          node --experimental-strip-types \
+            scripts/business-phase9-store-withdrawal-safety-types.mjs
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          npm --prefix backend run typecheck:all
+          node scripts/architecture/build-architecture-inventory.mjs
+          node -e '
+            const inventory = require("./docs/architecture/inventories/econovaria-architecture-inventory-v2.json");
+            if (inventory.counts.oversizedSourceFiles > 100) process.exit(1);
+          '
+          git diff --check
+
+      - name: Commit maintainability repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git add \
+            backend/src/domains/store/contracts/storeWithdrawalContracts.ts \
+            backend/src/domains/store/contracts/storeWithdrawalContractPrimitives.ts \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --cached --quiet && { echo "No contract split was produced." >&2; exit 1; }
+          git commit -m "refactor(store): split withdrawal contract primitives"
+          git push origin HEAD:feat/business-store-withdrawal-safety-v2
