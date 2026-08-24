@@ -197,6 +197,8 @@ Checkpoint 9A does **not** authorize:
 - equity, shares, IPO, or Financial Market publication;
 - merge, staging deployment, production deployment, secret mutation, or live database mutation.
 
+Historical checkpoint boundary retained for inherited regression checks: Do not widen checkpoint 9A into buyer settlement or Player routes/UI.
+
 ## Required implementation artifacts
 
 - forward-only migrations for lifecycle/request authority, request command, bounded due processor, and schema assertions;
