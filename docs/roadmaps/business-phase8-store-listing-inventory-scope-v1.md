@@ -1,6 +1,9 @@
 # Business V2 Phase 8 — Physical Store-Listing Inventory Scope v1
 
-**Status:** IN PROGRESS — checkpoint 8A scope locked; implementation not certified
+**Status:** COMPLETE — checkpoint 8A certified
+**Certified implementation and exact-head verification source:** `c0fd8650987a332f99b8173395dcf84fc3518c15`
+**Dedicated certification workflow:** `32691204140`
+**Certification date:** 2026-08-24
 **Branch:** `feat/business-store-listing-inventory-v2`
 **Parent branch:** `feat/business-store-seller-offers-v2`
 **Parent draft PR:** #662
@@ -181,6 +184,28 @@ One frozen implementation SHA must pass:
 - two-game isolation and deterministic concurrency checks;
 - `git diff --check`.
 
+## Certification evidence
+
+**Exact certified implementation SHA:** `c0fd8650987a332f99b8173395dcf84fc3518c15`
+**Dedicated workflow:** Business Store Listing Inventory V2 `32691204140`
+
+- Phase 8A structural contract, custody/concurrency/economic simulation, typed command/result contract, deterministic architecture inventory, and Repository Quality: **PASS**;
+- retained Phase 7A seller-offer authority, aggregation, Banking, Store, Inventory, and Business contracts: **PASS** (`32691204160`);
+- retained Player Terminal plus Chromium verification: **PASS** in both the Phase 8A and Phase 7A workflows;
+- Database Replay from zero twice and rebuilt-database lint: **PASS** (`32691204293`);
+- Backend Typecheck and backend smoke: **PASS** (`32691204167`);
+- retained timed manufacturing, workforce/equipment resource regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight: **PASS** (`32691204313`);
+- Business Workforce Payroll V2: **PASS** (`32691204210`);
+- Business Economy V2: **PASS** (`32691204214`);
+- Repository Quality: **PASS** (`32691204184`);
+- Supply Chain Security: **PASS** (`32691204146`);
+- Runtime Interaction Wiring: **PASS** (`32691204273`);
+- Admin API Check: **PASS** (`32691204138`);
+- Required Game Market Timezone: **PASS** (`32691204157`);
+- Exchange Calendar Runtime: **PASS** (`32691204255`).
+
+No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred. Later documentation-only commits do not replace `c0fd8650987a332f99b8173395dcf84fc3518c15` as the exact certified implementation source.
+
 ## Completion rule
 
 Checkpoint 8A is complete only when:
@@ -192,6 +217,6 @@ Checkpoint 8A is complete only when:
 5. temporary repair/finalizer artifacts have zero net presence;
 6. the PR remains draft, unmerged, and undeployed.
 
-## Next step after scope lock
+## Next authorized step
 
-Implement the bounded canonical-poster extension, deterministic offer-scoped account authority, exact Finished Goods-to-Store transfer command, retained stockroom projection convergence, typed Store contracts, tests, and dedicated CI. Do not widen checkpoint 8A into withdrawal or buyer settlement.
+Checkpoint 8A is complete. Open a bounded Phase 9 checkpoint for five-minute Store withdrawal safety: introduce withdrawal-pending state/timestamps, disable purchase eligibility immediately, serialize request and due processing on the offer version, and return only remaining unsold units `Store Listing -> Finished Goods` after the minimum cooling-off period while preserving cost, provenance, retained stockroom convergence, idempotency, and two-game isolation. Offer-aware buyer settlement, Player routes/UI, automatic sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain unauthorized.

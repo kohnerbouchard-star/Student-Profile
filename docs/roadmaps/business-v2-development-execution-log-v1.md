@@ -1032,3 +1032,66 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 8 — physical Store-listing inventory scope is OPEN.** Start with a bounded stacked checkpoint that creates or resolves canonical offer-scoped `store_stock` custody and moves exact units `Finished Goods -> Store Listing` with idempotency, optimistic offer concurrency, cost/provenance preservation, and two-game isolation. Do not include withdrawal cooling-off, buyer payment/inventory settlement, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation in the first Phase 8 checkpoint.
+
+---
+
+## 2026-08-24 — Phase 8A COMPLETE: physical Store-listing inventory foundation
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `c0fd8650987a332f99b8173395dcf84fc3518c15`.
+- Feature branch: `feat/business-store-listing-inventory-v2`.
+- Stacked draft PR: #663, based on the durably certified Phase 7A handoff `462e6083c5b2d2b3b5d515c67bc7a8d71a2e43fb` / PR #662.
+- PR #663 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged on `refactor/business-ux-mechanics-v1`.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- Later documentation-only commits record certification and do not replace `c0fd8650987a332f99b8173395dcf84fc3518c15` as the exact tested source.
+
+### What is now authoritative
+
+- The canonical Inventory poster accepts the retained seeded Store compatibility account and a Business-owned `store_stock` account only when that account is bound to one same-game, non-retired Business seller offer for the exact canonical item.
+- Each Business offer resolves to one deterministic immutable Store-listing account owned by the Business economic party, with public Business/offer provenance and no parallel offer quantity.
+- `public.stock_business_store_offer_v2` is service-only and moves positive integer units from canonical Finished Goods into the offer account under trusted game scope, public Business/offer keys, optimistic offer versioning, and idempotency.
+- A matching committed retry replays before current-version rejection; conflicting key reuse, stale versions, retired offers, wrong seller/game/item/account, unavailable custody, and insufficient unreserved Finished Goods fail closed.
+- The canonical transfer carries average unit cost and cost currency into Store-listing custody and records one append-only Inventory transaction; it does not create cash, revenue, tax, wage, expense, or COGS entries.
+- The retained `business_inventory` Finished Goods row is locked, verified against canonical Inventory, and synchronized to the canonical post-state in the same transaction, preventing stale stockroom reads or re-inflation of already-listed units.
+- Phase 7A aggregation now observes real Business offer availability from canonical Store-listing holdings without changing existing Player Store reads, quotes, purchases, buyer Inventory delivery, or Banking settlement.
+
+### Exact-head verification on `c0fd8650987a332f99b8173395dcf84fc3518c15`
+
+- **Business Store Listing Inventory V2 — PASS** (`32691204140`): Phase 8A structural/type contracts, deterministic custody/concurrency/cost/projection simulation, deterministic architecture inventory, retained Business/Store/Inventory runtime, all Backend/Edge TypeScript, standalone Player Terminal, and Chromium.
+- **Business Store Seller Offers V2 — PASS** (`32691204160`): retained Phase 7A authority, aggregation, Banking/Store/Inventory/Business contracts, standalone Player Terminal, and Chromium.
+- **Database Replay — PASS** (`32691204293`): complete replay from zero twice plus rebuilt-database lint.
+- **Backend Typecheck — PASS** (`32691204167`): backend typecheck and backend smoke.
+- **Business Timed Manufacturing V2 — PASS** (`32691204313`): retained manufacturing, workforce/equipment regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight.
+- **Business Workforce Payroll V2 — PASS** (`32691204210`).
+- **Business Economy V2 — PASS** (`32691204214`).
+- **Repository Quality — PASS** (`32691204184`).
+- **Supply Chain Security — PASS** (`32691204146`).
+- **Runtime Interaction Wiring — PASS** (`32691204273`).
+- **Admin API Check — PASS** (`32691204138`).
+- **Required Game Market Timezone — PASS** (`32691204157`).
+- **Exchange Calendar Runtime — PASS** (`32691204255`).
+
+### Phase 8A exit result
+
+- Canonical Business Store-listing account identity and immutable offer custody: **met**.
+- Exact available Finished Goods-to-Store movement with reserved-quantity exclusion: **met**.
+- Idempotent replay, conflicting-retry rejection, optimistic versioning, and concurrent-command serialization: **met**.
+- Average cost, currency, transaction provenance, and public-key privacy: **met**.
+- Canonical holdings and retained Business stockroom projection convergence: **met**.
+- Phase 7A aggregation reflects physical Business offer inventory without parallel quantity: **met**.
+- Database, backend, all Edge, retained Business/Banking/Store/Inventory/workforce/equipment/manufacturing, repository, security, Player, and Chromium gates: **met**.
+- No withdrawal, buyer settlement, Player mutation/read cutover, deployment, or live mutation: **met**.
+
+### Decisions and unresolved boundaries
+
+- Stock placement is additive only. Reduction, cancellation, return to Finished Goods, and cooling-off state remain Phase 9 authority.
+- Listing does not activate an offer automatically; offer lifecycle remains explicit and optimistic.
+- Buyer-visible reads remain on the retained Store compatibility channel until displayed offer, quote, payment, seller revenue, and transferred inventory can settle against one locked offer.
+- Store-listing inventory is not cash or revenue. Seller cash, COGS, tax, and buyer Inventory remain untouched until Phase 10.
+- Withdrawal/purchase race ordering, simulated demand convergence, Player UX, equity/IPO, merge, staging, and production remain unauthorized.
+
+### Next authorized step
+
+**Phase 9 checkpoint 9A — five-minute Store withdrawal safety is OPEN.** Create a stacked draft branch/PR from the durably certified Phase 8A lineage. Introduce withdrawal-pending state and timestamps, disable purchase eligibility immediately, serialize request and due processing on the offer row/version, and return only remaining unsold units `Store Listing -> Finished Goods` after the minimum cooling-off period while preserving cost/provenance, retained stockroom convergence, idempotency, and two-game isolation. Do not include offer-aware buyer settlement, Player routes/UI, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation.

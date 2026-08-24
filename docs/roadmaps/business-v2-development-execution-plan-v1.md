@@ -367,20 +367,24 @@ Exit: seller-specific offers aggregate under one canonical Store product without
 
 ## Phase 8 — Physical Store-listing inventory
 
-**Status:** NOT STARTED
+**Status:** FOUNDATION COMPLETE — checkpoint 8A certified exact-head source `c0fd8650987a332f99b8173395dcf84fc3518c15`; buyer inventory transfer remains deferred to atomic Store purchase settlement
 
-- [ ] Create/resolve canonical Store-listing stock account scoped to the offer.
-- [ ] Listing quantity physically moves `Finished Goods -> Store Listing`.
-- [ ] Increasing stock moves additional units immediately.
-- [ ] Purchasing moves exact units `Store Listing -> Buyer Inventory`.
-- [ ] Store-listed goods cannot be consumed by another Business workflow.
-- [ ] Preserve cost/provenance/audit journal.
+- [x] Create/resolve one canonical immutable Store-listing stock account scoped to the Business offer.
+- [x] Listing quantity physically moves exact available units `Finished Goods -> Store Listing`.
+- [x] Increasing stock moves additional units immediately under optimistic offer concurrency.
+- [ ] Purchasing moves exact units `Store Listing -> Buyer Inventory` — deferred to Phase 10 so payment and inventory cannot diverge.
+- [x] Store-listed goods cannot be consumed by another Business workflow because they leave canonical Finished Goods custody.
+- [x] Preserve average cost, currency, public-key provenance, append-only Inventory evidence, retained stockroom convergence, and two-game isolation.
 
-Exit: offer availability equals actual inventory held in its Store-listing account.
+Certified checkpoint:
+
+- **8A:** canonical poster support for Business-owned offer custody; deterministic offer-scoped `store_stock` account; service-only idempotent stock command; exact Finished Goods-to-Store transfer; reserved-quantity exclusion; optimistic offer versioning; canonical/retained stockroom convergence; typed Store contracts/repository; deterministic concurrency, cost, rollback, aggregation, and two-game tests. **Certified implementation and exact-head verification source:** `c0fd8650987a332f99b8173395dcf84fc3518c15`. Dedicated workflow: `32691204140`.
+
+Exit: offer availability equals actual canonical inventory held in its Store-listing account. The physical listing foundation is **MET**; buyer transfer remains part of Phase 10 atomic settlement.
 
 ## Phase 9 — Five-minute Store withdrawal safety
 
-**Status:** NOT STARTED
+**Status:** OPEN — bounded checkpoint 9A authorized
 
 - [ ] Add `withdrawal_pending` lifecycle/state.
 - [ ] Store `withdrawal_requested_at` and `withdrawal_effective_at`.
