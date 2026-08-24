@@ -26,7 +26,11 @@ interface StoreListingInventoryClient {
 
 export class SupabaseStoreListingInventoryRepository
   implements StoreListingInventoryRepository {
-  constructor(private readonly client: StoreListingInventoryClient) {}
+  private readonly client: StoreListingInventoryClient;
+
+  constructor(client: StoreListingInventoryClient) {
+    this.client = client;
+  }
 
   async stockBusinessOffer(
     command: StockBusinessStoreOfferCommand,
