@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const files = {
   poster: "backend/supabase/migrations/20260824110000_business_store_listing_inventory_poster_v2.sql",
   commands: "backend/supabase/migrations/20260824110010_business_store_listing_inventory_commands_v2.sql",
+  projection: "backend/supabase/migrations/20260824110015_business_store_listing_inventory_projection_v2.sql",
   assertions: "backend/supabase/migrations/20260824110020_business_store_listing_inventory_assertions_v2.sql",
   contracts: "backend/src/domains/store/contracts/storeListingInventoryContracts.ts",
   repository: "backend/src/domains/store/infrastructure/supabaseStoreListingInventoryRepository.ts",
@@ -76,7 +77,8 @@ requireTokens(source.commands, "Deterministic listing account", [
   "on conflict",
   "STORE_LISTING_ACCOUNT_UNAVAILABLE",
 ]);
-requireTokens(source.commands, "Service-only stock command", [
+
+requireTokens(source.projection, "Service-only stock command", [
   "create or replace function public.stock_business_store_offer_v2",
   "STORE_LISTING_STOCK_REQUEST_INVALID",
   "STORE_LISTING_STOCK_IDEMPOTENCY_CONFLICT",
@@ -97,7 +99,18 @@ requireTokens(source.commands, "Service-only stock command", [
   "'replayed', true",
   "'replayed', false",
 ]);
-requireTokens(source.commands, "Public-key-only result", [
+requireTokens(source.projection, "Finished Goods projection convergence", [
+  "public.business_inventory%rowtype",
+  "inventory_row.inventory_kind = 'finished_good'",
+  "STORE_LISTING_STOCK_FINISHED_PROJECTION_MISSING",
+  "STORE_LISTING_STOCK_FINISHED_PROJECTION_MISMATCH",
+  "STORE_LISTING_STOCK_REPLAY_FINISHED_PROJECTION_MISMATCH",
+  "quantity = v_source_holding_after.quantity_owned",
+  "unit_cost = v_source_holding_after.average_unit_cost",
+  "total_cost_basis = round(",
+  "STORE_LISTING_STOCK_FINISHED_PROJECTION_UPDATE_INVALID",
+]);
+requireTokens(source.projection, "Public-key-only result", [
   "'offerKey', v_offer.public_key",
   "'inventoryAccountKey', v_account.public_key",
   "'transactionKey'",
@@ -106,14 +119,14 @@ requireTokens(source.commands, "Public-key-only result", [
   "'averageUnitCost'",
   "'costCurrencyCode'",
 ]);
-requireTokens(source.commands, "Service-role privilege boundary", [
+requireTokens(source.projection, "Service-role privilege boundary", [
   "revoke all on function public.stock_business_store_offer_v2",
   "from public, anon, authenticated",
   "to service_role",
 ]);
 
-const replayIndex = source.commands.indexOf("select transaction_row.*");
-const versionIndex = source.commands.indexOf(
+const replayIndex = source.projection.indexOf("select transaction_row.*");
+const versionIndex = source.projection.indexOf(
   "if v_offer.version <> p_expected_offer_version then",
 );
 if (replayIndex < 0 || versionIndex < 0 || replayIndex > versionIndex) {
@@ -121,9 +134,26 @@ if (replayIndex < 0 || versionIndex < 0 || replayIndex > versionIndex) {
     "Idempotent replay must be resolved before rejecting the advanced offer version.",
   );
 }
+const projectionLockIndex = source.projection.indexOf(
+  "from public.business_inventory as inventory_row",
+  versionIndex,
+);
+const holdingLockIndex = source.projection.indexOf(
+  "from public.inventory_holdings as holding_row",
+  projectionLockIndex,
+);
+if (
+  projectionLockIndex < 0 ||
+  holdingLockIndex < 0 ||
+  projectionLockIndex > holdingLockIndex
+) {
+  throw new Error(
+    "Finished Goods projection must be locked before its canonical holding.",
+  );
+}
 
 forbidTokens(
-  `${source.poster}\n${source.commands}\n${source.assertions}`,
+  `${source.poster}\n${source.commands}\n${source.projection}\n${source.assertions}`,
   "Checkpoint 8A migrations",
   [
     "withdraw_business_store_offer",
@@ -143,6 +173,7 @@ requireTokens(source.assertions, "Phase 8A schema assertions", [
   "STORE_LISTING_ACCOUNT_GUARD_MISSING",
   "STORE_LISTING_STOCK_PRIVILEGE_BOUNDARY_INVALID",
   "STORE_LISTING_STOCK_FUNCTION_INCOMPLETE",
+  "STORE_LISTING_STOCK_PROJECTION_SYNC_MISSING",
   "STORE_LISTING_PARALLEL_QUANTITY_FORBIDDEN",
   "STORE_LISTING_ACCOUNT_BACKFILL_INVALID",
 ]);
