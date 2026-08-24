@@ -48,6 +48,16 @@ jobs:
           set -euo pipefail
           git merge-base --is-ancestor 1abc8b878df5b08716107adb467bd013e85b6df4 HEAD
           python3 scripts/business-phase10a1-certify.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("docs/roadmaps/business-phase10-store-purchase-settlement-scope-v1.md")
+          text = path.read_text()
+          text = text.replace(
+              "**Exact certified implementation and verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`  \n",
+              "**Exact certified implementation and verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`\n",
+          )
+          path.write_text(text)
+          PY
           git diff --check
 
       - name: Commit certification and remove temporary machinery
