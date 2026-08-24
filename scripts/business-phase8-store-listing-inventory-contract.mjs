@@ -201,8 +201,17 @@ requireTokens(source.index, "Store-domain exports", [
   "storeListingInventoryContracts.ts",
   "supabaseStoreListingInventoryRepository.ts",
 ]);
+
+const acceptedScopeStatuses = [
+  "**Status:** IN PROGRESS — checkpoint 8A scope locked; implementation not certified",
+  "**Status:** COMPLETE — checkpoint 8A certified",
+];
+if (!acceptedScopeStatuses.some((status) => source.scope.includes(status))) {
+  throw new Error(
+    "Phase 8A scope has neither the locked implementation status nor the certified status.",
+  );
+}
 requireTokens(source.scope, "Phase 8A scope lock", [
-  "Status:** IN PROGRESS",
   "Checkpoint 8A makes a Business Store offer hold real canonical inventory",
   "It does not withdraw listed units and it does not sell them to a buyer",
   "Do not widen checkpoint 8A into withdrawal or buyer settlement",
