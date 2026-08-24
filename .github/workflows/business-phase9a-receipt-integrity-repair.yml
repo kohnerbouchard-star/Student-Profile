@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git log -1 --format=%s)" = "ops(business): retry Phase 9A source repair"
+          test "$(git log -1 --format=%s)" = "ops(business): finalize Phase 9A source repair"
           git merge-base --is-ancestor \
             9aa3595be3376069a6005e713c982705cf449883 HEAD
 
@@ -110,7 +110,7 @@ jobs:
           path.write_text(text.replace(old, new, 1))
           PYPATCH
           git show \
-            5a2249dc543f3d54fcf401ac8b11d0226c145ceb:.github/workflows/business-store-withdrawal-safety-v2.yml \
+            b91a8279d14521aee13b493158482875f52d6504:.github/workflows/business-store-withdrawal-safety-v2.yml \
             > .github/workflows/business-store-withdrawal-safety-v2.yml
           node scripts/architecture/build-architecture-inventory.mjs
           git diff --check
