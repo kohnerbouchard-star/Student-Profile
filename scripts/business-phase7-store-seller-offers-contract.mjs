@@ -209,7 +209,7 @@ requireTokens(identityAssertions, "Phase 7A identity assertions", [
 ]);
 
 requireTokens(scope, "Phase 7A scope lock", [
-  "Status:** IN PROGRESS",
+  "Status:** COMPLETE — checkpoint 7A certified",
   "Checkpoint 7A — seller-offer identity and aggregation foundation",
   "Available quantity is never browser-authored",
   "existing Player Store reads, quotes, and purchases continue",
