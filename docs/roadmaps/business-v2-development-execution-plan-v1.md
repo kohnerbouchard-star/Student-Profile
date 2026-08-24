@@ -405,15 +405,22 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** OPEN — bounded checkpoint 10A authorized
+**Status:** FOUNDATION COMPLETE — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 offer-aware quote authority is OPEN
 
-- [ ] Lock offer and validate purchasable state.
+- [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
+- [x] Freeze one seller-offer-first economic row-lock order.
+- [x] Prove purchase-first and withdrawal-first ordering plus replay, conflict, rollback, and two-game isolation in deterministic simulations.
+- [ ] Add immutable offer-aware quote authority bound to exact offer, version, seller, custody, quantity, price, currency, and expiry.
+- [ ] Lock offer and validate purchasable state in the runtime settlement command.
 - [ ] Lock/check buyer balance and listing inventory.
 - [ ] Atomically debit Buyer Checking, credit Business cash, transfer inventory, and update offer quantity.
 - [ ] Enforce idempotency and exact-once revenue/inventory settlement.
-- [ ] Add both lock-order race tests: purchase-first and withdrawal-first.
 
-Exit: no paid-without-item or item-without-payment state is possible.
+Certified checkpoint:
+
+- **10A.1:** non-mutating Store settlement authority foundation; immutable public `spr_...` receipt contract; trusted command boundary; fixed offer-first lock order; deterministic purchase/withdrawal ordering, replay, conflict, rollback, and two-game simulations; complete retained database, Business, Store, Inventory, backend/Edge, repository, security, Player, and Chromium matrix. **Certified implementation and exact-head verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`. Dedicated workflow: `32753253910`.
+
+Exit: no paid-without-item or item-without-payment state is possible. **Not yet met; quote and settlement runtime remain open.**
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 

@@ -1168,3 +1168,57 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 10 checkpoint 10A — atomic Store purchase settlement is OPEN.** Create a stacked draft branch/PR from the clean Phase 9A durable handoff. Reuse canonical Player Checking, first-class Business cash, Store seller-offer identity/version, offer-scoped Store-listing Inventory, buyer Inventory, Store pricing/quote evidence, Business activity evidence, and the canonical Inventory poster. Plan a bounded first checkpoint before coding. It must define one immutable public purchase receipt and one offer-first lock order, prove purchase-first and withdrawal-first races, and keep buyer debit, seller credit, Inventory transfer, revenue/COGS evidence, and idempotency within one transaction. Do not include Player Store read/UI cutover, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation unless separately authorized.
+
+
+---
+
+## 2026-08-25 — Phase 10A.1 COMPLETE: Store settlement authority foundation
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`.
+- Feature branch: `feat/business-store-purchase-settlement-v2`.
+- Stacked draft PR: #665, based on `feat/business-store-withdrawal-safety-v2` / PR #664.
+- Certified Phase 9A implementation source: `bf17e2493654620229d1acdeaae0fbaba21caf63`.
+- PR #665 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, mergeable, and unmerged.
+- The exact implementation delta contains the permanent Phase 10A.1 workflow, authority audit, scope, typed contracts, structural verification, and deterministic lock/replay/rollback/two-game simulations. No temporary writer/controller workflow remains after this certification commit.
+- No migration, runtime persistence, API route, Player control, deployment, secret mutation, or live database mutation occurred.
+
+### What is now authoritative
+
+- A future Business seller-offer purchase is defined as one indivisible economic transaction binding one exact offer, quote, Buyer Checking debit, Business cash credit, Store Listing-to-Buyer Inventory transfer, revenue/COGS result, offer-version transition, and immutable public receipt.
+- Browser input expresses only offer/quote/quantity/version/idempotency intent. Game, Buyer, seller, Business, custody, money, and Inventory scope are trusted server authority.
+- The public receipt identity is `spr_[0-9a-f]{32}`; internal ledger and table UUIDs remain private.
+- All economic row locking begins with the seller offer. Buyer money or Inventory may never be locked before the offer.
+- Purchase-first may complete atomically and advance the offer once; withdrawal-first changes the offer to `withdrawal_pending` and forces purchase rejection before any economic mutation.
+- Matching replay returns immutable recorded receipt evidence. Conflicting idempotency reuse fails closed. Any posting failure rolls the full conceptual transaction back.
+- The retained seeded Store purchase channel remains unchanged and is not silently repurposed for Business seller offers.
+
+### Exact-head verification on `1abc8b878df5b08716107adb467bd013e85b6df4`
+
+- **Business Store Purchase Settlement Foundation V2 — PASS** (`32753253910`): Phase 10A.1 structural/type/race/replay/conflict/rollback/two-game contracts; Database Replay twice and lint; retained Store/Inventory/Business Economy/Banking/workforce/payroll/equipment/manufacturing; all Backend/Edge TypeScript; Player Edge bundleability; Admin API; required game timezone; exchange calendar; Player Terminal; Chromium.
+- **Business Store Withdrawal Safety V2 — PASS** (`32753253771`).
+- **Repository Quality — PASS** (`32753253904`).
+- **Supply Chain Security — PASS** (`32753253694`).
+
+### Phase 10A.1 exit result
+
+- Immutable public receipt and trusted command boundary: **met**.
+- Fixed seller-offer-first economic lock order: **met**.
+- Purchase-first and withdrawal-first ordering model: **met**.
+- Replay, conflicting reuse, rollback, and two-game deterministic coverage: **met**.
+- Complete retained exact-head matrix: **met**.
+- Temporary machinery zero net; PR draft/unmerged; no deployment/live mutation: **met**.
+- Runtime quote, settlement, money movement, Inventory movement, revenue/COGS posting, and Player cutover: **not implemented and not claimed**.
+
+### Decisions and unresolved boundaries
+
+- Checkpoint 10A.2 must introduce a durable offer-aware quote rather than widening the retained seeded compatibility quote.
+- The quote must bind exact offer/version/seller/Business/custody/item/quantity/price/currency/expiry and immutable request hash.
+- Checkpoint 10A.3 remains the first authority allowed to debit Buyer Checking, credit Business cash, transfer Inventory, or recognize seller revenue/COGS.
+- Player Store read/UI cutover, automatic consumer sales, equity/IPO, merge, staging, and production remain unauthorized.
+
+### Next authorized step
+
+**Phase 10 checkpoint 10A.2 — immutable offer-aware quote authority is OPEN.** Add only the durable quote schema, service-only quote command/repository, exact replay and conflict behavior, expiry/version/custody validation, typed public contract, deterministic tests, and exact-head certification. Do not add Buyer debit, seller credit, Inventory transfer, revenue/COGS, Player route/UI, automatic sales, equity/IPO, merge, deployment, secrets, or live database mutation.

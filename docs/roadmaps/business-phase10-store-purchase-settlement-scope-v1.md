@@ -1,13 +1,16 @@
 # Business V2 Phase 10 — Atomic Store Purchase Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A1`
-**Status:** IN PROGRESS — checkpoint 10A.1 authority foundation locked; runtime settlement is not implemented or certified
+**Status:** COMPLETE — checkpoint 10A.1 authority foundation certified; checkpoint 10A.2 offer-aware quote authority is open
 **Branch:** `feat/business-store-purchase-settlement-v2`
 **Parent branch:** `feat/business-store-withdrawal-safety-v2`
 **Parent draft PR:** #664
 **Certified Phase 9A exact-head source:** `bf17e2493654620229d1acdeaae0fbaba21caf63`
 **Clean Phase 9A durable handoff:** `952e4b198cd895916a12d0d1bed4ac80c23ead4b`
 **Current clean Phase 9A branch head:** `8183702d64ff72988cff2ba992a85b1cf85d82dd`
+**Certified checkpoint 10A.1 exact-head source:** `1abc8b878df5b08716107adb467bd013e85b6df4`
+**Dedicated certification workflow:** `32753253910`
+**Certification date:** 2026-08-25
 
 ## Purpose
 
@@ -241,6 +244,22 @@ Checkpoint 10A.1 is certified only when:
 5. the PR remains draft, open, unmerged, and undeployed.
 
 Certification of 10A.1 does not certify runtime Store settlement or complete Phase 10.
+
+## Certification evidence
+
+**Exact certified implementation and verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`
+**Dedicated workflow:** Business Store Purchase Settlement Foundation V2 `32753253910`
+
+- Phase 10A.1 structural, typed command/receipt, offer-first lock-order, purchase-first, withdrawal-first, replay, conflict, rollback, and two-game simulations: **PASS**.
+- Complete database replay from zero twice and rebuilt-database lint: **PASS** in `32753253910`.
+- Retained Business Economy, Banking, workforce/payroll, equipment, timed manufacturing, Store, Inventory, all Backend/Edge TypeScript, Player Edge bundleability, Admin API, required game timezone, exchange calendar, Player Terminal, and Chromium: **PASS** in `32753253910`.
+- Retained Phase 9A withdrawal authority: **PASS** (`32753253771`).
+- Repository Quality and deterministic architecture inventory: **PASS** (`32753253904`).
+- Supply Chain Security: **PASS** (`32753253694`).
+- PR #665 remained open, draft, mergeable, unmerged, and undeployed. No database migration, runtime persistence, settlement RPC, money movement, Inventory movement, Player route/UI, secret mutation, or live database mutation was introduced by checkpoint 10A.1.
+- The exact certified source remains `1abc8b878df5b08716107adb467bd013e85b6df4`. Later certification-only documentation commits do not replace that tested implementation source.
+
+Checkpoint 10A.1 is complete. Runtime Store purchase settlement is not complete. The next authorized checkpoint is 10A.2, limited to immutable offer-aware quote authority.
 
 ## Next implementation sequence
 
