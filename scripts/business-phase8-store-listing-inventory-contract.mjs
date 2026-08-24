@@ -214,7 +214,7 @@ if (!acceptedScopeStatuses.some((status) => source.scope.includes(status))) {
 requireTokens(source.scope, "Phase 8A scope lock", [
   "Checkpoint 8A makes a Business Store offer hold real canonical inventory",
   "It does not withdraw listed units and it does not sell them to a buyer",
-  "Do not widen checkpoint 8A into withdrawal or buyer settlement",
+  "buyer payment, seller cash credit, COGS, tax, or inventory settlement",
 ]);
 requireTokens(source.workflow, "Dedicated Phase 8A workflow", [
   "Business Store Listing Inventory V2",

@@ -821,6 +821,15 @@ assert.equal(authority.getListing(gameFive, offerFive).owned, beforeMismatchList
 assert.equal(authority.getOffer(gameFive, offerFive).status, "withdrawal_pending");
 assert.equal(authority.getRequest(mismatch.requestKey).status, "pending");
 authority.corruptProjection(gameFive, businessFive, item, -1);
+const recoveredMismatch = await authority.processDue(mismatch.effectiveAtUs, 25);
+assert.equal(
+  recoveredMismatch.completedCount,
+  1,
+  "A repaired projection must allow the same pending withdrawal to complete exactly once.",
+);
+assert.equal(recoveredMismatch.results[0].requestKey, mismatch.requestKey);
+assert.equal(authority.getRequest(mismatch.requestKey).status, "completed");
+assert.equal(authority.getListing(gameFive, offerFive).owned, 0);
 
 const gameSix = "game_six";
 const batchOffers = [

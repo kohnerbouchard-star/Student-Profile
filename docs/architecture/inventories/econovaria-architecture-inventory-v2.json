@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1075,
+    "sourceFiles": 1077,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 7,
-    "oversizedSourceFiles": 100,
+    "oversizedSourceFiles": 101,
     "capabilityStrings": 124
   },
   "domains": [
@@ -320,7 +320,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 30,
+      "sourceFiles": 32,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -3674,6 +3674,10 @@
       },
       {
         "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
+        "lines": 544
+      },
+      {
+        "file": "backend/src/domains/store/contracts/storeWithdrawalContracts.ts",
         "lines": 544
       },
       {
