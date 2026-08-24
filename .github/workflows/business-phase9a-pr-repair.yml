@@ -1,0 +1,121 @@
+name: Business Phase 9A PR Repair
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/business-phase9a-pr-repair.yml"
+      - ".github/workflows/business-phase9a-repair.yml"
+      - ".github/workflows/business-phase9a-repair-v2.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase9a-pr-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: >-
+      github.event.pull_request.number == 664 &&
+      github.event.pull_request.head.ref == 'feat/business-store-withdrawal-safety-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out Phase 9A branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-withdrawal-safety-v2
+          fetch-depth: 0
+
+      - name: Verify bounded lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_HEAD="b91a8279d14521aee13b493158482875f52d6504"
+          git merge-base --is-ancestor "$SOURCE_HEAD" HEAD
+          ALLOWED='^(.github/workflows/business-phase9a-(pr-repair|repair|repair-v2)\.yml|scripts/business-phase9-store-withdrawal-safety-simulation\.mjs|scripts/business-phase8-store-listing-inventory-contract\.mjs|docs/architecture/inventories/econovaria-architecture-inventory-v2\.json)$'
+          UNEXPECTED="$(git diff --name-only "$SOURCE_HEAD" HEAD -- . | grep -Ev "$ALLOWED" || true)"
+          test -z "$UNEXPECTED" || { printf 'Unexpected repair delta:\n%s\n' "$UNEXPECTED" >&2; exit 1; }
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install deterministic tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Apply idempotent bounded repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_or_verify(path: str, old: str, new: str, label: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text()
+              old_count = text.count(old)
+              new_count = text.count(new)
+              if old_count == 1 and new_count == 0:
+                  file_path.write_text(text.replace(old, new, 1))
+                  return
+              if old_count == 0 and new_count == 1:
+                  return
+              raise SystemExit(
+                  f"{label}: unexpected old/new counts {old_count}/{new_count}"
+              )
+
+          replace_or_verify(
+              "scripts/business-phase9-store-withdrawal-safety-simulation.mjs",
+              "authority.corruptProjection(gameFive, businessFive, item, -1);\n\nconst gameSix = \"game_six\";\n",
+              "authority.corruptProjection(gameFive, businessFive, item, -1);\nconst recoveredMismatch = await authority.processDue(mismatch.effectiveAtUs, 25);\nassert.equal(\n  recoveredMismatch.completedCount,\n  1,\n  \"A repaired projection must allow the same pending withdrawal to complete exactly once.\",\n);\nassert.equal(recoveredMismatch.results[0].requestKey, mismatch.requestKey);\nassert.equal(authority.getRequest(mismatch.requestKey).status, \"completed\");\nassert.equal(authority.getListing(gameFive, offerFive).owned, 0);\n\nconst gameSix = \"game_six\";\n",
+              "Phase 9A recovery test",
+          )
+
+          replace_or_verify(
+              "scripts/business-phase8-store-listing-inventory-contract.mjs",
+              "  \"Do not widen checkpoint 8A into withdrawal or buyer settlement\",\n",
+              "  \"buyer payment, seller cash credit, COGS, tax, or inventory settlement\",\n",
+              "Phase 8A certified boundary token",
+          )
+          PY
+
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Verify focused repaired contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-simulation.mjs
+          node --experimental-strip-types scripts/business-phase9-store-withdrawal-safety-types.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Commit repair and remove temporary workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git rm -f \
+            .github/workflows/business-phase9a-pr-repair.yml \
+            .github/workflows/business-phase9a-repair.yml \
+            .github/workflows/business-phase9a-repair-v2.yml
+          git add \
+            scripts/business-phase9-store-withdrawal-safety-simulation.mjs \
+            scripts/business-phase8-store-listing-inventory-contract.mjs \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --cached --quiet && { echo "No bounded repair changes were produced." >&2; exit 1; }
+          git commit -m "fix(store): repair Phase 9A deterministic verification"
+          git push origin HEAD:feat/business-store-withdrawal-safety-v2
