@@ -123,12 +123,10 @@ The offer row may store only seller-specific commercial state such as price, lif
 
 ```text
 draft -> active | retired
-a ctive -> paused | retired
+active -> paused | retired
 paused -> active | retired
 retired -> terminal
 ```
-
-The implementation must correct the typographic form above to the canonical `active` token in code and tests.
 
 Concurrency rules:
 
@@ -183,7 +181,7 @@ Checkpoint 7A is not complete until one exact implementation SHA passes:
 - deterministic multi-seller one-card aggregation;
 - concurrent duplicate-create and stale-update rejection;
 - two-game isolation;
-- database replay from zero twice and rebuilt-database lint;
+- Database replay from zero twice and rebuilt-database lint;
 - Backend and all Edge typechecks;
 - retained Store purchase, Inventory, Business Economy, Business Banking, workforce/payroll, equipment, manufacturing, Repository Quality, Supply Chain Security, Player Terminal, and Chromium gates;
 - durable execution-plan and execution-log evidence.
