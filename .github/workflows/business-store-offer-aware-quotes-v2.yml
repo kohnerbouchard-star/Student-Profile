@@ -1,0 +1,183 @@
+name: Business Store Offer-Aware Quotes V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/202608251000*.sql"
+      - "backend/src/domains/store/**"
+      - "docs/roadmaps/business-phase10-offer-aware-quote-scope-v1.md"
+      - "scripts/business-phase10-offer-aware-quote-*.mjs"
+      - ".github/workflows/business-store-offer-aware-quotes-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/supabase/migrations/202608251000*.sql"
+      - "backend/src/domains/store/**"
+      - "docs/roadmaps/business-phase10-offer-aware-quote-scope-v1.md"
+      - "scripts/business-phase10-offer-aware-quote-*.mjs"
+      - ".github/workflows/business-store-offer-aware-quotes-v2.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-store-offer-aware-quotes-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-and-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm install --global npm@10.9.8 && npm ci --ignore-scripts
+      - name: Verify Phase 10A.2 and retained Store authorities
+        run: |
+          node scripts/business-phase10-offer-aware-quote-contract.mjs
+          node scripts/business-phase10-offer-aware-quote-simulation.mjs
+          node --experimental-strip-types scripts/business-phase10-offer-aware-quote-types.mjs
+          node scripts/business-phase10-store-purchase-settlement-foundation-contract.mjs
+          node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-lock-simulation.mjs
+          node --experimental-strip-types scripts/business-phase10-store-purchase-settlement-foundation-types.mjs
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-simulation.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-simulation.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase7-store-seller-offers-simulation.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Build architecture inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
+      - name: Upload generated architecture inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase10a2-architecture-inventory
+          path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          retention-days: 14
+      - run: git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - run: npm test
+      - run: npm run security:verify
+
+  retained-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+      - name: Verify retained Business runtime
+        run: |
+          node scripts/business-formation-authority-contract.mjs
+          node scripts/business-economy-authority-contract.mjs
+          node scripts/business-domain-boundary-contract.mjs
+          node scripts/business-stockroom-authority-contract.mjs
+          node scripts/business-store-procurement-authority-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+      - name: Verify Store, Inventory, and all TypeScript
+        working-directory: backend
+        run: |
+          npm run test:player-store-public
+          npm run test:player-inventory
+          npm run typecheck:all
+          deno check --config supabase/functions/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/player-api/index.ts \
+            supabase/functions/player-web-session-api/index.ts
+
+  database-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm install --global npm@10.9.8 && npm ci --ignore-scripts
+      - run: npm run audit:migrations
+      - name: Start disposable Postgres
+        run: |
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+      - name: Replay twice and lint
+        run: |
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+          npx supabase db lint --workdir backend --local --level warning
+      - if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  player-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: player-terminal/package-lock.json
+      - working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - working-directory: player-terminal
+        run: |
+          npm run verify
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
+      - working-directory: player-terminal
+        run: npx playwright install --with-deps chromium
+      - name: Materialize browser fixture
+        run: |
+          mkdir -p player-terminal/frontend/src/core
+          cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+          cat > player-terminal/runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+      - working-directory: player-terminal
+        run: npm run browser
