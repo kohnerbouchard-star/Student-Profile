@@ -184,6 +184,9 @@ class WithdrawalAuthority {
         requestedQuantity: command.mode === "reduce" ? command.quantity : null,
         resumeStatus: offer.status,
         status: "pending",
+        offerVersionAtRequest: offer.version + 1,
+        completionOfferStatus: null,
+        completionOfferVersion: null,
         idempotencyKey: command.idempotencyKey,
         requestHash,
         requestedAtUs: nowUs,
@@ -343,6 +346,12 @@ class WithdrawalAuthority {
     this.projections.get(`${game}|${businessKey}|${itemKey}`).quantity += delta;
   }
 
+  corruptFinishedCurrency(game, businessKey, itemKey, currencyCode) {
+    const projection = this.projections.get(`${game}|${businessKey}|${itemKey}`);
+    this.holdings.get(`${game}|${projection.accountKey}|${itemKey}`).currencyCode =
+      currencyCode;
+  }
+
   async #processRequest(requestKey, asOfUs) {
     return this.#requestLock(requestKey).run(async () => {
       const request = this.requests.get(requestKey);
@@ -401,6 +410,11 @@ class WithdrawalAuthority {
             `${request.game}|${projection.accountKey}|${request.itemKey}`,
           );
           this.#assertProjection(projection, finished);
+          if (finished.currencyCode !== business.currencyCode) {
+            throw new Error(
+              "STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH",
+            );
+          }
           const returnQuantity = request.mode === "full"
             ? listing.owned
             : Math.min(request.requestedQuantity, listing.owned);
@@ -443,6 +457,13 @@ class WithdrawalAuthority {
           }
           this.#assertProjection(projection, finished);
 
+          let nextStatus = request.mode === "full"
+            ? "paused"
+            : request.resumeStatus;
+          if (nextStatus === "active" && listing.owned - listing.reserved <= 0) {
+            nextStatus = "paused";
+          }
+
           request.status = "completed";
           request.nextAttemptAtUs = null;
           request.lastAttemptAtUs = asOfUs;
@@ -451,14 +472,10 @@ class WithdrawalAuthority {
           request.completedAtUs = asOfUs;
           request.returnedQuantity = returnQuantity;
           request.transactionKey = transactionKey;
+          request.completionOfferStatus = nextStatus;
+          request.completionOfferVersion = offer.version + 1;
           request.version += 1;
 
-          let nextStatus = request.mode === "full"
-            ? "paused"
-            : request.resumeStatus;
-          if (nextStatus === "active" && listing.owned - listing.reserved <= 0) {
-            nextStatus = "paused";
-          }
           offer.status = nextStatus;
           offer.resumeStatus = null;
           offer.currentRequestKey = null;
@@ -493,9 +510,13 @@ class WithdrawalAuthority {
     return {
       requestKey: request.requestKey,
       requestStatus: request.status,
-      offerKey: offer.offerKey,
-      offerStatus: offer.status,
-      offerVersion: offer.version,
+      offerKey: request.offerKey,
+      offerStatus: request.status === "pending"
+        ? "withdrawal_pending"
+        : request.completionOfferStatus,
+      offerVersion: request.status === "pending"
+        ? request.offerVersionAtRequest
+        : request.completionOfferVersion,
       mode: request.mode,
       requestedQuantity: request.requestedQuantity,
       requestedAtUs: request.requestedAtUs,
@@ -676,6 +697,26 @@ assert.equal(authority.transactionCount(), 1);
 const processorReplay = await authority.processDue(fullRequest.effectiveAtUs + 1, 25);
 assert.equal(processorReplay.selectedCount, 0);
 assert.equal(authority.transactionCount(), 1);
+const postCompletionMutation = await authority.mutatePrice({
+  game: gameOne,
+  offerKey: offerOne,
+  expectedVersion: 3,
+  unitPrice: 12,
+});
+assert.equal(postCompletionMutation.version, 4);
+const completedRequestReplay = await authority.requestWithdrawal(
+  fullCommand,
+  fullRequest.effectiveAtUs + 2,
+);
+assert.equal(completedRequestReplay.replayed, true);
+assert.equal(completedRequestReplay.requestStatus, "completed");
+assert.equal(completedRequestReplay.offerStatus, "paused");
+assert.equal(
+  completedRequestReplay.offerVersion,
+  3,
+  "Completed replay must return its recorded completion version, not later offer state.",
+);
+assert.equal(authority.getOffer(gameOne, offerOne).version, 4);
 
 const gameTwo = "game_two";
 const businessTwo = literalKey("biz", "3");
@@ -830,6 +871,51 @@ assert.equal(
 assert.equal(recoveredMismatch.results[0].requestKey, mismatch.requestKey);
 assert.equal(authority.getRequest(mismatch.requestKey).status, "completed");
 assert.equal(authority.getListing(gameFive, offerFive).owned, 0);
+
+const currencyGame = "game_currency_integrity";
+const currencyBusiness = literalKey("biz", "e");
+const currencyOffer = literalKey("sof", "3");
+authority.registerOffer({
+  game: currencyGame,
+  businessKey: currencyBusiness,
+  partyKey: literalKey("pty", "f"),
+  offerKey: currencyOffer,
+  itemKey: item,
+  status: "active",
+  finishedOwned: 2,
+  finishedCost: 2,
+  listedOwned: 2,
+  listedCost: 5,
+});
+const currencyRequest = await authority.requestWithdrawal({
+  game: currencyGame,
+  businessKey: currencyBusiness,
+  offerKey: currencyOffer,
+  mode: "full",
+  quantity: null,
+  expectedOfferVersion: 1,
+  idempotencyKey: "withdraw-currency-0007",
+}, t0 + 4_500_000);
+const transactionsBeforeCurrencyFailure = authority.transactionCount();
+authority.corruptFinishedCurrency(currencyGame, currencyBusiness, item, "USD");
+await assert.rejects(
+  () => authority.processDue(currencyRequest.effectiveAtUs, 25),
+  /FINISHED_COST_CURRENCY_MISMATCH/u,
+);
+assert.equal(authority.transactionCount(), transactionsBeforeCurrencyFailure);
+assert.equal(authority.getListing(currencyGame, currencyOffer).owned, 2);
+assert.equal(authority.getRequest(currencyRequest.requestKey).status, "pending");
+authority.corruptFinishedCurrency(currencyGame, currencyBusiness, item, "NRC");
+const recoveredCurrency = await authority.processDue(
+  currencyRequest.effectiveAtUs,
+  25,
+);
+assert.equal(recoveredCurrency.completedCount, 1);
+assert.equal(authority.getFinished(currencyGame, currencyBusiness, item).owned, 4);
+assert.equal(
+  authority.getFinished(currencyGame, currencyBusiness, item).averageUnitCost,
+  3.5,
+);
 
 const replayWorkerGame = "game_replay_worker";
 const replayWorkerBusiness = literalKey("biz", "0");

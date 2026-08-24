@@ -219,6 +219,12 @@ begin
       raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_PROJECTION_MISMATCH'
         using errcode = 'P0001';
     end if;
+    if v_finished_holding.cost_currency_code is not null
+      and v_finished_holding.cost_currency_code is distinct from v_business.currency_code
+    then
+      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH'
+        using errcode = 'P0001';
+    end if;
 
     v_return_quantity := case
       when v_request.mode = 'full' then
@@ -328,6 +334,13 @@ begin
       raise exception 'STORE_WITHDRAWAL_PROCESS_LISTING_HOLDING_MISSING_AFTER_POST'
         using errcode = 'P0001';
     end if;
+    if v_return_quantity > 0
+      and v_finished_holding_after.cost_currency_code
+        is distinct from v_business.currency_code
+    then
+      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_INVALID_AFTER_POST'
+        using errcode = 'P0001';
+    end if;
 
     if v_return_quantity > 0 then
       update public.business_inventory as inventory_row
@@ -361,20 +374,6 @@ begin
         using errcode = 'P0001';
     end if;
 
-    update public.store_offer_withdrawal_requests as request_row
-    set
-      status = 'completed',
-      next_attempt_at = null,
-      last_attempt_at = v_now,
-      last_block_reason = null,
-      attempt_count = request_row.attempt_count + 1,
-      completed_at = v_now,
-      returned_quantity = v_return_quantity,
-      inventory_transaction_id = v_transaction_id,
-      version = request_row.version + 1
-    where request_row.id = v_request.id
-    returning * into v_request;
-
     v_next_status := case
       when v_request.mode = 'full' then 'paused'
       else v_request.resume_status
@@ -387,6 +386,22 @@ begin
     then
       v_next_status := 'paused';
     end if;
+
+    update public.store_offer_withdrawal_requests as request_row
+    set
+      status = 'completed',
+      next_attempt_at = null,
+      last_attempt_at = v_now,
+      last_block_reason = null,
+      attempt_count = request_row.attempt_count + 1,
+      completed_at = v_now,
+      returned_quantity = v_return_quantity,
+      inventory_transaction_id = v_transaction_id,
+      completion_offer_status = v_next_status,
+      completion_offer_version = v_offer.version + 1,
+      version = request_row.version + 1
+    where request_row.id = v_request.id
+    returning * into v_request;
 
     update public.store_seller_offers as offer_row
     set

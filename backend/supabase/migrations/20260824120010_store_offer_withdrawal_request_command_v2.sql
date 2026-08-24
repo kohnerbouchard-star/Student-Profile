@@ -231,6 +231,7 @@ begin
     requested_quantity,
     resume_status,
     status,
+    offer_version_at_request,
     request_idempotency_key,
     request_hash,
     effective_at,
@@ -246,6 +247,7 @@ begin
     case when v_mode = 'reduce' then p_quantity else null end,
     v_offer.status,
     'pending',
+    v_offer.version + 1,
     btrim(p_idempotency_key),
     v_hash,
     statement_timestamp() + interval '5 minutes',
@@ -274,8 +276,14 @@ begin
     'requestKey', v_request.public_key,
     'requestStatus', v_request.status,
     'offerKey', v_offer.public_key,
-    'offerStatus', v_offer.status,
-    'offerVersion', v_offer.version,
+    'offerStatus', case
+      when v_request.status = 'pending' then 'withdrawal_pending'
+      else v_request.completion_offer_status
+    end,
+    'offerVersion', case
+      when v_request.status = 'pending' then v_request.offer_version_at_request
+      else v_request.completion_offer_version
+    end,
     'mode', v_request.mode,
     'requestedQuantity', v_request.requested_quantity,
     'requestedAt', v_request.requested_at,

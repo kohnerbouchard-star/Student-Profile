@@ -25,6 +25,9 @@ create table public.store_offer_withdrawal_requests (
   requested_quantity integer null,
   resume_status text not null,
   status text not null default 'pending',
+  offer_version_at_request bigint not null,
+  completion_offer_status text null,
+  completion_offer_version bigint null,
   request_idempotency_key text not null,
   request_hash text not null,
   requested_at timestamptz not null default statement_timestamp(),
@@ -54,6 +57,22 @@ create table public.store_offer_withdrawal_requests (
     check (resume_status in ('draft','active','paused')),
   constraint store_offer_withdrawals_status_check
     check (status in ('pending','completed')),
+  constraint store_offer_withdrawals_receipt_check
+    check (
+      offer_version_at_request > 0
+      and (
+        (
+          status = 'pending'
+          and completion_offer_status is null
+          and completion_offer_version is null
+        )
+        or (
+          status = 'completed'
+          and completion_offer_status in ('draft','active','paused')
+          and completion_offer_version > offer_version_at_request
+        )
+      )
+    ),
   constraint store_offer_withdrawals_idempotency_check
     check (length(btrim(request_idempotency_key)) between 8 and 160),
   constraint store_offer_withdrawals_request_hash_check
@@ -258,6 +277,9 @@ begin
 
     new.resume_status := v_offer.status;
     new.status := 'pending';
+    new.offer_version_at_request := v_offer.version + 1;
+    new.completion_offer_status := null;
+    new.completion_offer_version := null;
     new.requested_at := statement_timestamp();
     new.effective_at := new.requested_at + interval '5 minutes';
     new.next_attempt_at := new.effective_at;
@@ -287,10 +309,12 @@ begin
       or new.mode is distinct from old.mode
       or new.requested_quantity is distinct from old.requested_quantity
       or new.resume_status is distinct from old.resume_status
+      or new.offer_version_at_request is distinct from old.offer_version_at_request
       or new.request_idempotency_key is distinct from old.request_idempotency_key
       or new.request_hash is distinct from old.request_hash
       or new.requested_at is distinct from old.requested_at
       or new.effective_at is distinct from old.effective_at
+      or new.metadata is distinct from old.metadata
       or new.created_at is distinct from old.created_at
     then
       raise exception 'STORE_WITHDRAWAL_REQUEST_IDENTITY_IMMUTABLE'
@@ -306,6 +330,54 @@ begin
     if v_transition not in ('pending->pending','pending->completed') then
       raise exception 'STORE_WITHDRAWAL_REQUEST_TRANSITION_INVALID:%', v_transition
         using errcode = 'P0001';
+    end if;
+
+    if old.offer_version_at_request is distinct from v_offer.version then
+      raise exception 'STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT'
+        using errcode = 'P0001';
+    end if;
+
+    if v_transition = 'pending->pending' then
+      if new.completion_offer_status is not null
+        or new.completion_offer_version is not null
+        or new.attempt_count <> old.attempt_count + 1
+        or new.last_attempt_at is null
+        or new.last_block_reason is distinct from 'inventory_reserved'
+        or new.next_attempt_at is null
+        or new.next_attempt_at < new.last_attempt_at + interval '1 minute'
+        or new.completed_at is not null
+        or new.returned_quantity is not null
+        or new.inventory_transaction_id is not null
+      then
+        raise exception 'STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID'
+          using errcode = 'P0001';
+      end if;
+    else
+      if new.completion_offer_status is null
+        or new.completion_offer_version is distinct from v_offer.version + 1
+        or new.attempt_count <> old.attempt_count + 1
+        or new.last_attempt_at is null
+        or new.completed_at is distinct from new.last_attempt_at
+        or new.next_attempt_at is not null
+        or new.last_block_reason is not null
+        or (
+          new.mode = 'full'
+          and new.completion_offer_status <> 'paused'
+        )
+        or (
+          new.mode = 'reduce'
+          and not (
+            new.completion_offer_status = new.resume_status
+            or (
+              new.resume_status = 'active'
+              and new.completion_offer_status = 'paused'
+            )
+          )
+        )
+      then
+        raise exception 'STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID'
+          using errcode = 'P0001';
+      end if;
     end if;
 
     new.updated_at := statement_timestamp();

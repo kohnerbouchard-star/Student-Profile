@@ -48,6 +48,10 @@ requireTokens(source.foundation, "Withdrawal request authority", [
   "default ('swr_' || encode(gen_random_bytes(16), 'hex'))",
   "mode in ('full','reduce')",
   "status in ('pending','completed')",
+  "offer_version_at_request bigint not null",
+  "completion_offer_status text null",
+  "completion_offer_version bigint null",
+  "store_offer_withdrawals_receipt_check",
   "effective_at >= requested_at + interval '5 minutes'",
   "store_offer_withdrawals_pending_offer_unique",
   "store_offer_withdrawals_idempotency_unique",
@@ -70,6 +74,9 @@ requireTokens(source.foundation, "Withdrawal request guard", [
   "pending->pending",
   "pending->completed",
   "STORE_WITHDRAWAL_REQUEST_VERSION_INVALID",
+  "STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT",
+  "STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID",
+  "STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID",
 ]);
 requireTokens(source.foundation, "Offer withdrawal lifecycle guard", [
   "STORE_SELLER_OFFER_WITHDRAWAL_SCOPE_INVALID",
@@ -105,6 +112,9 @@ requireTokens(source.request, "Service-only withdrawal request", [
   "version = offer_row.version + 1",
   "'replayed', true",
   "'replayed', false",
+  "v_request.offer_version_at_request",
+  "v_request.completion_offer_status",
+  "v_request.completion_offer_version",
   "to service_role",
 ]);
 const replayIndex = source.request.indexOf(
@@ -158,6 +168,9 @@ requireTokens(source.processor, "Bounded due withdrawal processor", [
   "unit_cost = v_finished_holding_after.average_unit_cost",
   "status = 'completed'",
   "withdrawal_request_id = null",
+  "completion_offer_status = v_next_status",
+  "completion_offer_version = v_offer.version + 1",
+  "STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH",
   "when v_request.mode = 'full' then 'paused'",
   "to service_role",
 ]);

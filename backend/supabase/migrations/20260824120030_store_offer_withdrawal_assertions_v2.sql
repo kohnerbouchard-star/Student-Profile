@@ -32,7 +32,9 @@ begin
   foreach v_column in array array[
     'public_key','game_session_id','offer_id','business_id','seller_party_id',
     'game_item_id','inventory_account_id','mode','requested_quantity',
-    'resume_status','status','request_idempotency_key','request_hash',
+    'resume_status','status','offer_version_at_request',
+    'completion_offer_status','completion_offer_version',
+    'request_idempotency_key','request_hash',
     'requested_at','effective_at','next_attempt_at','last_attempt_at',
     'last_block_reason','attempt_count','completed_at','returned_quantity',
     'inventory_transaction_id','version','metadata','created_at','updated_at'
@@ -81,6 +83,11 @@ begin
     from pg_constraint
     where conrelid = 'public.store_offer_withdrawal_requests'::regclass
       and conname = 'store_offer_withdrawals_completion_check'
+  ) or not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.store_offer_withdrawal_requests'::regclass
+      and conname = 'store_offer_withdrawals_receipt_check'
   ) then
     raise exception 'STORE_WITHDRAWAL_CONSTRAINT_MISSING';
   end if;
@@ -202,6 +209,8 @@ begin
     or position('status = ''withdrawal_pending''' in v_definition) = 0
     or position('withdrawal_effective_at = v_request.effective_at' in v_definition) = 0
     or position('version = offer_row.version + 1' in v_definition) = 0
+    or position('v_request.offer_version_at_request' in v_definition) = 0
+    or position('v_request.completion_offer_status' in v_definition) = 0
   then
     raise exception 'STORE_WITHDRAWAL_REQUEST_FUNCTION_INCOMPLETE';
   end if;
@@ -218,6 +227,9 @@ begin
     or position('quantity = v_finished_holding_after.quantity_owned' in v_definition) = 0
     or position('status = ''completed''' in v_definition) = 0
     or position('withdrawal_request_id = null' in v_definition) = 0
+    or position('completion_offer_status = v_next_status' in v_definition) = 0
+    or position('completion_offer_version = v_offer.version + 1' in v_definition) = 0
+    or position('STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH' in v_definition) = 0
   then
     raise exception 'STORE_WITHDRAWAL_PROCESSOR_INCOMPLETE';
   end if;
@@ -235,6 +247,9 @@ begin
   if position('new.effective_at := new.requested_at + interval ''5 minutes''' in v_definition) = 0
     or position('STORE_WITHDRAWAL_REQUEST_COMPLETED_TERMINAL' in v_definition) = 0
     or position('pending->completed' in v_definition) = 0
+    or position('STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT' in v_definition) = 0
+    or position('STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID' in v_definition) = 0
+    or position('STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID' in v_definition) = 0
   then
     raise exception 'STORE_WITHDRAWAL_REQUEST_GUARD_INCOMPLETE';
   end if;
