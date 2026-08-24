@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   finalize:
-    if: github.event.head_commit.message == 'ops(business): add Phase 7A durable finalizer'
+    if: github.event.head_commit.message == 'ops(business): trigger Phase 7A durable finalizer'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -24,13 +24,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: feat/business-store-seller-offers-v2
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Verify certified implementation parent
+      - name: Verify frozen certified implementation lineage
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "04db81436e75cea6c52d0c720508c3ea12baab05"
+          IMPLEMENTATION_SHA="04db81436e75cea6c52d0c720508c3ea12baab05"
+          git merge-base --is-ancestor "$IMPLEMENTATION_SHA" HEAD
+          test -z "$(git diff --name-only "$IMPLEMENTATION_SHA" HEAD -- . ':(exclude).github/workflows/business-phase7a-durable-finalizer.yml')"
 
       - name: Write durable Phase 7A certification records
         shell: bash
@@ -75,7 +77,7 @@ jobs:
 - standalone Player Terminal and Chromium verification: **PASS**;
 - Database Replay from zero twice and rebuilt-database lint: **PASS** (`32681497737`);
 - Backend Typecheck and backend smoke: **PASS** (`32681497570`);
-- retained timed manufacturing, workforce/equipment resource regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight: **PASS** (`32681497707`);
+- retained timed manufacturing, workforce/equipment regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight: **PASS** (`32681497707`);
 - Business Workforce Payroll V2: **PASS** (`32681497655`);
 - Business Economy V2: **PASS** (`32681497604`);
 - Repository Quality: **PASS** (`32681497750`);
@@ -218,12 +220,13 @@ Exit: seller-specific offers aggregate under one canonical Store product without
             docs/roadmaps/business-v2-development-execution-plan-v1.md \
             docs/roadmaps/business-v2-development-execution-log-v1.md
 
-      - name: Commit and push durable records
+      - name: Commit durable records and remove one-time finalizer
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "econovaria-automation"
           git config user.email "econovaria-automation@users.noreply.github.com"
+          git rm .github/workflows/business-phase7a-durable-finalizer.yml
           git add \
             docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md \
             docs/roadmaps/business-v2-development-execution-plan-v1.md \
