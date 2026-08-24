@@ -47,6 +47,98 @@ begin
       using errcode = 'P0001';
   end if;
 
+  v_lock_key := hashtextextended(
+    concat_ws(':',
+      p_game_session_id::text,
+      lower(btrim(p_business_key)),
+      btrim(p_idempotency_key)
+    ),
+    0
+  );
+  perform pg_advisory_xact_lock(v_lock_key);
+
+  -- Durable replay resolves before active Business validation. The request
+  -- receipt remains authoritative after later Business, seller, catalog, or
+  -- offer lifecycle changes. Do not lock the request row here: due processors
+  -- intentionally lock request -> offer, and a replay-side request lock would
+  -- invert that order and permit a deadlock.
+  select request_row.*
+  into v_request
+  from public.store_offer_withdrawal_requests as request_row
+  join public.business_entities as replay_business
+    on replay_business.game_session_id = request_row.game_session_id
+   and replay_business.id = request_row.business_id
+  where request_row.game_session_id = p_game_session_id
+    and replay_business.public_key = lower(btrim(p_business_key))
+    and request_row.request_idempotency_key = btrim(p_idempotency_key);
+  if found then
+    select offer_row.*
+    into v_offer
+    from public.store_seller_offers as offer_row
+    where offer_row.game_session_id = p_game_session_id
+      and offer_row.id = v_request.offer_id;
+    if not found then
+      raise exception 'STORE_WITHDRAWAL_REPLAY_OFFER_MISSING'
+        using errcode = 'P0001';
+    end if;
+
+    v_hash := encode(
+      extensions.digest(
+        convert_to(
+          concat_ws('|',
+            p_game_session_id::text,
+            v_request.business_id::text,
+            v_request.offer_id::text,
+            v_mode,
+            coalesce(p_quantity::text, ''),
+            p_expected_offer_version::text
+          ),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    );
+
+    if v_offer.public_key is distinct from lower(btrim(p_offer_key))
+      or v_request.request_hash is distinct from v_hash
+    then
+      raise exception 'STORE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
+        using errcode = 'P0001';
+    end if;
+
+    v_transaction_key := null;
+    if v_request.inventory_transaction_id is not null then
+      select transaction_row.public_key
+      into v_transaction_key
+      from public.inventory_transactions as transaction_row
+      where transaction_row.id = v_request.inventory_transaction_id
+        and transaction_row.game_session_id = p_game_session_id;
+    end if;
+
+    return jsonb_build_object(
+      'requestKey', v_request.public_key,
+      'requestStatus', v_request.status,
+      'offerKey', v_offer.public_key,
+      'offerStatus', case
+        when v_request.status = 'pending' then 'withdrawal_pending'
+        else v_request.completion_offer_status
+      end,
+      'offerVersion', case
+        when v_request.status = 'pending' then v_request.offer_version_at_request
+        else v_request.completion_offer_version
+      end,
+      'mode', v_request.mode,
+      'requestedQuantity', v_request.requested_quantity,
+      'requestedAt', v_request.requested_at,
+      'effectiveAt', v_request.effective_at,
+      'nextAttemptAt', v_request.next_attempt_at,
+      'returnedQuantity', v_request.returned_quantity,
+      'transactionKey', v_transaction_key,
+      'replayed', true
+    );
+  end if;
+
   select business_row.*
   into v_business
   from public.business_entities as business_row
@@ -102,59 +194,6 @@ begin
     ),
     'hex'
   );
-
-  v_lock_key := hashtextextended(
-    concat_ws(':',
-      p_game_session_id::text,
-      v_party.id::text,
-      btrim(p_idempotency_key)
-    ),
-    0
-  );
-  perform pg_advisory_xact_lock(v_lock_key);
-
-  -- The offer row is already locked. Do not lock the request row here:
-  -- due processors intentionally lock request -> offer, and an idempotent
-  -- replay-side request lock would invert that order and permit a deadlock.
-  select request_row.*
-  into v_request
-  from public.store_offer_withdrawal_requests as request_row
-  where request_row.game_session_id = p_game_session_id
-    and request_row.seller_party_id = v_party.id
-    and request_row.request_idempotency_key = btrim(p_idempotency_key);
-  if found then
-    if v_request.offer_id is distinct from v_offer.id
-      or v_request.request_hash is distinct from v_hash
-    then
-      raise exception 'STORE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
-        using errcode = 'P0001';
-    end if;
-
-    v_transaction_key := null;
-    if v_request.inventory_transaction_id is not null then
-      select transaction_row.public_key
-      into v_transaction_key
-      from public.inventory_transactions as transaction_row
-      where transaction_row.id = v_request.inventory_transaction_id
-        and transaction_row.game_session_id = p_game_session_id;
-    end if;
-
-    return jsonb_build_object(
-      'requestKey', v_request.public_key,
-      'requestStatus', v_request.status,
-      'offerKey', v_offer.public_key,
-      'offerStatus', v_offer.status,
-      'offerVersion', v_offer.version,
-      'mode', v_request.mode,
-      'requestedQuantity', v_request.requested_quantity,
-      'requestedAt', v_request.requested_at,
-      'effectiveAt', v_request.effective_at,
-      'nextAttemptAt', v_request.next_attempt_at,
-      'returnedQuantity', v_request.returned_quantity,
-      'transactionKey', v_transaction_key,
-      'replayed', true
-    );
-  end if;
 
   if v_offer.version <> p_expected_offer_version then
     raise exception 'STORE_WITHDRAWAL_OFFER_VERSION_CONFLICT'
@@ -276,14 +315,8 @@ begin
     'requestKey', v_request.public_key,
     'requestStatus', v_request.status,
     'offerKey', v_offer.public_key,
-    'offerStatus', case
-      when v_request.status = 'pending' then 'withdrawal_pending'
-      else v_request.completion_offer_status
-    end,
-    'offerVersion', case
-      when v_request.status = 'pending' then v_request.offer_version_at_request
-      else v_request.completion_offer_version
-    end,
+    'offerStatus', 'withdrawal_pending',
+    'offerVersion', v_request.offer_version_at_request,
     'mode', v_request.mode,
     'requestedQuantity', v_request.requested_quantity,
     'requestedAt', v_request.requested_at,

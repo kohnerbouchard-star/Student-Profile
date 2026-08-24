@@ -104,6 +104,7 @@ requireTokens(source.request, "Service-only withdrawal request", [
   "STORE_WITHDRAWAL_IDEMPOTENCY_CONFLICT",
   "STORE_WITHDRAWAL_OFFER_VERSION_CONFLICT",
   "STORE_WITHDRAWAL_REDUCTION_EXCEEDS_AVAILABLE",
+  "STORE_WITHDRAWAL_REPLAY_OFFER_MISSING",
   "pg_advisory_xact_lock",
   "quantity_owned - v_holding.quantity_reserved",
   "status = 'withdrawal_pending'",
@@ -115,21 +116,31 @@ requireTokens(source.request, "Service-only withdrawal request", [
   "v_request.offer_version_at_request",
   "v_request.completion_offer_status",
   "v_request.completion_offer_version",
+  "Durable replay resolves before active Business validation",
+  "replay_business.public_key",
   "to service_role",
 ]);
+const lockIndex = source.request.indexOf("perform pg_advisory_xact_lock(v_lock_key)");
 const replayIndex = source.request.indexOf(
   "from public.store_offer_withdrawal_requests as request_row",
+);
+const activeBusinessIndex = source.request.indexOf(
+  "and business_row.status = 'active'",
 );
 const requestVersionIndex = source.request.indexOf(
   "if v_offer.version <> p_expected_offer_version then",
 );
 if (
+  lockIndex < 0 ||
   replayIndex < 0 ||
+  activeBusinessIndex < 0 ||
   requestVersionIndex < 0 ||
-  replayIndex > requestVersionIndex
+  lockIndex > replayIndex ||
+  replayIndex > activeBusinessIndex ||
+  activeBusinessIndex > requestVersionIndex
 ) {
   throw new Error(
-    "Withdrawal idempotent replay must resolve before current offer-version rejection.",
+    "Committed withdrawal replay must resolve under the idempotency lock before active-Business and current-version validation.",
   );
 }
 const replayLookupEnd = source.request.indexOf("if found then", replayIndex);
@@ -138,12 +149,31 @@ if (
   source.request.slice(replayIndex, replayLookupEnd).includes("for update")
 ) {
   throw new Error(
-    "Withdrawal replay must not lock the request row after locking the offer.",
+    "Withdrawal replay must not lock the request row before the due processor.",
   );
 }
+const replayReturnStart = source.request.indexOf(
+  "return jsonb_build_object(",
+  replayLookupEnd,
+);
+const replayReturn = source.request.slice(replayReturnStart, activeBusinessIndex);
+requireTokens(replayReturn, "Durable withdrawal replay receipt", [
+  "when v_request.status = 'pending' then 'withdrawal_pending'",
+  "else v_request.completion_offer_status",
+  "when v_request.status = 'pending' then v_request.offer_version_at_request",
+  "else v_request.completion_offer_version",
+  "'transactionKey', v_transaction_key",
+  "'replayed', true",
+]);
+forbidTokens(replayReturn, "Durable withdrawal replay receipt", [
+  "'offerStatus', v_offer.status",
+  "'offerVersion', v_offer.version",
+]);
 requireTokens(source.request, "Replay lock-order boundary", [
-  "due processors intentionally lock request -> offer",
-  "replay-side request lock would invert that order and permit a deadlock",
+  "due processors",
+  "lock request -> offer",
+  "replay-side request lock",
+  "invert that order and permit a deadlock",
 ]);
 
 requireTokens(source.processor, "Bounded due withdrawal processor", [
