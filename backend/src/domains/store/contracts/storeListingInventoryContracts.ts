@@ -42,20 +42,29 @@ export class StoreListingInventoryContractError extends Error {
 export function normalizeStockBusinessStoreOfferCommand(
   value: StockBusinessStoreOfferCommand,
 ): StockBusinessStoreOfferCommand {
-  const gameSessionId = value.gameSessionId.trim().toLowerCase();
-  const businessKey = value.businessKey.trim().toLowerCase();
-  const offerKey = value.offerKey.trim().toLowerCase();
-  const idempotencyKey = value.idempotencyKey.trim();
-
-  requirePattern(
-    gameSessionId,
+  const gameSessionId = requireCommandPattern(
+    value.gameSessionId,
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
     "gameSessionId",
   );
-  requirePattern(businessKey, /^biz_[0-9a-f]{32}$/u, "businessKey");
-  requirePattern(offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey");
-  requirePositiveInteger(value.quantity, "quantity");
-  requirePositiveInteger(value.expectedOfferVersion, "expectedOfferVersion");
+  const businessKey = requireCommandPattern(
+    value.businessKey,
+    /^biz_[0-9a-f]{32}$/u,
+    "businessKey",
+  );
+  const offerKey = requireCommandPattern(
+    value.offerKey,
+    /^sof_[0-9a-f]{32}$/u,
+    "offerKey",
+  );
+  const quantity = requireCommandPositiveInteger(value.quantity, "quantity");
+  const expectedOfferVersion = requireCommandPositiveInteger(
+    value.expectedOfferVersion,
+    "expectedOfferVersion",
+  );
+  const idempotencyKey = typeof value.idempotencyKey === "string"
+    ? value.idempotencyKey.trim()
+    : "";
   if (idempotencyKey.length < 8 || idempotencyKey.length > 160) {
     throw contractError(
       "invalid_store_listing_command",
@@ -67,8 +76,8 @@ export function normalizeStockBusinessStoreOfferCommand(
     gameSessionId,
     businessKey,
     offerKey,
-    quantity: value.quantity,
-    expectedOfferVersion: value.expectedOfferVersion,
+    quantity,
+    expectedOfferVersion,
     idempotencyKey,
   };
 }
@@ -134,6 +143,32 @@ export function parseStockBusinessStoreOfferResult(
     ),
     replayed: requireBoolean(row.replayed, "replayed"),
   };
+}
+
+function requireCommandPattern(
+  value: unknown,
+  pattern: RegExp,
+  label: string,
+): string {
+  const text = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!pattern.test(text)) {
+    throw contractError(
+      "invalid_store_listing_command",
+      `${label} has an invalid public format.`,
+    );
+  }
+  return text;
+}
+
+function requireCommandPositiveInteger(value: unknown, label: string): number {
+  const numberValue = Number(value);
+  if (!Number.isInteger(numberValue) || numberValue < 1) {
+    throw contractError(
+      "invalid_store_listing_command",
+      `${label} must be a positive integer.`,
+    );
+  }
+  return numberValue;
 }
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
