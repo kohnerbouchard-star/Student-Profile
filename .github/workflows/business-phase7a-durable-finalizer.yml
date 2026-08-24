@@ -1,0 +1,233 @@
+name: Business Phase 7A Durable Finalizer
+
+on:
+  push:
+    branches:
+      - feat/business-store-seller-offers-v2
+    paths:
+      - ".github/workflows/business-phase7a-durable-finalizer.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase7a-durable-finalizer
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: github.event.head_commit.message == 'ops(business): add Phase 7A durable finalizer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact finalizer head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-seller-offers-v2
+          fetch-depth: 2
+
+      - name: Verify certified implementation parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "04db81436e75cea6c52d0c720508c3ea12baab05"
+
+      - name: Write durable Phase 7A certification records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          implementation_sha = "04db81436e75cea6c52d0c720508c3ea12baab05"
+          dedicated_run = "32681497746"
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected one match, found {count}")
+              return text.replace(old, new, 1)
+
+          scope_path = Path("docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md")
+          scope = scope_path.read_text()
+          scope = replace_once(
+              scope,
+              "**Status:** IN PROGRESS — checkpoint 7A scope locked; implementation not certified\n",
+              "**Status:** COMPLETE — checkpoint 7A certified\n"
+              f"**Certified implementation and exact-head verification source:** `{implementation_sha}`\n"
+              f"**Dedicated certification workflow:** `{dedicated_run}`\n"
+              "**Certification date:** 2026-08-24\n",
+              "scope status",
+          )
+          scope = replace_once(
+              scope,
+              "10. Keep seeded compatibility offers synchronized when existing Store catalog administration changes price, currency, visibility, status, canonical item, or Store stock account.\n",
+              "10. Keep seeded compatibility offers synchronized for permitted price, currency, visibility, and status changes; fail closed on currency changes while current Business offers exist and reject canonical-item or Store-stock-account repointing so compatibility identity and custody remain immutable.\n",
+              "scope compatibility rule",
+          )
+          evidence = f"""## Certification evidence
+
+**Exact certified implementation SHA:** `{implementation_sha}`  
+**Dedicated workflow:** Business Store Seller Offers V2 `{dedicated_run}`
+
+- seller-offer schema, authority, compatibility, aggregation, concurrency, idempotency, two-game isolation, deterministic architecture inventory, and Repository Quality job: **PASS**;
+- retained Business Banking, Business formation, Player Store quote/purchase lifecycle, Inventory lifecycle, and Player route-adapter contracts: **PASS**;
+- standalone Player Terminal and Chromium verification: **PASS**;
+- Database Replay from zero twice and rebuilt-database lint: **PASS** (`32681497737`);
+- Backend Typecheck and backend smoke: **PASS** (`32681497570`);
+- retained timed manufacturing, workforce/equipment resource regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight: **PASS** (`32681497707`);
+- Business Workforce Payroll V2: **PASS** (`32681497655`);
+- Business Economy V2: **PASS** (`32681497604`);
+- Repository Quality: **PASS** (`32681497750`);
+- Supply Chain Security: **PASS** (`32681497690`);
+- Runtime Interaction Wiring: **PASS** (`32681497580`);
+- Admin API Check: **PASS** (`32681497762`);
+- Required Game Market Timezone: **PASS** (`32681497598`);
+- Exchange Calendar Runtime: **PASS** (`32681497593`).
+
+No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred. Later documentation-only commits do not replace `{implementation_sha}` as the exact certified implementation source.
+
+"""
+          scope = replace_once(
+              scope,
+              "## Completion rule\n",
+              evidence + "## Completion rule\n",
+              "scope certification insertion",
+          )
+          scope = replace_once(
+              scope,
+              "## Next step after scope lock\n\nImplement the additive Store-owned offer authority, compatibility backfill/synchronization, service-only Business draft/mutation commands, typed aggregation repository, deterministic tests, and dedicated CI on the stacked draft branch. Do not widen checkpoint 7A into physical Store custody or buyer settlement.\n",
+              "## Next authorized step\n\nCheckpoint 7A is complete. Open a bounded Phase 8 scope for canonical physical Store-listing inventory: resolve an offer-scoped `store_stock` account, move exact unsold units from Business Finished Goods into that account, and preserve custody/provenance without changing buyer quote, payment, or purchase settlement. Withdrawal cooling-off, buyer settlement, automatic sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain unauthorized.\n",
+              "scope next step",
+          )
+          scope_path.write_text(scope)
+
+          plan_path = Path("docs/roadmaps/business-v2-development-execution-plan-v1.md")
+          plan = plan_path.read_text()
+          old_phase7 = """## Phase 7 — Store seller offers and multi-offer catalog presentation
+
+**Status:** OPEN — bounded checkpoint 7A authorized
+
+**Checkpoint 7A boundary:** establish seller-offer identity, lifecycle/version invariants, and catalog aggregation reads by reusing canonical Store, Business, Inventory, money, and economic-party authorities. Physical Store custody, listing-stock transfer, withdrawal safety, buyer settlement, automatic sales convergence, and IPO/equity remain closed for later phases.
+
+- [ ] Introduce seller-offer authority separate from catalog item identity.
+- [ ] Seeded/NPC and Business sellers share one catalog product presentation.
+- [ ] One active offer per Business per item.
+- [ ] Offer price/version/status are server validated.
+- [ ] Add Store aggregation: best price, total available, seller count, offer details.
+- [ ] Give seeded/NPC offers finite stock/replenishment rules.
+
+Exit: duplicate sellers do not create duplicate Store product cards.
+"""
+          new_phase7 = f"""## Phase 7 — Store seller offers and multi-offer catalog presentation
+
+**Status:** FOUNDATION COMPLETE — checkpoint 7A certified exact-head source `{implementation_sha}`; Player presentation cutover remains deferred until offer-aware quote and settlement semantics cannot diverge
+
+**Checkpoint 7A boundary:** seller-offer identity, lifecycle/version invariants, seeded compatibility projection, bounded replenishment policy, and service-owned catalog aggregation reuse canonical Store, Business, Inventory, money, and economic-party authorities. Physical Store custody transfer, withdrawal safety, buyer settlement, automatic sales convergence, and IPO/equity remain closed for later phases.
+
+- [x] Introduce Store-owned seller-offer authority separate from catalog item identity.
+- [x] Aggregate seeded, NPC-capable, and Business seller offers under one canonical product in a service-owned read model; Player-facing presentation remains intentionally deferred.
+- [x] Enforce one current non-retired offer per Business and canonical item plus one active offer per custody account.
+- [x] Server-validate offer price, currency, seller kind, lifecycle, immutable identity/custody, and optimistic version progression.
+- [x] Add deterministic Store aggregation: best price, total canonical availability, seller count, and public offer details.
+- [x] Bind seeded compatibility offers to canonical finite Store inventory and bounded `canonical_supply`; retain bounded NPC seller support for later materialization.
+
+Certified checkpoint:
+
+- **7A:** additive `store_seller_offers` authority; immutable game/catalog/seller identity; service-only idempotent Business draft creation and optimistic mutation; seeded compatibility backfill/synchronization with fail-closed identity/custody rules; canonical Inventory-backed aggregation; typed Store contracts/repository; deterministic concurrency, idempotency, aggregation, and two-game isolation. **Certified implementation and exact-head verification source:** `{implementation_sha}`. Dedicated workflow: `{dedicated_run}`.
+
+Exit: seller-specific offers aggregate under one canonical Store product without duplicating catalog identity. The service foundation is **MET**; Player-facing multi-offer presentation remains deferred until the quote/purchase path becomes offer aware.
+"""
+          plan = replace_once(plan, old_phase7, new_phase7, "execution plan Phase 7")
+          plan_path.write_text(plan)
+
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+          log = log_path.read_text()
+          marker = "## 2026-08-24 — Phase 7A COMPLETE: Store seller-offer authority and aggregation foundation"
+          if marker in log:
+              raise SystemExit("execution log already contains Phase 7A certification")
+          entry = f"""
+
+---
+
+{marker}
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `{implementation_sha}`.
+- Feature branch: `feat/business-store-seller-offers-v2`.
+- Stacked draft PR: #662, based on the clean certified Phase 6 handoff `b4a41fd1f80dbe426e1aa20bd1ff37291dca1fd4` / PR #661.
+- PR #662 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged on `refactor/business-ux-mechanics-v1`.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- Later documentation-only commits record certification and do not replace `{implementation_sha}` as the exact tested source.
+
+### What is now authoritative
+
+- `public.store_seller_offers` is the Store-owned seller-specific commercial authority while `game_items` remains product identity and `store_items` remains Store presentation plus the legacy quote/purchase compatibility channel.
+- Offers use public `sof_...` identity, bounded seeded/NPC/Business seller kinds, draft/active/paused/terminal-retired lifecycle, optimistic versions, immutable identity, and service-derived game/seller/catalog scope.
+- A current Business offer is unique per Business seller and canonical item; one active custody account cannot back multiple active offers.
+- Active offers require a same-game active canonical `store_stock` Inventory account owned by the seller party. Available quantity is derived from canonical holdings and is never persisted as parallel offer quantity.
+- Existing Store administration backfills and synchronizes seeded compatibility offers for permitted price, currency, visibility, and status changes. Canonical item/account repointing is rejected, and currency changes fail closed while current Business offers exist.
+- Service-only commands provide idempotent Business draft creation and optimistic price/state/one-time custody binding without exposing Player mutation routes.
+- The service-owned aggregation groups active inventory-backed offers under one canonical item and returns deterministic best price, total available quantity, seller/offer counts, and public-key-only offer details.
+- Existing Player Store reads, quotes, purchases, Banking/ledger settlement, and buyer Inventory delivery remain unchanged in checkpoint 7A.
+
+### Exact-head verification on `{implementation_sha}`
+
+- **Business Store Seller Offers V2 — PASS** (`{dedicated_run}`): seller-offer authority/simulations, deterministic architecture inventory, retained Banking/Business/Store/Inventory contracts, standalone Player Terminal, and Chromium verification.
+- **Database Replay — PASS** (`32681497737`): complete replay from zero twice plus rebuilt-database lint.
+- **Backend Typecheck — PASS** (`32681497570`): backend typecheck and backend smoke.
+- **Business Timed Manufacturing V2 — PASS** (`32681497707`): retained manufacturing, workforce/equipment regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight.
+- **Business Workforce Payroll V2 — PASS** (`32681497655`).
+- **Business Economy V2 — PASS** (`32681497604`).
+- **Repository Quality — PASS** (`32681497750`).
+- **Supply Chain Security — PASS** (`32681497690`).
+- **Runtime Interaction Wiring — PASS** (`32681497580`).
+- **Admin API Check — PASS** (`32681497762`).
+- **Required Game Market Timezone — PASS** (`32681497598`).
+- **Exchange Calendar Runtime — PASS** (`32681497593`).
+
+### Phase 7A exit result
+
+- Store-owned seller-offer identity separate from catalog identity: **met**.
+- Same-game seller/catalog/currency/custody validation and immutable identity: **met**.
+- Idempotent Business draft creation, optimistic mutation, terminal lifecycle, and concurrency safety: **met**.
+- Seeded compatibility backfill/synchronization with identity and currency guards: **met**.
+- Canonical Inventory-backed multi-seller aggregation without parallel quantity: **met**.
+- Deterministic multi-seller, stale-update, duplicate-create, and two-game isolation tests: **met**.
+- Database, backend, all Edge, retained Business/Banking/Store/Inventory/workforce/equipment/manufacturing, repository, security, Player, and Chromium gates: **met**.
+- No buyer-facing read/quote/purchase cutover, deployment, or live mutation: **met**.
+
+### Decisions and unresolved boundaries
+
+- Store offer identity and aggregation are now authoritative, but buyer-visible multi-offer presentation remains deferred until displayed price, quoted offer, payment, seller revenue, and transferred inventory can settle against one locked offer.
+- A draft Business offer may bind a canonical Store-stock account once; an established non-null custody binding is immutable in checkpoint 7A.
+- Seeded compatibility identity and custody are immutable. Existing Store administration may change permitted commercial presentation fields but cannot repoint the canonical item or stock account underneath an existing offer.
+- Physical Finished Goods-to-Store custody, listing quantity commands, withdrawal cooling-off, offer-aware purchase settlement, automatic demand/sales convergence, equity/IPO, merge, staging, and production deployment remain unauthorized.
+
+### Next authorized step
+
+**Phase 8 — physical Store-listing inventory scope is OPEN.** Start with a bounded stacked checkpoint that creates or resolves canonical offer-scoped `store_stock` custody and moves exact units `Finished Goods -> Store Listing` with idempotency, optimistic offer concurrency, cost/provenance preservation, and two-game isolation. Do not include withdrawal cooling-off, buyer payment/inventory settlement, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation in the first Phase 8 checkpoint.
+"""
+          log_path.write_text(log.rstrip() + entry + "\n")
+          PY
+
+          git diff --check
+          git diff -- docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+
+      - name: Commit and push durable records
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git add \
+            docs/roadmaps/business-phase7-store-seller-offers-scope-v1.md \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+          git diff --cached --quiet && { echo "No durable record changes were produced." >&2; exit 1; }
+          git commit -m "docs(business): certify Phase 7A seller-offer foundation"
+          git push origin HEAD:feat/business-store-seller-offers-v2
