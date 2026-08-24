@@ -1,0 +1,295 @@
+name: Business Phase 9A Receipt and Cost Integrity Repair
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/business-phase9a-receipt-integrity-repair.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase9a-receipt-integrity-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: >-
+      github.event.pull_request.number == 664 &&
+      github.event.pull_request.head.ref == 'feat/business-store-withdrawal-safety-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out Phase 9A branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-withdrawal-safety-v2
+          fetch-depth: 0
+
+      - name: Verify bounded lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_HEAD="9aa3595be3376069a6005e713c982705cf449883"
+          git merge-base --is-ancestor "$SOURCE_HEAD" HEAD
+          test -z "$(git diff --name-only "$SOURCE_HEAD" HEAD -- . \
+            ':(exclude).github/workflows/business-phase9a-receipt-integrity-repair.yml')"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install deterministic tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Harden durable receipts, state transitions, and cost currency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str, label: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected one match, found {count}")
+              file_path.write_text(text.replace(old, new, 1))
+
+          def replace_count(path: str, old: str, new: str, expected: int, label: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text()
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{label}: expected {expected} matches, found {count}")
+              file_path.write_text(text.replace(old, new))
+
+          foundation = "backend/supabase/migrations/20260824120000_store_offer_withdrawal_foundation_v2.sql"
+          request = "backend/supabase/migrations/20260824120010_store_offer_withdrawal_request_command_v2.sql"
+          processor = "backend/supabase/migrations/20260824120020_store_offer_withdrawal_processor_v2.sql"
+          assertions = "backend/supabase/migrations/20260824120030_store_offer_withdrawal_assertions_v2.sql"
+          contract = "scripts/business-phase9-store-withdrawal-safety-contract.mjs"
+          simulation = "scripts/business-phase9-store-withdrawal-safety-simulation.mjs"
+
+          replace_once(
+              foundation,
+              """  resume_status text not null,\n  status text not null default 'pending',\n  request_idempotency_key text not null,\n""",
+              """  resume_status text not null,\n  status text not null default 'pending',\n  offer_version_at_request bigint not null,\n  completion_offer_status text null,\n  completion_offer_version bigint null,\n  request_idempotency_key text not null,\n""",
+              "withdrawal receipt columns",
+          )
+          replace_once(
+              foundation,
+              """  constraint store_offer_withdrawals_status_check\n    check (status in ('pending','completed')),\n  constraint store_offer_withdrawals_idempotency_check\n""",
+              """  constraint store_offer_withdrawals_status_check\n    check (status in ('pending','completed')),\n  constraint store_offer_withdrawals_receipt_check\n    check (\n      offer_version_at_request > 0\n      and (\n        (\n          status = 'pending'\n          and completion_offer_status is null\n          and completion_offer_version is null\n        )\n        or (\n          status = 'completed'\n          and completion_offer_status in ('draft','active','paused')\n          and completion_offer_version > offer_version_at_request\n        )\n      )\n    ),\n  constraint store_offer_withdrawals_idempotency_check\n""",
+              "withdrawal receipt constraint",
+          )
+          replace_once(
+              foundation,
+              """    new.resume_status := v_offer.status;\n    new.status := 'pending';\n    new.requested_at := statement_timestamp();\n""",
+              """    new.resume_status := v_offer.status;\n    new.status := 'pending';\n    new.offer_version_at_request := v_offer.version + 1;\n    new.completion_offer_status := null;\n    new.completion_offer_version := null;\n    new.requested_at := statement_timestamp();\n""",
+              "withdrawal initial receipt state",
+          )
+          replace_once(
+              foundation,
+              """      or new.resume_status is distinct from old.resume_status\n      or new.request_idempotency_key is distinct from old.request_idempotency_key\n""",
+              """      or new.resume_status is distinct from old.resume_status\n      or new.offer_version_at_request is distinct from old.offer_version_at_request\n      or new.request_idempotency_key is distinct from old.request_idempotency_key\n""",
+              "withdrawal immutable request version",
+          )
+          replace_once(
+              foundation,
+              """      or new.effective_at is distinct from old.effective_at\n      or new.created_at is distinct from old.created_at\n""",
+              """      or new.effective_at is distinct from old.effective_at\n      or new.metadata is distinct from old.metadata\n      or new.created_at is distinct from old.created_at\n""",
+              "withdrawal immutable provenance",
+          )
+          replace_once(
+              foundation,
+              """    v_transition := old.status || '->' || new.status;\n    if v_transition not in ('pending->pending','pending->completed') then\n      raise exception 'STORE_WITHDRAWAL_REQUEST_TRANSITION_INVALID:%', v_transition\n        using errcode = 'P0001';\n    end if;\n\n    new.updated_at := statement_timestamp();\n""",
+              """    v_transition := old.status || '->' || new.status;\n    if v_transition not in ('pending->pending','pending->completed') then\n      raise exception 'STORE_WITHDRAWAL_REQUEST_TRANSITION_INVALID:%', v_transition\n        using errcode = 'P0001';\n    end if;\n\n    if old.offer_version_at_request is distinct from v_offer.version then\n      raise exception 'STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT'\n        using errcode = 'P0001';\n    end if;\n\n    if v_transition = 'pending->pending' then\n      if new.completion_offer_status is not null\n        or new.completion_offer_version is not null\n        or new.attempt_count <> old.attempt_count + 1\n        or new.last_attempt_at is null\n        or new.last_block_reason is distinct from 'inventory_reserved'\n        or new.next_attempt_at is null\n        or new.next_attempt_at < new.last_attempt_at + interval '1 minute'\n        or new.completed_at is not null\n        or new.returned_quantity is not null\n        or new.inventory_transaction_id is not null\n      then\n        raise exception 'STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID'\n          using errcode = 'P0001';\n      end if;\n    else\n      if new.completion_offer_status is null\n        or new.completion_offer_version is distinct from v_offer.version + 1\n        or new.attempt_count <> old.attempt_count + 1\n        or new.last_attempt_at is null\n        or new.completed_at is distinct from new.last_attempt_at\n        or new.next_attempt_at is not null\n        or new.last_block_reason is not null\n        or (\n          new.mode = 'full'\n          and new.completion_offer_status <> 'paused'\n        )\n        or (\n          new.mode = 'reduce'\n          and not (\n            new.completion_offer_status = new.resume_status\n            or (\n              new.resume_status = 'active'\n              and new.completion_offer_status = 'paused'\n            )\n          )\n        )\n      then\n        raise exception 'STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID'\n          using errcode = 'P0001';\n      end if;\n    end if;\n\n    new.updated_at := statement_timestamp();\n""",
+              "withdrawal terminal and retry state guard",
+          )
+
+          replace_once(
+              request,
+              """    resume_status,\n    status,\n    request_idempotency_key,\n""",
+              """    resume_status,\n    status,\n    offer_version_at_request,\n    request_idempotency_key,\n""",
+              "request receipt insert columns",
+          )
+          replace_once(
+              request,
+              """    v_offer.status,\n    'pending',\n    btrim(p_idempotency_key),\n""",
+              """    v_offer.status,\n    'pending',\n    v_offer.version + 1,\n    btrim(p_idempotency_key),\n""",
+              "request receipt insert values",
+          )
+          replace_count(
+              request,
+              """    'offerStatus', v_offer.status,\n    'offerVersion', v_offer.version,\n""",
+              """    'offerStatus', case\n      when v_request.status = 'pending' then 'withdrawal_pending'\n      else v_request.completion_offer_status\n    end,\n    'offerVersion', case\n      when v_request.status = 'pending' then v_request.offer_version_at_request\n      else v_request.completion_offer_version\n    end,\n""",
+              2,
+              "recorded replay receipt",
+          )
+
+          replace_once(
+              processor,
+              """    if v_projection.quantity is distinct from v_finished_holding.quantity_owned\n      or v_projection.unit_cost is distinct from v_finished_holding.average_unit_cost\n      or v_projection.total_cost_basis is distinct from round(\n        v_finished_holding.quantity_owned * v_finished_holding.average_unit_cost,\n        4\n      )\n    then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_PROJECTION_MISMATCH'\n        using errcode = 'P0001';\n    end if;\n\n    v_return_quantity := case\n""",
+              """    if v_projection.quantity is distinct from v_finished_holding.quantity_owned\n      or v_projection.unit_cost is distinct from v_finished_holding.average_unit_cost\n      or v_projection.total_cost_basis is distinct from round(\n        v_finished_holding.quantity_owned * v_finished_holding.average_unit_cost,\n        4\n      )\n    then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_PROJECTION_MISMATCH'\n        using errcode = 'P0001';\n    end if;\n    if v_finished_holding.cost_currency_code is not null\n      and v_finished_holding.cost_currency_code is distinct from v_business.currency_code\n    then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH'\n        using errcode = 'P0001';\n    end if;\n\n    v_return_quantity := case\n""",
+              "finished-goods currency precondition",
+          )
+          replace_once(
+              processor,
+              """    if not found then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_LISTING_HOLDING_MISSING_AFTER_POST'\n        using errcode = 'P0001';\n    end if;\n\n    if v_return_quantity > 0 then\n      update public.business_inventory as inventory_row\n""",
+              """    if not found then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_LISTING_HOLDING_MISSING_AFTER_POST'\n        using errcode = 'P0001';\n    end if;\n    if v_return_quantity > 0\n      and v_finished_holding_after.cost_currency_code\n        is distinct from v_business.currency_code\n    then\n      raise exception 'STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_INVALID_AFTER_POST'\n        using errcode = 'P0001';\n    end if;\n\n    if v_return_quantity > 0 then\n      update public.business_inventory as inventory_row\n""",
+              "finished-goods currency postcondition",
+          )
+          replace_once(
+              processor,
+              """    update public.store_offer_withdrawal_requests as request_row\n    set\n      status = 'completed',\n      next_attempt_at = null,\n      last_attempt_at = v_now,\n      last_block_reason = null,\n      attempt_count = request_row.attempt_count + 1,\n      completed_at = v_now,\n      returned_quantity = v_return_quantity,\n      inventory_transaction_id = v_transaction_id,\n      version = request_row.version + 1\n    where request_row.id = v_request.id\n    returning * into v_request;\n\n    v_next_status := case\n      when v_request.mode = 'full' then 'paused'\n      else v_request.resume_status\n    end;\n    if v_next_status = 'active'\n      and (\n        v_listing_holding_after.quantity_owned\n          - v_listing_holding_after.quantity_reserved\n      ) <= 0\n    then\n      v_next_status := 'paused';\n    end if;\n\n    update public.store_seller_offers as offer_row\n""",
+              """    v_next_status := case\n      when v_request.mode = 'full' then 'paused'\n      else v_request.resume_status\n    end;\n    if v_next_status = 'active'\n      and (\n        v_listing_holding_after.quantity_owned\n          - v_listing_holding_after.quantity_reserved\n      ) <= 0\n    then\n      v_next_status := 'paused';\n    end if;\n\n    update public.store_offer_withdrawal_requests as request_row\n    set\n      status = 'completed',\n      next_attempt_at = null,\n      last_attempt_at = v_now,\n      last_block_reason = null,\n      attempt_count = request_row.attempt_count + 1,\n      completed_at = v_now,\n      returned_quantity = v_return_quantity,\n      inventory_transaction_id = v_transaction_id,\n      completion_offer_status = v_next_status,\n      completion_offer_version = v_offer.version + 1,\n      version = request_row.version + 1\n    where request_row.id = v_request.id\n    returning * into v_request;\n\n    update public.store_seller_offers as offer_row\n""",
+              "recorded completion receipt",
+          )
+
+          replace_once(
+              assertions,
+              """    'resume_status','status','request_idempotency_key','request_hash',\n""",
+              """    'resume_status','status','offer_version_at_request',\n    'completion_offer_status','completion_offer_version',\n    'request_idempotency_key','request_hash',\n""",
+              "asserted receipt columns",
+          )
+          replace_once(
+              assertions,
+              """  ) or not exists (\n    select 1\n    from pg_constraint\n    where conrelid = 'public.store_offer_withdrawal_requests'::regclass\n      and conname = 'store_offer_withdrawals_completion_check'\n  ) then\n""",
+              """  ) or not exists (\n    select 1\n    from pg_constraint\n    where conrelid = 'public.store_offer_withdrawal_requests'::regclass\n      and conname = 'store_offer_withdrawals_completion_check'\n  ) or not exists (\n    select 1\n    from pg_constraint\n    where conrelid = 'public.store_offer_withdrawal_requests'::regclass\n      and conname = 'store_offer_withdrawals_receipt_check'\n  ) then\n""",
+              "asserted receipt constraint",
+          )
+          replace_once(
+              assertions,
+              """    or position('version = offer_row.version + 1' in v_definition) = 0\n""",
+              """    or position('version = offer_row.version + 1' in v_definition) = 0\n    or position('v_request.offer_version_at_request' in v_definition) = 0\n    or position('v_request.completion_offer_status' in v_definition) = 0\n""",
+              "asserted recorded request receipt",
+          )
+          replace_once(
+              assertions,
+              """    or position('withdrawal_request_id = null' in v_definition) = 0\n""",
+              """    or position('withdrawal_request_id = null' in v_definition) = 0\n    or position('completion_offer_status = v_next_status' in v_definition) = 0\n    or position('completion_offer_version = v_offer.version + 1' in v_definition) = 0\n    or position('STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH' in v_definition) = 0\n""",
+              "asserted processor receipt and currency",
+          )
+          replace_once(
+              assertions,
+              """    or position('pending->completed' in v_definition) = 0\n""",
+              """    or position('pending->completed' in v_definition) = 0\n    or position('STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT' in v_definition) = 0\n    or position('STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID' in v_definition) = 0\n    or position('STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID' in v_definition) = 0\n""",
+              "asserted request state machine",
+          )
+
+          replace_once(
+              contract,
+              """  \"resume_status\",\n  \"status in ('pending','completed')\",\n""",
+              """  \"resume_status\",\n  \"offer_version_at_request bigint not null\",\n  \"completion_offer_status text null\",\n  \"completion_offer_version bigint null\",\n  \"status in ('pending','completed')\",\n  \"store_offer_withdrawals_receipt_check\",\n""",
+              "structural receipt authority",
+          )
+          replace_once(
+              contract,
+              """  \"STORE_WITHDRAWAL_REQUEST_VERSION_INVALID\",\n]);\n""",
+              """  \"STORE_WITHDRAWAL_REQUEST_VERSION_INVALID\",\n  \"STORE_WITHDRAWAL_REQUEST_OFFER_VERSION_DRIFT\",\n  \"STORE_WITHDRAWAL_REQUEST_RETRY_STATE_INVALID\",\n  \"STORE_WITHDRAWAL_REQUEST_COMPLETION_STATE_INVALID\",\n]);\n""",
+              "structural request state guard",
+          )
+          replace_once(
+              contract,
+              """  \"'replayed', false\",\n  \"to service_role\",\n]);\n""",
+              """  \"'replayed', false\",\n  \"v_request.offer_version_at_request\",\n  \"v_request.completion_offer_status\",\n  \"v_request.completion_offer_version\",\n  \"to service_role\",\n]);\n""",
+              "structural recorded replay receipt",
+          )
+          replace_once(
+              contract,
+              """  \"withdrawal_request_id = null\",\n  \"when v_request.mode = 'full' then 'paused'\",\n""",
+              """  \"withdrawal_request_id = null\",\n  \"completion_offer_status = v_next_status\",\n  \"completion_offer_version = v_offer.version + 1\",\n  \"STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH\",\n  \"when v_request.mode = 'full' then 'paused'\",\n""",
+              "structural processor receipt and currency",
+          )
+
+          replace_once(
+              simulation,
+              """        resumeStatus: offer.status,\n        status: \"pending\",\n        idempotencyKey: command.idempotencyKey,\n""",
+              """        resumeStatus: offer.status,\n        status: \"pending\",\n        offerVersionAtRequest: offer.version + 1,\n        completionOfferStatus: null,\n        completionOfferVersion: null,\n        idempotencyKey: command.idempotencyKey,\n""",
+              "simulation request receipt",
+          )
+          replace_once(
+              simulation,
+              """          this.#assertProjection(projection, finished);\n          const returnQuantity = request.mode === \"full\"\n""",
+              """          this.#assertProjection(projection, finished);\n          if (finished.currencyCode !== business.currencyCode) {\n            throw new Error(\n              \"STORE_WITHDRAWAL_PROCESS_FINISHED_COST_CURRENCY_MISMATCH\",\n            );\n          }\n          const returnQuantity = request.mode === \"full\"\n""",
+              "simulation finished currency precondition",
+          )
+          replace_once(
+              simulation,
+              """          request.status = \"completed\";\n          request.nextAttemptAtUs = null;\n          request.lastAttemptAtUs = asOfUs;\n          request.lastBlockReason = null;\n          request.attemptCount += 1;\n          request.completedAtUs = asOfUs;\n          request.returnedQuantity = returnQuantity;\n          request.transactionKey = transactionKey;\n          request.version += 1;\n\n          let nextStatus = request.mode === \"full\"\n            ? \"paused\"\n            : request.resumeStatus;\n          if (nextStatus === \"active\" && listing.owned - listing.reserved <= 0) {\n            nextStatus = \"paused\";\n          }\n          offer.status = nextStatus;\n""",
+              """          let nextStatus = request.mode === \"full\"\n            ? \"paused\"\n            : request.resumeStatus;\n          if (nextStatus === \"active\" && listing.owned - listing.reserved <= 0) {\n            nextStatus = \"paused\";\n          }\n\n          request.status = \"completed\";\n          request.nextAttemptAtUs = null;\n          request.lastAttemptAtUs = asOfUs;\n          request.lastBlockReason = null;\n          request.attemptCount += 1;\n          request.completedAtUs = asOfUs;\n          request.returnedQuantity = returnQuantity;\n          request.transactionKey = transactionKey;\n          request.completionOfferStatus = nextStatus;\n          request.completionOfferVersion = offer.version + 1;\n          request.version += 1;\n\n          offer.status = nextStatus;\n""",
+              "simulation recorded completion receipt",
+          )
+          replace_once(
+              simulation,
+              """      offerKey: offer.offerKey,\n      offerStatus: offer.status,\n      offerVersion: offer.version,\n""",
+              """      offerKey: request.offerKey,\n      offerStatus: request.status === \"pending\"\n        ? \"withdrawal_pending\"\n        : request.completionOfferStatus,\n      offerVersion: request.status === \"pending\"\n        ? request.offerVersionAtRequest\n        : request.completionOfferVersion,\n""",
+              "simulation stable request receipt",
+          )
+          replace_once(
+              simulation,
+              """  corruptProjection(game, businessKey, itemKey, delta) {\n    this.projections.get(`${game}|${businessKey}|${itemKey}`).quantity += delta;\n  }\n\n  async #processRequest(requestKey, asOfUs) {\n""",
+              """  corruptProjection(game, businessKey, itemKey, delta) {\n    this.projections.get(`${game}|${businessKey}|${itemKey}`).quantity += delta;\n  }\n\n  corruptFinishedCurrency(game, businessKey, itemKey, currencyCode) {\n    const projection = this.projections.get(`${game}|${businessKey}|${itemKey}`);\n    this.holdings.get(`${game}|${projection.accountKey}|${itemKey}`).currencyCode =\n      currencyCode;\n  }\n\n  async #processRequest(requestKey, asOfUs) {\n""",
+              "simulation currency corruption helper",
+          )
+          replace_once(
+              simulation,
+              """assert.equal(processorReplay.selectedCount, 0);\nassert.equal(authority.transactionCount(), 1);\n\nconst gameTwo = \"game_two\";\n""",
+              """assert.equal(processorReplay.selectedCount, 0);\nassert.equal(authority.transactionCount(), 1);\nconst postCompletionMutation = await authority.mutatePrice({\n  game: gameOne,\n  offerKey: offerOne,\n  expectedVersion: 3,\n  unitPrice: 12,\n});\nassert.equal(postCompletionMutation.version, 4);\nconst completedRequestReplay = await authority.requestWithdrawal(\n  fullCommand,\n  fullRequest.effectiveAtUs + 2,\n);\nassert.equal(completedRequestReplay.replayed, true);\nassert.equal(completedRequestReplay.requestStatus, \"completed\");\nassert.equal(completedRequestReplay.offerStatus, \"paused\");\nassert.equal(\n  completedRequestReplay.offerVersion,\n  3,\n  \"Completed replay must return its recorded completion version, not later offer state.\",\n);\nassert.equal(authority.getOffer(gameOne, offerOne).version, 4);\n\nconst gameTwo = \"game_two\";\n""",
+              "completed replay stability simulation",
+          )
+          replace_once(
+              simulation,
+              """assert.equal(authority.getRequest(mismatch.requestKey).status, \"completed\");\nassert.equal(authority.getListing(gameFive, offerFive).owned, 0);\n\nconst replayWorkerGame = \"game_replay_worker\";\n""",
+              """assert.equal(authority.getRequest(mismatch.requestKey).status, \"completed\");\nassert.equal(authority.getListing(gameFive, offerFive).owned, 0);\n\nconst currencyGame = \"game_currency_integrity\";\nconst currencyBusiness = literalKey(\"biz\", \"e\");\nconst currencyOffer = literalKey(\"sof\", \"3\");\nauthority.registerOffer({\n  game: currencyGame,\n  businessKey: currencyBusiness,\n  partyKey: literalKey(\"pty\", \"f\"),\n  offerKey: currencyOffer,\n  itemKey: item,\n  status: \"active\",\n  finishedOwned: 2,\n  finishedCost: 2,\n  listedOwned: 2,\n  listedCost: 5,\n});\nconst currencyRequest = await authority.requestWithdrawal({\n  game: currencyGame,\n  businessKey: currencyBusiness,\n  offerKey: currencyOffer,\n  mode: \"full\",\n  quantity: null,\n  expectedOfferVersion: 1,\n  idempotencyKey: \"withdraw-currency-0007\",\n}, t0 + 4_500_000);\nconst transactionsBeforeCurrencyFailure = authority.transactionCount();\nauthority.corruptFinishedCurrency(currencyGame, currencyBusiness, item, \"USD\");\nawait assert.rejects(\n  () => authority.processDue(currencyRequest.effectiveAtUs, 25),\n  /FINISHED_COST_CURRENCY_MISMATCH/u,\n);\nassert.equal(authority.transactionCount(), transactionsBeforeCurrencyFailure);\nassert.equal(authority.getListing(currencyGame, currencyOffer).owned, 2);\nassert.equal(authority.getRequest(currencyRequest.requestKey).status, \"pending\");\nauthority.corruptFinishedCurrency(currencyGame, currencyBusiness, item, \"NRC\");\nconst recoveredCurrency = await authority.processDue(\n  currencyRequest.effectiveAtUs,\n  25,\n);\nassert.equal(recoveredCurrency.completedCount, 1);\nassert.equal(authority.getFinished(currencyGame, currencyBusiness, item).owned, 4);\nassert.equal(\n  authority.getFinished(currencyGame, currencyBusiness, item).averageUnitCost,\n  3.5,\n);\n\nconst replayWorkerGame = \"game_replay_worker\";\n""",
+              "finished-goods currency rollback simulation",
+          )
+          PY
+
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+
+      - name: Verify integrity hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-simulation.mjs
+          node --experimental-strip-types scripts/business-phase9-store-withdrawal-safety-types.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-simulation.mjs
+          node --experimental-strip-types scripts/business-phase8-store-listing-inventory-types.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase7-store-seller-offers-simulation.mjs
+          node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --check
+
+      - name: Commit hardening and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git rm .github/workflows/business-phase9a-receipt-integrity-repair.yml
+          git add \
+            backend/supabase/migrations/20260824120000_store_offer_withdrawal_foundation_v2.sql \
+            backend/supabase/migrations/20260824120010_store_offer_withdrawal_request_command_v2.sql \
+            backend/supabase/migrations/20260824120020_store_offer_withdrawal_processor_v2.sql \
+            backend/supabase/migrations/20260824120030_store_offer_withdrawal_assertions_v2.sql \
+            scripts/business-phase9-store-withdrawal-safety-contract.mjs \
+            scripts/business-phase9-store-withdrawal-safety-simulation.mjs \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --cached --quiet && { echo "No receipt or cost-integrity changes were produced." >&2; exit 1; }
+          git commit -m "fix(store): harden withdrawal receipts and cost integrity"
+          git push origin HEAD:feat/business-store-withdrawal-safety-v2
