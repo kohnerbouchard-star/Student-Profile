@@ -3,30 +3,50 @@ name: Business Store Withdrawal Safety V2
 on:
   pull_request:
     paths:
+      - "backend/package.json"
+      - "backend/src/domains/store/**"
+      - "backend/src/domains/inventory/**"
+      - "backend/src/domains/business/**"
+      - "backend/supabase/migrations/202608241200*.sql"
+      - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
+      - "docs/roadmaps/business-phase9-store-withdrawal-safety-scope-v1.md"
+      - "scripts/business-phase9-store-withdrawal-safety-*.mjs"
+      - "scripts/business-phase8-store-listing-inventory-*.mjs"
+      - "scripts/business-phase7-store-seller-offers-*.mjs"
+      - ".github/workflows/business-store-withdrawal-safety-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/package.json"
+      - "backend/src/domains/store/**"
+      - "backend/src/domains/inventory/**"
+      - "backend/src/domains/business/**"
+      - "backend/supabase/migrations/202608241200*.sql"
+      - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
+      - "scripts/business-phase9-store-withdrawal-safety-*.mjs"
+      - "scripts/business-phase8-store-listing-inventory-*.mjs"
+      - "scripts/business-phase7-store-seller-offers-*.mjs"
       - ".github/workflows/business-store-withdrawal-safety-v2.yml"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: business-store-withdrawal-safety-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  apply-bounded-repair:
-    if: github.event.pull_request.number == 664
+  verify-withdrawal-authority:
+    name: Verify withdrawal authority
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
-      - name: Check out Phase 9A branch
+      - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: feat/business-store-withdrawal-safety-v2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-
-      - name: Verify exact repair trigger
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git log -1 --format=%s)" = "ops(business): execute resilient Phase 9A receipt repair"
-          git merge-base --is-ancestor \
-            9aa3595be3376069a6005e713c982705cf449883 HEAD
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -35,89 +55,13 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install deterministic tooling
-        run: |
-          npm install --global npm@10.9.8
-          npm ci --ignore-scripts
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
 
-      - name: Apply reviewed integrity transformation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show \
-            78d63a793045437cb00d298af9c99d539797a3d2:.github/workflows/business-phase9a-receipt-integrity-repair.yml \
-            > /tmp/receipt-source.yml
-          python3 - <<'PYEXTRACT'
-          from pathlib import Path
-          import re
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
 
-          text = Path('/tmp/receipt-source.yml').read_text()
-          old = "              2,\n              \"recorded replay receipt\",\n"
-          new = "              1,\n              \"recorded replay receipt\",\n"
-          if text.count(old) != 1:
-              raise SystemExit('receipt match-count target is not unique')
-          lines = text.replace(old, new, 1).splitlines()
-          start = next(
-              i for i, line in enumerate(lines)
-              if line.strip() == "python3 - <<'PY'"
-          )
-          end = next(
-              i for i in range(start + 1, len(lines))
-              if lines[i].strip() == 'PY'
-          )
-          body = [
-              line[10:] if line.startswith('          ') else line
-              for line in lines[start + 1:end]
-          ]
-          script = '\n'.join(body) + '\n'
-          stale_pattern = re.compile(
-              r'\nreplace_once\(\n    contract,\n.*?\n'
-              r'    "structural receipt authority",\n\)\n',
-              re.S,
-          )
-          script, count = stale_pattern.subn('\n', script, count=1)
-          if count != 1:
-              raise SystemExit('stale structural receipt block was not unique')
-          Path('/tmp/receipt-hardening.py').write_text(script)
-          PYEXTRACT
-          python3 /tmp/receipt-hardening.py
-          python3 - <<'PYPATCH'
-          from pathlib import Path
-
-          path = Path('scripts/business-phase9-store-withdrawal-safety-contract.mjs')
-          text = path.read_text()
-          old = (
-              '  "status in (\'pending\',\'completed\')",\n'
-              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
-          )
-          new = (
-              '  "status in (\'pending\',\'completed\')",\n'
-              '  "offer_version_at_request bigint not null",\n'
-              '  "completion_offer_status text null",\n'
-              '  "completion_offer_version bigint null",\n'
-              '  "store_offer_withdrawals_receipt_check",\n'
-              '  "effective_at >= requested_at + interval \'5 minutes\'",\n'
-          )
-          if text.count(old) != 1:
-              raise SystemExit('current structural receipt anchor is not unique')
-          path.write_text(text.replace(old, new, 1))
-          PYPATCH
-
-      - name: Restore permanent workflow and remove temporary files
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show \
-            5a2249dc543f3d54fcf401ac8b11d0226c145ceb:.github/workflows/business-store-withdrawal-safety-v2.yml \
-            > .github/workflows/business-store-withdrawal-safety-v2.yml
-          git rm -f \
-            .github/workflows/business-phase9a-receipt-integrity-repair.yml \
-            .github/workflows/business-phase9a-receipt-runner-fix.yml \
-            .github/workflows/business-phase9a-receipt-integrity-executor.yml
-          node scripts/architecture/build-architecture-inventory.mjs
-          git diff --check
-
-      - name: Verify hardened authority
+      - name: Verify Phase 9A timing, reservation, and concurrency authority
         shell: bash
         run: |
           set -euo pipefail
@@ -131,18 +75,136 @@ jobs:
           node scripts/business-phase7-store-seller-offers-simulation.mjs
           node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
           node scripts/validate-supabase-migrations.mjs
-          node scripts/architecture/build-architecture-inventory.mjs
-          git diff --exit-code -- \
-            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
           git diff --check
 
-      - name: Commit hardened candidate
+      - name: Verify deterministic architecture inventory
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "econovaria-automation"
-          git config user.email "econovaria-automation@users.noreply.github.com"
-          git add -A
-          git diff --cached --quiet && { echo "No hardened candidate delta." >&2; exit 1; }
-          git commit -m "fix(store): harden withdrawal receipts and cost integrity"
-          git push origin HEAD:feat/business-store-withdrawal-safety-v2
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+      - name: Run repository quality suite
+        run: npm test
+
+  verify-retained-economic-runtime:
+    name: Verify retained Store, Inventory, and Business runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify retained Business economic authorities
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase6-manufacturing-foundation-contract.mjs
+          node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
+          node scripts/business-phase6-manufacturing-start-contract.mjs
+          node scripts/business-phase6-manufacturing-start-simulation.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-simulation.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-simulation.mjs
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
+      - name: Verify retained Store and Inventory lifecycles
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:player-store-public
+          npm run test:player-inventory
+
+      - name: Verify all backend and Edge TypeScript
+        working-directory: backend
+        run: npm run typecheck:all
+
+  verify-player-terminal-and-chromium:
+    name: Verify retained Player Terminal and Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: player-terminal/package-lock.json
+
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify standalone Player Terminal
+        working-directory: player-terminal
+        run: npm run verify
+
+      - name: Install Chromium
+        working-directory: player-terminal
+        run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser-only runtime fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p player-terminal/frontend/src/core
+          cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+          cat > player-terminal/runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+
+      - name: Run Chromium browser verification
+        working-directory: player-terminal
+        run: npm run browser
