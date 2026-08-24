@@ -1,5 +1,6 @@
 name: Business Phase 8A PR Finalizer
 
+# One-time certification writer for the frozen Phase 8A implementation SHA.
 on:
   pull_request:
     types: [synchronize]
