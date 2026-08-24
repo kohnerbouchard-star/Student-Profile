@@ -32,13 +32,13 @@ jobs:
         run: |
           set -euo pipefail
           IMPLEMENTATION_SHA="bf17e2493654620229d1acdeaae0fbaba21caf63"
-          test "$(git log -1 --format=%s)" = "ops(business): execute Phase 9A durable certification"
+          test "$(git log -1 --format=%s)" = "ops(business): retry Phase 9A durable certification"
           git merge-base --is-ancestor "$IMPLEMENTATION_SHA" HEAD
           test -z "$(git diff --name-only "$IMPLEMENTATION_SHA" HEAD -- . \
             ':(exclude).github/workflows/business-phase9a-durable-finalizer.yml' \
             ':(exclude).github/workflows/business-phase9a-durable-finalizer-executor.yml')"
 
-      - name: Execute reviewed durable-record transformation
+      - name: Execute and normalize reviewed durable-record transformation
         shell: bash
         run: |
           set -euo pipefail
@@ -65,6 +65,27 @@ jobs:
           )
           PYEXTRACT
           python3 /tmp/business-phase9a-finalize.py
+          python3 - <<'PYNORMALIZE'
+          from pathlib import Path
+
+          implementation_sha = "bf17e2493654620229d1acdeaae0fbaba21caf63"
+          scope_path = Path(
+              "docs/roadmaps/business-phase9-store-withdrawal-safety-scope-v1.md"
+          )
+          scope = scope_path.read_text().replace(
+              f"**Exact certified implementation SHA:** `{implementation_sha}`  \n",
+              f"**Exact certified implementation SHA:** `{implementation_sha}`\n",
+              1,
+          )
+          scope_path.write_text(scope.rstrip() + "\n")
+
+          for relative in (
+              "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+              "docs/roadmaps/business-v2-development-execution-log-v1.md",
+          ):
+              path = Path(relative)
+              path.write_text(path.read_text().rstrip() + "\n")
+          PYNORMALIZE
           git diff --check
 
       - name: Commit durable certification records
