@@ -1,6 +1,9 @@
 # Business V2 Phase 7 — Store Seller Offers Scope v1
 
-**Status:** IN PROGRESS — checkpoint 7A scope locked; implementation not certified
+**Status:** COMPLETE — checkpoint 7A certified
+**Certified implementation and exact-head verification source:** `04db81436e75cea6c52d0c720508c3ea12baab05`
+**Dedicated certification workflow:** `32681497746`
+**Certification date:** 2026-08-24
 **Branch:** `feat/business-store-seller-offers-v2`
 **Parent branch:** `feat/business-timed-manufacturing-v2`
 **Parent draft PR:** #661
@@ -58,7 +61,7 @@ No new catalog table, inventory holding table, balance table, ledger, quote tabl
 7. Enforce at most one non-retired Business offer per Business seller and canonical item; retired history may remain.
 8. Prevent one active custody account from backing multiple active offers.
 9. Backfill one seeded compatibility offer per existing `store_items` row using the canonical Store party, canonical item, canonical Store stock account, current price, and current active/paused state.
-10. Keep seeded compatibility offers synchronized when existing Store catalog administration changes price, currency, visibility, status, canonical item, or Store stock account.
+10. Keep seeded compatibility offers synchronized for permitted price, currency, visibility, and status changes; fail closed on currency changes while current Business offers exist and reject canonical-item or Store-stock-account repointing so compatibility identity and custody remain immutable.
 11. Add a service-only, idempotent Business draft-offer creation command using public Business and Store item keys.
 12. Add a service-only optimistic-concurrency offer mutation command for price, state, and future canonical Store-stock account binding.
 13. Add a service-only catalog aggregation read that groups active, inventory-backed offers under one canonical item and returns deterministic best price, total available quantity, seller count, and public offer details.
@@ -186,6 +189,28 @@ Checkpoint 7A is not complete until one exact implementation SHA passes:
 - retained Store purchase, Inventory, Business Economy, Business Banking, workforce/payroll, equipment, manufacturing, Repository Quality, Supply Chain Security, Player Terminal, and Chromium gates;
 - durable execution-plan and execution-log evidence.
 
+## Certification evidence
+
+**Exact certified implementation SHA:** `04db81436e75cea6c52d0c720508c3ea12baab05`
+**Dedicated workflow:** Business Store Seller Offers V2 `32681497746`
+
+- seller-offer schema, authority, compatibility, aggregation, concurrency, idempotency, two-game isolation, deterministic architecture inventory, and Repository Quality job: **PASS**;
+- retained Business Banking, Business formation, Player Store quote/purchase lifecycle, Inventory lifecycle, and Player route-adapter contracts: **PASS**;
+- standalone Player Terminal and Chromium verification: **PASS**;
+- Database Replay from zero twice and rebuilt-database lint: **PASS** (`32681497737`);
+- Backend Typecheck and backend smoke: **PASS** (`32681497570`);
+- retained timed manufacturing, workforce/equipment regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight: **PASS** (`32681497707`);
+- Business Workforce Payroll V2: **PASS** (`32681497655`);
+- Business Economy V2: **PASS** (`32681497604`);
+- Repository Quality: **PASS** (`32681497750`);
+- Supply Chain Security: **PASS** (`32681497690`);
+- Runtime Interaction Wiring: **PASS** (`32681497580`);
+- Admin API Check: **PASS** (`32681497762`);
+- Required Game Market Timezone: **PASS** (`32681497598`);
+- Exchange Calendar Runtime: **PASS** (`32681497593`).
+
+No merge, staging deployment, production deployment, secret mutation, or live database mutation occurred. Later documentation-only commits do not replace `04db81436e75cea6c52d0c720508c3ea12baab05` as the exact certified implementation source.
+
 ## Completion rule
 
 Checkpoint 7A may be claimed complete only when:
@@ -197,6 +222,6 @@ Checkpoint 7A may be claimed complete only when:
 5. no temporary certification machinery remains;
 6. no merge, deployment, secret change, or live database mutation occurred.
 
-## Next step after scope lock
+## Next authorized step
 
-Implement the additive Store-owned offer authority, compatibility backfill/synchronization, service-only Business draft/mutation commands, typed aggregation repository, deterministic tests, and dedicated CI on the stacked draft branch. Do not widen checkpoint 7A into physical Store custody or buyer settlement.
+Checkpoint 7A is complete. Open a bounded Phase 8 scope for canonical physical Store-listing inventory: resolve an offer-scoped `store_stock` account, move exact unsold units from Business Finished Goods into that account, and preserve custody/provenance without changing buyer quote, payment, or purchase settlement. Withdrawal cooling-off, buyer settlement, automatic sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain unauthorized.

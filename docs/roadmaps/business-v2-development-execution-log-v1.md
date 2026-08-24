@@ -970,3 +970,65 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 7 checkpoint 7A — seller-offer authority and multi-offer catalog aggregation is OPEN.** Create a stacked draft branch/PR from the durably certified Phase 6 lineage. Reuse canonical Store/catalog, Business, Inventory, money, and economic-party authorities. Keep offer identity separate from catalog identity. Do not include physical Store custody, listing-stock transfer, withdrawal processing, buyer payment/inventory settlement, automatic demand/sales convergence, equity/IPO, merge, or deployment in checkpoint 7A.
+
+---
+
+## 2026-08-24 — Phase 7A COMPLETE: Store seller-offer authority and aggregation foundation
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `04db81436e75cea6c52d0c720508c3ea12baab05`.
+- Feature branch: `feat/business-store-seller-offers-v2`.
+- Stacked draft PR: #662, based on the clean certified Phase 6 handoff `b4a41fd1f80dbe426e1aa20bd1ff37291dca1fd4` / PR #661.
+- PR #662 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged on `refactor/business-ux-mechanics-v1`.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- Later documentation-only commits record certification and do not replace `04db81436e75cea6c52d0c720508c3ea12baab05` as the exact tested source.
+
+### What is now authoritative
+
+- `public.store_seller_offers` is the Store-owned seller-specific commercial authority while `game_items` remains product identity and `store_items` remains Store presentation plus the legacy quote/purchase compatibility channel.
+- Offers use public `sof_...` identity, bounded seeded/NPC/Business seller kinds, draft/active/paused/terminal-retired lifecycle, optimistic versions, immutable identity, and service-derived game/seller/catalog scope.
+- A current Business offer is unique per Business seller and canonical item; one active custody account cannot back multiple active offers.
+- Active offers require a same-game active canonical `store_stock` Inventory account owned by the seller party. Available quantity is derived from canonical holdings and is never persisted as parallel offer quantity.
+- Existing Store administration backfills and synchronizes seeded compatibility offers for permitted price, currency, visibility, and status changes. Canonical item/account repointing is rejected, and currency changes fail closed while current Business offers exist.
+- Service-only commands provide idempotent Business draft creation and optimistic price/state/one-time custody binding without exposing Player mutation routes.
+- The service-owned aggregation groups active inventory-backed offers under one canonical item and returns deterministic best price, total available quantity, seller/offer counts, and public-key-only offer details.
+- Existing Player Store reads, quotes, purchases, Banking/ledger settlement, and buyer Inventory delivery remain unchanged in checkpoint 7A.
+
+### Exact-head verification on `04db81436e75cea6c52d0c720508c3ea12baab05`
+
+- **Business Store Seller Offers V2 — PASS** (`32681497746`): seller-offer authority/simulations, deterministic architecture inventory, retained Banking/Business/Store/Inventory contracts, standalone Player Terminal, and Chromium verification.
+- **Database Replay — PASS** (`32681497737`): complete replay from zero twice plus rebuilt-database lint.
+- **Backend Typecheck — PASS** (`32681497570`): backend typecheck and backend smoke.
+- **Business Timed Manufacturing V2 — PASS** (`32681497707`): retained manufacturing, workforce/equipment regressions, all Backend/Edge TypeScript, Player Business surface, and local Player Edge boot/preflight.
+- **Business Workforce Payroll V2 — PASS** (`32681497655`).
+- **Business Economy V2 — PASS** (`32681497604`).
+- **Repository Quality — PASS** (`32681497750`).
+- **Supply Chain Security — PASS** (`32681497690`).
+- **Runtime Interaction Wiring — PASS** (`32681497580`).
+- **Admin API Check — PASS** (`32681497762`).
+- **Required Game Market Timezone — PASS** (`32681497598`).
+- **Exchange Calendar Runtime — PASS** (`32681497593`).
+
+### Phase 7A exit result
+
+- Store-owned seller-offer identity separate from catalog identity: **met**.
+- Same-game seller/catalog/currency/custody validation and immutable identity: **met**.
+- Idempotent Business draft creation, optimistic mutation, terminal lifecycle, and concurrency safety: **met**.
+- Seeded compatibility backfill/synchronization with identity and currency guards: **met**.
+- Canonical Inventory-backed multi-seller aggregation without parallel quantity: **met**.
+- Deterministic multi-seller, stale-update, duplicate-create, and two-game isolation tests: **met**.
+- Database, backend, all Edge, retained Business/Banking/Store/Inventory/workforce/equipment/manufacturing, repository, security, Player, and Chromium gates: **met**.
+- No buyer-facing read/quote/purchase cutover, deployment, or live mutation: **met**.
+
+### Decisions and unresolved boundaries
+
+- Store offer identity and aggregation are now authoritative, but buyer-visible multi-offer presentation remains deferred until displayed price, quoted offer, payment, seller revenue, and transferred inventory can settle against one locked offer.
+- A draft Business offer may bind a canonical Store-stock account once; an established non-null custody binding is immutable in checkpoint 7A.
+- Seeded compatibility identity and custody are immutable. Existing Store administration may change permitted commercial presentation fields but cannot repoint the canonical item or stock account underneath an existing offer.
+- Physical Finished Goods-to-Store custody, listing quantity commands, withdrawal cooling-off, offer-aware purchase settlement, automatic demand/sales convergence, equity/IPO, merge, staging, and production deployment remain unauthorized.
+
+### Next authorized step
+
+**Phase 8 — physical Store-listing inventory scope is OPEN.** Start with a bounded stacked checkpoint that creates or resolves canonical offer-scoped `store_stock` custody and moves exact units `Finished Goods -> Store Listing` with idempotency, optimistic offer concurrency, cost/provenance preservation, and two-game isolation. Do not include withdrawal cooling-off, buyer payment/inventory settlement, automatic sales convergence, equity/IPO, merge, staging, production deployment, secrets, or live database mutation in the first Phase 8 checkpoint.

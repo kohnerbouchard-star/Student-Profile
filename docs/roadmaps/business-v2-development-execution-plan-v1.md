@@ -348,18 +348,22 @@ Certified checkpoints:
 Exit: one end-to-end manufactured catalog item reliably reaches Finished Goods after authoritative server time. **MET.**
 ## Phase 7 — Store seller offers and multi-offer catalog presentation
 
-**Status:** OPEN — bounded checkpoint 7A authorized
+**Status:** FOUNDATION COMPLETE — checkpoint 7A certified exact-head source `04db81436e75cea6c52d0c720508c3ea12baab05`; Player presentation cutover remains deferred until offer-aware quote and settlement semantics cannot diverge
 
-**Checkpoint 7A boundary:** establish seller-offer identity, lifecycle/version invariants, and catalog aggregation reads by reusing canonical Store, Business, Inventory, money, and economic-party authorities. Physical Store custody, listing-stock transfer, withdrawal safety, buyer settlement, automatic sales convergence, and IPO/equity remain closed for later phases.
+**Checkpoint 7A boundary:** seller-offer identity, lifecycle/version invariants, seeded compatibility projection, bounded replenishment policy, and service-owned catalog aggregation reuse canonical Store, Business, Inventory, money, and economic-party authorities. Physical Store custody transfer, withdrawal safety, buyer settlement, automatic sales convergence, and IPO/equity remain closed for later phases.
 
-- [ ] Introduce seller-offer authority separate from catalog item identity.
-- [ ] Seeded/NPC and Business sellers share one catalog product presentation.
-- [ ] One active offer per Business per item.
-- [ ] Offer price/version/status are server validated.
-- [ ] Add Store aggregation: best price, total available, seller count, offer details.
-- [ ] Give seeded/NPC offers finite stock/replenishment rules.
+- [x] Introduce Store-owned seller-offer authority separate from catalog item identity.
+- [x] Aggregate seeded, NPC-capable, and Business seller offers under one canonical product in a service-owned read model; Player-facing presentation remains intentionally deferred.
+- [x] Enforce one current non-retired offer per Business and canonical item plus one active offer per custody account.
+- [x] Server-validate offer price, currency, seller kind, lifecycle, immutable identity/custody, and optimistic version progression.
+- [x] Add deterministic Store aggregation: best price, total canonical availability, seller count, and public offer details.
+- [x] Bind seeded compatibility offers to canonical finite Store inventory and bounded `canonical_supply`; retain bounded NPC seller support for later materialization.
 
-Exit: duplicate sellers do not create duplicate Store product cards.
+Certified checkpoint:
+
+- **7A:** additive `store_seller_offers` authority; immutable game/catalog/seller identity; service-only idempotent Business draft creation and optimistic mutation; seeded compatibility backfill/synchronization with fail-closed identity/custody rules; canonical Inventory-backed aggregation; typed Store contracts/repository; deterministic concurrency, idempotency, aggregation, and two-game isolation. **Certified implementation and exact-head verification source:** `04db81436e75cea6c52d0c720508c3ea12baab05`. Dedicated workflow: `32681497746`.
+
+Exit: seller-specific offers aggregate under one canonical Store product without duplicating catalog identity. The service foundation is **MET**; Player-facing multi-offer presentation remains deferred until the quote/purchase path becomes offer aware.
 
 ## Phase 8 — Physical Store-listing inventory
 
