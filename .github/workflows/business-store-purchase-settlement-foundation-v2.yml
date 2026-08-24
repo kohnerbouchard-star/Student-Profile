@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/architecture/business-phase10-store-purchase-settlement-authority-v1.md"
       - "docs/roadmaps/business-phase10-store-purchase-settlement-scope-v1.md"
+      - "docs/roadmaps/business-phase9-store-withdrawal-safety-scope-v1.md"
       - "scripts/business-phase10-store-purchase-settlement-*.mjs"
       - "scripts/business-phase10-store-purchase-settlement-*.ts"
       - ".github/workflows/business-store-purchase-settlement-foundation-v2.yml"
@@ -67,6 +68,8 @@ jobs:
           node scripts/business-phase7-store-seller-offers-simulation.mjs
           node --experimental-strip-types scripts/business-phase7-store-seller-offers-types.mjs
           node scripts/validate-supabase-migrations.mjs
+          npm run audit:interaction-wiring
+          node scripts/player-local-controls-contract.mjs
           git diff --check
 
       - name: Verify deterministic architecture inventory
@@ -80,9 +83,9 @@ jobs:
         run: npm test
 
   verify-retained-economic-runtime:
-    name: Verify retained Store, Inventory, and Business runtime
+    name: Verify retained Business, Store, Inventory, and Edge runtime
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -113,12 +116,35 @@ jobs:
           npm ci --ignore-scripts
           npm --prefix backend ci --ignore-scripts
 
-      - name: Verify retained Business economic authorities
+      - name: Verify retained Business Economy authority
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/business-formation-authority-contract.mjs
+          node scripts/business-economy-authority-contract.mjs
+          node scripts/business-domain-boundary-contract.mjs
+          node scripts/business-recipe-access-contract.mjs
+          node scripts/business-stockroom-authority-contract.mjs
+          node scripts/business-store-procurement-authority-contract.mjs
+          node scripts/business-input-purchase-retirement-contract.mjs
+
+      - name: Verify retained workforce, payroll, equipment, and manufacturing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
           node scripts/business-banking-runtime-contract.mjs
           node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-phase5-equipment-foundation-contract.mjs
+          node scripts/business-phase5-equipment-capacity-simulation.mjs
+          node scripts/business-phase5-equipment-recipe-sync-contract.mjs
+          node scripts/business-phase5-equipment-production-contract.mjs
+          node scripts/business-phase5-equipment-production-simulation.mjs
           node scripts/business-phase6-manufacturing-foundation-contract.mjs
           node scripts/business-phase6-manufacturing-lifecycle-simulation.mjs
           node scripts/business-phase6-manufacturing-start-contract.mjs
@@ -127,12 +153,25 @@ jobs:
           node scripts/business-phase6-manufacturing-completion-simulation.mjs
           node scripts/business-phase6-manufacturing-recovery-contract.mjs
           node scripts/business-phase6-manufacturing-recovery-simulation.mjs
-          node scripts/business-phase5-equipment-foundation-contract.mjs
-          node scripts/business-phase5-equipment-capacity-simulation.mjs
-          node scripts/business-phase4c-production-labor-contract.mjs
-          node scripts/business-phase4c-labor-reservation-simulation.mjs
-          node scripts/business-phase4c-payroll-settlement-contract.mjs
-          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-phase6e-player-api-contract.mjs
+          node --test \
+            scripts/player-cross-cutting-authority.test.mjs \
+            scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs
+
+      - name: Verify extracted Business route authority
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts \
+            src/domains/business/api/playerBusinessStoreProcurement.test.ts \
+            src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts \
+            src/domains/business/api/playerBusinessInputPurchaseRetirement.test.ts \
+            src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts \
+            src/domains/players/contracts/playerCapabilityManifestContracts.test.ts \
+            src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
 
       - name: Verify retained Store and Inventory lifecycles
         working-directory: backend
@@ -146,10 +185,201 @@ jobs:
         working-directory: backend
         run: npm run typecheck:all
 
+      - name: Verify Player Edge entrypoints are bundleable
+        working-directory: backend
+        run: |
+          deno check \
+            --config supabase/functions/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            supabase/functions/player-api/index.ts \
+            supabase/functions/player-web-session-api/index.ts
+
+  verify-database-replay:
+    name: Replay complete database twice and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install pinned tooling
+        run: npm ci --ignore-scripts
+
+      - name: Validate migration source and public-key repair contract
+        run: |
+          npm run audit:migrations
+          node --test scripts/player-contract-public-key-resolution-migration.test.mjs
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="/tmp/phase10-database-replay-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay migrations from zero twice
+        run: |
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Capture local service diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/phase10-database-replay-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/phase10-database-replay-docker.log || true
+          docker system df 2>&1 | tee -a /tmp/phase10-database-replay-docker.log || true
+
+      - name: Upload replay diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase10-database-replay-diagnostics
+          path: |
+            /tmp/phase10-database-replay-startup.log
+            /tmp/phase10-database-replay-status.log
+            /tmp/phase10-database-replay-docker.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  verify-admin-timezone-and-exchange:
+    name: Verify Admin API and game calendar contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm and install dependencies
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify Admin API
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/index.ts
+          deno test --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/*.test.ts
+
+      - name: Verify stabilization migration transaction boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          expected = [
+              Path('backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql'),
+              Path('backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql'),
+              Path('backend/supabase/migrations/20260713223000_complete_admin_control_surfaces_v1.sql'),
+              Path('backend/supabase/migrations/20260714224000_harden_admin_data_api_tables_v1.sql'),
+          ]
+          for path in expected:
+              if not path.exists():
+                  raise SystemExit(f'Missing stabilization migration: {path}')
+              text = path.read_text().strip().lower()
+              if not text.startswith('begin;') or not text.endswith('commit;'):
+                  raise SystemExit(f'{path} must be transaction wrapped')
+          print('Stabilization migration transaction boundary checks passed.')
+          PY
+
+      - name: Verify required game timezone and exchange calendar runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          node scripts/apply-shared-game-timezone-ui-v1.mjs
+          node scripts/fix-shared-game-timezone-smoke-v1.mjs
+          node scripts/enforce-single-game-timezone-source-v1.mjs
+          node scripts/fix-timezone-migration-preflight-v1.mjs
+          git diff --exit-code
+          npm --prefix backend run test:stock-market-calendar
+          env \
+            SUPABASE_URL=http://localhost:54321 \
+            SUPABASE_PUBLISHABLE_KEY=sb_publishable_smoke_key \
+            SUPABASE_SECRET_KEY=sb_secret_smoke_key \
+            deno test \
+              --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY \
+              --config backend/supabase/functions/classroom-api/deno.json \
+              --lock=backend/supabase/functions/deno.lock --frozen \
+              backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
+          node scripts/shared-game-timezone-ui-smoke.mjs
+          npm --prefix backend run typecheck:all
+          npm run audit:migrations
+          node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          node scripts/apply-shared-game-timezone-ui-v1.mjs
+          node scripts/fix-shared-game-timezone-smoke-v1.mjs
+          node scripts/enforce-single-game-timezone-source-v1.mjs
+          node scripts/fix-timezone-migration-preflight-v1.mjs
+          git diff --exit-code
+          git diff --check
+
   verify-player-terminal-and-chromium:
     name: Verify retained Player Terminal and Chromium
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -169,9 +399,15 @@ jobs:
         working-directory: player-terminal
         run: npm ci --no-audit --no-fund
 
-      - name: Verify standalone Player Terminal
+      - name: Verify standalone Player Terminal and Business surface
         working-directory: player-terminal
-        run: npm run verify
+        run: |
+          npm run verify
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration
 
       - name: Install Chromium
         working-directory: player-terminal
