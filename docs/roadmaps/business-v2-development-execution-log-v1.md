@@ -1490,7 +1490,7 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 
 - Roadmap items: `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001`.
 - Owner: `feat/canonical-fx-authority-v1` / stacked draft PR #671, based on exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3`.
-- Controlling scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`; immutable scope handoff: `23da0aa3ef87b4343b0fd75f46ba7153feae062d`.
+- Controlling scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`; immutable scope handoff: `23da0aa419438d2f9bc996df7f4f08c86959fd23`.
 - Exact implementation and verification source: `41bc2d978fe67cd06a8f2133f7310075492ecd99`.
 - Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`, because PR #671 remains draft, open, and unmerged and no production runtime evidence is claimed. This later documentation-only handoff does not replace the tested implementation identity.
 

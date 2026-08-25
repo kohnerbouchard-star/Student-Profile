@@ -8,7 +8,7 @@
 **Exact parent documentation handoff:** `cb4041b68ecd322c87d2fb6bb08000da28807af3`
 **Frozen Phase 10A.4A implementation candidate:** `88944e18520913ca9779c2706bd005f644c60050`
 **Scope commit:** `f499e828d57a6a146f528d89e714502807ab36b1`
-**Scope handoff:** `23da0aa3ef87b4343b0fd75f46ba7153feae062d`
+**Scope handoff:** `23da0aa419438d2f9bc996df7f4f08c86959fd23`
 **Exact implementation:** `41bc2d978fe67cd06a8f2133f7310075492ecd99`
 **Stacked draft PR:** #671
 **Production deployment authorized:** No
