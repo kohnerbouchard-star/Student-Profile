@@ -112,7 +112,19 @@ export const previewData = Object.freeze({
   store: {
     categories: ["All", "Equipment", "Materials", "Consumables", "Access"],
     items: [
-      { id: "market-lens", name: "Market Lens", category: "Equipment", price: 2400, stock: 8, owned: 1, image: "./assets/store-items/market-lens.svg", description: "Unlocks expanded market intelligence for one cycle." },
+      {
+        id: "market-lens", itemKey: "market-lens", storeItemKey: "market-lens",
+        catalogItemKey: "itm_11111111111111111111111111111111", canonicalItemKey: "market-lens",
+        name: "Market Lens", category: "Equipment", price: 2280, bestUnitPrice: 2280,
+        stock: 11, totalAvailableQuantity: 11, sellerCount: 2, offerCount: 3,
+        currencyCode: "ELD", owned: 1, image: "./assets/store-items/market-lens.svg",
+        description: "Unlocks expanded market intelligence for one cycle.",
+        offers: [
+          { offerKey: "sof_11111111111111111111111111111111", sellerKey: "pty_11111111111111111111111111111111", sellerPartyKey: "pty_11111111111111111111111111111111", sellerKind: "seeded", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 2400, currencyCode: "ELD", availableQuantity: 8, status: "active", purchasability: "seeded_offer", purchasable: true, version: 1 },
+          { offerKey: "sof_22222222222222222222222222222222", sellerKey: "pty_22222222222222222222222222222222", sellerPartyKey: "pty_22222222222222222222222222222222", sellerKind: "business", sellerName: "Crescent Dynamics", businessKey: "biz_22222222222222222222222222222222", businessName: "Crescent Dynamics", unitPrice: 2280, currencyCode: "ELD", availableQuantity: 3, status: "active", purchasability: "business_offer", purchasable: true, version: 4 },
+          { offerKey: "sof_33333333333333333333333333333333", sellerKey: "pty_33333333333333333333333333333333", sellerPartyKey: "pty_33333333333333333333333333333333", sellerKind: "npc", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 2200, currencyCode: "ELD", availableQuantity: 2, status: "active", purchasability: "unsupported", purchasable: false, version: 2 }
+        ]
+      },
       { id: "logistics-scanner", name: "Logistics Scanner", category: "Equipment", price: 1800, stock: 12, owned: 0, image: "./assets/store-items/logistics-scanner.svg", description: "Improves supply-chain contract visibility." },
       { id: "refined-alloy", name: "Refined Alloy Bundle", category: "Materials", price: 640, stock: 42, owned: 4, image: "./assets/store-items/refined-alloy-bundle.svg", description: "Industrial input used in fabrication contracts." },
       { id: "energy-cell", name: "Energy Cell Pack", category: "Materials", price: 420, stock: 65, owned: 8, image: "./assets/store-items/energy-cell-pack.svg", description: "Portable energy units used across the economy." },
@@ -163,6 +175,7 @@ export const previewData = Object.freeze({
     ]
   },
   business: {
+    configured: true,
     company: { name: "Crescent Dynamics", registration: "ELD-BIZ-4418", status: "Operating", industry: "Precision Manufacturing", headquarters: "Crescent Bay, Eldoran", valuation: 84600, valuationChange: 4.2, cash: 12600, revenue: 18420, margin: 18.6, reputation: 74, reputationLabel: "Trusted supplier", summary: "A compact player-owned manufacturer producing logistics and analytical equipment for regional buyers." },
     operations: { employees: 8, output: 146, backlog: 34, capacityUse: 78, maxRun: 50, capacityNote: "Current staffing can support one additional standard production run without overtime." },
     products: [
@@ -174,7 +187,18 @@ export const previewData = Object.freeze({
       { name: "Glassfall Composites", material: "Composite housings", country: "Valerion", status: "Stable", leadTime: "2 days", tone: "good" },
       { name: "Dusk Harbor Energy", material: "Energy cells", country: "Thaloris", status: "Price risk", leadTime: "3 days", tone: "warn" },
       { name: "Frostgate Circuits", material: "Sensor boards", country: "Northreach", status: "Stable", leadTime: "4 days", tone: "good" }
-    ]
+    ],
+    storeSales: {
+      businessKey: "biz_22222222222222222222222222222222",
+      currencyCode: "ELD",
+      recentReceiptCount: 0,
+      recentQuantitySold: 0,
+      recentGrossRevenue: 0,
+      recentCostOfGoodsSold: 0,
+      recentGrossMargin: 0,
+      sales: [],
+      activity: []
+    }
   },
   marketplace: {
     categories: ["All", "Equipment", "Materials", "Consumables", "Access"],

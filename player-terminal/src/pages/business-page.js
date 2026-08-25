@@ -112,6 +112,41 @@ function manufacturingTimestamp(value) {
     }).format(parsed);
 }
 
+function storeSalesPanel(business, displayCurrency) {
+  const snapshot = business.storeSales && typeof business.storeSales === "object"
+    ? business.storeSales
+    : {};
+  const sales = Array.isArray(snapshot.sales) ? snapshot.sales : [];
+  const activity = Array.isArray(snapshot.activity) ? snapshot.activity : [];
+  const currency = String(snapshot.currencyCode || displayCurrency).trim().toUpperCase() || displayCurrency;
+  const activityByReceipt = new Map(
+    activity.map((event) => [String(event.receiptKey || ""), event]),
+  );
+  const summary = `<div class="player-terminal-business-metrics">
+    ${renderMetric({ label: "Recent Store sales", value: formatNumber(snapshot.recentReceiptCount || 0), meta: `${formatNumber(snapshot.recentQuantitySold || 0)} units sold`, tone: "cyan", iconName: "store" })}
+    ${renderMetric({ label: "Store revenue", value: formatCurrency(snapshot.recentGrossRevenue || 0, currency), meta: "Committed seller receipts", tone: "green", iconName: "wallet" })}
+    ${renderMetric({ label: "Store COGS", value: formatCurrency(snapshot.recentCostOfGoodsSold || 0, currency), meta: `${formatCurrency(snapshot.recentGrossMargin || 0, currency)} gross margin`, tone: "amber", iconName: "chart" })}
+  </div>`;
+  const detail = sales.length
+    ? sales.map((sale) => {
+      const event = activityByReceipt.get(String(sale.receiptKey || ""));
+      return `<article class="player-terminal-business-product" data-business-store-sale-receipt="${escapeHtml(sale.receiptKey)}">
+        <span class="player-terminal-product-icon">${icon("store")}</span>
+        <div><small>${escapeHtml(manufacturingTimestamp(sale.completedAt))} · ${escapeHtml(sale.offerKey)}</small><strong>${escapeHtml(sale.itemKey)}</strong><p>${escapeHtml(formatNumber(sale.quantity))} units · receipt ${escapeHtml(sale.receiptKey)}</p>${event ? `<p data-business-store-sale-activity="${escapeHtml(event.activityKey)}">Activity committed · ${escapeHtml(event.reasonCode)}</p>` : ""}</div>
+        <dl><div><dt>REVENUE</dt><dd>${escapeHtml(formatCurrency(sale.grossRevenue, sale.currencyCode || currency))}</dd></div><div><dt>COGS</dt><dd>${escapeHtml(formatCurrency(sale.costOfGoodsSold, sale.currencyCode || currency))}</dd></div><div><dt>MARGIN</dt><dd>${escapeHtml(formatCurrency(sale.grossMargin, sale.currencyCode || currency))}</dd></div></dl>
+      </article>`;
+    }).join("")
+    : renderEmptyState({
+      title: "No committed Store sales",
+      detail: "Business-offer purchases will appear here from immutable Store receipts and activity evidence.",
+      iconName: "store",
+    });
+  return `<section class="player-terminal-panel player-terminal-business-products" data-business-store-sales aria-live="polite">
+    <header class="player-terminal-panel-header"><div><span>STORE SALES · FINANCE · ACTIVITY</span><strong>Committed seller evidence</strong></div>${renderStatusPill("RECEIPT BACKED", "green")}</header>
+    ${summary}<div>${detail}</div>
+  </section>`;
+}
+
 function manufacturingJobsPanel(business) {
   const jobs = Array.isArray(business.manufacturingJobs)
     ? business.manufacturingJobs
@@ -197,6 +232,8 @@ export function renderBusinessPage(data) {
         <header class="player-terminal-panel-header"><div><span>PRODUCT LINE</span><strong>${escapeHtml(business.products.length)} active products</strong></div><small>Pricing changes apply only after confirmation</small></header>
         <div>${business.products.length ? business.products.map((product) => productRow(product, business, code)).join("") : renderEmptyState({ title: "No products configured", detail: "Create a product before running production.", iconName: "business" })}</div>
       </section>
+
+      ${storeSalesPanel(business, code)}
 
       <section class="player-terminal-panel player-terminal-business-products">
         <header class="player-terminal-panel-header"><div><span>EMPLOYMENT</span><strong>${escapeHtml((business.employees || []).filter((employee) => String(employee.status).toLowerCase() === "active").length)} active employees</strong></div><small>Wages settle through recurring Business payroll</small></header>

@@ -146,6 +146,18 @@ Deno.test("all migrated Player route families dispatch on the Player API boundar
   assertEquals(readPlayerMarketplaceRoutePath(`${prefix}/players/me/marketplace/listings`), { kind: "collection" });
   assertEquals(readPlayerCraftingRoutePath(`${prefix}/players/me/crafting`), { kind: "read" });
   assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`), { kind: "items" });
+  assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/offer-quotes`), {
+    kind: "offerQuotes",
+  });
+  assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/offer-purchases`), {
+    kind: "offerPurchases",
+  });
+  assertEquals(
+    readPlayerStorePublicRoutePath(
+      `${prefix}/players/me/store/receipts/spr_${"a".repeat(32)}`,
+    ),
+    { kind: "offerReceipt", receiptKey: `spr_${"a".repeat(32)}` },
+  );
   assertEquals(readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`), { kind: "banking" });
   assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), {
     kind: "businessRead",

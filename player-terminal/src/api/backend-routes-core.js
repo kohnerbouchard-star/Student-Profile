@@ -50,6 +50,24 @@ function idempotencyKey(payload, endpointKey) {
   return requiredText(payload?.idempotencyKey, "idempotencyKey", endpointKey);
 }
 
+function requiredPublicKey(value, pattern, fieldName, endpointKey) {
+  const candidate = requiredText(value, fieldName, endpointKey).toLowerCase();
+  if (pattern.test(candidate)) return candidate;
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: { code: "player_public_key_invalid", fieldName, endpointKey },
+  });
+}
+
+function requiredPositiveInteger(value, fieldName, endpointKey) {
+  const candidate = Number(value);
+  if (Number.isSafeInteger(candidate) && candidate >= 1 && candidate <= 1_000_000) {
+    return candidate;
+  }
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: { code: "player_positive_integer_invalid", fieldName, endpointKey },
+  });
+}
+
 function gameSessionId(payload, session, endpointKey) {
   return requiredText(
     payload?.gameSessionId || session?.gameSessionId,
@@ -176,6 +194,39 @@ const ROUTE_BUILDERS = Object.freeze({
       clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
     },
   }),
+  storeOfferQuote: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/store/offer-quotes",
+    payload: {
+      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeOfferQuote"),
+      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeOfferQuote"),
+      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeOfferQuote"),
+      idempotencyKey: idempotencyKey(payload, "storeOfferQuote"),
+    },
+  }),
+  storeOfferPurchase: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/store/offer-purchases",
+    payload: {
+      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeOfferPurchase"),
+      quoteKey: requiredPublicKey(payload.quoteKey, /^quote_[0-9a-f]{32}$/u, "quoteKey", "storeOfferPurchase"),
+      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeOfferPurchase"),
+      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeOfferPurchase"),
+      idempotencyKey: idempotencyKey(payload, "storeOfferPurchase"),
+    },
+  }),
+  storeOfferReceipt: ({ path, params = {}, payload = {} }) => {
+    const receiptKey = requiredPublicKey(
+      params.receiptKey || payload.receiptKey || resolvedPathValue(path, /^\/store\/receipts\/([^/]+)$/),
+      /^spr_[0-9a-f]{32}$/u,
+      "receiptKey",
+      "storeOfferReceipt",
+    );
+    return {
+      method: "GET",
+      path: `/players/me/store/receipts/${encodeURIComponent(receiptKey)}`,
+    };
+  },
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
   inventoryUse: ({ path, params = {}, payload = {} }) => ({
     method: "POST",

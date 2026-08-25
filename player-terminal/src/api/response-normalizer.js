@@ -1,4 +1,5 @@
 import { ApiRequestError } from "./errors.js";
+import { validateStoreResponse } from "./response-store-validator.js";
 
 const ARRAY_READS = new Set(["countries", "notifications"]);
 const READ_ENDPOINTS = new Set([
@@ -212,6 +213,118 @@ function validateBusinessWorkforceUtilization(value, context) {
   }
 }
 
+function finiteMoney(value, { allowNegative = false } = {}) {
+  return typeof value === "number" && Number.isFinite(value) && (allowNegative || value >= 0);
+}
+
+function validTimestamp(value) {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
+}
+
+function round4(value) {
+  return Math.round((value + Number.EPSILON) * 10_000) / 10_000;
+}
+
+function validateBusinessStoreSales(value, context) {
+  const snapshot = value.storeSales;
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot) || UUID.test(JSON.stringify(snapshot))) {
+    throw invalidResponse("business", context.requestId, context.path);
+  }
+  const configured = value.configured !== false;
+  const businessKey = String(snapshot.businessKey || "");
+  const currencyCode = String(snapshot.currencyCode || "");
+  if (
+    (configured && !/^biz_[0-9a-f]{32}$/u.test(businessKey)) ||
+    (!configured && businessKey !== "") ||
+    (configured && !/^[A-Z0-9_]{3,16}$/u.test(currencyCode)) ||
+    (!configured && currencyCode !== "") ||
+    !Array.isArray(snapshot.sales) ||
+    !Array.isArray(snapshot.activity)
+  ) throw invalidResponse("business", context.requestId, context.path);
+
+  for (const key of ["recentReceiptCount", "recentQuantitySold"]) {
+    if (!Number.isSafeInteger(snapshot[key]) || snapshot[key] < 0) {
+      throw invalidResponse("business", context.requestId, context.path);
+    }
+  }
+  for (const key of ["recentGrossRevenue", "recentCostOfGoodsSold"]) {
+    if (!finiteMoney(snapshot[key])) throw invalidResponse("business", context.requestId, context.path);
+  }
+  if (!finiteMoney(snapshot.recentGrossMargin, { allowNegative: true })) {
+    throw invalidResponse("business", context.requestId, context.path);
+  }
+
+  const salesByReceipt = new Map();
+  const saleQuoteKeys = new Set();
+  for (const sale of snapshot.sales) {
+    if (
+      !sale || typeof sale !== "object" || Array.isArray(sale) ||
+      !/^spr_[0-9a-f]{32}$/u.test(String(sale.receiptKey || "")) ||
+      !/^quote_[0-9a-f]{32}$/u.test(String(sale.quoteKey || "")) ||
+      !/^sof_[0-9a-f]{32}$/u.test(String(sale.offerKey || "")) ||
+      !/^[a-z0-9_-]{1,64}$/u.test(String(sale.itemKey || "")) ||
+      !Number.isSafeInteger(sale.quantity) || sale.quantity < 1 ||
+      !finiteMoney(sale.grossRevenue) || !finiteMoney(sale.costOfGoodsSold) ||
+      !finiteMoney(sale.grossMargin, { allowNegative: true }) ||
+      sale.grossMargin !== round4(sale.grossRevenue - sale.costOfGoodsSold) ||
+      sale.currencyCode !== currencyCode || !validTimestamp(sale.completedAt)
+    ) throw invalidResponse("business", context.requestId, context.path);
+    if (salesByReceipt.has(sale.receiptKey) || saleQuoteKeys.has(sale.quoteKey)) {
+      throw invalidResponse("business", context.requestId, context.path);
+    }
+    salesByReceipt.set(sale.receiptKey, sale);
+    saleQuoteKeys.add(sale.quoteKey);
+  }
+
+  const activityKeys = new Set();
+  const activityReceiptKeys = new Set();
+  for (const activity of snapshot.activity) {
+    if (
+      !activity || typeof activity !== "object" || Array.isArray(activity) ||
+      !/^bae_[0-9a-f]{32}$/u.test(String(activity.activityKey || "")) ||
+      activity.eventType !== "business.store.sale.completed" ||
+      activity.reasonCode !== "business_store_offer_purchase" ||
+      !/^spr_[0-9a-f]{32}$/u.test(String(activity.receiptKey || "")) ||
+      !/^quote_[0-9a-f]{32}$/u.test(String(activity.quoteKey || "")) ||
+      !/^sof_[0-9a-f]{32}$/u.test(String(activity.offerKey || "")) ||
+      !Number.isSafeInteger(activity.quantity) || activity.quantity < 1 ||
+      !finiteMoney(activity.grossRevenue) || !finiteMoney(activity.costOfGoodsSold) ||
+      !finiteMoney(activity.grossMargin, { allowNegative: true }) ||
+      activity.grossMargin !== round4(activity.grossRevenue - activity.costOfGoodsSold) ||
+      activity.currencyCode !== currencyCode || !validTimestamp(activity.occurredAt)
+    ) throw invalidResponse("business", context.requestId, context.path);
+    const sale = salesByReceipt.get(activity.receiptKey);
+    if (
+      activityKeys.has(activity.activityKey) ||
+      activityReceiptKeys.has(activity.receiptKey) ||
+      !sale ||
+      activity.quoteKey !== sale.quoteKey || activity.offerKey !== sale.offerKey ||
+      activity.quantity !== sale.quantity || activity.grossRevenue !== sale.grossRevenue ||
+      activity.costOfGoodsSold !== sale.costOfGoodsSold || activity.grossMargin !== sale.grossMargin ||
+      activity.currencyCode !== sale.currencyCode
+    ) throw invalidResponse("business", context.requestId, context.path);
+    activityKeys.add(activity.activityKey);
+    activityReceiptKeys.add(activity.receiptKey);
+  }
+  if (activityReceiptKeys.size !== salesByReceipt.size) {
+    throw invalidResponse("business", context.requestId, context.path);
+  }
+
+  const totals = snapshot.sales.reduce((result, sale) => ({
+    quantity: result.quantity + sale.quantity,
+    revenue: result.revenue + sale.grossRevenue,
+    cost: result.cost + sale.costOfGoodsSold,
+    margin: result.margin + sale.grossMargin,
+  }), { quantity: 0, revenue: 0, cost: 0, margin: 0 });
+  if (
+    snapshot.recentReceiptCount !== snapshot.sales.length ||
+    snapshot.recentQuantitySold !== totals.quantity ||
+    snapshot.recentGrossRevenue !== round4(totals.revenue) ||
+    snapshot.recentCostOfGoodsSold !== round4(totals.cost) ||
+    snapshot.recentGrossMargin !== round4(totals.margin)
+  ) throw invalidResponse("business", context.requestId, context.path);
+}
+
 function validateEndpointShape(endpointKey, value, context) {
   for (const key of REQUIRED_ARRAY_FIELDS[endpointKey] || []) {
     if (!Array.isArray(value[key])) throw invalidResponse(endpointKey, context.requestId, context.path);
@@ -225,7 +338,9 @@ function validateEndpointShape(endpointKey, value, context) {
   if (endpointKey === "business") {
     validateBusinessManufacturingJobs(value, context);
     validateBusinessWorkforceUtilization(value, context);
+    validateBusinessStoreSales(value, context);
   }
+  if (endpointKey === "store") validateStoreResponse(value, context);
   if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
   }

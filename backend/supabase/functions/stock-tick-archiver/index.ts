@@ -1,4 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { AwsClient } from "npm:aws4fetch@1.0.20";
 import { parquetWriteBuffer } from "npm:hyparquet-writer@0.16.6/src/index.js";
 
@@ -12,7 +15,6 @@ const TICK_SELECT = [
   "long_run_volatility", "explanation", "created_at",
 ].join(",");
 
-type SupabaseClient = ReturnType<typeof createClient>;
 type PreparedArchive = {
   game_session_id: string;
   range_start: string;
@@ -262,7 +264,7 @@ async function readPreparedRows(client: SupabaseClient, prepared: PreparedArchiv
       .order("tick_index", { ascending: true }).order("stock_asset_id", { ascending: true })
       .limit(PAGE_SIZE);
     if (response.error) throw new Error(`tick_fetch_failed:${response.error.message}`);
-    const batch = (response.data || []) as TickRow[];
+    const batch = (response.data || []) as unknown as TickRow[];
     if (batch.length >= PAGE_SIZE) {
       throw new Error(`tick_fetch_batch_saturated:start=${tickStart}:end=${tickEnd}`);
     }
@@ -303,7 +305,9 @@ async function safeText(response: Response): Promise<string> {
   }
 }
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digestBytes = new Uint8Array(bytes.byteLength);
+  digestBytes.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", digestBytes);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 function json(status: number, payload: unknown): Response {

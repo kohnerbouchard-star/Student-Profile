@@ -55,6 +55,9 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   store: { method: "GET", path: "/store/items" },
   storeQuote: { method: "POST", path: "/store/quotes" },
   storePurchase: { method: "POST", path: "/store/purchases" },
+  storeOfferQuote: { method: "POST", path: "/store/offer-quotes" },
+  storeOfferPurchase: { method: "POST", path: "/store/offer-purchases" },
+  storeOfferReceipt: { method: "GET", path: "/store/receipts/:receiptKey" },
   marketplace: { method: "GET", path: "/marketplace/listings" },
   marketplaceActivate: {
     method: "POST",

@@ -10,8 +10,11 @@ import {
   parseBusinessWorkforceSnapshot,
   parseBusinessWorkforceUtilization,
 } from "../application/workforce/businessWorkforceResultParser.ts";
-
-type Row = Record<string, unknown>;
+import {
+  type BusinessRepositoryRow,
+  emptyBusinessStoreSales,
+  projectBusinessStoreSalesSnapshot as businessStoreSalesSnapshot,
+} from "./supabasePlayerBusinessStoreSalesProjection.ts";
 
 export class SupabasePlayerBusinessRepository implements PlayerBusinessRepository {
   constructor(private readonly client: EdgeSupabaseClient) {}
@@ -95,7 +98,16 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
     if (!business) return emptyBusiness();
 
     const businessId = text(business.id);
-    const [products, employees, inventory, runs, balanceRows, utilization] = await Promise.all([
+    const [
+      products,
+      employees,
+      inventory,
+      runs,
+      balanceRows,
+      utilization,
+      storeReceiptRows,
+      storeActivityRows,
+    ] = await Promise.all([
       rows(this.client.from("business_products").select("*")
         .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
         .order("created_at", { ascending: true })),
@@ -114,6 +126,17 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
         p_game_session_id: input.gameSessionId,
         p_player_id: input.playerId,
       }),
+      rows(this.client.from("store_offer_purchase_receipts")
+        .select(
+          "public_key,quote_key,offer_key,store_item_key,quantity,gross_revenue,cost_of_goods_sold,gross_margin,currency_code,completed_at",
+        )
+        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
+        .order("completed_at", { ascending: false }).limit(50)),
+      rows(this.client.from("business_activity_events")
+        .select("public_key,event_type,reason_code,metadata,occurred_at")
+        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
+        .eq("event_type", "business.store.sale.completed")
+        .order("occurred_at", { ascending: false }).limit(50)),
     ]);
 
     const businessAccount = `business:${text(business.public_key).toLowerCase()}`;
@@ -190,6 +213,12 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
         quantity: number(row.quantity),
         unitCost: number(row.unit_cost),
       })),
+      storeSales: businessStoreSalesSnapshot(
+        text(business.public_key),
+        text(business.currency_code).toUpperCase(),
+        storeReceiptRows,
+        storeActivityRows,
+      ),
       workforceUtilization: utilization
         ? parseBusinessWorkforceUtilization(utilization)
         : null,
@@ -229,11 +258,11 @@ export class SupabasePlayerBusinessRepository implements PlayerBusinessRepositor
   }
 }
 
-async function rows(builder: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Row[]> {
+async function rows(builder: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<BusinessRepositoryRow[]> {
   const response = await builder;
   if (response.error) throw mapDatabaseError(response.error.message);
   return Array.isArray(response.data)
-    ? response.data.filter((value): value is Row => Boolean(value && typeof value === "object" && !Array.isArray(value)))
+    ? response.data.filter((value): value is BusinessRepositoryRow => Boolean(value && typeof value === "object" && !Array.isArray(value)))
     : [];
 }
 
@@ -241,7 +270,7 @@ async function rpcMaybeRow(
   client: EdgeSupabaseClient,
   command: string,
   args: Readonly<Record<string, unknown>>,
-): Promise<Row | null> {
+): Promise<BusinessRepositoryRow | null> {
   const response = await client.rpc<unknown>(command, args);
   if (response.error) throw mapDatabaseError(response.error.message);
   const value = Array.isArray(response.data) ? response.data[0] : response.data;
@@ -249,7 +278,7 @@ async function rpcMaybeRow(
   if (typeof value !== "object" || Array.isArray(value)) {
     throw new PlayerBusinessError("business_banking_result_invalid", "The operation completed without a valid result.", 500);
   }
-  return value as Row;
+  return value as BusinessRepositoryRow;
 }
 
 function mapDatabaseError(message: string): PlayerBusinessError {
@@ -344,7 +373,8 @@ function emptyBusiness(): BusinessSnapshotDto {
       employees: 0, output: 0, backlog: 0, capacityUse: 0, maxRun: 0,
       capacityNote: "No production capacity is configured.",
     },
-    products: [], suppliers: [], employees: [], inventory: [], workforceUtilization: null,
+    products: [], suppliers: [], employees: [], inventory: [],
+    storeSales: emptyBusinessStoreSales("", ""), workforceUtilization: null,
   };
 }
 

@@ -47,6 +47,36 @@ const failureCases = [
     message: "This Store purchase is still processing. Wait a moment before retrying.",
     resetQuote: false,
     retryable: true
+  },
+  {
+    code: "STORE_OFFER_WITHDRAWAL_PENDING",
+    message: "This seller offer is being withdrawn and can no longer be purchased. Refresh the Store and choose another offer.",
+    resetQuote: true,
+    retryable: false
+  },
+  {
+    code: "STORE_OFFER_VERSION_CONFLICT",
+    message: "This seller offer changed. Refresh the Store before requesting a new quote.",
+    resetQuote: true,
+    retryable: false
+  },
+  {
+    code: "STORE_OFFER_SELF_PURCHASE_FORBIDDEN",
+    message: "You cannot purchase an offer from your own Business.",
+    resetQuote: false,
+    retryable: false
+  },
+  {
+    code: "STORE_OFFER_SETTLEMENT_OFFER_CONFLICT",
+    message: "This seller offer changed after the quote was issued. Request a new quote.",
+    resetQuote: true,
+    retryable: false
+  },
+  {
+    code: "PLAYER_STORE_OFFER_PURCHASE_FAILED",
+    message: "The Business offer purchase could not be completed. No funds or inventory moved.",
+    resetQuote: false,
+    retryable: false
   }
 ];
 
@@ -184,6 +214,73 @@ for (const testCase of failureCases) {
     calls[0],
     calls[1],
     "A non-transient rejection must not pin the earlier idempotency key to a later manual retry."
+  );
+}
+
+for (const [endpointKey, payload] of [
+  ["storeOfferQuote", { offerKey: "sof_11111111111111111111111111111111", quantity: 1, expectedVersion: 2 }],
+  ["storeOfferPurchase", { offerKey: "sof_11111111111111111111111111111111", quoteKey: QUOTE_KEY, quantity: 1, expectedVersion: 2 }]
+]) {
+  const calls = [];
+  let attempt = 0;
+  const retryApi = new PlayerApi({
+    usePreviewData: false,
+    playerSessionToken: "token-1",
+    requestTimeoutMs: 1000,
+    writeCooldownMs: 0,
+    apiCall: async (context) => {
+      calls.push(context.idempotencyKey);
+      attempt += 1;
+      if (attempt === 1) {
+        throw new ApiRequestError("The player terminal could not reach the game service.", {
+          code: "NETWORK_ERROR",
+          endpointKey
+        });
+      }
+      return { ok: true };
+    }
+  });
+  await assert.rejects(retryApi.execute(endpointKey, payload), (error) => error.code === "NETWORK_ERROR");
+  await retryApi.execute(endpointKey, payload);
+  assert.match(calls[0], new RegExp(`^ptr_${endpointKey}_`));
+  assert.equal(calls[1], calls[0], `${endpointKey} must reuse its idempotency key after an ambiguous network failure.`);
+}
+
+{
+  const calls = [];
+  let attempt = 0;
+  const abortedApi = new PlayerApi({
+    usePreviewData: false,
+    playerSessionToken: "token-1",
+    requestTimeoutMs: 1000,
+    writeCooldownMs: 0,
+    apiCall: async (context) => {
+      calls.push(context.idempotencyKey);
+      attempt += 1;
+      if (attempt === 1) {
+        throw new ApiRequestError("The settlement response was interrupted.", {
+          code: "REQUEST_ABORTED",
+          endpointKey: context.endpointKey
+        });
+      }
+      return { ok: true };
+    }
+  });
+  const payload = {
+    offerKey: "sof_11111111111111111111111111111111",
+    quoteKey: QUOTE_KEY,
+    quantity: 1,
+    expectedVersion: 2
+  };
+  await assert.rejects(
+    abortedApi.execute("storeOfferPurchase", payload),
+    (error) => error.code === "REQUEST_ABORTED"
+  );
+  await abortedApi.execute("storeOfferPurchase", payload);
+  assert.equal(
+    calls[1],
+    calls[0],
+    "An interrupted idempotent settlement response must retain its key for authoritative replay recovery."
   );
 }
 

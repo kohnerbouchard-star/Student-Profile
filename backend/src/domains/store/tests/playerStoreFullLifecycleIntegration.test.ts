@@ -44,6 +44,9 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
       },
     }),
     createRepository: () => repository,
+    createOfferRepository: () => ({
+      listOfferProducts: () => Promise.resolve([]),
+    } as never),
     now: () => "2026-07-19T03:00:00.000Z",
   };
   const playerBodies: unknown[] = [];
@@ -58,6 +61,7 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
   assertEquals(catalog.status, 200);
   assertEquals(catalogBody.items[0].itemKey, ITEM_KEY);
   assertEquals(catalogBody.items[0].stockQuantity, 5);
+  assertEquals(catalogBody.products, []);
 
   const quote = await handlePlayerStorePublicRequest(
     request("POST", "/players/me/store/quotes", {

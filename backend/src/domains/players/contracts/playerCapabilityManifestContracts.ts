@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-23.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-25.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -471,13 +471,21 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "storeQuote",
-    operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }],
+    operations: [
+      { method: "POST", pathTemplate: "/players/me/store/quotes" },
+      { method: "POST", pathTemplate: "/players/me/store/offer-quotes" },
+    ],
   },
   {
     key: "storePurchase",
     operations: [
       { method: "GET", pathTemplate: "/players/me/store/purchases" },
       { method: "POST", pathTemplate: "/players/me/store/purchases" },
+      { method: "POST", pathTemplate: "/players/me/store/offer-purchases" },
+      {
+        method: "GET",
+        pathTemplate: "/players/me/store/receipts/:receiptKey",
+      },
     ],
     actionCapabilities: ["storePurchase"],
   },

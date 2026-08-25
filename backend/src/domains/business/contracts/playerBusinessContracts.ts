@@ -61,6 +61,46 @@ export interface BusinessProductDto {
   readonly version: number;
 }
 
+export interface BusinessStoreSaleDto {
+  readonly receiptKey: string;
+  readonly quoteKey: string;
+  readonly offerKey: string;
+  readonly itemKey: string;
+  readonly quantity: number;
+  readonly grossRevenue: number;
+  readonly costOfGoodsSold: number;
+  readonly grossMargin: number;
+  readonly currencyCode: string;
+  readonly completedAt: string;
+}
+
+export interface BusinessStoreSaleActivityDto {
+  readonly activityKey: string;
+  readonly eventType: "business.store.sale.completed";
+  readonly reasonCode: "business_store_offer_purchase";
+  readonly receiptKey: string;
+  readonly quoteKey: string;
+  readonly offerKey: string;
+  readonly quantity: number;
+  readonly grossRevenue: number;
+  readonly costOfGoodsSold: number;
+  readonly grossMargin: number;
+  readonly currencyCode: string;
+  readonly occurredAt: string;
+}
+
+export interface BusinessStoreSalesSnapshotDto {
+  readonly businessKey: string;
+  readonly currencyCode: string;
+  readonly recentReceiptCount: number;
+  readonly recentQuantitySold: number;
+  readonly recentGrossRevenue: number;
+  readonly recentCostOfGoodsSold: number;
+  readonly recentGrossMargin: number;
+  readonly sales: readonly BusinessStoreSaleDto[];
+  readonly activity: readonly BusinessStoreSaleActivityDto[];
+}
+
 export const BUSINESS_STOCKROOM_LOCATION_KEYS = [
   "warehouse",
   "work_in_progress",
@@ -270,6 +310,7 @@ export interface BusinessSnapshotDto {
     readonly quantity: number;
     readonly unitCost: number;
   }[];
+  readonly storeSales: BusinessStoreSalesSnapshotDto;
   readonly workforceUtilization: BusinessWorkforceUtilizationDto | null;
   readonly compliance?: readonly {
     readonly requirement: string;

@@ -316,6 +316,34 @@ export function createPlayerTerminal({ mount, config }) {
     return loadData();
   }
 
+  async function refreshResources(resourceKeys) {
+    const keys = [...new Set((Array.isArray(resourceKeys) ? resourceKeys : []).filter((key) => typeof key === "string" && key))];
+    if (!keys.length) return { data: {}, errors: {}, resourceStatus: {} };
+    api.setSession(config);
+    const result = await api.refreshResources(keys);
+    const invalidSession = Object.values(result.errors || {}).find((error) => Number(error?.status) === 401);
+    if (invalidSession) {
+      handleInvalidSession(invalidSession);
+      throw invalidSession;
+    }
+    store.setState((state) => {
+      const { resourceStatus: refreshedStatus = {}, ...resources } = result.data || {};
+      const data = {
+        ...state.data,
+        ...resources,
+        resourceStatus: {
+          ...(state.data?.resourceStatus || {}),
+          ...refreshedStatus,
+        },
+      };
+      if (resources.session || resources.dashboard) {
+        data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
+      }
+      return { ...state, data };
+    });
+    return result;
+  }
+
   function openConnectionModal(error, opener = null) {
     rememberFocus(opener);
     store.setState((state) => ({ ...state, ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false }, modal: {
@@ -975,6 +1003,7 @@ export function createPlayerTerminal({ mount, config }) {
 
   return {
     refresh: loadData,
+    refreshResources,
     connectSession,
     getState: store.getState,
     subscribe: store.subscribe,

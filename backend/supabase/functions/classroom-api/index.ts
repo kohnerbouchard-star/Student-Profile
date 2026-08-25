@@ -135,6 +135,7 @@ import {
   handlePlayerStorePublicRequest,
 } from "../../../src/domains/store/api/playerStorePublicHttpHandler.ts";
 import {
+  playerStoreRouteRateLimitKey,
   readPlayerStorePublicRoutePath,
 } from "../../../src/domains/store/api/playerStorePublicRoutePaths.ts";
 import {
@@ -444,14 +445,9 @@ Deno.serve(async (request) => {
   const playerStoreRoute = readPlayerStorePublicRoutePath(url.pathname);
 
   if (playerStoreRoute) {
-    const endpointKey = playerStoreRoute.kind === "items"
-      ? "store"
-      : playerStoreRoute.kind === "quotes"
-      ? "storeQuote"
-      : "storePurchase";
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
-      endpointKey,
+      playerStoreRouteRateLimitKey(playerStoreRoute),
       () =>
         handlePlayerStorePublicRequest(request, playerStoreRoute, {
           createServiceClient,

@@ -1,16 +1,29 @@
 import { PlayerApi } from "../../api/player-api.js";
-import { ApiConnectionPendingError, playerSafeErrorMessage } from "../../api/errors.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { renderModal } from "../../components/modal.js";
 import { focusFirstInteractive, setButtonProcessing } from "../../core/dom.js";
+import {
+  createSeededStoreOffer,
+  dispatchStoreSessionInvalid,
+  quoteExpired,
+  resolveStorePurchaseFailure,
+  validateBusinessOfferQuote,
+  validateBusinessOfferReceipt,
+  validateSeededQuote,
+  validateSeededReceipt,
+} from "./store-purchase-contract.js";
+import {
+  convergeCommittedStorePurchase,
+  refreshStaleStoreOffer,
+} from "./store-purchase-convergence.js";
 
-const RESET_QUOTE_CODES = new Set([
-  "STORE_INSUFFICIENT_STOCK",
-  "STORE_ITEM_NOT_AVAILABLE",
-  "STORE_QUOTE_ALREADY_USED",
-  "STORE_QUOTE_EXPIRED",
-  "STORE_QUOTE_NOT_FOUND"
-]);
+export {
+  dispatchStoreSessionInvalid,
+  resolveStorePurchaseFailure,
+  storeQuoteFromOperation,
+  validateBusinessOfferQuote,
+  validateImmutableBusinessOfferReceipt,
+} from "./store-purchase-contract.js";
 
 function storeModalElement(root) {
   const dialog = root?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
@@ -22,59 +35,10 @@ function focusableElements(root) {
     .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
 }
 
-function safeMessage(error, fallback) {
-  if (error instanceof ApiConnectionPendingError) return "Store purchasing is awaiting the authoritative backend connection.";
-  const code = String(error?.code || "").trim().toUpperCase();
-  const status = Number(error?.status || 0);
-  if (code || status) return playerSafeErrorMessage({ status, code });
-  return String(error?.message || fallback || "The Store request could not be completed.");
-}
-
-export function storeQuoteFromOperation(result) {
-  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
-  const quote = result.quote;
-  return quote && typeof quote === "object" && !Array.isArray(quote) ? quote : result;
-}
-
-export function resolveStorePurchaseFailure(error, fallback = "The Store purchase could not be completed.") {
-  const code = String(error?.code || "").trim().toUpperCase();
-  const status = Number(error?.status || 0);
-  return Object.freeze({
-    code,
-    status,
-    message: safeMessage(error, fallback),
-    resetQuote: RESET_QUOTE_CODES.has(code),
-    retryable: code === "STORE_PURCHASE_IN_PROGRESS" || error?.retryable === true,
-    sessionInvalid: status === 401
-  });
-}
-
-export function dispatchStoreSessionInvalid(error, config = {}, runtime = globalThis) {
-  const failure = resolveStorePurchaseFailure(error);
-  if (!failure.sessionInvalid) return false;
-  const detail = Object.freeze({
-    reason: "invalid_player_session",
-    terminal: "player",
-    status: failure.status || 401,
-    code: failure.code || "SESSION_INVALID",
-    requestId: String(error?.requestId || "")
-  });
-  try {
-    if (typeof config.onSessionInvalid === "function") config.onSessionInvalid(detail);
-  } catch {
-    // Host callbacks cannot block the safe fallback event.
-  }
-  const eventName = String(config.sessionInvalidEvent || "econovaria:player-session-invalid");
-  if (typeof runtime.CustomEvent === "function" && typeof runtime.dispatchEvent === "function") {
-    runtime.dispatchEvent(new runtime.CustomEvent(eventName, { detail }));
-  }
-  return true;
-}
-
 export function installStorePurchaseFlow({ mount, terminal, config }) {
   if (!(mount instanceof HTMLElement)) return { destroy() {} };
-  if (!terminal || typeof terminal.getState !== "function" || typeof terminal.refresh !== "function") {
-    throw new TypeError("The Store purchase flow requires an active player terminal.");
+  if (!terminal || typeof terminal.getState !== "function" || typeof terminal.refreshResources !== "function") {
+    throw new TypeError("The Store purchase flow requires an active player terminal with bounded resource refresh.");
   }
 
   const api = new PlayerApi(config);
@@ -85,8 +49,11 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
 
   let opener = null;
   let openerItemKey = "";
+  let openerOfferKey = "";
   let transaction = null;
   let destroyed = false;
+  let generation = 0;
+  let activeController = null;
 
   function applicationRoot() {
     return mount.querySelector(".player-terminal-app-root");
@@ -101,19 +68,41 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   function restoreOpenerFocus() {
-    const current = opener?.isConnected ? opener : (
-      openerItemKey ? mount.querySelector(`[data-player-purchase="${CSS.escape(openerItemKey)}"]`) : null
+    const offerSelector = openerOfferKey
+      ? `[data-player-store-offer="${openerOfferKey}"]`
+      : "";
+    let current = opener?.isConnected ? opener : (
+      offerSelector ? mount.querySelector(offerSelector) :
+        openerItemKey ? mount.querySelector(`[data-player-purchase="${openerItemKey}"]`) : null
     );
+    if (current?.disabled || current?.getAttribute?.("aria-disabled") === "true") {
+      current = mount.querySelector(`[data-player-purchase="${openerItemKey}"]:not([disabled]):not([aria-disabled="true"])`) ||
+        current.closest?.(".player-terminal-store-card") ||
+        mount.querySelector(".player-terminal-store-page h2");
+    }
+    if (current && !current.matches?.('a[href], button:not([disabled]), input:not([disabled]), [tabindex]')) {
+      current.setAttribute?.("tabindex", "-1");
+    }
     current?.focus?.({ preventScroll: true });
   }
 
-  function closeModal({ restoreFocus = true } = {}) {
+  function cancelActiveRequest() {
+    generation += 1;
+    activeController?.abort();
+    activeController = null;
+  }
+
+  function closeModal({ restoreFocus = true, force = false } = {}) {
+    if (transaction?.processing === true && !force) return false;
+    cancelActiveRequest();
     storeModalElement(overlayHost)?.remove();
     restoreApplication();
     if (restoreFocus) restoreOpenerFocus();
     opener = null;
     openerItemKey = "";
+    openerOfferKey = "";
     transaction = null;
+    return true;
   }
 
   function renderTransaction() {
@@ -129,7 +118,26 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       root.inert = true;
       root.setAttribute("aria-hidden", "true");
     }
-    focusFirstInteractive(modal);
+    const quantity = modal.querySelector("[data-player-store-quantity]");
+    if (quantity) quantity.focus({ preventScroll: true });
+    else if (transaction.processing === true) {
+      modal.querySelector('[aria-labelledby="storePurchaseModalTitle"]')
+        ?.focus({ preventScroll: true });
+    } else focusFirstInteractive(modal);
+  }
+
+  function beginRequest() {
+    activeController?.abort();
+    activeController = new AbortController();
+    return { requestGeneration: generation, signal: activeController.signal };
+  }
+
+  function requestIsCurrent(requestGeneration) {
+    return !destroyed && transaction && requestGeneration === generation;
+  }
+
+  function convergenceRequestIsCurrent() {
+    return !destroyed;
   }
 
   function openPurchase(button) {
@@ -138,138 +146,266 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const itemId = button.dataset.playerPurchase;
     const item = state.data?.store?.items?.find((candidate) => String(candidate.itemKey || candidate.id) === String(itemId));
     if (!item) return;
+    const offerKey = String(button.dataset.playerStoreOffer || "");
+    const offer = (Array.isArray(item.offers) && offerKey
+      ? item.offers.find((candidate) => candidate.offerKey === offerKey)
+      : null) || createSeededStoreOffer(item);
+    const purchasability = String(button.dataset.playerStorePurchaseMode || offer.purchasability || "seeded_offer");
+    if (!offer.purchasable || purchasability === "unsupported") return;
+    cancelActiveRequest();
     opener = button;
     openerItemKey = String(itemId || "");
+    openerOfferKey = offerKey;
     transaction = {
       stage: "select",
       item,
+      offer,
+      purchaseMode: purchasability,
       quantity: 1,
       quote: null,
       receipt: null,
       error: "",
+      refreshState: "idle",
       refreshWarning: "",
-      currencyCode: state.data?.session?.currencyCode || "ECO"
+      invalidatedResources: [],
+      processing: false,
+      currencyCode: offer.currencyCode || state.data?.session?.currencyCode || "ECO",
     };
     renderTransaction();
   }
 
   async function requestQuote(button) {
+    const current = transaction;
+    if (!current) return;
     const input = storeModalElement(overlayHost)?.querySelector("[data-player-store-quantity]");
     const quantity = Number(input?.value);
-    const stock = Number(transaction?.item?.stock);
-    if (!Number.isInteger(quantity) || quantity < 1 || (Number.isFinite(stock) && quantity > stock)) {
-      transaction = { ...transaction, error: `Enter a whole-number quantity between 1 and ${Math.max(1, stock || 1)}.` };
+    const stock = Number(current.offer?.availableQuantity ?? current.item?.stock);
+    if (!current.offer?.purchasable || current.purchaseMode === "unsupported") {
+      transaction = { ...current, error: "This seller offer is no longer available. Refresh the Store and choose another offer." };
+      renderTransaction();
+      return;
+    }
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || !Number.isSafeInteger(stock) || quantity > stock) {
+      transaction = { ...current, error: `Enter a whole-number quantity between 1 and ${Math.max(1, stock || 1)}.` };
       renderTransaction();
       return;
     }
 
     const restoreButton = setButtonProcessing(button, "Requesting quote");
+    const { requestGeneration, signal } = beginRequest();
     try {
       api.setSession(config);
-      const operation = await api.execute("storeQuote", {
-        itemKey: transaction.item.itemKey || transaction.item.id,
-        quantity
-      });
+      const businessOffer = current.purchaseMode === "business_offer";
+      const operation = businessOffer
+        ? await api.execute("storeOfferQuote", {
+          offerKey: current.offer.offerKey,
+          quantity,
+          expectedVersion: current.offer.version,
+        }, {}, { signal })
+        : await api.execute("storeQuote", {
+          itemKey: current.item.itemKey || current.item.id,
+          quantity,
+        }, {}, { signal });
+      if (!requestIsCurrent(requestGeneration)) return;
+      const quote = businessOffer
+        ? validateBusinessOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity })
+        : validateSeededQuote(operation.result, { item: current.item, quantity });
       transaction = {
-        ...transaction,
+        ...current,
         stage: "review",
         quantity,
-        quote: storeQuoteFromOperation(operation.result),
+        quote,
         receipt: null,
         error: "",
-        refreshWarning: ""
+        refreshState: "idle",
+        refreshWarning: "",
       };
       renderTransaction();
     } catch (error) {
       restoreButton();
+      if (!requestIsCurrent(requestGeneration)) return;
       const failure = resolveStorePurchaseFailure(error, "The Store quote could not be created.");
-      if (failure.sessionInvalid && dispatchStoreSessionInvalid(error, config)) return;
-      transaction = { ...transaction, quantity, error: failure.message };
+      if (failure.sessionInvalid) {
+        closeModal({ restoreFocus: false });
+        dispatchStoreSessionInvalid(error, config);
+        return;
+      }
+      transaction = { ...current, quantity, error: failure.message };
       renderTransaction();
-    }
-  }
-
-  function quoteExpired(quote) {
-    const expiresAt = Date.parse(String(quote?.expiresAt || ""));
-    return Number.isFinite(expiresAt) && expiresAt <= Date.now();
-  }
-
-  async function refreshedTransactionItem() {
-    const itemKey = String(transaction?.item?.itemKey || transaction?.item?.id || "");
-    try {
-      await terminal.refresh();
-      return terminal.getState()?.data?.store?.items?.find((item) => String(item.itemKey || item.id) === itemKey) || transaction.item;
-    } catch {
-      return transaction.item;
     }
   }
 
   async function confirmPurchase(button) {
-    const quote = transaction?.quote;
-    if (!quote?.quoteKey) {
-      transaction = { ...transaction, stage: "select", error: "Request a current Store quote before confirming the purchase." };
-      renderTransaction();
+    const current = transaction;
+    const quote = current?.quote;
+    if (current?.processing === true) return;
+    if (!current || !quote?.quoteKey) {
+      if (current) {
+        transaction = { ...current, stage: "select", error: "Request a current Store quote before confirming the purchase." };
+        renderTransaction();
+      }
       return;
     }
     if (quoteExpired(quote)) {
-      transaction = { ...transaction, stage: "select", quote: null, error: "This quote expired. Request a new authoritative quote." };
+      transaction = { ...current, stage: "select", quote: null, error: "This quote expired. Request a new authoritative quote." };
       renderTransaction();
       return;
     }
 
-    const restoreButton = setButtonProcessing(button, "Completing purchase");
+    void button;
+    transaction = { ...current, processing: true, error: "" };
+    renderTransaction();
+    const { requestGeneration, signal } = beginRequest();
     let operation;
+    let receipt;
     try {
       api.setSession(config);
-      operation = await api.execute("storePurchase", {
-        quoteKey: quote.quoteKey,
-        clientSubmittedAt: new Date().toISOString()
-      });
+      if (current.purchaseMode === "business_offer") {
+        operation = await api.execute("storeOfferPurchase", {
+          offerKey: quote.offerKey,
+          quoteKey: quote.quoteKey,
+          quantity: quote.quantity,
+          expectedVersion: quote.offerVersion,
+        }, {}, { signal });
+        if (!requestIsCurrent(requestGeneration)) return;
+        receipt = validateBusinessOfferReceipt(operation.result, {
+          item: current.item,
+          offer: current.offer,
+          quote,
+        });
+      } else {
+        operation = await api.execute("storePurchase", {
+          quoteKey: quote.quoteKey,
+          clientSubmittedAt: new Date().toISOString(),
+        }, {}, { signal });
+        if (!requestIsCurrent(requestGeneration)) return;
+        receipt = validateSeededReceipt(operation.result, { item: current.item, quote });
+      }
     } catch (error) {
-      restoreButton();
+      if (!requestIsCurrent(requestGeneration)) return;
       const failure = resolveStorePurchaseFailure(error);
-      if (failure.sessionInvalid && dispatchStoreSessionInvalid(error, config)) return;
+      if (failure.sessionInvalid) {
+        transaction = { ...current, processing: false };
+        closeModal({ restoreFocus: false });
+        dispatchStoreSessionInvalid(error, config);
+        return;
+      }
       if (failure.resetQuote) {
-        const item = await refreshedTransactionItem();
+        const refreshed = await refreshStaleStoreOffer({
+          current,
+          terminal,
+          requestGeneration,
+          requestIsCurrent,
+        });
+        if (!refreshed) return;
         transaction = {
-          ...transaction,
+          ...current,
+          item: refreshed.item,
+          offer: refreshed.offer,
           stage: "select",
-          item,
           quote: null,
           receipt: null,
-          error: failure.message,
-          refreshWarning: ""
+          error: refreshed.refreshPending
+            ? `${failure.message} The authoritative Store refresh is still pending, so this offer remains unavailable.`
+            : failure.message,
+          refreshState: refreshed.refreshPending ? "pending" : "idle",
+          refreshWarning: refreshed.refreshPending
+            ? "Authoritative Store refresh pending."
+            : "",
+          processing: false,
         };
       } else {
-        transaction = { ...transaction, error: failure.message };
+        transaction = { ...current, error: failure.message, processing: false };
       }
       renderTransaction();
       return;
     }
 
     transaction = {
-      ...transaction,
+      ...current,
       stage: "receipt",
-      receipt: operation.result?.receipt || operation.result,
+      receipt,
       error: "",
-      refreshWarning: ""
+      refreshState: "refreshing",
+      refreshWarning: "",
+      processing: false,
+      invalidatedResources: Object.freeze([
+        ...new Set(Array.isArray(operation.invalidatedResources)
+          ? operation.invalidatedResources
+          : ["dashboard", "store", "inventory", "banking"]),
+      ]),
     };
+    renderTransaction();
 
-    storeModalElement(overlayHost)?.remove();
-    restoreApplication();
+    let warnings;
     try {
-      await terminal.refresh();
-    } catch {
-      transaction = {
-        ...transaction,
-        refreshWarning: "The purchase completed, but current balances and inventory could not be refreshed. Reopen this section or retry the terminal refresh."
-      };
+      warnings = await convergeCommittedStorePurchase({
+        current: transaction,
+        api,
+        config,
+        terminal,
+        requestGeneration,
+        requestIsCurrent: convergenceRequestIsCurrent,
+        signal: null,
+      });
+    } catch (error) {
+      if (destroyed) return;
+      if (requestIsCurrent(requestGeneration)) closeModal({ restoreFocus: false });
+      dispatchStoreSessionInvalid(error, config);
+      return;
     }
+    if (!warnings || !requestIsCurrent(requestGeneration)) return;
+    transaction = {
+      ...transaction,
+      refreshState: warnings.length ? "pending" : "complete",
+      refreshWarning: warnings.join(" "),
+    };
+    renderTransaction();
+  }
+
+  async function retryCommittedRefresh() {
+    const current = transaction;
+    if (
+      !current || current.stage !== "receipt" || !current.receipt ||
+      current.refreshState !== "pending"
+    ) return;
+    transaction = {
+      ...current,
+      refreshState: "refreshing",
+      refreshWarning: "",
+    };
+    renderTransaction();
+    const { requestGeneration, signal } = beginRequest();
+    let warnings;
+    try {
+      warnings = await convergeCommittedStorePurchase({
+        current: transaction,
+        api,
+        config,
+        terminal,
+        requestGeneration,
+        requestIsCurrent: convergenceRequestIsCurrent,
+        signal: null,
+      });
+    } catch (error) {
+      if (destroyed) return;
+      if (requestIsCurrent(requestGeneration)) closeModal({ restoreFocus: false });
+      dispatchStoreSessionInvalid(error, config);
+      return;
+    }
+    if (!warnings || !requestIsCurrent(requestGeneration)) return;
+    transaction = {
+      ...transaction,
+      refreshState: warnings.length ? "pending" : "complete",
+      refreshWarning: warnings.join(" "),
+    };
     renderTransaction();
   }
 
   function editQuantity() {
-    transaction = { ...transaction, stage: "select", quote: null, receipt: null, error: "", refreshWarning: "" };
+    if (!transaction) return;
+    cancelActiveRequest();
+    transaction = { ...transaction, stage: "select", quote: null, receipt: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
     renderTransaction();
   }
 
@@ -296,8 +432,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
     if (event.target.closest('[data-player-local-action="close-modal"]')) {
       const route = event.target.closest("[data-route]")?.dataset.route;
-      closeModal({ restoreFocus: !route });
-      if (route) terminal.navigate(route);
+      const closed = closeModal({ restoreFocus: !route });
+      if (closed && route) terminal.navigate(route);
       return;
     }
     const review = event.target.closest("[data-player-store-review]");
@@ -307,6 +443,10 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
     if (event.target.closest("[data-player-store-edit]")) {
       editQuantity();
+      return;
+    }
+    if (event.target.closest("[data-player-store-refresh-retry]")) {
+      void retryCommittedRefresh();
       return;
     }
     const confirm = event.target.closest("[data-player-store-confirm]");
@@ -324,7 +464,12 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
     if (event.key !== "Tab") return;
     const focusables = focusableElements(modal);
-    if (!focusables.length) return;
+    if (!focusables.length) {
+      event.preventDefault();
+      modal.querySelector('[aria-labelledby="storePurchaseModalTitle"]')
+        ?.focus({ preventScroll: true });
+      return;
+    }
     const first = focusables[0];
     const last = focusables.at(-1);
     if (event.shiftKey && document.activeElement === first) {
@@ -346,8 +491,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       mount.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("keydown", handleKeyDown, true);
-      closeModal({ restoreFocus: false });
+      closeModal({ restoreFocus: false, force: true });
       overlayHost.remove();
-    }
+    },
   };
 }

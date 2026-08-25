@@ -74,7 +74,7 @@ function mergeAbortSignals(...signals) {
 
 function shouldReuseIdempotencyKey(error) {
   const status = Number(error?.status || 0);
-  return ["NETWORK_ERROR", "OFFLINE", "REQUEST_TIMEOUT"].includes(error?.code) || status >= 500;
+  return ["NETWORK_ERROR", "OFFLINE", "REQUEST_ABORTED", "REQUEST_TIMEOUT"].includes(error?.code) || status >= 500;
 }
 
 function readyResourceStatus() {

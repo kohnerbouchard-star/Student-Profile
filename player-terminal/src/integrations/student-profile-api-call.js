@@ -2,6 +2,7 @@ import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
 import { hasMarketplaceBackendRoute, resolveMarketplaceBackendRequest } from "../api/marketplace-backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
+import { normalizeApiResponse } from "../api/response-normalizer.js";
 import { attachPortfolioHoldings } from "../api/portfolio-market-holdings.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
@@ -397,7 +398,14 @@ export function createStudentProfileApiCall({ request } = {}) {
       return snapshot.marketplace;
     }
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
-      snapshot = mergeTerminalRead(snapshot, context.endpointKey, raw);
+      const readResponse = context.endpointKey === "store"
+        ? normalizeApiResponse("store", raw, {
+          config: context.config || {},
+          path: context.path,
+          requestId: context.requestId,
+        })
+        : raw;
+      snapshot = mergeTerminalRead(snapshot, context.endpointKey, readResponse);
       if (context.endpointKey === "countries" && snapshot.session?.currencyCode) {
         snapshot = bindSessionCurrency(snapshot, snapshot.session.currencyCode);
       }

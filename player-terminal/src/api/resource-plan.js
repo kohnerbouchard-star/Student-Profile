@@ -41,6 +41,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking"]),
   marketWatchlist: Object.freeze(["market"]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
+  storeOfferPurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
   marketplaceActivate: Object.freeze(["marketplace", "inventory"]),
   marketplacePurchase: Object.freeze(["dashboard", "marketplace", "inventory", "banking"]),
   marketplaceListing: Object.freeze(["marketplace", "inventory"]),
@@ -68,7 +69,10 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   storyDeliveryState: Object.freeze(["storyDeliveries"])
 });
 
-export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set(Object.keys(WRITE_INVALIDATIONS)));
+export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set([
+  ...Object.keys(WRITE_INVALIDATIONS),
+  "storeOfferQuote",
+]));
 
 export function resourcesForRoute(route) {
   return ROUTE_RESOURCE_PLAN[route] || ROUTE_RESOURCE_PLAN.dashboard;

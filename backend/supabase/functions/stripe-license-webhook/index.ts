@@ -454,7 +454,7 @@ function validateEventEnvelope(
 function normalizeCheckoutSession(
   value: unknown,
   mode: "test" | "live",
-): StripeCheckoutSession | null {
+): (StripeCheckoutSession & { readonly id: string }) | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const session = value as StripeCheckoutSession;
   const id = String(session.id || "");

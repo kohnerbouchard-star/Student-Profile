@@ -144,7 +144,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":offerKey", `lop_${"a".repeat(32)}`)
         .replace(":loanKey", `lon_${"a".repeat(32)}`)
         .replace(":skillId", "skl_market_literacy_v1")
-        .replace(":rewardId", `rwd_${"b".repeat(32)}`),
+        .replace(":rewardId", `rwd_${"b".repeat(32)}`)
+        .replace(":receiptKey", `spr_${"c".repeat(32)}`),
     }))
   );
 
@@ -210,6 +211,26 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       throw new Error(`Advertised endpoint ${operation.key} is not dispatchable: ${operation.path}`);
     }
   }
+});
+
+Deno.test("Business Store operations reuse the retained Store capability keys", () => {
+  const manifest = buildPlayerCapabilityManifest();
+  const storeQuote = manifest.endpoints.find((endpoint) => endpoint.key === "storeQuote");
+  const storePurchase = manifest.endpoints.find((endpoint) => endpoint.key === "storePurchase");
+
+  assertEquals(storeQuote?.operations, [
+    { method: "POST", pathTemplate: "/players/me/store/quotes" },
+    { method: "POST", pathTemplate: "/players/me/store/offer-quotes" },
+  ]);
+  assertEquals(storePurchase?.operations, [
+    { method: "GET", pathTemplate: "/players/me/store/purchases" },
+    { method: "POST", pathTemplate: "/players/me/store/purchases" },
+    { method: "POST", pathTemplate: "/players/me/store/offer-purchases" },
+    { method: "GET", pathTemplate: "/players/me/store/receipts/:receiptKey" },
+  ]);
+  assertEquals(manifest.capabilities.routes.store, true);
+  assertEquals(manifest.capabilities.actions.storePurchase, true);
+  assertEquals("storeOfferPurchase" in manifest.capabilities.actions, false);
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

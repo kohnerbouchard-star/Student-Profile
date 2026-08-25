@@ -595,21 +595,150 @@ function normalizeBankingRead(response, currentBanking) {
   };
 }
 
-function storeItemsFromSnapshot(snapshot) {
-  const store = object(object(snapshot.me).store);
-  const inventoryByItem = new Map(list(store.inventory).map((holding) => [holding.itemId, holding]));
-  return list(store.listings).map((item) => ({
-    id: text(item.itemKey || item.id || item.itemId),
-    itemKey: text(item.itemKey || item.id || item.itemId),
+function inventoryQuantity(inventoryByItem, itemKey, catalogItemKey = "") {
+  const holding = inventoryByItem.get(itemKey) || inventoryByItem.get(catalogItemKey) || {};
+  return number(holding.quantityOwned ?? holding.quantity);
+}
+
+function seededStoreOffer(item) {
+  const itemKey = text(item.itemKey || item.id || item.itemId);
+  if (!itemKey) return null;
+  return {
+    offerKey: `seeded:${itemKey}`,
+    sellerKey: `seeded:${itemKey}`,
+    sellerPartyKey: `seeded:${itemKey}`,
+    sellerKind: "seeded",
+    sellerName: "Econovaria Store",
+    businessKey: null,
+    businessName: null,
+    unitPrice: number(item.price),
+    currencyCode: text(item.currencyCode),
+    availableQuantity: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
+    status: "active",
+    purchasability: "seeded_offer",
+    purchasable: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))) > 0,
+    version: 1,
+  };
+}
+
+function publicSellerOffer(value) {
+  const offer = object(value);
+  const sellerKind = text(offer.sellerKind).toLowerCase();
+  return {
+    offerKey: text(offer.offerKey),
+    sellerKey: text(offer.sellerPartyKey || offer.sellerKey),
+    sellerPartyKey: text(offer.sellerPartyKey || offer.sellerKey),
+    sellerKind,
+    sellerName: text(offer.sellerName, sellerKind === "business" ? "Player Business" : "Econovaria Store"),
+    businessKey: offer.businessKey === null ? null : text(offer.businessKey) || null,
+    businessName: offer.businessName === null ? null : text(offer.businessName) || null,
+    unitPrice: number(offer.unitPrice),
+    currencyCode: text(offer.currencyCode).toUpperCase(),
+    availableQuantity: Math.max(0, Math.trunc(number(offer.availableQuantity))),
+    status: text(offer.status, "active").toLowerCase(),
+    purchasability: text(offer.purchasability),
+    purchasable: offer.purchasable === true,
+    version: Math.max(1, Math.trunc(number(offer.version, 1))),
+  };
+}
+
+function normalizedSeededStoreItem(item, inventoryByItem) {
+  const itemKey = text(item.itemKey || item.id || item.itemId);
+  const offer = seededStoreOffer(item);
+  return {
+    id: itemKey,
+    itemKey,
+    catalogItemKey: "",
+    canonicalItemKey: itemKey,
+    storeItemKey: itemKey,
     name: text(item.name, "Unnamed item"),
     category: text(item.category, "Other"),
     price: number(item.price),
-    stock: number(item.stockQuantity),
-    currencyCode: text(item.currencyCode),
-    owned: number(inventoryByItem.get(item.id || item.itemId)?.quantityOwned),
-    image: categoryImage(item),
-    description: text(item.description, "No description is available.")
-  }));
+    bestOfferKey: offer?.availableQuantity > 0 ? offer.offerKey : null,
+    bestUnitPrice: number(item.price),
+    stock: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
+    totalAvailableQuantity: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
+    sellerCount: offer && offer.availableQuantity > 0 ? 1 : 0,
+    offerCount: offer ? 1 : 0,
+    offers: offer ? [offer] : [],
+    currencyCode: text(item.currencyCode).toUpperCase(),
+    owned: inventoryQuantity(inventoryByItem, itemKey),
+    image: text(item.image, categoryImage(item)),
+    description: text(item.description, "No description is available."),
+    updatedAt: text(item.updatedAt)
+  };
+}
+
+function normalizedCatalogProduct(product, seededItem, inventoryByItem) {
+  const itemKey = text(product.storeItemKey || seededItem?.itemKey || seededItem?.id);
+  const catalogItemKey = text(product.catalogItemKey);
+  const offers = list(product.offers).map(publicSellerOffer);
+  if (seededItem && !offers.some((offer) => offer.sellerKind === "seeded")) {
+    const retainedOffer = seededStoreOffer(seededItem);
+    if (retainedOffer) offers.push(retainedOffer);
+  }
+  const activeOffers = offers.filter((offer) => offer.status === "active" && offer.purchasable === true && offer.availableQuantity > 0);
+  const prices = activeOffers.map((offer) => offer.unitPrice).filter((price) => Number.isFinite(price) && price >= 0);
+  const totalAvailableQuantity = activeOffers.reduce((sum, offer) => sum + offer.availableQuantity, 0);
+  const bestUnitPrice = prices.length ? Math.min(...prices) : null;
+  const bestOfferKey = activeOffers.find((offer) => offer.unitPrice === bestUnitPrice)?.offerKey ?? null;
+  const currencyCode = text(product.currencyCode || seededItem?.currencyCode).toUpperCase();
+  return {
+    id: itemKey,
+    itemKey,
+    catalogItemKey,
+    canonicalItemKey: text(product.canonicalItemKey, itemKey),
+    storeItemKey: itemKey,
+    name: text(product.name || seededItem?.name, "Unnamed item"),
+    category: text(product.category || seededItem?.category, "Other"),
+    price: bestUnitPrice ?? number(seededItem?.price),
+    bestOfferKey,
+    bestUnitPrice,
+    stock: totalAvailableQuantity,
+    totalAvailableQuantity,
+    sellerCount: new Set(activeOffers.map((offer) => offer.sellerKey)).size,
+    offerCount: offers.length,
+    offers,
+    currencyCode,
+    owned: inventoryQuantity(inventoryByItem, itemKey, catalogItemKey),
+    image: text(seededItem?.image, categoryImage({ ...product, itemKey })),
+    description: text(product.description || seededItem?.description, "No description is available."),
+    updatedAt: text(product.updatedAt || seededItem?.updatedAt)
+  };
+}
+
+function normalizedStoreItems(response, inventoryRows = []) {
+  const body = object(response);
+  const inventoryByItem = new Map();
+  for (const holding of list(inventoryRows)) {
+    for (const key of [holding.itemId, holding.storeItemId, holding.itemKey, holding.catalogItemKey]) {
+      if (text(key)) inventoryByItem.set(text(key), holding);
+    }
+  }
+  const seededItems = list(body.items || body.listings);
+  const seededByKey = new Map(seededItems.map((item) => [
+    text(item.itemKey || item.id || item.itemId),
+    item
+  ]).filter(([key]) => key));
+  const usedSeededKeys = new Set();
+  const products = list(body.products).map((product) => {
+    const key = text(product.storeItemKey);
+    const seededItem = seededByKey.get(key);
+    if (seededItem) usedSeededKeys.add(key);
+    return normalizedCatalogProduct(product, seededItem, inventoryByItem);
+  });
+  for (const [key, item] of seededByKey) {
+    if (!usedSeededKeys.has(key)) products.push(normalizedSeededStoreItem(item, inventoryByItem));
+  }
+  return products;
+}
+
+function storeItemsFromSnapshot(snapshot) {
+  const store = object(object(snapshot.me).store);
+  return normalizedStoreItems(
+    { items: list(store.listings), products: list(store.products) },
+    list(store.inventory),
+  );
 }
 
 function normalizeStore(snapshot) {
@@ -935,7 +1064,8 @@ export function mergeTerminalRead(data, endpointKey, response) {
     };
   }
   if (endpointKey === "store") {
-    const snapshot = { me: { store: { listings: list(object(response).items), inventory: data.inventory.items.map((item) => ({
+    const body = object(response);
+    const snapshot = { me: { store: { listings: list(body.items), products: list(body.products), inventory: data.inventory.items.map((item) => ({
       inventoryId: item.id,
       itemId: item.storeItemId,
       itemName: item.name,

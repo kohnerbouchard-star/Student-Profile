@@ -24,6 +24,86 @@
   box-shadow: var(--player-glow-cyan);
 }
 
+/* Store cards group canonical products while keeping every seller choice explicit. */
+.player-terminal-store-page .player-terminal-catalog-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.player-terminal-store-card {
+  grid-template-rows: 11rem auto auto minmax(0, 1fr);
+  align-content: start;
+}
+.player-terminal-store-summary {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--player-space-3);
+  padding: .75rem .8125rem;
+  border-top: 1px solid rgba(148, 182, 197, .12);
+  border-bottom: 1px solid rgba(148, 182, 197, .12);
+  background: rgba(2, 8, 16, .28);
+}
+.player-terminal-store-summary > span { display: grid; gap: .15rem; min-width: 0; }
+.player-terminal-store-summary small {
+  color: var(--player-color-text-faint);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.player-terminal-store-summary strong { color: var(--player-color-cyan); font-size: .875rem; }
+.player-terminal-store-offer-list {
+  display: grid;
+  align-content: start;
+  gap: .5rem;
+  padding: .75rem;
+}
+.player-terminal-store-offer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+  align-items: center;
+  min-width: 0;
+  padding: .7rem;
+  border: 1px solid rgba(148, 182, 197, .14);
+  border-radius: var(--player-radius-sm);
+  background: rgba(2, 8, 16, .44);
+}
+.player-terminal-store-seller,
+.player-terminal-store-offer-action,
+.player-terminal-store-offer-action > span { min-width: 0; }
+.player-terminal-store-seller { display: grid; gap: .18rem; }
+.player-terminal-store-seller > span {
+  width: max-content;
+  max-width: 100%;
+  padding: .12rem .35rem;
+  border: 1px solid rgba(148, 182, 197, .22);
+  border-radius: 999px;
+  color: var(--player-color-text-muted);
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+}
+.player-terminal-store-seller > span.is-business { border-color: rgba(168, 85, 247, .45); color: #d8b4fe; }
+.player-terminal-store-seller > span.is-seeded { border-color: rgba(0, 212, 255, .35); color: var(--player-color-cyan); }
+.player-terminal-store-seller > span.is-npc { border-color: rgba(255, 165, 0, .38); color: var(--player-color-amber); }
+.player-terminal-store-seller strong {
+  overflow-wrap: anywhere;
+  color: var(--player-color-text);
+  font-size: .78rem;
+  line-height: 1.25;
+}
+.player-terminal-store-seller small { color: var(--player-color-text-faint); font-size: .68rem; }
+.player-terminal-store-offer-action {
+  display: grid;
+  justify-items: end;
+  gap: .4rem;
+}
+.player-terminal-store-offer-action > span { display: grid; justify-items: end; gap: .12rem; }
+.player-terminal-store-offer-action small { color: var(--player-color-text-faint); font-size: .58rem; font-weight: 800; }
+.player-terminal-store-offer-action strong { font-size: .78rem; white-space: nowrap; }
+.player-terminal-store-offer-action .player-terminal-compact-button { min-width: 7rem; min-height: 2.5rem; }
+.player-terminal-store-offer-action .player-terminal-compact-button:disabled { opacity: .52; }
+
 .player-terminal-store-image,
 .player-terminal-inventory-image,
 .player-terminal-marketplace-image,
@@ -193,6 +273,7 @@
 .player-terminal-crafting-readiness.is-blocked { border-color: rgba(255, 165, 0, .32); }
 
 @media (max-width: 1180px) {
+  .player-terminal-store-page .player-terminal-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .player-terminal-inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .player-terminal-inventory-card { grid-template-columns: 5.125rem minmax(0, 1fr); }
   .player-terminal-inventory-image { width: 5.125rem; height: 5.125rem; }
@@ -208,6 +289,11 @@
 }
 
 @media (max-width: 760px) {
+  .player-terminal-store-page .player-terminal-catalog-grid { grid-template-columns: 1fr; }
+  .player-terminal-store-offer { grid-template-columns: 1fr; }
+  .player-terminal-store-offer-action { grid-template-columns: minmax(0, 1fr) auto; align-items: end; justify-items: stretch; }
+  .player-terminal-store-offer-action > span { justify-items: start; }
+  .player-terminal-store-offer-action .player-terminal-compact-button { min-height: 2.75rem; }
   .player-terminal-item-state-line,
   .player-terminal-marketplace-buying-power,
   .player-terminal-crafting-readiness,

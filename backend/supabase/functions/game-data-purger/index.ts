@@ -1,4 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "npm:@aws-sdk/client-s3@3.864.0";
 
 const SCHEDULER_NAME = "econovaria-game-data-purge-scheduler-v1";
@@ -12,8 +15,6 @@ const EXPECTED_DELETE_ORDER_TABLES = 129;
 const DB_FINALIZE_CURSOR = 130;
 const DB_BATCH_SIZE = 20;
 const R2_BATCH_SIZE = 1000;
-
-type SupabaseClient = ReturnType<typeof createClient>;
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") {
@@ -280,7 +281,9 @@ function env(name: string): string {
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digestBytes = new Uint8Array(bytes.byteLength);
+  digestBytes.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", digestBytes);
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");

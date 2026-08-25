@@ -8,16 +8,16 @@
   },
   "counts": {
     "domains": 27,
-    "sourceFiles": 1083,
+    "sourceFiles": 1100,
     "edgeEntrypoints": 25,
     "handlerFiles": 59,
     "persistenceOutsideInfrastructure": 100,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 208,
     "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 124
+    "capabilityStrings": 125
   },
   "domains": [
     {
@@ -89,7 +89,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 22,
+      "sourceFiles": 24,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -320,7 +320,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 38,
+      "sourceFiles": 50,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -3257,12 +3257,6 @@
         ]
       },
       {
-        "file": "player-terminal/src/features/store/store-purchase-flow.js",
-        "markers": [
-          "fallback"
-        ]
-      },
-      {
         "file": "player-terminal/src/features/world/world-runtime-flow.js",
         "markers": [
           "fallback",
@@ -3341,6 +3335,10 @@
         "lines": 1132
       },
       {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 1120
+      },
+      {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "lines": 1110
       },
@@ -3350,7 +3348,7 @@
       },
       {
         "file": "player-terminal/src/app.js",
-        "lines": 1019
+        "lines": 1048
       },
       {
         "file": "backend/supabase/functions/web-session-api/index.ts",
@@ -3359,10 +3357,6 @@
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
         "lines": 998
-      },
-      {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 990
       },
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
@@ -3390,7 +3384,7 @@
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 866
+        "lines": 862
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
@@ -3466,7 +3460,7 @@
       },
       {
         "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 684
+        "lines": 692
       },
       {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
@@ -3602,7 +3596,7 @@
       },
       {
         "file": "backend/supabase/functions/player-api/runtime.ts",
-        "lines": 576
+        "lines": 572
       },
       {
         "file": "admin/inventory-redemption-queue-surface.js",
@@ -4029,6 +4023,14 @@
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "curriculum.apple",
+        "locations": [
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryCatalogSuite.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryCommandSuite.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryTestFixtures.ts"
         ]
       },
       {

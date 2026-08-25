@@ -214,7 +214,7 @@ const sessionWriteApi = new PlayerApi(connectedConfig({
   apiCall: async ({ endpointKey, session, signal }) => {
     if (endpointKey === "store") {
       sessionStoreReads += 1;
-      return { items: [{ id: session.csrfToken }] };
+      return { items: [{ id: "session-probe", name: "Session probe", price: 1, marker: session.csrfToken }] };
     }
     markOldWriteStarted();
     await oldWriteGate;
@@ -226,11 +226,11 @@ await sessionWriteApi.request("store");
 const oldSessionWrite = sessionWriteApi.execute("storePurchase", { storeItemId: "market-lens", quantity: 1 }, {});
 await oldWriteStarted;
 sessionWriteApi.setSession({ authenticated: true, csrfToken: CSRF_NEW });
-assert.equal((await sessionWriteApi.request("store")).items[0].id, CSRF_NEW);
+assert.equal((await sessionWriteApi.request("store")).items[0].marker, CSRF_NEW);
 releaseOldWrite();
 await assert.rejects(oldSessionWrite, (error) => error.code === "REQUEST_ABORTED");
 assert.equal(sessionWriteApi.writeCompletedAt.size, 0, "An old write must not create a cooldown in the new session.");
-assert.equal((await sessionWriteApi.request("store")).items[0].id, CSRF_NEW);
+assert.equal((await sessionWriteApi.request("store")).items[0].marker, CSRF_NEW);
 assert.equal(sessionStoreReads, 2, "An old write completion must not invalidate the new session cache.");
 
 let adapterContext = null;
@@ -308,14 +308,20 @@ assert.throws(
 );
 assert.equal(normalizeWritePayload("messageSend", { body: "x".repeat(5000) }).body.length, 4000);
 
+assert.throws(
+  () => normalizeApiResponse("store", {
+    items: [{ id: "unsafe-item", name: "Unsafe item", image: "javascript:alert(1)", price: Number.POSITIVE_INFINITY }]
+  }, { config: { allowedImageHosts: [] }, requestId: "ptr_schema_invalid", path: "/store/items" }),
+  (error) => error.code === "INVALID_RESPONSE",
+  "A non-finite Store price must fail closed after sanitization."
+);
 const sanitizedStore = normalizeApiResponse("store", {
   items: [
-    { image: "javascript:alert(1)", price: Number.POSITIVE_INFINITY },
-    { image: "./assets/store-items/market-lens.svg", price: 10 }
+    { id: "unsafe-image", name: "Unsafe image", image: "javascript:alert(1)", price: 10 },
+    { id: "market-lens", name: "Market Lens", image: "./assets/store-items/market-lens.svg", price: 10 }
   ]
 }, { config: { allowedImageHosts: [] }, requestId: "ptr_schema", path: "/store/items" });
 assert.equal(sanitizedStore.items[0].image, "");
-assert.equal(sanitizedStore.items[0].price, null);
 assert.equal(sanitizedStore.items[1].image, "./assets/store-items/market-lens.svg");
 
 assert.equal("logout" in PLAYER_ENDPOINTS, false, "The terminal must not expose a direct Player token logout endpoint.");

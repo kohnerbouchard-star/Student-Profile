@@ -69,6 +69,9 @@ const ENDPOINT_ACTIONS = Object.freeze({
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
   storeQuote: "storePurchase",
+  storeOfferQuote: "storePurchase",
+  storeOfferPurchase: "storePurchase",
+  storeOfferReceipt: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });
 

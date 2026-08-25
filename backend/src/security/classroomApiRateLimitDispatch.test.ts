@@ -95,6 +95,24 @@ Deno.test("both Player composition roots forward the authenticated Inventory con
   }
 });
 
+Deno.test("both Player composition roots share the Store route rate-limit classifier", async () => {
+  for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
+    const source = await Deno.readTextFile(sourceUrl);
+    const normalized = source.replace(/\s+/gu, " ");
+
+    assertEquals(
+      normalized.includes(
+        "playerStoreRouteRateLimitKey(playerStoreRoute), () => handlePlayerStorePublicRequest",
+      ),
+      true,
+    );
+    assertEquals(
+      normalized.includes('playerStoreRoute.kind === "items"'),
+      false,
+    );
+  }
+});
+
 function occurrences(value: string, pattern: string): number {
   return value.split(pattern).length - 1;
 }
