@@ -415,14 +415,14 @@ jobs:
                 > "$SANITIZED_DIR/$(basename "$SOURCE")"
             fi
           done
-          if rg --text --quiet \
+          if grep -aErqi \
             -e 'postgres(ql)?://[^[:space:]]+' \
             -e 'postgres:postgres' \
-            -e '(?i)"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
+            -e '"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
-            -e '(?i)"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
+            -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             "$SANITIZED_DIR"; then
             echo "Database diagnostics contain a forbidden credential or private identifier." >&2
@@ -557,14 +557,14 @@ jobs:
                 > "$SANITIZED_DIR/$(basename "$SOURCE")"
             fi
           done
-          if rg --text --quiet \
+          if grep -aErqi \
             -e 'postgres(ql)?://[^[:space:]]+' \
             -e 'postgres:postgres' \
-            -e '(?i)"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
+            -e '"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
-            -e '(?i)"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
+            -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             "$SANITIZED_DIR"; then
             echo "Database replay diagnostics contain a forbidden credential or private identifier." >&2
@@ -993,14 +993,14 @@ jobs:
           if [ -d "$ECONOVARIA_PLAYER_STORE_OUTPUT_DIR" ]; then
             SCAN_PATHS+=("$ECONOVARIA_PLAYER_STORE_OUTPUT_DIR")
           fi
-          if rg --text --quiet \
+          if grep -aErqi \
             -e 'postgres(ql)?://[^[:space:]]+' \
             -e 'postgres:postgres' \
-            -e '(?i)"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
+            -e '"?(SUPABASE[ _-]?[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD)|DATABASE[ _-]?URL|DB[ _-]?URL|PGPASSWORD|DB[ _-]?PASSWORD|POSTGRES[ _-]?PASSWORD|JWT[ _-]?SECRET|(ANON|SERVICE[ _-]?ROLE|SECRET|PUBLISHABLE)[ _-]?KEY|S3[ _-]?(ACCESS|SECRET)[ _-]?KEY|S3_[A-Z0-9_]+|ECONOVARIA_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PEPPER)|AUTHORIZATION|APIKEY|API[ _-]?KEY|COOKIE|SET[ _-]?COOKIE|X[ _-]?PLAYER[ _-]?SESSION[ _-]?TOKEN|X[ _-]?ECONOVARIA[ _-]?(CSRF|PLAYER[ _-]?SESSION)[ _-]?TOKEN)"?[[:space:]]*(=|:|\||│)[[:space:]]*[^[:space:]|│]+' \
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
-            -e '(?i)"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
+            -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             -e 'PLAYER-PHASE10A4-LICENSE-001' \
             -e 'Phase10A4-Player-Admin-2026!' \

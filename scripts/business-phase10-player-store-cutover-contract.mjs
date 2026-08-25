@@ -558,6 +558,15 @@ requireTokenCount(
   "SUPABASE[ _-]?[A-Z0-9_]*",
   3,
 );
+requireTokenCount(
+  source.workflow,
+  "portable artifact privacy scans",
+  "grep -aErqi",
+  3,
+);
+forbidTokens(source.workflow, "artifact privacy scans", [
+  "rg --text --quiet",
+]);
 
 const databaseUpload = workflowStepBlock(
   source.workflow,
