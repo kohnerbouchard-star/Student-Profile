@@ -14,6 +14,35 @@ function replaceExactlyOnce(source, label, before, after) {
   return source.replace(before, after);
 }
 
+function adaptMutationCompletion(source) {
+  source = replaceExactlyOnce(
+    source,
+    "Business mutation stale-toast reset",
+    `  await configure(target);
+  const responsePromise = page.waitForResponse(`,
+    `  await configure(target);
+  await page.locator(".player-terminal-toast").evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+  const responsePromise = page.waitForResponse(`,
+  );
+
+  return replaceExactlyOnce(
+    source,
+    "Business mutation reconciliation wait",
+    `  if (response.status() !== 200 || payload?.ok !== true) {
+    throw new Error(\`${"${endpoint}"} returned ${"${response.status()}"}: ${"${redact(JSON.stringify(payload))}"}\`);
+  }
+  return operation;`,
+    `  if (response.status() !== 200 || payload?.ok !== true) {
+    throw new Error(\`${"${endpoint}"} returned ${"${response.status()}"}: ${"${redact(JSON.stringify(payload))}"}\`);
+  }
+  await page.getByText("Action completed and current information refreshed.", { exact: true }).first().waitFor({
+    state: "visible",
+    timeout: 60_000,
+  });
+  return operation;`,
+  );
+}
+
 function adaptDisclosureInteraction(source) {
   const before = `async function exposeForm(target) {
   await target.evaluate((element) => {
@@ -24,14 +53,37 @@ function adaptDisclosureInteraction(source) {
 }`;
 
   const after = `async function exposeForm(target) {
-  await target.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
-    element.querySelector(
-      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
-    )?.focus({ preventScroll: true });
-  });
+  await target.waitFor({ state: "attached", timeout: 30_000 });
+  const details = target.locator("xpath=ancestor::details[1]").first();
+  const control = target.locator(
+    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+  ).first();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await details.count() && await details.getAttribute("open") === null) {
+      const summary = details.locator(":scope > summary").first();
+      if (await summary.count()) {
+        try {
+          await summary.click({ timeout: 7_500 });
+        } catch {
+          await details.evaluate((element) => { element.open = true; });
+        }
+      } else {
+        await details.evaluate((element) => { element.open = true; });
+      }
+    }
+    if (
+      await target.isVisible() &&
+      await control.isVisible() &&
+      await control.isEnabled()
+    ) {
+      await control.focus();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   await target.waitFor({ state: "visible", timeout: 30_000 });
+  await control.waitFor({ state: "visible", timeout: 30_000 });
+  await control.focus();
 }`;
 
   return replaceExactlyOnce(
@@ -98,8 +150,10 @@ function adaptBusinessReplayVerification(source) {
 async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const canonicalCorePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
-  const source = adaptDisclosureInteraction(
-    adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
+  const source = adaptMutationCompletion(
+    adaptDisclosureInteraction(
+      adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
+    ),
   );
   const temporaryDirectory = await mkdtemp(join(dirname(entryPath), ".business-bff-replay-"));
   const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
