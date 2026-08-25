@@ -471,6 +471,8 @@ Exit: no paid-without-item or item-without-payment state is possible. **MET for 
 | `BUSINESS-V2-10A4C4` | `feat/business-multicurrency-treasury-v1` | Business-owned foreign Checking accounts, bounded treasury FX, and procurement funding. |
 | `BUSINESS-V2-10A4D` | `feat/business-player-store-fx-final-v2` | Converge the frozen candidate behavior with the dependency stack, repair the three secondary failures, and run final Store/FX/two-browser certification. |
 
+The controlling scope for `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` is `docs/roadmaps/canonical-fx-authority-scope-v1.md`, established from exact 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3` before any FX runtime implementation.
+
 Phase 11 remains closed until 10A.4D has one exact implementation SHA, all required exact-head evidence is green, and a clean documentation-only handoff is recorded. No item in this inserted sequence is `VERIFIED_COMPLETE` before merge to `main` and any required runtime evidence.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
