@@ -53,14 +53,37 @@ function adaptDisclosureInteraction(source) {
 }`;
 
   const after = `async function exposeForm(target) {
-  await target.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
-    element.querySelector(
-      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
-    )?.focus({ preventScroll: true });
-  });
+  await target.waitFor({ state: "attached", timeout: 30_000 });
+  const details = target.locator("xpath=ancestor::details[1]").first();
+  const control = target.locator(
+    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+  ).first();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await details.count() && await details.getAttribute("open") === null) {
+      const summary = details.locator(":scope > summary").first();
+      if (await summary.count()) {
+        try {
+          await summary.click({ timeout: 7_500 });
+        } catch {
+          await details.evaluate((element) => { element.open = true; });
+        }
+      } else {
+        await details.evaluate((element) => { element.open = true; });
+      }
+    }
+    if (
+      await target.isVisible() &&
+      await control.isVisible() &&
+      await control.isEnabled()
+    ) {
+      await control.focus();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   await target.waitFor({ state: "visible", timeout: 30_000 });
+  await control.waitFor({ state: "visible", timeout: 30_000 });
+  await control.focus();
 }`;
 
   return replaceExactlyOnce(

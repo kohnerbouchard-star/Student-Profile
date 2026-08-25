@@ -9,14 +9,18 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/src/domains/progression/services/progressionIntegrationEventService.test.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/progression/services/progressionIntegrationEventService.test.ts",
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
@@ -28,6 +32,7 @@
     "player-production-secret-provision-contract",
     "player-api-read-resilience",
     "database-replay",
-    "player-multiplayer-and-load-e2e"
+    "player-multiplayer-and-load-e2e",
+    "progression-runtime"
   ]
 }
