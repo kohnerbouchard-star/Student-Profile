@@ -7,7 +7,7 @@
 **Parent draft PR:** #670  
 **Exact parent documentation handoff:** `cb4041b68ecd322c87d2fb6bb08000da28807af3`  
 **Frozen Phase 10A.4A implementation candidate:** `88944e18520913ca9779c2706bd005f644c60050`  
-**Scope commit:** `PENDING_SCOPE_COMMIT`  
+**Scope commit:** `f499e828d57a6a146f528d89e714502807ab36b1`  
 **Production deployment authorized:** No
 
 ## Decision

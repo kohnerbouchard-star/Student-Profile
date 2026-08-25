@@ -1477,7 +1477,7 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 - Roadmap items: `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001`.
 - Owner branch: `feat/canonical-fx-authority-v1`, created from exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3` without rebasing or changing the frozen candidate.
 - Controlling scope: `docs/roadmaps/canonical-fx-authority-scope-v1.md`.
-- Scope commit: `PENDING_SCOPE_COMMIT`.
+- Scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`.
 - Status: `IN_PROGRESS` — scope authority only; no B1 migration, runtime source, implementation SHA, workflow result, merge, deployment, secret mutation, or staging/production database mutation is claimed by this record.
 - Exact boundary: ECO registry/numeraire, deterministic game-local 08:00 fixing, immutable current/history evidence, queue-only Story shocks, provisioning/bootstrap, and guarded legacy cutover. Banking accounts/holds/clearing/settlement and purchase funding remain closed for B2 and C0–C4.
 - Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/business-player-store-cutover-v2`, then implement only B1 and certify one exact head before opening B2.
