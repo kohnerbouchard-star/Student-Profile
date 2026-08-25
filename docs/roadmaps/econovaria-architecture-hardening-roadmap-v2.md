@@ -257,6 +257,76 @@ Started multi-game bootstrap hydration (2026-08-18): dependency-serialized `ARCH
 
 Mandatory pre-code `ARCH-100F` root/edge ledger: `admin-api/index.ts::Deno.serve` calls `common.resolveContext` for bearer authentication, Staff ID and all-status owner-filtered ID-only game discovery, then `guardAdminRequest` exactly once; only post-guard does one server request ID feed distinct per-game Admin contexts and Auth-owned all-or-nothing profile/game hydration, with each row retained beside its exact context. The hydrated set serves global bootstrap/games/switch through `handleGlobalRoute`/`selectGame`/`gameDto`, base `/games/:id` and `/games/:id/dashboard` through `ensureOwnedGame`/`gameRoutes.handleGameRead`/`gameDto`, and existing full-row Admin consumers including archive confirmation. `staff-api/index.ts::Deno.serve` and `classroom-api/index.ts::Deno.serve` both call `staffBootstrapHttpHandler.handleStaffBootstrapRequest`; `web-session-api/index.ts::Deno.serve` reaches the same handler through successful login, status and MFA flows via `loadStaffBootstrap` and its trusted-IP internal dependency wrapper. The shared handler preserves method/environment checks and exactly one `resolveStaffSessionForRequest` security/rate boundary, then performs active-only ID discovery, one request ID, distinct neutral Staff contexts, and Auth-owned hydration. Discovery selects only owner-filtered IDs in existing descending order; hydration rechecks owner and Staff active status, validates exact cardinality/membership/shape, restores discovery order and fails all-or-nothing. Zero games performs no game hydration query. Staff/Classroom join-code and settings routes remain exact Game Sessions regression edges through `handleResetGameJoinCodeRequest`/`handleGameSettingsRequest`; the Game Sessions Staff contract/factory becomes only a neutral type alias/re-export/delegate. Admin all-status versus Staff active-only behavior, selection fallback, join-code mapping, routes, envelopes, browser privacy, guards, schemas, RPCs, economic/idempotency authority, UI and deployment remain unchanged. Every listed root/edge, the focused neutral/Auth/repository/composition seams, Game Sessions, Admin API, auth/Web Session, typecheck/smoke/full-root suites, architecture/safety gates and exact-head/exact-merge Edge/release/Vercel/health evidence are mandatory before `VERIFIED_COMPLETE`.
 
+Planning reconciliation after Business architecture drift (2026-08-25): fetched
+`origin/main` is `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`; the pushed
+`ARCH-100F` checkpoint is `9646509c12ac747693fdaefb6aa28908ae872321`,
+has no pull request, and is one commit ahead and 18 commits behind that main.
+The checkpoint contains the bounded implementation described above, so the
+earlier “pre-code” label records its original gate rather than current status.
+It remains `IN_PROGRESS`: reconciliation must regenerate the one conflicting
+architecture-inventory file, close Staff negative-boundary, Admin guard-denial,
+and route-level parity/privacy proof gaps, and rerun all local and exact-source
+acceptance. Prior branch-local passing results do not transfer across the
+current-main reconciliation.
+
+Business V2 is simultaneously active and unfinished. PR #648 plus stacked draft
+PRs #654–#667 are unmerged and undeployed; the current cumulative tip
+`1403e7e789a41156d82a629de6846861efa610b3` contains formation,
+Stockroom/procurement, workforce/payroll, equipment/manufacturing and Store
+seller/listing/withdrawal work. #666 head
+`38d040748a62c5aa21a7111eeab80cd7e74b9263` also adds an unmerged,
+service-only immutable/non-reserving offer quote RPC, repository/contracts and
+three forward migrations, but no Player route/UI composition, money movement,
+Inventory transfer, receipt or capability credit. #667 adds only the Phase
+10A.3 scope document and temporary source-snapshot workflow; atomic
+buyer/seller/Inventory settlement, automatic sales, completed Player/Admin
+workspaces and IPO/Market integration remain absent. Branch-local certification
+never satisfies this roadmap. The stack also has
+non-linear ancestry at #661 and #664, unresolved failing/sparse check evidence,
+and open #626/#642 browser/Player-authority collisions. #642 directly overlaps
+the Business stack's cross-cutting authority contract and commerce browser
+acceptance script.
+
+`ARCH-100F` may finish first because its sole exact-path overlap with current
+main and the cumulative Business stack is the generated inventory. Immediately
+after F, new documentation gate `ARCH-100G0` must audit the exact merged Business
+source and regenerate the root-to-handler classification. It remains blocked
+until every owning Business PR is merged in dependency order or explicitly
+closed/superseded, #626 and #642 have explicit dispositions, and the ancestry defects
+are repaired. No replacement branch is created while it is blocked, and all
+later `ARCH-100G1+` work is blocked behind it. The revised serialized ownership
+is recorded in `docs/architecture/econovaria-context-propagation-owner-map-v1.md`:
+Store is split into canonical catalog (`I1`) and later Business seller commerce
+(`I2A` for listing/withdrawal and future conditional `I2B` for quote/settlement);
+Banking/loans (`L1`) is separated from Business core (`L2`), procurement
+(`L3`), workforce/payroll (`L4`) and equipment/manufacturing (`L5`). Actor
+requests must forward the exact reviewed Player context without re-resolving
+scope. Admin Business list/review/compliance/cycle-settlement requests likewise
+require exact Admin context; only inner payroll, manufacturing, withdrawal and
+other leased scheduler processors are system runtimes and never receive
+fabricated actor contexts.
+
+Reconciled conditional `ARCH-100` owner ledger:
+
+| Item | Status | Exact dependency/ownership boundary | Required acceptance |
+|---|---|---|---|
+| `ARCH-100G0 — Business V2 context/collision reclassification` | `BLOCKED` | `ARCH-100F` verified; #648/#654–#666 merged in order or explicitly closed/superseded; scope-only #667 frozen, closed, superseded, or included if runtime is added; #626/#642 resolved; #661/#664 ancestry repaired | Audit exact merged source, regenerate inventory, classify every live/uncomposed/system edge, and resize or remove every conditional row below. Absent future functionality is not an `ARCH-100` completion dependency. |
+| `ARCH-100G3 — Player session/capability/auth-workflow context` | `PLANNED` | `ARCH-100G2`, `ARCH-100G0`; owns the generic reviewed-dispatch callback contract, both Player roots and capability/rate mappings; explicitly excludes `_shared/playerBusinessDispatch.ts` | Exact generic context/reference forwarding, limiter identity/order, bootstrap/login/logout/session privacy and replay evidence. |
+| `ARCH-100I1 — canonical catalog Store context` | `PLANNED` | `ARCH-100H`, `ARCH-100G0`; existing Admin/shared and seeded/catalog Player Store only | Admin/Player composition, Inventory/Economy authority characterization, public-key privacy and replay/two-game evidence. |
+| `ARCH-100L1 — Banking and loans context` | `PLANNED` | `ARCH-100K2`, `ARCH-100G0`; Banking/loan compatibility surfaces only | Exact actor context, handler characterization, ledger atomicity, replay/conflict and runtime evidence. |
+| `ARCH-100L2 — Business core/formation/read context` | `BLOCKED` | Conditional on `ARCH-100G0` finding merged Business source; then `ARCH-100L1`, `ARCH-100C`, `ARCH-100K2`; owns `_shared/playerBusinessDispatch.ts` onward plus Player handler/repository and Admin Business list/review/compliance branches | No second scope resolution; exact Player/Admin context identity; public-key privacy, retired-route and every-root composition evidence. |
+| `ARCH-100L3 — Business procurement context` | `BLOCKED` | Conditional merged source; then `ARCH-100I1`, `ARCH-100L2`, `ARCH-100C`, `ARCH-100K2` | Canonical price/currency/Inventory basis, atomic ledger/custody, rollback, replay and two-game evidence. |
+| `ARCH-100L4 — Business workforce/payroll context` | `BLOCKED` | Conditional merged source; then `ARCH-100L3`, `ARCH-100K2`; owns Player workforce commands and actor-triggered Admin `POST /businesses/:biz/settle`; only the inner leased processor is `SYSTEM_RUNTIME` | Admin auth/AAL/permission/rate/idempotency and exact context; Player context; zero-production, partial/unpaid recovery, no-double-debit, lease/replay and two-game evidence. |
+| `ARCH-100L5 — Business manufacturing context` | `BLOCKED` | Conditional merged source; then `ARCH-100L4`, `ARCH-100C`, `ARCH-100K2`; owns live Player job list/start/cancel and system completion/recovery. Equipment repositories remain uncomposed until a root is proven | Characterize and preserve the existing canonical recipe reference without starting Phase-2 `ARCH-203`; prove output, material/labor/equipment reservation, timing/lease/replay/recovery; no equipment capability credit without production composition evidence. |
+| `ARCH-100I2A — Business seller listing/withdrawal context` | `BLOCKED` | Conditional merged source; then `ARCH-100I1`, `ARCH-100L5`, `ARCH-100C`, `ARCH-100K2` | Exact actor versus worker classification; seller-offer/listing custody, cooling/reservation/return, replay/race and two-game evidence. |
+| `ARCH-100I2B — offer-aware quote/settlement context` | `BLOCKED` | Instantiated only by a merged production actor composition/cutover; #666's service-only unmerged quote earns no context/capability credit; then `ARCH-100I2A`, `ARCH-100L5`, `ARCH-100C`, `ARCH-100K2` | Merge-blocking exact-context, immutable quote/receipt, offer-first locking, and characterization of the existing atomic RPC/transaction with debit/credit/custody/revenue/COGS race/replay/rollback evidence; this context owner does not start Phase-3 `ARCH-300`. If production composition is absent, `ARCH-100G0` removes this row from current closure and the future feature must satisfy it before merge. |
+
+`ARCH-100G0` is a resizing gate, not a promise that every draft feature will
+land. If Business work is closed or superseded without a live edge, the gate
+records that absence and removes the corresponding conditional owner. If a
+future quote/settlement feature appears after context closure, its own PR must
+reopen and satisfy `I2B` as a merge-blocking architecture gate.
+
 Create or consolidate the existing equivalent of a request/application context carrying server-derived identity and scope. Do not invent a second context if one already exists.
 
 Conceptually:
@@ -348,7 +418,7 @@ Forbidden: arbitrary callers setting a status column directly to simulate a tran
 ## `ARCH-202` — Store -> Inventory/Economy integration
 
 Status: `PLANNED`
-Depends on: `ARCH-200`, Phase 3 transaction primitive if required
+Depends on: `ARCH-200`, `ARCH-205`, `ARCH-300` for settlement
 
 A successful purchase must have one authoritative orchestration path for:
 
@@ -360,6 +430,42 @@ A successful purchase must have one authoritative orchestration path for:
 - return a stable API contract.
 
 No dual writes and no partially successful purchase state.
+
+The unfinished Business V2 program changes the shape of this item, but none of
+its unmerged work is complete:
+
+- `ARCH-202A — canonical seeded/catalog Store`: `PLANNED`; preserve the existing
+  public catalog, canonical quote/purchase authority, Inventory grant, Economy
+  debit and stable API contract independently of seller commerce.
+- `ARCH-202B — seller offers, listing custody and withdrawal`: `BLOCKED` by
+  `ARCH-202A`, `ARCH-207A`, `ARCH-207D`, `ARCH-200` and `ARCH-205`. Draft
+  stacked branches are unaccepted evidence only. Inventory remains custody
+  authority and Store owns seller-offer/listing lifecycle. Acceptance requires
+  separate actor-triggered and leased-system composition; immediate purchase
+  disable; a server-derived minimum five-minute cooling period;
+  reservation-safe deferral; exact-once unsold-stock return; replay, recovery,
+  purchase/withdrawal race-order and two-game evidence.
+- `ARCH-202C — offer-aware quote and atomic settlement`: `BLOCKED` by
+  `ARCH-202B`, `ARCH-207A`, `ARCH-207D`, `ARCH-205` and `ARCH-300`.
+  Phase 10A.2 now has branch-local service-only quote implementation evidence,
+  but it is unmerged, undeployed and uncomposed and therefore unaccepted;
+  Phase 10A.3 transaction/receipt runtime remains absent. A quote must
+  be immutable and bind exact offer, offer version, seller, custody account,
+  quantity, price, currency and expiry; the receipt is likewise immutable.
+  Acceptance also requires expiry/version replay conflicts, offer-first locking,
+  both purchase/withdrawal race orders, one transaction for buyer debit, seller
+  credit, Inventory transfer, listing/purchase state, revenue and COGS, plus
+  exact-once replay/conflict/rollback evidence.
+- `ARCH-202D — automatic demand/sales`: `PLANNED`; it may start only after
+  `ARCH-202C` is merged and verified and must reuse the same settlement authority
+  rather than introduce a worker-only economic write path.
+
+Every Business/Store migration must replay twice from a clean database and pass
+lint/advisor review. Every new `public` table/function must have explicit Data
+API exposure, RLS/forced-RLS, `PUBLIC`/`anon`/`authenticated` revocation and
+intended server-role grant decisions. Every `SECURITY DEFINER` function requires
+fixed `search_path`, scoped authorization and cross-game/replay tests. Migration
+presence or service-only repository code does not prove live composition.
 
 ## `ARCH-203` — Crafting -> Inventory integration
 
@@ -393,9 +499,58 @@ Stocks own instruments, exchange/calendar rules, prices/ticks, orders/trades, po
 ## `ARCH-207` — Business/asset authority
 
 Status: `PLANNED`
-Depends on: `ARCH-205`
+Depends on: `ARCH-200`, `ARCH-205`, `ARCH-300`, `ARCH-202A`
 
 Define a canonical business ownership/asset boundary and ensure business-banking, marketplace, investments and Admin surfaces consume it rather than reproducing ownership checks.
+
+The authority program is split so unfinished Business code cannot silently
+redefine Banking, Inventory, Store or Market ownership:
+
+- `ARCH-207A — Business boundary, formation and reads`: `BLOCKED` by
+  `ARCH-200`, `ARCH-205`, `ARCH-300`, `ARCH-202A` and the exact
+  Business-stack merge/disposition gate;
+  draft PR #648 is unaccepted evidence only. Business owns formation,
+  governance, overview and recipe-access
+  policy; Economy owns money, Inventory owns assets/custody, and the canonical
+  physical-economy recipe remains the source of truth.
+- `ARCH-207B — Stockroom and procurement`: `BLOCKED` by `ARCH-207A`,
+  `ARCH-202A`, `ARCH-200`, `ARCH-205` and `ARCH-300`; draft #654–#656 are
+  unaccepted evidence only. Transit/warehouse state must preserve Economy price/currency authority,
+  Inventory basis/custody, atomic rollback and retirement of the abstract-input
+  mutation rather than dual-writing it.
+- `ARCH-207C — workforce and payroll`: `BLOCKED` by `ARCH-207B`, `ARCH-205`
+  and `ARCH-300`; draft #657–#659 are unaccepted evidence only.
+  Player hire/utilization commands require the exact Player context. Admin
+  `POST /businesses/:biz/settle` is an actor-triggered
+  `GAME_CONTEXT_REQUIRED` boundary and must preserve exact Admin context through
+  auth/AAL/permission/rate/idempotency review; only its inner leased payroll
+  processor is `SYSTEM_RUNTIME`. Both paths use Economy ledger authority and
+  require zero-production, partial/unpaid recovery, no-double-debit and two-game
+  evidence.
+- `ARCH-207D — equipment and timed manufacturing`: `BLOCKED` by `ARCH-207C`,
+  `ARCH-200`, `ARCH-203`, `ARCH-205` and `ARCH-300`; draft #660–#661 are
+  unaccepted evidence only. Inventory owns equipment/material/WIP/output custody;
+  Business owns job rules. Job list/start/cancel are actor commands;
+  claim/complete/fail/recovery are leased system operations with canonical
+  recipe, reservation, timing, replay and crash-recovery evidence. Equipment
+  read/install adapters are service-only on the audited branch and receive no
+  live capability credit until a production composition root and its exact
+  actor/system boundary are proven.
+- `ARCH-207E — Player/Admin Business workspace convergence`: `PLANNED`; depends
+  on `ARCH-207A`–`D` and `ARCH-202C`. The declared phases 12 and 13 are not
+  implemented and must expose only merged, authoritative capabilities.
+- `ARCH-207F — IPO/Market integration`: `PLANNED`; depends on `ARCH-206`,
+  `ARCH-207A`–`D` and accepted operating/financial inputs from `ARCH-202C` (and
+  `ARCH-202D` if automatic sales are part of valuation). Phase 14 remains
+  outside the current Business runtime. Stocks/Market retains instrument,
+  exchange and trading authority until a separately accepted integration exists.
+
+Before any subitem can be credited, its owning stack must be linear, merged into
+`main`, pass the relevant database/Edge/browser/runtime gates, and provide
+deployed evidence where required. The live legacy
+`submit_business_product_v1` route/capability must also be reconciled with the
+Business plan’s stated retirement of free-form product creation; leaving both
+contracts active is an acceptance blocker, not compatibility completion.
 
 ## `ARCH-208` — Contracts/Progression/reward authority
 
@@ -814,21 +969,24 @@ This queue is a dependency guide, not permission to ignore active-branch ownersh
 | 5 | Inventory authority | `ARCH-200` |
 | 6 | Redemption state machine/use split | `ARCH-201` |
 | 7 | Economy/ledger authority and transaction primitive | `ARCH-205`, `ARCH-300` |
-| 8 | Store + Crafting convergence | `ARCH-202`, `ARCH-203` |
-| 9 | Marketplace convergence | `ARCH-204` |
-| 10 | Stocks + Business convergence | `ARCH-206`, `ARCH-207` |
-| 11 | Contracts/Progression rewards + Story/World scope | `ARCH-208`, `ARCH-209` |
-| 12 | Commands/state machines/permissions/errors | `ARCH-301`–`ARCH-304` |
-| 13 | Contract and repository/public-boundary completion | `ARCH-400`–`ARCH-402` |
-| 14 | Player data plane | `ARCH-501`, part of `ARCH-502` |
-| 15 | Admin data plane | `ARCH-500`, remainder of `ARCH-502` |
-| 16 | Scheduler/simulation orchestration | `ARCH-600`, `ARCH-601` |
-| 17 | Internal domain events where justified | `ARCH-602` |
-| 18 | Legacy/compatibility retirement | `ARCH-700`, `ARCH-701` |
-| 19 | Topology normalization | `ARCH-702` |
-| 20 | Observability/failure isolation | `ARCH-800`–`ARCH-802` |
-| 21 | UI/CSS architecture cleanup | `ARCH-900`, `ARCH-901` |
-| 22 | Final re-audit and ratchet closure | `ARCH-1000`–`ARCH-1002` |
+| 8 | Canonical seeded/catalog Store + Crafting convergence | `ARCH-202A`, `ARCH-203` |
+| 9 | Business formation/read + Stockroom/procurement | `ARCH-207A`, `ARCH-207B` |
+| 10 | Business workforce/payroll + equipment/manufacturing | `ARCH-207C`, `ARCH-207D` |
+| 11 | Seller commerce quote/settlement + automatic sales | `ARCH-202B`–`ARCH-202D` |
+| 12 | Marketplace convergence | `ARCH-204` |
+| 13 | Stocks authority; later Business workspace/IPO convergence | `ARCH-206`, `ARCH-207E`, `ARCH-207F` |
+| 14 | Contracts/Progression rewards + Story/World scope | `ARCH-208`, `ARCH-209` |
+| 15 | Commands/state machines/permissions/errors | `ARCH-301`–`ARCH-304` |
+| 16 | Contract and repository/public-boundary completion | `ARCH-400`–`ARCH-402` |
+| 17 | Player data plane | `ARCH-501`, part of `ARCH-502` |
+| 18 | Admin data plane | `ARCH-500`, remainder of `ARCH-502` |
+| 19 | Scheduler/simulation orchestration | `ARCH-600`, `ARCH-601` |
+| 20 | Internal domain events where justified | `ARCH-602` |
+| 21 | Legacy/compatibility retirement | `ARCH-700`, `ARCH-701` |
+| 22 | Topology normalization | `ARCH-702` |
+| 23 | Observability/failure isolation | `ARCH-800`–`ARCH-802` |
+| 24 | UI/CSS architecture cleanup | `ARCH-900`, `ARCH-901` |
+| 25 | Final re-audit and ratchet closure | `ARCH-1000`–`ARCH-1002` |
 
 Split any tranche further if it crosses unrelated domains, changes too many runtime surfaces, or cannot be independently characterized and reverted.
 
