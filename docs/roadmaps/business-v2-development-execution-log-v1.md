@@ -1417,3 +1417,9 @@ This entry supersedes the `PENDING` evidence fields in the preceding implementat
 - No Phase 10A.4 runtime source, migration, implementation SHA, exact-head workflow result, merge, Business staging/production deployment, secret mutation, or live database mutation is claimed.
 - The scope-only branch must be pushed and opened as a separate draft PR over `feat/business-store-atomic-settlement-v2` before runtime implementation begins.
 - Phase 11 and later phases remain closed until Phase 10A.4 obtains its own exact-head certification and clean handoff.
+
+### Durable scope handoff
+
+- Exact scope commit: `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
+- Stacked draft PR: #670, base `feat/business-store-atomic-settlement-v2`, head `feat/business-player-store-cutover-v2`.
+- The branch and draft PR were pushed/opened before runtime implementation. They remain open, draft, unmerged, and without a Business staging/production release.

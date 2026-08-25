@@ -5,10 +5,11 @@
 **Branch:** `feat/business-player-store-cutover-v2`
 **Parent branch:** `feat/business-store-atomic-settlement-v2`
 **Parent draft PR:** #667
-**Stacked draft PR:** pending creation from this scope commit
+**Stacked draft PR:** #670
+**Scope commit:** `75d2a3c0b594017bc38f78e2618926f78ca2754e`
 **Certified parent implementation source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`
 **Clean parent handoff:** `6f9231b0030a7851bba5abe8519afa790071c32c`
-**Certification state:** no implementation SHA or workflow evidence is claimed
+**Certification state:** scope-only branch and draft PR established; no implementation SHA or workflow evidence is claimed
 
 ## Decision
 

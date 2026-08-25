@@ -302,7 +302,8 @@ No authenticated Player Store route/UI, automatic sales convergence, equity/IPO,
 ## 2026-08-25 Phase 10A.4 scope-only progression record
 
 - Roadmap item: `BUSINESS-V2-10A4`.
-- Owner branch: `feat/business-player-store-cutover-v2`.
+- Owner branch: `feat/business-player-store-cutover-v2`; stacked draft PR #670.
+- Exact scope commit: `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
 - Exact parent handoff: `6f9231b0030a7851bba5abe8519afa790071c32c` / draft PR #667.
 - Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
 - No pre-existing open branch or PR owned this checkpoint at scope creation.

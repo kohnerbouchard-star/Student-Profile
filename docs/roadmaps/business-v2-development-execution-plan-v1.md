@@ -441,7 +441,7 @@ Exit: no paid-without-item or item-without-payment state is possible. **MET for 
 
 ### Checkpoint 10A.4 bounded scope
 
-- Owner: `feat/business-player-store-cutover-v2`, starting exactly from Phase 10A.3 clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; the stacked draft PR is created from the initial scope commit.
+- Owner: `feat/business-player-store-cutover-v2` / stacked draft PR #670, starting exactly from Phase 10A.3 clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; exact scope commit `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
 - Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
 - The retained seeded Store routes remain distinct. The default Business-offer route design uses explicit `offer-quotes`, `offer-purchases`, and Buyer-authorized public receipt paths.
 - Player Store reads must aggregate seeded and Business offers under one canonical product card while retaining explicit public offer/seller identities and no internal UUIDs.
