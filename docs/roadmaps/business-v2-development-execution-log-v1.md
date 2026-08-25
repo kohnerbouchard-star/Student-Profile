@@ -1386,3 +1386,34 @@ This entry supersedes the `PENDING` evidence fields in the preceding implementat
 ### Next exact roadmap item
 
 **Phase 10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance is OPEN.** It must begin from this clean documentation-only handoff on a separate stacked branch and draft PR. Phase 11 and later phases remain closed until 10A.4 is separately certified.
+
+---
+
+## 2026-08-25 — Phase 10A.4 verified starting state and bounded scope
+
+### Repository and owner audit
+
+- Fetched `origin/main` at `80f5eb8e24a364bc878de11acfdf196add878f10`; the Business stack merge base remains `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, and the clean Phase 10A.3 handoff is 18 current-main commits behind.
+- Phase 10A.3 clean parent handoff: `6f9231b0030a7851bba5abe8519afa790071c32c`, pushed to `feat/business-store-atomic-settlement-v2` / draft PR #667.
+- PR #667 is open, draft, mergeable, unmerged, and clean at that exact handoff. No Business Backend, Edge, or database staging/production release is identified.
+- No existing branch or open PR owned `BUSINESS-V2-10A4`; the dedicated child branch `feat/business-player-store-cutover-v2` was created from the exact handoff without rebasing or replacing its parents.
+- Open PR #624 owns overlapping Player Terminal CSS/realtime/browser surfaces and is currently conflicting with `main`; exact-path edits must preserve that owner.
+- PR #626 closed without merge at `474370b4e96670c4a3e394ac41779ed87ce26d15`; its Business acceptance/capability changes are donor evidence only, not an active owner.
+- Open draft PR #668 owns ARCH-100F and the global beta roadmap file. This checkpoint must preserve that roadmap owner and cannot claim `VERIFIED_COMPLETE` while unmerged.
+- Future `ARCH-100I` owns Store context propagation. Phase 10A.4 consumes current authenticated scope derivation and does not absorb that refactor.
+
+### Bounded checkpoint
+
+- Controlling item: `BUSINESS-V2-10A4`.
+- Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
+- Parent implementation identity: `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; parent clean handoff: `6f9231b0030a7851bba5abe8519afa790071c32c`.
+- Retained seeded routes remain separate. The default Business-offer route design adds explicit offer quote/purchase and Buyer-authorized receipt paths behind the same-origin Player BFF.
+- Player Store reads must aggregate multiple seeded/Business offers under one canonical product card while exposing only bounded public offer/seller/Business identity.
+- Browser intent is limited to public offer/quote, quantity, expected version, and idempotency intent. Every trusted economic and ownership value remains server derived.
+- Required evidence includes stable errors, rate limits/capabilities, committed Buyer and seller convergence, seeded compatibility, real database vectors, both withdrawal orderings, two authenticated browser contexts, two games, accessibility/responsive behavior, and the full retained exact-head matrix.
+
+### Scope-only boundary
+
+- No Phase 10A.4 runtime source, migration, implementation SHA, exact-head workflow result, merge, Business staging/production deployment, secret mutation, or live database mutation is claimed.
+- The scope-only branch must be pushed and opened as a separate draft PR over `feat/business-store-atomic-settlement-v2` before runtime implementation begins.
+- Phase 11 and later phases remain closed until Phase 10A.4 obtains its own exact-head certification and clean handoff.

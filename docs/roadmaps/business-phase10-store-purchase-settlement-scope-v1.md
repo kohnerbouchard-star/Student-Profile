@@ -1,7 +1,7 @@
 # Business V2 Phase 10 — Atomic Store Purchase Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A1`
-**Status:** COMPLETE — 10A.1 authority foundation certified; 10A.2 exact-head verified; 10A.3 `IMPLEMENTED_NOT_MERGED` at `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; 10A.4 is next
+**Status:** COMPLETE — 10A.1 authority foundation certified; 10A.2 exact-head verified; 10A.3 `IMPLEMENTED_NOT_MERGED` at `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; 10A.4 authenticated Player cutover is `IN_PROGRESS` at the scope-only boundary
 **Branch:** `feat/business-store-purchase-settlement-v2`
 **Parent branch:** `feat/business-store-withdrawal-safety-v2`
 **Parent draft PR:** #664
@@ -267,7 +267,7 @@ After 10A.1 certification:
 
 1. **10A.2 — offer-aware quote authority:** certified at exact implementation source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; immutable quote binding to offer/version/seller/custody and deterministic pricing evidence.
 2. **10A.3 — atomic economic settlement:** exact implementation and verification source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; dedicated workflow `32817713404`; documentation-only clean handoff recorded by immutable SHA in PR #667 and the 10A.4 parent record; status `IMPLEMENTED_NOT_MERGED`.
-3. **10A.4 — authenticated Player route cutover and browser acceptance:** only after displayed offer, quote, payment, seller receipt, and delivered Inventory cannot diverge.
+3. **10A.4 — authenticated Player route cutover and browser acceptance:** bounded scope opened on `feat/business-player-store-cutover-v2` from clean Phase 10A.3 handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; no runtime implementation or certification is yet claimed.
 
 Do not skip directly from this foundation to Player UI or automatic sales convergence.
 
@@ -298,3 +298,13 @@ Local implementation evidence includes repeated clean PostgreSQL 17.6 database r
 - The clean handoff does not replace `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` as the tested implementation identity.
 
 No authenticated Player Store route/UI, automatic sales convergence, equity/IPO, merge, secret mutation, live database mutation, or Business staging/production deployment was included. The next exact checkpoint is **10A.4**.
+
+## 2026-08-25 Phase 10A.4 scope-only progression record
+
+- Roadmap item: `BUSINESS-V2-10A4`.
+- Owner branch: `feat/business-player-store-cutover-v2`.
+- Exact parent handoff: `6f9231b0030a7851bba5abe8519afa790071c32c` / draft PR #667.
+- Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
+- No pre-existing open branch or PR owned this checkpoint at scope creation.
+- Required end state binds authenticated Player presentation, explicit offer selection, quote, settlement, receipt, Buyer Inventory/Checking refresh, and seller Business Sales/Finance/Activity visibility to the same locked Business offer and immutable receipt while preserving the seeded compatibility channel.
+- No Phase 10A.4 runtime file, migration, implementation SHA, workflow run, merge, Business staging/production deployment, secret mutation, or live database mutation is claimed at this boundary.

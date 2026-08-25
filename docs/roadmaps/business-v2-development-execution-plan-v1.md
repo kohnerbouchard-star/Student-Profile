@@ -405,7 +405,7 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** SETTLEMENT AUTHORITY `IMPLEMENTED_NOT_MERGED` — checkpoint 10A.1 exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 exact-head source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; authenticated Player cutover 10A.4 is next
+**Status:** PLAYER CUTOVER `IN_PROGRESS` — checkpoint 10A.1 exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 exact-head source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` and clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; checkpoint 10A.4 is scope-only on its dedicated stacked branch
 
 - [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
 - [x] Freeze one seller-offer-first economic row-lock order.
@@ -438,6 +438,16 @@ Certified checkpoint:
 - No authenticated Player route/UI, automatic demand/sales convergence, equity/IPO, merge, staging or production deployment, secret mutation, or live database mutation is authorized or included.
 
 Exit: no paid-without-item or item-without-payment state is possible. **MET for the server-owned atomic settlement authority at checkpoint 10A.3. Phase 10 remains open only for 10A.4 authenticated Player cutover and connected browser acceptance.**
+
+### Checkpoint 10A.4 bounded scope
+
+- Owner: `feat/business-player-store-cutover-v2`, starting exactly from Phase 10A.3 clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; the stacked draft PR is created from the initial scope commit.
+- Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
+- The retained seeded Store routes remain distinct. The default Business-offer route design uses explicit `offer-quotes`, `offer-purchases`, and Buyer-authorized public receipt paths.
+- Player Store reads must aggregate seeded and Business offers under one canonical product card while retaining explicit public offer/seller identities and no internal UUIDs.
+- Browser intent is limited to public offer/quote, quantity, expected version, and idempotency intent. Game, Buyer, seller, Business, custody, product, money, cost, Inventory, and receipt state remain server derived.
+- Required evidence includes same-origin authentication/capabilities/rate limits, stable negative states, committed Buyer and seller convergence, seeded compatibility, real database vectors, two authenticated browsers, both withdrawal orderings, two games, accessibility/responsive acceptance, and the complete retained matrix.
+- No Phase 10A.4 runtime source, migration, implementation SHA, workflow result, merge, deployment, secret mutation, or live database mutation is claimed at the scope-only boundary.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
