@@ -1,0 +1,119 @@
+name: Business Phase 10A.2 Durable Finalizer Final
+
+on:
+  push:
+    branches:
+      - feat/business-store-offer-aware-quote-v2
+    paths:
+      - ".github/workflows/business-phase10a2-finalizer-final.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: business-phase10a2-durable-finalizer
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/business-store-offer-aware-quote-v2
+          fetch-depth: 0
+
+      - name: Verify frozen implementation lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          TESTED_SHA="ad57d5b9307178229a6b47b3206d258f1bd9b70d"
+          git merge-base --is-ancestor "$TESTED_SHA" HEAD
+          test -f .github/workflows/business-phase10a2-durable-finalizer.yml
+          test -f .github/workflows/business-phase10a2-finalizer-retry.yml
+          test -f .github/workflows/business-phase10a2-finalizer-final.yml
+          test -z "$(git diff --name-only "$TESTED_SHA" HEAD -- . \
+            ':(exclude).github/workflows/business-phase10a2-durable-finalizer.yml' \
+            ':(exclude).github/workflows/business-phase10a2-finalizer-retry.yml' \
+            ':(exclude).github/workflows/business-phase10a2-finalizer-final.yml')"
+
+      - name: Verify exact-head certification workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN="repos/kohnerbouchard-star/Student-Profile/actions/runs/32790518745"
+          test "$(gh api "$RUN" --jq .name)" = "Business Store Offer-Aware Quotes V2"
+          test "$(gh api "$RUN" --jq .head_sha)" = "ad57d5b9307178229a6b47b3206d258f1bd9b70d"
+          test "$(gh api "$RUN" --jq .status)" = "completed"
+          test "$(gh api "$RUN" --jq .conclusion)" = "success"
+          test "$(gh api "$RUN/jobs?per_page=100" --jq .total_count)" = "4"
+          test "$(gh api "$RUN/jobs?per_page=100" --jq '[.jobs[] | select(.status == "completed" and .conclusion == "success")] | length')" = "4"
+
+      - name: Execute and normalize durable-record transformation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEXTRACT'
+          from pathlib import Path
+
+          source_path = Path('.github/workflows/business-phase10a2-durable-finalizer.yml')
+          lines = source_path.read_text().splitlines()
+          start = next(i for i, line in enumerate(lines) if line.strip() == "python3 - <<'PY'")
+          end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == 'PY')
+          body = []
+          for line in lines[start + 1:end]:
+              body.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/business-phase10a2-finalize.py').write_text('\n'.join(body) + '\n')
+          PYEXTRACT
+          python3 /tmp/business-phase10a2-finalize.py
+          python3 - <<'PYNORMALIZE'
+          from pathlib import Path
+
+          scope_path = Path('docs/roadmaps/business-phase10-offer-aware-quote-scope-v1.md')
+          scope = scope_path.read_text().replace(
+              'The one-time durable finalizer is removed in the certification commit.',
+              'Temporary Phase 10A.2 durable-finalizer workflows are removed in the certification commit.',
+              1,
+          )
+          scope_path.write_text(scope.rstrip() + '\n')
+
+          log_path = Path('docs/roadmaps/business-v2-development-execution-log-v1.md')
+          log = log_path.read_text().replace(
+              'The one-time durable finalizer has zero net presence in the final branch tree.',
+              'Temporary Phase 10A.2 finalizer workflows have zero net presence in the final branch tree.',
+              1,
+          )
+          log_path.write_text(log.rstrip() + '\n')
+
+          plan_path = Path('docs/roadmaps/business-v2-development-execution-plan-v1.md')
+          plan_path.write_text(plan_path.read_text().rstrip() + '\n')
+          PYNORMALIZE
+          git diff --check
+
+      - name: Commit durable records and remove temporary finalizers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-automation"
+          git config user.email "econovaria-automation@users.noreply.github.com"
+          git rm \
+            .github/workflows/business-phase10a2-durable-finalizer.yml \
+            .github/workflows/business-phase10a2-finalizer-retry.yml \
+            .github/workflows/business-phase10a2-finalizer-final.yml
+          git add \
+            docs/roadmaps/business-phase10-offer-aware-quote-scope-v1.md \
+            docs/roadmaps/business-v2-development-execution-plan-v1.md \
+            docs/roadmaps/business-v2-development-execution-log-v1.md
+          if find .github/workflows scripts -maxdepth 1 -type f \
+            \( -iname '*phase10a2*finalizer*' -o -iname '*phase10a2*certifier*' -o -iname '*phase10a2*controller*' -o -iname '*phase10a2*repair*' \) \
+            | grep -q .; then
+            echo "Temporary Phase 10A.2 machinery remains." >&2
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m "docs(business): certify Phase 10A.2 offer-aware quotes"
+          git push origin HEAD:feat/business-store-offer-aware-quote-v2
