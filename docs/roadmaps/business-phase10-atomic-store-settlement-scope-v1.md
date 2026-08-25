@@ -1,13 +1,15 @@
 # Business V2 Phase 10A.3 — Atomic Business Seller-Offer Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A3`  
-**Status:** OPEN — bounded implementation and certification checkpoint  
+**Status:** OPEN — clean Codex implementation handoff; scope only  
 **Branch:** `feat/business-store-atomic-settlement-v2`  
 **Parent branch:** `feat/business-store-offer-aware-quote-v2`  
 **Parent draft PR:** #666  
-**Stacked draft PR:** pending  
+**Stacked draft PR:** #667  
 **Certified parent implementation source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`  
 **Clean parent handoff:** `38d040748a62c5aa21a7111eeab80cd7e74b9263`  
+**Handoff state:** no Phase 10A.3 runtime implementation has been committed or certified on PR #667  
+**Temporary tooling:** the source-snapshot workflow was removed and has zero net presence at this handoff  
 
 ## Decision
 
@@ -271,3 +273,12 @@ Checkpoint 10A.3 is complete only when:
 5. the stacked PR remains draft, open, unmerged, and undeployed.
 
 Certification of 10A.3 does not authorize Player cutover. The next expected checkpoint is **10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance**, unless the live roadmap is explicitly changed.
+
+## Codex handoff state
+
+This scope is the complete bounded authority contract for the next implementation owner. At handoff:
+
+- PR #667 contains this scope only relative to the certified Phase 10A.2 parent after temporary snapshot-workflow cleanup;
+- no Phase 10A.3 migration, runtime settlement command, repository wiring, test suite, or permanent exact-head workflow is certified;
+- no merge, deployment, secret mutation, or live database mutation has occurred;
+- the next implementation owner must begin by verifying the live branch/PR/workflow state and must not treat any local or prior-chat draft as authoritative.
