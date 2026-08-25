@@ -183,7 +183,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 - **`BETA-PROGRESSION-TEST-CLOCK-001` — Deterministic Progression integration-event fixture clock**
   - Status: `IN_PROGRESS`
-  - Owner branch and exact base: `fix/progression-integration-event-clock-v1`, created from fetched `origin/main` `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`. Pull request is pending.
+  - Owner branch and exact base: `fix/progression-integration-event-clock-v1`, created from fetched `origin/main` `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`. Draft pull request: #669.
   - Implementation commit: `cbd3c4415c1b2a8170ca7f0783b0e69cbb6691a7`.
   - Ownership and collision reconciliation: PR #654 contains an unmerged embedded edit to `backend/src/domains/progression/services/progressionIntegrationEventService.test.ts`. Ownership of only this test-fixture correction is reassigned to the standalone branch above. PR #654's embedded copy is superseded, earns no implementation or completion credit, and must reconcile merged `main` and remove or accept the duplicate before proceeding. No Business donor commit is imported, and PR #654 retains ownership of its Business runtime scope.
   - Scope and beta impact: make the Progression integration-event test deterministic by defining fixed `NOW` value `2026-07-21T05:00:00.000Z` and supplying it to all seven `recordTrustedProgressionEventV1` calls. This removes wall-clock expiry from the test and unblocks the required `ARCH-100F` backend-smoke gate without changing runtime behavior.
