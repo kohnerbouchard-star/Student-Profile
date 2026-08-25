@@ -272,9 +272,9 @@ current-main reconciliation.
 
 Reconciled implementation candidate (2026-08-25): planning reconciliation
 commit `001e9b35c3dda8197d5bd497b95d0126bbd60bca` was followed by the required
-normal merge of unchanged `origin/main` as merge commit
+normal merge of then-current `origin/main` as merge commit
 `20e5b649bd9472f49333bc21118de6b60b8d9eeb`; the sole conflict was the
-generated architecture inventory and it was regenerated with
+generated architecture inventory, which was regenerated with
 `node scripts/architecture/build-architecture-inventory.mjs`. Bounded
 implementation commit `88b3e96e4570b027597afa24b91c6de3cdb0c0e4` and tree
 `6ba09a1d240e6b7bfafe2945475221c789fdbf55` close all three reviewed
@@ -290,42 +290,58 @@ defaults. Executable response-parity tests cover zero/one/multi-game selection,
 multi-game and empty bootstrap, all-status games ordering and join-code
 mapping, owned/non-owned switch, base game, selected-game dashboard scoping,
 exact envelopes, `no-store` behavior and persistence/security-field privacy.
-Draft PR #668 owns this exact candidate.
+Draft PR #668 remains the sole owner.
 
-Local reconciled evidence is green except for the mandatory backend smoke:
+Post-prerequisite reconciliation (2026-08-25): PR #642 was accepted at exact
+head `9ccf68319e34f82186669acee5cf068a749b0e3f` and merged normally as current
+main `80f5eb8e24a364bc878de11acfdf196add878f10`; accepted-head and merge trees
+are identical at `acec002fa0d2af406a8862b3e7993a21c3009578`. Dedicated
+blocker-ledger reconciliation commit
+`43ce10be4b829ca0797eb319a53e370e1670f6cc` pre-applied the exact shared
+roadmap additions, after which current main merged normally into `ARCH-100F` as
+`49f520eac74fedb63a43e15f112faa1655aa4211` with tree
+`c812eb63d79ac3869d2e82c06f1c8b50bb4f1f42`. Collision simulation and the
+actual merge were conflict-free. The deterministic inventory was regenerated
+and remained at 1,060 source files and 25 Edge entrypoints. No Business runtime
+source or donor commit was imported.
+
+All local post-reconciliation evidence is green on that merged candidate:
 Staff bootstrap 36/36; Game Sessions 58/58; Admin API 184/184; Admin local
-mutations 80/80; game lifecycle 16/16; `typecheck:all`; frozen Deno checks for
-bootstrap, Staff, Staff MFA, Player, Player Web Session, Web Session and
-password-reset roots; Admin local UI/architecture 17/17; Admin game-session
-controls and lifecycle; Admin v2 84/84; auth boundaries 16/16 plus 8/8; Web
-Session release 39/39 plus 6/6; and complete root `npm test`. Architecture,
-Admin-contract, high-priority, legacy-runtime, migration, secret, touched
-TypeScript format and diff gates pass. The regenerated inventory contains 1,060
-source files and 25 Edge entrypoints; measured debt is flat or lower at 99
-persistence candidates, 168 cross-domain deep imports, 209 compatibility-marker
-files, 100 oversized source files and 5 oversized handlers, with every
-zero-tolerance category still zero. The PR diff changes no migration, RPC,
-workflow, root manifest, UI, deployment, Business source, economic write or
-idempotency contract.
+mutations 80/80; game lifecycle 16/16; full backend smoke; `typecheck:all`;
+frozen Deno checks for bootstrap, Staff, Staff MFA, Player, Player Web Session,
+Web Session and password-reset roots; Admin local UI/architecture 17/17; Admin
+game-session controls and lifecycle; Admin v2 84/84; auth boundaries 16/16 plus
+8/8; Web Session release 39/39 plus 6/6; and complete root `npm test`.
+Architecture, Admin-contract, high-priority, legacy-runtime, 297-migration,
+secret, 25-file touched-TypeScript format and diff gates pass. Measured debt is
+flat or lower at 99 persistence candidates, 168 cross-domain deep imports, 209
+compatibility-marker files, 100 oversized source files and 5 oversized
+handlers, with every zero-tolerance category still zero. The PR diff changes no
+migration, RPC, workflow, root manifest, UI, deployment, Business runtime
+source, economic write or idempotency contract.
 
-Unresolved acceptance blocker (2026-08-25): `npm --prefix backend run smoke`
-reaches Player Progression and then reports 23 passes and 5 failures in
-`progressionIntegrationEventService.test.ts`. That file and its service are
-byte-identical to fetched `origin/main`; the static 2026-07-21 fixture has aged
-past the production 30-day event window on the 2026-08-25 clock. The cumulative
-Business owner already edits that exact test to inject a fixed `now`, so
-copying or cherry-picking the donor fix into F would violate the collision and
-Business-source exclusions. `ARCH-100F` therefore remains `IN_PROGRESS` in
-draft PR #668 with no accepted head, merge, deployment or runtime credit. The
-next exact action is for the owning current-main/Business work to land or
-otherwise resolve the deterministic fixture, then merge any advanced main
-normally, regenerate the inventory, rerun every gate at the exact PR head, and
-proceed to merge/runtime/verification-ledger evidence only when all gates are
-green. `ARCH-100G0` and every later owner remain blocked.
+Acceptance boundary (2026-08-25): `ARCH-100F` remains `IN_PROGRESS` in draft
+PR #668 with no accepted head, merge, deployment or runtime credit. PR #642's
+exact-head checks and three consecutive connected Player runs passed, as did
+all non-release exact-merge workflows. Production Git Release run
+`32815368607` failed closed because staging and production each report 21
+post-cutoff migration-ledger rows while exact main has 20 canonical rows;
+release publication was skipped and `release/production` remains
+`59a82ef8580d7d571727e722424bc84cf064e8aa`. This independent external
+database/release drift is not waived. No active owner currently owns its
+reconciliation, so `BETA-LIVE-MIGRATION-PARITY-001` requires separate explicit
+authorization; no F runtime or schema workaround is authorized. The next exact
+action is to publish the reconciled F head and run every currently satisfiable
+exact-head check. F must not merge until the parity owner resolves and merges
+the correction into `main`; F must then merge that advanced main normally,
+regenerate the inventory, and rerun every exact-head check and review thread
+before its regular merge. Exact-merge Edge, release, live, Vercel, health and
+branch-hygiene evidence plus a separately merged verification ledger remain
+mandatory. `ARCH-100G0` and every later owner remain blocked.
 
 Business V2 is simultaneously active and unfinished. PR #648 plus stacked draft
-PRs #654–#667 are unmerged and undeployed; the current cumulative tip
-`1403e7e789a41156d82a629de6846861efa610b3` contains formation,
+PRs #654–#667 are unmerged and undeployed; the current cumulative tip is #667
+head `2a163a0d036973fa1b3f5b237a516fb10b2add4c` and contains formation,
 Stockroom/procurement, workforce/payroll, equipment/manufacturing and Store
 seller/listing/withdrawal work. #666 head
 `38d040748a62c5aa21a7111eeab80cd7e74b9263` also adds an unmerged,
@@ -335,19 +351,22 @@ Inventory transfer, receipt or capability credit. #667 adds only the Phase
 10A.3 scope document and temporary source-snapshot workflow; atomic
 buyer/seller/Inventory settlement, automatic sales, completed Player/Admin
 workspaces and IPO/Market integration remain absent. Branch-local certification
-never satisfies this roadmap. The stack also has
-non-linear ancestry at #661 and #664, unresolved failing/sparse check evidence,
-and open #626/#642 browser/Player-authority collisions. #642 directly overlaps
-the Business stack's cross-cutting authority contract and commerce browser
-acceptance script.
+never satisfies this roadmap. The stack also has non-linear ancestry at #661
+and #664 and unresolved failing/sparse check evidence. PR #626 is
+closed/superseded and PR #642 is merged. The overlapping
+`progressionIntegrationEventService.test.ts`, Player-authority manifest,
+Business browser wrapper and Commerce browser wrapper are now main-owned, so
+the Business stack must reconcile or de-duplicate them without receiving
+Business implementation credit.
 
 `ARCH-100F` may finish first because its sole exact-path overlap with current
 main and the cumulative Business stack is the generated inventory. Immediately
 after F, new documentation gate `ARCH-100G0` must audit the exact merged Business
 source and regenerate the root-to-handler classification. It remains blocked
 until every owning Business PR is merged in dependency order or explicitly
-closed/superseded, #626 and #642 have explicit dispositions, and the ancestry defects
-are repaired. No replacement branch is created while it is blocked, and all
+closed/superseded and the ancestry defects are repaired. The #626/#642
+disposition condition is satisfied, but their now-main-owned paths must still
+be reconciled by the Business stack. No replacement branch is created while it is blocked, and all
 later `ARCH-100G1+` work is blocked behind it. The revised serialized ownership
 is recorded in `docs/architecture/econovaria-context-propagation-owner-map-v1.md`:
 Store is split into canonical catalog (`I1`) and later Business seller commerce
@@ -364,7 +383,7 @@ Reconciled conditional `ARCH-100` owner ledger:
 
 | Item | Status | Exact dependency/ownership boundary | Required acceptance |
 |---|---|---|---|
-| `ARCH-100G0 — Business V2 context/collision reclassification` | `BLOCKED` | `ARCH-100F` verified; #648/#654–#666 merged in order or explicitly closed/superseded; scope-only #667 frozen, closed, superseded, or included if runtime is added; #626/#642 resolved; #661/#664 ancestry repaired | Audit exact merged source, regenerate inventory, classify every live/uncomposed/system edge, and resize or remove every conditional row below. Absent future functionality is not an `ARCH-100` completion dependency. |
+| `ARCH-100G0 — Business V2 context/collision reclassification` | `BLOCKED` | `ARCH-100F` verified; #648/#654–#666 merged in order or explicitly closed/superseded; scope-only #667 frozen, closed, superseded, or included if runtime is added; resolved #626/#642 paths reconciled from current main; #661/#664 ancestry repaired | Audit exact merged source, regenerate inventory, classify every live/uncomposed/system edge, and resize or remove every conditional row below. Absent future functionality is not an `ARCH-100` completion dependency. |
 | `ARCH-100G3 — Player session/capability/auth-workflow context` | `PLANNED` | `ARCH-100G2`, `ARCH-100G0`; owns the generic reviewed-dispatch callback contract, both Player roots and capability/rate mappings; explicitly excludes `_shared/playerBusinessDispatch.ts` | Exact generic context/reference forwarding, limiter identity/order, bootstrap/login/logout/session privacy and replay evidence. |
 | `ARCH-100I1 — canonical catalog Store context` | `PLANNED` | `ARCH-100H`, `ARCH-100G0`; existing Admin/shared and seeded/catalog Player Store only | Admin/Player composition, Inventory/Economy authority characterization, public-key privacy and replay/two-game evidence. |
 | `ARCH-100L1 — Banking and loans context` | `PLANNED` | `ARCH-100K2`, `ARCH-100G0`; Banking/loan compatibility surfaces only | Exact actor context, handler characterization, ledger atomicity, replay/conflict and runtime evidence. |

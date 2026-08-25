@@ -1,8 +1,10 @@
 # Econovaria Context Propagation Owner Map v1
 
 **Roadmap item:** `ARCH-100E`  
-**Audited main:** `651e607c0f63f79532c9f06ee74b705622ee7819`  
-**Audited tree:** `f784e1d585db8b2e4337f50558b23442bbee8e56`  
+**ARCH-100E audited main:** `651e607c0f63f79532c9f06ee74b705622ee7819`
+**ARCH-100E audited tree:** `f784e1d585db8b2e4337f50558b23442bbee8e56`
+**Last reconciled main:** `80f5eb8e24a364bc878de11acfdf196add878f10`
+**Active unmerged ARCH-100F reconciliation:** `49f520eac74fedb63a43e15f112faa1655aa4211`; tree `c812eb63d79ac3869d2e82c06f1c8b50bb4f1f42`
 **Status:** classification and dependency ledger; no residual path is implemented by this document
 
 This map is the reviewed closure ledger for `ARCH-100`. It classifies the live
@@ -28,9 +30,11 @@ a parallel context:
 - `backend/supabase/functions/admin-api/adminRequestApplicationContext.ts`
   creates the Admin context after the Admin permission/AAL/rate guard and owned
   game check.
-- `backend/src/domains/game-sessions/contracts/gameSessionsStaffApplicationContext.ts`
-  is the current domain-owned Staff view. Its shared factory creates a Staff
-  context after Staff auth/AAL/rate checks and owned-game resolution.
+- `backend/src/shared/staffRequestApplicationContext.ts` is the canonical Staff
+  context type, and `backend/src/shared/staffRequestApplicationContextFactory.ts`
+  constructs it only after reviewed Staff/rate/owned-game authority. The Game
+  Sessions Staff contract is a type re-export and its factory delegates to this
+  neutral authority.
 - Inventory and Game Sessions type-only context ports are verified examples.
   Later domains may expose equivalent minimal type-only views, but may not create
   a second request identity or authentication authority.
@@ -78,10 +82,11 @@ Every implementation owner must preserve these rules:
    domain-owned/type-only. Domain contracts/application code may not import Edge
    roots, Supabase implementations, or platform mutation-identity types.
 9. Shared Staff domains receive type-only views of one canonical frozen Staff
-   context. `ARCH-100F` must move/generalize construction into a neutral
-   shared/auth contract and factory. The Game Sessions contract/factory becomes
-   only a type-only alias, re-export, or delegate to neutral; neutral code may
-   never import Game Sessions. Per-domain context factories and generic
+   context. The `ARCH-100F` candidate has moved/generalized construction into a
+   neutral shared contract and factory; this remains unverified until its merge
+   and evidence gates complete. The Game Sessions contract/factory is only a
+   type re-export/delegate to neutral, and neutral code never imports Game
+   Sessions. Per-domain context factories and generic
    Admin/Staff/Player unions are forbidden. Each incoming request/process has
    one correlation request ID and at most one context per owned game; an explicit
    Admin-to-Classroom HTTP hop creates a separate downstream process-local Staff
@@ -231,15 +236,14 @@ scheduler/runtime roadmap owners.
 
 ### Business V2 planning reconciliation — 2026-08-25
 
-This map was re-audited against fetched `origin/main`
-`dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, the then-local `ARCH-100F`
-checkpoint `9646509c12ac747693fdaefb6aa28908ae872321` subsequently reconciled
-and published in draft PR #668, and the active Business
+This map was re-audited against current `origin/main`
+`80f5eb8e24a364bc878de11acfdf196add878f10`, the normally reconciled local
+`ARCH-100F` merge `49f520eac74fedb63a43e15f112faa1655aa4211` pending publication to draft PR #668, and the active Business
 V2 stack. The Business work is not in `main`: PR #648 and stacked PRs
 #654–#667 are all draft, unmerged and undeployed. Their branch-local
 certification records are useful evidence only and satisfy no dependency in
-this map. The current cumulative tip
-`1403e7e789a41156d82a629de6846861efa610b3` includes the non-mutating Phase
+this map. The current cumulative tip is #667 head
+`2a163a0d036973fa1b3f5b237a516fb10b2add4c` and includes the non-mutating Phase
 10A.1 settlement contract/simulations and #666's unmerged service-only immutable,
 non-reserving quote RPC/repository/contracts. That quote has no Player route or
 UI composition and moves no money or Inventory. #667 adds only the Phase 10A.3
@@ -264,25 +268,30 @@ payroll execution is system runtime. Service-only or uncomposed
 repositories remain explicitly non-live until a merged composition root proves
 otherwise.
 
-`ARCH-100F` remains path-independent from the Business runtime: its only overlap
-with current main and every Business landing head is the generated architecture
-inventory. The old-base/current-main merge has one real inventory conflict and
-the cumulative Business heads have two. These conflicts are resolved only by
-running the current generator on the reconciled tree; counts or sorted entries
-must never be hand-selected. `ARCH-100F` may therefore reconcile current main,
-close its existing acceptance-evidence gaps, regenerate the inventory, rerun all
-gates and merge first. No prior local result transfers across that reconciliation.
+`ARCH-100F` remains path-independent from the Business runtime: its bounded diff
+overlaps current main and every Business landing head only at the generated
+architecture inventory. Its initial current-main reconciliation regenerated the
+one inventory conflict. After #642 merged, dedicated ledger reconciliation
+`43ce10be4b829ca0797eb319a53e370e1670f6cc` allowed exact current main to merge
+normally and conflict-free as `49f520eac74fedb63a43e15f112faa1655aa4211`;
+the generator was run again and the inventory remained deterministic. Every
+future inventory collision is resolved only by running the current generator on
+the reconciled tree; counts or sorted entries must never be hand-selected.
+`ARCH-100F` may finish first without importing any Business source or donor
+commit.
 
 After `ARCH-100F`, `ARCH-100G0` is a mandatory coordination gate. It cannot be
 completed from donor branches: every Business PR that owns the Player/Classroom,
 Business, Store or generated-inventory surface must first merge in dependency
-order or be explicitly closed/superseded by its owner. PRs #626 and #642 remain
-separate open collisions on Business browser/Player authority evidence and
-likewise require explicit owner resolutions. #642 directly overlaps the active
-Business stack at
-`docs/operations/contracts/player-cross-cutting-verification-authority-v1.json`
-and `scripts/business-banking-player-commerce-browser-acceptance.mjs`. The
-current stack also requires ancestry
+order or be explicitly closed/superseded by its owner. PR #626 is
+closed/superseded and PR #642 merged into current main, satisfying their
+disposition condition. The active Business stack must now reconcile or
+de-duplicate the main-owned
+`backend/src/domains/progression/services/progressionIntegrationEventService.test.ts`,
+`docs/operations/contracts/player-cross-cutting-verification-authority-v1.json`,
+`scripts/business-banking-player-business-browser-acceptance.mjs` and
+`scripts/business-banking-player-commerce-browser-acceptance.mjs` without
+Business implementation credit. The current stack also requires ancestry
 repair at #661 and #664 before it is a linear merge authority. Until those
 conditions hold, `ARCH-100G0` and every later context owner are blocked; no
 replacement branch is created and no unmerged Business work is treated as
@@ -313,8 +322,8 @@ gate before that feature may merge.
 
 | Order | Item and sole branch | Bounded ownership | Functional dependencies and focused acceptance |
 |---:|---|---|---|
-| 1 | `ARCH-100F — Multi-game bootstrap context hydration`; `refactor/multi-game-bootstrap-context-hydration-v1` | Neutral canonical Staff context authority; ID-only pre-guard discovery; post-guard per-game DTO/join-code hydration for Admin plus Staff/Classroom/Web Session roots | `ARCH-100E`; reconcile exact current main, regenerate rather than hand-merge the inventory, close negative-boundary and route-parity evidence gaps, then rerun every focused/full/exact-merge gate |
-| 2 | `ARCH-100G0 — Business V2 context/collision reclassification`; branch intentionally uncreated while blocked | Documentation-only exact-merged-source audit of Business, Store, Business Banking, both Player roots, Classroom composition, actor/system boundaries and the downstream owner split | `ARCH-100F` verified plus #648/#654–#666 merged in dependency order or explicitly closed/superseded; scope-only #667 explicitly frozen, closed, superseded, or included if runtime is added; #626 and #642 explicitly resolved; stack ancestry repaired; fresh inventory and zero unassigned new live edges; donor-branch certification is insufficient |
+| 1 | `ARCH-100F — Multi-game bootstrap context hydration`; `refactor/multi-game-bootstrap-context-hydration-v1` | Neutral canonical Staff context authority; ID-only pre-guard discovery; post-guard per-game DTO/join-code hydration for Admin plus Staff/Classroom/Web Session roots | Implementation, proof gaps and local current-main reconciliation are complete through merge `49f520eac74fedb63a43e15f112faa1655aa4211`; publish and run currently satisfiable exact-head checks, hold merge until `BETA-LIVE-MIGRATION-PARITY-001` lands, reconcile that advanced main and rerun every gate, then merge normally, collect exact-merge Edge/release/Vercel/health/hygiene evidence and merge the separate verification ledger |
+| 2 | `ARCH-100G0 — Business V2 context/collision reclassification`; branch intentionally uncreated while blocked | Documentation-only exact-merged-source audit of Business, Store, Business Banking, both Player roots, Classroom composition, actor/system boundaries and the downstream owner split | `ARCH-100F` verified plus #648/#654–#666 merged in dependency order or explicitly closed/superseded; scope-only #667 explicitly frozen, closed, superseded, or included if runtime is added; resolved #626/#642 paths reconciled from current main; stack ancestry repaired; fresh inventory and zero unassigned new live edges; donor-branch certification is insufficient |
 | 3 | `ARCH-100G1 — Staff Players roster/create/archive context`; `refactor/staff-players-context-propagation-v1` | Shared roster/create plus Admin create/archive/read branches; Player-history audit is excluded for `ARCH-100W` | `ARCH-100G0`; Admin local/API, every Staff/Classroom root, credential/currency/privacy/two-game tests |
 | 4 | `ARCH-100G2 — Staff Player credential-reset context`; `refactor/player-credential-context-propagation-v1` | Sensitive access-code reset and Admin-to-Classroom proxy boundary | `ARCH-100G1`; credential/session revocation, no proxy serialization, cross-game and both-process auth tests |
 | 5 | `ARCH-100G3 — Player session/capability/auth-workflow context`; `refactor/player-session-context-propagation-v1` | Both Player roots, capability/bootstrap/logout, generic reviewed-dispatch callback contract, pre-auth login characterization and post-verification auth workflow scope; `_shared/playerBusinessDispatch.ts` is excluded for `L2` | `ARCH-100G2`; exact generic callback context/reference and limiter context, bootstrap-currency registration, logout/token/login/session privacy and replay/conflict tests |
@@ -360,14 +369,22 @@ audit. The branch merged fetched, unchanged `origin/main`
 generated inventory, which was regenerated rather than selected or hand
 edited. Bounded implementation commit
 `88b3e96e4570b027597afa24b91c6de3cdb0c0e4` is published in draft PR #668
-with tree `6ba09a1d240e6b7bfafe2945475221c789fdbf55`. The 2026-08-25 collision audit covers #619, #620,
-#624, #626, #642, Business integration PR #648 and stacked Business PRs
+with tree `6ba09a1d240e6b7bfafe2945475221c789fdbf55`. The PR remote head is still
+`e64f4f1407709806d62c619547c2af3ec2c100db` while the following reconciliation remains local. After PR #642 merged,
+blocker-ledger reconciliation `43ce10be4b829ca0797eb319a53e370e1670f6cc`
+pre-applied the shared roadmap additions and current main
+`80f5eb8e24a364bc878de11acfdf196add878f10` merged normally and
+conflict-free as `49f520eac74fedb63a43e15f112faa1655aa4211`, tree
+`c812eb63d79ac3869d2e82c06f1c8b50bb4f1f42`. The inventory was regenerated
+and remained unchanged. The 2026-08-25 collision audit covers #619, #620,
+#624, closed #626, merged #642, Business integration PR #648 and stacked Business PRs
 #654–#667. No active owner touches the bounded `ARCH-100F` runtime, tests,
 package registration or roadmap source. Its sole exact-path overlap with current
 main and every cumulative Business landing head is the generated architecture
 inventory; that conflict must be regenerated from the reconciled tree. #619
-owns root dependency manifests, #620 workflow control-plane files, #624/#626/#642
-Player browser/realtime/authority evidence, and the Business stack owns its
+owns root dependency manifests, #620 workflow control-plane files, #624 owns
+Player browser/realtime scope, merged #642 makes its harness and authority
+evidence main-owned, and the Business stack owns its
 Business/Store/Player/Classroom runtime. This owner may register tests in
 `backend/package.json`, but it may not edit root dependency manifests,
 workflows, browser/UI, authority-manifest or Business-owned files. Exact-path stale donors
@@ -386,26 +403,30 @@ Staff/grant evaluation and zero request-ID/profile/game/context/route work; and
 executable route tests preserve exact zero/multi-game bootstrap, games, switch,
 base-game and selected-game dashboard envelopes, ordering, `no-store` behavior
 and privacy. Staff 36/36, Game Sessions 58/58, Admin API 184/184, Admin local
-80/80, lifecycle 16/16, `typecheck:all`, seven frozen Edge-root checks, full
-root `npm test`, Admin/auth/Web Session suites and every architecture/safety
-gate pass. The regenerated inventory records 1,060 source files and 25 Edge
+80/80, lifecycle 16/16, full backend smoke, `typecheck:all`, seven frozen
+Edge-root checks, full root `npm test`, Admin/auth/Web Session suites and every
+architecture/safety gate pass. The regenerated inventory records 1,060 source files and 25 Edge
 entrypoints with all debt limits flat or lower and every zero-tolerance
 category at zero.
 
-`ARCH-100F` nevertheless remains `IN_PROGRESS`. Mandatory backend smoke fails
-only after reaching the untouched current-main Player Progression suite: 23
-tests pass and 5 static 2026-07-21 fixture cases fail because they are older
-than the production 30-day event window on 2026-08-25. The file and service are
-byte-identical to `origin/main`, while the cumulative Business owner already
-edits the exact test to inject fixed time. F cannot import that donor change
-without violating its collision boundary. Draft PR #668 therefore has no
-accepted-head, merge, runtime or completion credit. After the owning fixture
-resolution lands, F must merge advanced main normally if necessary, regenerate
-the inventory, rerun every gate at the exact head, and complete merge/runtime/
-verification-ledger evidence before any later owner starts.
+`ARCH-100F` nevertheless remains `IN_PROGRESS`. Draft PR #668 has no accepted
+head, merge, runtime or completion credit. PR #642's exact-head checks and three
+consecutive connected Player runs passed, but exact-merge Production Git Release
+run `32815368607` failed closed on external staging/production migration-ledger
+and structural drift; publication was skipped and `release/production` remains
+`59a82ef8580d7d571727e722424bc84cf064e8aa`. That drift is outside #642's
+five-file diff and is not waived. No active owner currently owns its
+reconciliation, so it requires a separate explicitly authorized owner rather
+than an F runtime/schema workaround. F may publish and run all currently
+satisfiable exact-head checks, but it must not merge until that parity
+correction merges into `main`. F must then merge advanced main normally,
+regenerate the inventory, rerun every exact-head check and review thread, merge
+normally, prove exact-merge Edge, release, live, Vercel, health and
+branch-hygiene evidence, and merge a separate verification ledger before any
+later context owner starts.
 
-Before runtime implementation, the exact reviewed roots and direct/internal
-composition edges are:
+The implemented candidate preserves these exact reviewed roots and
+direct/internal composition edges:
 
 1. `backend/supabase/functions/admin-api/index.ts::Deno.serve` calls
    `common.resolveContext`, which authenticates the bearer and discovers only
@@ -534,16 +555,17 @@ dependencies owned by PR #619.
 
 ## Collision ledger
 
-Current open PRs at audit time:
+Reviewed PR and branch collisions at audit time:
 
 - #619 owns root dependency manifests; no context tranche may absorb dependency
   changes.
 - #620 owns workflow definitions. It is an acceptance-control-plane collision;
   context tranches do not edit workflows and must reconcile/rerun if it merges.
-- #624, #626 and #642 own Player browser/realtime/authority-manifest acceptance
-  work; #642 also overlaps the Business commerce browser-acceptance script.
-  Backend owners exclude their UI, browser, workflow, and authority-manifest
-  files. `ARCH-100G0` must record explicit #626 and #642 dispositions before any
+- #624 retains Player browser/realtime scope. #626 is closed/superseded and
+  #642 is merged, so its Player authority and Business-commerce harness paths
+  are now main-owned. Backend owners exclude the UI, browser, workflow and
+  authority-manifest files. `ARCH-100G0` must verify that the Business stack
+  reconciled or de-duplicated those current-main paths before any
   `ARCH-100G1+` owner starts; `ARCH-100L1`–`L5` then re-audit the resulting
   exact merged Player/Business authority surface.
 - #648 and stacked #654–#667 own the unfinished Business V2, Store seller,
