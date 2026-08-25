@@ -11,6 +11,15 @@ const CREDENTIAL_FIELD_PATTERN = new RegExp(
   "giu",
 );
 
+const PRIVATE_HASH_FIELD_NAME = String.raw`(?:[A-Z][A-Z0-9_]*_HASH)`;
+
+const PRIVATE_HASH_FIELD_PATTERN = new RegExp(
+  String.raw`"?\b${PRIVATE_HASH_FIELD_NAME}\b"?[ \t]*(?:=|:|\||│|%3D)[ \t]*(?:eq\.|eq%2E)?(?:"[^"\r\n]*"|'[^'\r\n]*'|[^&\s"'<>|│]+)`,
+  "giu",
+);
+
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/giu;
+
 const REPLACEMENTS = Object.freeze([
   {
     pattern: /"?authorization"?\s*:\s*"?bearer\s+[^\s"']+"?/giu,
@@ -19,6 +28,10 @@ const REPLACEMENTS = Object.freeze([
   {
     pattern: CREDENTIAL_FIELD_PATTERN,
     replacement: "[credential-field-redacted]",
+  },
+  {
+    pattern: PRIVATE_HASH_FIELD_PATTERN,
+    replacement: "[private-hash-field-redacted]",
   },
   {
     pattern: /postgres(?:ql)?:\/\/[^\s"'<>]+/giu,
@@ -37,7 +50,9 @@ const REPLACEMENTS = Object.freeze([
     replacement: "[supabase-key-redacted]",
   },
   {
-    pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/giu,
+    // URL-encoded delimiters such as `%28` end in an alphanumeric byte, so a
+    // leading word boundary misses the first UUID in an encoded `in.(...)`.
+    pattern: UUID_PATTERN,
     replacement: "[uuid-redacted]",
   },
   {
@@ -48,6 +63,10 @@ const REPLACEMENTS = Object.freeze([
 
 const FORBIDDEN = Object.freeze([
   { name: "named credential", pattern: CREDENTIAL_FIELD_PATTERN },
+  {
+    name: "private hash field",
+    pattern: new RegExp(PRIVATE_HASH_FIELD_PATTERN.source, "iu"),
+  },
   { name: "database URL", pattern: /postgres(?:ql)?:\/\/[^\s"'<>]+/iu },
   { name: "default database credential", pattern: /\bpostgres:postgres\b/iu },
   { name: "Bearer credential", pattern: /"?authorization"?\s*:\s*"?bearer\s+[^\s"']+"?/iu },
@@ -55,7 +74,7 @@ const FORBIDDEN = Object.freeze([
   { name: "Supabase key", pattern: /\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/iu },
   {
     name: "UUID",
-    pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/iu,
+    pattern: new RegExp(UUID_PATTERN.source, "iu"),
   },
   { name: "private key", pattern: /-----BEGIN [^-\r\n]*PRIVATE KEY-----/u },
 ]);

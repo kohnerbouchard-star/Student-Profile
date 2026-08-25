@@ -422,6 +422,7 @@ jobs:
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
+            -e '"?[A-Z][A-Z0-9_]*_HASH"?[[:space:]]*(=|:|[|│]|%3D)[[:space:]]*(eq\.|eq%2E)?("[^"]*"|[^&[:space:]|│"]+)' \
             -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             "$SANITIZED_DIR"; then
@@ -564,6 +565,7 @@ jobs:
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
+            -e '"?[A-Z][A-Z0-9_]*_HASH"?[[:space:]]*(=|:|[|│]|%3D)[[:space:]]*(eq\.|eq%2E)?("[^"]*"|[^&[:space:]|│"]+)' \
             -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             "$SANITIZED_DIR"; then
@@ -1000,6 +1002,7 @@ jobs:
             -e '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' \
             -e 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' \
             -e 'sb_(secret|publishable)_[A-Za-z0-9_-]+' \
+            -e '"?[A-Z][A-Z0-9_]*_HASH"?[[:space:]]*(=|:|[|│]|%3D)[[:space:]]*(eq\.|eq%2E)?("[^"]*"|[^&[:space:]|│"]+)' \
             -e '"?authorization"?[[:space:]]*:[[:space:]]*"?bearer[[:space:]]+[^[:space:]"]+' \
             -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
             -e 'PLAYER-PHASE10A4-LICENSE-001' \

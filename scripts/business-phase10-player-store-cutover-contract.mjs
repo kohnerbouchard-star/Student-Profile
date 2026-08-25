@@ -564,6 +564,12 @@ requireTokenCount(
   "grep -aErqi",
   3,
 );
+requireTokenCount(
+  source.workflow,
+  "private hash-field artifact privacy scans",
+  '"?[A-Z][A-Z0-9_]*_HASH"?',
+  3,
+);
 forbidTokens(source.workflow, "artifact privacy scans", [
   "rg --text --quiet",
 ]);
@@ -622,6 +628,7 @@ requireTokens(source.ciLogRedactor, "CI evidence stream redactor", [
   "postgres(?:ql)?",
   "authorization",
   "PRIVATE KEY",
+  "PRIVATE_HASH_FIELD_PATTERN",
   "assertEconovariaCiLogSanitized",
 ]);
 requireTokens(source.ciLogRedactorTests, "CI evidence redactor tests", [
@@ -637,6 +644,15 @@ requireTokens(source.ciLogRedactorTests, "CI evidence redactor tests", [
   "ECONOVARIA_RATE_LIMIT_HMAC_SECRET",
   "ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY",
   "ECONOVARIA_PLAYER_CREDENTIAL_PEPPER",
+  "session_token_hash",
+  "access_code_hash",
+  "game_join_code_hash",
+  "normalized_student_code_hash",
+  "purchase_codes_code_hash",
+  "nonce_hash",
+  "token_hash",
+  "code_hash",
+  "%2841b43379-2942-5bb4-8c65-a12e70709dd2",
   "assertEconovariaCiLogSanitized",
 ]);
 requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
