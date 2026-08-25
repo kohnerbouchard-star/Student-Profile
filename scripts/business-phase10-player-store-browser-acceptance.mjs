@@ -1372,27 +1372,19 @@ async function completePlayerLogin(page, audit, game, player) {
       response.request().method() === "POST",
     { timeout: 120_000 },
   );
-  const storeResponsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith("/players/me/store/items") &&
-      response.request().method() === "GET",
-    { timeout: 180_000 },
-  );
   await page.locator("#playerForm button[type='submit']").click();
   const loginResponse = await loginResponsePromise;
   assert(loginResponse.status() === 200, `${player.role} login returned ${loginResponse.status()}.`);
   await validatePlayerLoginResponse(loginResponse, player.role);
   await page.waitForURL(/\/player-terminal\/(?:index\.html)?(?:#.*)?$/u, { timeout: 120_000 });
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const storeResponse = await storeResponsePromise;
-  assert(storeResponse.status() === 200, `${player.role} Store bootstrap returned ${storeResponse.status()}.`);
-  const storePayload = await parsedPlaywrightResponse(storeResponse);
   await page.waitForTimeout(400);
   await assertSafePlayerDom(page);
   const documentMarker = `${Date.now()}-${Math.random()}`;
   await page.evaluate((marker) => {
     globalThis.__econovariaPhase10A4DocumentMarker = marker;
   }, documentMarker);
-  return { documentMarker, storePayload };
+  return { documentMarker };
 }
 
 async function loginPlayer(browser, game, player) {
@@ -1424,7 +1416,7 @@ async function reauthenticatePlayer(session, game, player) {
   const authenticated = await completePlayerLogin(session.page, session.audit, game, player);
   session.player = player;
   session.documentMarker = authenticated.documentMarker;
-  session.storePayload = authenticated.storePayload;
+  session.storePayload = null;
   return session;
 }
 
@@ -1452,6 +1444,20 @@ async function openRoute(session, route, pageSelector) {
   await session.page.waitForFunction((target) => location.hash === `#${target}`, route, { timeout: 30_000 });
   await session.page.locator(pageSelector).waitFor({ state: "visible", timeout: 60_000 });
   await assertSafePlayerDom(session.page);
+}
+
+async function openStoreRoute(session) {
+  const storeResponsePromise = session.page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/store/items") &&
+      response.request().method() === "GET",
+    { timeout: 120_000 },
+  );
+  await openRoute(session, "store", '[data-page="store"]');
+  const storeResponse = await storeResponsePromise;
+  assert(storeResponse.status() === 200, `${session.player.role} Store route returned ${storeResponse.status()}.`);
+  const storePayload = await parsedPlaywrightResponse(storeResponse);
+  session.storePayload = storePayload;
+  return storePayload;
 }
 
 function responseBusinessQuote(payload) {
@@ -1483,8 +1489,8 @@ function assertNoCrossGameStoreExposure(payload, otherFixture) {
 }
 
 async function assertReciprocalGameStoreExposure(session, ownFixture, otherFixture, otherReceiptKey) {
-  await openRoute(session, "store", '[data-page="store"]');
-  const serialized = JSON.stringify(session.storePayload);
+  const storePayload = await openStoreRoute(session);
+  const serialized = JSON.stringify(storePayload);
   assert(
     serialized.includes(ownFixture.offerKey) && serialized.includes(ownFixture.businessKey),
     "Game 2 Store response omitted its own exact Business offer.",
@@ -1955,10 +1961,9 @@ async function main() {
     await sellerSession.page.locator("[data-business-store-sales]").waitFor({ state: "visible", timeout: 60_000 });
     const sellerNavigationBaseline = sellerSession.audit.navigations;
 
-    await openRoute(buyerSession, "store", '[data-page="store"]');
+    const storePayload = await openStoreRoute(buyerSession);
     await buyerSession.page.waitForTimeout(500);
-    const storePayload = buyerSession.storePayload;
-    assert(storePayload, "Buyer Store bootstrap payload was not captured.");
+    assert(storePayload, "Buyer Store route payload was not captured.");
     assertNoCrossGameStoreExposure(storePayload, fixture2);
     const storeDom = await buyerSession.page.locator('[data-page="store"]').evaluate((element) => element.outerHTML);
     assert(!storeDom.includes(fixture2.offerKey) && !storeDom.includes(fixture2.businessKey), "Game 2 public keys appeared in Game 1 Store DOM.");

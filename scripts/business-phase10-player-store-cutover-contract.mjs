@@ -145,6 +145,20 @@ function interfaceBlock(text, name) {
   throw new Error(`Unbounded interface ${name}.`);
 }
 
+function functionBlock(text, name) {
+  const marker = `function ${name}(`;
+  const start = text.indexOf(marker);
+  if (start < 0) throw new Error(`Missing function ${name}.`);
+  const bodyStart = text.indexOf("{", start);
+  let depth = 0;
+  for (let index = bodyStart; index < text.length; index += 1) {
+    if (text[index] === "{") depth += 1;
+    if (text[index] === "}") depth -= 1;
+    if (depth === 0) return text.slice(start, index + 1);
+  }
+  throw new Error(`Unbounded function ${name}.`);
+}
+
 requireTokens(source.routes, "Player Store route parser", [
   'kind: "items"',
   'kind: "quotes"',
@@ -675,9 +689,30 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "purchaseFirstRemainingWithdrawalAccepted",
   "sourceMaterializationCount: 0",
   "assertSanitizedArtifact",
+  "async function openStoreRoute(session)",
+  "Store route returned",
   "on country.id = assignment.country_profile_id",
 ]);
-forbidTokens(source.browserAcceptance, "connected country assignment lookup", [
+const connectedLogin = functionBlock(source.browserAcceptance, "completePlayerLogin");
+forbidTokens(connectedLogin, "connected route-lazy Player login", [
+  "/players/me/store/items",
+  "storeResponsePromise",
+]);
+const connectedStoreRoute = functionBlock(source.browserAcceptance, "openStoreRoute");
+requireTokens(connectedStoreRoute, "connected explicit Store route", [
+  "waitForResponse",
+  "/players/me/store/items",
+  'await openRoute(session, "store"',
+  "session.storePayload = storePayload",
+]);
+requireTokenCount(
+  source.browserAcceptance,
+  "connected explicit Store route ownership",
+  "openStoreRoute(",
+  3,
+);
+forbidTokens(source.browserAcceptance, "connected route-lazy Store and country assignment", [
+  "Store bootstrap returned",
   "country.game_session_id = assignment.game_session_id",
 ]);
 requireTokens(
