@@ -405,7 +405,7 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** PLAYER CUTOVER `IN_PROGRESS` — checkpoint 10A.1 exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 exact-head source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` and clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; checkpoint 10A.4 is scope-only on its dedicated stacked branch
+**Status:** `IMPLEMENTED_NOT_MERGED` — checkpoint 10A.1 exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 exact-head source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` and clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; checkpoint 10A.4 implementation candidate `88944e18520913ca9779c2706bd005f644c60050` is frozen on draft PR #670 with certification blocked by the missing canonical FX and shared multi-currency funding authority
 
 - [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
 - [x] Freeze one seller-offer-first economic row-lock order.
@@ -424,6 +424,8 @@ Certified checkpoint:
 
 - **10A.3:** Store-owned atomic Business seller-offer settlement; exact replay before mutable-state interpretation; fixed seller-offer-first locks; Buyer Checking debit; Business cash credit; canonical Store Listing-to-Buyer Inventory transfer; exact revenue/COGS/margin and immutable `spr_...` receipt evidence; quote consumption; offer-version advancement; seven-stage rollback; real-lock races; retained seeded purchase; and two-game isolation. **Exact implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`. Dedicated workflow: `32817713404`. Status: `IMPLEMENTED_NOT_MERGED`.
 
+- **10A.4 implementation candidate:** authenticated Player Store catalog/offer/quote/purchase/receipt routes, explicit seeded-versus-Business discrimination, Buyer and seller committed-state projections, Player Terminal purchase flow, and permanent structural/connected acceptance machinery are present at `88944e18520913ca9779c2706bd005f644c60050`. This SHA is an implementation identity, not an exact-head certified source. Status: `IMPLEMENTED_NOT_MERGED`; certification is blocked by canonical FX and shared multi-currency funding plus the three recorded secondary test/control-plane failures.
+
 ### Checkpoint 10A.3 certified boundary
 
 - Owner: `feat/business-store-atomic-settlement-v2` / stacked draft PR #667, based on clean Phase 10A.2 handoff `38d040748a62c5aa21a7111eeab80cd7e74b9263`.
@@ -439,7 +441,7 @@ Certified checkpoint:
 
 Exit: no paid-without-item or item-without-payment state is possible. **MET for the server-owned atomic settlement authority at checkpoint 10A.3. Phase 10 remains open only for 10A.4 authenticated Player cutover and connected browser acceptance.**
 
-### Checkpoint 10A.4 bounded scope
+### Checkpoint 10A.4A implementation freeze
 
 - Owner: `feat/business-player-store-cutover-v2` / stacked draft PR #670, starting exactly from Phase 10A.3 clean handoff `6f9231b0030a7851bba5abe8519afa790071c32c`; exact scope commit `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
 - Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
@@ -447,7 +449,29 @@ Exit: no paid-without-item or item-without-payment state is possible. **MET for 
 - Player Store reads must aggregate seeded and Business offers under one canonical product card while retaining explicit public offer/seller identities and no internal UUIDs.
 - Browser intent is limited to public offer/quote, quantity, expected version, and idempotency intent. Game, Buyer, seller, Business, custody, product, money, cost, Inventory, and receipt state remain server derived.
 - Required evidence includes same-origin authentication/capabilities/rate limits, stable negative states, committed Buyer and seller convergence, seeded compatibility, real database vectors, two authenticated browsers, both withdrawal orderings, two games, accessibility/responsive acceptance, and the complete retained matrix.
-- No Phase 10A.4 runtime source, migration, implementation SHA, workflow result, merge, deployment, secret mutation, or live database mutation is claimed at the scope-only boundary.
+- Frozen implementation candidate: `88944e18520913ca9779c2706bd005f644c60050`. It adds runtime, Player UI, tests, and the dedicated workflow but no new database migration. It remains draft, open, unmerged, undeployed, and without any secret or live-database mutation.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`. The candidate is not certified and is not the final Phase 10A.4 implementation source.
+- Root dependency: permanent Store checkout cannot be certified while Store remains same-currency-only and Banking has no canonical account identity, holds, clearing party, or shared funding planner. Those authorities must be added outside PR #670 before final convergence.
+- Secondary exact-head failures retained for repair rather than weakened:
+  - the connected readiness helper sends a loopback `Origin` to `bootstrap-api`, whose HTTPS allowlist correctly rejects it with `403`; this is a readiness-probe contract defect, not proof that the Edge runtime failed to start;
+  - `player-terminal/tests/store-local-currency.mjs` expects obsolete copy claiming the quote converts into a THD local wallet, while the frozen candidate supports only same-currency Store settlement;
+  - the cross-cutting Player verifier consumes the mutable singleton `player-cross-cutting-verification-authority-v1.json`, still bound to PR #661, rather than an immutable PR-bound authority record.
+- PR #670 is frozen after this documentation-only 10A.4A record. Do not rewrite its runtime candidate while the dependency stack is built.
+
+### Inserted dependency sequence before final 10A.4 certification
+
+| Item | Dedicated branch | Required boundary |
+| --- | --- | --- |
+| `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` | `feat/canonical-fx-authority-v1` | ECO numeraire, one deterministic game-local 08:00 fixing, immutable current/history evidence, Story-shock convergence, and legacy-rate cutover. |
+| `BUSINESS-V2-10A4B2` | `feat/banking-fx-clearing-v1` | Banking-owned account identities, balanced journal grouping, holds, named clearing/reserve parties, capped liquidity, and standard/instant Player FX. |
+| `BUSINESS-V2-10A4C0` | `feat/multicurrency-funding-core-v1` | Immutable maximum-three-Checking-account funding quotes and a private atomic funding composer. |
+| `BUSINESS-V2-10A4C1` | `feat/multicurrency-store-funding-v1` | Seeded/NPC and Business Store offers consume the shared funding authority. |
+| `BUSINESS-V2-10A4C2` | `feat/multicurrency-marketplace-funding-v1` | Marketplace preserves listing currency and retires its competing treasury balance writes. |
+| `BUSINESS-V2-10A4C3` | `feat/multicurrency-stock-funding-v1` | Stocks gain immutable ECO listing currency; buys and sale proceeds settle in that currency. |
+| `BUSINESS-V2-10A4C4` | `feat/business-multicurrency-treasury-v1` | Business-owned foreign Checking accounts, bounded treasury FX, and procurement funding. |
+| `BUSINESS-V2-10A4D` | `feat/business-player-store-fx-final-v2` | Converge the frozen candidate behavior with the dependency stack, repair the three secondary failures, and run final Store/FX/two-browser certification. |
+
+Phase 11 remains closed until 10A.4D has one exact implementation SHA, all required exact-head evidence is green, and a clean documentation-only handoff is recorded. No item in this inserted sequence is `VERIFIED_COMPLETE` before merge to `main` and any required runtime evidence.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 

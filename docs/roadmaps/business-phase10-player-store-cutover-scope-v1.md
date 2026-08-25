@@ -1,7 +1,7 @@
 # Business V2 Phase 10A.4 — Authenticated Player Store Cutover Scope v1
 
-**Roadmap item:** `BUSINESS-V2-10A4`
-**Status:** `IN_PROGRESS` — bounded scope only; no Phase 10A.4 runtime implementation is yet claimed
+**Roadmap item:** `BUSINESS-V2-10A4A` under parent `BUSINESS-V2-10A4`
+**Status:** `IMPLEMENTED_NOT_MERGED` — implementation candidate frozen; certification blocked by canonical FX and shared multi-currency funding
 **Branch:** `feat/business-player-store-cutover-v2`
 **Parent branch:** `feat/business-store-atomic-settlement-v2`
 **Parent draft PR:** #667
@@ -9,7 +9,8 @@
 **Scope commit:** `75d2a3c0b594017bc38f78e2618926f78ca2754e`
 **Certified parent implementation source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`
 **Clean parent handoff:** `6f9231b0030a7851bba5abe8519afa790071c32c`
-**Certification state:** scope-only branch and draft PR established; no implementation SHA or workflow evidence is claimed
+**Frozen implementation candidate:** `88944e18520913ca9779c2706bd005f644c60050`
+**Certification state:** not exact-head certified; canonical FX/funding dependency and three secondary failures remain open
 
 ## Decision
 
@@ -20,6 +21,8 @@ The governing invariant is:
 > The offer displayed and selected by the Buyer, the immutable quote, the locked settlement, the credited Business, the transferred canonical Inventory, the Buyer receipt, and the seller-visible accounting/activity projection all refer to the same public seller offer and one committed `spr_...` receipt.
 
 The retained seeded Store compatibility channel remains functional and keeps its historical quote, purchase, receipt, pricing, and Inventory meaning. Phase 10A.4 must discriminate seeded and Business-offer intent explicitly; it must not infer authority from key shape, silently reinterpret a retained quote, or dual-write two purchase paths.
+
+The runtime/UI candidate at `88944e18520913ca9779c2706bd005f644c60050` implements this bounded Store cutover contract, but it is frozen rather than certified. Its same-currency settlement assumption exposed a prerequisite architecture gap: canonical FX, Banking-owned clearing and holds, and one shared multi-currency funding authority must precede permanent Store certification. This amendment records that dependency without expanding PR #670 into an FX or Banking owner.
 
 ## Included authority
 
@@ -258,6 +261,8 @@ Checkpoint 10A.4 does **not authorize**:
 - secret mutation;
 - staging or production database mutation.
 
+The FX-clearing exclusion continues to apply to PR #670. FX, Banking clearing, and shared funding are separately owned prerequisite checkpoints; their insertion does not authorize additional runtime edits on the frozen branch.
+
 ## Collision and ownership boundary
 
 - No pre-existing Phase 10A.4 branch or PR owned this capability at scope creation.
@@ -266,19 +271,41 @@ Checkpoint 10A.4 does **not authorize**:
 - Active ARCH-100F PR #668 owns the global beta roadmap file. Scope Intake reconciliation must preserve that owner's work and may not independently mark an unmerged Business checkpoint `VERIFIED_COMPLETE`.
 - The Business stack is intentionally unmerged. This branch starts from the exact Phase 10A.3 clean handoff rather than rebasing or replacing parent authorities.
 
+## 2026-08-26 implementation freeze amendment
+
+### Frozen candidate and current certification failures
+
+- Exact frozen implementation candidate: `88944e18520913ca9779c2706bd005f644c60050` on draft PR #670. It is an implementation identity only and must not be described as an exact-head certified source.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`; not `VERIFIED_COMPLETE` and not certified. No merge, deployment, secret mutation, or staging/production database mutation occurred.
+- Canonical dependency blocker: Store checkout remains same-currency-only while the repository lacks one ECO-based daily fixing, Banking-owned account identities and holds, a named game-scoped clearing/reserve authority, and a shared maximum-three-account funding planner.
+- Connected readiness currently fails because `scripts/local-edge-runtime-isolation.mjs` sends a loopback `Origin` to `bootstrap-api`; the function correctly rejects non-HTTPS/non-allowlisted origins with `403`. Final 10A.4D must probe health without weakening production CORS.
+- `player-terminal/tests/store-local-currency.mjs` asserts obsolete THD-conversion copy. Final 10A.4D must replace it with authoritative direct, retail-FX, account-selection, seller-currency, spread, and committed-balance semantics after those authorities exist.
+- The Player cross-cutting verifier reads one mutable singleton authority record that is still bound to PR #661. Final 10A.4D must use immutable `pr-<number>.json` records selected from trusted PR context and fail closed for ambiguous local execution.
+- These failures are preserved as evidence. None may be hidden by weakening CORS, accepting stale currency semantics, rebinding a prior PR record in place, or removing required checks.
+
+### Required dependency order
+
+1. `BUSINESS-V2-10A4A`: freeze this candidate and correct the durable plan/log/PR record.
+2. `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` on `feat/canonical-fx-authority-v1`: add ECO and the deterministic game-local 08:00 fixing authority, immutable history, Story-shock convergence, and guarded legacy cutover.
+3. `BUSINESS-V2-10A4B2` on `feat/banking-fx-clearing-v1`: add canonical Banking account identities, balanced postings, holds, named clearing/reserve parties, capped liquidity, and standard/instant FX.
+4. `BUSINESS-V2-10A4C0` through `BUSINESS-V2-10A4C4`: add the shared maximum-three-Checking-account funding planner, then converge Store, Marketplace, Stocks, and Business procurement/treasury on separate dependency-ordered branches.
+5. `BUSINESS-V2-10A4D` on `feat/business-player-store-fx-final-v2`: converge the frozen Store candidate with those authorities, repair the three secondary failures, and run the complete final exact-head certification matrix.
+
+PR #670 remains frozen after the 10A.4A documentation handoff. Each prerequisite is a separate bounded draft PR against its immediate predecessor. Phase 11 and later phases remain closed until 10A.4D is exactly certified and handed off.
+
 ## Completion rule
 
 Checkpoint 10A.4 is complete at the development boundary only when:
 
-1. one exact implementation SHA is identified;
+1. one final 10A.4D exact implementation SHA is identified after the B1, B2, and C0–C4 dependency stack;
 2. every required exact-head job reaches terminal `success` on that SHA;
 3. connected Buyer/seller/two-game browser and committed database evidence match exactly;
 4. seeded compatibility remains green;
 5. this scope, the Phase 10 index, Business execution plan/log, draft PR, and integration PR #648 record matching exact evidence;
 6. temporary repair, writer, controller, certifier, finalizer, and source-snapshot machinery has zero net presence;
 7. the PR remains draft, open, unmerged, and without a Business staging/production release;
-8. the clean documentation-only handoff SHA is recorded for Phase 11.
+8. the final 10A.4D clean documentation-only handoff SHA is recorded for Phase 11.
 
 Because the Business stack is unmerged, the checkpoint status must remain `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE` in the global beta ledger.
 
-After a clean handoff, the next exact phase is **Phase 11 — converge automatic demand and physical sales onto the Store seller-offer settlement authority** through separately bounded stacked checkpoints.
+After the 10A.4D clean handoff, the next exact phase is **Phase 11 — converge automatic demand and physical sales onto the Store seller-offer settlement authority** through separately bounded stacked checkpoints.

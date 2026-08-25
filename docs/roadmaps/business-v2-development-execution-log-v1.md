@@ -1423,3 +1423,49 @@ This entry supersedes the `PENDING` evidence fields in the preceding implementat
 - Exact scope commit: `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
 - Stacked draft PR: #670, base `feat/business-store-atomic-settlement-v2`, head `feat/business-player-store-cutover-v2`.
 - The branch and draft PR were pushed/opened before runtime implementation. They remain open, draft, unmerged, and without a Business staging/production release.
+
+---
+
+## 2026-08-26 — Phase 10A.4A implementation freeze and canonical FX dependency insertion
+
+This entry supersedes only the stale scope-only state recorded above. It does not alter any certified Phase 10A.1–10A.3 source, workflow, or handoff identity.
+
+### Exact implementation candidate and status
+
+- Roadmap item: `BUSINESS-V2-10A4A`, under parent `BUSINESS-V2-10A4`.
+- Frozen implementation candidate: `88944e18520913ca9779c2706bd005f644c60050` on `feat/business-player-store-cutover-v2` / draft PR #670.
+- Parent Phase 10A.3 implementation remains `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; its clean handoff remains `6f9231b0030a7851bba5abe8519afa790071c32c`. Neither identity is rewritten by this record.
+- The candidate adds authenticated Player Store catalog/offer/quote/purchase/receipt wiring, explicit seeded-versus-Business route separation, committed Buyer/seller projections, Player Terminal offer purchase flow, and permanent structural/connected acceptance machinery. It adds no new database migration.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`. The candidate is not exact-head certified and is not `VERIFIED_COMPLETE`; final certification is blocked by the missing canonical FX and shared multi-currency funding authority.
+- Draft PR #670 remains open, draft, unmerged, undeployed, and without any secret or staging/production database mutation. This record freezes its runtime candidate; subsequent dependency work belongs on new bounded branches.
+
+### Current certification failures
+
+1. The connected readiness helper sends `Origin: http://127.0.0.1:...` while probing proxied `bootstrap-api`. That service intentionally accepts only configured HTTPS browser origins, so it returns `403` and the helper expects success. This is a probe-contract defect, not evidence that the Edge runtime failed to start. Final repair must send no browser `Origin` for the health probe and must not weaken production CORS.
+2. `player-terminal/tests/store-local-currency.mjs` still requires copy claiming an authoritative quote converts the final amount into a THD local wallet. The frozen candidate implements same-currency Store settlement only. The stale assertion must be replaced after canonical retail FX/funding semantics exist, not edited to bless an interim assumption.
+3. `docs/operations/contracts/player-cross-cutting-verification-authority-v1.json` is a mutable singleton still bound to PR #661. The current verifier therefore cannot provide immutable PR #670 authority evidence. Final convergence must use PR-bound authority files selected from trusted PR context and must fail closed locally without an explicit PR number.
+
+### Root-cause decision
+
+- The Store candidate cannot become the permanent checkout authority while exchange rates remain independently written pair rows, ECO is absent from the canonical registry, Banking cannot assign canonical accounts to a clearing party or reserve delayed funds, and Store/Marketplace/Stocks/Business apply incompatible currency assumptions.
+- Do not repair these root gaps inside PR #670. Preserve that branch as the Phase 10A.4A implementation freeze and insert the dependency stack before final certification.
+- The global beta completion roadmap remains untouched here because draft PR #668 owns that exact file. Its owner must reconcile Scope Intake independently without overwriting this Business-stack record.
+
+### Dependency-ordered owner stack
+
+| Item | Branch | Outcome before the next checkpoint |
+| --- | --- | --- |
+| `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` | `feat/canonical-fx-authority-v1` | ECO registry/numeraire, deterministic game-local 08:00 fixing, immutable current/history evidence, Story-shock convergence, and guarded legacy-rate cutover. |
+| `BUSINESS-V2-10A4B2` | `feat/banking-fx-clearing-v1` | Canonical account identities, balanced posting groups, holds, named clearing/reserve parties, capped liquidity, and standard/instant FX. |
+| `BUSINESS-V2-10A4C0` | `feat/multicurrency-funding-core-v1` | Immutable maximum-three-Checking-account funding quote and private atomic funding composer. |
+| `BUSINESS-V2-10A4C1` | `feat/multicurrency-store-funding-v1` | Seeded/NPC and Business Store settlement consume the shared funding authority. |
+| `BUSINESS-V2-10A4C2` | `feat/multicurrency-marketplace-funding-v1` | Marketplace preserves listing currency and stops competing treasury balance writes. |
+| `BUSINESS-V2-10A4C3` | `feat/multicurrency-stock-funding-v1` | Existing securities receive ECO listing currency without rewriting historical trades; new buys/sales settle in listing currency. |
+| `BUSINESS-V2-10A4C4` | `feat/business-multicurrency-treasury-v1` | Business-owned foreign Checking accounts, bounded treasury FX, and procurement funding. |
+| `BUSINESS-V2-10A4D` | `feat/business-player-store-fx-final-v2` | Converge the frozen candidate, repair the three secondary failures, and run final Store/FX/two-browser/two-game certification. |
+
+Each branch is a bounded draft PR against its immediate predecessor and must identify one exact implementation SHA before advancing. No merge, deployment, secret mutation, or staging/production database mutation is authorized.
+
+### Next exact roadmap item
+
+Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentation handoff on `feat/canonical-fx-authority-v1`. Phase 11 remains closed until 10A.4D is exactly certified and handed off; Phases 12, 13, and 14A–14D remain dependency ordered after Phase 11.
