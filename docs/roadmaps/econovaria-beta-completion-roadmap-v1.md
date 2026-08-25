@@ -74,7 +74,7 @@ feature introducing that edge must satisfy the row before merge.
 
 - **`ARCH-001` — Architecture ratchets before large moves**
   - Status: `VERIFIED_COMPLETE`
-  - Owner branch and baseline: `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`.
+  - Owner branch and baseline: `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b066457a355d09cdb47cf6fa13e45f6923` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`.
   - Scope and beta impact: compose the existing architecture and legacy-runtime audits with a checked v2 baseline that permits measured debt only to stay flat or decrease. Zero-tolerance checks cover direct browser database access, out-of-owner balance/Inventory mutation, unscoped live-simulation persistence and retired browser markers. No product behavior, UI, route, RPC, migration, database or deployment change.
   - Collision audit: open PRs #619, #620, #624 and #626 do not own the ratchet files; no in-flight Player/runtime file is modified.
   - Implementation files: `scripts/architecture/architecture-ratchet-v2.mjs`, `scripts/architecture/architecture-ratchet-v2-baseline.json`, `package.json`, architecture dependency documentation and both authoritative roadmaps.
@@ -90,9 +90,9 @@ feature introducing that edge must satisfy the row before merge.
   - Implementation files: `docs/architecture/econovaria-domain-ownership-v2.md`, `docs/architecture/econovaria-dependency-map-v2.md`, `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`, `scripts/architecture/build-architecture-inventory.mjs`, and the `audit:architecture-inventory` package script.
   - Measured baseline: 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above 500 lines, and 123 capability-like strings. Lexical candidates require characterization before refactoring or deletion.
   - Tests and evidence: deterministic `audit:architecture-inventory`; `audit:high-priority-boundaries` (80 checks); `audit:architecture` (7 broad fetch assignments, 1 scoped assignment, 11 MutationObservers); `audit:legacy-runtime` (8 groups, 15 runtimes, 2 credential records); Node syntax; JSON parse; `git diff --check`; and tracked/untracked changed-file secret scans all pass. Runtime and staging evidence are inapplicable because the tranche is documentation/read-only tooling.
-  - Pull request and commit SHA: PR #629; implementation commit `71bb4911f8a9e256549629ff74750a65cf26de46`.
-  - Completion basis: PR #629 passed its full suite and merged into `main` as `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63`. The transient Business Banking action-download failure passed unchanged on rerun. No runtime/staging evidence was required for documentation/read-only tooling.
-  - Unresolved blocker: none.
+  - Pull request and commit SHA: PR #629; implementation commit `71bb4911daf47720ecb3e10872260c61bf26ff06`; accepted head `0bc5edb5097d9bfcea8276c2ffa6f209ba4d1385`; merge commit `e40cb5b066457a355d09cdb47cf6fa13e45f6923`.
+  - Completion basis: PR #629's required pre-merge suite passed. The transient Business Banking action-download failure passed unchanged on rerun. The accepted-head and merge trees are identical at `f7af6ce5c4c2a051e4b572e16e0cc433ff5e18ed`. Post-close Branch Hygiene run `32040084962` initially failed when GitHub's delete-ref API returned HTTP 503; attempt 2 passed on 2026-08-25, and the owner branch is absent locally and remotely. A later dynamic CodeQL Python job in run `32040352374` failed before checkout on repeated external action-download HTTP 429 responses and cannot be rerun; its Actions and JavaScript/TypeScript jobs passed. No runtime/staging evidence was required for documentation/read-only tooling.
+  - Unresolved implementation blocker: none.
   - Next exact roadmap item: `ARCH-001`.
 
 - **`BETA-ADMIN-UI-V2-003` — Market Management native v2 migration**
