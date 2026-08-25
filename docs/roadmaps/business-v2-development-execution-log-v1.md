@@ -1481,3 +1481,39 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 - Status: `IN_PROGRESS` — scope authority only; no B1 migration, runtime source, implementation SHA, workflow result, merge, deployment, secret mutation, or staging/production database mutation is claimed by this record.
 - Exact boundary: ECO registry/numeraire, deterministic game-local 08:00 fixing, immutable current/history evidence, queue-only Story shocks, provisioning/bootstrap, and guarded legacy cutover. Banking accounts/holds/clearing/settlement and purchase funding remain closed for B2 and C0–C4.
 - Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/business-player-store-cutover-v2`, then implement only B1 and certify one exact head before opening B2.
+
+---
+
+## 2026-08-26 — Canonical FX authority exact-head implementation handoff
+
+### Identity and status
+
+- Roadmap items: `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001`.
+- Owner: `feat/canonical-fx-authority-v1` / stacked draft PR #671, based on exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3`.
+- Controlling scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`; immutable scope handoff: `23da0aa3ef87b4343b0fd75f46ba7153feae062d`.
+- Exact implementation and verification source: `41bc2d978fe67cd06a8f2133f7310075492ecd99`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`, because PR #671 remains draft, open, and unmerged and no production runtime evidence is claimed. This later documentation-only handoff does not replace the tested implementation identity.
+
+### Implemented authority
+
+- Forward migration `backend/supabase/migrations/20260825223806_canonical_fx_authority_v1.sql` extends the single registry with ECO, persists immutable policy/fixing/value/input/component/shock evidence, owns leased runtime state, queues Story shocks exactly once, freezes legacy pair writes after guarded cutover, and retains `convert_currency_amount` only as a deprecated compatibility reader.
+- `backend/src/domains/fx/**` provides fixed-point deterministic policy calculation, contracts, repository, leased fixing runner, orchestration HTTP boundary, and focused tests. `backend/supabase/functions/fx-orchestrator/index.ts` exposes the trusted scheduled worker root.
+- The RPC surface comprises generic and delegated Stock timezone reads; new-game/bootstrap initialization; due-game claim, input load, apply, and claim-failure paths; canonical rate/current/history/runtime reads; Story-shock authorization; an inert scheduler configurator; guarded legacy initialization; and compatibility conversion.
+- Daily publication is one game-local 08:00 fixing including weekends. It uses the latest complete ten-country set effective by the boundary, records exact input identities/digest and actual calculation time, does not replay paused dates, and leaves the prior fixing active with overdue evidence when inputs are incomplete.
+- Existing games cut over only from a complete pairwise-consistent legacy matrix. New games require ten macro snapshots, eleven currency values, a distinct bootstrap fixing, and valid runtime state before readiness. Prior rates and Story rows are not rewritten or reapplied.
+- The existing `game_settings.stock_market_window.timezone` is the only timezone source. Once FX is bootstrapped, timezone mutation is rejected to preserve the uniqueness of a game/local-date fixing while unrelated stock-window edits remain permitted.
+- `PUBLIC`, browser roles, and `service_role` were re-audited explicitly: immutable evidence is append-only, privileged mutation is service-only, reads are bounded, internal UUIDs are not exposed through browser contracts, and the service role does not retain direct evidence DML through inherited grants.
+
+### Verification evidence
+
+- Local deterministic FX suite: 39/39. Focused Story convergence: 16/16. Full Backend smoke suite: green.
+- Adjacent suites: Player World 17/17, World runtime 11/11, Player Banking 6/6, ledger 3/3, Stock calendar 38/38, Player market assets 74/74, and Player Store 20/20.
+- Backend typecheck and every one of 26 discovered Edge roots passed. Edge manifest/config/source parity passed 7/7. Exact workflow contract, authorization boundaries, migration audit, secret scan, architecture inventory/ratchets, high-priority route checks, asset and interaction checks, formatting, and `git diff --check` passed.
+- Two final disposable PostgreSQL 17 resets replayed every forward migration from zero. Rollback-only canonical-FX database acceptance passed after each final reset. Rebuilt-schema lint exited successfully while reporting 61 pre-existing repository findings, including 19 errors, and zero B1/FX findings; the repository-wide debt remains explicit.
+- Exact-head **Canonical FX Authority V1** run `32912008039` succeeded at `41bc2d978fe67cd06a8f2133f7310075492ecd99`: exact-head static authority job `98007902296`; FX and adjacent-domain compatibility job `98007902407`; disposable migration replay and lint job `98007902485`. The database job performed both zero-to-head replays, live acceptance, rebuilt-schema lint, and clean disposable-stack teardown.
+
+### Safety, blockers, and next item
+
+- The scheduler configurator was not invoked. No merge, deployment, scheduled job installation, credential/secret change, staging or production SQL, or live-environment mutation occurred.
+- Intentionally unresolved and excluded from B1: Banking-owned account identities, balanced grouped posting, holds, clearing/reserve accounts, capped facility capacity, customer quotes/orders/settlement, Player Banking FX, and all shared purchase funding.
+- Next exact item: create `feat/banking-fx-clearing-v1` from this documentation-only handoff, establish a controlling B2 scope record, and open its draft PR against `feat/canonical-fx-authority-v1` before runtime implementation.

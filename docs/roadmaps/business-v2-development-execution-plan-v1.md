@@ -473,6 +473,17 @@ Exit: no paid-without-item or item-without-payment state is possible. **MET for 
 
 The controlling scope for `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` is `docs/roadmaps/canonical-fx-authority-scope-v1.md`, established from exact 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3` before any FX runtime implementation.
 
+### Checkpoint 10A.4B1 canonical FX handoff
+
+- Owner: `feat/canonical-fx-authority-v1` / stacked draft PR #671, based on exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3`; immutable scope commit `f499e828d57a6a146f528d89e714502807ab36b1`; scope handoff `23da0aa3ef87b4343b0fd75f46ba7153feae062d`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`. Exact implementation and verification source: `41bc2d978fe67cd06a8f2133f7310075492ecd99`. This documentation-only handoff does not replace that identity.
+- One forward migration, `20260825223806_canonical_fx_authority_v1.sql`, adds ECO to the existing currency registry; immutable policy/fixing/value/input/component/shock evidence; leased runtime state; a single game-timezone accessor; deterministic local-08:00 publication; complete-as-of-boundary macro selection; guarded bootstrap/backfill; Story-shock single consumption; append-only enforcement; canonical reads; and the frozen legacy compatibility boundary.
+- The bounded runtime surface is `backend/src/domains/fx/**`, `backend/supabase/functions/fx-orchestrator/index.ts`, the Story-effect queue convergence, and the permanent static/database/workflow contracts. Banking accounts, holds, settlement, clearing, quotes, orders, and purchase funding remain excluded.
+- Exact-head **Canonical FX Authority V1** run `32912008039` passed static authority job `98007902296`, FX/adjacent compatibility job `98007902407`, and disposable replay/database/lint job `98007902485` at the exact implementation SHA. The database job replayed every forward migration from zero twice and exercised the authority against the rebuilt schema.
+- Local evidence additionally passed 39 focused FX tests, 16 Story tests, the full Backend smoke suite, all 26 Edge roots, adjacent World/Economy/Banking/Stocks/Store suites, security and repository ratchets, two final database rebuilds with rollback acceptance, and formatting/diff checks. Rebuilt-schema lint retains 61 pre-existing repository findings, 19 errors, and zero B1/FX findings.
+- The existing game timezone is immutable after FX bootstrap to protect one-fixing-per-local-date identity. Runtime scheduler configuration remains inert and uninvoked. No merge, deployment, secret mutation, cron installation, staging/production SQL, or live-environment mutation occurred.
+- Next exact item: `BUSINESS-V2-10A4B2` on `feat/banking-fx-clearing-v1`, based on the later documentation-only B1 handoff. It owns canonical accounts, balanced posting groups, holds, clearing/reserve capacity, customer standard/instant FX, and Player Banking UX.
+
 Phase 11 remains closed until 10A.4D has one exact implementation SHA, all required exact-head evidence is green, and a clean documentation-only handoff is recorded. No item in this inserted sequence is `VERIFIED_COMPLETE` before merge to `main` and any required runtime evidence.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
