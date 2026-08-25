@@ -14,6 +14,17 @@ const adminContextSource = read(
 const adminBootstrapSource = read(
   "backend/supabase/functions/admin-api/adminBootstrapComposition.ts",
 );
+const adminBootstrapRoutesSource = read(
+  "backend/supabase/functions/admin-api/adminBootstrapRoutes.ts",
+);
+const adminAuthorizationSource = adminBootstrapSource.slice(
+  adminBootstrapSource.indexOf(
+    "export async function authorizeAndHydrateAdminBootstrapContext<",
+  ),
+  adminBootstrapSource.indexOf(
+    "export function applicationContextForAdminGame(",
+  ),
+);
 const staffBootstrapRepositorySource = read(
   "backend/src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.ts",
 );
@@ -37,8 +48,9 @@ const commonSource = read("backend/supabase/functions/admin-api/common.ts");
 test("Admin boundary runs once before owner-scoped local mutation dispatch", () => {
   const serveSource = indexSource.slice(indexSource.indexOf("Deno.serve("));
   const contextIndex = serveSource.indexOf("await resolveContext(request)");
-  const securityIndex = serveSource.indexOf("await guardAdminRequest(");
-  const hydrationIndex = serveSource.indexOf("await hydrateAdminBootstrapContext({");
+  const authorizationIndex = serveSource.indexOf(
+    "await authorizeAndHydrateAdminBootstrapContext(",
+  );
   const ownershipIndex = serveSource.indexOf("ensureOwnedGame(securedContext, gameId)");
   const applicationContextIndex = serveSource.indexOf(
     "applicationContextForAdminGame(",
@@ -47,9 +59,14 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
   const compatibilityWriteIndex = serveSource.indexOf("await handleGameWrite(");
 
   assert.ok(contextIndex >= 0, "Admin authentication context must be resolved");
-  assert.ok(securityIndex > contextIndex, "security must follow authentication");
-  assert.ok(hydrationIndex > securityIndex, "detailed hydration must follow security");
-  assert.ok(ownershipIndex > hydrationIndex, "ownership must follow reviewed hydration");
+  assert.ok(
+    authorizationIndex > contextIndex,
+    "authorization and hydration must follow authentication",
+  );
+  assert.ok(
+    ownershipIndex > authorizationIndex,
+    "ownership must follow reviewed hydration",
+  );
   assert.ok(
     applicationContextIndex > ownershipIndex,
     "the exact hydrated application context must follow owned-game validation",
@@ -60,19 +77,40 @@ test("Admin boundary runs once before owner-scoped local mutation dispatch", () 
     "legacy writes must not run before local mutation dispatch",
   );
   assert.equal(
-    serveSource.match(/await guardAdminRequest\(/g)?.length,
+    serveSource.match(/await authorizeAndHydrateAdminBootstrapContext\(/g)
+      ?.length,
+    1,
+    "the executable Admin authorization boundary must run once",
+  );
+  assert.equal(
+    serveSource.match(/await guardAdminRequest\(/g)?.length || 0,
+    0,
+    "the Edge root must not bypass the executable authorization boundary",
+  );
+  assert.equal(
+    adminAuthorizationSource.match(/await guardAdminRequest\(/g)?.length,
     1,
     "Admin permission, AAL2, and user-action rate limiting must run once",
   );
+  const denialIndex = adminAuthorizationSource.indexOf(
+    "if (security.ok === false) return security",
+  );
+  const requestIdIndex = adminAuthorizationSource.indexOf("createRequestId()");
+  const hydrationIndex = adminAuthorizationSource.indexOf(
+    "hydrateAdminBootstrapContext({",
+  );
+  assert.ok(denialIndex >= 0, "guard denial must return immediately");
+  assert.ok(requestIdIndex > denialIndex, "request identity must be success-only");
+  assert.ok(hydrationIndex > denialIndex, "hydration must be success-only");
   assert.equal(
-    serveSource.match(/requestId:\s*crypto\.randomUUID\(\)/g)?.length,
+    adminAuthorizationSource.match(/createRequestId\(\)/g)?.length,
     1,
     "one request correlation ID must be generated after the guard",
   );
   assert.doesNotMatch(serveSource, /createAdminRequestApplicationContext\(/);
   assert.match(
     adminBootstrapSource,
-    /input\.context\.games\.map\(\(ownedGame\)\s*=>\s*createAdminRequestApplicationContext\(\{/,
+    /input\.context\.games\.map\(\(ownedGame\)\s*=>\s*createApplicationContext\(\{/,
   );
   assert.match(
     adminBootstrapSource,
@@ -93,7 +131,7 @@ test("reviewed Admin context reaches the Inventory application adapter", () => {
   assert.match(adminBootstrapSource, /ownedGame,/);
   assert.match(adminBootstrapSource, /staffUserId:\s*input\.context\.staff\.id/);
   assert.match(adminBootstrapSource, /requestId:\s*input\.requestId/);
-  assert.match(indexSource, /requestId:\s*crypto\.randomUUID\(\)/);
+  assert.match(adminAuthorizationSource, /requestId:\s*createRequestId\(\)/);
   assert.match(
     indexSource,
     /applicationContextForAdminGame\(\s*securedContext\.gameBootstrapEntries,\s*game,?\s*\)/,
@@ -118,6 +156,18 @@ test("reviewed Admin context reaches the Inventory application adapter", () => {
     adminContextSource,
     /createStaffRequestApplicationContext<AdminPermission>/,
   );
+});
+
+test("Admin bootstrap routes are executable without importing the Edge listener", () => {
+  assert.match(indexSource, /handleAdminBootstrapGlobalRoute\(/);
+  assert.equal(
+    indexSource.match(/handleAdminBootstrapGlobalRoute\(/g)?.length,
+    1,
+  );
+  assert.match(adminBootstrapRoutesSource, /path === "\/session\/bootstrap"/);
+  assert.match(adminBootstrapRoutesSource, /path === "\/games"/);
+  assert.match(adminBootstrapRoutesSource, /\/switch\$\//);
+  assert.doesNotMatch(adminBootstrapRoutesSource, /Deno\.serve\(/);
 });
 
 test("Admin preguard discovery is ID-only and detailed rows hydrate under exact contexts", () => {

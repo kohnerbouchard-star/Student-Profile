@@ -7,9 +7,11 @@ import type { StaffGameSessionBootstrapSupabaseClient } from "../../../src/domai
 import {
   AdminBootstrapCompositionError,
   applicationContextForAdminGame,
+  authorizeAndHydrateAdminBootstrapContext,
   discoverAdminOwnedGameIdentities,
   hydrateAdminBootstrapContext,
 } from "./adminBootstrapComposition.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 const STAFF_ID = "00000000-0000-4000-8000-000000000101";
 const FIRST_GAME_ID = "00000000-0000-4000-8000-000000000102";
@@ -135,6 +137,111 @@ Deno.test("zero-game Admin hydration loads only the profile and fabricates no co
   assertEquals(gameHydrationCalls, 0);
   assertEquals(hydrated.games, []);
   assertEquals(hydrated.gameBootstrapEntries, []);
+});
+
+Deno.test("Admin permission denial performs zero request-ID, hydration, or context work", async () => {
+  let staffSecurityReads = 0;
+  let permissionGrantReads = 0;
+  let requestIdCalls = 0;
+  let profileHydrationCalls = 0;
+  let gameHydrationCalls = 0;
+  let applicationContextCalls = 0;
+  const service = {
+    from(table: string): any {
+      if (table === "staff_users") {
+        staffSecurityReads += 1;
+        const query = {
+          select: () => query,
+          eq: () => query,
+          maybeSingle: async () => ({
+            data: {
+              status: "active",
+              role: "game_admin",
+              permission_version: 1,
+              security_version: 1,
+              mfa_required: true,
+            },
+            error: null,
+          }),
+        };
+        return query;
+      }
+      if (table === "staff_permission_grants") {
+        permissionGrantReads += 1;
+        const query = {
+          select: () => query,
+          eq: async () => ({
+            data: [{ permission: "account.read" }],
+            error: null,
+          }),
+        };
+        return query;
+      }
+      throw new Error(`Unexpected guard table: ${table}`);
+    },
+    async rpc<T>(): Promise<{ data: T | null; error: null }> {
+      return { data: null, error: null };
+    },
+  };
+  const repository: StaffGameSessionBootstrapRepository = {
+    async discoverOwnedGameSessionIds() {
+      throw new Error("Post-guard discovery must not run.");
+    },
+    async readStaffBootstrapProfile() {
+      profileHydrationCalls += 1;
+      return staffProfile();
+    },
+    async hydrateOwnedGameSessions(input) {
+      gameHydrationCalls += 1;
+      return input.applicationContexts.map((context) =>
+        gameRecord(context.gameSessionId)
+      );
+    },
+  };
+
+  const result = await authorizeAndHydrateAdminBootstrapContext(
+    new Request(`https://example.test/admin-api/games/${FIRST_GAME_ID}`, {
+      method: "GET",
+    }),
+    {
+      token: "guard-denial-token",
+      user: {
+        id: "auth-user",
+        app_metadata: {
+          econovaria_role: "game_admin",
+          permission_version: 1,
+          security_version: 1,
+        },
+      },
+      staff: { id: STAFF_ID },
+      games: [{ id: FIRST_GAME_ID }],
+      service,
+    },
+    `/games/${FIRST_GAME_ID}`,
+    {
+      repository,
+      createRequestId() {
+        requestIdCalls += 1;
+        return REQUEST_ID;
+      },
+      createApplicationContext(input) {
+        applicationContextCalls += 1;
+        return createAdminRequestApplicationContext(input);
+      },
+    },
+  );
+
+  assertEquals(result.ok, false);
+  if (result.ok === false) {
+    assertEquals(result.status, 403);
+    assertEquals(result.code, "staff_permission_denied");
+  }
+  assertEquals(staffSecurityReads, 1);
+  assertEquals(permissionGrantReads, 1);
+  assertEquals(requestIdCalls, 0);
+  assertEquals(profileHydrationCalls, 0);
+  assertEquals(gameHydrationCalls, 0);
+  assertEquals(applicationContextCalls, 0);
 });
 
 Deno.test("Admin profile and game hydration failures retain exact auth envelopes", async () => {

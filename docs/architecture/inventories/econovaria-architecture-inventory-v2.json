@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1058,
+    "sourceFiles": 1060,
     "edgeEntrypoints": 25,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 99,
@@ -78,7 +78,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 16,
       "publicBoundaryFiles": []
     },
     {
@@ -3427,12 +3427,12 @@
         "lines": 748
       },
       {
-        "file": "backend/supabase/functions/license-email-worker/index.ts",
-        "lines": 730
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "lines": 737
       },
       {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 724
+        "file": "backend/supabase/functions/license-email-worker/index.ts",
+        "lines": 730
       },
       {
         "file": "frontend/src/core/login.js",
@@ -3587,10 +3587,6 @@
         "lines": 577
       },
       {
-        "file": "backend/supabase/functions/admin-api/index.ts",
-        "lines": 572
-      },
-      {
         "file": "admin/inventory-redemption-queue-surface.js",
         "lines": 569
       },
@@ -3695,6 +3691,10 @@
         "lines": 507
       },
       {
+        "file": "backend/supabase/functions/admin-api/index.ts",
+        "lines": 507
+      },
+      {
         "file": "backend/supabase/functions/admin-api/playerOperations.ts",
         "lines": 506
       },
@@ -3713,6 +3713,8 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -4190,6 +4192,7 @@
           "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
           "backend/src/shared/staffRequestApplicationContextFactory.test.ts",
           "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
@@ -4204,6 +4207,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]

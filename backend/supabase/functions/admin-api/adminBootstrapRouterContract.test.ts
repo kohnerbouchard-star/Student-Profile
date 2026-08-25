@@ -3,6 +3,7 @@ import compositionSource from "./adminBootstrapComposition.ts" with {
 };
 import commonSource from "./common.ts" with { type: "text" };
 import indexSource from "./index.ts" with { type: "text" };
+import routesSource from "./adminBootstrapRoutes.ts" with { type: "text" };
 
 Deno.test("Admin preguard resolution discovers only Staff and owned-game identities", () => {
   const resolveSource = boundedSource(
@@ -32,9 +33,8 @@ Deno.test("Admin preguard resolution discovers only Staff and owned-game identit
 Deno.test("Admin root guards once before one postguard multi-game hydration", () => {
   const serveSource = indexSource.slice(indexSource.indexOf("Deno.serve("));
   const resolution = serveSource.indexOf("await resolveContext(request)");
-  const guard = serveSource.indexOf("await guardAdminRequest(");
-  const hydration = serveSource.indexOf(
-    "await hydrateAdminBootstrapContext({",
+  const authorization = serveSource.indexOf(
+    "await authorizeAndHydrateAdminBootstrapContext(",
   );
   const globalDispatch = serveSource.indexOf("await handleGlobalRoute(");
   const ownedGame = serveSource.indexOf(
@@ -45,41 +45,83 @@ Deno.test("Admin root guards once before one postguard multi-game hydration", ()
   );
 
   assert(resolution >= 0, "Admin identity resolution must run.");
-  assert(guard > resolution, "Admin guard must follow identity resolution.");
-  assert(hydration > guard, "Detailed hydration must follow the Admin guard.");
   assert(
-    globalDispatch > hydration,
+    authorization > resolution,
+    "Admin authorization and hydration must follow identity resolution.",
+  );
+  assert(
+    globalDispatch > authorization,
     "Global DTO dispatch must follow hydration.",
   );
-  assert(ownedGame > hydration, "Scoped ownership must use hydrated rows.");
+  assert(
+    ownedGame > authorization,
+    "Scoped ownership must use hydrated rows.",
+  );
   assert(
     pairedContext > ownedGame,
     "Scoped dispatch must reuse the context paired with the hydrated row.",
   );
-  assertEquals(serveSource.match(/await guardAdminRequest\(/g)?.length, 1);
   assertEquals(
-    serveSource.match(/await hydrateAdminBootstrapContext\(\{/g)?.length,
+    serveSource.match(/await authorizeAndHydrateAdminBootstrapContext\(/g)
+      ?.length,
     1,
   );
   assertEquals(
-    serveSource.match(/requestId:\s*crypto\.randomUUID\(\)/g)?.length,
-    1,
+    serveSource.match(/await guardAdminRequest\(/g)?.length ?? 0,
+    0,
+  );
+  assertEquals(
+    serveSource.match(/await hydrateAdminBootstrapContext\(\{/g)?.length ?? 0,
+    0,
+  );
+  assertEquals(
+    serveSource.match(/requestId:\s*crypto\.randomUUID\(\)/g)?.length ?? 0,
+    0,
   );
   assert(
     !serveSource.includes("createAdminRequestApplicationContext("),
     "The Admin root must not create a second selected-game context.",
   );
+
+  const boundarySource = boundedSource(
+    compositionSource,
+    "export async function authorizeAndHydrateAdminBootstrapContext<",
+    "export function applicationContextForAdminGame(",
+  );
+  const guard = boundarySource.indexOf(
+    "await guardAdminRequest(request, context, path)",
+  );
+  const denial = boundarySource.indexOf(
+    "if (security.ok === false) return security",
+  );
+  const requestId = boundarySource.indexOf("createRequestId()");
+  const hydration = boundarySource.indexOf("hydrateAdminBootstrapContext({");
+  assert(guard >= 0, "The executable boundary must run the real guard.");
+  assert(denial > guard, "Guard denial must short-circuit the boundary.");
+  assert(requestId > denial, "Request identity must be success-only.");
+  assert(hydration > denial, "Hydration must be success-only.");
+  assertEquals(boundarySource.match(/await guardAdminRequest\(/g)?.length, 1);
+  assertEquals(
+    boundarySource.match(/hydrateAdminBootstrapContext\(\{/g)?.length,
+    1,
+  );
+  assertEquals(boundarySource.match(/createRequestId\(\)/g)?.length, 1);
 });
 
 Deno.test("Admin composition keeps exact contexts paired with persistence-shaped rows", () => {
   const contextCreation = compositionSource.indexOf(
-    "createAdminRequestApplicationContext({",
+    "createApplicationContext({",
   );
   const hydration = compositionSource.indexOf(
     "hydrateStaffGameSessionBootstrap(",
   );
   assert(contextCreation >= 0);
   assert(hydration > contextCreation);
+  assertIncludes(
+    compositionSource,
+    "dependencies.createApplicationContext ??",
+  );
+  assertIncludes(compositionSource, "createAdminRequestApplicationContext;");
   assertIncludes(compositionSource, 'visibility: "all"');
   assertIncludes(
     compositionSource,
@@ -98,6 +140,27 @@ Deno.test("Admin composition keeps exact contexts paired with persistence-shaped
       "}",
     ).includes("owner_staff_user_id"),
     "Admin persistence-shaped rows must not expand archive browser output.",
+  );
+});
+
+Deno.test("Admin bootstrap routes are executable outside the Edge root", () => {
+  assertIncludes(indexSource, "handleAdminBootstrapGlobalRoute(");
+  assertEquals(
+    indexSource.match(/handleAdminBootstrapGlobalRoute\(/g)?.length,
+    1,
+  );
+  for (
+    const route of [
+      'path === "/session/bootstrap"',
+      'path === "/games"',
+      "/switch$/",
+    ]
+  ) {
+    assertIncludes(routesSource, route);
+  }
+  assert(
+    !routesSource.includes("Deno.serve("),
+    "Route parity tests must not import an Edge listener side effect.",
   );
 });
 

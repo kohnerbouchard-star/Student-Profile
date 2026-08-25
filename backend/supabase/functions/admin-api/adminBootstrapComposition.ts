@@ -10,7 +10,10 @@ import {
   createSupabaseStaffGameSessionBootstrapRepository,
   type StaffGameSessionBootstrapSupabaseClient,
 } from "../../../src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.ts";
-import type { AdminSecurityGuardResult } from "./adminSecurityGuard.ts";
+import {
+  type AdminSecurityGuardResult,
+  guardAdminRequest,
+} from "./adminSecurityGuard.ts";
 import {
   type AdminRequestApplicationContext,
   createAdminRequestApplicationContext,
@@ -57,6 +60,12 @@ export interface AdminBootstrapIdentityContext {
   readonly service: unknown;
 }
 
+type AdminSecurityContext = Parameters<typeof guardAdminRequest>[1];
+
+export type AdminBootstrapAuthorizedContext =
+  & AdminBootstrapIdentityContext
+  & AdminSecurityContext;
+
 export type HydratedAdminBootstrapContext<
   TContext extends AdminBootstrapIdentityContext,
 > =
@@ -90,7 +99,28 @@ export class AdminBootstrapCompositionError extends Error {
 
 interface AdminBootstrapCompositionDependencies {
   readonly repository?: StaffGameSessionBootstrapRepository;
+  readonly createApplicationContext?:
+    typeof createAdminRequestApplicationContext;
 }
+
+interface AdminBootstrapAuthorizationDependencies
+  extends AdminBootstrapCompositionDependencies {
+  readonly createRequestId?: () => string;
+}
+
+type RejectedAdminSecurity = Extract<
+  AdminSecurityGuardResult,
+  { readonly ok: false }
+>;
+
+export type AdminBootstrapAuthorizationResult<
+  TContext extends AdminBootstrapAuthorizedContext,
+> =
+  | RejectedAdminSecurity
+  | {
+    readonly ok: true;
+    readonly context: HydratedAdminBootstrapContext<TContext>;
+  };
 
 export async function discoverAdminOwnedGameIdentities(
   service: unknown,
@@ -133,8 +163,10 @@ export async function hydrateAdminBootstrapContext<
   );
 
   try {
+    const createApplicationContext = dependencies.createApplicationContext ??
+      createAdminRequestApplicationContext;
     const applicationContexts = input.context.games.map((ownedGame) =>
-      createAdminRequestApplicationContext({
+      createApplicationContext({
         ownedGame,
         staffUserId: input.context.staff.id,
         security: input.security,
@@ -167,6 +199,28 @@ export async function hydrateAdminBootstrapContext<
   } catch {
     throw new AdminBootstrapCompositionError("games");
   }
+}
+
+export async function authorizeAndHydrateAdminBootstrapContext<
+  TContext extends AdminBootstrapAuthorizedContext,
+>(
+  request: Request,
+  context: TContext,
+  path: string,
+  dependencies: AdminBootstrapAuthorizationDependencies = {},
+): Promise<AdminBootstrapAuthorizationResult<TContext>> {
+  const security = await guardAdminRequest(request, context, path);
+  if (security.ok === false) return security;
+
+  const createRequestId = dependencies.createRequestId ??
+    (() => crypto.randomUUID());
+  const hydratedContext = await hydrateAdminBootstrapContext({
+    context,
+    security,
+    requestId: createRequestId(),
+  }, dependencies);
+
+  return Object.freeze({ ok: true, context: hydratedContext });
 }
 
 export function applicationContextForAdminGame(

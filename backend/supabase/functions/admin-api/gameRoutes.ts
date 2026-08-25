@@ -119,6 +119,12 @@ function currencyScopedLeaderboard(players: any[]): any[] {
   });
 }
 
+export interface AdminDashboardReadDependencies {
+  readonly loadPlayers?: typeof loadPlayersEnhanced;
+  readonly loadAttendance?: typeof loadAttendanceEnhanced;
+  readonly loadContracts?: typeof loadContracts;
+}
+
 export async function handleGameRead(
   request: Request,
   context: any,
@@ -127,6 +133,7 @@ export async function handleGameRead(
   gameId: string,
   suffix: string,
   applicationContext: AdminRequestApplicationContext,
+  dashboardDependencies: AdminDashboardReadDependencies = {},
 ): Promise<Response | null> {
   if (request.method !== "GET") return null;
 
@@ -150,10 +157,16 @@ export async function handleGameRead(
   }
 
   if (suffix === "/dashboard") {
-    const players = await loadPlayersEnhanced(context.service, gameId);
+    const loadDashboardPlayers = dashboardDependencies.loadPlayers ??
+      loadPlayersEnhanced;
+    const loadDashboardAttendance = dashboardDependencies.loadAttendance ??
+      loadAttendanceEnhanced;
+    const loadDashboardContracts = dashboardDependencies.loadContracts ??
+      loadContracts;
+    const players = await loadDashboardPlayers(context.service, gameId);
     const [attendance, contracts] = await Promise.all([
-      loadAttendanceEnhanced(context.service, gameId, players),
-      loadContracts(context.service, gameId),
+      loadDashboardAttendance(context.service, gameId, players),
+      loadDashboardContracts(context.service, gameId),
     ]);
     const leaderboard = currencyScopedLeaderboard(players);
     return json(request, 200, {

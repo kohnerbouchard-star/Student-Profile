@@ -26,6 +26,7 @@ import {
 interface StaffBootstrapDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readEnvironment?: typeof readSupabaseEnv;
   readonly resolveStaffSession?: typeof resolveStaffSessionForRequest;
   readonly createBootstrapRepository?: (
     client: EdgeSupabaseClient,
@@ -80,7 +81,7 @@ export async function handleStaffBootstrapRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
