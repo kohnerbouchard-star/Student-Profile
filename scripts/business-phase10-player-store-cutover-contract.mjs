@@ -60,6 +60,7 @@ const files = {
     "scripts/business-phase10-player-store-browser-acceptance.mjs",
   focusedBrowserAcceptance:
     "player-terminal/tests/browser/player-store-business-offer-acceptance.spec.mjs",
+  playerStoreFlowTests: "player-terminal/tests/store-purchase-flow.mjs",
   ciLogRedactor: "scripts/redact-econovaria-ci-log.mjs",
   ciLogRedactorTests: "scripts/redact-econovaria-ci-log.test.mjs",
   workflow: ".github/workflows/business-player-store-cutover-v2.yml",
@@ -689,7 +690,16 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "postCommitReceiptReadAttempts",
   "injectedInvalidReceiptResponses === 1",
   "receiptReadAttempts === 1",
-  "receiptReadAttempts === 2",
+  "MAX_MANUAL_REFRESH_ATTEMPTS = 4",
+  "refreshAttempt <= MAX_MANUAL_REFRESH_ATTEMPTS",
+  "receiptReadAttempts === receiptReadsBeforeAttempt + 1",
+  "receiptReadAttempts === evidence.browser.refreshRetryAttempts + 1",
+  "refreshRetryPendingAttempts === evidence.browser.refreshRetryAttempts - 1",
+  "refreshRetryResourceAttempts.length === evidence.browser.refreshRetryAttempts",
+  'evidence.browser.refreshRetryOutcomes.at(-1) === "complete"',
+  "installCommittedRefreshAudit(buyerSession)",
+  "initialPostCommitResourceRefresh",
+  "Committed receipt UI state did not match the recorded resource-refresh outcome.",
   "receiptRead.status() === 200",
   `await route.fulfill({
           status: 200,
@@ -710,6 +720,101 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "Store route returned",
   "on country.id = assignment.country_profile_id",
 ]);
+const connectedRefreshRetryStart = source.browserAcceptance.indexOf("let refreshCompleted = false;");
+const connectedRefreshRetryEnd = source.browserAcceptance.indexOf(
+  'await modal.getByText("PURCHASE RECEIPT"',
+  connectedRefreshRetryStart,
+);
+if (connectedRefreshRetryStart < 0 || connectedRefreshRetryEnd <= connectedRefreshRetryStart) {
+  throw new Error("Missing bounded connected committed-refresh retry block.");
+}
+const connectedRefreshRetry = source.browserAcceptance.slice(
+  connectedRefreshRetryStart,
+  connectedRefreshRetryEnd,
+);
+requireTokens(connectedRefreshRetry, "bounded connected committed-refresh retry", [
+  "assertReceipt(immutableReceipt, fixture1, quote)",
+  "assertImmutableReceiptReread(receipt, immutableReceipt)",
+  "buyerSession.audit.businessPurchaseRequestCount === 1",
+  'refreshState === "complete"',
+  "refreshAttempt < MAX_MANUAL_REFRESH_ATTEMPTS",
+  "refreshRetryPendingAttempts += 1",
+  "refreshAuditsAfterAttempt.length === refreshAuditsBeforeAttempt + 1",
+  "refreshAudit.threw || refreshAudit.errors.length > 0",
+  "finally {",
+  "unroute(receiptRoutePattern, receiptContractFailureHandler)",
+]);
+forbidTokens(connectedRefreshRetry, "bounded connected committed-refresh retry", [
+  "/players/me/store/offer-purchases",
+  'api.execute("storeOfferPurchase"',
+]);
+requireTokens(source.playerStoreFlowTests, "bounded committed-refresh flow tests", [
+  "convergeCommittedStorePurchase",
+  'errors: { dashboard: { code: "REQUEST_TIMEOUT" } }',
+  "completedConvergence",
+  "Each safe refresh attempt must reread the immutable receipt exactly once.",
+  "Safe refresh attempts must never resubmit settlement.",
+  "convergenceSettlementSubmissions, 0",
+  "convergenceReceiptReads, 2",
+  "convergenceCurrent.invalidatedResources",
+]);
+const committedRefreshAudit = functionBlock(source.browserAcceptance, "installCommittedRefreshAudit");
+requireTokens(committedRefreshAudit, "safe committed-refresh audit", [
+  "Reflect.apply(originalRefreshResources, this, [resources])",
+  "resources: safeTokens(resources)",
+  "dataKeys: safeTokens(Object.keys(data))",
+  "Object.entries(errors).map(([resource, error])",
+  "elapsedMs: elapsed(startedAt)",
+  "threw: false",
+  "threw: true",
+  "return result",
+  "throw error",
+]);
+forbidTokens(committedRefreshAudit, "safe committed-refresh audit", [
+  "error?.message",
+  "error.message",
+  "JSON.stringify(result)",
+]);
+const immutableReceiptReread = functionBlock(source.browserAcceptance, "assertImmutableReceiptReread");
+requireTokens(immutableReceiptReread, "exact immutable receipt reread", [
+  "Object.keys(committedReceipt).sort()",
+  "Object.keys(immutableReceipt).sort()",
+  'field === "alreadyCompleted"',
+  "JSON.stringify(immutableReceipt[field]) === JSON.stringify(committedReceipt[field])",
+  "committedReceipt.alreadyCompleted === false && immutableReceipt.alreadyCompleted === true",
+]);
+const focusedRetryStart = source.focusedBrowserAcceptance.indexOf(
+  'test("committed refresh retries stay read-only across invalid receipt and resource timeout"',
+);
+const focusedRetryEnd = source.focusedBrowserAcceptance.indexOf("\ntest(\"", focusedRetryStart + 1);
+if (focusedRetryStart < 0 || focusedRetryEnd <= focusedRetryStart) {
+  throw new Error("Missing focused committed-refresh retry browser regression.");
+}
+const focusedRetry = source.focusedBrowserAcceptance.slice(focusedRetryStart, focusedRetryEnd);
+requireTokens(focusedRetry, "focused committed-refresh retry browser regression", [
+  'return { ok: true, data: {} }',
+  'dashboard: { code: "REQUEST_TIMEOUT", status: 504 }',
+  'toContainText("COMPLETED · REFRESH PENDING")',
+  'refreshRetry.click()',
+  "settlementCalls: 1",
+  "receiptReads: 3",
+  "resourceRefreshes: 3",
+  'toHaveCount(0)',
+  'toHaveAttribute("aria-busy", "false")',
+]);
+const focusedRetryRequestAudit = functionBlock(focusedRetry, "instrumentedPreviewRequest");
+const focusedRetryDelegateIndex = focusedRetryRequestAudit.indexOf(
+  "const result = await request.call(this, context);",
+);
+for (const attemptedRequestCounter of [
+  'if (context.endpointKey === "storeOfferPurchase") audit.settlementCalls += 1;',
+  'if (context.endpointKey === "storeOfferReceipt") audit.receiptReads += 1;',
+]) {
+  const counterIndex = focusedRetryRequestAudit.indexOf(attemptedRequestCounter);
+  if (counterIndex < 0 || focusedRetryDelegateIndex < 0 || counterIndex > focusedRetryDelegateIndex) {
+    throw new Error("Focused committed-refresh regression must count every attempted receipt read and settlement before delegation.");
+  }
+}
 const connectedLogin = functionBlock(source.browserAcceptance, "completePlayerLogin");
 forbidTokens(connectedLogin, "connected route-lazy Player login", [
   "/players/me/store/items",

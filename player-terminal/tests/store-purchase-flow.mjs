@@ -10,6 +10,7 @@ import {
   validateBusinessOfferQuote,
   validateImmutableBusinessOfferReceipt
 } from "../src/features/store/store-purchase-flow.js";
+import { convergeCommittedStorePurchase } from "../src/features/store/store-purchase-convergence.js";
 import { renderStorePage } from "../src/pages/store-page.js";
 
 const capabilities = resolveCapabilities({
@@ -263,6 +264,59 @@ assert.throws(
   (error) => error.code === "INVALID_RESPONSE",
   "The immutable reread must match every committed receipt identity and economics field."
 );
+
+let convergenceReceiptReads = 0;
+let convergenceSettlementSubmissions = 0;
+const convergenceResourceAttempts = [];
+const convergenceApi = {
+  setSession() {},
+  async request(endpointKey, options) {
+    assert.equal(endpointKey, "storeOfferReceipt");
+    assert.equal(options.params.receiptKey, committedBusinessReceipt.receiptKey);
+    convergenceReceiptReads += 1;
+    return { receipt: { ...committedBusinessReceipt, alreadyCompleted: true } };
+  },
+  async execute() {
+    convergenceSettlementSubmissions += 1;
+    throw new Error("Committed refresh must not submit settlement.");
+  },
+};
+const convergenceTerminal = {
+  async refreshResources(resources) {
+    convergenceResourceAttempts.push([...resources]);
+    return convergenceResourceAttempts.length === 1
+      ? { data: {}, errors: { dashboard: { code: "REQUEST_TIMEOUT" } } }
+      : { data: {}, errors: {} };
+  },
+};
+const convergenceCurrent = {
+  purchaseMode: "business_offer",
+  item: canonicalItem,
+  offer: businessOffer,
+  quote: businessQuote,
+  receipt: committedBusinessReceipt,
+  invalidatedResources: ["dashboard", "store", "inventory", "banking"],
+};
+const convergenceContext = {
+  current: convergenceCurrent,
+  api: convergenceApi,
+  config: {},
+  terminal: convergenceTerminal,
+  requestGeneration: 1,
+  requestIsCurrent: () => true,
+  signal: null,
+};
+const timedOutConvergence = await convergeCommittedStorePurchase(convergenceContext);
+assert.equal(timedOutConvergence.length, 1);
+assert.match(timedOutConvergence[0], /balances, Store stock, or inventory could not be refreshed/u);
+const completedConvergence = await convergeCommittedStorePurchase(convergenceContext);
+assert.deepEqual(completedConvergence, []);
+assert.equal(convergenceReceiptReads, 2, "Each safe refresh attempt must reread the immutable receipt exactly once.");
+assert.equal(convergenceSettlementSubmissions, 0, "Safe refresh attempts must never resubmit settlement.");
+assert.deepEqual(convergenceResourceAttempts, [
+  convergenceCurrent.invalidatedResources,
+  convergenceCurrent.invalidatedResources,
+]);
 
 const storeHtml = renderStorePage({
   ...createEmptyReadModels(),

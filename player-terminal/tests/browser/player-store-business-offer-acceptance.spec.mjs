@@ -375,6 +375,90 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expect(product).toContainText("TOTAL STOCK 9 · 2 SELLERS");
 });
 
+test("committed refresh retries stay read-only across invalid receipt and resource timeout", async ({ page }) => {
+  await openStore(page);
+  await page.evaluate(async () => {
+    const { PreviewTransport } = await import("/src/api/preview-transport.js");
+    const terminal = globalThis.Econovaria?.playerTerminal;
+    if (!terminal || typeof terminal.refreshResources !== "function") {
+      throw new Error("The Player terminal refresh contract is unavailable.");
+    }
+    const request = PreviewTransport.prototype.request;
+    const refreshResources = terminal.refreshResources;
+    const audit = {
+      settlementCalls: 0,
+      receiptReads: 0,
+      resourceRefreshes: 0,
+    };
+    globalThis.__phase10A4CommittedRetryRegression = audit;
+    PreviewTransport.prototype.request = async function instrumentedPreviewRequest(context) {
+      if (context.endpointKey === "storeOfferPurchase") audit.settlementCalls += 1;
+      if (context.endpointKey === "storeOfferReceipt") audit.receiptReads += 1;
+      const result = await request.call(this, context);
+      if (context.endpointKey === "storeOfferReceipt" && audit.receiptReads === 1) {
+        return { ok: true, data: {} };
+      }
+      return result;
+    };
+    terminal.refreshResources = async function instrumentedCommittedRefresh(resources) {
+      const result = await refreshResources.call(this, resources);
+      audit.resourceRefreshes += 1;
+      if (audit.resourceRefreshes === 2) {
+        return {
+          ...result,
+          errors: {
+            ...(result?.errors || {}),
+            dashboard: { code: "REQUEST_TIMEOUT", status: 504 },
+          },
+        };
+      }
+      return result;
+    };
+  });
+
+  const businessPurchase = page.locator(`[data-player-store-offer="${BUSINESS_OFFER_KEY}"]`);
+  await businessPurchase.click();
+  let dialog = page.getByRole("dialog", { name: "Market Lens" });
+  await dialog.locator("[data-player-store-quantity]").fill("2");
+  await dialog.locator("[data-player-store-review]").click();
+  dialog = page.getByRole("dialog", { name: "Review Market Lens" });
+  await dialog.locator("[data-player-store-confirm]").click();
+
+  dialog = page.getByRole("dialog", { name: "Market Lens" });
+  await expect(dialog).toContainText("COMPLETED · REFRESH PENDING");
+  let refreshRetry = dialog.locator("[data-player-store-refresh-retry]");
+  await expect(refreshRetry).toBeEnabled();
+  await expect.poll(() => page.evaluate(() => globalThis.__phase10A4CommittedRetryRegression)).toEqual({
+    settlementCalls: 1,
+    receiptReads: 1,
+    resourceRefreshes: 1,
+  });
+
+  await refreshRetry.click();
+  await expect(dialog).toHaveAttribute("aria-busy", "true");
+  await expect(dialog).toContainText("COMPLETED · REFRESH PENDING");
+  refreshRetry = dialog.locator("[data-player-store-refresh-retry]");
+  await expect(refreshRetry).toBeEnabled();
+  await expect.poll(() => page.evaluate(() => globalThis.__phase10A4CommittedRetryRegression)).toEqual({
+    settlementCalls: 1,
+    receiptReads: 2,
+    resourceRefreshes: 2,
+  });
+
+  await refreshRetry.click();
+  await expect(dialog).toHaveAttribute("aria-busy", "true");
+  await expect(dialog).toContainText("PURCHASE RECEIPT");
+  await expect(dialog).toContainText("COMPLETED");
+  await expect(dialog).not.toContainText("REFRESH PENDING");
+  await expect(dialog.locator("[data-player-store-refresh-retry]")).toHaveCount(0);
+  await expect(dialog).toHaveAttribute("aria-busy", "false");
+  await expect.poll(() => page.evaluate(() => globalThis.__phase10A4CommittedRetryRegression)).toEqual({
+    settlementCalls: 1,
+    receiptReads: 3,
+    resourceRefreshes: 3,
+  });
+});
+
 test("committed receipt navigation does not cancel authoritative convergence", async ({ page }) => {
   await openStore(page);
   const documentMarker = await page.evaluate(async () => {

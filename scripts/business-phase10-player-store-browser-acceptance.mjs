@@ -37,6 +37,8 @@ const OUTPUT_DIR = String(
 
 const REQUEST_TIMEOUT_MS = 180_000;
 const SELLER_CONVERGENCE_TIMEOUT_MS = 90_000;
+const MAX_MANUAL_REFRESH_ATTEMPTS = 4;
+const MANUAL_REFRESH_STATE_TIMEOUT_MS = 30_000;
 const CREDIT_AMOUNT = 10_000;
 const BUSINESS_PURCHASE_QUANTITY = 2;
 const BUSINESS_LISTING_QUANTITY = 10;
@@ -44,6 +46,12 @@ const BUSINESS_FINISHED_QUANTITY = 12;
 const BUSINESS_UNIT_PRICE = 7.5;
 const BUSINESS_UNIT_COST = 2.5;
 const EVIDENCE_FILE = "business-phase10-player-store-browser-acceptance.json";
+const EXPECTED_COMMITTED_REFRESH_RESOURCES = Object.freeze([
+  "dashboard",
+  "store",
+  "inventory",
+  "banking",
+]);
 
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/iu;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/u;
@@ -51,6 +59,7 @@ const SUPABASE_KEY_PATTERN = /\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/iu;
 const DATABASE_URL_PATTERN = /\bpostgres(?:ql)?:\/\/[^\s"']+/iu;
 const GAME_CODE_PATTERN = /\bECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}\b/u;
 const CSRF_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const REFRESH_AUDIT_TOKEN_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u;
 const UUID_REDACTION_PATTERN = new RegExp(UUID_PATTERN.source, "giu");
 const JWT_REDACTION_PATTERN = new RegExp(JWT_PATTERN.source, "gu");
 const SUPABASE_KEY_REDACTION_PATTERN = new RegExp(SUPABASE_KEY_PATTERN.source, "giu");
@@ -156,6 +165,11 @@ const evidence = {
     postCommitInvalidReceiptResponses: 0,
     postCommitReceiptReadAttempts: 0,
     refreshPendingRendered: false,
+    refreshRetryAttempts: 0,
+    refreshRetryPendingAttempts: 0,
+    refreshRetryOutcomes: [],
+    initialPostCommitResourceRefresh: null,
+    refreshRetryResourceAttempts: [],
     refreshRetryCompleted: false,
     refreshRetryDidNotResubmitSettlement: false,
     replayUsedSameOriginPageFetch: false,
@@ -1389,6 +1403,109 @@ async function completePlayerLogin(page, audit, game, player) {
   return { documentMarker };
 }
 
+async function installCommittedRefreshAudit(session) {
+  const installed = await session.page.evaluate(() => {
+    const terminal = globalThis.Econovaria?.playerTerminal;
+    if (!terminal || typeof terminal.refreshResources !== "function") return false;
+    const originalRefreshResources = terminal.refreshResources;
+    const entries = [];
+    const safeToken = (value, fallback) => {
+      const token = String(value || "").trim();
+      return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u.test(token) ? token : fallback;
+    };
+    const safeTokens = (values) => [...new Set(Array.isArray(values) ? values : [])]
+      .map((value) => safeToken(value, "unknown"));
+    const safeStatus = (value) => {
+      const status = Number(value || 0);
+      return Number.isInteger(status) && status >= 0 && status <= 599 ? status : 0;
+    };
+    const elapsed = (startedAt) => Math.min(
+      300_000,
+      Math.max(0, Math.round(performance.now() - startedAt)),
+    );
+
+    terminal.refreshResources = async function auditedCommittedRefresh(resources) {
+      const startedAt = performance.now();
+      try {
+        const result = await Reflect.apply(originalRefreshResources, this, [resources]);
+        const data = result?.data && typeof result.data === "object" && !Array.isArray(result.data)
+          ? result.data
+          : {};
+        const errors = result?.errors && typeof result.errors === "object" && !Array.isArray(result.errors)
+          ? result.errors
+          : {};
+        entries.push({
+          resources: safeTokens(resources),
+          dataKeys: safeTokens(Object.keys(data)),
+          errors: Object.entries(errors).map(([resource, error]) => ({
+            resource: safeToken(resource, "unknown"),
+            code: safeToken(error?.code, "REQUEST_FAILED"),
+            status: safeStatus(error?.status),
+          })),
+          elapsedMs: elapsed(startedAt),
+          threw: false,
+        });
+        return result;
+      } catch (error) {
+        entries.push({
+          resources: safeTokens(resources),
+          dataKeys: [],
+          errors: [{
+            resource: "refresh",
+            code: safeToken(error?.code, "REFRESH_THROWN"),
+            status: safeStatus(error?.status),
+          }],
+          elapsedMs: elapsed(startedAt),
+          threw: true,
+        });
+        throw error;
+      }
+    };
+    globalThis.__econovariaPhase10A4CommittedRefreshAudit = { entries };
+    return true;
+  });
+  assert(installed, "The connected Player terminal could not install safe committed-refresh auditing.");
+}
+
+function assertCommittedRefreshAudit(entry, label) {
+  assert(entry && typeof entry === "object" && !Array.isArray(entry), `${label} audit entry is missing.`);
+  assert(
+    JSON.stringify(entry.resources) === JSON.stringify(EXPECTED_COMMITTED_REFRESH_RESOURCES),
+    `${label} did not refresh the exact bounded committed resources.`,
+  );
+  assert(
+    Array.isArray(entry.dataKeys) && entry.dataKeys.every((key) => REFRESH_AUDIT_TOKEN_PATTERN.test(key)),
+    `${label} recorded an unsafe refresh data key.`,
+  );
+  assert(
+    Array.isArray(entry.errors) && entry.errors.every((error) =>
+      error &&
+      REFRESH_AUDIT_TOKEN_PATTERN.test(String(error.resource || "")) &&
+      REFRESH_AUDIT_TOKEN_PATTERN.test(String(error.code || "")) &&
+      Number.isInteger(error.status) &&
+      error.status >= 0 &&
+      error.status <= 599
+    ),
+    `${label} recorded an unsafe refresh error.`,
+  );
+  assert(
+    Number.isInteger(entry.elapsedMs) && entry.elapsedMs >= 0 && entry.elapsedMs <= 300_000,
+    `${label} recorded invalid refresh timing.`,
+  );
+  assert(typeof entry.threw === "boolean", `${label} did not record whether refresh threw.`);
+  return entry;
+}
+
+async function readCommittedRefreshAudits(session) {
+  const entries = await session.page.evaluate(() =>
+    globalThis.__econovariaPhase10A4CommittedRefreshAudit?.entries || []
+  );
+  assert(Array.isArray(entries), "Committed-refresh audit storage is invalid.");
+  return entries.map((entry, index) =>
+    assertCommittedRefreshAudit(entry, `Committed refresh ${index + 1}`)
+  );
+}
+
 async function loginPlayer(browser, game, player) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
@@ -1610,6 +1727,26 @@ function assertReceipt(receipt, fixture, quote) {
   assert(Number(receipt.offerVersionBefore) === fixture.initialOfferVersion, "Business receipt before-version is invalid.");
   assert(Number(receipt.offerVersionAfter) === fixture.initialOfferVersion + 1, "Business receipt after-version is invalid.");
   assert(Number(receipt.remainingListedQuantity) === BUSINESS_LISTING_QUANTITY - BUSINESS_PURCHASE_QUANTITY, "Business receipt remaining stock is invalid.");
+}
+
+function assertImmutableReceiptReread(committedReceipt, immutableReceipt) {
+  const committedFields = Object.keys(committedReceipt).sort();
+  const immutableFields = Object.keys(immutableReceipt).sort();
+  assert(
+    JSON.stringify(immutableFields) === JSON.stringify(committedFields),
+    "Safe refresh retry changed the exact immutable receipt field set.",
+  );
+  for (const field of committedFields) {
+    if (field === "alreadyCompleted") continue;
+    assert(
+      JSON.stringify(immutableReceipt[field]) === JSON.stringify(committedReceipt[field]),
+      `Safe refresh retry changed immutable receipt field ${field}.`,
+    );
+  }
+  assert(
+    committedReceipt.alreadyCompleted === false && immutableReceipt.alreadyCompleted === true,
+    "Safe refresh retry did not preserve the allowed alreadyCompleted transition.",
+  );
 }
 
 function assertExactPurchaseRequest(postData, headers, fixture, quote) {
@@ -1854,9 +1991,28 @@ function assertEvidenceComplete() {
   assert(evidence.browser.postCommitRefreshFailureForced, "Connected acceptance did not force the post-commit read failure.");
   assert(
     evidence.browser.postCommitInvalidReceiptResponses === 1 &&
-      evidence.browser.postCommitReceiptReadAttempts === 2,
-    "Connected acceptance did not prove one contract-invalid receipt read followed by one explicit safe retry.",
+      evidence.browser.refreshRetryAttempts >= 1 &&
+      evidence.browser.refreshRetryAttempts <= MAX_MANUAL_REFRESH_ATTEMPTS &&
+      evidence.browser.refreshRetryPendingAttempts === evidence.browser.refreshRetryAttempts - 1 &&
+      evidence.browser.postCommitReceiptReadAttempts === evidence.browser.refreshRetryAttempts + 1 &&
+      evidence.browser.refreshRetryOutcomes.length === evidence.browser.refreshRetryAttempts &&
+      evidence.browser.refreshRetryResourceAttempts.length === evidence.browser.refreshRetryAttempts &&
+      evidence.browser.refreshRetryOutcomes.at(-1) === "complete",
+    "Connected acceptance did not prove bounded read-only retries after one contract-invalid receipt read.",
   );
+  assertCommittedRefreshAudit(
+    evidence.browser.initialPostCommitResourceRefresh,
+    "Initial post-commit resource refresh",
+  );
+  for (const [index, refreshAudit] of evidence.browser.refreshRetryResourceAttempts.entries()) {
+    assertCommittedRefreshAudit(refreshAudit, `Manual committed refresh ${index + 1}`);
+    const refreshFailed = refreshAudit.threw || refreshAudit.errors.length > 0;
+    assert(
+      (evidence.browser.refreshRetryOutcomes[index] === "pending" && refreshFailed) ||
+        (evidence.browser.refreshRetryOutcomes[index] === "complete" && !refreshFailed),
+      `Manual committed refresh ${index + 1} UI state does not match its safe resource audit.`,
+    );
+  }
   assert(evidence.browser.refreshPendingRendered, "Committed receipt did not preserve a visible refresh-pending state.");
   assert(evidence.browser.refreshRetryCompleted, "Safe committed-state refresh retry did not converge.");
   assert(evidence.browser.refreshRetryDidNotResubmitSettlement, "Refresh retry resubmitted settlement.");
@@ -2029,6 +2185,8 @@ async function main() {
     assert(quoteReviewRows["QUOTE KEY"] === quote.quoteKey, "Rendered quote review changed quote identity.");
     evidence.browser.authoritativeQuoteRendered = true;
 
+    await installCommittedRefreshAudit(buyerSession);
+
     const purchaseResponsePromise = buyerSession.page.waitForResponse((response) =>
       new URL(response.url()).pathname.endsWith("/players/me/store/offer-purchases") &&
       response.request().method() === "POST",
@@ -2167,37 +2325,92 @@ async function main() {
     assert(await refreshRetry.isEnabled(), "Committed receipt refresh retry is not available.");
     evidence.browser.refreshPendingRendered = true;
     assert(buyerSession.audit.businessPurchaseRequestCount === 1, "Initial committed purchase issued more than one settlement request.");
+    const initialRefreshAudits = await readCommittedRefreshAudits(buyerSession);
+    assert(
+      initialRefreshAudits.length === 1,
+      "Initial post-commit convergence did not make exactly one bounded resource refresh.",
+    );
+    evidence.browser.initialPostCommitResourceRefresh = initialRefreshAudits[0];
 
-    const retryReceiptReadPromise = buyerSession.page.waitForResponse((response) =>
-      /\/players\/me\/store\/receipts\/spr_[0-9a-f]{32}$/u.test(new URL(response.url()).pathname) &&
-      response.request().method() === "GET" && response.status() === 200,
-    { timeout: 60_000 });
-    await refreshRetry.click();
-    const retryReceiptRead = await retryReceiptReadPromise;
-    await buyerSession.page.unroute(receiptRoutePattern, receiptContractFailureHandler);
+    let refreshCompleted = false;
+    try {
+      for (
+        let refreshAttempt = 1;
+        refreshAttempt <= MAX_MANUAL_REFRESH_ATTEMPTS && !refreshCompleted;
+        refreshAttempt += 1
+      ) {
+        await refreshRetry.waitFor({ state: "visible", timeout: 30_000 });
+        assert(await refreshRetry.isEnabled(), "Committed receipt refresh retry is not available.");
+        const receiptReadsBeforeAttempt = receiptReadAttempts;
+        const refreshAuditsBeforeAttempt = (await readCommittedRefreshAudits(buyerSession)).length;
+        const retryReceiptReadPromise = buyerSession.page.waitForResponse((response) =>
+          /\/players\/me\/store\/receipts\/spr_[0-9a-f]{32}$/u.test(new URL(response.url()).pathname) &&
+          response.request().method() === "GET" && response.status() === 200,
+        { timeout: 60_000 });
+        await refreshRetry.click();
+        evidence.browser.refreshRetryAttempts = refreshAttempt;
+        const retryReceiptRead = await retryReceiptReadPromise;
+        assert(
+          receiptReadAttempts === receiptReadsBeforeAttempt + 1 &&
+            injectedInvalidReceiptResponses === 1,
+          "A manual committed-state refresh did not make exactly one additional immutable receipt read.",
+        );
+        evidence.browser.postCommitReceiptReadAttempts = receiptReadAttempts;
+        const immutablePayload = await parsedPlaywrightResponse(retryReceiptRead);
+        const immutableReceipt = responseBusinessReceipt(immutablePayload);
+        assertReceipt(immutableReceipt, fixture1, quote);
+        assertImmutableReceiptReread(receipt, immutableReceipt);
+        evidence.browser.immutableReceiptReloaded = true;
+        evidence.browser.refreshRetryDidNotResubmitSettlement =
+          buyerSession.audit.businessPurchaseRequestCount === 1;
+        assert(evidence.browser.refreshRetryDidNotResubmitSettlement, "Safe refresh retry resubmitted settlement.");
+
+        const refreshStateHandle = await buyerSession.page.waitForFunction(() => {
+          const dialog = document.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
+          if (!dialog || dialog.getAttribute("aria-busy") !== "false") return "";
+          const retry = dialog.querySelector("[data-player-store-refresh-retry]");
+          const content = dialog.textContent || "";
+          if (retry && !retry.disabled && content.includes("COMPLETED · REFRESH PENDING")) {
+            return "pending";
+          }
+          if (!retry && !content.includes("REFRESH PENDING")) return "complete";
+          return "";
+        }, undefined, { timeout: MANUAL_REFRESH_STATE_TIMEOUT_MS });
+        const refreshState = await refreshStateHandle.jsonValue();
+        await refreshStateHandle.dispose();
+        const refreshAuditsAfterAttempt = await readCommittedRefreshAudits(buyerSession);
+        assert(
+          refreshAuditsAfterAttempt.length === refreshAuditsBeforeAttempt + 1,
+          "A manual committed-state retry did not make exactly one bounded resource refresh.",
+        );
+        const refreshAudit = refreshAuditsAfterAttempt.at(-1);
+        const refreshFailed = refreshAudit.threw || refreshAudit.errors.length > 0;
+        assert(
+          (refreshState === "pending" && refreshFailed) ||
+            (refreshState === "complete" && !refreshFailed),
+          "Committed receipt UI state did not match the recorded resource-refresh outcome.",
+        );
+        evidence.browser.refreshRetryOutcomes.push(refreshState);
+        evidence.browser.refreshRetryResourceAttempts.push(refreshAudit);
+        refreshCompleted = refreshState === "complete";
+        if (!refreshCompleted) {
+          evidence.browser.refreshRetryPendingAttempts += 1;
+          assert(
+            refreshAttempt < MAX_MANUAL_REFRESH_ATTEMPTS,
+            `Committed refresh remained pending after ${MAX_MANUAL_REFRESH_ATTEMPTS} bounded safe retries.`,
+          );
+        }
+      }
+    } finally {
+      await buyerSession.page.unroute(receiptRoutePattern, receiptContractFailureHandler).catch(() => undefined);
+    }
+    assert(refreshCompleted, "Committed refresh did not converge within the bounded safe-retry allowance.");
     assert(
-      receiptReadAttempts === 2 && injectedInvalidReceiptResponses === 1,
-      "Manual committed-state refresh did not make exactly one additional immutable receipt read.",
+      receiptReadAttempts === evidence.browser.refreshRetryAttempts + 1 &&
+        evidence.browser.refreshRetryPendingAttempts === evidence.browser.refreshRetryAttempts - 1,
+      "Committed refresh retry evidence does not reconcile to the exact receipt-read attempts.",
     );
-    evidence.browser.postCommitReceiptReadAttempts = receiptReadAttempts;
-    const immutablePayload = await parsedPlaywrightResponse(retryReceiptRead);
-    const immutableReceipt = responseBusinessReceipt(immutablePayload);
-    assertReceipt(immutableReceipt, fixture1, quote);
-    assert(
-      immutableReceipt.receiptKey === receipt.receiptKey && immutableReceipt.alreadyCompleted === true,
-      "Safe refresh retry changed immutable receipt identity.",
-    );
-    await buyerSession.page.waitForFunction(() => {
-      const dialog = document.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
-      return dialog && dialog.getAttribute("aria-busy") === "false" &&
-        !dialog.querySelector("[data-player-store-refresh-retry]") &&
-        !(dialog.textContent || "").includes("REFRESH PENDING");
-    }, undefined, { timeout: 90_000 });
     evidence.browser.refreshRetryCompleted = true;
-    evidence.browser.refreshRetryDidNotResubmitSettlement =
-      buyerSession.audit.businessPurchaseRequestCount === 1;
-    assert(evidence.browser.refreshRetryDidNotResubmitSettlement, "Safe refresh retry resubmitted settlement.");
-    evidence.browser.immutableReceiptReloaded = true;
 
     await modal.getByText("PURCHASE RECEIPT", { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
     await modal.waitFor({ state: "visible", timeout: 30_000 });
