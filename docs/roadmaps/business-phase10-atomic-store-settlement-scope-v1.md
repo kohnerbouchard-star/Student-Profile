@@ -1,14 +1,16 @@
 # Business V2 Phase 10A.3 — Atomic Business Seller-Offer Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A3`  
-**Status:** IN_PROGRESS — local implementation and verification underway; not certified, merged, or deployed
+**Status:** `IMPLEMENTED_NOT_MERGED` — exact-head implementation and required matrix passed; PR #667 remains draft, open, unmerged, and without any Business staging or production release
 **Branch:** `feat/business-store-atomic-settlement-v2`  
 **Parent branch:** `feat/business-store-offer-aware-quote-v2`  
 **Parent draft PR:** #666  
 **Stacked draft PR:** #667  
 **Certified parent implementation source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`  
 **Clean parent handoff:** `38d040748a62c5aa21a7111eeab80cd7e74b9263`  
-**Implementation state:** Phase 10A.3 runtime artifacts and permanent local database harnesses exist in the local owner worktree; the exact implementation SHA, exact-head workflow evidence, and clean handoff SHA remain pending
+**Exact certified implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`
+**Dedicated exact-head workflow:** Business Store Atomic Settlement V2 `32817713404`
+**Certification date:** 2026-08-25
 **Temporary tooling:** the source-snapshot workflow was removed and has zero net presence at this handoff  
 
 ## Decision
@@ -21,7 +23,7 @@ The governing invariant is:
 
 The retained seeded Store purchase path remains unchanged and retains its compatibility meaning.
 
-## 2026-08-25 implementation-in-progress record
+## 2026-08-25 certified implementation record
 
 The bounded implementation currently adds the following forward migration family after the certified Phase 10A.2 quote authority:
 
@@ -37,7 +39,7 @@ The Store source surface is limited to:
 - `backend/src/domains/store/application/settleBusinessStoreOffer.ts`;
 - the bounded exports in `backend/src/domains/store/index.ts`.
 
-Permanent local verification artifacts currently present are:
+Permanent verification artifacts are:
 
 - `scripts/business-phase10-atomic-settlement-contract.mjs`;
 - `scripts/business-phase10-atomic-settlement-types.mjs`;
@@ -62,9 +64,9 @@ The permanent serial harness commits only into a disposable localhost database, 
 - The private receipt projection and receipt validation/immutability trigger helpers are not directly executable by `service_role`, `anon`, or `authenticated`.
 - A before-insert validator binds each completed receipt to its exact same-game Buyer debit, Business credit, and canonical Inventory transaction evidence; a separate trigger rejects later receipt update or deletion.
 
-### Local evidence, not certification
+### Local and exact-head evidence
 
-The implementation-in-progress has the following local evidence:
+The immutable implementation source has the following local evidence:
 
 - complete disposable PostgreSQL 17.6 migration replay from zero passed twice;
 - migration validation passed all 356 migrations, and rebuilt-database lint produced no new Phase 10A.3 finding beyond inherited baseline findings;
@@ -75,13 +77,17 @@ The implementation-in-progress has the following local evidence:
 - retained Phase 7A through Phase 10A.2 checks passed after a stale temporal fixture was corrected without weakening its authority assertions;
 - backend `typecheck:all`, Store 14/14, Inventory 50/50, retained Business economy/workforce/payroll/equipment/manufacturing scripts, migration/diff/YAML/interaction/security checks, and deterministic architecture regeneration passed locally; the regenerated inventory records 1,083 source files and 38 Store files.
 
-This evidence does not satisfy the completion rule while the exact implementation SHA, exact-head workflow run/jobs, and clean handoff SHA are absent.
+The same immutable source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` then passed the permanent **Business Store Atomic Settlement V2** workflow run `32817713404`. Every required job reached terminal `success`:
 
-### Evidence placeholders
+- `Verify atomic settlement authority and retained Store phases` (`97709253437`) — Phase 10A.3 contracts/types/simulation, retained Store phases, deterministic architecture inventory, Repository Quality, and Supply Chain Security;
+- `Verify database settlement, rollback, races, and isolation` (`97709253468`) — independent rebuilt-database serial and observed-lock concurrency suites, rollback injection, purchase/withdrawal ordering, replay/conflict, and two-game isolation;
+- `Replay complete database twice and lint` (`97709253285`) — full migration replay from zero twice and rebuilt-database lint;
+- `Verify retained Business, Store, Inventory, Backend, and Edge runtime` (`97709253519`) — retained Business Economy/Banking/workforce/payroll/equipment/manufacturing, Store 14/14, Inventory 50/50, Backend TypeScript, and all Edge/Deno entrypoints;
+- `Verify retained Player Terminal and Chromium` (`97709253398`) — standalone Player verification, adapter/capability/runtime integration, and Chromium browser acceptance.
 
-- **Exact implementation SHA:** `PENDING — not yet committed and tested as one immutable source`.
-- **Exact-head workflow run and jobs:** `PENDING — no Phase 10A.3 workflow run is claimed`.
-- **Clean handoff SHA:** `PENDING — requires green exact-head evidence and zero temporary machinery`.
+Conditional failure-diagnostic steps did not execute because their jobs succeeded; no required job was skipped, cancelled, neutral, timed out, queued, or left in progress. No failure log exists.
+
+The documentation-only certification commit that records this evidence is the clean durable handoff. Its immutable SHA is recorded in draft PR #667 and in the Phase 10A.4 parent record; it does not replace `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` as the exact tested implementation source.
 
 ## Included authority
 
@@ -336,13 +342,18 @@ Checkpoint 10A.3 is complete only when:
 
 Certification of 10A.3 does not authorize Player cutover. The next expected checkpoint is **10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance**, unless the live roadmap is explicitly changed.
 
+### Completion result
+
+All Phase 10A.3 implementation gates passed on `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`. The checkpoint is `IMPLEMENTED_NOT_MERGED`; it is not `VERIFIED_COMPLETE` because it is not merged into `main`.
+
 ## Codex handoff state
 
-This scope remains the bounded authority contract for the current implementation owner. At this implementation-in-progress checkpoint:
+This scope remains the bounded authority contract for the certified development checkpoint:
 
 - PR #667 remains the existing stacked draft authority over the certified Phase 10A.2 parent; no replacement branch or PR was created;
-- the four forward migrations, Store contracts/repository/application wiring, six permanent structural/simulation/database scripts, and permanent exact-head workflow exist only in the current implementation lineage until an exact committed SHA is recorded;
-- exact-head CI evidence and a clean handoff commit remain required; the permanent serial and concurrency harnesses now exist and pass locally against independent rebuilt databases;
-- no Phase 10A.3 implementation is certified or `VERIFIED_COMPLETE`, and the branch remains unmerged;
+- exact implementation source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` passed all five jobs in exact-head workflow run `32817713404`;
+- the four forward migrations, Store contracts/repository/application wiring, six permanent structural/simulation/database scripts, and permanent exact-head workflow are committed in that tested lineage;
+- temporary repair, writer, controller, certifier, finalizer, and source-snapshot machinery has zero net presence in the parent-relative diff;
+- this development checkpoint is durably certified, but it is not marked `VERIFIED_COMPLETE` in the global beta ledger because PR #667 remains draft and unmerged;
 - no authenticated Player route/UI, automatic demand/sales convergence, equity/IPO, merge, staging or production deployment, secret mutation, or live database mutation has occurred or is authorized;
-- after 10A.3 obtains exact-head evidence and a clean handoff, the next exact checkpoint is **10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance**.
+- the next exact checkpoint is **10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance**, on a new branch and draft PR stacked from this documentation-only clean handoff.

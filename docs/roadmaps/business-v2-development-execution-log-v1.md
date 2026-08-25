@@ -1352,3 +1352,37 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next exact roadmap item
 
 Phase 10A.3 remains active until its exact implementation SHA, exact-head workflow jobs, and clean handoff are durably recorded. Its permanent serial and concurrency harnesses now exist and pass locally. After that separately evidenced boundary, **Phase 10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance** is next. Phase 11 automatic-sales convergence, Phase 12 workspace UX, Phase 13 Admin supervision, and Phase 14A–14D remain closed until their own dependency-ordered checkpoints.
+
+---
+
+## 2026-08-25 — Phase 10A.3 EXACT-HEAD VERIFIED: atomic Business seller-offer settlement
+
+This entry supersedes the `PENDING` evidence fields in the preceding implementation-in-progress snapshot. The checkpoint status is `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
+
+### Exact source and workflow evidence
+
+- **Exact implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`.
+- **Business Store Atomic Settlement V2 — PASS** (`32817713404`):
+  - `Replay complete database twice and lint` — `97709253285`, **success**;
+  - `Verify retained Player Terminal and Chromium` — `97709253398`, **success**;
+  - `Verify atomic settlement authority and retained Store phases` — `97709253437`, **success**;
+  - `Verify database settlement, rollback, races, and isolation` — `97709253468`, **success**;
+  - `Verify retained Business, Store, Inventory, Backend, and Edge runtime` — `97709253519`, **success**.
+- Every required job was terminal `success`. Conditional failure-diagnostic steps did not run because their jobs succeeded; no required job was queued, skipped, cancelled, neutral, timed out, or in progress at certification.
+- **Clean durable handoff:** this later documentation-only certification commit. Its immutable SHA is recorded in draft PR #667 and the Phase 10A.4 parent record; it does not replace `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` as the tested implementation identity.
+- PR #667 remained draft, open, mergeable, unmerged, and without a Business Backend, Edge, or database staging/production release at certification. Integration PR #648 remained draft and unmerged.
+- Temporary repair, writer, controller, certifier, finalizer, and source-snapshot machinery has zero net presence in the parent-relative diff.
+- The global beta completion ledger was not edited in this tranche because active ARCH-100F PR #668 owns the same roadmap file. This checkpoint remains `IMPLEMENTED_NOT_MERGED`; Phase 10A.4 must re-audit that owner and reconcile Scope Intake without overwriting its work.
+
+### Exit result
+
+- Atomic Buyer debit, Business credit, canonical Inventory delivery, revenue/COGS/margin evidence, immutable receipt, quote consumption, and offer advancement: **met**.
+- Exact replay/conflict, seven-stage rollback, money/cost precision, receipt immutability, observed-lock races, no oversell, purchase/withdrawal ordering, retained seeded purchase/replay, and two-game isolation: **met**.
+- Exact-head retained Backend/Edge/Business/Store/Inventory/Player/Chromium matrix: **met**.
+- Browser roles remain unable to access receipt persistence or settlement RPC authority; internal UUIDs remain outside the public result contract: **met**.
+- Status: `IMPLEMENTED_NOT_MERGED`; not `VERIFIED_COMPLETE` because PR #667 is not merged into `main`.
+- No authenticated Player Store cutover, automatic consumer/NPC sales convergence, equity/IPO, merge, Business staging/production deployment, secret mutation, or live database mutation was included.
+
+### Next exact roadmap item
+
+**Phase 10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance is OPEN.** It must begin from this clean documentation-only handoff on a separate stacked branch and draft PR. Phase 11 and later phases remain closed until 10A.4 is separately certified.

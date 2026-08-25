@@ -405,16 +405,16 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** SETTLEMENT IMPLEMENTATION IN PROGRESS — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 certified exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 has local implementation evidence but is not certified, merged, or deployed
+**Status:** SETTLEMENT AUTHORITY `IMPLEMENTED_NOT_MERGED` — checkpoint 10A.1 exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 exact-head source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; authenticated Player cutover 10A.4 is next
 
 - [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
 - [x] Freeze one seller-offer-first economic row-lock order.
 - [x] Prove purchase-first and withdrawal-first ordering plus replay, conflict, rollback, and two-game isolation in deterministic simulations.
 - [x] Add immutable offer-aware quote authority bound to exact offer, version, seller, custody, quantity, price, currency, and expiry.
-- [ ] Lock offer and validate purchasable state in the runtime settlement command.
-- [ ] Lock/check buyer balance and listing inventory.
-- [ ] Atomically debit Buyer Checking, credit Business cash, transfer inventory, and update offer quantity.
-- [ ] Enforce idempotency and exact-once revenue/inventory settlement.
+- [x] Lock offer and validate purchasable state in the runtime settlement command.
+- [x] Lock/check buyer balance and listing inventory.
+- [x] Atomically debit Buyer Checking, credit Business cash, transfer inventory, and update offer quantity.
+- [x] Enforce idempotency and exact-once revenue/inventory settlement.
 
 Certified checkpoint:
 
@@ -422,19 +422,22 @@ Certified checkpoint:
 
 - **10A.2:** Store-owned immutable Business-offer quote authority; exact Buyer/offer/version/Business/seller/catalog/item/custody binding; same-currency fixed-price evidence; two-minute expiry; non-reserving canonical availability snapshot; replay-before-mutable-state validation; seller-offer-first quote/withdrawal ordering; concurrency, conflict, expiry, reserved-stock, sold-out, self-purchase, cross-currency, rollback, and two-game isolation coverage. **Certified implementation and exact-head verification source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`. Dedicated workflow: `32790518745`.
 
-### Checkpoint 10A.3 implementation-in-progress boundary
+- **10A.3:** Store-owned atomic Business seller-offer settlement; exact replay before mutable-state interpretation; fixed seller-offer-first locks; Buyer Checking debit; Business cash credit; canonical Store Listing-to-Buyer Inventory transfer; exact revenue/COGS/margin and immutable `spr_...` receipt evidence; quote consumption; offer-version advancement; seven-stage rollback; real-lock races; retained seeded purchase; and two-game isolation. **Exact implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`. Dedicated workflow: `32817713404`. Status: `IMPLEMENTED_NOT_MERGED`.
+
+### Checkpoint 10A.3 certified boundary
 
 - Owner: `feat/business-store-atomic-settlement-v2` / stacked draft PR #667, based on clean Phase 10A.2 handoff `38d040748a62c5aa21a7111eeab80cd7e74b9263`.
 - Four forward migrations add immutable `public.store_offer_purchase_receipts`, private public-key-only result projection and receipt guards, service-role-only `public.settle_business_store_offer_v2(...)`, and fail-closed settlement assertions: `20260825110000_business_store_offer_purchase_receipt_v2.sql`, `20260825110010_business_store_offer_purchase_receipt_result_v2.sql`, `20260825110020_business_store_offer_atomic_settlement_v2.sql`, and `20260825110030_business_store_offer_settlement_assertions_v2.sql`.
 - The bounded Store source surface is `storeOfferSettlementContracts.ts`, `supabaseStoreOfferSettlementRepository.ts`, `settleBusinessStoreOffer.ts`, and the matching `backend/src/domains/store/index.ts` exports.
-- Permanent verification files currently include `scripts/business-phase10-atomic-settlement-contract.mjs`, `scripts/business-phase10-atomic-settlement-types.mjs`, `scripts/business-phase10-atomic-settlement-simulation.mjs`, `scripts/business-phase10-atomic-settlement-database-support.mjs`, `scripts/business-phase10-atomic-settlement-database.mjs`, `scripts/business-phase10-atomic-settlement-concurrency.mjs`, and `.github/workflows/business-store-atomic-settlement-v2.yml`.
+- Permanent verification files include `scripts/business-phase10-atomic-settlement-contract.mjs`, `scripts/business-phase10-atomic-settlement-types.mjs`, `scripts/business-phase10-atomic-settlement-simulation.mjs`, `scripts/business-phase10-atomic-settlement-database-support.mjs`, `scripts/business-phase10-atomic-settlement-database.mjs`, `scripts/business-phase10-atomic-settlement-concurrency.mjs`, and `.github/workflows/business-store-atomic-settlement-v2.yml`.
 - Exact two-decimal Buyer/Business ledger totals are kept separate from four-decimal canonical Inventory source cost, COGS, and gross-margin evidence; settlement rejects incompatible precision rather than silently rounding.
 - Receipt storage has enabled and forced RLS. Browser roles have no access; `service_role` receives receipt read plus settlement-RPC execute only, not direct receipt DML or private-helper execute authority. The security-definer transaction and receipt evidence trigger own validated completion, and update/delete guards make completed receipts immutable.
-- Local evidence currently passes repeated PostgreSQL 17.6 database rebuilds, migration validation 356/356, no new Phase 10A.3 lint finding, independent real-database quote/settlement/replay and outer-rollback cleanup, the permanent full-row serial success/failure/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. Architecture inventory regeneration records 1,083 source files and 38 Store files.
-- This local evidence is not exact-head certification. **Implementation SHA:** `PENDING`; **workflow run/jobs:** `PENDING`; **clean handoff SHA:** `PENDING`.
+- Local evidence passed repeated PostgreSQL 17.6 database rebuilds, migration validation 356/356, no new Phase 10A.3 lint finding, independent real-database quote/settlement/replay and outer-rollback cleanup, the permanent full-row serial success/failure/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. Architecture inventory regeneration records 1,083 source files and 38 Store files.
+- Exact implementation source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` passed every required job in **Business Store Atomic Settlement V2** run `32817713404`: authority/Store `97709253437`, database settlement/concurrency `97709253468`, double replay/lint `97709253285`, retained Business/Store/Inventory/Backend/Edge runtime `97709253519`, and Player/Chromium `97709253398`.
+- The documentation-only certification commit is the clean durable handoff and is recorded by immutable SHA in PR #667 and the Phase 10A.4 parent record. It does not replace the tested implementation source.
 - No authenticated Player route/UI, automatic demand/sales convergence, equity/IPO, merge, staging or production deployment, secret mutation, or live database mutation is authorized or included.
 
-Exit: no paid-without-item or item-without-payment state is possible. **Not yet met at the durable completion boundary; the local transaction and permanent serial/concurrency proofs exist, but exact-head workflow evidence and a clean handoff remain open. After that evidence, the next exact checkpoint is 10A.4 authenticated Player cutover and connected browser acceptance.**
+Exit: no paid-without-item or item-without-payment state is possible. **MET for the server-owned atomic settlement authority at checkpoint 10A.3. Phase 10 remains open only for 10A.4 authenticated Player cutover and connected browser acceptance.**
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
@@ -525,11 +528,11 @@ Form Business
 
 # Non-negotiable acceptance gates
 
-- [ ] Database replay from zero twice.
-- [ ] Database lint/advisors where available.
-- [ ] Backend typecheck.
+- [x] Database replay from zero twice.
+- [x] Database lint/advisors where available.
+- [x] Backend typecheck.
 - [ ] Browser cannot submit trusted ownership/game UUIDs.
-- [ ] Cross-game isolation.
+- [x] Cross-game isolation.
 - [ ] Materials cannot be double-spent.
 - [ ] Labor cannot be double-booked.
 - [x] Equipment cannot be double-booked.
@@ -539,17 +542,17 @@ Form Business
 - [ ] Only exact catalog items/recipes can enter new Business production.
 - [ ] No new custom physical products or variants.
 - [ ] Production output enters Finished Goods.
-- [ ] Store listing physically removes listed stock from Finished Goods.
-- [ ] Store withdrawal disables purchases immediately.
-- [ ] Five-minute withdrawal cooling-off enforced server-side.
-- [ ] Purchase-first race passes.
-- [ ] Withdrawal-first race passes.
-- [ ] Buyer payment and inventory transfer are atomic.
-- [ ] Business Store revenue credits exactly once.
-- [ ] Seeded and Business offers aggregate under one catalog item.
-- [ ] One Business cannot spam duplicate active offers for the same item.
+- [x] Store listing physically removes listed stock from Finished Goods.
+- [x] Store withdrawal disables purchases immediately.
+- [x] Five-minute withdrawal cooling-off enforced server-side.
+- [x] Purchase-first race passes.
+- [x] Withdrawal-first race passes.
+- [x] Buyer payment and inventory transfer are atomic.
+- [x] Business Store revenue credits exactly once.
+- [x] Seeded and Business offers aggregate under one catalog item.
+- [x] One Business cannot spam duplicate active offers for the same item.
 - [ ] 40-Player concurrent classroom acceptance.
-- [ ] Two simultaneous games cannot affect one another.
+- [x] Two simultaneous games cannot affect one another.
 - [ ] Player E2E: Business -> Store -> buyer Inventory.
 - [ ] No production deployment until explicit release authorization.
 

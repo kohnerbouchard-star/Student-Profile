@@ -1,7 +1,7 @@
 # Business V2 Phase 10 — Atomic Store Purchase Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A1`
-**Status:** COMPLETE — checkpoint 10A.1 authority foundation certified; checkpoint 10A.2 quote authority certified; checkpoint 10A.3 settlement implementation is in progress and not certified
+**Status:** COMPLETE — 10A.1 authority foundation certified; 10A.2 exact-head verified; 10A.3 `IMPLEMENTED_NOT_MERGED` at `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; 10A.4 is next
 **Branch:** `feat/business-store-purchase-settlement-v2`
 **Parent branch:** `feat/business-store-withdrawal-safety-v2`
 **Parent draft PR:** #664
@@ -259,23 +259,23 @@ Certification of 10A.1 does not certify runtime Store settlement or complete Pha
 - PR #665 remained open, draft, mergeable, unmerged, and undeployed. No database migration, runtime persistence, settlement RPC, money movement, Inventory movement, Player route/UI, secret mutation, or live database mutation was introduced by checkpoint 10A.1.
 - The exact certified source remains `1abc8b878df5b08716107adb467bd013e85b6df4`. Later certification-only documentation commits do not replace that tested implementation source.
 
-Checkpoint 10A.1 is complete. Runtime Store purchase settlement is not complete. The next authorized checkpoint is 10A.2, limited to immutable offer-aware quote authority.
+At checkpoint 10A.1 certification, runtime Store purchase settlement was not complete. The later checkpoint progression is recorded below.
 
 ## Next implementation sequence
 
 After 10A.1 certification:
 
 1. **10A.2 — offer-aware quote authority:** certified at exact implementation source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; immutable quote binding to offer/version/seller/custody and deterministic pricing evidence.
-2. **10A.3 — atomic economic settlement:** implementation in progress on `feat/business-store-atomic-settlement-v2` / draft PR #667; Buyer Checking debit, Business cash credit, Store Listing-to-Buyer Inventory transfer, revenue/COGS evidence, immutable receipt, and exact race tests are not yet certified.
+2. **10A.3 — atomic economic settlement:** exact implementation and verification source `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; dedicated workflow `32817713404`; documentation-only clean handoff recorded by immutable SHA in PR #667 and the 10A.4 parent record; status `IMPLEMENTED_NOT_MERGED`.
 3. **10A.4 — authenticated Player route cutover and browser acceptance:** only after displayed offer, quote, payment, seller receipt, and delivered Inventory cannot diverge.
 
 Do not skip directly from this foundation to Player UI or automatic sales convergence.
 
-## 2026-08-25 Phase 10A.3 progression record — implementation in progress
+## 2026-08-25 Phase 10A.3 exact-head implementation record
 
-The Phase 10A.1 foundation and Phase 10A.2 quote authority remain immutable historical certification records. Current Phase 10A.3 work is separately stacked on `feat/business-store-atomic-settlement-v2` / draft PR #667 and is not certified, merged, or deployed.
+The Phase 10A.1 foundation and Phase 10A.2 quote authority remain immutable historical certification records. Phase 10A.3 is exact-head verified on `feat/business-store-atomic-settlement-v2` / draft PR #667 and remains unmerged and without a Business staging or production release.
 
-Current implementation artifacts are:
+Implementation artifacts are:
 
 - four forward migrations: `20260825110000_business_store_offer_purchase_receipt_v2.sql`, `20260825110010_business_store_offer_purchase_receipt_result_v2.sql`, `20260825110020_business_store_offer_atomic_settlement_v2.sql`, and `20260825110030_business_store_offer_settlement_assertions_v2.sql`;
 - immutable completed table `public.store_offer_purchase_receipts`;
@@ -290,12 +290,11 @@ The precision boundary is explicit: Buyer Checking, Business cash, and ledger se
 
 The receipt table has enabled and forced RLS. Browser roles have no table or RPC access; `service_role` may select receipts and execute only the public settlement RPC, but it cannot directly insert, update, delete, truncate, reference, trigger, or maintain the table and cannot execute the private projection/trigger helpers. The `SECURITY DEFINER` settlement transaction performs the validated receipt insert, and immutable update/delete guards preserve completed evidence.
 
-Local implementation evidence currently includes repeated clean PostgreSQL 17.6 database resets, migration validation 356/356, rebuilt lint with no new Phase 10A.3 finding, an independent real-database success/replay state vector with exact debit/credit/Inventory/evidence counts and rollback cleanup, the permanent full-row serial failure/success/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. The deterministic architecture inventory was regenerated to 1,083 source files and 38 Store files.
+Local implementation evidence includes repeated clean PostgreSQL 17.6 database resets, migration validation 356/356, rebuilt lint with no new Phase 10A.3 finding, an independent real-database success/replay state vector with exact debit/credit/Inventory/evidence counts and rollback cleanup, the permanent full-row serial failure/success/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. The deterministic architecture inventory was regenerated to 1,083 source files and 38 Store files.
 
-This is local in-progress evidence only. The immutable implementation commit, exact-head workflow run/jobs, and clean handoff remain pending; the permanent serial and concurrency database harnesses now exist and pass locally.
+- **Exact implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`.
+- **Business Store Atomic Settlement V2 — PASS** (`32817713404`): replay twice and lint `97709253285`; retained Player Terminal and Chromium `97709253398`; settlement authority and retained Store phases `97709253437`; database settlement/concurrency/rollback/isolation `97709253468`; retained Business, Store, Inventory, Backend, and Edge runtime `97709253519`.
+- **Clean durable handoff:** the later documentation-only certification commit; its immutable SHA is recorded in PR #667 and the Phase 10A.4 parent record.
+- The clean handoff does not replace `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` as the tested implementation identity.
 
-- **Exact implementation SHA:** `PENDING`.
-- **Exact-head workflow run/jobs:** `PENDING`.
-- **Clean handoff SHA:** `PENDING`.
-
-No authenticated Player Store route/UI, automatic consumer sales convergence, equity/IPO, merge, deployment, secret mutation, or live database mutation is included or authorized. After a separately evidenced 10A.3 clean handoff, the next exact checkpoint is **10A.4**.
+No authenticated Player Store route/UI, automatic sales convergence, equity/IPO, merge, secret mutation, live database mutation, or Business staging/production deployment was included. The next exact checkpoint is **10A.4**.
