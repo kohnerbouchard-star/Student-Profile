@@ -5,22 +5,42 @@ import {
   restartLocalEdgeRuntime,
 } from "./local-edge-runtime-isolation.mjs";
 
+const EDGE_CONTAINER = "supabase_edge_runtime_backend";
+const KONG_CONTAINER = "supabase_kong_backend";
+const CONTAINERS = `${EDGE_CONTAINER}\n${KONG_CONTAINER}\n`;
 const CONFIG = `window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
   "supabasePublishableKey": "sb_publishable_local_contract_1234567890"
 });\n`;
 
-function executable(names = "supabase_edge_runtime_backend\n") {
+function executable({
+  names = CONTAINERS,
+  onRestart = () => {},
+  running = () => true,
+} = {}) {
   const calls = [];
+  let recoveryRestarts = 0;
   const execFile = (command, args) => {
     calls.push([command, ...args]);
     if (args[0] === "ps") return names;
-    if (args[0] === "restart") return `${args[1]}\n`;
+    if (args[0] === "restart") {
+      if (args[1] === EDGE_CONTAINER) recoveryRestarts += 1;
+      onRestart(recoveryRestarts, args[1]);
+      return `${args.slice(1).join("\n")}\n`;
+    }
+    if (args[0] === "inspect") {
+      const containerName = args.at(-1);
+      return running({ containerName, restarts: recoveryRestarts }) ? "true\n" : "false\n";
+    }
     throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);
   };
-  return { execFile, calls };
+  return { execFile, calls, restartCount: () => recoveryRestarts };
 }
 
-test("restarts the only local Edge runtime and accepts gateway-normalized Player readiness", async () => {
+function readyResponse(url) {
+  return new Response(null, { status: new URL(url).pathname === "/" ? 200 : 204 });
+}
+
+test("restarts the exact Edge and Kong containers and proves three stable gateway waves", async () => {
   const { execFile, calls } = executable();
   const requests = [];
   const sleeps = [];
@@ -29,109 +49,203 @@ test("restarts the only local Edge runtime and accepts gateway-normalized Player
     execFile,
     readFileImpl: async () => CONFIG,
     fetchImpl: async (url, init) => {
-      requests.push({ url, method: init.method, apikey: init.headers.apikey });
-      return new Response(null, { status: 200 });
+      requests.push({
+        url,
+        method: init.method,
+        apikey: init.headers?.apikey,
+      });
+      return readyResponse(url);
     },
     sleep: async (milliseconds) => sleeps.push(milliseconds),
     log: (value) => logs.push(value),
   });
 
   assert.equal(result.ready, true);
-  assert.equal(result.pathsChecked, 2);
+  assert.equal(result.recoveryAttempt, 1);
+  assert.equal(result.recoveryAttempts, 2);
+  assert.equal(result.readinessWaves, 3);
+  assert.equal(result.pathsChecked, 4);
   assert.equal(result.stableWaves, 3);
   assert.equal(result.settleMs, 1_000);
-  assert.deepEqual(calls, [
-    ["docker", "ps", "--format", "{{.Names}}"],
-    ["docker", "restart", "supabase_edge_runtime_backend"],
+  assert.deepEqual(calls[0], [
+    "docker",
+    "ps",
+    "-a",
+    "--format",
+    "{{.Names}}",
   ]);
-  assert.equal(requests.length, 6);
   assert.deepEqual(
-    requests.slice(0, 2).map(({ url, method }) => ({ url, method })),
+    calls.filter((call) => call[1] === "restart"),
     [
-      { url: "http://127.0.0.1:4173/functions/v1/player-api", method: "OPTIONS" },
-      { url: "http://127.0.0.1:4173/functions/v1/player-web-session-api", method: "OPTIONS" },
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
     ],
   );
+  assert.deepEqual(
+    requests.slice(0, 4).map(({ url, method }) => ({ url, method })),
+    [
+      { url: "http://127.0.0.1:4173/", method: "GET" },
+      { url: "http://127.0.0.1:4173/functions/v1/player-api", method: "OPTIONS" },
+      {
+        url: "http://127.0.0.1:4173/functions/v1/player-web-session-api",
+        method: "OPTIONS",
+      },
+      { url: "http://127.0.0.1:4173/functions/v1/bootstrap-api", method: "OPTIONS" },
+    ],
+  );
+  assert.equal(requests.length, 12);
+  assert.equal(requests[0].apikey, undefined);
+  assert.ok(requests.slice(1).every(({ apikey }, index) =>
+    index % 4 === 3 || apikey?.startsWith("sb_publishable_")
+  ));
   assert.deepEqual(sleeps, [500, 500, 1_000]);
-  assert.ok(requests.every(({ apikey }) => apikey.startsWith("sb_publishable_")));
   assert.equal(logs.some((value) => value.includes("sb_publishable_")), false);
+  assert.equal(logs.some((value) => value.includes(EDGE_CONTAINER)), false);
 });
 
-test("resets the readiness streak after an unhealthy wave while accepting direct and gateway preflights", async () => {
-  const { execFile } = executable();
-  const statuses = [
-    200, 204,
-    503, 204,
-    204, 200,
-    200, 204,
-  ];
-  const sleeps = [];
+test("performs only one bounded recovery when the first warmup loses Edge runtime", async () => {
+  let edgeRunning = true;
+  let currentRestart = 0;
+  const { execFile, calls } = executable({
+    onRestart(restarts) {
+      currentRestart = restarts;
+      edgeRunning = true;
+    },
+    running({ containerName }) {
+      return containerName === EDGE_CONTAINER ? edgeRunning : true;
+    },
+  });
+
   const result = await restartLocalEdgeRuntime({
     execFile,
-    timeoutMs: 5_000,
-    pollMs: 25,
-    stableWaves: 2,
-    settleMs: 40,
+    pollMs: 0,
+    settleMs: 0,
     readFileImpl: async () => CONFIG,
-    fetchImpl: async () => new Response(null, { status: statuses.shift() ?? 204 }),
-    sleep: async (milliseconds) => sleeps.push(milliseconds),
+    fetchImpl: async (url) => {
+      if (
+        currentRestart === 1 &&
+        new URL(url).pathname === "/functions/v1/player-api"
+      ) {
+        edgeRunning = false;
+        return new Response(null, { status: 502 });
+      }
+      return readyResponse(url);
+    },
+    sleep: async () => {},
     log: () => {},
   });
 
   assert.equal(result.ready, true);
-  assert.equal(result.attempts, 4);
-  assert.equal(result.stableWaves, 2);
-  assert.deepEqual(sleeps, [25, 25, 25, 40]);
+  assert.equal(result.recoveryAttempt, 2);
+  assert.equal(result.recoveryAttempts, 2);
+  assert.equal(result.readinessWaves, 4);
+  assert.deepEqual(
+    calls.filter((call) => call[1] === "restart"),
+    [
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+    ],
+  );
 });
 
-test("waits for both Player functions after the container restart", async () => {
+test("restarts again when running containers retain stale Kong DNS", async () => {
+  let currentRecovery = 0;
+  const { execFile, calls } = executable({
+    onRestart(restarts, containerName) {
+      if (containerName === EDGE_CONTAINER) currentRecovery = restarts;
+    },
+  });
+
+  const result = await restartLocalEdgeRuntime({
+    execFile,
+    pollMs: 0,
+    settleMs: 0,
+    readFileImpl: async () => CONFIG,
+    fetchImpl: async (url) => {
+      const path = new URL(url).pathname;
+      if (
+        currentRecovery === 1 &&
+        path === "/functions/v1/player-api"
+      ) {
+        return new Response(null, { status: 503 });
+      }
+      return readyResponse(url);
+    },
+    sleep: async () => {},
+    log: () => {},
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.recoveryAttempt, 2);
+  assert.equal(result.readinessWaves, 9);
+  assert.deepEqual(
+    calls.filter((call) => call[1] === "restart"),
+    [
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+    ],
+  );
+});
+
+test("resets the readiness streak after an unhealthy wave", async () => {
   const { execFile } = executable();
-  let wave = 0;
+  const playerStatuses = [204, 503, 204, 204];
   const sleeps = [];
   const result = await restartLocalEdgeRuntime({
     execFile,
-    timeoutMs: 5_000,
     pollMs: 25,
     stableWaves: 2,
     settleMs: 40,
     readFileImpl: async () => CONFIG,
-    fetchImpl: async () => {
-      const status = wave < 2 ? 503 : 204;
-      wave += 1;
-      return new Response(null, { status });
+    fetchImpl: async (url) => {
+      const path = new URL(url).pathname;
+      if (path === "/") return new Response(null, { status: 200 });
+      if (path === "/functions/v1/player-api") {
+        return new Response(null, { status: playerStatuses.shift() ?? 204 });
+      }
+      return new Response(null, { status: 204 });
     },
     sleep: async (milliseconds) => sleeps.push(milliseconds),
     log: () => {},
   });
 
   assert.equal(result.ready, true);
-  assert.equal(result.attempts, 3);
-  assert.deepEqual(sleeps, [25, 25, 40]);
+  assert.equal(result.readinessWaves, 4);
+  assert.equal(result.stableWaves, 2);
+  assert.deepEqual(sleeps, [25, 25, 25, 40]);
 });
 
-test("fails closed when the runtime container identity is ambiguous", async () => {
-  const { execFile } = executable(
-    "supabase_edge_runtime_one\nsupabase_edge_runtime_two\n",
-  );
-  await assert.rejects(
-    () => restartLocalEdgeRuntime({
-      execFile,
-      readFileImpl: async () => CONFIG,
-      fetchImpl: async () => new Response(null, { status: 204 }),
-      log: () => {},
-    }),
-    /Expected one local Edge runtime container, found 2/u,
-  );
+test("fails closed when either exact runtime container identity is ambiguous", async () => {
+  for (const names of [
+    `${EDGE_CONTAINER}\nsupabase_edge_runtime_other\n${KONG_CONTAINER}\n`,
+    `${EDGE_CONTAINER}\n${KONG_CONTAINER}\nsupabase_kong_other\n`,
+  ]) {
+    const { execFile, calls } = executable({ names });
+    await assert.rejects(
+      () => restartLocalEdgeRuntime({
+        execFile,
+        readFileImpl: async () => CONFIG,
+        fetchImpl: async (url) => readyResponse(url),
+        log: () => {},
+      }),
+      /Expected one local (?:Edge runtime|Kong gateway) container, found 2/u,
+    );
+    assert.equal(calls.some((call) => call[1] === "restart"), false);
+  }
 });
 
-test("refuses to restart infrastructure through a non-local gateway", async () => {
+test("refuses infrastructure operations through a non-local gateway", async () => {
   const { execFile, calls } = executable();
   await assert.rejects(
     () => restartLocalEdgeRuntime({
       baseUrl: "https://econovaria.example",
       execFile,
       readFileImpl: async () => CONFIG,
-      fetchImpl: async () => new Response(null, { status: 204 }),
+      fetchImpl: async (url) => readyResponse(url),
       log: () => {},
     }),
     /restricted to the local acceptance gateway/u,
@@ -139,14 +253,68 @@ test("refuses to restart infrastructure through a non-local gateway", async () =
   assert.deepEqual(calls, []);
 });
 
-test("rejects invalid stability configuration before restarting Docker", async () => {
+test("never permits more than two recovery attempts", async () => {
+  const { execFile, calls } = executable();
+  await assert.rejects(
+    () => restartLocalEdgeRuntime({
+      recoveryAttempts: 3,
+      execFile,
+      readFileImpl: async () => CONFIG,
+      fetchImpl: async (url) => readyResponse(url),
+      log: () => {},
+    }),
+    /recoveryAttempts must be between 1 and 2/u,
+  );
+  assert.deepEqual(calls, []);
+});
+
+test("fails closed after two bounded unhealthy recoveries without broad Docker actions", async () => {
+  let clock = 0;
+  const { execFile, calls, restartCount } = executable();
+  await assert.rejects(
+    () => restartLocalEdgeRuntime({
+      timeoutMs: 100,
+      pollMs: 50,
+      settleMs: 0,
+      execFile,
+      readFileImpl: async () => CONFIG,
+      fetchImpl: async (url) => {
+        const status = new URL(url).pathname === "/" ? 200 : 503;
+        return new Response(null, { status });
+      },
+      sleep: async (milliseconds) => {
+        clock += milliseconds;
+      },
+      now: () => clock,
+      log: () => {},
+    }),
+    /did not become stable after 2 bounded recovery attempts/u,
+  );
+
+  assert.equal(restartCount(), 2);
+  assert.deepEqual(
+    calls.filter((call) => call[1] === "restart"),
+    [
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+      ["docker", "restart", EDGE_CONTAINER],
+      ["docker", "restart", KONG_CONTAINER],
+    ],
+  );
+  assert.equal(
+    calls.some((call) => ["stop", "rm", "prune"].includes(call[1])),
+    false,
+  );
+});
+
+test("rejects invalid stability configuration before inspecting Docker", async () => {
   const { execFile, calls } = executable();
   await assert.rejects(
     () => restartLocalEdgeRuntime({
       stableWaves: 0,
       execFile,
       readFileImpl: async () => CONFIG,
-      fetchImpl: async () => new Response(null, { status: 204 }),
+      fetchImpl: async (url) => readyResponse(url),
       log: () => {},
     }),
     /stableWaves must be a positive integer/u,

@@ -63,6 +63,8 @@ const files = {
   playerStoreFlowTests: "player-terminal/tests/store-purchase-flow.mjs",
   ciLogRedactor: "scripts/redact-econovaria-ci-log.mjs",
   ciLogRedactorTests: "scripts/redact-econovaria-ci-log.test.mjs",
+  edgeRuntimeIsolation: "scripts/local-edge-runtime-isolation.mjs",
+  edgeRuntimeIsolationTests: "scripts/local-edge-runtime-isolation.test.mjs",
   workflow: ".github/workflows/business-player-store-cutover-v2.yml",
 };
 
@@ -518,6 +520,7 @@ requireTokens(source.workflow, "permanent exact-head workflow", [
   "Run focused Business-offer accessibility and responsive acceptance",
   "tests/browser/player-store-business-offer-acceptance.spec.mjs",
   "node --test scripts/redact-econovaria-ci-log.test.mjs",
+  "node --test scripts/local-edge-runtime-isolation.test.mjs",
   "node scripts/redact-econovaria-ci-log.mjs",
   'backend/tsconfig*.json',
   "docs/seed-content/authorizations/**",
@@ -536,6 +539,89 @@ requireTokens(source.workflow, "permanent exact-head workflow", [
   "/tmp/phase10a4-database-sanitized/",
   "/tmp/phase10a4-database-replay-sanitized/",
   "/tmp/phase10a4-connected-sanitized/",
+]);
+
+requireTokens(source.edgeRuntimeIsolation, "bounded local Edge runtime recovery", [
+  "DEFAULT_STABLE_WAVES = 3",
+  "DEFAULT_RECOVERY_ATTEMPTS = 2",
+  "MAX_RECOVERY_ATTEMPTS = 2",
+  "MAX_READINESS_WAVES_PER_RECOVERY = 6",
+  "DOCKER_COMMAND_TIMEOUT_MS = 30_000",
+  "PROBE_TIMEOUT_GRACE_MS = 5_000",
+  "probeTimeoutMs = gatewayRequestTimeoutMs + PROBE_TIMEOUT_GRACE_MS",
+  'path: "/"',
+  'path: "/functions/v1/player-api"',
+  'path: "/functions/v1/player-web-session-api"',
+  'path: "/functions/v1/bootstrap-api"',
+  "EDGE_CONTAINER_PATTERN",
+  "KONG_CONTAINER_PATTERN",
+  'execFile("docker", ["ps", "-a", "--format", "{{.Names}}"]',
+  "for (const containerName of [containers.edge, containers.kong])",
+  'execFile("docker", ["restart", containerName]',
+  '["inspect", "--format", "{{.State.Running}}", containerName]',
+  "recoveryAttempts > MAX_RECOVERY_ATTEMPTS",
+  "remainingMs < probeTimeoutMs",
+  "restricted to the local acceptance gateway",
+  "bounded recovery attempts",
+]);
+requireTokenCount(
+  source.edgeRuntimeIsolation,
+  "bounded local Docker subprocesses",
+  "timeout: DOCKER_COMMAND_TIMEOUT_MS",
+  3,
+);
+forbidTokens(source.edgeRuntimeIsolation, "bounded local Edge runtime recovery", [
+  "Promise.all",
+  '["stop"',
+  '["rm"',
+  '["prune"',
+]);
+requireTokens(source.edgeRuntimeIsolationTests, "local Edge recovery regressions", [
+  "restarts the exact Edge and Kong containers and proves three stable gateway waves",
+  "performs only one bounded recovery when the first warmup loses Edge runtime",
+  "restarts again when running containers retain stale Kong DNS",
+  "fails closed when either exact runtime container identity is ambiguous",
+  "never permits more than two recovery attempts",
+  "fails closed after two bounded unhealthy recoveries without broad Docker actions",
+]);
+
+const connectedGatewayStart = workflowStepBlock(
+  source.workflow,
+  "Start same-origin Player gateway",
+);
+requireTokens(connectedGatewayStart, "connected local gateway recovery", [
+  "GATEWAY_PID=$!",
+  'kill -0 "$GATEWAY_PID"',
+  "STATIC_READY=false",
+  "--max-time 5",
+  "restartLocalEdgeRuntime",
+  "local-edge-runtime-isolation.mjs",
+]);
+forbidTokens(connectedGatewayStart, "connected local gateway recovery", [
+  "PUBLISHABLE_KEY",
+  "/functions/v1/player-api",
+  "/functions/v1/bootstrap-api",
+  "seq 1 90",
+]);
+
+const connectedRuntimeDiagnostics = workflowStepBlock(
+  source.workflow,
+  "Capture sanitized connected-runtime diagnostics",
+);
+requireTokens(connectedRuntimeDiagnostics, "privacy-safe exited runtime diagnostics", [
+  "docker ps -a --format '{{.Names}} status={{.Status}}'",
+  "^supabase_(edge_runtime|kong)_[A-Za-z0-9_.-]+$",
+  "{{.State.Status}}",
+  "{{.State.Running}}",
+  "{{.State.ExitCode}}",
+  "{{.State.OOMKilled}}",
+  "{{.RestartCount}}",
+  "docker logs --since 20m --tail 900",
+  "node scripts/redact-econovaria-ci-log.mjs",
+]);
+forbidTokens(connectedRuntimeDiagnostics, "privacy-safe exited runtime diagnostics", [
+  "docker inspect \"$CONTAINER\"",
+  "docker ps --format '{{.Names}}'",
 ]);
 requireTokenCount(
   source.workflow,
@@ -720,6 +806,56 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "Store route returned",
   "on country.id = assignment.country_profile_id",
 ]);
+const sellerSemanticStart = source.browserAcceptance.indexOf(
+  "const sellerReceipt = sellerSession.page.locator(`[data-business-store-sale-receipt=\"${receipt.receiptKey}\"]`);",
+);
+const sellerSemanticEnd = source.browserAcceptance.indexOf(
+  "await completeSeededCompatibilityPurchase",
+  sellerSemanticStart,
+);
+if (sellerSemanticStart < 0 || sellerSemanticEnd <= sellerSemanticStart) {
+  throw new Error("Missing bounded semantic seller convergence block.");
+}
+const sellerSemanticConvergence = source.browserAcceptance.slice(
+  sellerSemanticStart,
+  sellerSemanticEnd,
+);
+requireTokens(sellerSemanticConvergence, "semantic seller convergence", [
+  'await sellerReceipt.waitFor({ state: "visible", timeout: SELLER_CONVERGENCE_TIMEOUT_MS });',
+  'await sellerReceipt.locator(`[data-business-store-sale-activity="${activityKey}"]`).waitFor({ state: "visible", timeout: 30_000 });',
+  "const sellerSemanticText = await sellerReceipt.textContent();",
+  '["receipt", receipt.receiptKey]',
+  '["offer", receipt.offerKey]',
+  '["Store item", fixture1.storeItemKey]',
+  '["quantity", `${receipt.quantity} units`]',
+  'sellerSemanticText.includes("business_store_offer_purchase")',
+  "receiptModalText.includes(receipt.receiptKey) && sellerSemanticText.includes(receipt.receiptKey)",
+]);
+forbidTokens(sellerSemanticConvergence, "semantic seller convergence", [
+  "sellerReceipt.innerText()",
+  ".toLowerCase()",
+  ".toUpperCase()",
+  "sellerReceipt.innerHTML",
+  "sellerReceipt.outerHTML",
+]);
+const sellerReceiptVisibleIndex = sellerSemanticConvergence.indexOf(
+  'await sellerReceipt.waitFor({ state: "visible"',
+);
+const sellerActivityVisibleIndex = sellerSemanticConvergence.indexOf(
+  "await sellerReceipt.locator(`[data-business-store-sale-activity=",
+);
+const sellerSemanticReadIndex = sellerSemanticConvergence.indexOf(
+  "const sellerSemanticText = await sellerReceipt.textContent();",
+);
+if (
+  sellerReceiptVisibleIndex < 0 ||
+  sellerActivityVisibleIndex <= sellerReceiptVisibleIndex ||
+  sellerSemanticReadIndex <= sellerActivityVisibleIndex
+) {
+  throw new Error(
+    "Seller semantic convergence must wait for receipt and activity visibility before reading text.",
+  );
+}
 const connectedRefreshRetryStart = source.browserAcceptance.indexOf("let refreshCompleted = false;");
 const connectedRefreshRetryEnd = source.browserAcceptance.indexOf(
   'await modal.getByText("PURCHASE RECEIPT"',

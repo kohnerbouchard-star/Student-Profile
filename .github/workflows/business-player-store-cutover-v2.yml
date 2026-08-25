@@ -786,6 +786,7 @@ jobs:
           node --test scripts/redact-econovaria-ci-log.test.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/econovaria-local-gateway-core.py
           node --test scripts/local-staging-gateway-contract.test.mjs
+          node --test scripts/local-edge-runtime-isolation.test.mjs
           npx playwright install --with-deps chromium
 
       - name: Build exact authorized physical-economy pack
@@ -905,37 +906,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          eval "$(npx supabase status --workdir backend -o env)"
-          test -n "${PUBLISHABLE_KEY:-}"
-          case "$PUBLISHABLE_KEY" in
-            sb_publishable_*) ;;
-            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
-          esac
           python3 scripts/econovaria-local-gateway.py \
             --local-supabase \
             --port 4173 \
             > /tmp/phase10a4-connected-gateway-raw.log 2>&1 &
-          echo $! > /tmp/phase10a4-connected-gateway.pid
-          for ATTEMPT in $(seq 1 90); do
+          GATEWAY_PID=$!
+          echo "$GATEWAY_PID" > /tmp/phase10a4-connected-gateway.pid
+          STATIC_READY=false
+          for ATTEMPT in $(seq 1 30); do
+            if ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
+              break
+            fi
             STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               http://127.0.0.1:4173/ || true)"
-            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
-              --request OPTIONS \
-              --header "apikey: ${PUBLISHABLE_KEY}" \
-              http://127.0.0.1:4173/functions/v1/player-api || true)"
-            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
-              --request OPTIONS \
-              --header "apikey: ${PUBLISHABLE_KEY}" \
-              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
-            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
-              exit 0
+            if [ "$STATIC_STATUS" = "200" ]; then
+              STATIC_READY=true
+              break
             fi
             sleep 1
           done
-          node scripts/redact-econovaria-ci-log.mjs \
-            /tmp/phase10a4-connected-gateway-raw.log \
-            | sed -E 's#ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}#[game-code-redacted]#g; s#P10A4-G[12]-(BUYER|SELLER)-ACCESS-[0-9]+#[credential-redacted]#g; s#PHASE10A4-G[12]-(BUYER|SELLER)#[player-identifier-redacted]#g' >&2 || true
-          exit 1
+          if [ "$STATIC_READY" != "true" ]; then
+            node scripts/redact-econovaria-ci-log.mjs \
+              /tmp/phase10a4-connected-gateway-raw.log >&2 || true
+            echo "The local Player gateway did not become ready." >&2
+            exit 1
+          fi
+
+          node --input-type=module --eval \
+            'import { restartLocalEdgeRuntime } from "./scripts/local-edge-runtime-isolation.mjs"; await restartLocalEdgeRuntime();'
 
       - name: Execute connected two-browser Player Store journey
         id: connected_store
@@ -957,10 +955,21 @@ jobs:
           {
             echo "== aggregate database counts =="
             psql "$DATABASE_URL" -X -qAt -c "select jsonb_build_object('games', (select count(*) from public.game_sessions), 'players', (select count(*) from public.players), 'receipts', (select count(*) from public.store_offer_purchase_receipts))::text;"
-            echo "== local runtime logs =="
-            for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
+            echo "== local runtime container summary =="
+            docker ps -a --format '{{.Names}} status={{.Status}}' \
+              | grep -E '^supabase_(edge_runtime|auth|rest|kong)_[A-Za-z0-9_.-]+[[:space:]]' || true
+            echo "== exact Edge and Kong state =="
+            for CONTAINER in $(docker ps -a --format '{{.Names}}' \
+              | grep -E '^supabase_(edge_runtime|kong)_[A-Za-z0-9_.-]+$' || true); do
+              docker inspect \
+                --format 'name={{.Name}} state={{.State.Status}} running={{.State.Running}} exit={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} restartCount={{.RestartCount}}' \
+                "$CONTAINER"
+            done
+            echo "== capped local runtime logs =="
+            for CONTAINER in $(docker ps -a --format '{{.Names}}' \
+              | grep -E '^supabase_(edge_runtime|auth|rest|kong)_[A-Za-z0-9_.-]+$' || true); do
               echo "-- local component --"
-              docker logs --since 20m "$CONTAINER" 2>&1 | tail -n 900
+              docker logs --since 20m --tail 900 "$CONTAINER" 2>&1
             done
           } | node scripts/redact-econovaria-ci-log.mjs \
             | sed -E \

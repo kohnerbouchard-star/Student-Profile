@@ -2486,9 +2486,17 @@ async function main() {
     await sellerReceipt.waitFor({ state: "visible", timeout: SELLER_CONVERGENCE_TIMEOUT_MS });
     const activityKey = assertPublic(vector.businessActivityKey, PUBLIC.activity, "Business activity");
     await sellerReceipt.locator(`[data-business-store-sale-activity="${activityKey}"]`).waitFor({ state: "visible", timeout: 30_000 });
-    const sellerText = await sellerReceipt.innerText();
-    for (const expected of [receipt.receiptKey, receipt.offerKey, fixture1.storeItemKey, `${receipt.quantity} units`]) {
-      assert(sellerText.includes(expected), "Seller Business evidence omitted the shared receipt vector.");
+    const sellerSemanticText = await sellerReceipt.textContent();
+    for (const [label, expected] of [
+      ["receipt", receipt.receiptKey],
+      ["offer", receipt.offerKey],
+      ["Store item", fixture1.storeItemKey],
+      ["quantity", `${receipt.quantity} units`],
+    ]) {
+      assert(
+        sellerSemanticText?.includes(expected),
+        `Seller Business evidence omitted the shared ${label} vector.`,
+      );
     }
     const sellerCashMetric = sellerSession.page.locator(".player-terminal-metric-card", { hasText: "Operating cash" }).first();
     const sellerCash = await sellerCashMetric.locator("strong").innerText();
@@ -2502,11 +2510,11 @@ async function main() {
     assert(sameAmount(uiAmount(sellerFinance.REVENUE), vector.grossRevenue), "Seller revenue did not converge to the receipt.");
     assert(sameAmount(uiAmount(sellerFinance.COGS), vector.costOfGoodsSold), "Seller COGS did not converge to the receipt.");
     assert(sameAmount(uiAmount(sellerFinance.MARGIN), vector.grossMargin), "Seller gross margin did not converge to the receipt.");
-    assert(sellerText.includes("business_store_offer_purchase"), "Seller activity reason did not converge to the receipt.");
+    assert(sellerSemanticText.includes("business_store_offer_purchase"), "Seller activity reason did not converge to the receipt.");
     assert(sellerSession.audit.navigations === sellerNavigationBaseline, "Seller convergence required a document reload.");
     await assertSameDocument(sellerSession, "Seller");
     evidence.browser.sellerConvergedWithoutReload = true;
-    evidence.browser.sharedReceiptIdentityVisible = receiptModalText.includes(receipt.receiptKey) && sellerText.includes(receipt.receiptKey);
+    evidence.browser.sharedReceiptIdentityVisible = receiptModalText.includes(receipt.receiptKey) && sellerSemanticText.includes(receipt.receiptKey);
 
     await completeSeededCompatibilityPurchase(buyerSession, fixture1);
     await provePurchaseFirstLeavesOnlyRemainderWithdrawable(fixture1);
