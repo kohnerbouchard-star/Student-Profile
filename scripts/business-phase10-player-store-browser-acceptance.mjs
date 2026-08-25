@@ -153,6 +153,8 @@ const evidence = {
     immutableReceiptRendered: false,
     immutableReceiptReloaded: false,
     postCommitRefreshFailureForced: false,
+    postCommitInvalidReceiptResponses: 0,
+    postCommitReceiptReadAttempts: 0,
     refreshPendingRendered: false,
     refreshRetryCompleted: false,
     refreshRetryDidNotResubmitSettlement: false,
@@ -1850,6 +1852,11 @@ function assertEvidenceComplete() {
   assert(evidence.browser.immutableReceiptRendered, "Rendered Store did not show the immutable Business receipt.");
   assert(evidence.browser.immutableReceiptReloaded, "Rendered Store did not reload the immutable receipt through the authenticated page.");
   assert(evidence.browser.postCommitRefreshFailureForced, "Connected acceptance did not force the post-commit read failure.");
+  assert(
+    evidence.browser.postCommitInvalidReceiptResponses === 1 &&
+      evidence.browser.postCommitReceiptReadAttempts === 2,
+    "Connected acceptance did not prove one contract-invalid receipt read followed by one explicit safe retry.",
+  );
   assert(evidence.browser.refreshPendingRendered, "Committed receipt did not preserve a visible refresh-pending state.");
   assert(evidence.browser.refreshRetryCompleted, "Safe committed-state refresh retry did not converge.");
   assert(evidence.browser.refreshRetryDidNotResubmitSettlement, "Refresh retry resubmitted settlement.");
@@ -2056,27 +2063,27 @@ async function main() {
     };
     await buyerSession.page.route(settlementRoutePattern, settlementResponseHandler);
     const receiptRoutePattern = "**/players/me/store/receipts/*";
-    let injectedReceiptReadFailures = 0;
-    const receiptFailureHandler = async (route) => {
-      if (route.request().method() === "GET" && injectedReceiptReadFailures === 0) {
-        injectedReceiptReadFailures += 1;
+    let receiptReadAttempts = 0;
+    let injectedInvalidReceiptResponses = 0;
+    const receiptContractFailureHandler = async (route) => {
+      if (route.request().method() === "GET") {
+        receiptReadAttempts += 1;
+      }
+      if (route.request().method() === "GET" && injectedInvalidReceiptResponses === 0) {
+        injectedInvalidReceiptResponses += 1;
         await route.fulfill({
-          status: 503,
+          status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            ok: false,
-            error: {
-              code: "phase10a4_injected_receipt_read_failure",
-              message: "Injected disposable post-commit receipt read failure.",
-              retryable: true,
-            },
+            ok: true,
+            data: {},
           }),
         });
         return;
       }
       await route.continue();
     };
-    await buyerSession.page.route(receiptRoutePattern, receiptFailureHandler);
+    await buyerSession.page.route(receiptRoutePattern, receiptContractFailureHandler);
     const receiptReadPromise = buyerSession.page.waitForResponse((response) =>
       /\/players\/me\/store\/receipts\/spr_[0-9a-f]{32}$/u.test(new URL(response.url()).pathname) &&
       response.request().method() === "GET",
@@ -2145,10 +2152,14 @@ async function main() {
     );
     const receiptRead = await receiptReadPromise;
     assert(
-      receiptRead.status() === 503 && injectedReceiptReadFailures === 1,
-      "Disposable post-commit receipt read failure was not forced exactly once.",
+      receiptRead.status() === 200 &&
+        injectedInvalidReceiptResponses === 1 &&
+        receiptReadAttempts === 1,
+      "Contract-invalid post-commit receipt read was not forced exactly once without an automatic retry.",
     );
     evidence.browser.postCommitRefreshFailureForced = true;
+    evidence.browser.postCommitInvalidReceiptResponses = injectedInvalidReceiptResponses;
+    evidence.browser.postCommitReceiptReadAttempts = receiptReadAttempts;
 
     await modal.getByText("COMPLETED · REFRESH PENDING", { exact: true }).waitFor({ state: "visible", timeout: 90_000 });
     const refreshRetry = modal.locator("[data-player-store-refresh-retry]");
@@ -2163,7 +2174,12 @@ async function main() {
     { timeout: 60_000 });
     await refreshRetry.click();
     const retryReceiptRead = await retryReceiptReadPromise;
-    await buyerSession.page.unroute(receiptRoutePattern, receiptFailureHandler);
+    await buyerSession.page.unroute(receiptRoutePattern, receiptContractFailureHandler);
+    assert(
+      receiptReadAttempts === 2 && injectedInvalidReceiptResponses === 1,
+      "Manual committed-state refresh did not make exactly one additional immutable receipt read.",
+    );
+    evidence.browser.postCommitReceiptReadAttempts = receiptReadAttempts;
     const immutablePayload = await parsedPlaywrightResponse(retryReceiptRead);
     const immutableReceipt = responseBusinessReceipt(immutablePayload);
     assertReceipt(immutableReceipt, fixture1, quote);

@@ -685,6 +685,23 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "settlementProcessingDismissalBlocked",
   "settlementProcessingFocusContained",
   "refreshRetryDidNotResubmitSettlement",
+  "postCommitInvalidReceiptResponses",
+  "postCommitReceiptReadAttempts",
+  "injectedInvalidReceiptResponses === 1",
+  "receiptReadAttempts === 1",
+  "receiptReadAttempts === 2",
+  "receiptRead.status() === 200",
+  `await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            data: {},
+          }),
+        });`,
+  "Contract-invalid post-commit receipt read",
+  "evidence.browser.consoleErrors.length === 0",
+  "evidence.browser.pageErrors.length === 0",
   "withdrawalFirstRejectedBeforePayment",
   "purchaseFirstRemainingWithdrawalAccepted",
   "sourceMaterializationCount: 0",
@@ -781,6 +798,7 @@ forbidTokens(source.browserAcceptance, "permanent browser acceptance", [
   "copyFile",
   "appendFile",
   "rename(",
+  "phase10a4_injected_receipt_read_failure",
 ]);
 
 for (const file of fs.readdirSync("backend/supabase/migrations")) {
