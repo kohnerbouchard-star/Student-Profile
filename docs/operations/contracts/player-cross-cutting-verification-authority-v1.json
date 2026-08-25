@@ -10,12 +10,14 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json",
+    "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-commerce-browser-acceptance.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
