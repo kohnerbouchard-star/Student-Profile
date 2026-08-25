@@ -159,7 +159,7 @@ Add one overarching rule:
 
 Status: `VERIFIED_COMPLETE`
 
-Execution record (2026-08-17): audited fetched `origin/main` at `72cefb73a0038aa2bc24261d63e70c113cb7c24c` from the existing owner branch `agent/architecture-hardening-roadmap-v2`. Open-PR collision audit covered #619, #620, #624 and #626; none owns the ARCH-000 deliverables, while #624's Player CSS/realtime files were treated as in-flight and not modified. Deliverables are `docs/architecture/econovaria-domain-ownership-v2.md`, `docs/architecture/econovaria-dependency-map-v2.md`, `scripts/architecture/build-architecture-inventory.mjs`, and its checked snapshot under `docs/architecture/inventories/`. The inventory measures 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above the 500-line review threshold, and 123 capability-like strings. Counts are candidate baselines and do not declare every lexical match a live violation. No runtime, route, RPC, migration, UI or schema behavior changes. Local evidence and the full PR suite pass, including deterministic inventory, architecture/high-priority/legacy audits, repository quality, security, replay and release-contract workflows. The transient Business Banking setup failure (GitHub action download 503/429/500) passed unchanged on rerun. Runtime/staging evidence is inapplicable to this documentation/read-only tooling tranche. Implementation commit: `71bb4911f8a9e256549629ff74750a65cf26de46`; PR #629 merged into `main` as `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63`. Unresolved blocker: none. Next exact item: `ARCH-001`.
+Execution record (2026-08-17): audited fetched `origin/main` at `72cefb73a0038aa2bc24261d63e70c113cb7c24c` from the existing owner branch `agent/architecture-hardening-roadmap-v2`. Open-PR collision audit covered #619, #620, #624 and #626; none owns the ARCH-000 deliverables, while #624's Player CSS/realtime files were treated as in-flight and not modified. Deliverables are `docs/architecture/econovaria-domain-ownership-v2.md`, `docs/architecture/econovaria-dependency-map-v2.md`, `scripts/architecture/build-architecture-inventory.mjs`, and its checked snapshot under `docs/architecture/inventories/`. The inventory measures 26 domains, 24 Edge entrypoints, 58 handler candidates, 168 cross-domain deep imports, 100 persistence-call candidates outside approved infrastructure paths, 27 browser shim/observer files, 209 compatibility-marker candidates, six scheduler/worker entrypoints, 100 source files at or above the 500-line review threshold, and 123 capability-like strings. Counts are candidate baselines and do not declare every lexical match a live violation. No runtime, route, RPC, migration, UI or schema behavior changes. Local evidence and the required pre-merge PR suite passed, including deterministic inventory, architecture/high-priority/legacy audits, repository quality, security, replay and release-contract workflows. The transient Business Banking setup failure (GitHub action download 503/429/500) passed unchanged on rerun. Runtime/staging evidence is inapplicable to this documentation/read-only tooling tranche. Implementation commit: `71bb4911daf47720ecb3e10872260c61bf26ff06`; accepted PR #629 head: `0bc5edb5097d9bfcea8276c2ffa6f209ba4d1385`; merge commit: `e40cb5b066457a355d09cdb47cf6fa13e45f6923`. The accepted-head and merge trees are identical at `f7af6ce5c4c2a051e4b572e16e0cc433ff5e18ed`. Post-close Branch Hygiene run `32040084962` initially failed when GitHub's delete-ref API returned HTTP 503; attempt 2 passed on 2026-08-25, and the owner branch is absent locally and remotely. A later dynamic CodeQL Python job in run `32040352374` failed before checkout on repeated external action-download HTTP 429 responses and cannot be rerun; the Actions and JavaScript/TypeScript jobs passed, and this does not change the already accepted implementation evidence. Unresolved implementation blocker: none. Next exact item: `ARCH-001`.
 
 Produce a current-main inventory, not an old-roadmap reconstruction:
 
@@ -189,7 +189,7 @@ Deliverables:
 Status: `VERIFIED_COMPLETE`
 Depends on: `ARCH-000`
 
-Execution record (2026-08-17): owner branch `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b05c913fb52f402e2f7171f8b7ee69ad63` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`. Collision audit covered open PRs #619, #620, #624 and #626; none owns architecture ratchets, and no in-flight Player/runtime file was modified. This tranche composes the existing Admin and legacy-runtime audits with a checked v2 baseline and non-increasing/zero-tolerance checks in `scripts/architecture/`. It detects direct browser database access, deep cross-domain and infrastructure imports, direct balance/Inventory mutations outside their owners, unscoped live-simulation persistence, browser transport monkey patches, unowned compatibility candidates, oversized handlers/source files and retired browser markers. No behavior, route, RPC, schema, migration or UI change. Local acceptance passed: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON validation, `git diff --check`, and changed-file secret scans. PR #631's required checks all passed; release-only jobs were skipped by their intended conditions, and transient external action-download/Admin browser failures passed unchanged on rerun. Runtime/staging evidence is inapplicable to read-only architecture tooling. Implementation commit: `a19b8b0758cf174dfb8205676b1bd4d5175c326d`; PR #631 merged into `main` as `92a818dfd719d1dcf1407c39bb6904f5d9b78077`. Unresolved blocker: none. Next exact item: `ARCH-100`.
+Execution record (2026-08-17): owner branch `chore/architecture-ratchets-v1`, created from merged ARCH-000 main `e40cb5b066457a355d09cdb47cf6fa13e45f6923` and reconciled with current main `7ecc9e018f6ee82ef4f4eae56a824e719481c3fd`. Collision audit covered open PRs #619, #620, #624 and #626; none owns architecture ratchets, and no in-flight Player/runtime file was modified. This tranche composes the existing Admin and legacy-runtime audits with a checked v2 baseline and non-increasing/zero-tolerance checks in `scripts/architecture/`. It detects direct browser database access, deep cross-domain and infrastructure imports, direct balance/Inventory mutations outside their owners, unscoped live-simulation persistence, browser transport monkey patches, unowned compatibility candidates, oversized handlers/source files and retired browser markers. No behavior, route, RPC, schema, migration or UI change. Local acceptance passed: `npm run audit:architecture`, `npm run audit:high-priority-boundaries`, `npm run audit:legacy-runtime`, syntax/JSON validation, `git diff --check`, and changed-file secret scans. PR #631's required checks all passed; release-only jobs were skipped by their intended conditions, and transient external action-download/Admin browser failures passed unchanged on rerun. Runtime/staging evidence is inapplicable to read-only architecture tooling. Implementation commit: `a19b8b0758cf174dfb8205676b1bd4d5175c326d`; PR #631 merged into `main` as `92a818dfd719d1dcf1407c39bb6904f5d9b78077`. Unresolved blocker: none. Next exact item: `ARCH-100`.
 
 Extend existing architecture audits rather than inventing a disconnected second framework. Add ratchets for newly measured violations so the count can only move toward zero.
 
@@ -252,6 +252,153 @@ Local classification acceptance passed on the exact candidate: `npm run audit:ar
 Verified residual classification tranche (2026-08-18): PR #639 accepted exact head `67b8db18013a82338001782fc604270ad25c312b` against unchanged base `651e607c0f63f79532c9f06ee74b705622ee7819` and merged as `83c3177ed112cc93bedae2d2d4018554c4c40a83`. The merge parents are exactly that base and accepted head, and the accepted-head and merge trees are byte-identical at `07440291f6b46011b587dad7346d02bc0c99710b`. Exact-head evidence comprised 10 successful checks, one successful Vercel status, two intended conditional skips, no unresolved check, no review and no review thread. The governing exact-head runs passed: CodeQL `32085727999`, Production Runtime Promotion Contract `32085729919`, Release Integrity `32085729930`, Repository Quality `32085729869` and Supply Chain Security `32085729914`.
 
 All eight exact-source merge workflows passed with no failed or pending gate: CodeQL `32085873137`, Beta Security Contract `32085873315`, Beta Pilot Contract `32085873324`, Required Game Market Timezone `32085873325`, Supply Chain Security `32085873327`, Repository Quality `32085873330`, Production Git Release `32085873306` and downstream Vercel Git Production Verification `32085966812`. The resulting 16 jobs comprised 14 successes and two intended conditional skips: dependency review `95558168805` and event-inapplicable Vercel contract validation `95558448297`. Production Git Release passed tokenless-contract validation, exact staging and production capture, bounded live-parity enforcement with `status:PASS` and zero unapproved differences in artifact `9306694683`, and fast-forward-only publication recorded by artifact `9306699990`; `release/production` resolves exactly to the merge. Edge-attestation publication steps were intentionally skipped because no Edge source changed. Vercel verification artifact `9306709933` reports canonical production health `{ok:true,status:"ready"}`, project `cgiukdjwicykrmtkhudh`, exact `sourceCommit` equal to the merge, and both `web-session-api` and `player-web-session-api` healthy at HTTP 200. Branch Hygiene run `32085874369` passed and the owner branch is absent locally and remotely. No unresolved blocker remains. `ARCH-100E` is `VERIFIED_COMPLETE`; `ARCH-100` remains `IN_PROGRESS`, `ARCH-101` remains blocked, and the next exact item is `ARCH-100F` on `refactor/multi-game-bootstrap-context-hydration-v1`, which must be created only after this completion record merges and from that exact current `main`.
+
+Started multi-game bootstrap hydration (2026-08-18): dependency-serialized `ARCH-100F` is owned solely by `refactor/multi-game-bootstrap-context-hydration-v1`, created from exact verified main/release SHA `59a82ef8580d7d571727e722424bc84cf064e8aa` and tree `7ccf90a65bc0e1717b96f66a7ebca929513e96bf` only after the `ARCH-100E` verification ledger merged and all of its exact-merge gates passed. The refreshed collision audit covers open PRs #619, #620, #624 and #626: none owns the bounded bootstrap/context source; #619 root dependency manifests, #620 workflow control-plane files, and #624/#626 Player browser/realtime/authority-manifest files remain excluded. Stale exact-path donors `wip/codex-production-slices-2026-08-04`, `automation/admin-v2-ux-root-apply-20260814`, and `feat/story-narrative-convergence-v1` must not be merged or cherry-picked. `backend/package.json` may change only to register bounded tests. No later residual owner may start before this owner is merged and verified.
+
+Mandatory pre-code `ARCH-100F` root/edge ledger: `admin-api/index.ts::Deno.serve` calls `common.resolveContext` for bearer authentication, Staff ID and all-status owner-filtered ID-only game discovery, then `guardAdminRequest` exactly once; only post-guard does one server request ID feed distinct per-game Admin contexts and Auth-owned all-or-nothing profile/game hydration, with each row retained beside its exact context. The hydrated set serves global bootstrap/games/switch through `handleGlobalRoute`/`selectGame`/`gameDto`, base `/games/:id` and `/games/:id/dashboard` through `ensureOwnedGame`/`gameRoutes.handleGameRead`/`gameDto`, and existing full-row Admin consumers including archive confirmation. `staff-api/index.ts::Deno.serve` and `classroom-api/index.ts::Deno.serve` both call `staffBootstrapHttpHandler.handleStaffBootstrapRequest`; `web-session-api/index.ts::Deno.serve` reaches the same handler through successful login, status and MFA flows via `loadStaffBootstrap` and its trusted-IP internal dependency wrapper. The shared handler preserves method/environment checks and exactly one `resolveStaffSessionForRequest` security/rate boundary, then performs active-only ID discovery, one request ID, distinct neutral Staff contexts, and Auth-owned hydration. Discovery selects only owner-filtered IDs in existing descending order; hydration rechecks owner and Staff active status, validates exact cardinality/membership/shape, restores discovery order and fails all-or-nothing. Zero games performs no game hydration query. Staff/Classroom join-code and settings routes remain exact Game Sessions regression edges through `handleResetGameJoinCodeRequest`/`handleGameSettingsRequest`; the Game Sessions Staff contract/factory becomes only a neutral type alias/re-export/delegate. Admin all-status versus Staff active-only behavior, selection fallback, join-code mapping, routes, envelopes, browser privacy, guards, schemas, RPCs, economic/idempotency authority, UI and deployment remain unchanged. Every listed root/edge, the focused neutral/Auth/repository/composition seams, Game Sessions, Admin API, auth/Web Session, typecheck/smoke/full-root suites, architecture/safety gates and exact-head/exact-merge Edge/release/Vercel/health evidence are mandatory before `VERIFIED_COMPLETE`.
+
+Planning reconciliation start snapshot after Business architecture drift
+(2026-08-25): fetched
+`origin/main` is `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`; the pushed
+`ARCH-100F` checkpoint is `9646509c12ac747693fdaefb6aa28908ae872321`,
+had no pull request and was one commit ahead and 18 commits behind that main.
+The checkpoint contains the bounded implementation described above, so the
+earlier “pre-code” label records its original gate rather than current status.
+It remained `IN_PROGRESS`: reconciliation had to regenerate the one conflicting
+architecture-inventory file, close Staff negative-boundary, Admin guard-denial,
+and route-level parity/privacy proof gaps, and rerun all local and exact-source
+acceptance. Prior branch-local passing results do not transfer across the
+current-main reconciliation.
+
+Reconciled implementation candidate (2026-08-25): planning reconciliation
+commit `001e9b35c3dda8197d5bd497b95d0126bbd60bca` was followed by the required
+normal merge of then-current `origin/main` as merge commit
+`20e5b649bd9472f49333bc21118de6b60b8d9eeb`; the sole conflict was the
+generated architecture inventory, which was regenerated with
+`node scripts/architecture/build-architecture-inventory.mjs`. Bounded
+implementation commit `88b3e96e4570b027597afa24b91c6de3cdb0c0e4` and tree
+`6ba09a1d240e6b7bfafe2945475221c789fdbf55` close all three reviewed
+evidence gaps. Staff bootstrap now has a private default-preserving
+environment-reader seam plus table-driven environment, resolver, Auth, claims,
+rate-limit and exception denial evidence proving zero repository, discovery,
+request-ID, application-context and hydration work. Admin bootstrap now uses
+one real guard-and-hydrate composition helper; guard denial precedes request-ID
+and context creation; the three bootstrap/global routes are isolated in a
+side-effect-free router after the unchanged provisioning/account probes; and
+the dashboard has test-only final loader seams with unchanged production
+defaults. Executable response-parity tests cover zero/one/multi-game selection,
+multi-game and empty bootstrap, all-status games ordering and join-code
+mapping, owned/non-owned switch, base game, selected-game dashboard scoping,
+exact envelopes, `no-store` behavior and persistence/security-field privacy.
+Draft PR #668 remains the sole owner.
+
+Post-prerequisite reconciliation (2026-08-25): PR #642 was accepted at exact
+head `9ccf68319e34f82186669acee5cf068a749b0e3f` and merged normally as current
+main `80f5eb8e24a364bc878de11acfdf196add878f10`; accepted-head and merge trees
+are identical at `acec002fa0d2af406a8862b3e7993a21c3009578`. Dedicated
+blocker-ledger reconciliation commit
+`43ce10be4b829ca0797eb319a53e370e1670f6cc` pre-applied the exact shared
+roadmap additions, after which current main merged normally into `ARCH-100F` as
+`49f520eac74fedb63a43e15f112faa1655aa4211` with tree
+`c812eb63d79ac3869d2e82c06f1c8b50bb4f1f42`. Collision simulation and the
+actual merge were conflict-free. The deterministic inventory was regenerated
+and remained at 1,060 source files and 25 Edge entrypoints. No Business runtime
+source or donor commit was imported.
+
+All local post-reconciliation evidence is green on that merged candidate:
+Staff bootstrap 36/36; Game Sessions 58/58; Admin API 184/184; Admin local
+mutations 80/80; game lifecycle 16/16; full backend smoke; `typecheck:all`;
+frozen Deno checks for bootstrap, Staff, Staff MFA, Player, Player Web Session,
+Web Session and password-reset roots; Admin local UI/architecture 17/17; Admin
+game-session controls and lifecycle; Admin v2 84/84; auth boundaries 16/16 plus
+8/8; Web Session release 39/39 plus 6/6; and complete root `npm test`.
+Architecture, Admin-contract, high-priority, legacy-runtime, 297-migration,
+secret, 25-file touched-TypeScript format and diff gates pass. Measured debt is
+flat or lower at 99 persistence candidates, 168 cross-domain deep imports, 209
+compatibility-marker files, 100 oversized source files and 5 oversized
+handlers, with every zero-tolerance category still zero. The PR diff changes no
+migration, RPC, workflow, root manifest, UI, deployment, Business runtime
+source, economic write or idempotency contract.
+
+Acceptance boundary (2026-08-25): `ARCH-100F` remains `IN_PROGRESS` in draft
+PR #668 with no accepted head, merge, deployment or runtime credit. PR #642's
+exact-head checks and three consecutive connected Player runs passed, as did
+all non-release exact-merge workflows. Production Git Release run
+`32815368607` failed closed because staging and production each report 21
+post-cutoff migration-ledger rows while exact main has 20 canonical rows;
+release publication was skipped and `release/production` remains
+`59a82ef8580d7d571727e722424bc84cf064e8aa`. This independent external
+database/release drift is not waived. No active owner currently owns its
+reconciliation, so `BETA-LIVE-MIGRATION-PARITY-001` requires separate explicit
+authorization; no F runtime or schema workaround is authorized. The next exact
+action is to publish the reconciled F head and run every currently satisfiable
+exact-head check. F must not merge until the parity owner resolves and merges
+the correction into `main`; F must then merge that advanced main normally,
+regenerate the inventory, and rerun every exact-head check and review thread
+before its regular merge. Exact-merge Edge, release, live, Vercel, health and
+branch-hygiene evidence plus a separately merged verification ledger remain
+mandatory. `ARCH-100G0` and every later owner remain blocked.
+
+Business V2 is simultaneously active and unfinished. PR #648 plus stacked draft
+PRs #654–#667 are unmerged and undeployed; the current cumulative tip is #667
+head `2a163a0d036973fa1b3f5b237a516fb10b2add4c` and contains formation,
+Stockroom/procurement, workforce/payroll, equipment/manufacturing and Store
+seller/listing/withdrawal work. #666 head
+`38d040748a62c5aa21a7111eeab80cd7e74b9263` also adds an unmerged,
+service-only immutable/non-reserving offer quote RPC, repository/contracts and
+three forward migrations, but no Player route/UI composition, money movement,
+Inventory transfer, receipt or capability credit. #667 adds only the Phase
+10A.3 scope document and temporary source-snapshot workflow; atomic
+buyer/seller/Inventory settlement, automatic sales, completed Player/Admin
+workspaces and IPO/Market integration remain absent. Branch-local certification
+never satisfies this roadmap. The stack also has non-linear ancestry at #661
+and #664 and unresolved failing/sparse check evidence. PR #626 is
+closed/superseded and PR #642 is merged. The overlapping
+`progressionIntegrationEventService.test.ts`, Player-authority manifest,
+Business browser wrapper and Commerce browser wrapper are now main-owned, so
+the Business stack must reconcile or de-duplicate them without receiving
+Business implementation credit.
+
+`ARCH-100F` may finish first because its sole exact-path overlap with current
+main and the cumulative Business stack is the generated inventory. Immediately
+after F, new documentation gate `ARCH-100G0` must audit the exact merged Business
+source and regenerate the root-to-handler classification. It remains blocked
+until every owning Business PR is merged in dependency order or explicitly
+closed/superseded and the ancestry defects are repaired. The #626/#642
+disposition condition is satisfied, but their now-main-owned paths must still
+be reconciled by the Business stack. No replacement branch is created while it is blocked, and all
+later `ARCH-100G1+` work is blocked behind it. The revised serialized ownership
+is recorded in `docs/architecture/econovaria-context-propagation-owner-map-v1.md`:
+Store is split into canonical catalog (`I1`) and later Business seller commerce
+(`I2A` for listing/withdrawal and future conditional `I2B` for quote/settlement);
+Banking/loans (`L1`) is separated from Business core (`L2`), procurement
+(`L3`), workforce/payroll (`L4`) and equipment/manufacturing (`L5`). Actor
+requests must forward the exact reviewed Player context without re-resolving
+scope. Admin Business list/review/compliance/cycle-settlement requests likewise
+require exact Admin context; only inner payroll, manufacturing, withdrawal and
+other leased scheduler processors are system runtimes and never receive
+fabricated actor contexts.
+
+Reconciled conditional `ARCH-100` owner ledger:
+
+| Item | Status | Exact dependency/ownership boundary | Required acceptance |
+|---|---|---|---|
+| `ARCH-100G0 — Business V2 context/collision reclassification` | `BLOCKED` | `ARCH-100F` verified; #648/#654–#666 merged in order or explicitly closed/superseded; scope-only #667 frozen, closed, superseded, or included if runtime is added; resolved #626/#642 paths reconciled from current main; #661/#664 ancestry repaired | Audit exact merged source, regenerate inventory, classify every live/uncomposed/system edge, and resize or remove every conditional row below. Absent future functionality is not an `ARCH-100` completion dependency. |
+| `ARCH-100G3 — Player session/capability/auth-workflow context` | `PLANNED` | `ARCH-100G2`, `ARCH-100G0`; owns the generic reviewed-dispatch callback contract, both Player roots and capability/rate mappings; explicitly excludes `_shared/playerBusinessDispatch.ts` | Exact generic context/reference forwarding, limiter identity/order, bootstrap/login/logout/session privacy and replay evidence. |
+| `ARCH-100I1 — canonical catalog Store context` | `PLANNED` | `ARCH-100H`, `ARCH-100G0`; existing Admin/shared and seeded/catalog Player Store only | Admin/Player composition, Inventory/Economy authority characterization, public-key privacy and replay/two-game evidence. |
+| `ARCH-100L1 — Banking and loans context` | `PLANNED` | `ARCH-100K2`, `ARCH-100G0`; Banking/loan compatibility surfaces only | Exact actor context, handler characterization, ledger atomicity, replay/conflict and runtime evidence. |
+| `ARCH-100L2 — Business core/formation/read context` | `BLOCKED` | Conditional on `ARCH-100G0` finding merged Business source; then `ARCH-100L1`, `ARCH-100C`, `ARCH-100K2`; owns `_shared/playerBusinessDispatch.ts` onward plus Player handler/repository and Admin Business list/review/compliance branches | No second scope resolution; exact Player/Admin context identity; public-key privacy, retired-route and every-root composition evidence. |
+| `ARCH-100L3 — Business procurement context` | `BLOCKED` | Conditional merged source; then `ARCH-100I1`, `ARCH-100L2`, `ARCH-100C`, `ARCH-100K2` | Canonical price/currency/Inventory basis, atomic ledger/custody, rollback, replay and two-game evidence. |
+| `ARCH-100L4 — Business workforce/payroll context` | `BLOCKED` | Conditional merged source; then `ARCH-100L3`, `ARCH-100K2`; owns Player workforce commands and actor-triggered Admin `POST /businesses/:biz/settle`; only the inner leased processor is `SYSTEM_RUNTIME` | Admin auth/AAL/permission/rate/idempotency and exact context; Player context; zero-production, partial/unpaid recovery, no-double-debit, lease/replay and two-game evidence. |
+| `ARCH-100L5 — Business manufacturing context` | `BLOCKED` | Conditional merged source; then `ARCH-100L4`, `ARCH-100C`, `ARCH-100K2`; owns live Player job list/start/cancel and system completion/recovery. Equipment repositories remain uncomposed until a root is proven | Characterize and preserve the existing canonical recipe reference without starting Phase-2 `ARCH-203`; prove output, material/labor/equipment reservation, timing/lease/replay/recovery; no equipment capability credit without production composition evidence. |
+| `ARCH-100I2A — Business seller listing/withdrawal context` | `BLOCKED` | Conditional merged source; then `ARCH-100I1`, `ARCH-100L5`, `ARCH-100C`, `ARCH-100K2` | Exact actor versus worker classification; seller-offer/listing custody, cooling/reservation/return, replay/race and two-game evidence. |
+| `ARCH-100I2B — offer-aware quote/settlement context` | `BLOCKED` | Instantiated only by a merged production actor composition/cutover; #666's service-only unmerged quote earns no context/capability credit; then `ARCH-100I2A`, `ARCH-100L5`, `ARCH-100C`, `ARCH-100K2` | Merge-blocking exact-context, immutable quote/receipt, offer-first locking, and characterization of the existing atomic RPC/transaction with debit/credit/custody/revenue/COGS race/replay/rollback evidence; this context owner does not start Phase-3 `ARCH-300`. If production composition is absent, `ARCH-100G0` removes this row from current closure and the future feature must satisfy it before merge. |
+
+`ARCH-100G0` is a resizing gate, not a promise that every draft feature will
+land. If Business work is closed or superseded without a live edge, the gate
+records that absence and removes the corresponding conditional owner. If a
+future quote/settlement feature appears after context closure, its own PR must
+reopen and satisfy `I2B` as a merge-blocking architecture gate.
 
 Create or consolidate the existing equivalent of a request/application context carrying server-derived identity and scope. Do not invent a second context if one already exists.
 
@@ -344,7 +491,7 @@ Forbidden: arbitrary callers setting a status column directly to simulate a tran
 ## `ARCH-202` — Store -> Inventory/Economy integration
 
 Status: `PLANNED`
-Depends on: `ARCH-200`, Phase 3 transaction primitive if required
+Depends on: `ARCH-200`, `ARCH-205`, `ARCH-300` for settlement
 
 A successful purchase must have one authoritative orchestration path for:
 
@@ -356,6 +503,42 @@ A successful purchase must have one authoritative orchestration path for:
 - return a stable API contract.
 
 No dual writes and no partially successful purchase state.
+
+The unfinished Business V2 program changes the shape of this item, but none of
+its unmerged work is complete:
+
+- `ARCH-202A — canonical seeded/catalog Store`: `PLANNED`; preserve the existing
+  public catalog, canonical quote/purchase authority, Inventory grant, Economy
+  debit and stable API contract independently of seller commerce.
+- `ARCH-202B — seller offers, listing custody and withdrawal`: `BLOCKED` by
+  `ARCH-202A`, `ARCH-207A`, `ARCH-207D`, `ARCH-200` and `ARCH-205`. Draft
+  stacked branches are unaccepted evidence only. Inventory remains custody
+  authority and Store owns seller-offer/listing lifecycle. Acceptance requires
+  separate actor-triggered and leased-system composition; immediate purchase
+  disable; a server-derived minimum five-minute cooling period;
+  reservation-safe deferral; exact-once unsold-stock return; replay, recovery,
+  purchase/withdrawal race-order and two-game evidence.
+- `ARCH-202C — offer-aware quote and atomic settlement`: `BLOCKED` by
+  `ARCH-202B`, `ARCH-207A`, `ARCH-207D`, `ARCH-205` and `ARCH-300`.
+  Phase 10A.2 now has branch-local service-only quote implementation evidence,
+  but it is unmerged, undeployed and uncomposed and therefore unaccepted;
+  Phase 10A.3 transaction/receipt runtime remains absent. A quote must
+  be immutable and bind exact offer, offer version, seller, custody account,
+  quantity, price, currency and expiry; the receipt is likewise immutable.
+  Acceptance also requires expiry/version replay conflicts, offer-first locking,
+  both purchase/withdrawal race orders, one transaction for buyer debit, seller
+  credit, Inventory transfer, listing/purchase state, revenue and COGS, plus
+  exact-once replay/conflict/rollback evidence.
+- `ARCH-202D — automatic demand/sales`: `PLANNED`; it may start only after
+  `ARCH-202C` is merged and verified and must reuse the same settlement authority
+  rather than introduce a worker-only economic write path.
+
+Every Business/Store migration must replay twice from a clean database and pass
+lint/advisor review. Every new `public` table/function must have explicit Data
+API exposure, RLS/forced-RLS, `PUBLIC`/`anon`/`authenticated` revocation and
+intended server-role grant decisions. Every `SECURITY DEFINER` function requires
+fixed `search_path`, scoped authorization and cross-game/replay tests. Migration
+presence or service-only repository code does not prove live composition.
 
 ## `ARCH-203` — Crafting -> Inventory integration
 
@@ -389,9 +572,58 @@ Stocks own instruments, exchange/calendar rules, prices/ticks, orders/trades, po
 ## `ARCH-207` — Business/asset authority
 
 Status: `PLANNED`
-Depends on: `ARCH-205`
+Depends on: `ARCH-200`, `ARCH-205`, `ARCH-300`, `ARCH-202A`
 
 Define a canonical business ownership/asset boundary and ensure business-banking, marketplace, investments and Admin surfaces consume it rather than reproducing ownership checks.
+
+The authority program is split so unfinished Business code cannot silently
+redefine Banking, Inventory, Store or Market ownership:
+
+- `ARCH-207A — Business boundary, formation and reads`: `BLOCKED` by
+  `ARCH-200`, `ARCH-205`, `ARCH-300`, `ARCH-202A` and the exact
+  Business-stack merge/disposition gate;
+  draft PR #648 is unaccepted evidence only. Business owns formation,
+  governance, overview and recipe-access
+  policy; Economy owns money, Inventory owns assets/custody, and the canonical
+  physical-economy recipe remains the source of truth.
+- `ARCH-207B — Stockroom and procurement`: `BLOCKED` by `ARCH-207A`,
+  `ARCH-202A`, `ARCH-200`, `ARCH-205` and `ARCH-300`; draft #654–#656 are
+  unaccepted evidence only. Transit/warehouse state must preserve Economy price/currency authority,
+  Inventory basis/custody, atomic rollback and retirement of the abstract-input
+  mutation rather than dual-writing it.
+- `ARCH-207C — workforce and payroll`: `BLOCKED` by `ARCH-207B`, `ARCH-205`
+  and `ARCH-300`; draft #657–#659 are unaccepted evidence only.
+  Player hire/utilization commands require the exact Player context. Admin
+  `POST /businesses/:biz/settle` is an actor-triggered
+  `GAME_CONTEXT_REQUIRED` boundary and must preserve exact Admin context through
+  auth/AAL/permission/rate/idempotency review; only its inner leased payroll
+  processor is `SYSTEM_RUNTIME`. Both paths use Economy ledger authority and
+  require zero-production, partial/unpaid recovery, no-double-debit and two-game
+  evidence.
+- `ARCH-207D — equipment and timed manufacturing`: `BLOCKED` by `ARCH-207C`,
+  `ARCH-200`, `ARCH-203`, `ARCH-205` and `ARCH-300`; draft #660–#661 are
+  unaccepted evidence only. Inventory owns equipment/material/WIP/output custody;
+  Business owns job rules. Job list/start/cancel are actor commands;
+  claim/complete/fail/recovery are leased system operations with canonical
+  recipe, reservation, timing, replay and crash-recovery evidence. Equipment
+  read/install adapters are service-only on the audited branch and receive no
+  live capability credit until a production composition root and its exact
+  actor/system boundary are proven.
+- `ARCH-207E — Player/Admin Business workspace convergence`: `PLANNED`; depends
+  on `ARCH-207A`–`D` and `ARCH-202C`. The declared phases 12 and 13 are not
+  implemented and must expose only merged, authoritative capabilities.
+- `ARCH-207F — IPO/Market integration`: `PLANNED`; depends on `ARCH-206`,
+  `ARCH-207A`–`D` and accepted operating/financial inputs from `ARCH-202C` (and
+  `ARCH-202D` if automatic sales are part of valuation). Phase 14 remains
+  outside the current Business runtime. Stocks/Market retains instrument,
+  exchange and trading authority until a separately accepted integration exists.
+
+Before any subitem can be credited, its owning stack must be linear, merged into
+`main`, pass the relevant database/Edge/browser/runtime gates, and provide
+deployed evidence where required. The live legacy
+`submit_business_product_v1` route/capability must also be reconciled with the
+Business plan’s stated retirement of free-form product creation; leaving both
+contracts active is an acceptance blocker, not compatibility completion.
 
 ## `ARCH-208` — Contracts/Progression/reward authority
 
@@ -810,21 +1042,24 @@ This queue is a dependency guide, not permission to ignore active-branch ownersh
 | 5 | Inventory authority | `ARCH-200` |
 | 6 | Redemption state machine/use split | `ARCH-201` |
 | 7 | Economy/ledger authority and transaction primitive | `ARCH-205`, `ARCH-300` |
-| 8 | Store + Crafting convergence | `ARCH-202`, `ARCH-203` |
-| 9 | Marketplace convergence | `ARCH-204` |
-| 10 | Stocks + Business convergence | `ARCH-206`, `ARCH-207` |
-| 11 | Contracts/Progression rewards + Story/World scope | `ARCH-208`, `ARCH-209` |
-| 12 | Commands/state machines/permissions/errors | `ARCH-301`–`ARCH-304` |
-| 13 | Contract and repository/public-boundary completion | `ARCH-400`–`ARCH-402` |
-| 14 | Player data plane | `ARCH-501`, part of `ARCH-502` |
-| 15 | Admin data plane | `ARCH-500`, remainder of `ARCH-502` |
-| 16 | Scheduler/simulation orchestration | `ARCH-600`, `ARCH-601` |
-| 17 | Internal domain events where justified | `ARCH-602` |
-| 18 | Legacy/compatibility retirement | `ARCH-700`, `ARCH-701` |
-| 19 | Topology normalization | `ARCH-702` |
-| 20 | Observability/failure isolation | `ARCH-800`–`ARCH-802` |
-| 21 | UI/CSS architecture cleanup | `ARCH-900`, `ARCH-901` |
-| 22 | Final re-audit and ratchet closure | `ARCH-1000`–`ARCH-1002` |
+| 8 | Canonical seeded/catalog Store + Crafting convergence | `ARCH-202A`, `ARCH-203` |
+| 9 | Business formation/read + Stockroom/procurement | `ARCH-207A`, `ARCH-207B` |
+| 10 | Business workforce/payroll + equipment/manufacturing | `ARCH-207C`, `ARCH-207D` |
+| 11 | Seller commerce quote/settlement + automatic sales | `ARCH-202B`–`ARCH-202D` |
+| 12 | Marketplace convergence | `ARCH-204` |
+| 13 | Stocks authority; later Business workspace/IPO convergence | `ARCH-206`, `ARCH-207E`, `ARCH-207F` |
+| 14 | Contracts/Progression rewards + Story/World scope | `ARCH-208`, `ARCH-209` |
+| 15 | Commands/state machines/permissions/errors | `ARCH-301`–`ARCH-304` |
+| 16 | Contract and repository/public-boundary completion | `ARCH-400`–`ARCH-402` |
+| 17 | Player data plane | `ARCH-501`, part of `ARCH-502` |
+| 18 | Admin data plane | `ARCH-500`, remainder of `ARCH-502` |
+| 19 | Scheduler/simulation orchestration | `ARCH-600`, `ARCH-601` |
+| 20 | Internal domain events where justified | `ARCH-602` |
+| 21 | Legacy/compatibility retirement | `ARCH-700`, `ARCH-701` |
+| 22 | Topology normalization | `ARCH-702` |
+| 23 | Observability/failure isolation | `ARCH-800`–`ARCH-802` |
+| 24 | UI/CSS architecture cleanup | `ARCH-900`, `ARCH-901` |
+| 25 | Final re-audit and ratchet closure | `ARCH-1000`–`ARCH-1002` |
 
 Split any tranche further if it crosses unrelated domains, changes too many runtime surfaces, or cannot be independently characterized and reverted.
 

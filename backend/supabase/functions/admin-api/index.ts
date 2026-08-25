@@ -1,10 +1,8 @@
 import {
   corsHeaders,
   ensureOwnedGame,
-  gameDto,
   json,
   resolveContext,
-  selectGame,
   SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_URL,
@@ -27,13 +25,16 @@ import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
 } from "./gameLifecycleOperations.ts";
+import { type AdminSecurityGuardResult } from "./adminSecurityGuard.ts";
 import {
-  type AdminSecurityGuardResult,
-  guardAdminRequest,
-} from "./adminSecurityGuard.ts";
-import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
+  type AdminBootstrapAuthorizedContext,
+  AdminBootstrapCompositionError,
+  applicationContextForAdminGame,
+  authorizeAndHydrateAdminBootstrapContext,
+} from "./adminBootstrapComposition.ts";
+import { handleAdminBootstrapGlobalRoute } from "./adminBootstrapRoutes.ts";
 
-type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
+type AuthorizedAdminContext = AdminBootstrapAuthorizedContext;
 type AdminSecurityFailure = Extract<
   AdminSecurityGuardResult,
   { readonly ok: false }
@@ -113,59 +114,12 @@ async function handleGlobalRoute(
     return json(request, accountOperation.status, accountOperation.body);
   }
 
-  if (path === "/session/bootstrap" && request.method === "GET") {
-    const selected = selectGame(context, request);
-    const claims = context.user || {};
-    return json(request, 200, {
-      data: {
-        admin: {
-          id: context.staff.id,
-          accountId: context.staff.id,
-          displayName: context.staff.display_name,
-          email: context.staff.email,
-          role: "game_admin",
-          roles: ["game_admin"],
-        },
-        activeGame: selected ? gameDto(selected) : {},
-        games: context.games.map(gameDto),
-        permissions: context.security.permissions,
-        permissionVersion: Number(
-          context.user?.app_metadata?.permission_version || 0,
-        ),
-        securityVersion: Number(
-          context.user?.app_metadata?.security_version || 0,
-        ),
-        roles: ["game_admin"],
-        csrfToken: "",
-        session: {
-          id: claims.id || context.staff.id,
-          csrfToken: "",
-          assuranceLevel: context.security.assuranceLevel,
-          expiresAt: claims.exp
-            ? new Date(Number(claims.exp) * 1000).toISOString()
-            : null,
-        },
-        capabilities: {
-          notifications: false,
-          securityHistory: "current_session_only",
-          helpArticles: true,
-          auditLogFlags: true,
-          auditLogExport: true,
-          overallScore: false,
-          marketplaceAdminTrading: false,
-          progressionReview: true,
-          progressionCorrection: true,
-          multiFactorAuthentication: context.security.assuranceLevel === "aal2",
-        },
-      },
-    });
-  }
-
-  if (path === "/games" && request.method === "GET") {
-    return json(request, 200, {
-      data: { games: context.games.map(gameDto) },
-    });
-  }
+  const bootstrapResponse = handleAdminBootstrapGlobalRoute(
+    request,
+    context,
+    path,
+  );
+  if (bootstrapResponse) return bootstrapResponse;
 
   if (path === "/account/profile" && request.method === "GET") {
     return json(request, 200, {
@@ -226,17 +180,6 @@ async function handleGlobalRoute(
     return json(request, 200, { data: { signedOut: true } });
   }
 
-  const switchMatch = path.match(/^\/games\/([^/]+)\/switch$/);
-  if (switchMatch && request.method === "POST") {
-    const game = ensureOwnedGame(context, decodeURIComponent(switchMatch[1]));
-    return game
-      ? json(request, 200, { data: { activeGame: gameDto(game) } })
-      : json(request, 404, {
-        code: "game_not_found",
-        message: "That game is not available to this administrator.",
-      });
-  }
-
   return null;
 }
 
@@ -265,15 +208,26 @@ Deno.serve(async (request: Request) => {
   const path = routePath(url);
 
   try {
-    const security = await guardAdminRequest(
-      request,
-      authorizedContext,
-      path,
-    );
-    if (security.ok === false) {
-      return adminSecurityFailureResponse(request, security);
+    let securedContext;
+    try {
+      const authorization = await authorizeAndHydrateAdminBootstrapContext(
+        request,
+        authorizedContext,
+        path,
+      );
+      if (authorization.ok === false) {
+        return adminSecurityFailureResponse(request, authorization);
+      }
+      securedContext = authorization.context;
+    } catch (error) {
+      if (error instanceof AdminBootstrapCompositionError) {
+        return json(request, error.status, {
+          code: "auth_failed",
+          message: error.responseMessage,
+        });
+      }
+      throw error;
     }
-    const securedContext = { ...authorizedContext, security };
 
     const globalResponse = await handleGlobalRoute(
       request,
@@ -305,12 +259,10 @@ Deno.serve(async (request: Request) => {
         message: "That game is not available to this administrator.",
       });
     }
-    const applicationContext = createAdminRequestApplicationContext({
-      ownedGame: game,
-      staffUserId: securedContext.staff.id,
-      security,
-      requestId: crypto.randomUUID(),
-    });
+    const applicationContext = applicationContextForAdminGame(
+      securedContext.gameBootstrapEntries,
+      game,
+    );
 
     const lifecycleOperation = await handleGameLifecycleOperation(
       securedContext.service,

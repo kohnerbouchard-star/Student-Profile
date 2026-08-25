@@ -1,4 +1,8 @@
 import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
+import {
+  createStaffRequestApplicationContext,
+  StaffRequestApplicationContextValidationError,
+} from "../../../shared/staffRequestApplicationContextFactory.ts";
 
 export interface CreateGameSessionsStaffApplicationContextInput {
   readonly ownedGame: { readonly id: unknown };
@@ -19,40 +23,35 @@ export interface CreateGameSessionsStaffApplicationContextInput {
 export function createGameSessionsStaffApplicationContext(
   input: CreateGameSessionsStaffApplicationContextInput,
 ): GameSessionsStaffApplicationContext {
-  const gameSessionId = requiredText(input.ownedGame.id, "owned game ID");
-  const staffUserId = requiredText(input.staff.id, "Staff user ID");
-  const requestId = requiredText(input.requestId, "request ID");
-
-  if (input.staff.role !== "game_admin") {
-    throw new Error(
-      "Game Sessions Staff application context requires a reviewed Game Admin role.",
-    );
+  try {
+    return createStaffRequestApplicationContext({
+      ...input,
+      permissions: [],
+    });
+  } catch (error) {
+    if (error instanceof StaffRequestApplicationContextValidationError) {
+      throw gameSessionsValidationError(error);
+    }
+    throw error;
   }
-  if (!new Set(["aal1", "aal2", "unknown"]).has(input.assuranceLevel)) {
-    throw new Error(
-      "Game Sessions Staff application context requires a reviewed assurance level.",
-    );
-  }
-
-  return Object.freeze({
-    gameSessionId,
-    actor: Object.freeze({
-      kind: "staff" as const,
-      staffUserId,
-    }),
-    role: input.staff.role,
-    permissions: Object.freeze([] as string[]),
-    requestId,
-    assuranceLevel: input.assuranceLevel,
-  });
 }
 
-function requiredText(value: unknown, label: string): string {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  if (!normalized) {
-    throw new Error(
-      `Game Sessions Staff application context requires a ${label}.`,
-    );
-  }
-  return normalized;
+function gameSessionsValidationError(
+  error: StaffRequestApplicationContextValidationError,
+): Error {
+  const message = (() => {
+    switch (error.issue) {
+      case "owned_game_id":
+        return "Game Sessions Staff application context requires a owned game ID.";
+      case "staff_user_id":
+        return "Game Sessions Staff application context requires a Staff user ID.";
+      case "request_id":
+        return "Game Sessions Staff application context requires a request ID.";
+      case "staff_role":
+        return "Game Sessions Staff application context requires a reviewed Game Admin role.";
+      case "assurance_level":
+        return "Game Sessions Staff application context requires a reviewed assurance level.";
+    }
+  })();
+  return new Error(message);
 }

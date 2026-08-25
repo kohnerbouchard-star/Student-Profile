@@ -6,7 +6,15 @@ declare const Deno: {
 
 const GAME_ID = "00000000-0000-4000-8000-000000000911";
 const STAFF_ID = "00000000-0000-4000-8000-000000000912";
-const GAME = { id: GAME_ID, name: "Lifecycle Audit Game", status: "archived" };
+const GAME = {
+  id: GAME_ID,
+  name: "Lifecycle Audit Game",
+  status: "ended",
+  game_join_code: "AUDIT7",
+  game_join_code_status: "inactive",
+  created_at: "2026-08-01T00:00:00.000Z",
+  updated_at: "2026-08-18T00:00:00.000Z",
+};
 
 Deno.test("legacy Admin archive route uses canonical lifecycle RPC", async () => {
   const service = fixtureService([{
@@ -37,7 +45,12 @@ Deno.test("legacy Admin archive route uses canonical lifecycle RPC", async () =>
       p_expected_version: 6,
     },
   }]);
-  assertEquals(result.body.data.game.lifecycleState, "archived");
+  assertEquals(result.body.data.game, {
+    ...GAME,
+    status: "archived",
+    lifecycleState: "archived",
+    lifecycleVersion: 7,
+  });
 });
 
 Deno.test("legacy Admin archive route still requires explicit confirmation", async () => {
@@ -89,6 +102,10 @@ function fixtureService(
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Actual: ${JSON.stringify(actual)}\nExpected: ${JSON.stringify(expected)}`);
+    throw new Error(
+      `Actual: ${JSON.stringify(actual)}\nExpected: ${
+        JSON.stringify(expected)
+      }`,
+    );
   }
 }

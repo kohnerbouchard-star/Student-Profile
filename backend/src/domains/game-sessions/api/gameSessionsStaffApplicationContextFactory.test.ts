@@ -2,6 +2,7 @@ import {
   createGameSessionsStaffApplicationContext,
   type CreateGameSessionsStaffApplicationContextInput,
 } from "./gameSessionsStaffApplicationContextFactory.ts";
+import type { StaffRequestApplicationContext } from "../../../shared/staffRequestApplicationContext.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -16,8 +17,9 @@ Deno.test("Game Sessions Staff context freezes truthful reviewed scope", () => {
     const context = createGameSessionsStaffApplicationContext(
       inputWith({ assuranceLevel }),
     );
+    const neutralContext: StaffRequestApplicationContext = context;
 
-    assertEquals(context, {
+    assertEquals(neutralContext, {
       gameSessionId: GAME_ID,
       actor: { kind: "staff", staffUserId: STAFF_ID },
       role: "game_admin",
@@ -65,16 +67,37 @@ Deno.test("Game Sessions Staff context contains no transport, credential, or mut
 
 Deno.test("Game Sessions Staff context fails closed on incomplete or unreviewed scope", () => {
   for (
-    const candidate of [
-      inputWith({ ownedGame: { id: " " } }),
-      inputWith({ ownedGame: { id: 101 } }),
-      inputWith({ staff: { id: "", role: "game_admin" } }),
-      inputWith({ staff: { id: STAFF_ID, role: "security_operator" } }),
-      inputWith({ requestId: "\t" }),
-      inputWith({ assuranceLevel: "unreviewed" as "aal1" }),
-    ]
+    const [candidate, message] of [
+      [
+        inputWith({ ownedGame: { id: " " } }),
+        "Game Sessions Staff application context requires a owned game ID.",
+      ],
+      [
+        inputWith({ ownedGame: { id: 101 } }),
+        "Game Sessions Staff application context requires a owned game ID.",
+      ],
+      [
+        inputWith({ staff: { id: "", role: "game_admin" } }),
+        "Game Sessions Staff application context requires a Staff user ID.",
+      ],
+      [
+        inputWith({ staff: { id: STAFF_ID, role: "security_operator" } }),
+        "Game Sessions Staff application context requires a reviewed Game Admin role.",
+      ],
+      [
+        inputWith({ requestId: "\t" }),
+        "Game Sessions Staff application context requires a request ID.",
+      ],
+      [
+        inputWith({ assuranceLevel: "unreviewed" as "aal1" }),
+        "Game Sessions Staff application context requires a reviewed assurance level.",
+      ],
+    ] as const
   ) {
-    assertThrows(() => createGameSessionsStaffApplicationContext(candidate));
+    assertThrows(
+      () => createGameSessionsStaffApplicationContext(candidate),
+      message,
+    );
   }
 });
 
@@ -94,10 +117,12 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function assertThrows(run: () => void): void {
+function assertThrows(run: () => void, expectedMessage: string): void {
   try {
     run();
-  } catch {
+  } catch (error) {
+    assert(error instanceof Error, "expected an Error");
+    assertEquals(error.message, expectedMessage);
     return;
   }
   throw new Error("Expected function to throw.");
