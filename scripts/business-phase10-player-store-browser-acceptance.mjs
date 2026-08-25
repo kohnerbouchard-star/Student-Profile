@@ -662,8 +662,7 @@ async function playerEconomicContext(game, player) {
     )::text
     from public.player_country_assignments as assignment
     join public.country_profiles as country
-      on country.game_session_id = assignment.game_session_id
-     and country.id = assignment.country_profile_id
+      on country.id = assignment.country_profile_id
     where assignment.game_session_id = ${sqlLiteral(game.id)}::uuid
       and assignment.player_id = ${sqlLiteral(player.id)}::uuid
       and assignment.status = 'active'

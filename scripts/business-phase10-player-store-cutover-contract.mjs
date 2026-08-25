@@ -659,6 +659,10 @@ requireTokens(source.browserAcceptance, "connected two-browser acceptance", [
   "purchaseFirstRemainingWithdrawalAccepted",
   "sourceMaterializationCount: 0",
   "assertSanitizedArtifact",
+  "on country.id = assignment.country_profile_id",
+]);
+forbidTokens(source.browserAcceptance, "connected country assignment lookup", [
+  "country.game_session_id = assignment.game_session_id",
 ]);
 requireTokens(
   source.focusedBrowserAcceptance,
