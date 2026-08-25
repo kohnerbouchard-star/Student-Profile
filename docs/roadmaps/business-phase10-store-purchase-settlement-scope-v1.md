@@ -1,7 +1,7 @@
 # Business V2 Phase 10 — Atomic Store Purchase Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A1`
-**Status:** COMPLETE — checkpoint 10A.1 authority foundation certified; checkpoint 10A.2 offer-aware quote authority is open
+**Status:** COMPLETE — checkpoint 10A.1 authority foundation certified; checkpoint 10A.2 quote authority certified; checkpoint 10A.3 settlement implementation is in progress and not certified
 **Branch:** `feat/business-store-purchase-settlement-v2`
 **Parent branch:** `feat/business-store-withdrawal-safety-v2`
 **Parent draft PR:** #664
@@ -265,8 +265,37 @@ Checkpoint 10A.1 is complete. Runtime Store purchase settlement is not complete.
 
 After 10A.1 certification:
 
-1. **10A.2 — offer-aware quote authority:** immutable quote binding to offer/version/seller/custody and deterministic pricing evidence.
-2. **10A.3 — atomic economic settlement:** Buyer Checking debit, Business cash credit, Store Listing-to-Buyer Inventory transfer, revenue/COGS evidence, immutable receipt, and exact race tests.
+1. **10A.2 — offer-aware quote authority:** certified at exact implementation source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; immutable quote binding to offer/version/seller/custody and deterministic pricing evidence.
+2. **10A.3 — atomic economic settlement:** implementation in progress on `feat/business-store-atomic-settlement-v2` / draft PR #667; Buyer Checking debit, Business cash credit, Store Listing-to-Buyer Inventory transfer, revenue/COGS evidence, immutable receipt, and exact race tests are not yet certified.
 3. **10A.4 — authenticated Player route cutover and browser acceptance:** only after displayed offer, quote, payment, seller receipt, and delivered Inventory cannot diverge.
 
 Do not skip directly from this foundation to Player UI or automatic sales convergence.
+
+## 2026-08-25 Phase 10A.3 progression record — implementation in progress
+
+The Phase 10A.1 foundation and Phase 10A.2 quote authority remain immutable historical certification records. Current Phase 10A.3 work is separately stacked on `feat/business-store-atomic-settlement-v2` / draft PR #667 and is not certified, merged, or deployed.
+
+Current implementation artifacts are:
+
+- four forward migrations: `20260825110000_business_store_offer_purchase_receipt_v2.sql`, `20260825110010_business_store_offer_purchase_receipt_result_v2.sql`, `20260825110020_business_store_offer_atomic_settlement_v2.sql`, and `20260825110030_business_store_offer_settlement_assertions_v2.sql`;
+- immutable completed table `public.store_offer_purchase_receipts`;
+- service-role-only RPC `public.settle_business_store_offer_v2(uuid, uuid, text, text, integer, bigint, text)`;
+- private projection helper `economy_private.read_store_offer_purchase_receipt_result_v2(uuid, boolean)` plus private insert-validation and immutability-guard trigger functions;
+- Store contracts, Supabase repository, application service, and bounded barrel exports at `storeOfferSettlementContracts.ts`, `supabaseStoreOfferSettlementRepository.ts`, `settleBusinessStoreOffer.ts`, and `backend/src/domains/store/index.ts`;
+- permanent structural, typed, and simulation scripts named `business-phase10-atomic-settlement-{contract,types,simulation}.mjs`;
+- permanent disposable-PostgreSQL support, full-row serial, and real-lock concurrency harnesses named `business-phase10-atomic-settlement-{database-support,database,concurrency}.mjs`;
+- permanent workflow `.github/workflows/business-store-atomic-settlement-v2.yml`.
+
+The precision boundary is explicit: Buyer Checking, Business cash, and ledger settlement accept only exact two-decimal totals, while canonical Inventory source unit cost, COGS, and derived gross margin retain four-decimal precision. No silent cost-basis rounding is authorized.
+
+The receipt table has enabled and forced RLS. Browser roles have no table or RPC access; `service_role` may select receipts and execute only the public settlement RPC, but it cannot directly insert, update, delete, truncate, reference, trigger, or maintain the table and cannot execute the private projection/trigger helpers. The `SECURITY DEFINER` settlement transaction performs the validated receipt insert, and immutable update/delete guards preserve completed evidence.
+
+Local implementation evidence currently includes repeated clean PostgreSQL 17.6 database resets, migration validation 356/356, rebuilt lint with no new Phase 10A.3 finding, an independent real-database success/replay state vector with exact debit/credit/Inventory/evidence counts and rollback cleanup, the permanent full-row serial failure/success/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. The deterministic architecture inventory was regenerated to 1,083 source files and 38 Store files.
+
+This is local in-progress evidence only. The immutable implementation commit, exact-head workflow run/jobs, and clean handoff remain pending; the permanent serial and concurrency database harnesses now exist and pass locally.
+
+- **Exact implementation SHA:** `PENDING`.
+- **Exact-head workflow run/jobs:** `PENDING`.
+- **Clean handoff SHA:** `PENDING`.
+
+No authenticated Player Store route/UI, automatic consumer sales convergence, equity/IPO, merge, deployment, secret mutation, or live database mutation is included or authorized. After a separately evidenced 10A.3 clean handoff, the next exact checkpoint is **10A.4**.

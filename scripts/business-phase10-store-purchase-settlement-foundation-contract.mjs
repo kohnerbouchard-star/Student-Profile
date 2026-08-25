@@ -57,8 +57,8 @@ function forbidTokens(text, label, tokens) {
 
 requireTokens(source.scope, "Phase 10A.1 scope", [
   "BUSINESS-V2-10A1",
-  "authority foundation locked",
-  "runtime settlement is not implemented or certified",
+  "authority foundation certified",
+  "A later runtime settlement must create exactly one durable receipt",
   "spr_[0-9a-f]{32}",
   "The retained Player Store quote/purchase path is a seeded compatibility channel",
   "Buyer Checking debit equals the quote's final total price",

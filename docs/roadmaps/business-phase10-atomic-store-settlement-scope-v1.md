@@ -1,14 +1,14 @@
 # Business V2 Phase 10A.3 — Atomic Business Seller-Offer Settlement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A3`  
-**Status:** OPEN — clean Codex implementation handoff; scope only  
+**Status:** IN_PROGRESS — local implementation and verification underway; not certified, merged, or deployed
 **Branch:** `feat/business-store-atomic-settlement-v2`  
 **Parent branch:** `feat/business-store-offer-aware-quote-v2`  
 **Parent draft PR:** #666  
 **Stacked draft PR:** #667  
 **Certified parent implementation source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`  
 **Clean parent handoff:** `38d040748a62c5aa21a7111eeab80cd7e74b9263`  
-**Handoff state:** no Phase 10A.3 runtime implementation has been committed or certified on PR #667  
+**Implementation state:** Phase 10A.3 runtime artifacts and permanent local database harnesses exist in the local owner worktree; the exact implementation SHA, exact-head workflow evidence, and clean handoff SHA remain pending
 **Temporary tooling:** the source-snapshot workflow was removed and has zero net presence at this handoff  
 
 ## Decision
@@ -20,6 +20,68 @@ The governing invariant is:
 > Buyer debit, Business credit, physical delivery, revenue, COGS, quote consumption, offer-version advancement, and immutable receipt completion are one atomic settlement. They all commit together or none exist.
 
 The retained seeded Store purchase path remains unchanged and retains its compatibility meaning.
+
+## 2026-08-25 implementation-in-progress record
+
+The bounded implementation currently adds the following forward migration family after the certified Phase 10A.2 quote authority:
+
+- `20260825110000_business_store_offer_purchase_receipt_v2.sql` — immutable completed `public.store_offer_purchase_receipts`, same-game evidence foreign keys, insert-evidence validation, update/delete immutability guard, forced RLS, and explicit table ACLs;
+- `20260825110010_business_store_offer_purchase_receipt_result_v2.sql` — private public-key-only receipt projection helper `economy_private.read_store_offer_purchase_receipt_result_v2(uuid, boolean)`;
+- `20260825110020_business_store_offer_atomic_settlement_v2.sql` — service-owned `public.settle_business_store_offer_v2(uuid, uuid, text, text, integer, bigint, text)` transaction;
+- `20260825110030_business_store_offer_settlement_assertions_v2.sql` — fail-closed schema, privilege, trigger, helper, RPC, and authority assertions.
+
+The Store source surface is limited to:
+
+- `backend/src/domains/store/contracts/storeOfferSettlementContracts.ts`;
+- `backend/src/domains/store/infrastructure/supabaseStoreOfferSettlementRepository.ts`;
+- `backend/src/domains/store/application/settleBusinessStoreOffer.ts`;
+- the bounded exports in `backend/src/domains/store/index.ts`.
+
+Permanent local verification artifacts currently present are:
+
+- `scripts/business-phase10-atomic-settlement-contract.mjs`;
+- `scripts/business-phase10-atomic-settlement-types.mjs`;
+- `scripts/business-phase10-atomic-settlement-simulation.mjs`;
+- `scripts/business-phase10-atomic-settlement-database-support.mjs`;
+- `scripts/business-phase10-atomic-settlement-database.mjs`;
+- `scripts/business-phase10-atomic-settlement-concurrency.mjs`;
+- `.github/workflows/business-store-atomic-settlement-v2.yml`.
+
+The permanent serial harness commits only into a disposable localhost database, compares complete deterministically ordered rows across the full game-scoped Store, money, Inventory, Business, identity, legacy purchase, and idempotency surface, and exercises the real RPC. Fixture creation is one transaction. The workflow rebuilds the disposable database before the serial harness and rebuilds it again before the independent concurrency harness, so immutable receipt protection is never bypassed for cleanup.
+
+### Monetary and Inventory precision
+
+- Buyer Checking, Business cash, ledger debits/credits, and gross revenue settle only totals that are exactly representable to two decimal places and fit the canonical ledger balance range.
+- Canonical Inventory source average unit cost retains four-decimal precision. COGS is `sourceUnitCost * quantity` at four-decimal Inventory/accounting precision, and gross margin is `grossRevenue - COGS` at four decimals.
+- Settlement rejects excess precision or inconsistent totals; it does not silently round an economically material input to make a command pass.
+
+### Service, RLS, and ACL boundary
+
+- `public.store_offer_purchase_receipts` has RLS enabled and forced. `anon` and `authenticated` have no table privilege. `service_role` has read-only table access and no direct insert, update, delete, truncate, reference, trigger, or maintain authority.
+- Only `service_role` may execute `public.settle_business_store_offer_v2(...)`. The `SECURITY DEFINER` transaction owns the validated receipt write.
+- The private receipt projection and receipt validation/immutability trigger helpers are not directly executable by `service_role`, `anon`, or `authenticated`.
+- A before-insert validator binds each completed receipt to its exact same-game Buyer debit, Business credit, and canonical Inventory transaction evidence; a separate trigger rejects later receipt update or deletion.
+
+### Local evidence, not certification
+
+The implementation-in-progress has the following local evidence:
+
+- complete disposable PostgreSQL 17.6 migration replay from zero passed twice;
+- migration validation passed all 356 migrations, and rebuilt-database lint produced no new Phase 10A.3 finding beyond inherited baseline findings;
+- an independent real-database quote, settlement, and replay probe passed: Buyer Checking `100 -> 85`, Business cash `20 -> 35`, listing quantity `10 -> 8`, Buyer Inventory `0 -> 2`, exactly one receipt, two ledger entries, two ledger lines, one `PURCHASED` Inventory event, one Business activity, quote version 2 consumed, offer version `2 -> 3`, matching completion timestamps, and zero durable fixture residue after outer-transaction rollback;
+- the permanent real-PostgreSQL serial harness passed malformed/wrong-scope, inactive Business/seller, terminal quote, paused offer, custody, cash-currency, Buyer-Inventory-currency, insufficient-funds, reserved/insufficient-stock, source-cost-currency, cash-overflow, self-purchase, expiry, mismatch, two distinct cross-game, exact success, immutable receipt, replay/conflict, money-precision, retained seeded-purchase/replay, and all seven injected rollback cases using the full-row mutation oracle;
+- after an independent full database rebuild, the permanent concurrency harness passed actual observed-lock races for matching idempotency, same-offer no-oversell, Buyer Checking, listing holding, Business cash overflow, purchase-first/withdrawal-first ordering, and two-game isolation;
+- Phase 10A.3 structural, typed, and deterministic simulation checks passed locally;
+- retained Phase 7A through Phase 10A.2 checks passed after a stale temporal fixture was corrected without weakening its authority assertions;
+- backend `typecheck:all`, Store 14/14, Inventory 50/50, retained Business economy/workforce/payroll/equipment/manufacturing scripts, migration/diff/YAML/interaction/security checks, and deterministic architecture regeneration passed locally; the regenerated inventory records 1,083 source files and 38 Store files.
+
+This evidence does not satisfy the completion rule while the exact implementation SHA, exact-head workflow run/jobs, and clean handoff SHA are absent.
+
+### Evidence placeholders
+
+- **Exact implementation SHA:** `PENDING — not yet committed and tested as one immutable source`.
+- **Exact-head workflow run and jobs:** `PENDING — no Phase 10A.3 workflow run is claimed`.
+- **Clean handoff SHA:** `PENDING — requires green exact-head evidence and zero temporary machinery`.
 
 ## Included authority
 
@@ -276,9 +338,11 @@ Certification of 10A.3 does not authorize Player cutover. The next expected chec
 
 ## Codex handoff state
 
-This scope is the complete bounded authority contract for the next implementation owner. At handoff:
+This scope remains the bounded authority contract for the current implementation owner. At this implementation-in-progress checkpoint:
 
-- PR #667 contains this scope only relative to the certified Phase 10A.2 parent after temporary snapshot-workflow cleanup;
-- no Phase 10A.3 migration, runtime settlement command, repository wiring, test suite, or permanent exact-head workflow is certified;
-- no merge, deployment, secret mutation, or live database mutation has occurred;
-- the next implementation owner must begin by verifying the live branch/PR/workflow state and must not treat any local or prior-chat draft as authoritative.
+- PR #667 remains the existing stacked draft authority over the certified Phase 10A.2 parent; no replacement branch or PR was created;
+- the four forward migrations, Store contracts/repository/application wiring, six permanent structural/simulation/database scripts, and permanent exact-head workflow exist only in the current implementation lineage until an exact committed SHA is recorded;
+- exact-head CI evidence and a clean handoff commit remain required; the permanent serial and concurrency harnesses now exist and pass locally against independent rebuilt databases;
+- no Phase 10A.3 implementation is certified or `VERIFIED_COMPLETE`, and the branch remains unmerged;
+- no authenticated Player route/UI, automatic demand/sales convergence, equity/IPO, merge, staging or production deployment, secret mutation, or live database mutation has occurred or is authorized;
+- after 10A.3 obtains exact-head evidence and a clean handoff, the next exact checkpoint is **10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance**.

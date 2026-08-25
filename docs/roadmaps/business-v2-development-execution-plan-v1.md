@@ -405,7 +405,7 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** QUOTE FOUNDATION COMPLETE — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 certified exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 atomic settlement is OPEN
+**Status:** SETTLEMENT IMPLEMENTATION IN PROGRESS — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 certified exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 has local implementation evidence but is not certified, merged, or deployed
 
 - [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
 - [x] Freeze one seller-offer-first economic row-lock order.
@@ -422,7 +422,19 @@ Certified checkpoint:
 
 - **10A.2:** Store-owned immutable Business-offer quote authority; exact Buyer/offer/version/Business/seller/catalog/item/custody binding; same-currency fixed-price evidence; two-minute expiry; non-reserving canonical availability snapshot; replay-before-mutable-state validation; seller-offer-first quote/withdrawal ordering; concurrency, conflict, expiry, reserved-stock, sold-out, self-purchase, cross-currency, rollback, and two-game isolation coverage. **Certified implementation and exact-head verification source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`. Dedicated workflow: `32790518745`.
 
-Exit: no paid-without-item or item-without-payment state is possible. **Not yet met; immutable quote authority is certified, while atomic settlement and authenticated Player cutover remain open.**
+### Checkpoint 10A.3 implementation-in-progress boundary
+
+- Owner: `feat/business-store-atomic-settlement-v2` / stacked draft PR #667, based on clean Phase 10A.2 handoff `38d040748a62c5aa21a7111eeab80cd7e74b9263`.
+- Four forward migrations add immutable `public.store_offer_purchase_receipts`, private public-key-only result projection and receipt guards, service-role-only `public.settle_business_store_offer_v2(...)`, and fail-closed settlement assertions: `20260825110000_business_store_offer_purchase_receipt_v2.sql`, `20260825110010_business_store_offer_purchase_receipt_result_v2.sql`, `20260825110020_business_store_offer_atomic_settlement_v2.sql`, and `20260825110030_business_store_offer_settlement_assertions_v2.sql`.
+- The bounded Store source surface is `storeOfferSettlementContracts.ts`, `supabaseStoreOfferSettlementRepository.ts`, `settleBusinessStoreOffer.ts`, and the matching `backend/src/domains/store/index.ts` exports.
+- Permanent verification files currently include `scripts/business-phase10-atomic-settlement-contract.mjs`, `scripts/business-phase10-atomic-settlement-types.mjs`, `scripts/business-phase10-atomic-settlement-simulation.mjs`, `scripts/business-phase10-atomic-settlement-database-support.mjs`, `scripts/business-phase10-atomic-settlement-database.mjs`, `scripts/business-phase10-atomic-settlement-concurrency.mjs`, and `.github/workflows/business-store-atomic-settlement-v2.yml`.
+- Exact two-decimal Buyer/Business ledger totals are kept separate from four-decimal canonical Inventory source cost, COGS, and gross-margin evidence; settlement rejects incompatible precision rather than silently rounding.
+- Receipt storage has enabled and forced RLS. Browser roles have no access; `service_role` receives receipt read plus settlement-RPC execute only, not direct receipt DML or private-helper execute authority. The security-definer transaction and receipt evidence trigger own validated completion, and update/delete guards make completed receipts immutable.
+- Local evidence currently passes repeated PostgreSQL 17.6 database rebuilds, migration validation 356/356, no new Phase 10A.3 lint finding, independent real-database quote/settlement/replay and outer-rollback cleanup, the permanent full-row serial success/failure/replay/retained-path harness, the permanent observed-lock concurrency/purchase-withdrawal/two-game harness after an independent rebuild, Phase 10A.3 structural/type/simulation checks, retained Phase 7A–10A.2 checks, backend typecheck, Store 14/14, Inventory 50/50, retained Business suites, and migration/diff/YAML/interaction/security checks. Architecture inventory regeneration records 1,083 source files and 38 Store files.
+- This local evidence is not exact-head certification. **Implementation SHA:** `PENDING`; **workflow run/jobs:** `PENDING`; **clean handoff SHA:** `PENDING`.
+- No authenticated Player route/UI, automatic demand/sales convergence, equity/IPO, merge, staging or production deployment, secret mutation, or live database mutation is authorized or included.
+
+Exit: no paid-without-item or item-without-payment state is possible. **Not yet met at the durable completion boundary; the local transaction and permanent serial/concurrency proofs exist, but exact-head workflow evidence and a clean handoff remain open. After that evidence, the next exact checkpoint is 10A.4 authenticated Player cutover and connected browser acceptance.**
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
