@@ -232,8 +232,9 @@ scheduler/runtime roadmap owners.
 ### Business V2 planning reconciliation — 2026-08-25
 
 This map was re-audited against fetched `origin/main`
-`dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, the local `ARCH-100F`
-checkpoint `9646509c12ac747693fdaefb6aa28908ae872321`, and the active Business
+`dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, the then-local `ARCH-100F`
+checkpoint `9646509c12ac747693fdaefb6aa28908ae872321` subsequently reconciled
+and published in draft PR #668, and the active Business
 V2 stack. The Business work is not in `main`: PR #648 and stacked PRs
 #654–#667 are all draft, unmerged and undeployed. Their branch-local
 certification records are useful evidence only and satisfy no dependency in
@@ -351,11 +352,15 @@ gate before that feature may merge.
 `refactor/multi-game-bootstrap-context-hydration-v1`, created from exact verified
 main/release SHA `59a82ef8580d7d571727e722424bc84cf064e8aa` and tree
 `7ccf90a65bc0e1717b96f66a7ebca929513e96bf` after the `ARCH-100E` verification
-ledger merged. The pushed branch-local checkpoint is
-`9646509c12ac747693fdaefb6aa28908ae872321`; it has no pull request, is one
-commit ahead and 18 commits behind fetched `origin/main`
-`dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, and is not an acceptance
-candidate until reconciled. The 2026-08-25 collision audit covers #619, #620,
+ledger merged. Planning reconciliation commit
+`001e9b35c3dda8197d5bd497b95d0126bbd60bca` records the refreshed ownership
+audit. The branch merged fetched, unchanged `origin/main`
+`dcb68958102f4ecbf07fe9e52d6eede4d5e692ff` normally as
+`20e5b649bd9472f49333bc21118de6b60b8d9eeb`; its sole conflict was the
+generated inventory, which was regenerated rather than selected or hand
+edited. Bounded implementation commit
+`88b3e96e4570b027597afa24b91c6de3cdb0c0e4` is published in draft PR #668
+with tree `6ba09a1d240e6b7bfafe2945475221c789fdbf55`. The 2026-08-25 collision audit covers #619, #620,
 #624, #626, #642, Business integration PR #648 and stacked Business PRs
 #654–#667. No active owner touches the bounded `ARCH-100F` runtime, tests,
 package registration or roadmap source. Its sole exact-path overlap with current
@@ -371,16 +376,33 @@ workflows, browser/UI, authority-manifest or Business-owned files. Exact-path st
 `feat/story-narrative-convergence-v1` overlap bounded paths or package
 registration and remain prohibited from merge or cherry-pick.
 
-The checkpoint implements the reviewed neutral Staff context, Auth-owned game
-discovery/profile/hydration, Staff/Classroom/Web Session bootstrap composition,
-Game Sessions delegation and Admin multi-game hydration, but remains
-`IN_PROGRESS`. Skeptical review requires three additional proof gates before
-reconciliation can become an acceptance candidate: Staff missing-environment
-and resolver/auth/claims/rate failures must prove zero repository/request-ID/
-context work; Admin guard denial must prove zero hydration/context work; and
-executable route-level parity/privacy must cover bootstrap, games, switch, base
-game and dashboard responses. All prior test results are branch-local and must
-be rerun after current-main reconciliation.
+The reconciled candidate implements the reviewed neutral Staff context,
+Auth-owned game discovery/profile/hydration, Staff/Classroom/Web Session
+bootstrap composition, Game Sessions delegation and Admin multi-game
+hydration. It also closes all three skeptical-review gaps: table-driven Staff
+pre-bootstrap denials prove zero repository/discovery/request-ID/context/
+hydration work; a real Admin unrelated-grant denial proves exactly one
+Staff/grant evaluation and zero request-ID/profile/game/context/route work; and
+executable route tests preserve exact zero/multi-game bootstrap, games, switch,
+base-game and selected-game dashboard envelopes, ordering, `no-store` behavior
+and privacy. Staff 36/36, Game Sessions 58/58, Admin API 184/184, Admin local
+80/80, lifecycle 16/16, `typecheck:all`, seven frozen Edge-root checks, full
+root `npm test`, Admin/auth/Web Session suites and every architecture/safety
+gate pass. The regenerated inventory records 1,060 source files and 25 Edge
+entrypoints with all debt limits flat or lower and every zero-tolerance
+category at zero.
+
+`ARCH-100F` nevertheless remains `IN_PROGRESS`. Mandatory backend smoke fails
+only after reaching the untouched current-main Player Progression suite: 23
+tests pass and 5 static 2026-07-21 fixture cases fail because they are older
+than the production 30-day event window on 2026-08-25. The file and service are
+byte-identical to `origin/main`, while the cumulative Business owner already
+edits the exact test to inject fixed time. F cannot import that donor change
+without violating its collision boundary. Draft PR #668 therefore has no
+accepted-head, merge, runtime or completion credit. After the owning fixture
+resolution lands, F must merge advanced main normally if necessary, regenerate
+the inventory, rerun every gate at the exact head, and complete merge/runtime/
+verification-ledger evidence before any later owner starts.
 
 Before runtime implementation, the exact reviewed roots and direct/internal
 composition edges are:

@@ -257,17 +257,71 @@ Started multi-game bootstrap hydration (2026-08-18): dependency-serialized `ARCH
 
 Mandatory pre-code `ARCH-100F` root/edge ledger: `admin-api/index.ts::Deno.serve` calls `common.resolveContext` for bearer authentication, Staff ID and all-status owner-filtered ID-only game discovery, then `guardAdminRequest` exactly once; only post-guard does one server request ID feed distinct per-game Admin contexts and Auth-owned all-or-nothing profile/game hydration, with each row retained beside its exact context. The hydrated set serves global bootstrap/games/switch through `handleGlobalRoute`/`selectGame`/`gameDto`, base `/games/:id` and `/games/:id/dashboard` through `ensureOwnedGame`/`gameRoutes.handleGameRead`/`gameDto`, and existing full-row Admin consumers including archive confirmation. `staff-api/index.ts::Deno.serve` and `classroom-api/index.ts::Deno.serve` both call `staffBootstrapHttpHandler.handleStaffBootstrapRequest`; `web-session-api/index.ts::Deno.serve` reaches the same handler through successful login, status and MFA flows via `loadStaffBootstrap` and its trusted-IP internal dependency wrapper. The shared handler preserves method/environment checks and exactly one `resolveStaffSessionForRequest` security/rate boundary, then performs active-only ID discovery, one request ID, distinct neutral Staff contexts, and Auth-owned hydration. Discovery selects only owner-filtered IDs in existing descending order; hydration rechecks owner and Staff active status, validates exact cardinality/membership/shape, restores discovery order and fails all-or-nothing. Zero games performs no game hydration query. Staff/Classroom join-code and settings routes remain exact Game Sessions regression edges through `handleResetGameJoinCodeRequest`/`handleGameSettingsRequest`; the Game Sessions Staff contract/factory becomes only a neutral type alias/re-export/delegate. Admin all-status versus Staff active-only behavior, selection fallback, join-code mapping, routes, envelopes, browser privacy, guards, schemas, RPCs, economic/idempotency authority, UI and deployment remain unchanged. Every listed root/edge, the focused neutral/Auth/repository/composition seams, Game Sessions, Admin API, auth/Web Session, typecheck/smoke/full-root suites, architecture/safety gates and exact-head/exact-merge Edge/release/Vercel/health evidence are mandatory before `VERIFIED_COMPLETE`.
 
-Planning reconciliation after Business architecture drift (2026-08-25): fetched
+Planning reconciliation start snapshot after Business architecture drift
+(2026-08-25): fetched
 `origin/main` is `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`; the pushed
 `ARCH-100F` checkpoint is `9646509c12ac747693fdaefb6aa28908ae872321`,
-has no pull request, and is one commit ahead and 18 commits behind that main.
+had no pull request and was one commit ahead and 18 commits behind that main.
 The checkpoint contains the bounded implementation described above, so the
 earlier “pre-code” label records its original gate rather than current status.
-It remains `IN_PROGRESS`: reconciliation must regenerate the one conflicting
+It remained `IN_PROGRESS`: reconciliation had to regenerate the one conflicting
 architecture-inventory file, close Staff negative-boundary, Admin guard-denial,
 and route-level parity/privacy proof gaps, and rerun all local and exact-source
 acceptance. Prior branch-local passing results do not transfer across the
 current-main reconciliation.
+
+Reconciled implementation candidate (2026-08-25): planning reconciliation
+commit `001e9b35c3dda8197d5bd497b95d0126bbd60bca` was followed by the required
+normal merge of unchanged `origin/main` as merge commit
+`20e5b649bd9472f49333bc21118de6b60b8d9eeb`; the sole conflict was the
+generated architecture inventory and it was regenerated with
+`node scripts/architecture/build-architecture-inventory.mjs`. Bounded
+implementation commit `88b3e96e4570b027597afa24b91c6de3cdb0c0e4` and tree
+`6ba09a1d240e6b7bfafe2945475221c789fdbf55` close all three reviewed
+evidence gaps. Staff bootstrap now has a private default-preserving
+environment-reader seam plus table-driven environment, resolver, Auth, claims,
+rate-limit and exception denial evidence proving zero repository, discovery,
+request-ID, application-context and hydration work. Admin bootstrap now uses
+one real guard-and-hydrate composition helper; guard denial precedes request-ID
+and context creation; the three bootstrap/global routes are isolated in a
+side-effect-free router after the unchanged provisioning/account probes; and
+the dashboard has test-only final loader seams with unchanged production
+defaults. Executable response-parity tests cover zero/one/multi-game selection,
+multi-game and empty bootstrap, all-status games ordering and join-code
+mapping, owned/non-owned switch, base game, selected-game dashboard scoping,
+exact envelopes, `no-store` behavior and persistence/security-field privacy.
+Draft PR #668 owns this exact candidate.
+
+Local reconciled evidence is green except for the mandatory backend smoke:
+Staff bootstrap 36/36; Game Sessions 58/58; Admin API 184/184; Admin local
+mutations 80/80; game lifecycle 16/16; `typecheck:all`; frozen Deno checks for
+bootstrap, Staff, Staff MFA, Player, Player Web Session, Web Session and
+password-reset roots; Admin local UI/architecture 17/17; Admin game-session
+controls and lifecycle; Admin v2 84/84; auth boundaries 16/16 plus 8/8; Web
+Session release 39/39 plus 6/6; and complete root `npm test`. Architecture,
+Admin-contract, high-priority, legacy-runtime, migration, secret, touched
+TypeScript format and diff gates pass. The regenerated inventory contains 1,060
+source files and 25 Edge entrypoints; measured debt is flat or lower at 99
+persistence candidates, 168 cross-domain deep imports, 209 compatibility-marker
+files, 100 oversized source files and 5 oversized handlers, with every
+zero-tolerance category still zero. The PR diff changes no migration, RPC,
+workflow, root manifest, UI, deployment, Business source, economic write or
+idempotency contract.
+
+Unresolved acceptance blocker (2026-08-25): `npm --prefix backend run smoke`
+reaches Player Progression and then reports 23 passes and 5 failures in
+`progressionIntegrationEventService.test.ts`. That file and its service are
+byte-identical to fetched `origin/main`; the static 2026-07-21 fixture has aged
+past the production 30-day event window on the 2026-08-25 clock. The cumulative
+Business owner already edits that exact test to inject a fixed `now`, so
+copying or cherry-picking the donor fix into F would violate the collision and
+Business-source exclusions. `ARCH-100F` therefore remains `IN_PROGRESS` in
+draft PR #668 with no accepted head, merge, deployment or runtime credit. The
+next exact action is for the owning current-main/Business work to land or
+otherwise resolve the deterministic fixture, then merge any advanced main
+normally, regenerate the inventory, rerun every gate at the exact PR head, and
+proceed to merge/runtime/verification-ledger evidence only when all gates are
+green. `ARCH-100G0` and every later owner remain blocked.
 
 Business V2 is simultaneously active and unfinished. PR #648 plus stacked draft
 PRs #654–#667 are unmerged and undeployed; the current cumulative tip
