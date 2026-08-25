@@ -6,8 +6,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { runConnectedPlayerBffAcceptance as runBaseConnectedPlayerBffAcceptance } from "./connected-player-bff-acceptance-loader.mjs";
 import { restartLocalEdgeRuntime } from "./local-edge-runtime-isolation.mjs";
 
-const entryPath = fileURLToPath(import.meta.url);
-const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
 const before = `  const form = sender.page.locator('form[data-endpoint="bankTransfer"]');
   await form.evaluate((element) => { const details = element.closest("details"); if (details) details.open = true; });
   await form.locator('[name="recipientPlayerIdentifier"]').fill(recipient.playerIdentifier);`;
@@ -47,24 +45,30 @@ const after = `  const transferForms = sender.page.locator('form[data-endpoint="
     await sender.page.waitForTimeout(250);
   }`;
 
-const originalSource = await readFile(corePath, "utf8");
-const matches = originalSource.split(before).length - 1;
-if (matches !== 1) {
-  throw new Error(`Connected commerce transfer stabilization expected one canonical match, found ${matches}.`);
-}
-const patchedSource = originalSource.replace(before, after);
-const temporaryDirectory = await mkdtemp(
-  join(dirname(entryPath), ".commerce-bff-disclosure-"),
-);
-const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
-const temporaryCorePath = temporaryEntryPath.replace(/\.mjs$/u, ".core.mjs");
-
-try {
-  await writeFile(temporaryCorePath, patchedSource, "utf8");
-  await restartLocalEdgeRuntime();
-  await runBaseConnectedPlayerBffAcceptance(
-    pathToFileURL(temporaryEntryPath).href,
+async function runConnectedPlayerBffAcceptance(entryUrl) {
+  const entryPath = fileURLToPath(entryUrl);
+  const corePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
+  const originalSource = await readFile(corePath, "utf8");
+  const matches = originalSource.split(before).length - 1;
+  if (matches !== 1) {
+    throw new Error(`Connected commerce transfer stabilization expected one canonical match, found ${matches}.`);
+  }
+  const patchedSource = originalSource.replace(before, after);
+  const temporaryDirectory = await mkdtemp(
+    join(dirname(entryPath), ".commerce-bff-disclosure-"),
   );
-} finally {
-  await rm(temporaryDirectory, { recursive: true, force: true });
+  const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
+  const temporaryCorePath = temporaryEntryPath.replace(/\.mjs$/u, ".core.mjs");
+
+  try {
+    await writeFile(temporaryCorePath, patchedSource, "utf8");
+    await runBaseConnectedPlayerBffAcceptance(
+      pathToFileURL(temporaryEntryPath).href,
+    );
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 }
+
+await restartLocalEdgeRuntime();
+await runConnectedPlayerBffAcceptance(import.meta.url);
