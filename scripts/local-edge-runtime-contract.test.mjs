@@ -9,6 +9,14 @@ const CAMPAIGN_RUNTIME_CLIENT = new URL(
   "../backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts",
   import.meta.url,
 );
+const FX_ORCHESTRATOR_HANDLER = new URL(
+  "../backend/src/domains/fx/api/fxOrchestratorHttpHandler.ts",
+  import.meta.url,
+);
+const FX_ORCHESTRATOR_REPOSITORY = new URL(
+  "../backend/src/domains/fx/infrastructure/supabaseFxFixingRepository.ts",
+  import.meta.url,
+);
 const AUTH_MANIFEST = new URL("../backend/supabase/admin-auth-edge-function-manifest.json", import.meta.url);
 const AUTH_STAGING_WORKFLOW = new URL("../.github/workflows/admin-auth-surface-staging-candidate.yml", import.meta.url);
 const AUTH_PRODUCTION_WORKFLOW = new URL("../.github/workflows/admin-auth-surface-production-promote.yml", import.meta.url);
@@ -26,6 +34,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "classroom-api": true,
   "campaign-orchestrator": false,
   "game-data-purger": false,
+  "fx-orchestrator": false,
   "stock-market-runner": false,
   "stock-market-read": false,
   "stock-market-seed-copy": false,
@@ -39,6 +48,7 @@ const CUSTOM_AUTH_FUNCTIONS = new Set([
   "admin-email-verification",
   "campaign-orchestrator",
   "game-data-purger",
+  "fx-orchestrator",
   "stock-market-orchestrator",
   "stock-tick-archiver",
 ]);
@@ -54,10 +64,18 @@ function section(source, name) {
 }
 
 test("local Supabase starts every declared split Edge security boundary", async () => {
-  const [config, packageSource, campaignClientSource] = await Promise.all([
+  const [
+    config,
+    packageSource,
+    campaignClientSource,
+    fxHandlerSource,
+    fxRepositorySource,
+  ] = await Promise.all([
     readFile(CONFIG, "utf8"),
     readFile(PACKAGE, "utf8"),
     readFile(CAMPAIGN_RUNTIME_CLIENT, "utf8"),
+    readFile(FX_ORCHESTRATOR_HANDLER, "utf8"),
+    readFile(FX_ORCHESTRATOR_REPOSITORY, "utf8"),
   ]);
 
   assert.match(section(config, "edge_runtime"), /(?:^|\n)enabled\s*=\s*true(?:\s|$)/);
@@ -75,6 +93,8 @@ test("local Supabase starts every declared split Edge security boundary", async 
       : "";
     functionSources[name] = `${entrypoint}\n${runtime}`;
   }
+  functionSources["fx-orchestrator"] +=
+    `\n${fxHandlerSource}\n${fxRepositorySource}`;
 
   const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
     .map((match) => match[1]);
@@ -142,6 +162,9 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(functionSources["stock-tick-archiver"], /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(functionSources["game-data-purger"], /verify_runtime_scheduler_token_v1/);
   assert.match(functionSources["game-data-purger"], /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(functionSources["fx-orchestrator"], /x-econovaria-scheduler-token/);
+  assert.match(functionSources["fx-orchestrator"], /verify_runtime_scheduler_token_v1/);
+  assert.match(functionSources["fx-orchestrator"], /SUPABASE_SERVICE_ROLE_KEY/);
   for (const name of expectedFalse.filter((value) => value.startsWith("stock-market-") && value !== "stock-market-orchestrator")) {
     assert.match(functionSources[name], /handleStockMarket/);
   }

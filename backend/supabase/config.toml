@@ -140,6 +140,12 @@ verify_jwt = false
 [functions.game-data-purger]
 verify_jwt = false
 
+# Database-owned daily FX fixing endpoint. It accepts no game or economic
+# input, authenticates a Vault-held scheduler token through the private hash
+# verifier, and uses service-role access only for the canonical FX RPCs.
+[functions.fx-orchestrator]
+verify_jwt = false
+
 # Deployed compatibility surface. Browser runtime must not target this function.
 # admin-api still forwards a bounded set of authenticated Staff operations here
 # server-side. Keep platform JWT verification enabled and retire the function only

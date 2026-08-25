@@ -47,6 +47,12 @@
       "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
     },
     {
+      "slug": "fx-orchestrator",
+      "entrypoint": "backend/supabase/functions/fx-orchestrator/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
+    },
+    {
       "slug": "player-api",
       "entrypoint": "backend/supabase/functions/player-api/index.ts",
       "verifyJwt": false,

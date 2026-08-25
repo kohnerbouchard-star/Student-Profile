@@ -1,0 +1,237 @@
+name: Canonical FX Authority V1
+
+on:
+  pull_request:
+    branches:
+      - feat/business-player-store-cutover-v2
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - converted_to_draft
+      - ready_for_review
+    paths:
+      - ".github/workflows/canonical-fx-authority-v1.yml"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/scripts/typecheckAllEdgeRoots.mjs"
+      - "backend/src/domains/fx/**"
+      - "backend/src/domains/storylines/services/storyEffectEngine.ts"
+      - "backend/src/domains/storylines/services/storyWorldFxEffectContracts.test.ts"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/edge-function-manifest.json"
+      - "backend/supabase/functions/fx-orchestrator/**"
+      - "backend/supabase/migrations/20260825223806_canonical_fx_authority_v1.sql"
+      - "docs/roadmaps/canonical-fx-authority-scope-v1.md"
+      - "docs/roadmaps/business-v2-development-execution-plan-v1.md"
+      - "docs/roadmaps/business-v2-development-execution-log-v1.md"
+      - "scripts/canonical-fx-authority-contract.mjs"
+      - "scripts/canonical-fx-authority-database.mjs"
+      - "scripts/edge-function-inventory/**"
+      - "scripts/local-edge-runtime-contract.test.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-fx-authority-v1-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  exact-head-static:
+    name: Exact-head static authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_PR_NUMBER: "671"
+      EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_REF: feat/canonical-fx-authority-v1
+      EXPECTED_BASE_REF: feat/business-player-store-cutover-v2
+      EXPECTED_DRAFT: ${{ github.event.pull_request.draft }}
+    steps:
+      - name: Check out the immutable PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed outside the bounded draft PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "pull_request"
+          test "$EVENT_PR_NUMBER" = "$EXPECTED_PR_NUMBER"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          git cat-file -e "$EXPECTED_BASE_SHA^{commit}"
+          test "$GITHUB_HEAD_REF" = "$EXPECTED_HEAD_REF"
+          test "$GITHUB_BASE_REF" = "$EXPECTED_BASE_REF"
+          test "$EXPECTED_DRAFT" = "true"
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned root tools
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Verify canonical FX and repository contracts
+        run: |
+          node scripts/canonical-fx-authority-contract.mjs
+          npm run security:secrets
+          npm run audit:migrations
+          npm run test:auth-boundaries
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          git diff --check "$EXPECTED_BASE_SHA...$EXPECTED_HEAD_SHA"
+
+  backend-compatibility:
+    name: FX and adjacent-domain compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_PR_NUMBER: "671"
+      EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_REF: feat/canonical-fx-authority-v1
+      EXPECTED_BASE_REF: feat/business-player-store-cutover-v2
+      EXPECTED_DRAFT: ${{ github.event.pull_request.draft }}
+    steps:
+      - name: Check out the immutable PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed outside the bounded draft PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "pull_request"
+          test "$EVENT_PR_NUMBER" = "$EXPECTED_PR_NUMBER"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          git cat-file -e "$EXPECTED_BASE_SHA^{commit}"
+          test "$GITHUB_HEAD_REF" = "$EXPECTED_HEAD_REF"
+          test "$GITHUB_BASE_REF" = "$EXPECTED_BASE_REF"
+          test "$EXPECTED_DRAFT" = "true"
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up pinned Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned Backend tools
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --prefix backend --ignore-scripts
+
+      - name: Verify deterministic FX authority
+        run: npm --prefix backend run test:fx
+
+      - name: Verify Story compatibility
+        working-directory: backend
+        run: |
+          deno test \
+            --config supabase/functions/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/domains/storylines/services/storyEffectEngine.test.ts \
+            src/domains/storylines/services/storyWorldFxEffectContracts.test.ts
+
+      - name: Verify World and Economy compatibility
+        run: |
+          npm --prefix backend run test:player-world
+          npm --prefix backend run test:world-runtime
+          npm --prefix backend run test:player-banking-public
+          npm --prefix backend run test:economic-ledger-invariants
+
+      - name: Verify Stocks and Store compatibility
+        run: |
+          npm --prefix backend run test:stock-market-calendar
+          npm --prefix backend run test:player-market-assets
+          npm --prefix backend run test:player-store-public
+
+      - name: Typecheck every Backend and Edge root
+        run: npm --prefix backend run typecheck:all
+
+  disposable-database:
+    name: Disposable migration replay and lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_PR_NUMBER: "671"
+      EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_REF: feat/canonical-fx-authority-v1
+      EXPECTED_BASE_REF: feat/business-player-store-cutover-v2
+      EXPECTED_DRAFT: ${{ github.event.pull_request.draft }}
+    steps:
+      - name: Check out the immutable PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed outside the bounded draft PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "pull_request"
+          test "$EVENT_PR_NUMBER" = "$EXPECTED_PR_NUMBER"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          git cat-file -e "$EXPECTED_BASE_SHA^{commit}"
+          test "$GITHUB_HEAD_REF" = "$EXPECTED_HEAD_REF"
+          test "$GITHUB_BASE_REF" = "$EXPECTED_BASE_REF"
+          test "$EXPECTED_DRAFT" = "true"
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install the lockfile-pinned Supabase CLI
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Require disposable Docker support
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker info >/dev/null
+
+      - name: Start a disposable local Supabase stack
+        run: npx --no-install supabase start --workdir backend --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor
+
+      - name: Replay every forward migration from zero (first pass)
+        run: npx --no-install supabase db reset --workdir backend --local
+
+      - name: Replay every forward migration from zero (second pass)
+        run: npx --no-install supabase db reset --workdir backend --local
+
+      - name: Exercise canonical FX authority against the rebuilt database
+        run: node scripts/canonical-fx-authority-database.mjs
+
+      - name: Lint the twice-rebuilt local schema
+        run: npx --no-install supabase db lint --workdir backend --local --level warning
+
+      - name: Stop the disposable stack
+        if: always()
+        run: npx --no-install supabase stop --workdir backend --no-backup || true

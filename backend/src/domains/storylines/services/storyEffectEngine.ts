@@ -20,6 +20,7 @@ import type {
 } from "../contracts/storyEffectExecutionContracts.ts";
 
 const OFFICIAL_CURRENCY_CODES = new Set([
+  "ECO",
   "NRC",
   "YRC",
   "THD",
@@ -398,7 +399,9 @@ async function executeWorldRouteStateEffect(
       50000,
     ),
     appliedAt: input.now,
-    idempotencyKey: `story_route:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+    idempotencyKey: `story_route:${input.storylineEventId}:${
+      input.effectIndex ?? 0
+    }`,
   };
 
   return collectWriteIds(
@@ -429,8 +432,9 @@ async function executeWorldLocationStateEffect(
       ["normal", "shortage", "conflict", "closed"] as const,
     ),
     appliedAt: input.now,
-    idempotencyKey:
-      `story_location:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+    idempotencyKey: `story_location:${input.storylineEventId}:${
+      input.effectIndex ?? 0
+    }`,
   };
 
   return collectWriteIds(
@@ -449,7 +453,9 @@ async function executeCurrencyVolatilityEffect(
     storylineEventId: input.storylineEventId,
     adjustmentsBasisPoints: readCurrencyAdjustments(effect.payload),
     appliedAt: input.now,
-    idempotencyKey: `story_fx:${input.storylineEventId}:${input.effectIndex ?? 0}`,
+    idempotencyKey: `story_fx:${input.storylineEventId}:${
+      input.effectIndex ?? 0
+    }`,
   };
 
   return collectWriteIds(
@@ -718,7 +724,10 @@ function readIntegerPayload(
   maximum: number,
 ): number {
   const value = payload[key];
-  if (!Number.isInteger(value) || Number(value) < minimum || Number(value) > maximum) {
+  if (
+    !Number.isInteger(value) || Number(value) < minimum ||
+    Number(value) > maximum
+  ) {
     throw new Error(`${effectType} payload ${key} is invalid.`);
   }
   return Number(value);
@@ -745,15 +754,19 @@ function readCurrencyAdjustments(payload: JsonObject): JsonObject {
         "currency_volatility adjustments must use official currency codes and integer basis points between -1500 and 1500.",
       );
     }
-    if (currencyCode === "VAL" && basisPoints !== 0) {
-      throw new Error("currency_volatility keeps VAL as the zero-adjustment numeraire.");
+    if (currencyCode === "ECO" && basisPoints !== 0) {
+      throw new Error(
+        "currency_volatility keeps ECO as the zero-adjustment numeraire.",
+      );
     }
     hasNonzero ||= Number(basisPoints) !== 0;
     result[currencyCode] = Number(basisPoints);
   }
 
   if (!hasNonzero) {
-    throw new Error("currency_volatility requires at least one nonzero adjustment.");
+    throw new Error(
+      "currency_volatility requires at least one nonzero adjustment.",
+    );
   }
 
   return Object.freeze(result);
