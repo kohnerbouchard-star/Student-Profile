@@ -360,11 +360,13 @@ function mapClaimedCommand(
   const effectKind = String(row.effect_kind);
   if (![
     "publish_news",
+    "publish_cutscene",
     "create_contract",
     "notify_players",
     "apply_market_shock",
     "set_store_scarcity",
     "set_route_state",
+    "apply_player_impact",
   ].includes(effectKind)) {
     throw invalid("Claimed campaign effect kind is invalid.");
   }

@@ -125,6 +125,12 @@ verify_jwt = false
 [functions.stock-market-orchestrator]
 verify_jwt = false
 
+# Database-owned campaign scheduler endpoint. It authenticates a dedicated
+# Vault-held scheduler token against the private hash verifier before processing
+# bounded campaign transitions and durable outbox effects.
+[functions.campaign-orchestrator]
+verify_jwt = false
+
 # Operational storage lifecycle boundaries. Both authenticate Vault-held scheduler
 # tokens through the private verifier before using service-role database access.
 # Platform JWT verification must remain disabled for these internal runtimes.
