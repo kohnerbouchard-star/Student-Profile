@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { runConnectedPlayerBffAcceptance } from "./connected-player-bff-acceptance-loader.mjs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { runConnectedPlayerBffAcceptance as runBaseConnectedPlayerBffAcceptance } from "./connected-player-bff-acceptance-loader.mjs";
 import { restartLocalEdgeRuntime } from "./local-edge-runtime-isolation.mjs";
 
 const entryPath = fileURLToPath(import.meta.url);
@@ -52,11 +53,18 @@ if (matches !== 1) {
   throw new Error(`Connected commerce transfer stabilization expected one canonical match, found ${matches}.`);
 }
 const patchedSource = originalSource.replace(before, after);
+const temporaryDirectory = await mkdtemp(
+  join(dirname(entryPath), ".commerce-bff-disclosure-"),
+);
+const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
+const temporaryCorePath = temporaryEntryPath.replace(/\.mjs$/u, ".core.mjs");
 
-await writeFile(corePath, patchedSource, "utf8");
 try {
+  await writeFile(temporaryCorePath, patchedSource, "utf8");
   await restartLocalEdgeRuntime();
-  await runConnectedPlayerBffAcceptance(import.meta.url);
+  await runBaseConnectedPlayerBffAcceptance(
+    pathToFileURL(temporaryEntryPath).href,
+  );
 } finally {
-  await writeFile(corePath, originalSource, "utf8");
+  await rm(temporaryDirectory, { recursive: true, force: true });
 }
