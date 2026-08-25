@@ -1222,3 +1222,58 @@ Phase 3 is not complete. The legacy Player API still advertises and executes the
 ### Next authorized step
 
 **Phase 10 checkpoint 10A.2 — immutable offer-aware quote authority is OPEN.** Add only the durable quote schema, service-only quote command/repository, exact replay and conflict behavior, expiry/version/custody validation, typed public contract, deterministic tests, and exact-head certification. Do not add Buyer debit, seller credit, Inventory transfer, revenue/COGS, Player route/UI, automatic sales, equity/IPO, merge, deployment, secrets, or live database mutation.
+
+---
+
+## 2026-08-25 — Phase 10A.2 COMPLETE: immutable Business seller-offer quote authority
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`.
+- Feature branch: `feat/business-store-offer-aware-quote-v2`.
+- Stacked draft PR: #666, based on the clean certified Phase 10A.1 handoff `34776a124e6595b67ffb7e52357fd5a1d9194435` / PR #665.
+- PR #666 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged.
+- No merge, staging deployment, production deployment, secret mutation, or live database mutation was performed.
+- The later documentation-only certification commit does not replace `ad57d5b9307178229a6b47b3206d258f1bd9b70d` as the exact tested implementation source.
+
+### What is now authoritative
+
+- `public.store_offer_purchase_quotes` is a separate Store-owned quote authority for Business seller offers; the retained seeded Store quote table retains its historical compatibility meaning.
+- One immutable public `quote_...` record binds trusted game and Buyer scope to one exact active Business offer/version, Business, seller party, Store item, canonical item, offer-scoped listing account, quantity, availability snapshot, unit/total price, currency, pricing version, creation time, expiry, and request hash.
+- Quote creation accepts only trusted game/Buyer scope plus offer key, quantity, expected version, and idempotency key. Business, seller, catalog, item, custody, country, currency, pricing, and expiry values remain server derived.
+- Quotes are non-reserving. Phase 10A.3 must re-lock and revalidate the offer/version and exact canonical availability before any economic mutation.
+- The first Business-offer purchase path is same-currency only with `exchangeRate = 1`; cross-currency settlement remains closed until a named FX-clearing authority and two-sided immutable evidence exist.
+- Durable Buyer-scoped replay resolves before mutable state validation; exact retries converge to one quote, conflicting key reuse fails closed, and replay cannot extend, reprice, reserve, or reactivate a quote.
+- Seller-offer-first locking makes quote-first snapshot the pre-mutation version while withdrawal-first changes the offer to `withdrawal_pending` and causes the later quote to reject.
+- Service-role-only persistence, forced RLS, immutable identity/lifecycle guards, public-key-only contracts, and two-game isolation remain enforced.
+
+### Exact-head verification on `ad57d5b9307178229a6b47b3206d258f1bd9b70d`
+
+- **Business Store Offer-Aware Quotes V2 — PASS** (`32790518745`).
+- `contract-and-quality` — **PASS**: Phase 10A.2 contracts/types/simulations, retained 10A.1/9A/8A/7A authority, migration validation, deterministic architecture inventory, Repository Quality, and Supply Chain Security.
+- `retained-runtime` — **PASS**: Business formation/economy/domain/stockroom/procurement/Banking, workforce/payroll, equipment, timed manufacturing, Store/Inventory lifecycle, all Backend/Edge TypeScript, and Player Edge entrypoints.
+- `database-replay` — **PASS**: complete replay from zero twice plus rebuilt-database lint.
+- `player-and-browser` — **PASS**: standalone Player Terminal verification, adapter/capability/runtime integration, and Chromium.
+
+### Phase 10A.2 exit result
+
+- Immutable quote identity and exact offer/version/seller/custody scope: **met**.
+- Trusted Buyer/game scope and server-derived economic identity: **met**.
+- Same-currency deterministic pricing and exact two-minute expiry: **met**.
+- Non-reserving canonical availability snapshot: **met**.
+- Replay, idempotency conflict, concurrency, quote/withdrawal ordering, expiry, reserved-stock, sold-out, self-purchase, cross-currency, and two-game guards: **met**.
+- Complete database, backend/all Edge, retained Business/Banking/Store/Inventory/workforce/equipment/manufacturing, repository, security, Player, and Chromium matrix: **met**.
+- No economic settlement, Player cutover, deployment, or live mutation: **met**.
+
+### Decisions and unresolved boundaries
+
+- A quote is price evidence, not an Inventory reservation. Settlement must revalidate current offer status/version and exact unreserved listing quantity.
+- Cross-currency Business Store settlement remains unsupported by design.
+- The retained seeded quote/purchase authority remains unchanged until an explicit later cutover.
+- Buyer Checking debit, Business cash credit, Store Listing-to-Buyer transfer, revenue/COGS, receipt completion, Player routes/UI, automatic demand convergence, equity/IPO, merge, staging, and production remain unauthorized.
+- Temporary Phase 10A.2 finalizer workflows have zero net presence in the final branch tree.
+
+### Next authorized step
+
+**Phase 10A.3 — atomic economic settlement is OPEN.** Create a separate stacked draft branch/PR from the clean Phase 10A.2 handoff. Implement one service-owned transaction with the fixed offer-first lock order: replay resolution, quote and offer revalidation, listing holding, Buyer Checking, Business cash, Buyer Inventory, canonical ledger/Inventory posting, immutable `spr_...` receipt completion, quote consumption, and offer-version advancement. Prove paid-without-item, item-without-payment, one-sided money movement, settlement-without-receipt, purchase/withdrawal inversion, conflicting replay, rollback, and cross-game mutation are impossible. Do not include authenticated Player route/UI cutover, automatic sales convergence, equity/IPO, merge, deployment, secrets, or live database mutation.

@@ -1,12 +1,16 @@
 # Business V2 Phase 10A.2 — Offer-Aware Quote Authority Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A2`
-**Status:** IN PROGRESS — implementation prepared for exact-head verification
+**Status:** COMPLETE — checkpoint 10A.2 durably certified
 **Branch:** `feat/business-store-offer-aware-quote-v2`
 **Parent branch:** `feat/business-store-purchase-settlement-v2`
 **Parent draft PR:** #665
+**Stacked draft PR:** #666
 **Certified parent implementation source:** `1abc8b878df5b08716107adb467bd013e85b6df4`
 **Clean parent handoff:** `34776a124e6595b67ffb7e52357fd5a1d9194435`
+**Exact certified implementation and verification source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`
+**Dedicated exact-head workflow:** Business Store Offer-Aware Quotes V2 `32790518745`
+**Certification date:** 2026-08-25
 
 ## Decision
 
@@ -137,8 +141,19 @@ One exact implementation SHA must pass:
 - standalone Player Terminal and Chromium checks;
 - `git diff --check`.
 
+## Certification evidence
+
+The exact implementation source `ad57d5b9307178229a6b47b3206d258f1bd9b70d` passed the complete dedicated workflow `Business Store Offer-Aware Quotes V2` run `32790518745`:
+
+- `contract-and-quality`: Phase 10A.2 structural authority, typed contract, replay/race simulation, retained 10A.1/9A/8A/7A contracts, migration validation, deterministic architecture inventory, Repository Quality, and Supply Chain Security — **PASS**;
+- `retained-runtime`: Business formation/economy/domain/stockroom/procurement/Banking, workforce/payroll, equipment, timed manufacturing, Store and Inventory lifecycle tests, all Backend/Edge TypeScript, and Player Edge entrypoints — **PASS**;
+- `database-replay`: complete database replay from zero twice plus rebuilt-database lint — **PASS**;
+- `player-and-browser`: standalone Player Terminal verification, adapter/capability/runtime integration, and Chromium browser verification — **PASS**.
+
+PR #666 remained open, draft, mergeable, unmerged, and undeployed. Temporary Phase 10A.2 durable-finalizer workflows are removed in the certification commit. No Buyer debit, Business credit, Inventory movement or reservation, revenue/COGS posting, purchase receipt, Player route/UI, merge, deployment, secret mutation, or live database mutation occurred.
+
 ## Completion rule
 
 Checkpoint 10A.2 is complete only when the exact implementation SHA passes the required matrix and the scope, execution plan, execution log, and draft PR contain matching evidence. The PR must remain stacked, draft, open, unmerged, and undeployed.
 
-Certification of 10A.2 does not certify purchase settlement. The next authorized checkpoint is **Phase 10A.3**, which must atomically debit Buyer Checking, credit Business cash, transfer the exact listing quantity to Buyer Inventory, recognize revenue and COGS, consume the quote, advance the offer version, and complete one immutable `spr_...` receipt.
+Checkpoint 10A.2 is complete. Purchase settlement remains uncertified. The next authorized checkpoint is **Phase 10A.3 — atomic economic settlement**, limited to one service-owned transaction that revalidates the locked quote and offer, debits Buyer Checking, credits Business cash, transfers exact Store-listing stock to Buyer Inventory, records revenue and COGS evidence, consumes the quote, advances the offer version, and completes one immutable `spr_...` receipt. Player route/UI cutover, automatic sales convergence, equity/IPO, merge, deployment, secrets, and live database mutation remain closed.

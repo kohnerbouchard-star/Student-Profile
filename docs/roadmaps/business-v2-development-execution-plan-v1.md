@@ -405,12 +405,12 @@ Exit: the withdrawal side of purchase-vs-withdrawal safety is **MET**. Phase 10 
 
 ## Phase 10 — Atomic Store purchase settlement
 
-**Status:** FOUNDATION COMPLETE — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 offer-aware quote authority is OPEN
+**Status:** QUOTE FOUNDATION COMPLETE — checkpoint 10A.1 certified exact-head source `1abc8b878df5b08716107adb467bd013e85b6df4`; checkpoint 10A.2 certified exact-head source `ad57d5b9307178229a6b47b3206d258f1bd9b70d`; checkpoint 10A.3 atomic settlement is OPEN
 
 - [x] Freeze the immutable public purchase-receipt contract and trusted/browser command boundary.
 - [x] Freeze one seller-offer-first economic row-lock order.
 - [x] Prove purchase-first and withdrawal-first ordering plus replay, conflict, rollback, and two-game isolation in deterministic simulations.
-- [ ] Add immutable offer-aware quote authority bound to exact offer, version, seller, custody, quantity, price, currency, and expiry.
+- [x] Add immutable offer-aware quote authority bound to exact offer, version, seller, custody, quantity, price, currency, and expiry.
 - [ ] Lock offer and validate purchasable state in the runtime settlement command.
 - [ ] Lock/check buyer balance and listing inventory.
 - [ ] Atomically debit Buyer Checking, credit Business cash, transfer inventory, and update offer quantity.
@@ -420,7 +420,9 @@ Certified checkpoint:
 
 - **10A.1:** non-mutating Store settlement authority foundation; immutable public `spr_...` receipt contract; trusted command boundary; fixed offer-first lock order; deterministic purchase/withdrawal ordering, replay, conflict, rollback, and two-game simulations; complete retained database, Business, Store, Inventory, backend/Edge, repository, security, Player, and Chromium matrix. **Certified implementation and exact-head verification source:** `1abc8b878df5b08716107adb467bd013e85b6df4`. Dedicated workflow: `32753253910`.
 
-Exit: no paid-without-item or item-without-payment state is possible. **Not yet met; quote and settlement runtime remain open.**
+- **10A.2:** Store-owned immutable Business-offer quote authority; exact Buyer/offer/version/Business/seller/catalog/item/custody binding; same-currency fixed-price evidence; two-minute expiry; non-reserving canonical availability snapshot; replay-before-mutable-state validation; seller-offer-first quote/withdrawal ordering; concurrency, conflict, expiry, reserved-stock, sold-out, self-purchase, cross-currency, rollback, and two-game isolation coverage. **Certified implementation and exact-head verification source:** `ad57d5b9307178229a6b47b3206d258f1bd9b70d`. Dedicated workflow: `32790518745`.
+
+Exit: no paid-without-item or item-without-payment state is possible. **Not yet met; immutable quote authority is certified, while atomic settlement and authenticated Player cutover remain open.**
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
