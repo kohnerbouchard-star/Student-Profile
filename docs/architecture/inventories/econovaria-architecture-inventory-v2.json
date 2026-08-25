@@ -8,14 +8,14 @@
   },
   "counts": {
     "domains": 26,
-    "sourceFiles": 1053,
-    "edgeEntrypoints": 24,
+    "sourceFiles": 1058,
+    "edgeEntrypoints": 25,
     "handlerFiles": 58,
     "persistenceOutsideInfrastructure": 99,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 209,
-    "schedulerEntrypoints": 6,
+    "schedulerEntrypoints": 7,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 123
   },
@@ -100,7 +100,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 10,
+      "sourceFiles": 13,
       "publicBoundaryFiles": []
     },
     {
@@ -343,6 +343,7 @@
       "backend/supabase/functions/admin-email-verification/index.ts",
       "backend/supabase/functions/admin-password-recovery/index.ts",
       "backend/supabase/functions/bootstrap-api/index.ts",
+      "backend/supabase/functions/campaign-orchestrator/index.ts",
       "backend/supabase/functions/classroom-api/index.ts",
       "backend/supabase/functions/game-data-purger/index.ts",
       "backend/supabase/functions/license-email-worker/index.ts",
@@ -425,6 +426,7 @@
       "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts"
     ],
     "schedulers": [
+      "backend/supabase/functions/campaign-orchestrator/index.ts",
       "backend/supabase/functions/game-data-purger/index.ts",
       "backend/supabase/functions/license-email-worker/index.ts",
       "backend/supabase/functions/license-issuance-worker/index.ts",
@@ -3625,12 +3627,12 @@
         "lines": 554
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
-        "lines": 553
+        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
+        "lines": 554
       },
       {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
-        "lines": 552
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
+        "lines": 553
       },
       {
         "file": "backend/src/domains/contracts/services/contractRewardService.ts",
