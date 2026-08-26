@@ -4,7 +4,7 @@ import {
   SupabaseStandardFxOrderSettlementRepository,
 } from "../../../src/domains/banking-fx/infrastructure/supabaseStandardFxOrderSettlementRepository.ts";
 import { StandardFxOrderSettlementError } from "../../../src/domains/banking-fx/services/standardFxOrderSettlementRunner.ts";
-import { createServiceRoleClient } from "../../../src/platform/supabase/serviceRoleClient.ts";
+import { createServiceRoleClient } from "../_shared/econovariaAuth.ts";
 
 Deno.serve((request: Request) =>
   handleBankingFxOrchestratorRequest(request, {
