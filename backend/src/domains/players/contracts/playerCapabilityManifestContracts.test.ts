@@ -8,7 +8,7 @@ import {
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
-import { readPlayerBankingFxRoutePath } from "../../banking-fx/api/playerBankingFxRoutePaths.ts";
+import { readPlayerBankingFxRoutePath } from "../../banking-fx/index.ts";
 import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { parsePlayerWorldRuntimeRoute } from "../../world/api/playerWorldRuntimeRoutePaths.ts";
