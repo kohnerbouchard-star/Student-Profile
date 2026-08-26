@@ -15,9 +15,9 @@ import {
   createPlayerRequestApplicationContext,
   type PlayerRequestApplicationContext,
   rejectClientSuppliedBodyIdentity,
+  resolveActivePlayerSession,
   resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import {
   PlayerBankingFxError,
   type PlayerBankingFxRepository,
