@@ -1,4 +1,4 @@
-import type { PlayerBankingPublicBalanceDto } from "../../economy/contracts/playerBankingPublicContracts.ts";
+import type { PlayerBankingPublicBalanceDto } from "../../economy/index.ts";
 
 export const PLAYER_BANK_ACCOUNT_KEY_PATTERN = /^bac_[0-9a-f]{32}$/u;
 export const PLAYER_FX_QUOTE_KEY_PATTERN = /^fxq_[0-9a-f]{32}$/u;
