@@ -107,6 +107,8 @@
     "scripts/banking-fx-database-acceptance.mjs",
     "scripts/banking-fx-database-acceptance.sql",
     "scripts/business-phase10-atomic-settlement-database-support.mjs",
+    "scripts/business-phase10-atomic-settlement-database.mjs",
+    "scripts/game-creation-provisioning-local-acceptance.mjs",
     "scripts/local-edge-runtime-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/player-local-currency-authority-contract.test.mjs",
