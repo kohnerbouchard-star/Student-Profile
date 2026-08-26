@@ -1525,7 +1525,7 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 - Roadmap item: `BUSINESS-V2-10A4B2`.
 - Owner branch: `feat/banking-fx-clearing-v1`, created from exact B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d`; parent B1 implementation remains `41bc2d978fe67cd06a8f2133f7310075492ecd99` on draft PR #671.
 - Controlling scope: `docs/roadmaps/banking-fx-clearing-scope-v1.md`.
-- Scope commit: `PENDING`.
+- Scope commit: `ce50306400b3173a489e2413f0531cef58c863a6`.
 - Status: `IN_PROGRESS` — scope authority only; no B2 migration, runtime source, implementation SHA, workflow result, merge, deployment, scheduler installation, secret mutation, or staging/production database mutation is claimed by this record.
 - Transition decision: pre-B2 ledger economic identity and amounts remain immutable `legacy_v1` while deterministic account/transaction linkage metadata is backfilled; every post-cutover monetary write, including calls through legacy wrappers, must be account-linked, hold-aware, and balanced per currency as `balanced_v2`. A dedicated non-spendable compatibility contra preserves old domain behavior without consuming FX reserve authority or beginning C1-C4.
 - Exact boundary: Banking account identity, balanced grouped posting, holds, clearing/reserve/fee capacity, capped facility evidence, standard/instant Player FX, authoritative Banking reads/routes/UI, readiness, and cross-domain hold enforcement. Multi-account retail funding and Store/Marketplace/Stocks/Business currency convergence remain closed for C0-C4.

@@ -7,7 +7,7 @@
 **Parent draft PR:** #671
 **Exact parent implementation:** `41bc2d978fe67cd06a8f2133f7310075492ecd99`
 **Exact parent documentation handoff:** `5e427e8f5b39e5b77cac0c912873fe505493565d`
-**Scope commit:** `PENDING`
+**Scope commit:** `ce50306400b3173a489e2413f0531cef58c863a6`
 **Production deployment authorized:** No
 
 ## Decision
