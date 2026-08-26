@@ -169,6 +169,32 @@ function gameSummary(game) {
         and source_domain = 'store'
         and source_action in ('business_offer_purchase_debit',
           'business_offer_purchase_credit')),
+    'businessSettlementEconomicLedgerCount', (select count(*)
+      from public.ledger_entries ledger_row
+      join public.bank_accounts account_row
+        on account_row.game_session_id = ledger_row.game_session_id
+        and account_row.id = ledger_row.bank_account_id
+      where ledger_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+        and ledger_row.source_domain = 'store'
+        and ledger_row.source_action in ('business_offer_purchase_debit',
+          'business_offer_purchase_credit')
+        and account_row.account_kind <> 'compatibility_offset'),
+    'businessSettlementOffsetLedgerCount', (select count(*)
+      from public.ledger_entries ledger_row
+      join public.bank_accounts account_row
+        on account_row.game_session_id = ledger_row.game_session_id
+        and account_row.id = ledger_row.bank_account_id
+      where ledger_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+        and ledger_row.source_domain = 'store'
+        and ledger_row.source_action in ('business_offer_purchase_debit',
+          'business_offer_purchase_credit')
+        and account_row.account_kind = 'compatibility_offset'),
+    'businessSettlementLedgerNet', (select coalesce(sum(amount), 0)
+      from public.ledger_entries
+      where game_session_id = ${sqlLiteral(game.id)}::uuid
+        and source_domain = 'store'
+        and source_action in ('business_offer_purchase_debit',
+          'business_offer_purchase_credit')),
     'businessSettlementTransactionCount', (select count(*)
       from public.inventory_transactions
       where game_session_id = ${sqlLiteral(game.id)}::uuid
@@ -932,7 +958,10 @@ assert.deepEqual(gameSummary(gameTwo), {
   buyerAverageCost: 2.5,
   offerVersion: 3,
   receiptCount: 1,
-  businessSettlementLedgerCount: 2,
+  businessSettlementLedgerCount: 4,
+  businessSettlementEconomicLedgerCount: 2,
+  businessSettlementOffsetLedgerCount: 2,
+  businessSettlementLedgerNet: 0,
   businessSettlementTransactionCount: 1,
   businessSettlementLineCount: 2,
   purchasedEventCount: 1,
@@ -980,7 +1009,10 @@ assert.deepEqual(gameSummary(gameOne), {
   buyerAverageCost: 2.5,
   offerVersion: 3,
   receiptCount: 1,
-  businessSettlementLedgerCount: 2,
+  businessSettlementLedgerCount: 4,
+  businessSettlementEconomicLedgerCount: 2,
+  businessSettlementOffsetLedgerCount: 2,
+  businessSettlementLedgerNet: 0,
   businessSettlementTransactionCount: 1,
   businessSettlementLineCount: 2,
   purchasedEventCount: 1,
