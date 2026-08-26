@@ -50,7 +50,7 @@ begin
       ),
       (
         'hire_business_employee_v1'::text,
-        'ab.player_id = p_player_id'::text,
+        'ab.player_id=p_player_id'::text,
         'ab.business_id = v_business.id'::text,
         1::integer
       ),

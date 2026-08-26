@@ -232,7 +232,7 @@ function lowerText(value: unknown): string {
 
 function mapRpcError(
   error: RpcError,
-  fallback: string,
+  defaultCode: string,
 ): StandardFxOrderSettlementError {
   const source = [error.code, error.message, error.details, error.hint]
     .filter((part): part is string => typeof part === "string")
@@ -259,7 +259,7 @@ function mapRpcError(
     );
   }
   return new StandardFxOrderSettlementError(
-    domainCode ?? fallback,
+    domainCode ?? defaultCode,
     "Standard FX settlement persistence is temporarily unavailable.",
     500,
     true,

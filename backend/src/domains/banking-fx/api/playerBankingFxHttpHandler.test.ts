@@ -1,5 +1,5 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
-import type { PlayerRequestApplicationContext } from "../../players/api/playerRequestScope.ts";
+import type { PlayerRequestApplicationContext } from "../../players/index.ts";
 import {
   PlayerBankingFxError,
   type PlayerBankingFxRepository,

@@ -57,8 +57,8 @@ function positiveAmount(value, endpointKey) {
   });
 }
 
-function boundedLimit(value, fallback, endpointKey) {
-  if (value === undefined || value === null || value === "") return fallback;
+function boundedLimit(value, defaultLimit, endpointKey) {
+  if (value === undefined || value === null || value === "") return defaultLimit;
   const result = Number(value);
   if (Number.isSafeInteger(result) && result >= 1 && result <= 100) return result;
   throw new ApiRequestError(`limit is invalid for ${endpointKey}.`, {
