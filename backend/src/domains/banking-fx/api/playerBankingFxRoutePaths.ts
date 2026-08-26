@@ -1,5 +1,7 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
-import type { PlayerCapabilityEndpointKey } from "../../players/contracts/playerCapabilityManifestContracts.ts";
+import {
+  readPlayerApiRouteSegments,
+  type PlayerCapabilityEndpointKey,
+} from "../../players/index.ts";
 import {
   PLAYER_FX_ORDER_KEY_PATTERN,
   type PlayerBankingFxRoute,
