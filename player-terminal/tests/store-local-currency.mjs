@@ -40,6 +40,11 @@ assert.match(html, /LOCAL AVAILABLE BALANCE/);
 assert.match(html, /THD 25/);
 assert.match(html, /GLOBAL SETTLEMENT WALLET ECO 1,001/);
 assert.match(html, /LUM 10/);
+assert.match(
+  html,
+  /same-currency purchase settles/i,
+  "Before retail checkout FX is introduced, Store must disclose the same-currency settlement boundary.",
+);
 assert.doesNotMatch(
   html,
   /AVAILABLE BALANCE[\s\S]{0,300}ECO 1,001<\/strong>/,
@@ -50,9 +55,10 @@ assert.doesNotMatch(
   /ECO 9,999/,
   "Structured balance rows must take precedence over the legacy single checking summary.",
 );
-assert.match(
+assert.doesNotMatch(
   html,
-  /authoritative quote converts the final amount into your THD local wallet/i,
+  /converts?[^.]{0,160}(?:THD|local wallet)/i,
+  "Store must not promise checkout currency conversion before the canonical retail-funding phase is implemented.",
 );
 
-console.log("Store local-currency rendering passed: cash/checking aliases converge in the UI, authored item currency remains explicit, and ECO stays separate.");
+console.log("Store local-currency rendering passed: local and global balances remain separate, authored offer currency stays explicit, and no pre-C0 checkout FX is implied.");
