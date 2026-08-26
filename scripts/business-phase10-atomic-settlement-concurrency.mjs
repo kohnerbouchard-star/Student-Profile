@@ -16,6 +16,7 @@ const gameOne = FIXTURE.games.one;
 const gameTwo = FIXTURE.games.two;
 const sessions = new Set();
 
+// B2 compatibility gateways must remain balanced under every retained Store race.
 function raceOffer({ index, hex, name }) {
   const suffix = String(index).padStart(12, "0");
   return Object.freeze({
