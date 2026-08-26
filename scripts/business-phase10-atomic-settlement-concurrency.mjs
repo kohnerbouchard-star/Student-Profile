@@ -249,6 +249,22 @@ async function sameIdempotencyRace() {
       'receiptCount', count(*),
       'ledgerCount', coalesce(sum((select count(*) from public.ledger_entries le
         where le.source_id = r.id)), 0),
+      'economicLedgerCount', coalesce(sum((select count(*)
+        from public.ledger_entries le
+        join public.bank_accounts ba
+          on ba.game_session_id = le.game_session_id
+          and ba.id = le.bank_account_id
+        where le.source_id = r.id
+          and ba.account_kind <> 'compatibility_offset')), 0),
+      'offsetLedgerCount', coalesce(sum((select count(*)
+        from public.ledger_entries le
+        join public.bank_accounts ba
+          on ba.game_session_id = le.game_session_id
+          and ba.id = le.bank_account_id
+        where le.source_id = r.id
+          and ba.account_kind = 'compatibility_offset')), 0),
+      'ledgerNet', coalesce(sum((select coalesce(sum(le.amount), 0)
+        from public.ledger_entries le where le.source_id = r.id)), 0),
       'transactionCount', coalesce(sum((select count(*) from public.inventory_transactions it
         where it.source_id = r.id)), 0),
       'activityCount', coalesce(sum((select count(*) from public.business_activity_events ae
@@ -276,7 +292,10 @@ async function sameIdempotencyRace() {
     where r.game_session_id = ${sqlLiteral(gameOne.id)}::uuid
       and r.request_idempotency_key = 'phase10a3-concurrency-same-idem';`);
     assert.equal(facts.receiptCount, 1);
-    assert.equal(facts.ledgerCount, 2);
+    assert.equal(facts.ledgerCount, 4);
+    assert.equal(facts.economicLedgerCount, 2);
+    assert.equal(facts.offsetLedgerCount, 2);
+    assertMoney(facts.ledgerNet, 0, "same-idempotency balanced journal net");
     assert.equal(facts.transactionCount, 1);
     assert.equal(facts.activityCount, 1);
     assertMoney(facts.buyerDebit, 15, "same-idempotency buyer debit");
@@ -474,10 +493,15 @@ async function buyerCheckingRace() {
     quantity: 2,
     idempotencyKey: "phase10a3-buyer-race-quote-b",
   });
-  runSql(`update public.account_balances set balance = 20
-    where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-      and player_id = ${sqlLiteral(gameOne.buyerOneId)}::uuid
-      and business_id is null and account_type = 'checking' and currency_code = 'ECO';`);
+  runSql(`select * from public.record_player_ledger_entry(
+    ${sqlLiteral(gameOne.id)}::uuid,
+    ${sqlLiteral(gameOne.buyerOneId)}::uuid,
+    'checking', -27.5, 'ECO', 'debit', 'banking', 'account_transfer_out',
+    ${sqlLiteral(gameOne.buyerOneId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-buyer-race-drain'
+    )
+  );`);
   const callA = settlementCall({
     game: lanes.buyerA,
     quoteKey: quoteA.quoteKey,
@@ -751,21 +775,74 @@ async function businessCashOverflowRace() {
     quantity: 1,
     idempotencyKey: "phase10a3-cash-race-quote-b",
   });
-  runSql(`update public.account_balances
-    set balance = case
-      when business_id = ${
-    sqlLiteral(gameOne.businessId)
-  }::uuid then 999999999990.00
-      else 100.00
-    end
-    where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-      and currency_code = 'ECO'
-      and (
-        business_id = ${sqlLiteral(gameOne.businessId)}::uuid
-        or (business_id is null and account_type = 'checking'
-          and player_id in (${sqlLiteral(gameOne.buyerOneId)}::uuid,
-            ${sqlLiteral(gameOne.buyerTwoId)}::uuid))
-      );`);
+  runSql(`do $cash_race_setup$
+declare
+  v_business_balance numeric;
+  v_buyer_one_balance numeric;
+  v_buyer_two_balance numeric;
+begin
+  select balance into strict v_business_balance
+  from public.account_balances
+  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
+    and business_id = ${sqlLiteral(gameOne.businessId)}::uuid
+    and currency_code = 'ECO';
+  if v_business_balance >= 999999999990.00 then
+    raise exception 'PHASE10A3_CASH_RACE_BUSINESS_SETUP_INVALID';
+  end if;
+  perform * from public.record_business_ledger_entry_v2(
+    ${sqlLiteral(gameOne.id)}::uuid,
+    ${sqlLiteral(gameOne.businessId)}::uuid,
+    999999999990.00 - v_business_balance, 'ECO', 'credit',
+    'business', 'capital_contribution_in',
+    ${sqlLiteral(gameOne.businessId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-cash-race-business-seed'
+    )
+  );
+
+  select balance into strict v_buyer_one_balance
+  from public.account_balances
+  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
+    and player_id = ${sqlLiteral(gameOne.buyerOneId)}::uuid
+    and business_id is null and account_type = 'checking'
+    and currency_code = 'ECO';
+  if v_buyer_one_balance > 100 then
+    raise exception 'PHASE10A3_CASH_RACE_BUYER_ONE_SETUP_INVALID';
+  elsif v_buyer_one_balance < 100 then
+    perform * from public.record_player_ledger_entry(
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameOne.buyerOneId)}::uuid,
+      'checking', 100 - v_buyer_one_balance, 'ECO', 'credit',
+      'setup', 'initial_balance_seed',
+      ${sqlLiteral(gameOne.buyerOneId)}::uuid, 'system', null,
+      jsonb_build_object(
+        'bankTransactionIdempotencyKey', 'phase10a3-cash-race-buyer-one-seed'
+      )
+    );
+  end if;
+
+  select balance into strict v_buyer_two_balance
+  from public.account_balances
+  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
+    and player_id = ${sqlLiteral(gameOne.buyerTwoId)}::uuid
+    and business_id is null and account_type = 'checking'
+    and currency_code = 'ECO';
+  if v_buyer_two_balance > 100 then
+    raise exception 'PHASE10A3_CASH_RACE_BUYER_TWO_SETUP_INVALID';
+  elsif v_buyer_two_balance < 100 then
+    perform * from public.record_player_ledger_entry(
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameOne.buyerTwoId)}::uuid,
+      'checking', 100 - v_buyer_two_balance, 'ECO', 'credit',
+      'setup', 'initial_balance_seed',
+      ${sqlLiteral(gameOne.buyerTwoId)}::uuid, 'system', null,
+      jsonb_build_object(
+        'bankTransactionIdempotencyKey', 'phase10a3-cash-race-buyer-two-seed'
+      )
+    );
+  end if;
+end
+$cash_race_setup$;`);
   const losingBuyerDebitCountBefore = runJson(`select jsonb_build_object(
     'count', count(*)
   )::text from public.ledger_entries
