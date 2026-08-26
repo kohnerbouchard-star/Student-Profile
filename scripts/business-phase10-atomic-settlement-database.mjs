@@ -653,7 +653,7 @@ const cashCurrencyQuote = createQuote(gameOne, {
   idempotencyKey: "phase10a3-cash-currency-quote",
 });
 assertNoMutationFailure(
-  "wrong-currency Business cash authority fails closed and rolls back",
+  "Banking projection identity rejects wrong-currency Business cash drift before Store settlement",
   withPreSettlementMutation(
     settlementSql({
       game: gameOne,
@@ -665,7 +665,7 @@ assertNoMutationFailure(
         and business_id = ${sqlLiteral(gameOne.businessId)}::uuid
         and currency_code = 'ECO';`,
   ),
-  /STORE_OFFER_SETTLEMENT_BUSINESS_CASH_UNAVAILABLE/iu,
+  /ACCOUNT_BALANCE_IDENTITY_IMMUTABLE/iu,
 );
 
 const buyerInventoryCurrencyQuote = createQuote(gameOne, {
@@ -699,23 +699,26 @@ assertNoMutationFailure(
 const insufficientFundsQuote = createQuote(gameOne, {
   idempotencyKey: "phase10a3-insufficient-funds-quote",
 });
-runSql(`update public.account_balances set balance = 0
-  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-    and player_id = ${sqlLiteral(gameOne.buyerOneId)}::uuid
-    and account_type = 'checking' and currency_code = 'ECO';`);
 assertNoMutationFailure(
   "insufficient Buyer Checking rolls back without mutation",
-  settlementSql({
-    game: gameOne,
-    quoteKey: insufficientFundsQuote.quoteKey,
-    idempotencyKey: "phase10a3-insufficient-funds-settle",
-  }),
+  withPreSettlementMutation(
+    settlementSql({
+      game: gameOne,
+      quoteKey: insufficientFundsQuote.quoteKey,
+      idempotencyKey: "phase10a3-insufficient-funds-settle",
+    }),
+    `select * from public.record_player_ledger_entry(
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameOne.buyerOneId)}::uuid,
+      'checking', -100, 'ECO', 'debit', 'banking', 'account_transfer_out',
+      ${sqlLiteral(gameOne.buyerOneId)}::uuid, 'system', null,
+      jsonb_build_object(
+        'bankTransactionIdempotencyKey', 'phase10a3-insufficient-funds-drain'
+      )
+    );`,
+  ),
   /STORE_OFFER_SETTLEMENT_INSUFFICIENT_FUNDS/iu,
 );
-runSql(`update public.account_balances set balance = 100
-  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-    and player_id = ${sqlLiteral(gameOne.buyerOneId)}::uuid
-    and account_type = 'checking' and currency_code = 'ECO';`);
 
 const reservedQuote = createQuote(gameOne, {
   idempotencyKey: "phase10a3-reserved-stock-quote",
@@ -783,23 +786,26 @@ runSql(`update public.inventory_holdings set cost_currency_code = 'ECO'
 const cashOverflowQuote = createQuote(gameOne, {
   idempotencyKey: "phase10a3-business-cash-overflow-quote",
 });
-runSql(`update public.account_balances set balance = 999999999999.99
-  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-    and business_id = ${sqlLiteral(gameOne.businessId)}::uuid
-    and currency_code = 'ECO';`);
 assertNoMutationFailure(
   "Business cash overflow fails closed",
-  settlementSql({
-    game: gameOne,
-    quoteKey: cashOverflowQuote.quoteKey,
-    idempotencyKey: "phase10a3-business-cash-overflow-settle",
-  }),
+  withPreSettlementMutation(
+    settlementSql({
+      game: gameOne,
+      quoteKey: cashOverflowQuote.quoteKey,
+      idempotencyKey: "phase10a3-business-cash-overflow-settle",
+    }),
+    `select * from public.record_business_ledger_entry_v2(
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameOne.businessId)}::uuid,
+      999999999979.99, 'ECO', 'credit', 'business', 'capital_contribution_in',
+      ${sqlLiteral(gameOne.businessId)}::uuid, 'system', null,
+      jsonb_build_object(
+        'bankTransactionIdempotencyKey', 'phase10a3-business-cash-overflow-seed'
+      )
+    );`,
+  ),
   /STORE_OFFER_SETTLEMENT_BUSINESS_CASH_UNAVAILABLE/iu,
 );
-runSql(`update public.account_balances set balance = 20
-  where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
-    and business_id = ${sqlLiteral(gameOne.businessId)}::uuid
-    and currency_code = 'ECO';`);
 
 insertManualQuote({
   buyerId: gameOne.ownerId,
