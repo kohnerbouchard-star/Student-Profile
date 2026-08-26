@@ -4,9 +4,9 @@ export interface PlayerBankingPublicBalanceDto {
   /** Stable browser-safe account identity; internal account UUIDs stay server-side. */
   readonly accountKey: string;
   readonly accountKind: string;
-  /** Compatibility alias retained while the Player Banking client converges. */
+  /** Transitional alias retained while the Player Banking client converges. */
   readonly accountType: string;
-  /** Compatibility alias for postedAmount. */
+  /** Transitional alias for postedAmount. */
   readonly balance: number;
   readonly currencyCode: string;
   readonly postedAmount: number;
