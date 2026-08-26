@@ -8,6 +8,11 @@ import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
 import { normalizePlayerMarketplace } from "../features/marketplace/marketplace-read-model.js";
+import {
+  normalizeBankingFxHistory,
+  normalizeBankingFxOrders,
+  normalizeBankingFxOverview,
+} from "../features/banking/banking-fx-read-model.js";
 import { validateStudentProfileCapabilityManifest } from "./student-profile-capability-manifest.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
@@ -89,7 +94,7 @@ function accountBalanceForCurrency(balances, accountType, preferredCurrencyCode)
   const type = String(accountType || "").trim().toLowerCase();
   const preferred = currencyCode(preferredCurrencyCode);
   const rows = (Array.isArray(balances) ? balances : []).filter((row) =>
-    String(row?.accountType || "").trim().toLowerCase() === type
+    String(row?.accountKind || row?.accountType || "").trim().toLowerCase() === type
   );
   if (preferred) {
     return rows.find((row) => currencyCode(row?.currencyCode) === preferred) || null;
@@ -112,8 +117,8 @@ function bindBankingCurrency(snapshot, raw) {
     "savings",
     preferredCurrencyCode,
   );
-  const checkingBalance = checking ? Number(checking.balance) : null;
-  const savingsBalance = savings ? Number(savings.balance) : null;
+  const checkingBalance = checking ? Number(checking.postedAmount ?? checking.balance) : null;
+  const savingsBalance = savings ? Number(savings.postedAmount ?? savings.balance) : null;
   const checkingAmount = Number.isFinite(checkingBalance) ? checkingBalance : null;
   const savingsAmount = Number.isFinite(savingsBalance) ? savingsBalance : null;
   return {
@@ -123,10 +128,13 @@ function bindBankingCurrency(snapshot, raw) {
       checking: checking
         ? {
           configured: true,
-          accountId: "CHECKING",
+          accountId: String(checking.accountKey || "CHECKING"),
           balance: checkingAmount,
-          available: checkingAmount,
-          pending: 0,
+          postedAmount: checkingAmount,
+          heldAmount: Number(checking.heldAmount ?? checking.held ?? 0),
+          available: Number(checking.availableAmount ?? checking.available ?? checkingAmount),
+          availableAmount: Number(checking.availableAmount ?? checking.available ?? checkingAmount),
+          pending: Number(checking.heldAmount ?? checking.held ?? 0),
           currencyCode: currencyCode(checking.currencyCode),
         }
         : {
@@ -140,9 +148,12 @@ function bindBankingCurrency(snapshot, raw) {
       savings: savings
         ? {
           configured: true,
-          accountId: "SAVINGS",
+          accountId: String(savings.accountKey || "SAVINGS"),
           balance: savingsAmount,
-          available: savingsAmount,
+          postedAmount: savingsAmount,
+          heldAmount: Number(savings.heldAmount ?? savings.held ?? 0),
+          available: Number(savings.availableAmount ?? savings.available ?? savingsAmount),
+          availableAmount: Number(savings.availableAmount ?? savings.available ?? savingsAmount),
           interestRate: snapshot.banking?.savings?.interestRate ?? null,
           interestEarned: snapshot.banking?.savings?.interestEarned ?? null,
           currencyCode: currencyCode(savings.currencyCode),
@@ -396,6 +407,16 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (context.endpointKey === "marketplace") {
       snapshot = { ...snapshot, marketplace: normalizePlayerMarketplace(raw) };
       return snapshot.marketplace;
+    }
+    if (context.endpointKey === "bankingFx") {
+      snapshot = { ...snapshot, bankingFx: normalizeBankingFxOverview(raw) };
+      return snapshot.bankingFx;
+    }
+    if (context.endpointKey === "bankingFxHistory") {
+      return normalizeBankingFxHistory(raw);
+    }
+    if (context.endpointKey === "bankingFxOrders") {
+      return normalizeBankingFxOrders(raw);
     }
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
       const readResponse = context.endpointKey === "store"

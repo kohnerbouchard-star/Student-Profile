@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-25.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-26.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -13,6 +13,7 @@ export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "inventory",
   "crafting",
   "banking",
+  "bankingFx",
   "loans",
   "messages",
   "progression",
@@ -23,9 +24,16 @@ export const PLAYER_ROUTE_CAPABILITY_KEYS = [
 export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "arrivalClassSubmit",
   "bankingExport",
+  "bankingFxCancel",
+  "bankingFxInstant",
+  "bankingFxQuote",
+  "bankingFxStandard",
   "bankTransfer",
   "businessCreate",
-  "businessEmployeeTerminate", "businessFormationActivate", "businessFormationPropose", "businessFormationRespond",
+  "businessEmployeeTerminate",
+  "businessFormationActivate",
+  "businessFormationPropose",
+  "businessFormationRespond",
   "businessCandidateHire",
   "businessPrice",
   "businessProductCreate",
@@ -72,10 +80,20 @@ export type PlayerCapabilityEndpointKey =
   | "capabilities"
   | "arrivalClass"
   | "banking"
+  | "bankingFx"
+  | "bankingFxHistory"
+  | "bankingFxOrders"
+  | "bankingFxQuote"
+  | "bankingFxStandard"
+  | "bankingFxInstant"
+  | "bankingFxCancel"
   | "bankTransfer"
   | "business"
   | "businessWorkforce"
-  | "businessCreate" | "businessFormationActivate" | "businessFormationPropose" | "businessFormationRespond"
+  | "businessCreate"
+  | "businessFormationActivate"
+  | "businessFormationPropose"
+  | "businessFormationRespond"
   | "businessCandidateHire"
   | "businessPrice"
   | "businessProductCreate"
@@ -223,6 +241,63 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     routeCapabilities: ["banking"],
   },
   {
+    key: "bankingFx",
+    operations: [{ method: "GET", pathTemplate: "/players/me/banking/fx" }],
+    routeCapabilities: ["banking", "bankingFx"],
+  },
+  {
+    key: "bankingFxHistory",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/banking/fx/history",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+  },
+  {
+    key: "bankingFxOrders",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/banking/fx/orders",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+  },
+  {
+    key: "bankingFxQuote",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/fx/quotes",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+    actionCapabilities: ["bankingFxQuote"],
+  },
+  {
+    key: "bankingFxStandard",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/fx/orders/standard",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+    actionCapabilities: ["bankingFxStandard"],
+  },
+  {
+    key: "bankingFxInstant",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/fx/orders/instant",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+    actionCapabilities: ["bankingFxInstant"],
+  },
+  {
+    key: "bankingFxCancel",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/fx/orders/:orderKey/cancel",
+    }],
+    routeCapabilities: ["banking", "bankingFx"],
+    actionCapabilities: ["bankingFxCancel"],
+  },
+  {
     key: "bankTransfer",
     operations: [{
       method: "POST",
@@ -251,10 +326,35 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     }],
     routeCapabilities: ["business"],
   },
-  { key: "businessCreate", operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }], actionCapabilities: ["businessCreate"] },
-  { key: "businessFormationPropose", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations" }], actionCapabilities: ["businessFormationPropose"] },
-  { key: "businessFormationRespond", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations/:formationKey/respond" }], actionCapabilities: ["businessFormationRespond"] },
-  { key: "businessFormationActivate", operations: [{ method: "POST", pathTemplate: "/players/me/business/formations/:formationKey/activate" }], actionCapabilities: ["businessFormationActivate"] },
+  {
+    key: "businessCreate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }],
+    actionCapabilities: ["businessCreate"],
+  },
+  {
+    key: "businessFormationPropose",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations",
+    }],
+    actionCapabilities: ["businessFormationPropose"],
+  },
+  {
+    key: "businessFormationRespond",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations/:formationKey/respond",
+    }],
+    actionCapabilities: ["businessFormationRespond"],
+  },
+  {
+    key: "businessFormationActivate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/formations/:formationKey/activate",
+    }],
+    actionCapabilities: ["businessFormationActivate"],
+  },
 
   {
     key: "businessProductCreate",
@@ -292,7 +392,8 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "businessManufacturingCancel",
     operations: [{
       method: "POST",
-      pathTemplate: "/players/me/businesses/:businessKey/manufacturing/jobs/:jobKey/cancel",
+      pathTemplate:
+        "/players/me/businesses/:businessKey/manufacturing/jobs/:jobKey/cancel",
     }],
     actionCapabilities: ["businessProduction"],
   },
@@ -515,37 +616,55 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "marketplace",
-    operations: [{ method: "GET", pathTemplate: "/players/me/marketplace/listings" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/marketplace/listings",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: [],
   },
   {
     key: "marketplaceListing",
-    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplaceListing"],
   },
   {
     key: "marketplaceActivate",
-    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/activate" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings/:listingId/activate",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplaceActivate"],
   },
   {
     key: "marketplacePurchase",
-    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/purchase" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings/:listingId/purchase",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplacePurchase"],
   },
   {
     key: "marketplaceCancel",
-    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/cancel" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings/:listingId/cancel",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplaceCancel"],
   },
   {
     key: "marketplaceDispute",
-    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/orders/:orderId/disputes" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/orders/:orderId/disputes",
+    }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplaceDispute"],
   },

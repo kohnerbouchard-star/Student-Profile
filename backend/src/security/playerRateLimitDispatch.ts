@@ -112,6 +112,27 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   banking: byMethod({
     GET: operation("player.banking.read", "read"),
   }),
+  bankingFx: byMethod({
+    GET: operation("player.banking.fx.read", "read"),
+  }),
+  bankingFxHistory: byMethod({
+    GET: operation("player.banking.fx.history.read", "read"),
+  }),
+  bankingFxOrders: byMethod({
+    GET: operation("player.banking.fx.orders.read", "read"),
+  }),
+  bankingFxQuote: byMethod({
+    POST: operation("player.banking.fx.quotes.create", "write"),
+  }),
+  bankingFxStandard: byMethod({
+    POST: operation("player.banking.fx.orders.standard", "sensitive"),
+  }),
+  bankingFxInstant: byMethod({
+    POST: operation("player.banking.fx.orders.instant", "sensitive"),
+  }),
+  bankingFxCancel: byMethod({
+    POST: operation("player.banking.fx.orders.cancel", "sensitive"),
+  }),
   bankTransfer: byMethod({
     POST: operation("player.banking.transfers.create", "sensitive"),
   }),
@@ -327,7 +348,8 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
       request,
       {
         ...operation,
-        action: threadScopedMessagingAction(request, endpointKey) ?? operation.action,
+        action: threadScopedMessagingAction(request, endpointKey) ??
+          operation.action,
       },
       dependencies,
     );
@@ -354,17 +376,17 @@ function threadScopedMessagingAction(
   request: Request,
   endpointKey: ReviewedPlayerRateLimitEndpointKey,
 ): string | null {
-  if (!new Set<ReviewedPlayerRateLimitEndpointKey>([
-    "messageThread",
-    "messageSend",
-    "messageRead",
-  ]).has(endpointKey)) return null;
+  if (
+    !new Set<ReviewedPlayerRateLimitEndpointKey>([
+      "messageThread",
+      "messageSend",
+      "messageRead",
+    ]).has(endpointKey)
+  ) return null;
   const match = new URL(request.url).pathname.match(
     /\/messages\/threads\/thr_([0-9a-f]{32})(?:\/|$)/,
   );
-  return match?.[1]
-    ? `player.messages.thr_${match[1].slice(0, 24)}`
-    : null;
+  return match?.[1] ? `player.messages.thr_${match[1].slice(0, 24)}` : null;
 }
 
 async function guardReviewedPlayerRequest(
@@ -386,12 +408,10 @@ async function guardReviewedPlayerRequest(
       request,
       scope: context,
     }, client);
-    return decision.allowed
-      ? { ok: true, context }
-      : {
-        ok: false,
-        response: rateLimitExceededResponse(decision),
-      };
+    return decision.allowed ? { ok: true, context } : {
+      ok: false,
+      response: rateLimitExceededResponse(decision),
+    };
   } catch (error) {
     if (error instanceof EdgeActivationError) {
       return {

@@ -146,6 +146,11 @@ verify_jwt = false
 [functions.fx-orchestrator]
 verify_jwt = false
 
+# Leased standard-order FX settlement endpoint. It shares the database-owned FX
+# scheduler verifier and uses service-role access only for claim/settle/fail RPCs.
+[functions.banking-fx-orchestrator]
+verify_jwt = false
+
 # Deployed compatibility surface. Browser runtime must not target this function.
 # admin-api still forwards a bounded set of authenticated Staff operations here
 # server-side. Keep platform JWT verification enabled and retire the function only

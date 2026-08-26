@@ -21,7 +21,10 @@ Deno.test("Player Banking parser accepts only the reviewed collection route", ()
     ),
     { kind: "banking" },
   );
-  assertEquals(readPlayerBankingPublicRoutePath("/players/me/ledger/private"), null);
+  assertEquals(
+    readPlayerBankingPublicRoutePath("/players/me/ledger/private"),
+    null,
+  );
 });
 
 Deno.test("Player Banking returns cross-currency checking data and a safe next cursor", async () => {
@@ -35,8 +38,8 @@ Deno.test("Player Banking returns cross-currency checking data and a safe next c
   assertEquals(response.status, 200);
   assertEquals(response.headers.get("cache-control"), "private, no-store");
   assertEquals(body.currentBalances, [
-    { accountType: "checking", balance: 1250, currencyCode: "ECO" },
-    { accountType: "checking", balance: 40, currencyCode: "LUM" },
+    account("bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ECO", 1250, 50),
+    account("bac_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "LUM", 40, 0),
   ]);
   assertEquals(body.ledgerEntries.map((entry: any) => entry.entryKey), [
     "ledger_1",
@@ -89,7 +92,8 @@ Deno.test("Player Banking cursor advances response-local public keys", async () 
 
 Deno.test("Player Banking empty state is a normal bounded response", async () => {
   const repository: PlayerBankingPublicRepository = {
-    readPage: () => Promise.resolve({ balances: [], entries: [], hasMore: false }),
+    readPage: () =>
+      Promise.resolve({ balances: [], entries: [], hasMore: false }),
   };
   const response = await handlePlayerBankingPublicRequest(
     request("GET", "/players/me/ledger"),
@@ -111,7 +115,9 @@ Deno.test("Player Banking rejects malformed pagination and browser-owned scope",
     request("GET", "/players/me/ledger?limit=101"),
     request("GET", "/players/me/ledger?limit=2&limit=3"),
     request("GET", "/players/me/ledger?gameSessionId=anything"),
-    request("GET", "/players/me/ledger", undefined, { "x-player-id": PLAYER_ID }),
+    request("GET", "/players/me/ledger", undefined, {
+      "x-player-id": PLAYER_ID,
+    }),
     requestWithGetBody("/players/me/ledger", { playerId: PLAYER_ID }),
   ];
 
@@ -135,8 +141,8 @@ class FixtureRepository implements PlayerBankingPublicRepository {
     this.inputs.push(input);
     return Promise.resolve({
       balances: [
-        { accountType: "checking", balance: 1250, currencyCode: "ECO" },
-        { accountType: "checking", balance: 40, currencyCode: "LUM" },
+        account("bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ECO", 1250, 50),
+        account("bac_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "LUM", 40, 0),
       ],
       entries: [
         {
@@ -163,6 +169,24 @@ class FixtureRepository implements PlayerBankingPublicRepository {
   }
 }
 
+function account(
+  accountKey: string,
+  currencyCode: string,
+  postedAmount: number,
+  heldAmount: number,
+) {
+  return {
+    accountKey,
+    accountKind: "checking",
+    accountType: "checking",
+    balance: postedAmount,
+    currencyCode,
+    postedAmount,
+    heldAmount,
+    availableAmount: postedAmount - heldAmount,
+  };
+}
+
 function dependencies(repository: PlayerBankingPublicRepository) {
   return {
     createServiceClient: () => ({} as never),
@@ -174,10 +198,11 @@ function dependencies(repository: PlayerBankingPublicRepository) {
         supabaseServiceRoleKey: "service",
       },
     }),
-    resolveScope: () => Promise.resolve({
-      gameId: GAME_ID,
-      playerUuid: PLAYER_ID,
-    }),
+    resolveScope: () =>
+      Promise.resolve({
+        gameId: GAME_ID,
+        playerUuid: PLAYER_ID,
+      }),
     createRepository: () => repository,
     now: () => "2026-07-19T04:00:00.000Z",
   };
@@ -216,15 +241,22 @@ function requestWithGetBody(path: string, body: unknown): Request {
 
 function assertNoUuid(value: unknown): void {
   const serialized = JSON.stringify(value);
-  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized)) {
-    throw new Error(`Player Banking response leaked an internal UUID: ${serialized}`);
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(serialized)
+  ) {
+    throw new Error(
+      `Player Banking response leaked an internal UUID: ${serialized}`,
+    );
   }
 }
 
 function assertNoCashAccountType(value: unknown): void {
   const serialized = JSON.stringify(value);
   if (serialized.includes('"accountType":"cash"')) {
-    throw new Error(`Player Banking response exposed the retired cash account type: ${serialized}`);
+    throw new Error(
+      `Player Banking response exposed the retired cash account type: ${serialized}`,
+    );
   }
 }
 

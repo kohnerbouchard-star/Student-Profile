@@ -25,6 +25,16 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "bootstrap:GET": ["player.session.read", "read"],
     "capabilities:GET": ["player.capabilities.read", "read"],
     "banking:GET": ["player.banking.read", "read"],
+    "bankingFx:GET": ["player.banking.fx.read", "read"],
+    "bankingFxHistory:GET": ["player.banking.fx.history.read", "read"],
+    "bankingFxOrders:GET": ["player.banking.fx.orders.read", "read"],
+    "bankingFxQuote:POST": ["player.banking.fx.quotes.create", "write"],
+    "bankingFxStandard:POST": [
+      "player.banking.fx.orders.standard",
+      "sensitive",
+    ],
+    "bankingFxInstant:POST": ["player.banking.fx.orders.instant", "sensitive"],
+    "bankingFxCancel:POST": ["player.banking.fx.orders.cancel", "sensitive"],
     "contractAccept:POST": ["player.contracts.accept", "write"],
     "contractSubmit:POST": ["player.contracts.submit", "write"],
     "contracts:GET": ["player.contracts.read", "read"],
@@ -33,7 +43,10 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "dashboard:GET": ["player.dashboard.read", "read"],
     "inventory:GET": ["player.inventory.read", "read"],
     "inventoryRedemption:GET": ["player.inventory.redemptions.read", "read"],
-    "inventoryRedemption:POST": ["player.inventory.redemptions.request", "write"],
+    "inventoryRedemption:POST": [
+      "player.inventory.redemptions.request",
+      "write",
+    ],
     "logout:POST": ["player.session.logout", "sensitive"],
     "market:GET": ["player.market.read", "read"],
     "marketAsset:GET": ["player.asset.read", "read"],
@@ -94,7 +107,10 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
         assertEquals(input.scope.playerUuid, SCOPE.playerUuid);
         assertEquals(input.scope.gameId, SCOPE.gameId);
         assertEquals(input.scope.activeSessionId, SCOPE.activeSessionId);
-        assertEquals(input.scope.authorizationContext, SCOPE.authorizationContext);
+        assertEquals(
+          input.scope.authorizationContext,
+          SCOPE.authorizationContext,
+        );
         limiterScope = input.scope;
         return Promise.resolve(ALLOWED);
       },

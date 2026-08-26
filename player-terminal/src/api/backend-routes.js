@@ -18,6 +18,11 @@ import {
   hasProgressionBackendRoute,
   resolveProgressionBackendRequest,
 } from "./progression-backend-routes.js";
+import {
+  BANKING_FX_BACKEND_ROUTE_KEYS,
+  hasBankingFxBackendRoute,
+  resolveBankingFxBackendRequest,
+} from "./banking-fx-backend-routes.js";
 
 // These operations are implemented by the Business/Banking adapter, while the
 // core route-key list predates their public endpoint identities. Keep the
@@ -51,6 +56,13 @@ export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
     !CRAFTING_BACKEND_ROUTE_KEYS.includes(key) &&
     !MESSAGING_BACKEND_ROUTE_KEYS.includes(key)
   ),
+  ...BANKING_FX_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !CRAFTING_BACKEND_ROUTE_KEYS.includes(key) &&
+    !MESSAGING_BACKEND_ROUTE_KEYS.includes(key) &&
+    !PROGRESSION_BACKEND_ROUTE_KEYS.includes(key)
+  ),
 ]);
 
 export function hasPlayerBackendRoute(endpointKey) {
@@ -58,10 +70,14 @@ export function hasPlayerBackendRoute(endpointKey) {
     BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(endpointKey) ||
     hasCraftingBackendRoute(endpointKey) ||
     hasMessagingBackendRoute(endpointKey) ||
-    hasProgressionBackendRoute(endpointKey);
+    hasProgressionBackendRoute(endpointKey) ||
+    hasBankingFxBackendRoute(endpointKey);
 }
 
 export function resolvePlayerBackendRequest(input) {
+  if (hasBankingFxBackendRoute(input.endpointKey)) {
+    return resolveBankingFxBackendRequest(input);
+  }
   if (hasProgressionBackendRoute(input.endpointKey)) {
     return resolveProgressionBackendRequest(input);
   }

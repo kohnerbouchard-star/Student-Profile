@@ -7,17 +7,17 @@
     "oversizedSourceFileLines": 500
   },
   "counts": {
-    "domains": 27,
-    "sourceFiles": 1100,
-    "edgeEntrypoints": 25,
-    "handlerFiles": 59,
-    "persistenceOutsideInfrastructure": 100,
-    "crossDomainDeepImports": 168,
+    "domains": 29,
+    "sourceFiles": 1124,
+    "edgeEntrypoints": 26,
+    "handlerFiles": 61,
+    "persistenceOutsideInfrastructure": 101,
+    "crossDomainDeepImports": 177,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 208,
-    "schedulerEntrypoints": 7,
-    "oversizedSourceFiles": 100,
-    "capabilityStrings": 125
+    "compatibilityMarkerFiles": 213,
+    "schedulerEntrypoints": 8,
+    "oversizedSourceFiles": 102,
+    "capabilityStrings": 126
   },
   "domains": [
     {
@@ -79,6 +79,16 @@
         "tests"
       ],
       "sourceFiles": 9,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "banking-fx",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure"
+      ],
+      "sourceFiles": 10,
       "publicBoundaryFiles": []
     },
     {
@@ -163,6 +173,19 @@
         "tests"
       ],
       "sourceFiles": 14,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "fx",
+      "layers": [
+        "api",
+        "calculations",
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 11,
       "publicBoundaryFiles": []
     },
     {
@@ -358,6 +381,7 @@
       "backend/supabase/functions/bootstrap-api/index.ts",
       "backend/supabase/functions/campaign-orchestrator/index.ts",
       "backend/supabase/functions/classroom-api/index.ts",
+      "backend/supabase/functions/fx-orchestrator/index.ts",
       "backend/supabase/functions/game-data-purger/index.ts",
       "backend/supabase/functions/license-email-worker/index.ts",
       "backend/supabase/functions/license-issuance-worker/index.ts",
@@ -387,6 +411,7 @@
       "backend/src/domains/auth/api/staffSignupCancelHttpHandler.ts",
       "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
       "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
+      "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.ts",
       "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
       "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
@@ -401,6 +426,7 @@
       "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
       "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
       "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
+      "backend/src/domains/fx/api/fxOrchestratorHttpHandler.ts",
       "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
       "backend/src/domains/game-sessions/api/createGameHandler.ts",
       "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts",
@@ -441,6 +467,7 @@
     ],
     "schedulers": [
       "backend/supabase/functions/campaign-orchestrator/index.ts",
+      "backend/supabase/functions/fx-orchestrator/index.ts",
       "backend/supabase/functions/game-data-purger/index.ts",
       "backend/supabase/functions/license-email-worker/index.ts",
       "backend/supabase/functions/license-issuance-worker/index.ts",
@@ -784,6 +811,10 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/fx-orchestrator/index.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/game-data-purger/index.ts",
         "layer": "outside-domain"
       },
@@ -870,6 +901,48 @@
         "ownerDomain": "attendance",
         "importedDomain": "players",
         "target": "../../players/domain/playerIdentifiers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.test.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "players",
+        "target": "../../players/api/playerRequestScope.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "players",
+        "target": "../../players/api/playerRequestScope.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "players",
+        "target": "../../players/api/playerSessionHttpHelpers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/api/playerBankingFxRoutePaths.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "players",
+        "target": "../../players/api/playerApiRouteSegments.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/api/playerBankingFxRoutePaths.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "players",
+        "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/contracts/playerBankingFxContracts.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "economy",
+        "target": "../../economy/contracts/playerBankingPublicContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/banking-fx/infrastructure/playerBankingFxPublicProjection.ts",
+        "ownerDomain": "banking-fx",
+        "importedDomain": "economy",
+        "target": "../../economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
       },
       {
         "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
@@ -1372,6 +1445,12 @@
       {
         "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
         "ownerDomain": "players",
+        "importedDomain": "banking-fx",
+        "target": "../../banking-fx/api/playerBankingFxRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
         "importedDomain": "inventory",
         "target": "../../inventory/api/playerInventoryRoutePaths.ts"
       },
@@ -1440,6 +1519,12 @@
         "ownerDomain": "players",
         "importedDomain": "economy",
         "target": "../../economy/api/playerBankingPublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "banking-fx",
+        "target": "../../banking-fx/api/playerBankingFxRoutePaths.ts"
       },
       {
         "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
@@ -2584,9 +2669,34 @@
         ]
       },
       {
+        "file": "backend/src/domains/economy/contracts/playerBankingPublicContracts.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
         "file": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
         "markers": [
           "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/fx/infrastructure/supabaseFxFixingRepository.ts",
+        "markers": [
+          "fallbackcode"
+        ]
+      },
+      {
+        "file": "backend/src/domains/fx/services/fxFixingRunner.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/fx/tests/canonicalFxMigrationContract.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
         ]
       },
       {
@@ -3160,6 +3270,12 @@
         "markers": []
       },
       {
+        "file": "player-terminal/src/api/banking-fx-backend-routes.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
         "file": "player-terminal/src/api/portfolio-market-holdings.js",
         "markers": [
           "fallback"
@@ -3331,12 +3447,16 @@
         "lines": 1194
       },
       {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 1139
+      },
+      {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
         "lines": 1132
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1120
+        "file": "backend/src/domains/fx/calculations/fxFixingEngine.ts",
+        "lines": 1125
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -3375,6 +3495,10 @@
         "lines": 908
       },
       {
+        "file": "backend/supabase/functions/classroom-api/index.ts",
+        "lines": 888
+      },
+      {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "lines": 869
       },
@@ -3383,12 +3507,12 @@
         "lines": 866
       },
       {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 862
-      },
-      {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
         "lines": 860
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
+        "lines": 856
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
@@ -3397,10 +3521,6 @@
       {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
         "lines": 851
-      },
-      {
-        "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
-        "lines": 843
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
@@ -3417,6 +3537,10 @@
       {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
         "lines": 821
+      },
+      {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 811
       },
       {
         "file": "backend/src/supabase/tableTypes.ts",
@@ -3447,6 +3571,10 @@
         "lines": 724
       },
       {
+        "file": "backend/src/domains/fx/infrastructure/supabaseFxFixingRepository.ts",
+        "lines": 720
+      },
+      {
         "file": "frontend/src/core/login.js",
         "lines": 715
       },
@@ -3457,10 +3585,6 @@
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
         "lines": 695
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 692
       },
       {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
@@ -3525,6 +3649,10 @@
       {
         "file": "admin/v2/src/routes/banking/BankingRoute.js",
         "lines": 620
+      },
+      {
+        "file": "backend/supabase/functions/player-api/runtime.ts",
+        "lines": 617
       },
       {
         "file": "backend/supabase/functions/stripe-license-webhook/index.ts",
@@ -3593,10 +3721,6 @@
       {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
         "lines": 577
-      },
-      {
-        "file": "backend/supabase/functions/player-api/runtime.ts",
-        "lines": 572
       },
       {
         "file": "admin/inventory-redemption-queue-surface.js",
@@ -4254,6 +4378,12 @@
         "capability": "index-method.v1",
         "locations": [
           "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.test.ts"
+        ]
+      },
+      {
+        "capability": "inflation.normalizer",
+        "locations": [
+          "backend/src/domains/fx/calculations/fxFixingEngine.ts"
         ]
       },
       {

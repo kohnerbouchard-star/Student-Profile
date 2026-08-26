@@ -5,6 +5,7 @@ import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/pla
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
+import { readPlayerBankingFxRoutePath } from "../../banking-fx/api/playerBankingFxRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerMarketplaceRoutePath } from "../../marketplace/api/playerMarketplaceRoutePaths.ts";
 import { readPlayerMessageThreadLifecycleRoutePath } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
@@ -127,53 +128,136 @@ Deno.test("shared Player route prefix parser accepts bounded services and reject
 
 Deno.test("all migrated Player route families dispatch on the Player API boundary", () => {
   const prefix = "/functions/v1/player-api";
-  assertEquals(readPlayerNotificationRoutePath(`${prefix}/players/me/notifications`), { kind: "list" });
-  assertEquals(readPlayerWorldRoutePath(`${prefix}/players/me/world/countries`), { kind: "countries" });
-  assertEquals(readPlayerInventoryRoutePath(`${prefix}/players/me/inventory`), { kind: "inventory" });
-  assertEquals(readPlayerMessagingRoutePath(`${prefix}/players/me/messages`), { kind: "list" });
-  assertEquals(readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages`), null);
-  assertEquals(readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/policy`), { kind: "policy" });
-  assertEquals(readPlayerStockAssetListRoutePath(`${prefix}/players/me/stocks/assets`), { kind: "assets" });
-  assertEquals(readPlayerContractPublicListRoutePath(`${prefix}/players/me/contracts`), { kind: "contracts" });
-  assertEquals(readPlayerContractAcceptanceRoutePath(`${prefix}/players/me/contracts/contract-key/accept`), {
-    kind: "accept",
-    contractKey: "contract-key",
+  assertEquals(
+    readPlayerNotificationRoutePath(`${prefix}/players/me/notifications`),
+    { kind: "list" },
+  );
+  assertEquals(
+    readPlayerWorldRoutePath(`${prefix}/players/me/world/countries`),
+    { kind: "countries" },
+  );
+  assertEquals(readPlayerInventoryRoutePath(`${prefix}/players/me/inventory`), {
+    kind: "inventory",
   });
-  assertEquals(readPlayerContractPublicSubmitRoutePath(`${prefix}/players/me/contracts/contract-key/submit`), {
-    kind: "submit",
-    contractKey: "contract-key",
+  assertEquals(readPlayerMessagingRoutePath(`${prefix}/players/me/messages`), {
+    kind: "list",
   });
-  assertEquals(readPlayerMarketplaceRoutePath(`${prefix}/players/me/marketplace/listings`), { kind: "collection" });
-  assertEquals(readPlayerCraftingRoutePath(`${prefix}/players/me/crafting`), { kind: "read" });
-  assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`), { kind: "items" });
-  assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/offer-quotes`), {
-    kind: "offerQuotes",
+  assertEquals(
+    readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages`),
+    null,
+  );
+  assertEquals(
+    readPlayerMessageThreadLifecycleRoutePath(
+      `${prefix}/players/me/messages/policy`,
+    ),
+    { kind: "policy" },
+  );
+  assertEquals(
+    readPlayerStockAssetListRoutePath(`${prefix}/players/me/stocks/assets`),
+    { kind: "assets" },
+  );
+  assertEquals(
+    readPlayerContractPublicListRoutePath(`${prefix}/players/me/contracts`),
+    { kind: "contracts" },
+  );
+  assertEquals(
+    readPlayerContractAcceptanceRoutePath(
+      `${prefix}/players/me/contracts/contract-key/accept`,
+    ),
+    {
+      kind: "accept",
+      contractKey: "contract-key",
+    },
+  );
+  assertEquals(
+    readPlayerContractPublicSubmitRoutePath(
+      `${prefix}/players/me/contracts/contract-key/submit`,
+    ),
+    {
+      kind: "submit",
+      contractKey: "contract-key",
+    },
+  );
+  assertEquals(
+    readPlayerMarketplaceRoutePath(`${prefix}/players/me/marketplace/listings`),
+    { kind: "collection" },
+  );
+  assertEquals(readPlayerCraftingRoutePath(`${prefix}/players/me/crafting`), {
+    kind: "read",
   });
-  assertEquals(readPlayerStorePublicRoutePath(`${prefix}/players/me/store/offer-purchases`), {
-    kind: "offerPurchases",
-  });
+  assertEquals(
+    readPlayerStorePublicRoutePath(`${prefix}/players/me/store/items`),
+    { kind: "items" },
+  );
+  assertEquals(
+    readPlayerStorePublicRoutePath(`${prefix}/players/me/store/offer-quotes`),
+    {
+      kind: "offerQuotes",
+    },
+  );
+  assertEquals(
+    readPlayerStorePublicRoutePath(
+      `${prefix}/players/me/store/offer-purchases`,
+    ),
+    {
+      kind: "offerPurchases",
+    },
+  );
   assertEquals(
     readPlayerStorePublicRoutePath(
       `${prefix}/players/me/store/receipts/spr_${"a".repeat(32)}`,
     ),
     { kind: "offerReceipt", receiptKey: `spr_${"a".repeat(32)}` },
   );
-  assertEquals(readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`), { kind: "banking" });
-  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`), {
-    kind: "businessRead",
-    resource: "overview",
-  });
-  assertEquals(readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business/stockroom`), {
-    kind: "businessRead",
-    resource: "stockroom",
-  });
-  assertEquals(parsePlayerWorldRuntimeRoute(`${prefix}/players/me/world-runtime`), {
-    operation: "context",
-    journeyId: null,
-  });
-  assertEquals(readPlayerProgressionRoutePath(`${prefix}/players/me/progression`), { kind: "read" });
-  assertEquals(readPlayerSessionLogoutRoutePath(`${prefix}/players/me/session/logout`), { kind: "logout" });
-  assertEquals(readPlayerStoryDeliveryRoutePath(`${prefix}/players/me/story-deliveries`), { kind: "list" });
+  assertEquals(
+    readPlayerBankingPublicRoutePath(`${prefix}/players/me/ledger`),
+    { kind: "banking" },
+  );
+  assertEquals(
+    readPlayerBankingFxRoutePath(`${prefix}/players/me/banking/fx`),
+    { kind: "overview" },
+  );
+  assertEquals(
+    readPlayerBankingFxRoutePath(
+      `${prefix}/players/me/banking/fx/orders/instant`,
+    ),
+    { kind: "instant" },
+  );
+  assertEquals(
+    readPlayerBusinessBankingRoutePath(`${prefix}/players/me/business`),
+    {
+      kind: "businessRead",
+      resource: "overview",
+    },
+  );
+  assertEquals(
+    readPlayerBusinessBankingRoutePath(
+      `${prefix}/players/me/business/stockroom`,
+    ),
+    {
+      kind: "businessRead",
+      resource: "stockroom",
+    },
+  );
+  assertEquals(
+    parsePlayerWorldRuntimeRoute(`${prefix}/players/me/world-runtime`),
+    {
+      operation: "context",
+      journeyId: null,
+    },
+  );
+  assertEquals(
+    readPlayerProgressionRoutePath(`${prefix}/players/me/progression`),
+    { kind: "read" },
+  );
+  assertEquals(
+    readPlayerSessionLogoutRoutePath(`${prefix}/players/me/session/logout`),
+    { kind: "logout" },
+  );
+  assertEquals(
+    readPlayerStoryDeliveryRoutePath(`${prefix}/players/me/story-deliveries`),
+    { kind: "list" },
+  );
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

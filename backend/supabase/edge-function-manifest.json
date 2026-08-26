@@ -35,6 +35,12 @@
       "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
     },
     {
+      "slug": "banking-fx-orchestrator",
+      "entrypoint": "backend/supabase/functions/banking-fx-orchestrator/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
+    },
+    {
       "slug": "campaign-orchestrator",
       "entrypoint": "backend/supabase/functions/campaign-orchestrator/index.ts",
       "verifyJwt": false,

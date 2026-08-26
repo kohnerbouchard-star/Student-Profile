@@ -36,6 +36,13 @@ import {
   readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
+  handlePlayerBankingFxRequest,
+} from "../../../src/domains/banking-fx/api/playerBankingFxHttpHandler.ts";
+import {
+  playerBankingFxRateLimitKey,
+  readPlayerBankingFxRoutePath,
+} from "../../../src/domains/banking-fx/api/playerBankingFxRoutePaths.ts";
+import {
   handlePlayerBusinessBankingRequest,
 } from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
 import {
@@ -248,6 +255,23 @@ Deno.serve(async (request) => {
     );
   }
 
+  const playerBankingFxRoute = readPlayerBankingFxRoutePath(url.pathname);
+
+  if (playerBankingFxRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      playerBankingFxRateLimitKey(playerBankingFxRoute, request.method),
+      (applicationContext) =>
+        handlePlayerBankingFxRequest(
+          request,
+          playerBankingFxRoute,
+          { createServiceClient },
+          applicationContext,
+        ),
+      { createServiceClient },
+    );
+  }
+
   const playerWorldRuntimeRoute = parsePlayerWorldRuntimeRoute(url.pathname);
 
   if (playerWorldRuntimeRoute) {
@@ -262,7 +286,8 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
@@ -321,9 +346,7 @@ Deno.serve(async (request) => {
 
   if (playerMarketplaceRoute) {
     const endpointKey = playerMarketplaceRoute.kind === "collection"
-      ? request.method === "GET"
-        ? "marketplace"
-        : "marketplaceListing"
+      ? request.method === "GET" ? "marketplace" : "marketplaceListing"
       : playerMarketplaceRoute.kind === "activate"
       ? "marketplaceActivate"
       : playerMarketplaceRoute.kind === "purchase"
@@ -367,7 +390,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
+  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(
+    url.pathname,
+  );
 
   if (playerStoryDeliveryRoute) {
     const endpointKey = playerStoryDeliveryRoute.kind === "state"
@@ -468,8 +493,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const playerContractAcceptanceRoute =
-    readPlayerContractAcceptanceRoutePath(url.pathname);
+  const playerContractAcceptanceRoute = readPlayerContractAcceptanceRoutePath(
+    url.pathname,
+  );
 
   if (playerContractAcceptanceRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
@@ -502,8 +528,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const playerContractPublicListRoute =
-    readPlayerContractPublicListRoutePath(url.pathname);
+  const playerContractPublicListRoute = readPlayerContractPublicListRoutePath(
+    url.pathname,
+  );
 
   if (playerContractPublicListRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
@@ -596,29 +623,28 @@ Deno.serve(async (request) => {
   );
 
   if (playerBusinessBankingRoute) {
-    const endpointKey =
-      playerBusinessBankingRoute.kind === "businessRead" &&
+    const endpointKey = playerBusinessBankingRoute.kind === "businessRead" &&
         playerBusinessBankingRoute.resource === "workforceCandidates"
-        ? "businessWorkforce"
-        : ({
-      businessRead: "business",
-      businessCreate: "businessCreate",
-      businessProductCreate: "businessProductCreate",
-      businessInputPurchase: "businessInputPurchase",
-      businessStoreQuote: "storeQuote",
-      businessStorePurchase: "storePurchase",
-      businessProduction: "businessProduction",
-      businessPrice: "businessPrice",
-      businessCandidateHire: "businessCandidateHire",
-      businessHire: "businessRetiredHire",
-      businessTerminate: "businessTerminate",
-      businessStatus: "businessStatus",
-      playerTransfer: "bankTransfer",
-      savingsTransfer: "savingsTransfer",
-      loansRead: "loans",
-      loanApply: "loanApply",
-      loanRepay: "loanRepay",
-    } as const)[playerBusinessBankingRoute.kind];
+      ? "businessWorkforce"
+      : ({
+        businessRead: "business",
+        businessCreate: "businessCreate",
+        businessProductCreate: "businessProductCreate",
+        businessInputPurchase: "businessInputPurchase",
+        businessStoreQuote: "storeQuote",
+        businessStorePurchase: "storePurchase",
+        businessProduction: "businessProduction",
+        businessPrice: "businessPrice",
+        businessCandidateHire: "businessCandidateHire",
+        businessHire: "businessRetiredHire",
+        businessTerminate: "businessTerminate",
+        businessStatus: "businessStatus",
+        playerTransfer: "bankTransfer",
+        savingsTransfer: "savingsTransfer",
+        loansRead: "loans",
+        loanApply: "loanApply",
+        loanRepay: "loanRepay",
+      } as const)[playerBusinessBankingRoute.kind];
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,

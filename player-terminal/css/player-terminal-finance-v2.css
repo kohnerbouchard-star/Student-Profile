@@ -7,3 +7,304 @@
 .player-terminal-bank-accounts{gap:var(--player-space-4)}.player-terminal-bank-card{border-color:rgba(0,212,255,.16);background:linear-gradient(145deg,rgba(10,29,52,.92),rgba(6,16,33,.95));box-shadow:var(--player-shadow-low)}.player-terminal-bank-card h3{font-size:clamp(1.45rem,3vw,2.1rem);letter-spacing:-.03em}.player-terminal-transaction-row{border-bottom:1px solid rgba(148,182,197,.1)}.player-terminal-transaction-row:last-child{border-bottom:0}.player-terminal-transaction-row.is-credit{background:linear-gradient(90deg,rgba(74,222,128,.035),transparent 45%)}.player-terminal-transaction-row.is-debit{background:linear-gradient(90deg,rgba(255,98,104,.025),transparent 45%)}
 .player-terminal-loan-offer{border-color:rgba(148,182,197,.16);transition:160ms ease}.player-terminal-loan-offer:hover,.player-terminal-loan-offer.active{border-color:var(--player-color-line-strong);background:rgba(0,212,255,.04)}.player-terminal-loan-review{border:1px solid rgba(255,165,0,.2);border-radius:var(--player-radius-sm);background:rgba(255,165,0,.035)}
 @media(max-width:760px){.player-terminal-position-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.player-terminal-market-summary,.player-terminal-portfolio-metrics,.player-terminal-loan-metrics{grid-template-columns:1fr 1fr}}
+
+/* Banking-owned canonical balances and customer FX. */
+.player-terminal-banking-page {
+  --player-fx-panel: rgba(4, 20, 38, 0.86);
+}
+
+.player-terminal-bank-balance-breakdown,
+.player-terminal-fx-quote dl,
+.player-terminal-fx-order dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--player-space-2);
+  margin: var(--player-space-3) 0 0;
+}
+
+.player-terminal-bank-balance-breakdown > div,
+.player-terminal-fx-quote dl > div,
+.player-terminal-fx-order dl > div {
+  min-width: 0;
+}
+
+.player-terminal-bank-balance-breakdown dt,
+.player-terminal-fx-quote dt,
+.player-terminal-fx-order dt {
+  color: var(--player-color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.player-terminal-bank-balance-breakdown dd,
+.player-terminal-fx-quote dd,
+.player-terminal-fx-order dd {
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-bank-account-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--player-space-2);
+}
+
+.player-terminal-bank-account-key code {
+  color: var(--player-color-cyan);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.player-terminal-fx-panel {
+  display: grid;
+  gap: var(--player-space-5);
+  margin-bottom: var(--player-space-5);
+  padding: var(--player-space-5);
+  border-color: rgba(0, 212, 255, 0.22);
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 212, 255, 0.08), transparent 32rem),
+    var(--player-fx-panel);
+}
+
+.player-terminal-fx-panel[aria-busy="true"] {
+  opacity: 0.82;
+}
+
+.player-terminal-fx-fixing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--player-space-3);
+}
+
+.player-terminal-fx-fixing-grid article {
+  display: grid;
+  gap: 0.25rem;
+  padding: var(--player-space-3);
+  border: 1px solid rgba(148, 182, 197, 0.14);
+  border-radius: var(--player-radius-sm);
+  background: rgba(3, 15, 30, 0.68);
+}
+
+.player-terminal-fx-fixing-grid small,
+.player-terminal-fx-quote-empty > small {
+  color: var(--player-color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.player-terminal-fx-fixing-grid span {
+  color: var(--player-color-text-muted);
+  font-size: 0.76rem;
+}
+
+.player-terminal-fx-workspace,
+.player-terminal-fx-order-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--player-space-4);
+}
+
+.player-terminal-fx-workspace > form,
+.player-terminal-fx-quote,
+.player-terminal-fx-quote-empty,
+.player-terminal-fx-history,
+.player-terminal-fx-orders {
+  min-width: 0;
+  padding: var(--player-space-4);
+  border: 1px solid rgba(148, 182, 197, 0.14);
+  border-radius: var(--player-radius-sm);
+  background: rgba(3, 15, 30, 0.72);
+}
+
+.player-terminal-fx-workspace fieldset {
+  display: grid;
+  gap: var(--player-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.player-terminal-fx-workspace legend {
+  margin-bottom: var(--player-space-3);
+  font-weight: 800;
+}
+
+.player-terminal-fx-workspace label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--player-color-text-muted);
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.player-terminal-fx-workspace select,
+.player-terminal-fx-workspace input {
+  width: 100%;
+}
+
+.player-terminal-fx-workspace fieldset > small,
+.player-terminal-fx-quote > p,
+.player-terminal-fx-quote-empty > p {
+  color: var(--player-color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.player-terminal-fx-quote,
+.player-terminal-fx-quote-empty {
+  display: grid;
+  align-content: start;
+  gap: var(--player-space-4);
+}
+
+.player-terminal-fx-quote > header,
+.player-terminal-fx-history > header,
+.player-terminal-fx-orders > header,
+.player-terminal-fx-order > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--player-space-3);
+}
+
+.player-terminal-fx-quote > header > div,
+.player-terminal-fx-history > header > div:first-child,
+.player-terminal-fx-orders > header > div,
+.player-terminal-fx-order > header > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.player-terminal-fx-quote dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--player-space-3);
+}
+
+.player-terminal-fx-quote dl .is-fee,
+.player-terminal-fx-quote dl .is-credit {
+  padding: var(--player-space-2);
+  border-radius: var(--player-radius-xs);
+  background: rgba(255, 165, 0, 0.05);
+}
+
+.player-terminal-fx-quote dl .is-credit {
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.player-terminal-fx-range {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--player-space-2);
+}
+
+.player-terminal-fx-range .is-active {
+  border-color: var(--player-color-cyan);
+  color: var(--player-color-cyan);
+}
+
+.player-terminal-fx-history-list {
+  display: grid;
+  gap: 1px;
+  margin-top: var(--player-space-4);
+  overflow: hidden;
+  border: 1px solid rgba(148, 182, 197, 0.12);
+  border-radius: var(--player-radius-sm);
+  background: rgba(148, 182, 197, 0.12);
+}
+
+.player-terminal-fx-history-list > article {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.5fr) minmax(7rem, 1fr) minmax(6rem, 0.7fr);
+  gap: var(--player-space-3);
+  padding: var(--player-space-3);
+  background: rgba(3, 15, 30, 0.92);
+}
+
+.player-terminal-fx-history-list > article strong {
+  text-align: right;
+}
+
+.player-terminal-fx-orders > header {
+  margin-bottom: var(--player-space-4);
+}
+
+.player-terminal-fx-order-columns > section {
+  display: grid;
+  align-content: start;
+  gap: var(--player-space-3);
+  min-width: 0;
+}
+
+.player-terminal-fx-order-columns h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.player-terminal-fx-order-columns h4 span {
+  color: var(--player-color-text-muted);
+}
+
+.player-terminal-fx-order {
+  display: grid;
+  gap: var(--player-space-3);
+  padding: var(--player-space-3);
+  border: 1px solid rgba(148, 182, 197, 0.12);
+  border-radius: var(--player-radius-sm);
+  background: rgba(4, 20, 38, 0.74);
+}
+
+.player-terminal-fx-order dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 67.5rem) {
+  .player-terminal-fx-workspace,
+  .player-terminal-fx-order-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
+  .player-terminal-fx-panel {
+    padding: var(--player-space-4);
+  }
+
+  .player-terminal-fx-fixing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-fx-history > header,
+  .player-terminal-fx-orders > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .player-terminal-fx-range {
+    justify-content: flex-start;
+  }
+
+  .player-terminal-fx-history-list > article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-terminal-fx-history-list > article strong {
+    text-align: left;
+  }
+}
+
+@media (max-width: 30rem) {
+  .player-terminal-bank-balance-breakdown,
+  .player-terminal-fx-quote dl,
+  .player-terminal-fx-order dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -17,7 +17,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
 
   assertEquals(
     occurrences(source, "return dispatchRateLimitedReviewedPlayerRequest("),
-    24,
+    25,
   );
   assertEquals(
     occurrences(source, "reviewed(request,"),
@@ -49,6 +49,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
     const directReturn of [
       "return handlePlayerCapabilityManifestRequest(",
       "return handlePlayerBankingPublicRequest(",
+      "return handlePlayerBankingFxRequest(",
       "return handlePlayerBusinessBankingRequest(",
       "return handlePlayerGameDashboardRequest(",
       "return handlePlayerWorldReadRequest(",
@@ -109,6 +110,21 @@ Deno.test("both Player composition roots share the Store route rate-limit classi
     assertEquals(
       normalized.includes('playerStoreRoute.kind === "items"'),
       false,
+    );
+  }
+});
+
+Deno.test("both Player composition roots share the Banking FX parser, classifier, and authenticated context", async () => {
+  for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
+    const source = await Deno.readTextFile(sourceUrl);
+    const normalized = source.replace(/\s+/gu, " ");
+    assertEquals(source.includes("readPlayerBankingFxRoutePath"), true);
+    assertEquals(source.includes("playerBankingFxRateLimitKey"), true);
+    assertEquals(
+      normalized.includes(
+        "handlePlayerBankingFxRequest( request, playerBankingFxRoute, { createServiceClient }, applicationContext, )",
+      ),
+      true,
     );
   }
 });

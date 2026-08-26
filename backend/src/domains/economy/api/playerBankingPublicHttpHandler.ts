@@ -91,7 +91,8 @@ export async function handlePlayerBankingPublicRequest(
       limit,
       offset,
     });
-    const generatedAt = (dependencies.now ?? (() => new Date().toISOString()))();
+    const generatedAt = (dependencies.now ?? (() =>
+      new Date().toISOString()))();
     const generatedTimestamp = Date.parse(generatedAt);
     if (!Number.isFinite(generatedTimestamp)) {
       throw new Error("Player Banking generatedAt is invalid.");
@@ -110,10 +111,10 @@ export async function handlePlayerBankingPublicRequest(
       currentBalances: page.balances,
       ledgerEntries,
       pagination: {
-      cursor: offset > 0 ? `offset_${offset}` : null,
-      limit,
-      hasMore: page.hasMore,
-      nextCursor: page.hasMore ? `offset_${nextOffset}` : null,
+        cursor: offset > 0 ? `offset_${offset}` : null,
+        limit,
+        hasMore: page.hasMore,
+        nextCursor: page.hasMore ? `offset_${nextOffset}` : null,
       },
     });
   } catch (error) {
@@ -154,10 +155,14 @@ function validateRequestEnvelope(request: Request, url: URL): void {
   const allowed = new Set(["limit", "cursor"]);
   for (const key of url.searchParams.keys()) {
     if (!allowed.has(key)) {
-      throw invalidRequest(`Player Banking does not accept query parameter: ${key}.`);
+      throw invalidRequest(
+        `Player Banking does not accept query parameter: ${key}.`,
+      );
     }
     if (url.searchParams.getAll(key).length !== 1) {
-      throw invalidRequest(`Player Banking query parameter ${key} may appear once.`);
+      throw invalidRequest(
+        `Player Banking query parameter ${key} may appear once.`,
+      );
     }
   }
   if (FORBIDDEN_SCOPE_HEADERS.some((name) => request.headers.has(name))) {

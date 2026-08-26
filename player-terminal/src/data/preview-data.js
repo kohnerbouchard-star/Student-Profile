@@ -174,6 +174,47 @@ export const previewData = Object.freeze({
       { id: "txn-6", date: "Jul 12 · 15:44", description: "Contract reward · Pricing Audit", category: "Contract", amount: 6100, status: "Posted" }
     ]
   },
+  bankingFx: {
+    configured: true,
+    generatedAt: "2026-08-26T08:01:00.000Z",
+    currencies: [
+      { currencyCode: "ECO", minorUnit: 2 },
+      { currencyCode: "ELD", minorUnit: 2 },
+      { currencyCode: "LUM", minorUnit: 2 },
+      { currencyCode: "XAL", minorUnit: 2 }
+    ],
+    balances: [
+      { accountKey: "bac_11111111111111111111111111111111", accountKind: "checking", currencyCode: "ECO", postedAmount: 32680, heldAmount: 1200, availableAmount: 31480 },
+      { accountKey: "bac_22222222222222222222222222222222", accountKind: "checking", currencyCode: "ELD", postedAmount: 8640, heldAmount: 0, availableAmount: 8640 },
+      { accountKey: "bac_33333333333333333333333333333333", accountKind: "checking", currencyCode: "LUM", postedAmount: 2400, heldAmount: 300, availableAmount: 2100 },
+      { accountKey: "bac_44444444444444444444444444444444", accountKind: "savings", currencyCode: "ECO", postedAmount: 18400, heldAmount: 0, availableAmount: 18400 }
+    ],
+    fixing: {
+      fixingKey: "fxf_11111111111111111111111111111111",
+      effectiveAt: "2026-08-26T08:00:00.000Z",
+      calculatedAt: "2026-08-26T08:00:04.000Z",
+      nextFixingAt: "2026-08-27T08:00:00.000Z",
+      overdue: false,
+      policyVersion: "fx-policy-v1"
+    },
+    history: {
+      range: "7d",
+      points: [
+        { fixingKey: "fxf_21111111111111111111111111111111", effectiveAt: "2026-08-24T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.42" },
+        { fixingKey: "fxf_31111111111111111111111111111111", effectiveAt: "2026-08-25T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.43" },
+        { fixingKey: "fxf_11111111111111111111111111111111", effectiveAt: "2026-08-26T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.44" }
+      ],
+      pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 100 }
+    },
+    pendingOrders: [
+      { orderKey: "fxo_11111111111111111111111111111111", quoteKey: "fxq_11111111111111111111111111111111", product: "standard", status: "pending", sourceCurrencyCode: "ECO", targetCurrencyCode: "LUM", sourceAmount: "1000", feeAmount: "0", targetAmount: "795", submittedAt: "2026-08-26T07:30:00.000Z", settlesAt: "2026-08-27T08:00:00.000Z", completedAt: "", receiptKey: "", cancellable: true }
+    ],
+    completedOrders: [
+      { orderKey: "fxo_22222222222222222222222222222222", quoteKey: "fxq_22222222222222222222222222222222", product: "instant", status: "settled", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", sourceAmount: "500", feeAmount: "10", targetAmount: "711.5", submittedAt: "2026-08-25T10:00:00.000Z", settlesAt: "2026-08-25T10:00:00.000Z", completedAt: "2026-08-25T10:00:01.000Z", receiptKey: "fxr_22222222222222222222222222222222", cancellable: false }
+    ],
+    currentQuote: null,
+    error: ""
+  },
   business: {
     configured: true,
     company: { name: "Crescent Dynamics", registration: "ELD-BIZ-4418", status: "Operating", industry: "Precision Manufacturing", headquarters: "Crescent Bay, Eldoran", valuation: 84600, valuationChange: 4.2, cash: 12600, revenue: 18420, margin: 18.6, reputation: 74, reputationLabel: "Trusted supplier", summary: "A compact player-owned manufacturer producing logistics and analytical equipment for regional buyers." },

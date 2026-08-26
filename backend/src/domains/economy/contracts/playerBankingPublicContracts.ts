@@ -1,9 +1,17 @@
 export const PLAYER_BANKING_CURSOR_PATTERN = /^offset_(0|[1-9][0-9]{0,6})$/u;
 
 export interface PlayerBankingPublicBalanceDto {
+  /** Stable browser-safe account identity; internal account UUIDs stay server-side. */
+  readonly accountKey: string;
+  readonly accountKind: string;
+  /** Compatibility alias retained while the Player Banking client converges. */
   readonly accountType: string;
+  /** Compatibility alias for postedAmount. */
   readonly balance: number;
   readonly currencyCode: string;
+  readonly postedAmount: number;
+  readonly heldAmount: number;
+  readonly availableAmount: number;
 }
 
 export interface PlayerBankingPublicEntryDto {

@@ -9,6 +9,13 @@ import {
   readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
+  handlePlayerBankingFxRequest,
+} from "../../../src/domains/banking-fx/api/playerBankingFxHttpHandler.ts";
+import {
+  playerBankingFxRateLimitKey,
+  readPlayerBankingFxRoutePath,
+} from "../../../src/domains/banking-fx/api/playerBankingFxRoutePaths.ts";
+import {
   handlePlayerBusinessBankingRequest,
 } from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
 import {
@@ -178,11 +185,28 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "capabilities",
-      () => handlePlayerCapabilityManifestRequest(
-        request,
-        playerCapabilityManifestRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerCapabilityManifestRequest(
+          request,
+          playerCapabilityManifestRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerBankingFxRoute = readPlayerBankingFxRoutePath(url.pathname);
+  if (playerBankingFxRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      playerBankingFxRateLimitKey(playerBankingFxRoute, request.method),
+      (applicationContext) =>
+        handlePlayerBankingFxRequest(
+          request,
+          playerBankingFxRoute,
+          { createServiceClient },
+          applicationContext,
+        ),
       { createServiceClient },
     );
   }
@@ -200,7 +224,8 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
@@ -210,9 +235,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       playerWorldRoute.kind,
-      () => handlePlayerWorldReadRequest(request, playerWorldRoute, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerWorldReadRequest(request, playerWorldRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -224,12 +250,13 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventoryRedemption",
-      (applicationContext) => handlePlayerInventoryRedemptionRequest(
-        request,
-        playerInventoryRedemptionRoute,
-        { createServiceClient },
-        applicationContext,
-      ),
+      (applicationContext) =>
+        handlePlayerInventoryRedemptionRequest(
+          request,
+          playerInventoryRedemptionRoute,
+          { createServiceClient },
+          applicationContext,
+        ),
       { createServiceClient },
     );
   }
@@ -239,12 +266,13 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventory",
-      (applicationContext) => handlePlayerInventoryReadRequest(
-        request,
-        playerInventoryRoute,
-        { createServiceClient },
-        applicationContext,
-      ),
+      (applicationContext) =>
+        handlePlayerInventoryReadRequest(
+          request,
+          playerInventoryRoute,
+          { createServiceClient },
+          applicationContext,
+        ),
       { createServiceClient },
     );
   }
@@ -252,9 +280,7 @@ Deno.serve(async (request: Request) => {
   const playerMarketplaceRoute = readPlayerMarketplaceRoutePath(url.pathname);
   if (playerMarketplaceRoute) {
     const endpointKey = playerMarketplaceRoute.kind === "collection"
-      ? request.method === "GET"
-        ? "marketplace"
-        : "marketplaceListing"
+      ? request.method === "GET" ? "marketplace" : "marketplaceListing"
       : playerMarketplaceRoute.kind === "activate"
       ? "marketplaceActivate"
       : playerMarketplaceRoute.kind === "purchase"
@@ -265,9 +291,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -288,14 +315,17 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerProgressionRequest(request, playerProgressionRoute, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerProgressionRequest(request, playerProgressionRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
-  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
+  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(
+    url.pathname,
+  );
   if (playerStoryDeliveryRoute) {
     const endpointKey = playerStoryDeliveryRoute.kind === "state"
       ? "storyDeliveryState"
@@ -303,11 +333,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerStoryDeliveryRequest(
-        request,
-        playerStoryDeliveryRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerStoryDeliveryRequest(
+          request,
+          playerStoryDeliveryRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -320,11 +351,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerNotificationRequest(
-        request,
-        playerNotificationRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerNotificationRequest(
+          request,
+          playerNotificationRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -334,9 +366,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "logout",
-      () => handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -353,11 +386,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerStockAssetListRequest(
-        request,
-        playerStockAssetListRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerStockAssetListRequest(
+          request,
+          playerStockAssetListRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -367,9 +401,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       playerStoreRouteRateLimitKey(playerStoreRoute),
-      () => handlePlayerStorePublicRequest(request, playerStoreRoute, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerStorePublicRequest(request, playerStoreRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -390,11 +425,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contractAccept",
-      () => handlePlayerContractAcceptanceRequest(
-        request,
-        playerContractAcceptanceRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerContractAcceptanceRequest(
+          request,
+          playerContractAcceptanceRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -405,11 +441,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contractSubmit",
-      () => handlePlayerContractPublicSubmitRequest(
-        request,
-        playerContractPublicSubmitRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerContractPublicSubmitRequest(
+          request,
+          playerContractPublicSubmitRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -421,9 +458,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contracts",
-      () => handlePlayerContractPublicListRequest(request, {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerContractPublicListRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -439,9 +477,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_portfolio", {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_portfolio", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -450,9 +489,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_holdings", {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_holdings", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -462,18 +502,20 @@ Deno.serve(async (request: Request) => {
       return dispatchRateLimitedReviewedPlayerRequest(
         request,
         "marketOrder",
-        () => handlePlayerStockMarketTradingRequest(request, {
-          createServiceClient,
-        }),
+        () =>
+          handlePlayerStockMarketTradingRequest(request, {
+            createServiceClient,
+          }),
         { createServiceClient },
       );
     }
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_orders", {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_orders", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -482,9 +524,10 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_trades", {
-        createServiceClient,
-      }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_trades", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -521,11 +564,12 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerBusinessBankingRequest(
-        request,
-        playerBusinessBankingRoute,
-        { createServiceClient },
-      ),
+      () =>
+        handlePlayerBusinessBankingRequest(
+          request,
+          playerBusinessBankingRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -544,7 +588,8 @@ Deno.serve(async (request: Request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "bootstrap",
-      () => handlePlayerSessionBootstrapRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerSessionBootstrapRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }

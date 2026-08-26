@@ -16,6 +16,7 @@ const READ_KEY_MAP = Object.freeze({
   inventory: "inventory",
   crafting: "crafting",
   banking: "banking",
+  bankingFx: "bankingFx",
   loans: "loans",
   messages: "messages",
   progression: "progression",
@@ -132,6 +133,18 @@ export class PreviewTransport {
     await delay(method === "GET" ? 80 : 180);
 
     if (method === "GET") {
+      if (endpointKey === "bankingFxHistory") {
+        return clone(previewData.bankingFx.history);
+      }
+      if (endpointKey === "bankingFxOrders") {
+        return {
+          orders: clone([
+            ...previewData.bankingFx.pendingOrders,
+            ...previewData.bankingFx.completedOrders,
+          ]),
+          pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 25 },
+        };
+      }
       if (endpointKey === "worldRuntime") return clone(this.worldRuntime);
       if (endpointKey === "store") return clone(this.storeData);
       if (endpointKey === "storeOfferReceipt") {

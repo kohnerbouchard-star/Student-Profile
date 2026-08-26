@@ -16,6 +16,7 @@ const RESOURCE_ENDPOINT_KEYS = Object.freeze({
   inventory: "inventory",
   crafting: "crafting",
   banking: "banking",
+  bankingFx: "bankingFx",
   loans: "loans",
   messages: "messages",
   progression: "progression"

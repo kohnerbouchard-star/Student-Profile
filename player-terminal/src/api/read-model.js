@@ -524,9 +524,16 @@ function normalizeBankingRead(response, currentBanking) {
   const body = object(response);
   const current = object(currentBanking);
   const balances = list(body.currentBalances);
-  const checking = balances.find((item) => text(item.accountType).toLowerCase() === "checking") || {};
-  const savings = balances.find((item) => text(item.accountType).toLowerCase() === "savings");
-  const checkingBalance = number(checking.balance);
+  const accountKind = (item) => text(item?.accountKind || item?.accountType).toLowerCase();
+  const postedAmount = (item) => number(item?.postedAmount ?? item?.balance);
+  const heldAmount = (item) => Math.max(0, number(item?.heldAmount ?? item?.held));
+  const availableAmount = (item) => number(
+    item?.availableAmount ?? item?.available,
+    postedAmount(item) - heldAmount(item),
+  );
+  const checking = balances.find((item) => accountKind(item) === "checking") || {};
+  const savings = balances.find((item) => accountKind(item) === "savings");
+  const checkingBalance = postedAmount(checking);
   const page = object(body.pagination);
   const incoming = list(body.ledgerEntries).map((entry) => {
     const amount = number(entry.amount);
@@ -550,25 +557,37 @@ function normalizeBankingRead(response, currentBanking) {
   return {
     ...current,
     balances: balances.map((balance) => ({
-      accountType: text(balance.accountType),
-      balance: number(balance.balance),
-      currencyCode: text(balance.currencyCode)
+      accountKey: text(balance.accountKey),
+      accountKind: accountKind(balance),
+      accountType: accountKind(balance),
+      postedAmount: postedAmount(balance),
+      heldAmount: heldAmount(balance),
+      availableAmount: availableAmount(balance),
+      balance: postedAmount(balance),
+      available: availableAmount(balance),
+      currencyCode: text(balance.currencyCode).toUpperCase()
     })),
     checking: {
-      accountId: text(checking.accountType, "CHECKING").toUpperCase(),
+      accountId: text(checking.accountKey || checking.accountType, "CHECKING"),
       balance: checkingBalance,
-      available: checkingBalance,
-      pending: 0,
-      currencyCode: text(checking.currencyCode)
+      postedAmount: checkingBalance,
+      heldAmount: heldAmount(checking),
+      available: availableAmount(checking),
+      availableAmount: availableAmount(checking),
+      pending: heldAmount(checking),
+      currencyCode: text(checking.currencyCode).toUpperCase()
     },
     savings: savings ? {
       configured: true,
-      accountId: text(savings.accountType, "SAVINGS").toUpperCase(),
-      balance: number(savings.balance),
-      available: number(savings.balance),
+      accountId: text(savings.accountKey || savings.accountType, "SAVINGS"),
+      balance: postedAmount(savings),
+      postedAmount: postedAmount(savings),
+      heldAmount: heldAmount(savings),
+      available: availableAmount(savings),
+      availableAmount: availableAmount(savings),
       interestRate: null,
       interestEarned: null,
-      currencyCode: text(savings.currencyCode)
+      currencyCode: text(savings.currencyCode).toUpperCase()
     } : {
       configured: false,
       accountId: "NOT CONFIGURED",
