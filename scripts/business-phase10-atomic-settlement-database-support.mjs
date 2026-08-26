@@ -299,7 +299,6 @@ join public.economic_parties as party_row
 do $fixture$
 declare
   v_listing uuid;
-  v_cash uuid;
 begin
   v_listing := economy_private.ensure_business_store_listing_account_v2(
     ${sqlLiteral(FIXTURE.games.one.id)}, ${
@@ -315,11 +314,16 @@ begin
     cost_currency_code, version)
   values (${sqlLiteral(FIXTURE.games.one.id)}, v_listing,
     ${sqlLiteral(FIXTURE.games.one.gameItemId)}, 10, 0, 2.5000, 'ECO', 1);
-  v_cash := public.ensure_business_bank_account_v2(
-    ${sqlLiteral(FIXTURE.games.one.id)}, ${
-  sqlLiteral(FIXTURE.games.one.businessId)
-});
-  update public.account_balances set balance = 20 where id = v_cash;
+  perform * from public.record_business_ledger_entry_v2(
+    ${sqlLiteral(FIXTURE.games.one.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,
+    20, 'ECO', 'credit', 'business', 'capital_contribution_in',
+    ${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,
+    'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-business-one-seed'
+    )
+  );
 
   v_listing := economy_private.ensure_business_store_listing_account_v2(
     ${sqlLiteral(FIXTURE.games.two.id)}, ${
@@ -335,23 +339,59 @@ begin
     cost_currency_code, version)
   values (${sqlLiteral(FIXTURE.games.two.id)}, v_listing,
     ${sqlLiteral(FIXTURE.games.two.gameItemId)}, 10, 0, 2.5000, 'ECO', 1);
-  v_cash := public.ensure_business_bank_account_v2(
-    ${sqlLiteral(FIXTURE.games.two.id)}, ${
-  sqlLiteral(FIXTURE.games.two.businessId)
-});
-  update public.account_balances set balance = 20 where id = v_cash;
+  perform * from public.record_business_ledger_entry_v2(
+    ${sqlLiteral(FIXTURE.games.two.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,
+    20, 'ECO', 'credit', 'business', 'capital_contribution_in',
+    ${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,
+    'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-business-two-seed'
+    )
+  );
 end
 $fixture$;
 
-update public.account_balances set balance = 100
-where player_id in (
-  ${sqlLiteral(FIXTURE.games.one.buyerOneId)}, ${
-  sqlLiteral(FIXTURE.games.one.buyerTwoId)
-},
-  ${sqlLiteral(FIXTURE.games.two.buyerOneId)}, ${
-  sqlLiteral(FIXTURE.games.two.buyerTwoId)
-}
-) and business_id is null and account_type = 'checking' and currency_code = 'ECO';
+do $fixture_buyer_balances$
+begin
+  perform * from public.record_player_ledger_entry(
+    ${sqlLiteral(FIXTURE.games.one.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid,
+    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',
+    ${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-a-seed'
+    )
+  );
+  perform * from public.record_player_ledger_entry(
+    ${sqlLiteral(FIXTURE.games.one.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid,
+    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',
+    ${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-b-seed'
+    )
+  );
+  perform * from public.record_player_ledger_entry(
+    ${sqlLiteral(FIXTURE.games.two.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid,
+    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',
+    ${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-a-seed'
+    )
+  );
+  perform * from public.record_player_ledger_entry(
+    ${sqlLiteral(FIXTURE.games.two.id)}::uuid,
+    ${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid,
+    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',
+    ${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid, 'system', null,
+    jsonb_build_object(
+      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-b-seed'
+    )
+  );
+end
+$fixture_buyer_balances$;
 `;
 
 export function resetFixture() {
