@@ -133,14 +133,23 @@ jobs:
           NODE
 
       - name: Install dependencies and validate repaired source
+        shell: bash
         run: |
+          set -euo pipefail
           npm install --global npm@10.9.8
           npm ci --ignore-scripts
           npm ci --prefix backend --ignore-scripts
           node --check scripts/business-phase10-atomic-settlement-database-support.mjs
           npm run --prefix backend test:banking-fx-clearing
           node scripts/validate-supabase-migrations.mjs
-          node scripts/verify-player-cross-cutting-authority.mjs --pr 672
+          {
+            git diff --name-only origin/feat/canonical-fx-authority-v1...HEAD
+            git diff --name-only
+          } | sed '/^$/d' | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/player-cross-cutting-changed-files.txt \
+            --pr-number 672 \
+            --base-ref feat/canonical-fx-authority-v1
           git diff --check
 
       - name: Commit deterministic fixture repair
