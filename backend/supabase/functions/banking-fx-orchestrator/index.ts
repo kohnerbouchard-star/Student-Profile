@@ -1,10 +1,10 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { handleBankingFxOrchestratorRequest } from "../../../src/domains/banking-fx/api/bankingFxOrchestratorHttpHandler.ts";
 import {
   type StandardFxOrderSettlementClient,
   SupabaseStandardFxOrderSettlementRepository,
 } from "../../../src/domains/banking-fx/infrastructure/supabaseStandardFxOrderSettlementRepository.ts";
 import { StandardFxOrderSettlementError } from "../../../src/domains/banking-fx/services/standardFxOrderSettlementRunner.ts";
+import { createServiceRoleClient } from "../../../src/platform/supabase/serviceRoleClient.ts";
 
 Deno.serve((request: Request) =>
   handleBankingFxOrchestratorRequest(request, {
@@ -19,14 +19,11 @@ Deno.serve((request: Request) =>
           false,
         );
       }
-      const client = createClient(supabaseUrl, serviceRoleKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        global: {
-          headers: {
-            "x-client-info": "econovaria-banking-fx-orchestrator-v1",
-          },
-        },
-      });
+      const client = createServiceRoleClient(
+        supabaseUrl,
+        serviceRoleKey,
+        "econovaria-banking-fx-orchestrator-v1",
+      );
       return new SupabaseStandardFxOrderSettlementRepository(
         client as unknown as StandardFxOrderSettlementClient,
       );
