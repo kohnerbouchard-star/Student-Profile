@@ -6,7 +6,7 @@ import {
   SupabaseFxFixingRepository,
 } from "../../../src/domains/fx/infrastructure/supabaseFxFixingRepository.ts";
 import { FxFixingRunnerError } from "../../../src/domains/fx/services/fxFixingRunner.ts";
-import { createServiceRoleClient } from "../../../src/platform/supabase/serviceRoleClient.ts";
+import { createServiceRoleClient } from "../_shared/econovariaAuth.ts";
 
 Deno.serve((request: Request) =>
   handleFxOrchestratorRequest(request, {
