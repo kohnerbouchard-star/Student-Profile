@@ -1,25 +1,49 @@
-name: B2 Final Certification Autofix
+name: banking-fx-clearing-v1
 
 on:
   push:
     branches:
       - feat/banking-fx-clearing-v1
     paths:
-      - .github/workflows/b2-final-certification-autofix.yml
+      - .github/workflows/banking-fx-clearing-v1.yml
+      - backend/package.json
+      - docs/operations/contracts/player-cross-cutting/pr-672.json
+      - scripts/business-phase10-atomic-settlement-database-support.mjs
+  pull_request:
+    paths:
+      - .github/workflows/banking-fx-clearing-v1.yml
+      - backend/package.json
+      - backend/src/domains/banking-fx/**
+      - backend/src/domains/economy/**
+      - backend/src/domains/fx/**
+      - backend/src/domains/players/**
+      - backend/src/security/**
+      - backend/supabase/**
+      - docs/operations/contracts/player-cross-cutting/pr-672.json
+      - docs/roadmaps/banking-fx-clearing-scope-v1.md
+      - player-terminal/**
+      - scripts/banking-fx-*.mjs
+      - scripts/banking-fx-*.sql
+      - scripts/business-phase10-atomic-settlement-database-support.mjs
+      - scripts/player-cross-cutting-authority.test.mjs
+      - scripts/verify-player-cross-cutting-authority.mjs
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: b2-final-certification-autofix
+  group: banking-fx-clearing-v1-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  repair:
-    if: github.actor != 'github-actions[bot]'
+  repair-retained-settlement-fixture:
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    name: Repair retained settlement fixture
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - name: Check out B2 branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -59,19 +83,13 @@ jobs:
           const replaceOnce = (source, before, after, label) => {
             const first = source.indexOf(before);
             assert(first >= 0, `${label}: source marker missing`);
-            assert(
-              source.indexOf(before, first + before.length) < 0,
-              `${label}: source marker is ambiguous`,
-            );
+            assert(source.indexOf(before, first + before.length) < 0, `${label}: source marker is ambiguous`);
             return source.slice(0, first) + after + source.slice(first + before.length);
           };
           const replaceSpan = (source, startMarker, endMarker, replacement, label) => {
             const start = source.indexOf(startMarker);
             assert(start >= 0, `${label}: start marker missing`);
-            assert(
-              source.indexOf(startMarker, start + startMarker.length) < 0,
-              `${label}: start marker is ambiguous`,
-            );
+            assert(source.indexOf(startMarker, start + startMarker.length) < 0, `${label}: start marker is ambiguous`);
             const endStart = source.indexOf(endMarker, start + startMarker.length);
             assert(endStart >= 0, `${label}: end marker missing`);
             const end = endStart + endMarker.length;
@@ -111,10 +129,7 @@ jobs:
             'Player checking fixture seed',
           );
 
-          assert(
-            !support.includes('update public.account_balances set balance ='),
-            'Direct balance fixture mutation remains',
-          );
+          assert(!support.includes('update public.account_balances set balance ='), 'Direct balance fixture mutation remains');
           write(supportPath, support);
 
           const backendPackagePath = 'backend/package.json';
@@ -125,10 +140,7 @@ jobs:
 
           const authorityPath = 'docs/operations/contracts/player-cross-cutting/pr-672.json';
           const authority = JSON.parse(read(authorityPath));
-          authority.allowedPaths = [...new Set([
-            ...authority.allowedPaths,
-            supportPath,
-          ])].sort();
+          authority.allowedPaths = [...new Set([...authority.allowedPaths, supportPath])].sort();
           write(authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
           NODE
 
@@ -156,12 +168,61 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if git diff --quiet -- backend/package.json docs/operations/contracts/player-cross-cutting/pr-672.json scripts/business-phase10-atomic-settlement-database-support.mjs; then
+            echo "No deterministic fixture repair required."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            backend/package.json \
-            docs/operations/contracts/player-cross-cutting/pr-672.json \
-            scripts/business-phase10-atomic-settlement-database-support.mjs
+          git add backend/package.json docs/operations/contracts/player-cross-cutting/pr-672.json scripts/business-phase10-atomic-settlement-database-support.mjs
           git diff --cached --check
           git commit -m "test(banking-fx): converge retained settlement fixture"
           git push origin HEAD:feat/banking-fx-clearing-v1
+
+  certify:
+    name: Certify Banking FX clearing source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm ci --prefix backend --ignore-scripts
+
+      - name: Run Banking FX certification lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          git diff --name-only origin/feat/canonical-fx-authority-v1...HEAD | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/player-cross-cutting-changed-files.txt \
+            --pr-number 672 \
+            --base-ref feat/canonical-fx-authority-v1
+          node --check scripts/business-phase10-atomic-settlement-database-support.mjs
+          npm run --prefix backend test:banking-fx-clearing
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/local-edge-runtime-contract.test.mjs
+          git diff --check
