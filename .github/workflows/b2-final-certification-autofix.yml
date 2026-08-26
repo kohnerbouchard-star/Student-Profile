@@ -1,0 +1,376 @@
+name: B2 Final Certification Autofix
+
+on:
+  push:
+    branches:
+      - feat/banking-fx-clearing-v1
+    paths:
+      - .github/workflows/b2-final-certification-autofix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: b2-final-certification-autofix
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out B2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/banking-fx-clearing-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Apply bounded fixture and certification repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const root = process.cwd();
+          const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+          const write = (file, content) => {
+            const target = path.join(root, file);
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, content.endsWith('\n') ? content : `${content}\n`);
+          };
+          const assert = (condition, message) => {
+            if (!condition) throw new Error(message);
+          };
+          const replaceOnce = (source, before, after, label) => {
+            const first = source.indexOf(before);
+            assert(first >= 0, `${label}: source marker missing`);
+            assert(source.indexOf(before, first + before.length) < 0, `${label}: source marker is ambiguous`);
+            return source.slice(0, first) + after + source.slice(first + before.length);
+          };
+          const replaceSpan = (source, startMarker, endMarker, replacement, label) => {
+            const start = source.indexOf(startMarker);
+            assert(start >= 0, `${label}: start marker missing`);
+            assert(source.indexOf(startMarker, start + startMarker.length) < 0, `${label}: start marker is ambiguous`);
+            const endStart = source.indexOf(endMarker, start + startMarker.length);
+            assert(endStart >= 0, `${label}: end marker missing`);
+            const end = endStart + endMarker.length;
+            return source.slice(0, start) + replacement + source.slice(end);
+          };
+
+          const supportPath = 'scripts/business-phase10-atomic-settlement-database-support.mjs';
+          let support = read(supportPath);
+          support = replaceOnce(
+            support,
+            '  v_listing uuid;\n  v_cash uuid;',
+            '  v_listing uuid;',
+            'remove direct Business cash fixture variable',
+          );
+
+          support = replaceSpan(
+            support,
+            `  v_cash := public.ensure_business_bank_account_v2(\n    \${sqlLiteral(FIXTURE.games.one.id)}, \${`,
+            '  update public.account_balances set balance = 20 where id = v_cash;',
+            `  perform * from public.record_business_ledger_entry_v2(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,\n    20, 'ECO', 'credit', 'business', 'capital_contribution_in',\n    \${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,\n    'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-business-one-seed'\n    )\n  );`,
+            'Game one Business cash seed',
+          );
+
+          support = replaceSpan(
+            support,
+            `  v_cash := public.ensure_business_bank_account_v2(\n    \${sqlLiteral(FIXTURE.games.two.id)}, \${`,
+            '  update public.account_balances set balance = 20 where id = v_cash;',
+            `  perform * from public.record_business_ledger_entry_v2(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,\n    20, 'ECO', 'credit', 'business', 'capital_contribution_in',\n    \${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,\n    'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-business-two-seed'\n    )\n  );`,
+            'Game two Business cash seed',
+          );
+
+          support = replaceSpan(
+            support,
+            'update public.account_balances set balance = 100',
+            ") and business_id is null and account_type = 'checking' and currency_code = 'ECO';",
+            `do $fixture_buyer_balances$\nbegin\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-a-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-b-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-a-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-b-seed'\n    )\n  );\nend\n$fixture_buyer_balances$;`,
+            'Player checking fixture seed',
+          );
+
+          assert(!support.includes('update public.account_balances set balance ='), 'Direct balance fixture mutation remains');
+          write(supportPath, support);
+
+          const backendPackagePath = 'backend/package.json';
+          const backendPackage = JSON.parse(read(backendPackagePath));
+          backendPackage.scripts['test:banking-fx-clearing'] =
+            'npm run test:player-banking-fx && npm run test:banking-fx-orchestrator && npm run test:fx';
+          write(backendPackagePath, `${JSON.stringify(backendPackage, null, 2)}\n`);
+
+          const authorityPath = 'docs/operations/contracts/player-cross-cutting/pr-672.json';
+          const authority = JSON.parse(read(authorityPath));
+          authority.allowedPaths = [...new Set([
+            ...authority.allowedPaths,
+            supportPath,
+          ])].sort();
+          write(authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
+
+          const certificationWorkflow = [
+            'name: Banking FX Clearing V1',
+            '',
+            'on:',
+            '  pull_request:',
+            '    paths:',
+            '      - "backend/package.json"',
+            '      - "backend/src/domains/banking-fx/**"',
+            '      - "backend/src/domains/economy/**"',
+            '      - "backend/src/domains/fx/**"',
+            '      - "backend/src/domains/players/**"',
+            '      - "backend/src/platform/supabase/**"',
+            '      - "backend/src/security/**"',
+            '      - "backend/supabase/config.toml"',
+            '      - "backend/supabase/edge-function-manifest.json"',
+            '      - "backend/supabase/functions/banking-fx-orchestrator/**"',
+            '      - "backend/supabase/functions/classroom-api/**"',
+            '      - "backend/supabase/functions/fx-orchestrator/**"',
+            '      - "backend/supabase/functions/player-api/**"',
+            '      - "backend/supabase/migrations/202608260*.sql"',
+            '      - "backend/supabase/migrations/20260826100000_business_bank_identity_runtime_v1.sql"',
+            '      - "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"',
+            '      - "docs/operations/contracts/player-cross-cutting/pr-672.json"',
+            '      - "docs/roadmaps/banking-fx-clearing-scope-v1.md"',
+            '      - "player-terminal/**"',
+            '      - "scripts/banking-fx-database-acceptance.*"',
+            '      - "scripts/business-phase10-atomic-settlement-database-support.mjs"',
+            '      - "scripts/player-cross-cutting-authority.test.mjs"',
+            '      - "scripts/verify-player-cross-cutting-authority.mjs"',
+            '      - ".github/workflows/banking-fx-clearing-v1.yml"',
+            '  push:',
+            '    branches: [main]',
+            '    paths:',
+            '      - "backend/src/domains/banking-fx/**"',
+            '      - "backend/supabase/migrations/202608260*.sql"',
+            '      - "backend/supabase/migrations/20260826100000_business_bank_identity_runtime_v1.sql"',
+            '      - "player-terminal/**"',
+            '      - "scripts/banking-fx-database-acceptance.*"',
+            '      - ".github/workflows/banking-fx-clearing-v1.yml"',
+            '  workflow_dispatch:',
+            '',
+            'permissions:',
+            '  contents: read',
+            '',
+            'concurrency:',
+            '  group: banking-fx-clearing-v1-${{ github.event.pull_request.number || github.ref }}',
+            '  cancel-in-progress: true',
+            '',
+            'jobs:',
+            '  static:',
+            '    name: Verify Banking FX source and authority',
+            '    runs-on: ubuntu-24.04',
+            '    timeout-minutes: 45',
+            '    steps:',
+            '      - name: Check out exact workflow head',
+            '        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
+            '        with:',
+            '          ref: ${{ github.event.pull_request.head.sha || github.sha }}',
+            '          fetch-depth: 0',
+            '          persist-credentials: false',
+            '      - name: Verify exact checked-out SHA',
+            '        env:',
+            '          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}',
+            '        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"',
+            '      - name: Set up Node',
+            '        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',
+            '        with:',
+            '          node-version: 22.23.1',
+            '          cache: npm',
+            '          cache-dependency-path: |',
+            '            package-lock.json',
+            '            backend/package-lock.json',
+            '            player-terminal/package-lock.json',
+            '      - name: Set up Deno',
+            '        uses: denoland/setup-deno@v2',
+            '        with:',
+            '          deno-version: v2.9.3',
+            '      - name: Install pinned dependencies',
+            '        run: |',
+            '          npm install --global npm@10.9.8',
+            '          npm ci --ignore-scripts',
+            '          npm ci --prefix backend --ignore-scripts',
+            '          npm ci --prefix player-terminal --no-audit --no-fund',
+            '      - name: Verify B2 authority and migrations',
+            '        run: |',
+            '          set -euo pipefail',
+            '          node scripts/verify-player-cross-cutting-authority.mjs --pr 672',
+            '          node --test scripts/player-cross-cutting-authority.test.mjs',
+            '          node scripts/validate-supabase-migrations.mjs',
+            '          node scripts/architecture/build-architecture-inventory.mjs',
+            '          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json',
+            '          node scripts/architecture/architecture-ratchet-v2.mjs',
+            '          npm run security:secrets',
+            '          npm run test:supply-chain',
+            '          git diff --check',
+            '      - name: Verify Backend and Edge Banking FX',
+            '        run: |',
+            '          set -euo pipefail',
+            '          npm run --prefix backend test:banking-fx-clearing',
+            '          npm run --prefix backend typecheck:all',
+            '          npm run --prefix backend typecheck:fx-edge',
+            '      - name: Verify Player Banking FX surface',
+            '        run: |',
+            '          set -euo pipefail',
+            '          npm run --prefix player-terminal check',
+            '          npm run --prefix player-terminal banking-read',
+            '          npm run --prefix player-terminal banking-fx',
+            '          npm run --prefix player-terminal capability-manifest-current',
+            '          npm run --prefix player-terminal runtime-integration',
+            '',
+            '  database:',
+            '    name: Verify Banking FX rebuilt database',
+            '    runs-on: ubuntu-24.04',
+            '    timeout-minutes: 45',
+            '    steps:',
+            '      - name: Check out exact workflow head',
+            '        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
+            '        with:',
+            '          ref: ${{ github.event.pull_request.head.sha || github.sha }}',
+            '          persist-credentials: false',
+            '      - name: Set up Node',
+            '        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',
+            '        with:',
+            '          node-version: 22.23.1',
+            '          cache: npm',
+            '      - name: Install pinned tooling',
+            '        run: |',
+            '          npm install --global npm@10.9.8',
+            '          npm ci --ignore-scripts',
+            '      - name: Start disposable Postgres service',
+            '        shell: bash',
+            '        run: |',
+            '          set -euo pipefail',
+            '          LOG="/tmp/banking-fx-startup.log"',
+            '          : > "$LOG"',
+            '          STATUS=1',
+            '          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"',
+            '          for ATTEMPT in 1 2 3; do',
+            '            printf "\\n## Supabase Postgres startup attempt %s\\n" "$ATTEMPT" | tee -a "$LOG"',
+            '            set +e',
+            '            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"',
+            '            STATUS=${PIPESTATUS[0]}',
+            '            set -e',
+            '            if [ "$STATUS" -eq 0 ]; then exit 0; fi',
+            '            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true',
+            '            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true',
+            '            sleep $((ATTEMPT * 10))',
+            '          done',
+            '          exit "$STATUS"',
+            '      - name: Replay twice, lint, and run B2 acceptance',
+            '        env:',
+            '          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+            '        run: |',
+            '          set -euo pipefail',
+            '          npx supabase db reset --workdir backend --local',
+            '          npx supabase db reset --workdir backend --local',
+            '          npx supabase db lint --workdir backend --local --level warning',
+            '          node scripts/banking-fx-database-acceptance.mjs',
+            '      - name: Capture database diagnostics',
+            '        if: failure()',
+            '        run: |',
+            '          npx supabase status --workdir backend 2>&1 | tee /tmp/banking-fx-status.log || true',
+            '          docker ps -a 2>&1 | tee /tmp/banking-fx-docker.log || true',
+            '      - name: Upload database diagnostics',
+            '        if: failure()',
+            '        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4',
+            '        with:',
+            '          name: banking-fx-database-diagnostics',
+            '          path: |',
+            '            /tmp/banking-fx-startup.log',
+            '            /tmp/banking-fx-status.log',
+            '            /tmp/banking-fx-docker.log',
+            '          if-no-files-found: warn',
+            '          retention-days: 14',
+            '      - name: Stop disposable stack',
+            '        if: always()',
+            '        run: npx supabase stop --workdir backend --no-backup || true',
+            '',
+            '  chromium:',
+            '    name: Verify Player Banking FX in Chromium',
+            '    runs-on: ubuntu-24.04',
+            '    timeout-minutes: 25',
+            '    steps:',
+            '      - name: Check out exact workflow head',
+            '        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',
+            '        with:',
+            '          ref: ${{ github.event.pull_request.head.sha || github.sha }}',
+            '          persist-credentials: false',
+            '      - name: Set up Node',
+            '        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',
+            '        with:',
+            '          node-version: 22.23.1',
+            '          cache: npm',
+            '          cache-dependency-path: player-terminal/package-lock.json',
+            '      - name: Install Player Terminal and Chromium',
+            '        working-directory: player-terminal',
+            '        run: |',
+            '          npm install --global npm@10.9.8',
+            '          npm ci --no-audit --no-fund',
+            '          npx playwright install --with-deps chromium',
+            '      - name: Run Banking FX browser acceptance',
+            '        working-directory: player-terminal',
+            '        run: npm run browser -- tests/browser/player-banking-fx.spec.mjs --project=chromium-desktop',
+            '      - name: Upload browser diagnostics',
+            '        if: failure()',
+            '        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4',
+            '        with:',
+            '          name: banking-fx-browser-diagnostics',
+            '          path: |',
+            '            player-terminal/playwright-report',
+            '            player-terminal/test-results',
+            '          if-no-files-found: warn',
+            '          retention-days: 14',
+            '',
+            '  certify:',
+            '    name: banking-fx-clearing-v1',
+            '    if: always()',
+            '    needs: [static, database, chromium]',
+            '    runs-on: ubuntu-24.04',
+            '    steps:',
+            '      - name: Require every B2 certification lane',
+            '        env:',
+            '          STATIC_RESULT: ${{ needs.static.result }}',
+            '          DATABASE_RESULT: ${{ needs.database.result }}',
+            '          CHROMIUM_RESULT: ${{ needs.chromium.result }}',
+            '        run: |',
+            '          test "$STATIC_RESULT" = success',
+            '          test "$DATABASE_RESULT" = success',
+            '          test "$CHROMIUM_RESULT" = success',
+          ].join('\n');
+          write('.github/workflows/banking-fx-clearing-v1.yml', certificationWorkflow);
+          NODE
+
+      - name: Install dependencies and validate repair source
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm ci --prefix backend --ignore-scripts
+          node --check scripts/business-phase10-atomic-settlement-database-support.mjs
+          npm run --prefix backend test:banking-fx-clearing
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+      - name: Commit deterministic final tranche
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            .github/workflows/banking-fx-clearing-v1.yml \
+            backend/package.json \
+            docs/operations/contracts/player-cross-cutting/pr-672.json \
+            scripts/business-phase10-atomic-settlement-database-support.mjs
+          git diff --cached --check
+          git commit -m "test(banking-fx): install exact-head B2 certification"
+          git push origin HEAD:feat/banking-fx-clearing-v1
