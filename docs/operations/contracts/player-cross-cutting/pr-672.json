@@ -94,6 +94,7 @@
     "player-terminal/tests/banking-fx-surface.mjs",
     "player-terminal/tests/browser/player-banking-fx.spec.mjs",
     "player-terminal/tests/current-capability-manifest.mjs",
+    "player-terminal/tests/store-local-currency.mjs",
     "scripts/banking-fx-database-acceptance.mjs",
     "scripts/banking-fx-database-acceptance.sql",
     "scripts/local-edge-runtime-contract.test.mjs",
