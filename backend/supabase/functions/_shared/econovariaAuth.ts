@@ -120,6 +120,22 @@ export function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
   }) as unknown as EdgeSupabaseClient;
 }
 
+export function createServiceRoleClient(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  clientInfo: string,
+): EdgeSupabaseClient {
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: { "x-client-info": clientInfo },
+    },
+  }) as unknown as EdgeSupabaseClient;
+}
+
 export function resolveStaffForRequest(
   request: Request,
   env: SupabaseEnv,
