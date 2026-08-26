@@ -484,6 +484,8 @@ The controlling scope for `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` is `docs/roadm
 - The existing game timezone is immutable after FX bootstrap to protect one-fixing-per-local-date identity. Runtime scheduler configuration remains inert and uninvoked. No merge, deployment, secret mutation, cron installation, staging/production SQL, or live-environment mutation occurred.
 - Next exact item: `BUSINESS-V2-10A4B2` on `feat/banking-fx-clearing-v1`, based on the later documentation-only B1 handoff. It owns canonical accounts, balanced posting groups, holds, clearing/reserve capacity, customer standard/instant FX, and Player Banking UX.
 
+The controlling scope for `BUSINESS-V2-10A4B2` is `docs/roadmaps/banking-fx-clearing-scope-v1.md`, established from exact B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d` before any B2 runtime implementation. Its explicit transition rule preserves pre-B2 ledger economic identity and amounts as immutable `legacy_v1` evidence while backfilling only deterministic account/transaction linkage metadata and requiring every post-cutover write, including compatibility wrappers, to be a hold-aware per-currency-balanced `balanced_v2` transaction.
+
 Phase 11 remains closed until 10A.4D has one exact implementation SHA, all required exact-head evidence is green, and a clean documentation-only handoff is recorded. No item in this inserted sequence is `VERIFIED_COMPLETE` before merge to `main` and any required runtime evidence.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers

@@ -1517,3 +1517,17 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 - The scheduler configurator was not invoked. No merge, deployment, scheduled job installation, credential/secret change, staging or production SQL, or live-environment mutation occurred.
 - Intentionally unresolved and excluded from B1: Banking-owned account identities, balanced grouped posting, holds, clearing/reserve accounts, capped facility capacity, customer quotes/orders/settlement, Player Banking FX, and all shared purchase funding.
 - Next exact item: create `feat/banking-fx-clearing-v1` from this documentation-only handoff, establish a controlling B2 scope record, and open its draft PR against `feat/canonical-fx-authority-v1` before runtime implementation.
+
+---
+
+## 2026-08-26 — Banking FX clearing scope established
+
+- Roadmap item: `BUSINESS-V2-10A4B2`.
+- Owner branch: `feat/banking-fx-clearing-v1`, created from exact B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d`; parent B1 implementation remains `41bc2d978fe67cd06a8f2133f7310075492ecd99` on draft PR #671.
+- Controlling scope: `docs/roadmaps/banking-fx-clearing-scope-v1.md`.
+- Scope commit: `PENDING`.
+- Status: `IN_PROGRESS` — scope authority only; no B2 migration, runtime source, implementation SHA, workflow result, merge, deployment, scheduler installation, secret mutation, or staging/production database mutation is claimed by this record.
+- Transition decision: pre-B2 ledger economic identity and amounts remain immutable `legacy_v1` while deterministic account/transaction linkage metadata is backfilled; every post-cutover monetary write, including calls through legacy wrappers, must be account-linked, hold-aware, and balanced per currency as `balanced_v2`. A dedicated non-spendable compatibility contra preserves old domain behavior without consuming FX reserve authority or beginning C1-C4.
+- Exact boundary: Banking account identity, balanced grouped posting, holds, clearing/reserve/fee capacity, capped facility evidence, standard/instant Player FX, authoritative Banking reads/routes/UI, readiness, and cross-domain hold enforcement. Multi-account retail funding and Store/Marketplace/Stocks/Business currency convergence remain closed for C0-C4.
+- Key collision controls: an explicit superseding interface decision leaves `fxf_...` exclusively with B1 fixing keys and assigns B2 clearing evidence `fxc_...` or internal identity; #668 retains the global roadmap; PR #624 overlapping Player files are avoided until re-audited; broad `service_role` monetary DML is revoked explicitly rather than treated as safe through RLS alone.
+- Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/canonical-fx-authority-v1`, then implement only B2 and certify one exact head before opening C0.
