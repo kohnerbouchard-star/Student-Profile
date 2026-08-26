@@ -59,6 +59,24 @@ begin
         'ab.player_id = p_player_id'::text,
         'ab.business_id = v_business.id'::text,
         3::integer
+      ),
+      (
+        'normalize_loan_application_repayment_account_v1'::text,
+        'balance_row.player_id = new.player_id'::text,
+        '((v_product.borrower_type = ''business'' and balance_row.business_id = v_business.id) or (v_product.borrower_type <> ''business'' and balance_row.player_id is not distinct from new.player_id))'::text,
+        1::integer
+      ),
+      (
+        'bind_player_loan_repayment_account_v1'::text,
+        'balance_row.player_id = new.player_id'::text,
+        '((v_product.borrower_type = ''business'' and balance_row.business_id = new.business_id) or (v_product.borrower_type <> ''business'' and balance_row.player_id is not distinct from new.player_id))'::text,
+        1::integer
+      ),
+      (
+        'repay_player_loan_v1'::text,
+        'balance_row.player_id = p_player_id'::text,
+        '((v_loan.business_id is not null and balance_row.business_id = v_loan.business_id) or (v_loan.business_id is null and balance_row.player_id is not distinct from p_player_id))'::text,
+        1::integer
       )
     ) as targets(function_name, old_predicate, new_predicate, expected_count)
   loop
@@ -179,9 +197,12 @@ begin
       using errcode = 'P0001';
   end if;
 
-  -- Diagnostic final sweep. create_or_acquire_player_business_v1 is excluded
-  -- because it legitimately reads the buyer's personal cash in the same
-  -- function; its Business-cash path is asserted explicitly above.
+  -- Diagnostic final sweep. It targets only balance-projection aliases; Player
+  -- ownership checks on loan, payment, and Business rows remain valid
+  -- authorization and are deliberately not classified as monetary identity.
+  -- create_or_acquire_player_business_v1 is excluded because it legitimately
+  -- reads the buyer's personal cash in the same function; its Business-cash
+  -- path is asserted explicitly above.
   select string_agg(proc_row.proname, ', ' order by proc_row.proname)
   into v_remaining
   from pg_catalog.pg_proc as proc_row
@@ -194,11 +215,13 @@ begin
     and pg_catalog.pg_get_functiondef(proc_row.oid) like '%business_account_type_v1%'
     and (
       pg_catalog.pg_get_functiondef(proc_row.oid)
-        ~ '[.]player_id[[:space:]]*=[[:space:]]*p_player_id'
+        ~ '(balance_row|ab)[.]player_id[[:space:]]*=[[:space:]]*p_player_id'
       or pg_catalog.pg_get_functiondef(proc_row.oid)
-        ~ '[.]player_id[[:space:]]*=[[:space:]]*v_business[.]owner_player_id'
+        ~ '(balance_row|ab)[.]player_id[[:space:]]*=[[:space:]]*new[.]player_id'
       or pg_catalog.pg_get_functiondef(proc_row.oid)
-        ~ '[.]player_id[[:space:]]*=[[:space:]]*v_seller_player_id'
+        ~ '(balance_row|ab)[.]player_id[[:space:]]*=[[:space:]]*v_business[.]owner_player_id'
+      or pg_catalog.pg_get_functiondef(proc_row.oid)
+        ~ '(balance_row|ab)[.]player_id[[:space:]]*=[[:space:]]*v_seller_player_id'
     );
 
   if v_remaining is not null then
