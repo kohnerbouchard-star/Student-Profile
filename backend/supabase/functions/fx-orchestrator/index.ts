@@ -1,4 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   handleFxOrchestratorRequest,
 } from "../../../src/domains/fx/api/fxOrchestratorHttpHandler.ts";
@@ -7,6 +6,7 @@ import {
   SupabaseFxFixingRepository,
 } from "../../../src/domains/fx/infrastructure/supabaseFxFixingRepository.ts";
 import { FxFixingRunnerError } from "../../../src/domains/fx/services/fxFixingRunner.ts";
+import { createServiceRoleClient } from "../../../src/platform/supabase/serviceRoleClient.ts";
 
 Deno.serve((request: Request) =>
   handleFxOrchestratorRequest(request, {
@@ -22,12 +22,11 @@ Deno.serve((request: Request) =>
         );
       }
 
-      const client = createClient(supabaseUrl, serviceRoleKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        global: {
-          headers: { "x-client-info": "econovaria-fx-orchestrator-v1" },
-        },
-      });
+      const client = createServiceRoleClient(
+        supabaseUrl,
+        serviceRoleKey,
+        "econovaria-fx-orchestrator-v1",
+      );
       return new SupabaseFxFixingRepository(
         client as unknown as FxFixingSupabaseClient,
       );
