@@ -5,7 +5,7 @@ import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/pla
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
-import { readPlayerBankingFxRoutePath } from "../../banking-fx/api/playerBankingFxRoutePaths.ts";
+import { readPlayerBankingFxRoutePath } from "../../banking-fx/index.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerMarketplaceRoutePath } from "../../marketplace/api/playerMarketplaceRoutePaths.ts";
 import { readPlayerMessageThreadLifecycleRoutePath } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
