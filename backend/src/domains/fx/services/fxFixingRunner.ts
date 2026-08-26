@@ -89,8 +89,6 @@ export async function runFxFixingRunner(
     readonly now?: () => Date;
   } = {},
 ): Promise<FxFixingRunnerResult> {
-  // Keep a full five-minute lease for a deliberately small sequential batch.
-  // This leaves twelve seconds per game before a later worker may reclaim it.
   const limit = input.limit ?? 25;
   const leaseSeconds = input.leaseSeconds ?? 300;
 
@@ -313,7 +311,7 @@ function invalidResultEvidence(): FxFixingRunnerError {
   );
 }
 
-function readErrorCode(error: unknown, fallback: string): string {
+function readErrorCode(error: unknown, defaultCode: string): string {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -322,7 +320,7 @@ function readErrorCode(error: unknown, fallback: string): string {
     const code = (error as { readonly code: string }).code;
     if (/^[a-z0-9][a-z0-9._:-]{0,127}$/.test(code)) return code;
   }
-  return fallback;
+  return defaultCode;
 }
 
 function isTimestamp(value: string): boolean {
