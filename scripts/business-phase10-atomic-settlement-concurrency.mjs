@@ -915,7 +915,11 @@ $cash_race_setup$;`);
           and source_domain = 'store'
           and source_action = 'business_offer_purchase_debit')
     )::text;`);
-    assert.equal(facts.businessCash, "999999999997.50");
+    assertMoney(
+      facts.businessCash,
+      999999999997.5,
+      "successful cash-race Business cash",
+    );
     assertMoney(facts.buyerOne, 92.5, "successful cash-race Buyer debit");
     assertMoney(facts.buyerTwo, 100, "overflow loser Buyer rollback");
     assert.equal(facts.firstReceipts, 1);
