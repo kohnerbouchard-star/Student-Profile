@@ -1,14 +1,6 @@
 name: banking-fx-clearing-v1
 
 on:
-  push:
-    branches:
-      - feat/banking-fx-clearing-v1
-    paths:
-      - .github/workflows/banking-fx-clearing-v1.yml
-      - backend/package.json
-      - docs/operations/contracts/player-cross-cutting/pr-672.json
-      - scripts/business-phase10-atomic-settlement-database-support.mjs
   pull_request:
     paths:
       - .github/workflows/banking-fx-clearing-v1.yml
@@ -25,8 +17,17 @@ on:
       - scripts/banking-fx-*.mjs
       - scripts/banking-fx-*.sql
       - scripts/business-phase10-atomic-settlement-database-support.mjs
+      - scripts/local-edge-runtime-contract.test.mjs
       - scripts/player-cross-cutting-authority.test.mjs
       - scripts/verify-player-cross-cutting-authority.mjs
+  push:
+    branches:
+      - feat/banking-fx-clearing-v1
+    paths:
+      - .github/workflows/banking-fx-clearing-v1.yml
+      - backend/package.json
+      - docs/operations/contracts/player-cross-cutting/pr-672.json
+      - scripts/business-phase10-atomic-settlement-database-support.mjs
   workflow_dispatch:
 
 permissions:
@@ -37,148 +38,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  repair-retained-settlement-fixture:
-    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
-    name: Repair retained settlement fixture
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    steps:
-      - name: Check out B2 branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: feat/banking-fx-clearing-v1
-          fetch-depth: 0
-
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22.23.1
-          cache: npm
-
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.9.3
-
-      - name: Apply bounded fixture repair
-        shell: bash
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-
-          const root = process.cwd();
-          const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-          const write = (file, content) => {
-            const target = path.join(root, file);
-            fs.mkdirSync(path.dirname(target), { recursive: true });
-            fs.writeFileSync(target, content.endsWith('\n') ? content : `${content}\n`);
-          };
-          const assert = (condition, message) => {
-            if (!condition) throw new Error(message);
-          };
-          const replaceOnce = (source, before, after, label) => {
-            const first = source.indexOf(before);
-            assert(first >= 0, `${label}: source marker missing`);
-            assert(source.indexOf(before, first + before.length) < 0, `${label}: source marker is ambiguous`);
-            return source.slice(0, first) + after + source.slice(first + before.length);
-          };
-          const replaceSpan = (source, startMarker, endMarker, replacement, label) => {
-            const start = source.indexOf(startMarker);
-            assert(start >= 0, `${label}: start marker missing`);
-            assert(source.indexOf(startMarker, start + startMarker.length) < 0, `${label}: start marker is ambiguous`);
-            const endStart = source.indexOf(endMarker, start + startMarker.length);
-            assert(endStart >= 0, `${label}: end marker missing`);
-            const end = endStart + endMarker.length;
-            return source.slice(0, start) + replacement + source.slice(end);
-          };
-
-          const supportPath = 'scripts/business-phase10-atomic-settlement-database-support.mjs';
-          let support = read(supportPath);
-          support = replaceOnce(
-            support,
-            '  v_listing uuid;\n  v_cash uuid;',
-            '  v_listing uuid;',
-            'remove direct Business cash fixture variable',
-          );
-
-          support = replaceSpan(
-            support,
-            `  v_cash := public.ensure_business_bank_account_v2(\n    \${sqlLiteral(FIXTURE.games.one.id)}, \${`,
-            '  update public.account_balances set balance = 20 where id = v_cash;',
-            `  perform * from public.record_business_ledger_entry_v2(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,\n    20, 'ECO', 'credit', 'business', 'capital_contribution_in',\n    \${sqlLiteral(FIXTURE.games.one.businessId)}::uuid,\n    'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-business-one-seed'\n    )\n  );`,
-            'Game one Business cash seed',
-          );
-
-          support = replaceSpan(
-            support,
-            `  v_cash := public.ensure_business_bank_account_v2(\n    \${sqlLiteral(FIXTURE.games.two.id)}, \${`,
-            '  update public.account_balances set balance = 20 where id = v_cash;',
-            `  perform * from public.record_business_ledger_entry_v2(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,\n    20, 'ECO', 'credit', 'business', 'capital_contribution_in',\n    \${sqlLiteral(FIXTURE.games.two.businessId)}::uuid,\n    'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-business-two-seed'\n    )\n  );`,
-            'Game two Business cash seed',
-          );
-
-          support = replaceSpan(
-            support,
-            'update public.account_balances set balance = 100',
-            ") and business_id is null and account_type = 'checking' and currency_code = 'ECO';",
-            `do $fixture_buyer_balances$\nbegin\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.one.buyerOneId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-a-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.one.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.one.buyerTwoId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-one-b-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.two.buyerOneId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-a-seed'\n    )\n  );\n  perform * from public.record_player_ledger_entry(\n    \${sqlLiteral(FIXTURE.games.two.id)}::uuid,\n    \${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid,\n    'checking', 100, 'ECO', 'credit', 'setup', 'initial_balance_seed',\n    \${sqlLiteral(FIXTURE.games.two.buyerTwoId)}::uuid, 'system', null,\n    jsonb_build_object(\n      'bankTransactionIdempotencyKey', 'phase10a3-buyer-two-b-seed'\n    )\n  );\nend\n$fixture_buyer_balances$;`,
-            'Player checking fixture seed',
-          );
-
-          assert(!support.includes('update public.account_balances set balance ='), 'Direct balance fixture mutation remains');
-          write(supportPath, support);
-
-          const backendPackagePath = 'backend/package.json';
-          const backendPackage = JSON.parse(read(backendPackagePath));
-          backendPackage.scripts['test:banking-fx-clearing'] =
-            'npm run test:player-banking-fx && npm run test:banking-fx-orchestrator && npm run test:fx';
-          write(backendPackagePath, `${JSON.stringify(backendPackage, null, 2)}\n`);
-
-          const authorityPath = 'docs/operations/contracts/player-cross-cutting/pr-672.json';
-          const authority = JSON.parse(read(authorityPath));
-          authority.allowedPaths = [...new Set([...authority.allowedPaths, supportPath])].sort();
-          write(authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
-          NODE
-
-      - name: Install dependencies and validate repaired source
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install --global npm@10.9.8
-          npm ci --ignore-scripts
-          npm ci --prefix backend --ignore-scripts
-          node --check scripts/business-phase10-atomic-settlement-database-support.mjs
-          npm run --prefix backend test:banking-fx-clearing
-          node scripts/validate-supabase-migrations.mjs
-          {
-            git diff --name-only origin/feat/canonical-fx-authority-v1...HEAD
-            git diff --name-only
-          } | sed '/^$/d' | sort -u > /tmp/player-cross-cutting-changed-files.txt
-          node scripts/verify-player-cross-cutting-authority.mjs \
-            --changed-files /tmp/player-cross-cutting-changed-files.txt \
-            --pr-number 672 \
-            --base-ref feat/canonical-fx-authority-v1
-          git diff --check
-
-      - name: Commit deterministic fixture repair
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- backend/package.json docs/operations/contracts/player-cross-cutting/pr-672.json scripts/business-phase10-atomic-settlement-database-support.mjs; then
-            echo "No deterministic fixture repair required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/package.json docs/operations/contracts/player-cross-cutting/pr-672.json scripts/business-phase10-atomic-settlement-database-support.mjs
-          git diff --cached --check
-          git commit -m "test(banking-fx): converge retained settlement fixture"
-          git push origin HEAD:feat/banking-fx-clearing-v1
-
   certify:
     name: Certify Banking FX clearing source
     runs-on: ubuntu-24.04
@@ -202,6 +61,11 @@ jobs:
         with:
           node-version: 22.23.1
           cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
 
       - name: Install pinned dependencies
         shell: bash
