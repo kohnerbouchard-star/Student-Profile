@@ -248,9 +248,17 @@ assert.doesNotMatch(
   "The generic staff ledger mutation must not invent ECO when currency is omitted.",
 );
 
-assert.match(bankingRepository, /aggregatePublicBalances/);
-assert.match(bankingRepository, /current\.balance\s*=\s*roundMoney\(current\.balance \+ balance\)/);
+assert.match(bankingRepository, /list_player_bank_accounts_v1/);
+assert.match(bankingRepository, /parsePlayerBankAccounts/);
+assert.match(bankingRepository, /postedAmount/);
+assert.match(bankingRepository, /heldAmount/);
+assert.match(bankingRepository, /availableAmount/);
 assert.match(bankingRepository, /normalized === "checking"/);
+assert.doesNotMatch(
+  bankingRepository,
+  /aggregatePublicBalances/,
+  "Canonical Banking reads must not merge unlike account rows in the browser-facing repository.",
+);
 
 assert.match(playerApiIntegration, /function explicitSessionCurrency\(/);
 assert.match(playerApiIntegration, /function dashboardCurrency\(/);
@@ -293,4 +301,4 @@ assert.match(storePage, /matchingRows\.reduce/);
 assert.match(storePage, /GLOBAL SETTLEMENT WALLET/);
 assert.match(storePage, /LOCAL AVAILABLE BALANCE/);
 
-console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and Player mutation identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");
+console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and canonical account identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");
