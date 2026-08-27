@@ -9,14 +9,22 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    ".github/workflows/c1-migration-name-generator.yml",
+    ".github/workflows/multicurrency-store-funding-v1.yml",
+    "backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql",
+    "backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
+    "backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql",
+    "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql",
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
-    "docs/roadmaps/multicurrency-store-funding-scope-v1.md"
+    "docs/roadmaps/multicurrency-store-funding-scope-v1.md",
+    "scripts/multicurrency-store-funding-contract.mjs",
+    "scripts/multicurrency-store-funding-database.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/multicurrency-store-funding-contract.mjs",
+    "scripts/multicurrency-store-funding-database.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -26,6 +34,7 @@
     "database-replay",
     "banking-fx-clearing-v1",
     "multicurrency-funding-core-v1",
-    "business-player-store-cutover-v2"
+    "business-player-store-cutover-v2",
+    "multicurrency-store-funding-v1"
   ]
 }
