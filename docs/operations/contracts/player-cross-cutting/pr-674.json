@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/c1-migration-name-generator.yml",
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
     "docs/roadmaps/multicurrency-store-funding-scope-v1.md"
   ],
