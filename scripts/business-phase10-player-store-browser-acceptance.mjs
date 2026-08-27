@@ -1890,7 +1890,7 @@ function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
   assert(evidence.database.buyerCostAndProvenanceExact, "Buyer Inventory cost or provenance is invalid.");
   assert(evidence.database.quoteConsumedExactly, "Business quote consumption vector is invalid.");
   assert(evidence.database.receiptExact, "Immutable Business receipt vector is invalid.");
-  assert(Number(vector.ledgerPostingCount) === 2, "Settlement did not create exactly two ledger postings.");
+  assert(Number(vector.ledgerPostingCount) === 4, "Settlement did not create exactly four ledger postings.");
   assert(Number(vector.debitPostingCount) === 1, "Settlement did not create exactly one Buyer debit posting.");
   assert(Number(vector.creditPostingCount) === 1, "Settlement did not create exactly one Business credit posting.");
   assert(Number(vector.inventoryTransactionCount) === 1, "Settlement did not create exactly one Inventory transaction.");
@@ -1899,7 +1899,7 @@ function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
   assert(Number(vector.purchasedEventCount) === 1, "Settlement did not create exactly one PURCHASED event.");
   assert(Number(vector.businessActivityCount) === 1, "Settlement did not create exactly one Business activity event.");
   assert(
-    Number(after.settlementLedgerCount) - Number(before.settlementLedgerCount) === 2 &&
+    Number(after.settlementLedgerCount) - Number(before.settlementLedgerCount) === 4 &&
       Number(after.inventoryTransactionCount) - Number(before.inventoryTransactionCount) === 1 &&
       Number(after.purchasedEventCount) - Number(before.purchasedEventCount) === 1 &&
       Number(after.businessActivityCount) - Number(before.businessActivityCount) === 1,
