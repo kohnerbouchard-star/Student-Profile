@@ -1,9 +1,10 @@
 name: B2 Certification Handoff Autofix
 
 on:
-  push:
+  pull_request:
+    types: [synchronize, reopened]
     branches:
-      - feat/banking-fx-clearing-v1
+      - feat/canonical-fx-authority-v1
     paths:
       - .github/workflows/b2-certification-handoff-autofix.yml
 
@@ -12,21 +13,27 @@ permissions:
 
 jobs:
   record-handoff:
+    if: >-
+      github.event.pull_request.number == 672 &&
+      github.event.pull_request.head.ref == 'feat/banking-fx-clearing-v1' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Check out handoff trigger
+      - name: Check out exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.sha }}
-          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: true
 
-      - name: Verify certified implementation parent
+      - name: Verify certified implementation ancestry and bounded pre-handoff diff
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "5c74f41e94c7326de16767c4645a5fb0be0d7255"
+          CERTIFIED_SHA="5c74f41e94c7326de16767c4645a5fb0be0d7255"
+          git merge-base --is-ancestor "$CERTIFIED_SHA" HEAD
+          test "$(git diff --name-only "$CERTIFIED_SHA"..HEAD | sort)" = ".github/workflows/b2-certification-handoff-autofix.yml"
 
       - name: Record B2 exact-head certification
         shell: bash
@@ -151,16 +158,17 @@ This entry supersedes the prior B2 scope-only state and closes the later `CERTIF
           log.write_text(log_text)
           PY
 
+          rm .github/workflows/b2-certification-handoff-autofix.yml
           git diff --check
-          git diff -- docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
+          git diff -- docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md .github/workflows/b2-certification-handoff-autofix.yml
 
-      - name: Commit documentation-only handoff
+      - name: Commit clean documentation-only handoff
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
+          git add docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md .github/workflows/b2-certification-handoff-autofix.yml
           git diff --cached --check
           git commit -m "docs(banking): certify repaired B2 exact head"
           git push origin HEAD:feat/banking-fx-clearing-v1
