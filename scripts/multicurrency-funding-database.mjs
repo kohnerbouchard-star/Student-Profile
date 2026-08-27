@@ -61,6 +61,24 @@ function businessBalance(game) {
   `).output);
 }
 
+function normalizeFxCountryFixture() {
+  // The retained Phase 10A Store fixture adds one synthetic active TST country
+  // for Store/Business identity. Canonical B1 deliberately requires exactly
+  // ten active national countries, so C0 disables only that disposable helper
+  // country before bootstrapping real B1/B2 FX state.
+  runSql(`
+    update public.country_profiles
+    set status = 'disabled'
+    where id = ${sqlLiteral(FIXTURE.countryId)}::uuid
+      and country_code = 'TST'
+      and currency_code = 'ECO';
+  `);
+  const activeCount = Number(runSql(`
+    select count(*) from public.country_profiles where status = 'active';
+  `).output);
+  assert.equal(activeCount, 10, "C0 fixture must expose the canonical ten-country FX cohort.");
+}
+
 function initializeFx(game) {
   runSql(`
     insert into public.game_settings(game_session_id, stock_market_window)
@@ -182,6 +200,7 @@ function createFundingQuote({
 }
 
 resetFixture();
+normalizeFxCountryFixture();
 initializeFx(gameOne);
 initializeFx(gameTwo);
 
@@ -195,6 +214,57 @@ const yrcKey = accountKey(gameOne.id, buyerOne, "YRC");
 for (const key of [ecoKey, nrcKey, yrcKey]) {
   assert.match(key, /^bac_[0-9a-f]{32}$/u);
 }
+
+// Two distinct quote commands in one transaction must not share pg_temp
+// staging rows. This is the regression for the command-local stage wrapper.
+runSql(`
+  begin;
+  set local role service_role;
+  select public.create_purchase_funding_quote_v1(
+    ${sqlLiteral(gameOne.id)}::uuid,
+    ${sqlLiteral(buyerOne)}::uuid,
+    'ECO', 4, 'acceptance_bill', 'c0-stage-isolation-a',
+    ${sqlLiteral("7".repeat(64))},
+    ${sqlLiteral(JSON.stringify([
+      { sourceAccountKey: ecoKey, targetAmount: 4 },
+    ]))}::jsonb,
+    'c0-stage-isolation-quote-a'
+  );
+  select public.create_purchase_funding_quote_v1(
+    ${sqlLiteral(gameOne.id)}::uuid,
+    ${sqlLiteral(buyerOne)}::uuid,
+    'ECO', 6, 'acceptance_bill', 'c0-stage-isolation-b',
+    ${sqlLiteral("8".repeat(64))},
+    ${sqlLiteral(JSON.stringify([
+      { sourceAccountKey: nrcKey, targetAmount: 6 },
+    ]))}::jsonb,
+    'c0-stage-isolation-quote-b'
+  );
+  commit;
+`);
+const stageIsolation = runJson(`
+  select jsonb_build_object(
+    'quoteCount', count(*),
+    'lineCounts', jsonb_object_agg(quote_row.idempotency_key, (
+      select count(*)
+      from public.purchase_funding_quote_lines as line_row
+      where line_row.quote_id = quote_row.id
+        and line_row.game_session_id = quote_row.game_session_id
+    )),
+    'targetAmounts', jsonb_object_agg(quote_row.idempotency_key, quote_row.target_amount)
+  )::text
+  from public.purchase_funding_quotes as quote_row
+  where quote_row.game_session_id = ${sqlLiteral(gameOne.id)}::uuid
+    and quote_row.idempotency_key in (
+      'c0-stage-isolation-quote-a',
+      'c0-stage-isolation-quote-b'
+    );
+`);
+assert.equal(Number(stageIsolation.quoteCount), 2);
+assert.equal(Number(stageIsolation.lineCounts["c0-stage-isolation-quote-a"]), 1);
+assert.equal(Number(stageIsolation.lineCounts["c0-stage-isolation-quote-b"]), 1);
+assert.equal(Number(stageIsolation.targetAmounts["c0-stage-isolation-quote-a"]), 4);
+assert.equal(Number(stageIsolation.targetAmounts["c0-stage-isolation-quote-b"]), 6);
 
 const quoteResult = createFundingQuote({
   game: gameOne,
@@ -574,7 +644,7 @@ const gameIsolation = runJson(`
     )
   )::text;
 `);
-assert.ok(Number(gameIsolation.gameOneQuotes) >= 2);
+assert.ok(Number(gameIsolation.gameOneQuotes) >= 4);
 assert.equal(Number(gameIsolation.gameTwoQuotes), 1);
 assert.equal(Number(gameIsolation.crossScopedRows), 0);
 
@@ -591,6 +661,7 @@ process.stdout.write(`${JSON.stringify({
   receiptKey,
   sourceAccounts: 3,
   targetAmount: 60,
+  quoteStageIsolation: true,
   currencyNetsZero: settlementFacts.currencyNetsZero,
   compatibilityOffsetLines: Number(settlementFacts.compatibilityOffsetLines),
   replayZeroDelta: true,
