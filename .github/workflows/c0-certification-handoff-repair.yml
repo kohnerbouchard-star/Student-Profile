@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
-          test "$(git rev-parse HEAD^)" = "32916453dbb698bbb685d01c2e882c5cffe341af"
+          test "$(git rev-parse HEAD^)" = "18f43ae04d1b39fe3f5660e913c62242bcec18bd"
 
       - name: Materialize reviewed handoff and repair scope formatting
         shell: bash
@@ -46,12 +46,15 @@ jobs:
               raise SystemExit('Reviewed C0 handoff heredoc markers were not found') from error
 
           reviewed_lines = controller_lines[start:end]
-          if not reviewed_lines or any(not line.startswith('          ') for line in reviewed_lines):
+          if not reviewed_lines or any(
+              line and not line.startswith('          ')
+              for line in reviewed_lines
+          ):
               raise SystemExit('Reviewed C0 handoff indentation is invalid')
 
           handoff_path = Path('docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md')
           handoff_path.write_text(
-              '\n'.join(line[10:] for line in reviewed_lines) + '\n'
+              '\n'.join(line[10:] if line else '' for line in reviewed_lines) + '\n'
           )
 
           scope_path = Path('docs/roadmaps/multicurrency-funding-core-scope-v1.md')
