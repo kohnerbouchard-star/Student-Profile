@@ -329,21 +329,28 @@ begin
     raise exception 'FX_RATE_VERSION_STALE' using errcode = 'P0001';
   end if;
 
-  select account_row.*, party_row.*
-  into v_target_account, v_target_party
+  select account_row.*
+  into v_target_account
   from public.bank_accounts as account_row
-  join public.economic_parties as party_row
-    on party_row.id = account_row.party_id
-   and party_row.game_session_id = account_row.game_session_id
   where account_row.id = p_target_account_id
     and account_row.game_session_id = p_game_session_id
     and account_row.account_kind = 'checking'
     and account_row.status = 'active'
-    and account_row.currency_code = v_quote.target_currency_code
+    and account_row.currency_code = v_quote.target_currency_code;
+  if not found then
+    raise exception 'PURCHASE_FUNDING_TARGET_ACCOUNT_INVALID' using errcode = 'P0001';
+  end if;
+
+  select party_row.*
+  into v_target_party
+  from public.economic_parties as party_row
+  where party_row.id = v_target_account.party_id
+    and party_row.game_session_id = p_game_session_id
     and party_row.status = 'active';
   if not found then
     raise exception 'PURCHASE_FUNDING_TARGET_ACCOUNT_INVALID' using errcode = 'P0001';
   end if;
+
   if v_target_party.party_kind = 'player'
      and v_target_party.player_id = p_player_id
   then
