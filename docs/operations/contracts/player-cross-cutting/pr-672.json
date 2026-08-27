@@ -77,6 +77,7 @@
     "backend/supabase/migrations/20260826101000_banking_staff_adjustment_compatibility_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-672.json",
+    "docs/roadmaps/banking-fx-clearing-implementation-handoff-v1.md",
     "docs/roadmaps/banking-fx-clearing-scope-v1.md",
     "docs/roadmaps/business-v2-development-execution-log-v1.md",
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
