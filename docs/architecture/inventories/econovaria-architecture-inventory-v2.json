@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1147,
+    "sourceFiles": 1150,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 55,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 9,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 126
+    "capabilityStrings": 127
   },
   "domains": [
     {
@@ -261,7 +261,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 22,
       "publicBoundaryFiles": []
     },
     {
@@ -4222,6 +4222,13 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "marketplace.purchase",
+        "locations": [
+          "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
+          "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts"
         ]
       },
       {
