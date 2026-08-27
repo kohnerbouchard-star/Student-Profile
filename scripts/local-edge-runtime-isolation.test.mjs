@@ -37,7 +37,10 @@ function executable({
 }
 
 function readyResponse(url) {
-  return new Response(null, { status: new URL(url).pathname === "/" ? 200 : 204 });
+  const pathname = new URL(url).pathname;
+  return new Response(null, {
+    status: pathname === "/" || pathname.endsWith("/health") ? 200 : 204,
+  });
 }
 
 test("restarts the exact Edge and Kong containers and proves three stable gateway waves", async () => {
@@ -53,6 +56,7 @@ test("restarts the exact Edge and Kong containers and proves three stable gatewa
         url,
         method: init.method,
         apikey: init.headers?.apikey,
+        origin: init.headers?.Origin,
       });
       return readyResponse(url);
     },
@@ -90,14 +94,18 @@ test("restarts the exact Edge and Kong containers and proves three stable gatewa
         url: "http://127.0.0.1:4173/functions/v1/player-web-session-api",
         method: "OPTIONS",
       },
-      { url: "http://127.0.0.1:4173/functions/v1/bootstrap-api", method: "OPTIONS" },
+      {
+        url: "http://127.0.0.1:4173/functions/v1/bootstrap-api/health",
+        method: "GET",
+      },
     ],
   );
   assert.equal(requests.length, 12);
   assert.equal(requests[0].apikey, undefined);
-  assert.ok(requests.slice(1).every(({ apikey }, index) =>
-    index % 4 === 3 || apikey?.startsWith("sb_publishable_")
-  ));
+  assert.ok(requests.slice(1).every(({ apikey }) => apikey?.startsWith("sb_publishable_")));
+  assert.equal(requests[1].origin, "http://127.0.0.1:4173");
+  assert.equal(requests[2].origin, "http://127.0.0.1:4173");
+  assert.equal(requests[3].origin, undefined);
   assert.deepEqual(sleeps, [500, 500, 1_000]);
   assert.equal(logs.some((value) => value.includes("sb_publishable_")), false);
   assert.equal(logs.some((value) => value.includes(EDGE_CONTAINER)), false);
@@ -203,7 +211,9 @@ test("resets the readiness streak after an unhealthy wave", async () => {
     readFileImpl: async () => CONFIG,
     fetchImpl: async (url) => {
       const path = new URL(url).pathname;
-      if (path === "/") return new Response(null, { status: 200 });
+      if (path === "/" || path.endsWith("/health")) {
+        return new Response(null, { status: 200 });
+      }
       if (path === "/functions/v1/player-api") {
         return new Response(null, { status: playerStatuses.shift() ?? 204 });
       }
