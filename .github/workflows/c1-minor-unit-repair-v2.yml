@@ -1,0 +1,65 @@
+name: C1 Store minor-unit repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-minor-unit-repair-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-store-minor-unit-repair-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Apply reviewed repair patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .github/c1-repair/c1-minor-unit.patch.xz.b64 > /tmp/c1-minor-unit.patch.xz
+          echo "af56c034a2dad83059611ce19e66ece222849e5d3524d72ff13a396391d2d21a  /tmp/c1-minor-unit.patch.xz" | sha256sum --check --strict
+          xz --decompress --stdout /tmp/c1-minor-unit.patch.xz | patch --batch --forward -p0
+
+      - name: Verify repair before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/multicurrency-store-funding-contract.mjs
+          node --check scripts/multicurrency-store-funding-database.mjs
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql docs/operations/contracts/player-cross-cutting/pr-674.json scripts/multicurrency-store-funding-contract.mjs scripts/multicurrency-store-funding-database.mjs "
+
+      - name: Commit repaired C1 authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
+          git add docs/operations/contracts/player-cross-cutting/pr-674.json
+          git add scripts/multicurrency-store-funding-contract.mjs
+          git add scripts/multicurrency-store-funding-database.mjs
+          git commit -m "fix(store-funding): enforce target minor-unit precision"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
