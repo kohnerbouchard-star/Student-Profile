@@ -1,0 +1,194 @@
+name: C0 clean candidate rebuild
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-funding-core-v1
+    paths:
+      - .github/workflows/c0-clean-candidate-rebuild.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact rebuild-controller head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard bounded repair ancestry
+        shell: bash
+        env:
+          CLEAN_PARENT: 486a1209c02261f4952248472c85399b2c551a60
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
+          git cat-file -e "${CLEAN_PARENT}^{commit}"
+          git diff --name-only "${CLEAN_PARENT}...HEAD" | sort -u > /tmp/c0-controller-diff.txt
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/c0-fx-fixture-repair.yml|.github/workflows/c0-clean-candidate-rebuild.yml|scripts/multicurrency-funding-database.mjs)
+                ;;
+              "")
+                ;;
+              *)
+                printf 'Unexpected post-candidate path: %s\n' "$path" >&2
+                exit 1
+                ;;
+            esac
+          done < /tmp/c0-controller-diff.txt
+
+      - name: Materialize clean repaired candidate
+        shell: bash
+        env:
+          CLEAN_PARENT: 486a1209c02261f4952248472c85399b2c551a60
+        run: |
+          set -euo pipefail
+          cp scripts/multicurrency-funding-database.mjs /tmp/multicurrency-funding-database.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('/tmp/multicurrency-funding-database.mjs')
+          text = path.read_text()
+
+          if "clock_timestamp() - interval '2 minutes'" in text:
+              text = text.replace(
+                  "      clock_timestamp() - interval '2 minutes',",
+                  "      statement_timestamp() - interval '2 minutes',",
+                  1,
+              )
+          if "clock_timestamp() - interval '3 minutes'" in text:
+              text = text.replace(
+                  "      clock_timestamp() - interval '3 minutes'",
+                  "      statement_timestamp() - interval '3 minutes'",
+                  1,
+              )
+
+          old = '''    select public.initialize_fx_authority_for_game_v1(
+                ${sqlLiteral(game.id)}::uuid,
+                clock_timestamp() - interval '1 minute',
+                true
+              )::text;
+            `);
+
+            const state = runJson(`
+          '''
+          new = '''  `);
+
+            const bootstrap = runJson(`
+              select public.initialize_fx_authority_for_game_v1(
+                ${sqlLiteral(game.id)}::uuid,
+                statement_timestamp() - interval '1 minute',
+                true
+              )::text;
+            `);
+            assert.equal(
+              bootstrap.cutoverStatus,
+              "ready",
+              `FX bootstrap did not become ready: ${JSON.stringify(bootstrap)}`,
+            );
+
+            const state = runJson(`
+          '''
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          required = [
+              "statement_timestamp() - interval '2 minutes'",
+              "statement_timestamp() - interval '3 minutes'",
+              "const bootstrap = runJson(`",
+              "FX bootstrap did not become ready:",
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit('Clean C0 repair invariant missing: ' + repr(missing))
+          if "clock_timestamp() - interval '2 minutes'" in text:
+              raise SystemExit('Per-row snapshot clock remains in C0 fixture')
+
+          path.write_text(text)
+          PY
+
+          git checkout --detach "$CLEAN_PARENT"
+          cp /tmp/multicurrency-funding-database.mjs scripts/multicurrency-funding-database.mjs
+          test "$(git diff --name-only)" = "scripts/multicurrency-funding-database.mjs"
+          git diff --check
+          node --check scripts/multicurrency-funding-database.mjs
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Verify clean source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          git diff --name-only 029ea568adc722f0b7c1cd57a02c49f88ceaf716...HEAD | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          printf '%s\n' scripts/multicurrency-funding-database.mjs >> /tmp/player-cross-cutting-changed-files.txt
+          sort -u -o /tmp/player-cross-cutting-changed-files.txt /tmp/player-cross-cutting-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/player-cross-cutting-changed-files.txt \
+            --pr-number 673 \
+            --base-ref feat/banking-fx-clearing-v1
+          node scripts/multicurrency-funding-core-contract.mjs
+          node scripts/multicurrency-funding-core-simulation.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Verify clean database candidate and observed races
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+          node scripts/banking-fx-database-acceptance.mjs
+          node scripts/multicurrency-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-concurrency.mjs
+          npx supabase db lint --workdir backend --local --level warning
+
+      - name: Commit and force-update the clean candidate
+        shell: bash
+        env:
+          CONTROLLER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/multicurrency-funding-database.mjs
+          git commit -m "test(funding): stabilize FX bootstrap fixture"
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "scripts/multicurrency-funding-database.mjs"
+          git push \
+            --force-with-lease="refs/heads/feat/multicurrency-funding-core-v1:${CONTROLLER_SHA}" \
+            origin HEAD:refs/heads/feat/multicurrency-funding-core-v1
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
