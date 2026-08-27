@@ -60,12 +60,12 @@ function initializeFx(game) {
       ${sqlLiteral(game.id)}::uuid,
       country_row.id,
       0,
-      clock_timestamp() - interval '2 minutes',
+      statement_timestamp() - interval '2 minutes',
       'C0 multi-currency funding concurrency',
       difficulty_row.id,
       difficulty_row.preset_key,
       jsonb_build_object('source', 'multicurrency-funding-concurrency'),
-      clock_timestamp() - interval '3 minutes'
+      statement_timestamp() - interval '3 minutes'
     from public.country_profiles as country_row
     join public.difficulty_policy_profiles as difficulty_row
       on difficulty_row.preset_key = 'standard'
