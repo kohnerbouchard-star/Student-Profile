@@ -17,6 +17,11 @@ import {
   resolvePlayerRequestScope,
 } from "../../players/api/playerRequestScope.ts";
 import {
+  MARKETPLACE_FUNDING_ACCOUNT_KEY_PATTERN,
+  type PlayerMarketplaceFundingAllocationInput,
+  type PlayerMarketplaceFundingRepository,
+} from "../contracts/playerMarketplaceFundingContracts.ts";
+import {
   MARKETPLACE_IDEMPOTENCY_KEY_PATTERN,
   MARKETPLACE_ITEM_KEY_PATTERN,
   type MarketplaceCommittedResult,
@@ -24,10 +29,11 @@ import {
   PlayerMarketplacePersistenceError,
   type PlayerMarketplaceRepository,
 } from "../contracts/playerMarketplaceContracts.ts";
+import { SupabasePlayerMarketplaceFundingRepository } from "../infrastructure/supabasePlayerMarketplaceFundingRepository.ts";
 import { SupabasePlayerMarketplaceRepository } from "../infrastructure/supabasePlayerMarketplaceRepository.ts";
 import type { PlayerMarketplaceRoute } from "./playerMarketplaceRoutePaths.ts";
 
-const MAX_BODY_BYTES = 4096;
+const MAX_BODY_BYTES = 8192;
 const CONDITIONS = new Set(["New", "Like New", "Used", "Damaged"]);
 
 export interface PlayerMarketplaceHttpDependencies {
@@ -40,6 +46,10 @@ export interface PlayerMarketplaceHttpDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerMarketplaceRepository;
+  readonly createFundingRepository?: (
+    client: EdgeSupabaseClient,
+  ) => PlayerMarketplaceFundingRepository;
+  readonly now?: () => Date;
 }
 
 export async function handlePlayerMarketplaceRequest(
@@ -48,23 +58,39 @@ export async function handlePlayerMarketplaceRequest(
   dependencies: PlayerMarketplaceHttpDependencies,
 ): Promise<Response> {
   if (route.kind === "malformed") {
-    return privateError(400, "invalid_player_marketplace_request", "Marketplace route is malformed.");
+    return privateError(
+      400,
+      "invalid_player_marketplace_request",
+      "Marketplace route is malformed.",
+    );
   }
   const allowed = route.kind === "collection"
     ? new Set(["GET", "POST"])
     : new Set(["POST"]);
   if (!allowed.has(request.method)) {
-    return privateError(405, "method_not_allowed", "Marketplace method is not allowed.");
+    return privateError(
+      405,
+      "method_not_allowed",
+      "Marketplace method is not allowed.",
+    );
   }
   if (request.headers.has("x-stock-market-runner-secret")) {
-    return privateError(400, "stock_runner_secret_not_allowed", "Marketplace requests must not send a runner secret.");
+    return privateError(
+      400,
+      "stock_runner_secret_not_allowed",
+      "Marketplace requests must not send a runner secret.",
+    );
   }
 
   try {
     rejectClientScope(request);
     const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
     if (!envResult.ok) {
-      return privateError(500, "missing_edge_runtime_config", "Classroom API runtime configuration is incomplete.");
+      return privateError(
+        500,
+        "missing_edge_runtime_config",
+        "Classroom API runtime configuration is incomplete.",
+      );
     }
     const client = dependencies.createServiceClient(envResult.value);
     const scope = await (dependencies.resolveScope ?? resolveScope)(request, client);
@@ -82,23 +108,103 @@ export async function handlePlayerMarketplaceRequest(
       });
     }
 
+    // C2 retires the former reserve-and-settle single request. Keep the public
+    // address only as a bounded tombstone so older clients cannot bypass quote
+    // review, account allocation, current fixing, or settlement revalidation.
+    if (route.kind === "purchase") {
+      return privateError(
+        410,
+        "player_marketplace_purchase_retired",
+        "Create a Marketplace funding quote and confirm that reservation instead.",
+      );
+    }
+
     const body = await strictJsonObject(request);
+
+    if (route.kind === "quote") {
+      exactKeys(body, [
+        "quantity",
+        "expectedVersion",
+        "allocations",
+        "idempotencyKey",
+      ]);
+      const fundingRepository = dependencies.createFundingRepository
+        ? dependencies.createFundingRepository(client)
+        : new SupabasePlayerMarketplaceFundingRepository(client as never);
+      const reservation = await fundingRepository.createQuote({
+        gameSessionId: scope.gameId,
+        playerId: scope.playerUuid,
+        listingKey: route.listingKey,
+        quantity: positiveInteger(body.quantity, "quantity", 1_000_000),
+        expectedVersion: positiveInteger(
+          body.expectedVersion,
+          "expectedVersion",
+          Number.MAX_SAFE_INTEGER,
+        ),
+        allocations: fundingAllocations(body.allocations),
+        idempotencyKey: idempotency(body.idempotencyKey),
+        effectiveAt: (dependencies.now ?? (() => new Date()))().toISOString(),
+      });
+      return privateResponse(reservation.replayed ? 200 : 201, {
+        ok: true,
+        outcome: reservation.replayed ? "replayed" : "applied",
+        reservation,
+        committed: true,
+        refreshRequired: false,
+      });
+    }
+
+    if (route.kind === "settlement") {
+      exactKeys(body, ["idempotencyKey", "clientSubmittedAt"]);
+      const fundingRepository = dependencies.createFundingRepository
+        ? dependencies.createFundingRepository(client)
+        : new SupabasePlayerMarketplaceFundingRepository(client as never);
+      const order = await fundingRepository.settle({
+        gameSessionId: scope.gameId,
+        playerId: scope.playerUuid,
+        reservationKey: route.reservationKey,
+        idempotencyKey: idempotency(body.idempotencyKey),
+        clientSubmittedAt: nullableTimestamp(body.clientSubmittedAt),
+      });
+      return privateResponse(200, {
+        ok: true,
+        outcome: order.replayed ? "replayed" : "applied",
+        order,
+        committed: true,
+        refreshRequired: true,
+      });
+    }
+
     let result: MarketplaceCommittedResult;
     let status = 200;
     if (route.kind === "collection") {
       exactKeys(body, [
-        "itemKey", "quantity", "unitPrice", "currencyCode", "condition",
-        "durationHours", "idempotencyKey",
+        "itemKey",
+        "quantity",
+        "unitPrice",
+        "currencyCode",
+        "condition",
+        "durationHours",
+        "idempotencyKey",
       ]);
       result = await repository.createListing({
         gameSessionId: scope.gameId,
         playerId: scope.playerUuid,
         itemKey: itemKey(body.itemKey),
         quantity: positiveInteger(body.quantity, "quantity", 1_000_000),
-        unitPrice: positiveNumber(body.unitPrice, "unitPrice", 1_000_000_000_000),
+        unitPrice: positiveNumber(
+          body.unitPrice,
+          "unitPrice",
+          1_000_000_000_000,
+        ),
         currencyCode: currency(body.currencyCode),
         condition: condition(body.condition),
-        durationHours: nullableInteger(body.durationHours, "durationHours", 1, 720),
+        durationHours: nullableInteger(
+          body.durationHours,
+          "durationHours",
+          1,
+          720,
+        ),
         idempotencyKey: idempotency(body.idempotencyKey),
       });
       status = result.outcome === "applied" ? 201 : 200;
@@ -108,17 +214,11 @@ export async function handlePlayerMarketplaceRequest(
         gameSessionId: scope.gameId,
         playerId: scope.playerUuid,
         listingKey: route.listingKey,
-        expectedVersion: positiveInteger(body.expectedVersion, "expectedVersion", Number.MAX_SAFE_INTEGER),
-        idempotencyKey: idempotency(body.idempotencyKey),
-      });
-    } else if (route.kind === "purchase") {
-      exactKeys(body, ["quantity", "expectedVersion", "idempotencyKey"]);
-      result = await repository.purchase({
-        gameSessionId: scope.gameId,
-        playerId: scope.playerUuid,
-        listingKey: route.listingKey,
-        quantity: positiveInteger(body.quantity, "quantity", 1_000_000),
-        expectedVersion: positiveInteger(body.expectedVersion, "expectedVersion", Number.MAX_SAFE_INTEGER),
+        expectedVersion: positiveInteger(
+          body.expectedVersion,
+          "expectedVersion",
+          Number.MAX_SAFE_INTEGER,
+        ),
         idempotencyKey: idempotency(body.idempotencyKey),
       });
     } else if (route.kind === "cancel") {
@@ -127,7 +227,11 @@ export async function handlePlayerMarketplaceRequest(
         gameSessionId: scope.gameId,
         playerId: scope.playerUuid,
         listingKey: route.listingKey,
-        expectedVersion: positiveInteger(body.expectedVersion, "expectedVersion", Number.MAX_SAFE_INTEGER),
+        expectedVersion: positiveInteger(
+          body.expectedVersion,
+          "expectedVersion",
+          Number.MAX_SAFE_INTEGER,
+        ),
         idempotencyKey: idempotency(body.idempotencyKey),
       });
     } else {
@@ -156,15 +260,34 @@ export async function handlePlayerMarketplaceRequest(
     });
   } catch (error) {
     if (error instanceof EdgeActivationError) {
-      return privateError(error.status, error.code, error.message, error.retryable);
+      return privateError(
+        error.status,
+        error.code,
+        error.message,
+        error.retryable,
+      );
     }
     if (error instanceof PlayerMarketplaceError) {
-      return privateError(error.status, error.code, error.message, error.retryable);
+      return privateError(
+        error.status,
+        error.code,
+        error.message,
+        error.retryable,
+      );
     }
     if (error instanceof PlayerMarketplacePersistenceError) {
-      return privateError(503, "player_marketplace_service_unavailable", "Marketplace is temporarily unavailable.", true);
+      return privateError(
+        503,
+        "player_marketplace_service_unavailable",
+        "Marketplace is temporarily unavailable.",
+        true,
+      );
     }
-    return privateError(500, "player_marketplace_service_unavailable", "Marketplace request failed.");
+    return privateError(
+      500,
+      "player_marketplace_service_unavailable",
+      "Marketplace request failed.",
+    );
   }
 }
 
@@ -178,14 +301,22 @@ function resolveScope(request: Request, client: EdgeSupabaseClient) {
 function rejectClientScope(request: Request): void {
   const url = new URL(request.url);
   if (url.search) throw invalid("Marketplace routes do not accept query parameters.");
-  for (const header of ["x-player-id", "x-player-session-id", "x-game-session-id"]) {
+  for (const header of [
+    "x-player-id",
+    "x-player-session-id",
+    "x-game-session-id",
+  ]) {
     if (request.headers.has(header)) {
-      throw invalid("Marketplace ownership is derived from the authenticated Player session.");
+      throw invalid(
+        "Marketplace ownership is derived from the authenticated Player session.",
+      );
     }
   }
 }
 
-async function strictJsonObject(request: Request): Promise<Record<string, unknown>> {
+async function strictJsonObject(
+  request: Request,
+): Promise<Record<string, unknown>> {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   if (!contentType.startsWith("application/json")) {
     throw invalid("Marketplace write requests must use application/json.");
@@ -215,67 +346,158 @@ async function strictJsonObject(request: Request): Promise<Record<string, unknow
   return body as Record<string, unknown>;
 }
 
-function exactKeys(body: Record<string, unknown>, allowed: readonly string[]): void {
+function exactKeys(
+  body: Record<string, unknown>,
+  allowed: readonly string[],
+): void {
   const allowedSet = new Set(allowed);
   const keys = Object.keys(body);
   if (keys.some((key) => !allowedSet.has(key)) || keys.length !== allowed.length) {
     throw invalid("Marketplace request contains missing or unexpected fields.");
   }
 }
+
+function fundingAllocations(
+  value: unknown,
+): readonly PlayerMarketplaceFundingAllocationInput[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
+    throw invalid("Choose between one and three Checking accounts.");
+  }
+  const seen = new Set<string>();
+  const result = value.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw invalid("Marketplace funding allocation is invalid.");
+    }
+    const row = entry as Record<string, unknown>;
+    exactKeys(row, ["sourceAccountKey", "targetAmount"]);
+    const sourceAccountKey = typeof row.sourceAccountKey === "string"
+      ? row.sourceAccountKey.trim().toLowerCase()
+      : "";
+    if (!MARKETPLACE_FUNDING_ACCOUNT_KEY_PATTERN.test(sourceAccountKey)) {
+      throw invalid("Marketplace funding account is invalid.");
+    }
+    if (seen.has(sourceAccountKey)) {
+      throw invalid("Marketplace funding accounts must be unique.");
+    }
+    seen.add(sourceAccountKey);
+    const targetAmount = positiveNumber(
+      row.targetAmount,
+      "targetAmount",
+      999_999_999_999_999,
+    );
+    return Object.freeze({ sourceAccountKey, targetAmount });
+  });
+  return Object.freeze(result);
+}
+
 function itemKey(value: unknown): string {
   const result = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (!MARKETPLACE_ITEM_KEY_PATTERN.test(result)) throw invalid("itemKey is invalid.");
+  if (!MARKETPLACE_ITEM_KEY_PATTERN.test(result)) {
+    throw invalid("itemKey is invalid.");
+  }
   return result;
 }
+
 function idempotency(value: unknown): string {
   const result = typeof value === "string" ? value.trim() : "";
-  if (!MARKETPLACE_IDEMPOTENCY_KEY_PATTERN.test(result)) throw invalid("idempotencyKey is invalid.");
+  if (!MARKETPLACE_IDEMPOTENCY_KEY_PATTERN.test(result)) {
+    throw invalid("idempotencyKey is invalid.");
+  }
   return result;
 }
+
 function currency(value: unknown): string {
   const result = typeof value === "string" ? value.trim().toUpperCase() : "";
-  if (!/^[A-Z0-9]{3,12}$/.test(result)) throw invalid("currencyCode is invalid.");
+  if (!/^[A-Z0-9]{3,12}$/.test(result)) {
+    throw invalid("currencyCode is invalid.");
+  }
   return result;
 }
-function condition(value: unknown): "New" | "Like New" | "Used" | "Damaged" {
+
+function condition(
+  value: unknown,
+): "New" | "Like New" | "Used" | "Damaged" {
   const result = typeof value === "string" ? value.trim() : "";
   if (!CONDITIONS.has(result)) throw invalid("condition is invalid.");
-  return result as never;
+  return result as "New" | "Like New" | "Used" | "Damaged";
 }
+
 function positiveInteger(value: unknown, field: string, max: number): number {
   const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < 1 || result > max) throw invalid(`${field} is invalid.`);
+  if (!Number.isSafeInteger(result) || result < 1 || result > max) {
+    throw invalid(`${field} is invalid.`);
+  }
   return result;
 }
-function nullableInteger(value: unknown, field: string, min: number, max: number): number | null {
+
+function nullableInteger(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): number | null {
   if (value === null || value === undefined || value === "") return null;
   const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < min || result > max) throw invalid(`${field} is invalid.`);
+  if (!Number.isSafeInteger(result) || result < min || result > max) {
+    throw invalid(`${field} is invalid.`);
+  }
   return result;
 }
+
 function positiveNumber(value: unknown, field: string, max: number): number {
   const result = Number(value);
-  if (!Number.isFinite(result) || result <= 0 || result > max) throw invalid(`${field} is invalid.`);
+  if (!Number.isFinite(result) || result <= 0 || result > max) {
+    throw invalid(`${field} is invalid.`);
+  }
   return result;
 }
-function boundedText(value: unknown, field: string, min: number, max: number): string {
+
+function nullableTimestamp(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+    throw invalid("clientSubmittedAt is invalid.");
+  }
+  return new Date(value).toISOString();
+}
+
+function boundedText(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): string {
   const result = typeof value === "string" ? value.trim() : "";
-  if (result.length < min || result.length > max) throw invalid(`${field} is invalid.`);
+  if (result.length < min || result.length > max) {
+    throw invalid(`${field} is invalid.`);
+  }
   return result;
 }
+
 function invalid(message: string): PlayerMarketplaceError {
-  return new PlayerMarketplaceError("invalid_player_marketplace_request", message, 400);
+  return new PlayerMarketplaceError(
+    "invalid_player_marketplace_request",
+    message,
+    400,
+  );
 }
+
 function privateResponse<T>(status: number, body: T): Response {
   const response = jsonResponse(status, body);
   privateHeaders(response);
   return response;
 }
-function privateError(status: number, code: string, message: string, retryable = false): Response {
+
+function privateError(
+  status: number,
+  code: string,
+  message: string,
+  retryable = false,
+): Response {
   const response = jsonError(status, { code, message, retryable });
   privateHeaders(response);
   return response;
 }
+
 function privateHeaders(response: Response): void {
   response.headers.set("cache-control", "private, no-store");
   response.headers.set("pragma", "no-cache");
