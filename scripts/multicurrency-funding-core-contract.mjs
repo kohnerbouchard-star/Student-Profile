@@ -8,6 +8,7 @@ const files = Object.freeze({
   scope: "docs/roadmaps/multicurrency-funding-core-scope-v1.md",
   authority: "docs/operations/contracts/player-cross-cutting/pr-673.json",
   quote: "backend/supabase/migrations/20260827090000_multicurrency_funding_quote_v1.sql",
+  quoteIsolation: "backend/supabase/migrations/20260827090500_multicurrency_funding_quote_stage_isolation_v1.sql",
   composer: "backend/supabase/migrations/20260827091000_multicurrency_funding_composer_v1.sql",
   bankingWorkflow: ".github/workflows/banking-fx-clearing-v1.yml",
 });
@@ -59,6 +60,19 @@ includesAll(source.quote, [
 assert.ok(
   /revoke all on function public\.create_purchase_funding_quote_v1[\s\S]*?from public, anon, authenticated;[\s\S]*?grant execute[\s\S]*?to service_role;/u.test(source.quote),
   "Funding quote command must remain service-only.",
+);
+
+includesAll(source.quoteIsolation, [
+  "create_purchase_funding_quote_core_v1",
+  "set schema private",
+  "drop table if exists pg_temp.purchase_funding_line_stage_v1",
+  "return private.create_purchase_funding_quote_core_v1",
+  "PURCHASE_FUNDING_PRIVATE_QUOTE_CORE_EXPOSED",
+  "grant execute on function public.create_purchase_funding_quote_v1",
+], "funding quote stage-isolation migration");
+assert.ok(
+  /revoke all on function private\.create_purchase_funding_quote_core_v1[\s\S]*?from public, anon, authenticated, service_role;/u.test(source.quoteIsolation),
+  "Private quote core must not be executable by service_role.",
 );
 
 includesAll(source.composer, [
@@ -124,4 +138,5 @@ process.stdout.write(`${JSON.stringify({
   changedPaths: changed.length,
   retailSpread: "0.01",
   maxSourceAccounts: 3,
+  quoteStageIsolation: true,
 })}\n`);
