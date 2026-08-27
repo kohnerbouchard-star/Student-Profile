@@ -200,39 +200,12 @@ jobs:
           response_path.write_text(response_imports + tail)
           PY
 
-      - name: Extend permanent C1 certification to adapter and inventory
+      - name: Extend the C1 source contract to the adapter boundary
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
-          workflow_path = Path(".github/workflows/multicurrency-store-funding-v1.yml")
-          workflow = workflow_path.read_text()
-          anchor = "      - .github/workflows/multicurrency-store-funding-v1.yml\n"
-          additions = (
-              "      - backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts\n"
-              "      - backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts\n"
-              "      - backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts\n"
-              "      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json\n"
-          )
-          if workflow.count(anchor) != 2:
-              raise SystemExit("expected two C1 workflow path-filter anchors")
-          workflow = workflow.replace(anchor, anchor + additions)
-          command_anchor = "          node scripts/validate-supabase-migrations.mjs\n"
-          command_additions = (
-              "          node scripts/architecture/build-architecture-inventory.mjs\n"
-              "          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json\n"
-              "          node scripts/architecture/architecture-ratchet-v2.mjs\n"
-          )
-          if workflow.count(command_anchor) != 1:
-              raise SystemExit("expected one C1 migration-validation command anchor")
-          workflow = workflow.replace(
-              command_anchor,
-              command_anchor + command_additions,
-              1,
-          )
-          workflow_path.write_text(workflow)
 
           contract_path = Path("scripts/multicurrency-store-funding-contract.mjs")
           contract = contract_path.read_text()
@@ -261,7 +234,7 @@ jobs:
               raise SystemExit("C1 contract reads anchor not found")
           contract = contract.replace(reads_anchor, reads_anchor + reads_additions, 1)
           assertion_anchor = "assert.match(scope, /No merge, deployment/iu);\n"
-          assertion_additions = '''
+          assertion_additions = r'''
           assert.match(fundingContracts, /PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN/u);
           assert.match(fundingContracts, /PlayerStoreFundingPublicRepository/u);
           assert.match(fundingContracts, /PlayerStoreFundingAllocationInput/u);
@@ -310,20 +283,16 @@ jobs:
           test "$(wc -l < backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts)" -lt 500
           git diff --check
 
-      - name: Commit bounded structural repair and remove transport workflow
+      - name: Commit bounded non-workflow repair
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/c1-structural-repair.yml
           git add \
-            .github/workflows/multicurrency-store-funding-v1.yml \
             backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts \
             backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts \
             docs/architecture/inventories/econovaria-architecture-inventory-v2.json \
             scripts/multicurrency-store-funding-contract.mjs
           cat > /tmp/c1-expected-staged.txt <<'EOF'
-          .github/workflows/c1-structural-repair.yml
-          .github/workflows/multicurrency-store-funding-v1.yml
           backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts
           backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
           docs/architecture/inventories/econovaria-architecture-inventory-v2.json
