@@ -209,35 +209,25 @@ function seedSeededStock(game, quantity) {
   assert.ok(state.accountId);
   assert.ok(state.gameItemId);
 
-  runJson(`
-    select economy_private.post_inventory_transaction_v2(
-      ${sqlLiteral(game.id)}::uuid,
-      'grant',
-      'setup',
-      'seeded_store_stock',
-      ${sqlLiteral(game.storeItemId)}::uuid,
-      ${sqlLiteral(`c1-seeded-stock-${game.id.slice(-4)}`)},
-      jsonb_build_object('fixture', 'multicurrency-store-funding'),
-      jsonb_build_array(jsonb_build_object(
-        'inventoryAccountId', ${sqlLiteral(state.accountId)}::uuid,
-        'gameItemId', ${sqlLiteral(state.gameItemId)}::uuid,
-        'storeItemId', ${sqlLiteral(state.storeItemId)}::uuid,
-        'quantityDelta', ${quantity},
-        'reservationDelta', 0,
-        'unitCost', ${state.unitCost},
-        'currencyCode', ${sqlLiteral(state.currencyCode)},
-        'metadata', jsonb_build_object('fixture', true)
-      ))
-    )::text;
-  `);
+  runSql(`
+  update public.store_items
+  set stock_quantity = ${quantity}
+  where game_session_id = ${sqlLiteral(game.id)}::uuid
+    and id = ${sqlLiteral(game.storeItemId)}::uuid;
+`);
 
-  const stock = Number(runSql(`
-    select stock_quantity
-    from public.store_items
-    where game_session_id = ${sqlLiteral(game.id)}::uuid
-      and id = ${sqlLiteral(game.storeItemId)}::uuid;
-  `).output);
-  assert.equal(stock, quantity, "Store stock projection did not follow canonical Inventory.");
+const canonicalQuantity = Number(runSql(`
+  select holding_row.quantity_owned
+  from public.inventory_holdings as holding_row
+  where holding_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+    and holding_row.inventory_account_id = ${sqlLiteral(state.accountId)}::uuid
+    and holding_row.game_item_id = ${sqlLiteral(state.gameItemId)}::uuid;
+`).output);
+assert.equal(
+  canonicalQuantity,
+  quantity,
+  "Canonical Store holding did not follow the Store stock root.",
+);
 }
 
 function inventoryQuantity(game, playerId) {
