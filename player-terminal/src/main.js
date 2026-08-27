@@ -8,6 +8,7 @@ import { installStoryDecisionFlow } from "./features/contracts/story-decision-fl
 import { installInventoryActionFlow } from "./features/inventory/inventory-action-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
+import { installMarketplaceFundingFlow } from "./features/marketplace/marketplace-funding-flow.js";
 import { installMessageIntentAdapter } from "./features/messages/message-intent-adapter.js";
 import { installMessageReadFlow } from "./features/messages/message-read-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
@@ -41,6 +42,7 @@ const localControls = installLocalControlsFlow({ mount, terminal });
 const inventoryActions = installInventoryActionFlow({ mount, terminal, config });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
+const marketplaceFunding = installMarketplaceFundingFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
@@ -57,6 +59,7 @@ terminal.destroy = () => {
   storyDeliveries.destroy();
   notifications.destroy();
   bankingReads.destroy();
+  marketplaceFunding.destroy();
   marketOrders.destroy();
   storePurchases.destroy();
   inventoryActions.destroy();
