@@ -1,0 +1,87 @@
+name: C1 backend API implementation transport repair v2
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-backend-api-implementation-repair-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Replace embedded handler assignments by label
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path('.github/workflows/c1-backend-api-implementation.yml')
+          text = path.read_text()
+          assignments = {
+              'old_quote': '''      const quote = await repository.createQuote({
+                ...publicScope,
+                itemKey: readPlayerStoreItemKey(body.itemKey),
+                quantity: readPlayerStoreQuantity(body.quantity),
+                nowIso: (dependencies.now ?? (() => new Date().toISOString()))(),
+              });''',
+              'new_quote': '''      const quote = await fundingRepository.createSeededQuote({
+                ...publicScope,
+                itemKey: readPlayerStoreItemKey(body.itemKey),
+                quantity: readPlayerStoreQuantity(body.quantity),
+                allocations: readPlayerStoreFundingAllocations(body.allocations),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                effectiveAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+              });''',
+              'old_purchase': '''      const receipt = await repository.purchase({
+                ...publicScope,
+                quoteKey: readPlayerStoreQuoteKey(body.quoteKey),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                clientSubmittedAt: readPlayerStoreOptionalTimestamp(
+                  body.clientSubmittedAt,
+                ),
+              });''',
+              'new_purchase': '''      const receipt = await fundingRepository.settleSeededPurchase({
+                ...publicScope,
+                quoteKey: readPlayerStoreQuoteKey(body.quoteKey),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                clientSubmittedAt: readPlayerStoreOptionalTimestamp(
+                  body.clientSubmittedAt,
+                ),
+              });''',
+          }
+          for label, body in assignments.items():
+              pattern = re.compile(rf"          {label} = '''.*?'''", re.DOTALL)
+              replacement = f"          {label} = '''{body}'''"
+              text, count = pattern.subn(replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit(f'expected one {label} assignment, replaced {count}')
+          path.write_text(text)
+          PY
+          git diff --check
+          grep -F "old_quote = '''      const quote = await repository.createQuote({" .github/workflows/c1-backend-api-implementation.yml
+          grep -F "new_purchase = '''      const receipt = await fundingRepository.settleSeededPurchase({" .github/workflows/c1-backend-api-implementation.yml
+
+      - name: Commit indentation-insensitive transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c1-backend-api-implementation.yml
+          git commit -m "fix(store-funding): make API transport markers exact"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
