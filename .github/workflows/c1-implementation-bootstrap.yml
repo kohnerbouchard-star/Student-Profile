@@ -46,7 +46,7 @@ jobs:
           echo "36fb92c2bbaca2c60821073302ba290b356a942776be458d388fb9ba740581e2  /tmp/c1bundle.tar.xz" | sha256sum --check --strict
           tar -xJf /tmp/c1bundle.tar.xz -C .
 
-      - name: Remove temporary bootstrap authority
+      - name: Remove temporary bootstrap authority and harden scope
         shell: bash
         run: |
           set -euo pipefail
@@ -54,8 +54,8 @@ jobs:
           import json
           from pathlib import Path
 
-          path = Path("docs/operations/contracts/player-cross-cutting/pr-674.json")
-          authority = json.loads(path.read_text())
+          authority_path = Path("docs/operations/contracts/player-cross-cutting/pr-674.json")
+          authority = json.loads(authority_path.read_text())
           temporary = {
               ".github/c1-bootstrap/c1bundle.part00.b64",
               ".github/c1-bootstrap/c1bundle.part01.b64",
@@ -69,7 +69,28 @@ jobs:
           ]
           if temporary.intersection(authority["allowedPaths"]):
               raise SystemExit("temporary bootstrap authority was not removed")
-          path.write_text(json.dumps(authority, indent=2) + "\n")
+          authority_path.write_text(json.dumps(authority, indent=2) + "\n")
+
+          scope_path = Path("docs/roadmaps/multicurrency-store-funding-scope-v1.md")
+          scope = scope_path.read_text()
+          scope = scope.replace(
+              "**Status:** `SCOPE_ONLY` — no runtime implementation or certification claimed",
+              "**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed",
+              1,
+          )
+          sentence = (
+              "No merge, deployment, scheduler installation, secret mutation, "
+              "staging/production SQL, or live database mutation is authorized by C1."
+          )
+          if sentence not in scope:
+              scope = scope.replace(
+                  "\n## Required proof before C1 certification",
+                  f"\n{sentence}\n\n## Required proof before C1 certification",
+                  1,
+              )
+          if sentence not in scope:
+              raise SystemExit("C1 no-merge/deployment boundary was not recorded")
+          scope_path.write_text(scope)
           PY
           git rm .github/workflows/c1-implementation-bootstrap.yml
           git rm .github/c1-bootstrap/c1bundle.part00.b64
@@ -107,6 +128,7 @@ jobs:
           git add backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
           git add backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
           git add docs/operations/contracts/player-cross-cutting/pr-674.json
+          git add docs/roadmaps/multicurrency-store-funding-scope-v1.md
           git add scripts/multicurrency-store-funding-contract.mjs
           git add scripts/multicurrency-store-funding-database.mjs
           git diff --cached --quiet && { echo "C1 implementation bundle produced no changes" >&2; exit 1; }
