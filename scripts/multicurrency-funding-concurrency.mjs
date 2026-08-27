@@ -21,6 +21,20 @@ function serviceJson(sql) {
   return runJson(`begin; set local role service_role; ${sql}; commit;`);
 }
 
+function normalizeFxCountryFixture() {
+  runSql(`
+    update public.country_profiles
+    set status = 'disabled'
+    where id = ${sqlLiteral(FIXTURE.countryId)}::uuid
+      and country_code = 'TST'
+      and currency_code = 'ECO';
+  `);
+  const activeCount = Number(runSql(`
+    select count(*) from public.country_profiles where status = 'active';
+  `).output);
+  assert.equal(activeCount, 10, "C0 concurrency fixture must expose the canonical ten-country FX cohort.");
+}
+
 function initializeFx(game) {
   runSql(`
     insert into public.game_settings(game_session_id, stock_market_window)
@@ -549,6 +563,7 @@ async function twoGameNonBlockingRace(ecoKeyOne, ecoKeyTwo, targetOne, targetTwo
 }
 
 resetFixture();
+normalizeFxCountryFixture();
 initializeFx(gameOne);
 initializeFx(gameTwo);
 
@@ -606,5 +621,6 @@ console.log(JSON.stringify({
   sameAccountOverspendRace: true,
   facilityOversubscriptionRace: true,
   twoGameNonBlockingRace: true,
+  canonicalCountryCohort: 10,
   compatibilityOffsetLines: Number(finalFacts.compatibilityOffsetLines),
 }));
