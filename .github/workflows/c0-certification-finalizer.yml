@@ -1,0 +1,541 @@
+name: C0 exact-head certification finalizer
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-funding-core-v1
+    paths:
+      - .github/workflows/c0-certification-finalizer.yml
+
+permissions:
+  actions: write
+  checks: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      REPOSITORY: kohnerbouchard-star/Student-Profile
+      TARGET_BRANCH: feat/multicurrency-funding-core-v1
+      CLEAN_PARENT: 486a1209c02261f4952248472c85399b2c551a60
+      B2_HEAD: 029ea568adc722f0b7c1cd57a02c49f88ceaf716
+      B2_IMPLEMENTATION: ce931f8320861117e64eba4403b84d6e7fe8da25
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact finalizer controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard bounded controller ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "$TARGET_BRANCH"
+          git cat-file -e "${CLEAN_PARENT}^{commit}"
+          git cat-file -e "${B2_HEAD}^{commit}"
+          git diff --name-only "${CLEAN_PARENT}...HEAD" | sort -u > /tmp/c0-controller-paths.txt
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/c0-fx-fixture-repair.yml|.github/workflows/c0-clean-candidate-rebuild.yml|.github/workflows/c0-certification-finalizer.yml|scripts/multicurrency-funding-database.mjs)
+                ;;
+              "")
+                ;;
+              *)
+                printf 'Unexpected controller-era path: %s\n' "$path" >&2
+                exit 1
+                ;;
+            esac
+          done < /tmp/c0-controller-paths.txt
+
+      - name: Reconstruct the clean implementation candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$CLEAN_PARENT"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/multicurrency-funding-database.mjs')
+          text = path.read_text()
+
+          old_snapshot = "      clock_timestamp() - interval '2 minutes',"
+          old_created = "      clock_timestamp() - interval '3 minutes'"
+          if old_snapshot not in text or old_created not in text:
+              raise SystemExit('Original C0 FX fixture timestamp markers missing')
+          text = text.replace(
+              old_snapshot,
+              "      statement_timestamp() - interval '2 minutes',",
+              1,
+          )
+          text = text.replace(
+              old_created,
+              "      statement_timestamp() - interval '3 minutes'",
+              1,
+          )
+
+          old_bootstrap = '''    select public.initialize_fx_authority_for_game_v1(
+                ${sqlLiteral(game.id)}::uuid,
+                clock_timestamp() - interval '1 minute',
+                true
+              )::text;
+            `);
+
+            const state = runJson(`
+          '''
+          new_bootstrap = '''  `);
+
+            const bootstrap = runJson(`
+              select public.initialize_fx_authority_for_game_v1(
+                ${sqlLiteral(game.id)}::uuid,
+                statement_timestamp() - interval '1 minute',
+                true
+              )::text;
+            `);
+            assert.equal(
+              bootstrap.cutoverStatus,
+              "ready",
+              `FX bootstrap did not become ready: ${JSON.stringify(bootstrap)}`,
+            );
+
+            const state = runJson(`
+          '''
+          if old_bootstrap not in text:
+              raise SystemExit('Original C0 FX initializer marker missing')
+          text = text.replace(old_bootstrap, new_bootstrap, 1)
+
+          required = [
+              "statement_timestamp() - interval '2 minutes'",
+              "statement_timestamp() - interval '3 minutes'",
+              "const bootstrap = runJson(`",
+              "FX bootstrap did not become ready:",
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit('Repaired C0 fixture invariant missing: ' + repr(missing))
+          path.write_text(text)
+          PY
+
+          test "$(git diff --name-only)" = "scripts/multicurrency-funding-database.mjs"
+          git diff --check
+          node --check scripts/multicurrency-funding-database.mjs
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Verify clean source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          git diff --name-only "${B2_HEAD}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          printf '%s\n' scripts/multicurrency-funding-database.mjs >> /tmp/player-cross-cutting-changed-files.txt
+          sort -u -o /tmp/player-cross-cutting-changed-files.txt /tmp/player-cross-cutting-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/player-cross-cutting-changed-files.txt \
+            --pr-number 673 \
+            --base-ref feat/banking-fx-clearing-v1
+          node scripts/multicurrency-funding-core-contract.mjs
+          node scripts/multicurrency-funding-core-simulation.mjs
+          node scripts/validate-supabase-migrations.mjs
+          node scripts/local-edge-runtime-contract.test.mjs
+          git diff --check
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Verify clean database candidate and observed races
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+          node scripts/banking-fx-database-acceptance.mjs
+          node scripts/multicurrency-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-concurrency.mjs
+          npx supabase db lint --workdir backend --local --level warning
+
+      - name: Commit exact implementation source
+        id: implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/multicurrency-funding-database.mjs
+          git commit -m "test(funding): stabilize FX bootstrap fixture"
+          IMPLEMENTATION_SHA="$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD^)" = "$CLEAN_PARENT"
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "scripts/multicurrency-funding-database.mjs"
+          printf 'implementation_sha=%s\n' "$IMPLEMENTATION_SHA" >> "$GITHUB_OUTPUT"
+          printf 'IMPLEMENTATION_SHA=%s\n' "$IMPLEMENTATION_SHA" >> "$GITHUB_ENV"
+
+      - name: Publish isolated exact-head certification ref
+        id: certification_ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMP_BRANCH="tmp/c0-cert-${GITHUB_RUN_ID}"
+          git push origin "$IMPLEMENTATION_SHA:refs/heads/${TEMP_BRANCH}"
+          printf 'temp_branch=%s\n' "$TEMP_BRANCH" >> "$GITHUB_OUTPUT"
+          printf 'TEMP_BRANCH=%s\n' "$TEMP_BRANCH" >> "$GITHUB_ENV"
+
+      - name: Discover and dispatch every PR-bound required workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method GET "repos/${REPOSITORY}/actions/workflows" -f per_page=100 > /tmp/c0-workflows.json
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          required = [
+              'player-terminal-verify',
+              'player-edge-trusted-ip-entrypoint-contract',
+              'player-production-secret-provision-contract',
+              'player-api-read-resilience',
+              'database-replay',
+              'banking-fx-clearing-v1',
+              'multicurrency-funding-core-v1',
+          ]
+
+          def normalize(value):
+              return re.sub(r'[^a-z0-9]+', '-', value.lower()).strip('-')
+
+          payload = json.loads(Path('/tmp/c0-workflows.json').read_text())
+          found = {}
+          for workflow in payload.get('workflows', []):
+              key = normalize(workflow.get('name', ''))
+              if key in required:
+                  found[key] = workflow
+
+          missing = [key for key in required if key not in found]
+          if missing:
+              raise SystemExit('Required workflow discovery failed: ' + repr(missing))
+
+          lines = []
+          for key in required:
+              workflow = found[key]
+              lines.append(f"{key}\t{workflow['id']}\t{workflow['name']}")
+          Path('/tmp/c0-required-workflows.tsv').write_text('\n'.join(lines) + '\n')
+          PY
+
+          while IFS=$'\t' read -r key workflow_id workflow_name; do
+            printf 'Dispatching %s (%s) against %s\n' "$workflow_name" "$key" "$TEMP_BRANCH"
+            gh api \
+              --method POST \
+              "repos/${REPOSITORY}/actions/workflows/${workflow_id}/dispatches" \
+              -f ref="$TEMP_BRANCH"
+          done < /tmp/c0-required-workflows.tsv
+
+      - name: Require exact-head success from the complete workflow matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          READY=0
+          for ATTEMPT in $(seq 1 90); do
+            gh api --method GET "repos/${REPOSITORY}/actions/runs" \
+              -f branch="$TEMP_BRANCH" \
+              -f event=workflow_dispatch \
+              -f per_page=100 > /tmp/c0-runs.json
+
+            python3 - <<'PY'
+            import json
+            import os
+            import re
+            from pathlib import Path
+
+            required = [
+                'player-terminal-verify',
+                'player-edge-trusted-ip-entrypoint-contract',
+                'player-production-secret-provision-contract',
+                'player-api-read-resilience',
+                'database-replay',
+                'banking-fx-clearing-v1',
+                'multicurrency-funding-core-v1',
+            ]
+
+            def normalize(value):
+                return re.sub(r'[^a-z0-9]+', '-', value.lower()).strip('-')
+
+            payload = json.loads(Path('/tmp/c0-runs.json').read_text())
+            implementation = os.environ['IMPLEMENTATION_SHA']
+            selected = {}
+            for run in payload.get('workflow_runs', []):
+                if run.get('head_sha') != implementation:
+                    continue
+                key = normalize(run.get('name', ''))
+                if key not in required:
+                    continue
+                previous = selected.get(key)
+                if previous is None or run.get('created_at', '') > previous.get('created_at', ''):
+                    selected[key] = run
+
+            failed = []
+            pending = []
+            for key in required:
+                run = selected.get(key)
+                if run is None:
+                    pending.append(f'{key}:missing')
+                    continue
+                if run.get('status') != 'completed':
+                    pending.append(f"{key}:{run.get('status')}")
+                    continue
+                if run.get('conclusion') != 'success':
+                    failed.append(f"{key}:{run.get('conclusion')}:{run.get('id')}")
+
+            state = {
+                'implementationSha': implementation,
+                'selected': [selected[key] for key in required if key in selected],
+                'pending': pending,
+                'failed': failed,
+            }
+            Path('/tmp/c0-certification-state.json').write_text(json.dumps(state, indent=2) + '\n')
+            if failed:
+                Path('/tmp/c0-certification-result').write_text('FAILED\n')
+            elif pending:
+                Path('/tmp/c0-certification-result').write_text('PENDING\n')
+            else:
+                Path('/tmp/c0-certification-result').write_text('READY\n')
+            PY
+
+            RESULT="$(tr -d '\r\n' < /tmp/c0-certification-result)"
+            if [ "$RESULT" = "READY" ]; then
+              READY=1
+              break
+            fi
+            if [ "$RESULT" = "FAILED" ]; then
+              cat /tmp/c0-certification-state.json
+              exit 1
+            fi
+            sleep 20
+          done
+          test "$READY" = "1"
+          cat /tmp/c0-certification-state.json
+
+      - name: Write durable implementation handoff and scope state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          repo = os.environ['REPOSITORY']
+          implementation = os.environ['IMPLEMENTATION_SHA']
+          b2_head = os.environ['B2_HEAD']
+          b2_implementation = os.environ['B2_IMPLEMENTATION']
+          run_id = os.environ['GITHUB_RUN_ID']
+          state = json.loads(Path('/tmp/c0-certification-state.json').read_text())
+
+          def normalize(value):
+              return re.sub(r'[^a-z0-9]+', '-', value.lower()).strip('-')
+
+          run_by_key = {normalize(run['name']): run for run in state['selected']}
+          required = [
+              'player-terminal-verify',
+              'player-edge-trusted-ip-entrypoint-contract',
+              'player-production-secret-provision-contract',
+              'player-api-read-resilience',
+              'database-replay',
+              'banking-fx-clearing-v1',
+              'multicurrency-funding-core-v1',
+          ]
+          rows = []
+          for key in required:
+              run = run_by_key[key]
+              rows.append(
+                  f"| `{key}` | `{run['id']}` | `{run['head_sha']}` | `{run['conclusion']}` |"
+              )
+
+          handoff = f'''# Multi-Currency Funding Core Implementation Handoff v1
+
+**Roadmap item:** `BUSINESS-V2-10A4C0`  
+**Status:** `IMPLEMENTED_NOT_MERGED`  
+**Certified implementation source:** `{implementation}`  
+**Parent B2 branch head:** `{b2_head}`  
+**Parent B2 certified implementation:** `{b2_implementation}`  
+**Draft PR:** #673  
+**Certification finalizer run:** `{run_id}`  
+**Merge authorized:** No  
+**Deployment authorized:** No
+
+## Certified result
+
+The C0 shared multi-currency purchase-funding authority is implemented and certified at the exact source SHA above. The implementation preserves B1 as the sole fixing authority and B2 as the sole Banking, hold, clearing, reserve, facility, and balanced-posting authority.
+
+The certified source provides:
+
+- immutable `pfq_...` funding quotes for one exact target-currency bill;
+- one to three unique Player-owned canonical Checking accounts;
+- exact target-currency allocation with no underfunding, overfunding, implicit remainder, or Savings funding;
+- same-currency legs at rate `1` with no FX cost;
+- purchase-only retail FX at the accepted B1 fixing with the locked 1.00% customer-adverse spread and source-minor-unit ceiling;
+- current available-balance, hold, fixing, expiry, and facility revalidation under lock;
+- one private atomic composer using `private.post_bank_transaction_v1` and no compatibility-offset account;
+- immutable `pfr_...` receipt evidence, exact replay/conflict semantics, per-currency zero sum, rollback safety, and two-game isolation.
+
+## Repaired certification fixture
+
+The final implementation also corrects the retained disposable FX bootstrap fixture. All ten macro snapshots now share one statement-stable effective timestamp, matching B1's exact cohort contract. The fixture now inspects the initializer result directly and fails with the returned blocked reason instead of surfacing an indirect zero-row join.
+
+This is a test-harness correction only. It does not weaken B1 cohort rules, change fixing calculation, change B2 pricing or settlement, or mutate any live environment.
+
+## Exact-head workflow matrix
+
+| Required workflow | Run ID | Head SHA | Conclusion |
+|---|---:|---|---|
+{chr(10).join(rows)}
+
+The finalizer also completed two zero-to-head migration replays, retained B2 database acceptance, C0 serial database acceptance, a clean rebuild, observed C0 concurrency/race acceptance, rebuilt-schema lint, source contracts, deterministic simulation, migration validation, and local Edge-runtime contract validation before publishing the implementation SHA.
+
+## Scope and safety boundary
+
+No Store, Marketplace, Stock, Business treasury/procurement, scheduler, secret, staging, production, or live-database mutation was performed. PR #673 remains draft and unmerged.
+
+C1 may begin from this certified C0 source. That authorization is for the next bounded development checkpoint only; it is not merge or deployment authorization.
+'''
+          Path('docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md').write_text(handoff)
+
+          scope_path = Path('docs/roadmaps/multicurrency-funding-core-scope-v1.md')
+          scope = scope_path.read_text()
+          scope = re.sub(
+              r"\*\*Status:\*\* `IN_PROGRESS`[^\n]*",
+              f"**Status:** `IMPLEMENTED_NOT_MERGED` — certified exact implementation `{implementation}`; draft PR #673 remains unmerged",
+              scope,
+              count=1,
+          )
+          certified_line = f"**Certified implementation source:** `{implementation}`  \n"
+          if certified_line not in scope:
+              marker = "**Exact parent B2 documentation handoff:** `f7a226d97e641b3e1ef3979bf3082baa37c7c0dd`  \n"
+              if marker not in scope:
+                  raise SystemExit('C0 scope parent handoff marker missing')
+              scope = scope.replace(marker, marker + certified_line, 1)
+
+          checkpoint = f'''## Certified implementation checkpoint
+
+C0 is certified as `IMPLEMENTED_NOT_MERGED` at exact source `{implementation}`. The durable evidence and exact-head workflow matrix are recorded in `docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md`.
+
+This certification authorizes the next bounded C1 development checkpoint only. It does not authorize merge, deployment, scheduler installation, secret mutation, staging or production SQL, or live-database mutation.
+
+'''
+          if '## Certified implementation checkpoint' not in scope:
+              marker = '## Completion boundary\n'
+              if marker not in scope:
+                  raise SystemExit('C0 completion boundary marker missing')
+              scope = scope.replace(marker, checkpoint + marker, 1)
+          scope_path.write_text(scope)
+          PY
+
+          git diff --check
+          test -f docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md
+
+      - name: Commit durable documentation and replace controller ancestry
+        id: documentation
+        shell: bash
+        env:
+          CONTROLLER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git add \
+            docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md \
+            docs/roadmaps/multicurrency-funding-core-scope-v1.md
+          git commit -m "docs(funding): certify C0 implementation"
+          DOC_HEAD="$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD^)" = "$IMPLEMENTATION_SHA"
+          git diff --name-only "$IMPLEMENTATION_SHA...$DOC_HEAD" | sort -u > /tmp/c0-doc-paths.txt
+          EXPECTED="$(printf '%s\n' \
+            docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md \
+            docs/roadmaps/multicurrency-funding-core-scope-v1.md | sort)"
+          test "$(cat /tmp/c0-doc-paths.txt)" = "$EXPECTED"
+          git push \
+            --force-with-lease="refs/heads/${TARGET_BRANCH}:${CONTROLLER_SHA}" \
+            origin HEAD:refs/heads/${TARGET_BRANCH}
+          printf 'doc_head=%s\n' "$DOC_HEAD" >> "$GITHUB_OUTPUT"
+          printf 'DOC_HEAD=%s\n' "$DOC_HEAD" >> "$GITHUB_ENV"
+
+      - name: Remove isolated certification ref
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${TEMP_BRANCH:-}" ]; then
+            git push origin --delete "$TEMP_BRANCH" || true
+          fi
+
+      - name: Update draft PR handoff state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/c0-pr-body.md <<EOF
+          ## Roadmap checkpoint
+
+          \`BUSINESS-V2-10A4C0\` — shared multi-currency purchase-funding core.
+
+          ## Certified state
+
+          - Status: \`IMPLEMENTED_NOT_MERGED\`.
+          - Exact certified implementation source: \`${IMPLEMENTATION_SHA}\`.
+          - Documentation head: \`${DOC_HEAD}\`.
+          - Parent B2 branch head: \`${B2_HEAD}\`.
+          - Parent B2 certified implementation: \`${B2_IMPLEMENTATION}\`.
+          - Durable handoff: \`docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md\`.
+          - Controlling scope: \`docs/roadmaps/multicurrency-funding-core-scope-v1.md\`.
+          - PR-bound authority: \`docs/operations/contracts/player-cross-cutting/pr-673.json\`.
+
+          The exact implementation passed the complete PR-bound workflow matrix, two zero-to-head migration replays, retained B2 database acceptance, C0 serial database acceptance, observed concurrency/race acceptance, rebuilt-schema lint, source contracts, deterministic simulation, migration validation, and local Edge-runtime contract validation.
+
+          The certified core provides exact one-to-three Checking-account funding, same-currency legs, purchase-only retail FX at the locked 1.00% spread, source-minor-unit ceiling, balance/hold/facility revalidation, atomic B2 posting composition, immutable quote/receipt evidence, exact replay/conflict semantics, rollback safety, per-currency zero sum, and two-game isolation.
+
+          No Store, Marketplace, Stocks, Business treasury/procurement, merge, deployment, scheduler, secret, staging, production, or live-database mutation is included. C1 may begin as the next bounded development checkpoint; this PR remains draft and unmerged.
+          EOF
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          body = Path('/tmp/c0-pr-body.md').read_text()
+          Path('/tmp/c0-pr-body.json').write_text(json.dumps({'body': body}))
+          PY
+          gh api --method PATCH "repos/${REPOSITORY}/pulls/673" --input /tmp/c0-pr-body.json > /tmp/c0-pr-update.json
+
+      - name: Verify final clean branch state
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_HEAD="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
+          test "$REMOTE_HEAD" = "$DOC_HEAD"
+          git diff --name-only "$B2_HEAD...$DOC_HEAD" | sort -u > /tmp/c0-final-paths.txt
+          test ! -e .github/workflows/c0-fx-fixture-repair.yml
+          test ! -e .github/workflows/c0-clean-candidate-rebuild.yml
+          test ! -e .github/workflows/c0-certification-finalizer.yml
+          git diff --check "$B2_HEAD...$DOC_HEAD"
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
