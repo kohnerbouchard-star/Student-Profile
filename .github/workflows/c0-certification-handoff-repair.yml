@@ -1,0 +1,96 @@
+name: C0 certification handoff repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-funding-core-v1
+    paths:
+      - .github/workflows/c0-certification-handoff-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard failed handoff controller ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
+          test "$(git rev-parse HEAD^)" = "32916453dbb698bbb685d01c2e882c5cffe341af"
+
+      - name: Materialize reviewed handoff and repair scope formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          controller_path = Path('.github/workflows/c0-certification-handoff.yml')
+          controller_lines = controller_path.read_text().splitlines()
+          start_marker = "          cat > docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md <<'EOF'"
+          end_marker = "          EOF"
+
+          try:
+              start = controller_lines.index(start_marker) + 1
+              end = controller_lines.index(end_marker, start)
+          except ValueError as error:
+              raise SystemExit('Reviewed C0 handoff heredoc markers were not found') from error
+
+          reviewed_lines = controller_lines[start:end]
+          if not reviewed_lines or any(not line.startswith('          ') for line in reviewed_lines):
+              raise SystemExit('Reviewed C0 handoff indentation is invalid')
+
+          handoff_path = Path('docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md')
+          handoff_path.write_text(
+              '\n'.join(line[10:] for line in reviewed_lines) + '\n'
+          )
+
+          scope_path = Path('docs/roadmaps/multicurrency-funding-core-scope-v1.md')
+          scope = scope_path.read_text()
+
+          replacements = (
+              (
+                  "**Status:** `IN_PROGRESS` — controlling scope only; runtime implementation begins after the stacked draft PR and PR-bound authority handoff exist  \n",
+                  "**Status:** `IMPLEMENTED_NOT_MERGED` — exact implementation and verification source `fd1511d716c1efd291cf6f45415a32a8d7550db4`; durable handoff `docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md`\n",
+              ),
+              (
+                  "**Exact parent B2 implementation:** `1d26af9df17cb7fa8334a299b4c78d29c0249904`  \n",
+                  "**Exact parent B2 implementation:** `ce931f8320861117e64eba4403b84d6e7fe8da25`\n",
+              ),
+              (
+                  "**Exact parent B2 documentation handoff:** `f7a226d97e641b3e1ef3979bf3082baa37c7c0dd`  \n",
+                  "**Exact parent B2 documentation handoff:** `029ea568adc722f0b7c1cd57a02c49f88ceaf716`\n",
+              ),
+          )
+
+          for old, new in replacements:
+              if old not in scope:
+                  raise SystemExit(f'Expected C0 scope header was not found: {old!r}')
+              scope = scope.replace(old, new, 1)
+
+          scope_path.write_text(scope)
+          PY
+
+          test -s docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md
+          grep -Fq 'fd1511d716c1efd291cf6f45415a32a8d7550db4' docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md
+          grep -Fq 'IMPLEMENTED_NOT_MERGED' docs/roadmaps/multicurrency-funding-core-scope-v1.md
+          git diff --check
+
+      - name: Commit and push documentation-only handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md docs/roadmaps/multicurrency-funding-core-scope-v1.md
+          git commit -m "docs(funding): certify C0 implementation"
+          git push origin HEAD:feat/multicurrency-funding-core-v1
