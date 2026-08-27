@@ -1,0 +1,166 @@
+name: B2 Certification Handoff Autofix
+
+on:
+  push:
+    branches:
+      - feat/banking-fx-clearing-v1
+    paths:
+      - .github/workflows/b2-certification-handoff-autofix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  record-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out handoff trigger
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: true
+
+      - name: Verify certified implementation parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "5c74f41e94c7326de16767c4645a5fb0be0d7255"
+
+      - name: Record B2 exact-head certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          implementation_sha = "5c74f41e94c7326de16767c4645a5fb0be0d7255"
+          scope = Path("docs/roadmaps/banking-fx-clearing-scope-v1.md")
+          log = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+
+          scope_text = scope.read_text()
+          old_status = "**Status:** `IN_PROGRESS` — controlling scope only; runtime implementation begins after the immutable scope handoff"
+          new_status = (
+              "**Status:** `IMPLEMENTED_NOT_MERGED` — exact-head certified at "
+              f"`{implementation_sha}`; PR #672 remains draft, open, unmerged, and undeployed"
+          )
+          if old_status in scope_text:
+              scope_text = scope_text.replace(old_status, new_status, 1)
+          elif new_status not in scope_text:
+              raise SystemExit("Unexpected Banking FX scope status line")
+
+          scope_marker = "## Exact-head certification — 2026-08-27"
+          if scope_marker not in scope_text:
+              scope_text = scope_text.rstrip() + f"""
+
+{scope_marker}
+
+- **Exact implementation and verification source:** `{implementation_sha}`.
+- **Canonical status:** `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`, because draft PR #672 remains unmerged and no production runtime evidence is claimed.
+- **Banking FX Clearing V1 — PASS** (`33034732485`): source certification job `98394875685` and disposable PostgreSQL database-acceptance job `98394875846` both completed `success`. The database job rebuilt from zero, executed `scripts/banking-fx-database-acceptance.mjs`, linted the rebuilt database, and tore down the disposable stack.
+- **Database Replay — PASS** (`33034732489`).
+- **Business Player Store Cutover V2 — PASS** (`33034732654`), proving the retained connected Buyer/seller Store path after the Banking compatibility cutover.
+- **Business Store Atomic Settlement V2 — PASS** (`33034732481`).
+- **Player Terminal Verify / Chromium — PASS** (`33034732553`).
+- **Backend Typecheck — PASS** (`33034732503`), **Beta Security Contract — PASS** (`33034732616`), **Repository Quality — PASS** (`33034732629`), and **Supply Chain Security — PASS** (`33034732604`).
+- **Business Banking Runtime — PASS** (`33034732541`), **Player Local Currency Authority — PASS** (`33034732500`), **Environment Neutral Browser — PASS** (`33034732600`), **Staging Readiness Preflight — PASS** (`33034732569`), and **Runtime Interaction Wiring — PASS** (`33034732496`).
+- Retained Business/Store/workforce/manufacturing, Marketplace, World, exchange-calendar, market-timezone, and Admin gates on the same exact head completed successfully.
+- The certification-reopened repair explicitly registers the eleven post-cutover Banking/FX game-scoped tables with the resumable purge registry, corrects the retained acceptance table name to `fx_settlement_receipts`, and makes standalone PostgreSQL acceptance an exact-head CI requirement. It does not expand B2 into C0-C4.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
+- After the clean documentation-only handoff, the next exact item is `BUSINESS-V2-10A4C0` on `feat/multicurrency-funding-core-v1`; C0 must incorporate this repaired B2 lineage before claiming its own final certification.
+"""
+          scope.write_text(scope_text)
+
+          log_text = log.read_text()
+          log_marker = "## 2026-08-27 — Banking FX clearing EXACT-HEAD VERIFIED"
+          if log_marker not in log_text:
+              log_text = log_text.rstrip() + f"""
+
+---
+
+{log_marker}
+
+This entry supersedes the prior B2 scope-only state and closes the later `CERTIFICATION_REOPENED` repair cycle. The checkpoint status is `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
+
+### Exact source and repository state
+
+- Roadmap item: `BUSINESS-V2-10A4B2`.
+- Owner: `feat/banking-fx-clearing-v1` / draft PR #672, based on B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d` / draft PR #671.
+- Controlling scope commit: `ce50306400b3173a489e2413f0531cef58c863a6`.
+- **Exact implementation and verification source:** `{implementation_sha}`.
+- Prior B2 source `1d26af9df17cb7fa8334a299b4c78d29c0249904` remains historical evidence only. C0 later exposed a retained purge-registration/database-acceptance gap, so certification was reopened and the repaired source above supersedes it.
+- PR #672 remained open, draft, mergeable, unmerged, and undeployed at certification. No production runtime evidence, scheduler installation, secret mutation, staging/production SQL, or live database mutation is claimed.
+- This later documentation-only handoff does not replace `{implementation_sha}` as the tested implementation identity.
+
+### Repair that closed the reopened certification gap
+
+- The canonical purge registry now explicitly owns the eleven B2 post-cutover game-scoped Banking/FX tables rather than relying on a registry sweep that executed before those tables existed.
+- The retained standalone database acceptance references the canonical `fx_settlement_receipts` table rather than retired `fx_receipts` terminology.
+- `.github/workflows/banking-fx-clearing-v1.yml` now contains a permanent exact-head disposable PostgreSQL acceptance lane, so the Banking/FX database contract must execute in CI rather than remain source-only.
+- These repairs remain inside B2 authority and do not implement C0 multi-account funding or C1-C4 currency convergence.
+
+### Exact-head verification on `{implementation_sha}`
+
+- **Banking FX Clearing V1 — PASS** (`33034732485`):
+  - `Certify Banking FX clearing source` — job `98394875685`, **success**;
+  - `Verify Banking FX database acceptance` — job `98394875846`, **success**; rebuilt from zero, ran standalone Banking/FX PostgreSQL acceptance, linted the rebuilt schema, and cleaned the disposable stack.
+- **Database Replay — PASS** (`33034732489`).
+- **Business Player Store Cutover V2 — PASS** (`33034732654`).
+- **Business Store Atomic Settlement V2 — PASS** (`33034732481`).
+- **Business Store Seller Offers V2 — PASS** (`33034732560`).
+- **Business Store Listing Inventory V2 — PASS** (`33034732520`).
+- **Business Store Withdrawal Safety V2 — PASS** (`33034732574`).
+- **Player Terminal Verify / Chromium — PASS** (`33034732553`).
+- **Backend Typecheck — PASS** (`33034732503`).
+- **Beta Security Contract — PASS** (`33034732616`).
+- **Repository Quality — PASS** (`33034732629`).
+- **Supply Chain Security — PASS** (`33034732604`).
+- **Business Banking Runtime — PASS** (`33034732541`).
+- **Business Economy V2 — PASS** (`33034732518`).
+- **Business Workforce Hiring V2 — PASS** (`33034732536`).
+- **Business Workforce Payroll V2 — PASS** (`33034732554`).
+- **Business Workforce Production Payroll V2 — PASS** (`33034732530`).
+- **Business Timed Manufacturing V2 — PASS** (`33034732580`).
+- **Player Local Currency Authority — PASS** (`33034732500`).
+- **Marketplace Preconvergence — PASS** (`33034732534`).
+- **World Runtime — PASS** (`33034732697`).
+- **Exchange Calendar Runtime — PASS** (`33034732546`).
+- **Required Game Market Timezone — PASS** (`33034732571`).
+- **Admin API Check — PASS** (`33034732568`).
+- **Admin Game Lifecycle Controls — PASS** (`33034732484`).
+- **Environment Neutral Browser — PASS** (`33034732600`).
+- **Staging Readiness Preflight — PASS** (`33034732569`).
+- **Runtime Interaction Wiring — PASS** (`33034732496`).
+- **Progression Runtime — PASS** (`33034732510`).
+
+### Exit result
+
+- Canonical opaque Player/Business/system Banking identities and deterministic historical identity backfill: **met**.
+- Immutable grouped `balanced_v2` transactions, per-currency zero-sum journal, compatibility-offset bridging, direct monetary-DML denial, and hold-aware available balances: **met**.
+- Clearing/reserve/fee identities, fixing-bound facility caps, operating buffer, reservations, draw/repayment evidence, and fail-closed `FX_LIQUIDITY_UNAVAILABLE`: **met**.
+- Standard next-boundary FX, instant FX with separate 2% source fee, quote/order/event/receipt evidence, cancellation/claim/lease/replay behavior, and Player Banking FX routes/read model/UI: **met**.
+- Database replay, standalone PostgreSQL acceptance, retained Store settlement/connected browser, Player Chromium, security, architecture ratchets, Backend/Edge, Business/Banking, and two-game regression evidence: **met**.
+- B2 remains unmerged and therefore is not `VERIFIED_COMPLETE`: **met**.
+- C0-C4, final 10A.4D, merge, deployment, scheduler installation, secret mutation, and staging/production database changes remain excluded: **met**.
+
+### Next exact roadmap item
+
+`BUSINESS-V2-10A4C0` / `feat/multicurrency-funding-core-v1` is the next dependency-ordered item. Because C0 exposed the B2 certification hole, its branch must first incorporate this repaired B2 handoff and then rerun its own exact-head certification. Do not merge or deploy B2 as part of that handoff.
+"""
+          log.write_text(log_text)
+          PY
+
+          git diff --check
+          git diff -- docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
+
+      - name: Commit documentation-only handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
+          git diff --cached --check
+          git commit -m "docs(banking): certify repaired B2 exact head"
+          git push origin HEAD:feat/banking-fx-clearing-v1
