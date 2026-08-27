@@ -1,7 +1,7 @@
 # Multi-Currency Store Funding Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C1`  
-**Status:** `SCOPE_ONLY` — no runtime implementation or certification claimed  
+**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed
 **Branch:** `feat/multicurrency-store-funding-v1`  
 **Parent branch:** `feat/multicurrency-funding-core-v1`  
 **Parent draft PR:** #673  
@@ -229,6 +229,8 @@ C1 must not:
 - run staging/production SQL or live database mutations.
 
 Marketplace remains C2, Stocks remains C3, Business treasury/procurement remains C4, and final Store/FX convergence remains 10A.4D.
+
+No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation is authorized by C1.
 
 ## Required proof before C1 certification
 
