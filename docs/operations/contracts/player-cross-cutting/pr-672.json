@@ -111,6 +111,8 @@
     "scripts/business-phase10-atomic-settlement-database.mjs",
     "scripts/game-creation-provisioning-local-acceptance.mjs",
     "scripts/local-edge-runtime-contract.test.mjs",
+    "scripts/local-edge-runtime-isolation.mjs",
+    "scripts/local-edge-runtime-isolation.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/player-local-currency-authority-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
