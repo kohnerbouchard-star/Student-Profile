@@ -63,6 +63,11 @@ jobs:
           node-version: 22.23.1
           cache: npm
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
       - name: Install pinned dependencies
         shell: bash
         run: |
@@ -88,10 +93,29 @@ jobs:
           node scripts/validate-supabase-migrations.mjs
           npm --prefix backend run typecheck
           npm --prefix backend run test:player-marketplace
-          node scripts/architecture/build-architecture-inventory.mjs
-          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
-          node scripts/architecture/architecture-ratchet-v2.mjs
           git diff --check
+
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+      - name: Upload generated architecture inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multicurrency-marketplace-architecture-${{ github.event.pull_request.head.sha || github.sha }}
+          path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Post Set up Deno
+        if: always()
+        shell: bash
+        run: deno --version
 
   disposable-database:
     name: Verify multi-currency Marketplace funding database
