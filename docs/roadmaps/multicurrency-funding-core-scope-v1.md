@@ -1,12 +1,12 @@
 # Multi-Currency Funding Core Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C0`  
-**Status:** `IN_PROGRESS` — controlling scope only; runtime implementation begins after the stacked draft PR and PR-bound authority handoff exist  
+**Status:** `IMPLEMENTED_NOT_MERGED` — exact implementation and verification source `fd1511d716c1efd291cf6f45415a32a8d7550db4`; durable handoff `docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md`
 **Branch:** `feat/multicurrency-funding-core-v1`  
 **Parent branch:** `feat/banking-fx-clearing-v1`  
 **Parent draft PR:** #672  
-**Exact parent B2 implementation:** `1d26af9df17cb7fa8334a299b4c78d29c0249904`  
-**Exact parent B2 documentation handoff:** `f7a226d97e641b3e1ef3979bf3082baa37c7c0dd`  
+**Exact parent B2 implementation:** `ce931f8320861117e64eba4403b84d6e7fe8da25`
+**Exact parent B2 documentation handoff:** `029ea568adc722f0b7c1cd57a02c49f88ceaf716`
 **Production deployment authorized:** No
 
 ## Decision
