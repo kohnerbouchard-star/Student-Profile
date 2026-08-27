@@ -10,6 +10,9 @@ const paths = Object.freeze({
   quotes: "backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
   settlement: "backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql",
   assertions: "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql",
+  fundingContracts: "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
+  fundingResponse: "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+  fundingRepository: "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
 });
 
 function text(path) {
@@ -22,6 +25,9 @@ const schema = text(paths.schema);
 const quotes = text(paths.quotes);
 const settlement = text(paths.settlement);
 const assertions = text(paths.assertions);
+const fundingContracts = text(paths.fundingContracts);
+const fundingResponse = text(paths.fundingResponse);
+const fundingRepository = text(paths.fundingRepository);
 
 assert.equal(authority.pullRequestNumber, 674);
 assert.equal(authority.baseRef, "feat/multicurrency-funding-core-v1");
@@ -41,6 +47,20 @@ assert.match(scope, /Store remains the commercial and inventory authority/iu);
 assert.match(scope, /C0 remains the funding and Banking-composition authority/iu);
 assert.match(scope, /Marketplace remains C2/iu);
 assert.match(scope, /No merge, deployment/iu);
+
+assert.match(fundingContracts, /PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN/u);
+assert.match(fundingContracts, /PlayerStoreFundingPublicRepository/u);
+assert.match(fundingContracts, /PlayerStoreFundingAllocationInput/u);
+assert.match(fundingRepository, /playerStoreFundingPublicResponse\.ts/u);
+assert.match(fundingRepository, /create_seeded_store_funding_quote_v1/u);
+assert.match(fundingRepository, /settle_seeded_store_funding_v1/u);
+assert.match(fundingRepository, /create_business_store_offer_funding_quote_v1/u);
+assert.match(fundingRepository, /settle_business_store_offer_funding_v1/u);
+assert.match(fundingRepository, /read_business_store_offer_funding_receipt_v1/u);
+assert.match(fundingResponse, /UUID_ANY/u);
+assert.match(fundingResponse, /lines\.length < 1 \|\| lines\.length > 3/u);
+assert.match(fundingResponse, /mapFundingRpcError/u);
+assert.match(fundingResponse, /export function publicRecord/u);
 
 for (const [path, source] of [
   [paths.schema, schema],

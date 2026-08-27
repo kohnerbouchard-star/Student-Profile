@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1144,
+    "sourceFiles": 1147,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 55,
@@ -351,7 +351,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 50,
+      "sourceFiles": 53,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
