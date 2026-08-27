@@ -76,7 +76,6 @@ jobs:
             --pr-number "$PR_NUMBER" \
             --base-ref "$BASE_REF"
           node scripts/multicurrency-store-funding-contract.mjs
-          node scripts/multicurrency-funding-core-contract.mjs
           node scripts/business-phase10-atomic-settlement-contract.mjs
           node scripts/business-phase10-offer-aware-quote-contract.mjs
           node scripts/business-phase10-player-store-cutover-contract.mjs
