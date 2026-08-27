@@ -65,7 +65,11 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   },
   marketplacePurchase: {
     method: "POST",
-    path: "/marketplace/listings/:listingId/purchase",
+    path: "/marketplace/listings/:listingId/quotes",
+  },
+  marketplaceSettlement: {
+    method: "POST",
+    path: "/marketplace/reservations/:reservationId/settlements",
   },
   marketplaceListing: { method: "POST", path: "/marketplace/listings" },
   marketplaceCancel: {
