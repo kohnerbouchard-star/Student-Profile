@@ -9,7 +9,6 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    ".github/workflows/c1-documentation-finalizer.yml",
     ".github/workflows/multicurrency-store-funding-v1.yml",
     "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
     "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
@@ -33,6 +32,9 @@
     "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
     "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
+    "docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md",
+    "docs/roadmaps/multicurrency-store-funding-scope-v1.md",
     "scripts/multicurrency-store-funding-contract.mjs",
     "scripts/multicurrency-store-funding-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
