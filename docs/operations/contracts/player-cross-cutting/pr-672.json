@@ -75,6 +75,7 @@
     "backend/supabase/migrations/20260826098000_banking_fx_readiness_v1.sql",
     "backend/supabase/migrations/20260826100000_business_bank_identity_runtime_v1.sql",
     "backend/supabase/migrations/20260826101000_banking_staff_adjustment_compatibility_v1.sql",
+    "backend/supabase/migrations/20260826102000_banking_fx_postcutover_purge_registry_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-672.json",
     "docs/roadmaps/banking-fx-clearing-implementation-handoff-v1.md",
