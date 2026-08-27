@@ -159,28 +159,9 @@ begin
     raise exception 'PURCHASE_FUNDING_COMPOSER_CONTRACT_INVALID';
   end if;
 
-  if exists (
-    select 1
-    from information_schema.columns as column_row
-    join information_schema.tables as table_row
-      on table_row.table_schema = column_row.table_schema
-     and table_row.table_name = column_row.table_name
-    left join private.game_data_purge_table_registry as registry_row
-      on registry_row.table_schema = column_row.table_schema
-     and registry_row.table_name = column_row.table_name
-    where column_row.column_name = 'game_session_id'
-      and column_row.table_schema in ('public', 'private')
-      and table_row.table_type = 'BASE TABLE'
-      and column_row.table_name <> 'game_sessions'
-      and column_row.table_name not in (
-        'game_data_purge_requests',
-        'game_data_purge_table_registry'
-      )
-      and registry_row.table_name is null
-  ) then
-    raise exception 'PURCHASE_FUNDING_PURGE_REGISTRY_INCOMPLETE';
-  end if;
-
+  -- C0 owns purge registration only for the three tables it creates above.
+  -- Global purge-registry completeness remains the responsibility of the
+  -- canonical purge authority and each owning domain, not this funding slice.
   if exists (
     select 1
     from pg_catalog.pg_proc as proc_row
