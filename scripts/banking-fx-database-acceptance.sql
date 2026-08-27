@@ -23,7 +23,7 @@ begin
     'fx_quotes',
     'fx_orders',
     'fx_order_events',
-    'fx_receipts'
+    'fx_settlement_receipts'
   ] loop
     if to_regclass('public.' || v_table) is null then
       raise exception 'B2_ACCEPTANCE_TABLE_MISSING:%', v_table;
