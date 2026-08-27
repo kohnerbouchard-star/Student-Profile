@@ -379,6 +379,10 @@ const seededTargetKey = runSql(`
 `).output;
 const seededTargetBefore = accountBalanceByKey(gameOne.id, seededTargetKey);
 const buyerInventoryBeforeSeeded = inventoryQuantity(gameOne, buyer);
+const seededClientSubmittedAt = runSql(
+  "select statement_timestamp()::text;",
+).output;
+assert.ok(Number.isFinite(Date.parse(seededClientSubmittedAt)));
 
 const seededReceipt = serviceJson(`
   select public.settle_seeded_store_funding_v1(
@@ -386,7 +390,7 @@ const seededReceipt = serviceJson(`
     ${sqlLiteral(buyer)}::uuid,
     ${sqlLiteral(seededQuote.quoteKey)},
     'c1-seeded-purchase-0001',
-    statement_timestamp(),
+    ${sqlLiteral(seededClientSubmittedAt)}::timestamptz,
     '{}'::jsonb
   )::text
 `);
@@ -429,7 +433,7 @@ const seededReplay = serviceJson(`
     ${sqlLiteral(buyer)}::uuid,
     ${sqlLiteral(seededQuote.quoteKey)},
     'c1-seeded-purchase-0001',
-    statement_timestamp(),
+    ${sqlLiteral(seededClientSubmittedAt)}::timestamptz,
     '{}'::jsonb
   )::text
 `);
