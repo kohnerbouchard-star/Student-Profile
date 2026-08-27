@@ -132,6 +132,37 @@ function restoreFixtureCountrySnapshots() {
   `);
 }
 
+function activateFixtureGames() {
+  runSql(`
+    update public.game_sessions
+    set
+      lifecycle_state = 'active',
+      status = 'active'
+    where id in (
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameTwo.id)}::uuid
+    )
+      and lifecycle_state = 'draft'
+      and status = 'disabled';
+  `);
+
+  const state = runJson(`
+    select jsonb_build_object(
+      'activeCount', count(*) filter (
+        where lifecycle_state = 'active' and status = 'active'
+      ),
+      'totalCount', count(*)
+    )::text
+    from public.game_sessions
+    where id in (
+      ${sqlLiteral(gameOne.id)}::uuid,
+      ${sqlLiteral(gameTwo.id)}::uuid
+    );
+  `);
+  assert.equal(Number(state.activeCount), 2);
+  assert.equal(Number(state.totalCount), 2);
+}
+
 function seedForeignChecking(game, playerId, currencyCode, amount, suffix) {
   runSql(`
     select *
@@ -266,6 +297,7 @@ resetFixture();
 normalizeFxCountryFixture();
 initializeFx(gameOne);
 initializeFx(gameTwo);
+activateFixtureGames();
 restoreFixtureCountrySnapshots();
 seedForeignChecking(gameOne, buyer, "NRC", 100, "buyer-nrc");
 seedForeignChecking(gameOne, buyer, "YRC", 100, "buyer-yrc");
