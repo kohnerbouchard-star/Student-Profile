@@ -28,6 +28,7 @@ on:
       - backend/package.json
       - backend/supabase/**
       - docs/operations/contracts/player-cross-cutting/pr-672.json
+      - player-terminal/**
       - scripts/banking-fx-*.mjs
       - scripts/banking-fx-*.sql
       - scripts/business-phase10-atomic-settlement-database-support.mjs
@@ -183,163 +184,69 @@ jobs:
         if: always()
         run: npx supabase stop --workdir backend --no-backup || true
 
-  finalize-certification-record:
-    name: Record clean B2 certification handoff
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.number == 672 &&
-      github.event.pull_request.head.ref == 'feat/banking-fx-clearing-v1' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      contents: write
+  chromium-acceptance:
+    name: Verify Banking FX Chromium acceptance
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - name: Check out exact PR head with write token
+      - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: true
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
-      - name: Verify one-shot finalizer boundary
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: player-terminal/package-lock.json
+
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        working-directory: player-terminal
+        run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser-only runtime fixture
         shell: bash
         run: |
           set -euo pipefail
-          CERTIFIED_SHA="5c74f41e94c7326de16767c4645a5fb0be0d7255"
-          git merge-base --is-ancestor "$CERTIFIED_SHA" HEAD
-          test "$(git diff --name-only "$CERTIFIED_SHA"..HEAD | sort)" = ".github/workflows/banking-fx-clearing-v1.yml"
+          mkdir -p player-terminal/frontend/src/core
+          cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+          cat > player-terminal/runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
 
-      - name: Write durable B2 certification records and restore certified workflow
+      - name: Run Chromium browser verification
+        id: banking-fx-chromium
+        working-directory: player-terminal
         shell: bash
         run: |
-          set -euo pipefail
-          python3 <<'PY'
-          from pathlib import Path
+          set -o pipefail
+          npm run browser 2>&1 | tee "$RUNNER_TEMP/banking-fx-chromium.log"
 
-          implementation_sha = "5c74f41e94c7326de16767c4645a5fb0be0d7255"
-          scope = Path("docs/roadmaps/banking-fx-clearing-scope-v1.md")
-          log = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
-
-          scope_text = scope.read_text()
-          old_status = "**Status:** `IN_PROGRESS` — controlling scope only; runtime implementation begins after the immutable scope handoff"
-          new_status = (
-              "**Status:** `IMPLEMENTED_NOT_MERGED` — exact-head certified at "
-              f"`{implementation_sha}`; PR #672 remains draft, open, unmerged, and undeployed"
-          )
-          if old_status in scope_text:
-              scope_text = scope_text.replace(old_status, new_status, 1)
-          elif new_status not in scope_text:
-              raise SystemExit("Unexpected Banking FX scope status line")
-
-          scope_marker = "## Exact-head certification — 2026-08-27"
-          if scope_marker not in scope_text:
-              scope_text = scope_text.rstrip() + f"""
-
-{scope_marker}
-
-- **Exact implementation and verification source:** `{implementation_sha}`.
-- **Canonical status:** `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`, because draft PR #672 remains unmerged and no production runtime evidence is claimed.
-- **Banking FX Clearing V1 — PASS** (`33034732485`): source certification job `98394875685` and disposable PostgreSQL database-acceptance job `98394875846` both completed `success`. The database job rebuilt from zero, executed `scripts/banking-fx-database-acceptance.mjs`, linted the rebuilt database, and tore down the disposable stack.
-- **Database Replay — PASS** (`33034732489`).
-- **Business Player Store Cutover V2 — PASS** (`33034732654`).
-- **Business Store Atomic Settlement V2 — PASS** (`33034732481`).
-- **Player Terminal Verify / Chromium — PASS** (`33034732553`).
-- **Backend Typecheck — PASS** (`33034732503`), **Beta Security Contract — PASS** (`33034732616`), **Repository Quality — PASS** (`33034732629`), and **Supply Chain Security — PASS** (`33034732604`).
-- **Business Banking Runtime — PASS** (`33034732541`), **Player Local Currency Authority — PASS** (`33034732500`), **Environment Neutral Browser — PASS** (`33034732600`), **Staging Readiness Preflight — PASS** (`33034732569`), and **Runtime Interaction Wiring — PASS** (`33034732496`).
-- Retained Business/Store/workforce/manufacturing, Marketplace, World, exchange-calendar, market-timezone, and Admin gates on the same exact head completed successfully.
-- The certification-reopened repair registers the eleven post-cutover Banking/FX game-scoped tables with the resumable purge registry, corrects the retained acceptance table name to `fx_settlement_receipts`, and makes standalone PostgreSQL acceptance an exact-head CI requirement.
-- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
-- The next exact item is `BUSINESS-V2-10A4C0` on `feat/multicurrency-funding-core-v1`; C0 must incorporate this repaired B2 lineage before claiming final certification.
-"""
-          scope.write_text(scope_text)
-
-          log_text = log.read_text()
-          marker = "## 2026-08-27 — Banking FX clearing EXACT-HEAD VERIFIED"
-          if marker not in log_text:
-              log_text = log_text.rstrip() + f"""
-
----
-
-{marker}
-
-This entry supersedes the prior B2 scope-only state and closes the later `CERTIFICATION_REOPENED` repair cycle. The checkpoint status is `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
-
-### Exact source and repository state
-
-- Roadmap item: `BUSINESS-V2-10A4B2`.
-- Owner: `feat/banking-fx-clearing-v1` / draft PR #672, based on B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d` / draft PR #671.
-- Controlling scope commit: `ce50306400b3173a489e2413f0531cef58c863a6`.
-- **Exact implementation and verification source:** `{implementation_sha}`.
-- Prior B2 source `1d26af9df17cb7fa8334a299b4c78d29c0249904` remains historical evidence only. C0 exposed a retained purge-registration/database-acceptance gap, so certification was reopened and the repaired source above supersedes it.
-- PR #672 remained open, draft, mergeable, unmerged, and undeployed at certification. No production runtime evidence, scheduler installation, secret mutation, staging/production SQL, or live database mutation is claimed.
-- This later documentation-only handoff does not replace `{implementation_sha}` as the tested implementation identity.
-
-### Repair that closed the reopened certification gap
-
-- The canonical purge registry explicitly owns the eleven B2 post-cutover game-scoped Banking/FX tables.
-- The retained standalone database acceptance references canonical `fx_settlement_receipts` rather than retired `fx_receipts` terminology.
-- `.github/workflows/banking-fx-clearing-v1.yml` permanently executes disposable PostgreSQL acceptance at exact head.
-- These repairs remain inside B2 authority and do not implement C0 multi-account funding or C1-C4 currency convergence.
-
-### Exact-head verification on `{implementation_sha}`
-
-- **Banking FX Clearing V1 — PASS** (`33034732485`): source job `98394875685`; disposable database-acceptance job `98394875846`.
-- **Database Replay — PASS** (`33034732489`).
-- **Business Player Store Cutover V2 — PASS** (`33034732654`).
-- **Business Store Atomic Settlement V2 — PASS** (`33034732481`).
-- **Business Store Seller Offers V2 — PASS** (`33034732560`).
-- **Business Store Listing Inventory V2 — PASS** (`33034732520`).
-- **Business Store Withdrawal Safety V2 — PASS** (`33034732574`).
-- **Player Terminal Verify / Chromium — PASS** (`33034732553`).
-- **Backend Typecheck — PASS** (`33034732503`).
-- **Beta Security Contract — PASS** (`33034732616`).
-- **Repository Quality — PASS** (`33034732629`).
-- **Supply Chain Security — PASS** (`33034732604`).
-- **Business Banking Runtime — PASS** (`33034732541`).
-- **Business Economy V2 — PASS** (`33034732518`).
-- **Business Workforce Hiring V2 — PASS** (`33034732536`).
-- **Business Workforce Payroll V2 — PASS** (`33034732554`).
-- **Business Workforce Production Payroll V2 — PASS** (`33034732530`).
-- **Business Timed Manufacturing V2 — PASS** (`33034732580`).
-- **Player Local Currency Authority — PASS** (`33034732500`).
-- **Marketplace Preconvergence — PASS** (`33034732534`).
-- **World Runtime — PASS** (`33034732697`).
-- **Exchange Calendar Runtime — PASS** (`33034732546`).
-- **Required Game Market Timezone — PASS** (`33034732571`).
-- **Admin API Check — PASS** (`33034732568`).
-- **Admin Game Lifecycle Controls — PASS** (`33034732484`).
-- **Environment Neutral Browser — PASS** (`33034732600`).
-- **Staging Readiness Preflight — PASS** (`33034732569`).
-- **Runtime Interaction Wiring — PASS** (`33034732496`).
-- **Progression Runtime — PASS** (`33034732510`).
-
-### Exit result
-
-- Canonical Banking identities, deterministic historical backfill, balanced grouped posting, compatibility-offset bridging, direct monetary-DML denial, and hold-aware available balances: **met**.
-- Clearing/reserve/fee identities, fixing-bound facility caps, operating buffer, reservations, draw/repayment evidence, and fail-closed liquidity exhaustion: **met**.
-- Standard and instant Player FX, immutable quote/order/event/receipt evidence, cancellation/claim/lease/replay behavior, and Player Banking FX routes/read model/UI: **met**.
-- Database replay, standalone PostgreSQL acceptance, retained Store settlement/connected browser, Player Chromium, security, architecture, Backend/Edge, Business/Banking, and two-game regression evidence: **met**.
-- B2 remains unmerged and therefore is not `VERIFIED_COMPLETE`: **met**.
-- C0-C4, final 10A.4D, merge, deployment, scheduler installation, secret mutation, and staging/production database changes remain excluded: **met**.
-
-### Next exact roadmap item
-
-`BUSINESS-V2-10A4C0` / `feat/multicurrency-funding-core-v1` is next. Its branch must incorporate this repaired B2 handoff and then rerun its own exact-head certification. Do not merge or deploy B2 as part of that handoff.
-"""
-          log.write_text(log_text)
-          PY
-
-          git checkout 5c74f41e94c7326de16767c4645a5fb0be0d7255 -- .github/workflows/banking-fx-clearing-v1.yml
-          git diff --check
-
-      - name: Commit and push documentation-only handoff
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/banking-fx-clearing-v1.yml docs/roadmaps/banking-fx-clearing-scope-v1.md docs/roadmaps/business-v2-development-execution-log-v1.md
-          git diff --cached --check
-          git commit -m "docs(banking): certify repaired B2 exact head"
-          git push origin HEAD:feat/banking-fx-clearing-v1
+      - name: Upload failed Chromium artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: banking-fx-chromium-failure-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/banking-fx-chromium.log
+            player-terminal/playwright-report/
+            player-terminal/test-results/
+          if-no-files-found: warn
+          retention-days: 14
