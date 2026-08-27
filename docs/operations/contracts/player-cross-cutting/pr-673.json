@@ -20,7 +20,9 @@
     "scripts/multicurrency-funding-concurrency.mjs",
     "scripts/multicurrency-funding-core-contract.mjs",
     "scripts/multicurrency-funding-core-simulation.mjs",
-    "scripts/multicurrency-funding-database.mjs"
+    "scripts/multicurrency-funding-database.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-673.json",
