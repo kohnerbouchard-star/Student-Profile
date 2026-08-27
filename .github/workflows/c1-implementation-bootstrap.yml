@@ -46,30 +46,12 @@ jobs:
           echo "36fb92c2bbaca2c60821073302ba290b356a942776be458d388fb9ba740581e2  /tmp/c1bundle.tar.xz" | sha256sum --check --strict
           tar -xJf /tmp/c1bundle.tar.xz -C .
 
-      - name: Remove temporary bootstrap authority and harden scope
+      - name: Harden C1 scope for implementation verification
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json
           from pathlib import Path
-
-          authority_path = Path("docs/operations/contracts/player-cross-cutting/pr-674.json")
-          authority = json.loads(authority_path.read_text())
-          temporary = {
-              ".github/c1-bootstrap/c1bundle.part00.b64",
-              ".github/c1-bootstrap/c1bundle.part01.b64",
-              ".github/c1-bootstrap/c1bundle.part02.b64",
-              ".github/c1-bootstrap/c1bundle.part03.b64",
-              ".github/c1-bootstrap/c1bundle.part04.b64",
-              ".github/workflows/c1-implementation-bootstrap.yml",
-          }
-          authority["allowedPaths"] = [
-              value for value in authority["allowedPaths"] if value not in temporary
-          ]
-          if temporary.intersection(authority["allowedPaths"]):
-              raise SystemExit("temporary bootstrap authority was not removed")
-          authority_path.write_text(json.dumps(authority, indent=2) + "\n")
 
           scope_path = Path("docs/roadmaps/multicurrency-store-funding-scope-v1.md")
           scope = scope_path.read_text()
@@ -92,12 +74,6 @@ jobs:
               raise SystemExit("C1 no-merge/deployment boundary was not recorded")
           scope_path.write_text(scope)
           PY
-          git rm .github/workflows/c1-implementation-bootstrap.yml
-          git rm .github/c1-bootstrap/c1bundle.part00.b64
-          git rm .github/c1-bootstrap/c1bundle.part01.b64
-          git rm .github/c1-bootstrap/c1bundle.part02.b64
-          git rm .github/c1-bootstrap/c1bundle.part03.b64
-          git rm .github/c1-bootstrap/c1bundle.part04.b64
 
       - name: Verify generated implementation before commit
         shell: bash
@@ -116,22 +92,20 @@ jobs:
           node scripts/validate-supabase-migrations.mjs
           git diff --check
 
-      - name: Commit reviewed C1 database authority
+      - name: Commit reviewed non-workflow C1 authority
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/multicurrency-store-funding-v1.yml
           git add backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql
           git add backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
           git add backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
           git add backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
-          git add docs/operations/contracts/player-cross-cutting/pr-674.json
           git add docs/roadmaps/multicurrency-store-funding-scope-v1.md
           git add scripts/multicurrency-store-funding-contract.mjs
           git add scripts/multicurrency-store-funding-database.mjs
-          git diff --cached --quiet && { echo "C1 implementation bundle produced no changes" >&2; exit 1; }
+          git diff --cached --quiet && { echo "C1 implementation bundle produced no non-workflow changes" >&2; exit 1; }
           git diff --cached --name-status
           git commit -m "feat(store-funding): add C1 database authority"
           git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
