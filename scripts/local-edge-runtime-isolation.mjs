@@ -20,18 +20,29 @@ const DOCKER_COMMAND_TIMEOUT_MS = 30_000;
 const EDGE_CONTAINER_PATTERN = /^supabase_edge_runtime_[A-Za-z0-9_.-]+$/u;
 const KONG_CONTAINER_PATTERN = /^supabase_kong_[A-Za-z0-9_.-]+$/u;
 const READY_TARGETS = Object.freeze([
-  Object.freeze({ path: "/", proxied: false }),
+  Object.freeze({
+    path: "/",
+    proxied: false,
+    method: "GET",
+    includeOrigin: false,
+  }),
   Object.freeze({
     path: "/functions/v1/player-api",
     proxied: true,
+    method: "OPTIONS",
+    includeOrigin: true,
   }),
   Object.freeze({
     path: "/functions/v1/player-web-session-api",
     proxied: true,
+    method: "OPTIONS",
+    includeOrigin: true,
   }),
   Object.freeze({
-    path: "/functions/v1/bootstrap-api",
+    path: "/functions/v1/bootstrap-api/health",
     proxied: true,
+    method: "GET",
+    includeOrigin: false,
   }),
 ]);
 
@@ -235,7 +246,9 @@ function restartExactRuntimeContainers(execFile, containers) {
 }
 
 function isAcceptedReadinessStatus(target, status) {
-  return target.proxied ? status === 200 || status === 204 : status === 200;
+  return target.method === "OPTIONS"
+    ? status === 200 || status === 204
+    : status === 200;
 }
 
 function runtimeContainersAreRunning(execFile, containers) {
@@ -268,11 +281,11 @@ async function probeReadinessTarget({
     const headers = target.proxied
       ? {
           apikey: publishableKey,
-          Origin: new URL(baseUrl).origin,
+          ...(target.includeOrigin ? { Origin: new URL(baseUrl).origin } : {}),
         }
       : undefined;
     const response = await fetchImpl(`${baseUrl}${target.path}`, {
-      method: target.proxied ? "OPTIONS" : "GET",
+      method: target.method,
       headers,
       cache: "no-store",
       signal: AbortSignal.timeout(
