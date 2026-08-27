@@ -7,6 +7,7 @@ const paths = Object.freeze({
   settlement: "backend/supabase/migrations/20260827101000_multicurrency_marketplace_funding_settlement_v1.sql",
   refund: "backend/supabase/migrations/20260827101500_multicurrency_marketplace_funding_refund_v1.sql",
   assertions: "backend/supabase/migrations/20260827102000_multicurrency_marketplace_funding_assertions_v1.sql",
+  purgeRegistry: "backend/supabase/migrations/20260827102500_multicurrency_marketplace_funding_purge_registry_v1.sql",
   contracts: "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
   response: "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
   repository: "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceFundingRepository.ts",
@@ -107,6 +108,14 @@ includesAll("assertion migration", source.assertions, [
   "MARKETPLACE_FUNDING_BROWSER_EXECUTE_FORBIDDEN",
   "MARKETPLACE_FUNDING_REVERSAL_PRIVATE_AUTHORITY_INVALID",
   "MARKETPLACE_FUNDING_SEARCH_PATH_MISSING",
+]);
+
+includesAll("purge registry migration", source.purgeRegistry, [
+  "private.game_data_purge_table_registry",
+  "public.marketplace_funding_refunds",
+  "marketplace_funding_refunds",
+  "on conflict (table_schema, table_name) do nothing",
+  "MARKETPLACE_FUNDING_PURGE_REGISTRY_INCOMPLETE",
 ]);
 
 includesAll("public contracts", source.contracts, [
