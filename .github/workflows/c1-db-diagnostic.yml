@@ -1,0 +1,64 @@
+name: C1 database acceptance diagnostic
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-db-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact diagnostic head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8 >/tmp/c1-npm-global.log 2>&1
+          npm ci --ignore-scripts >/tmp/c1-npm-ci.log 2>&1
+
+      - name: Start and rebuild disposable database quietly
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED" >/tmp/c1-start.log 2>&1
+          npx supabase db reset --workdir backend --local >/tmp/c1-reset.log 2>&1
+
+      - name: Print isolated C1 acceptance result
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set +e
+          node scripts/multicurrency-store-funding-database.mjs >/tmp/c1-acceptance.log 2>&1
+          STATUS=$?
+          cat /tmp/c1-acceptance.log
+          exit "$STATUS"
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup >/dev/null 2>&1 || true
