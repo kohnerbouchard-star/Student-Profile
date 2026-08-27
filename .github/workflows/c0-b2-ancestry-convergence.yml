@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
-          test "$(git rev-parse HEAD^)" = "04643f4eb1c2af14ddfaa9981578adf7b2b9ad06"
+          test "$(git rev-parse HEAD^)" = "314a1a687a6b463cd3c611ed3701bc5592f53f9f"
           git fetch origin feat/banking-fx-clearing-v1
           test "$(git rev-parse origin/feat/banking-fx-clearing-v1)" = "029ea568adc722f0b7c1cd57a02c49f88ceaf716"
 
@@ -33,6 +33,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           set +e
           git merge --no-commit --no-ff origin/feat/banking-fx-clearing-v1
           MERGE_STATUS=$?
@@ -74,19 +77,23 @@ jobs:
                       --pr-number 672 \\
                       --base-ref feat/canonical-fx-authority-v1
           '''
-          new = '''      - name: Run Banking FX certification lanes
+
+          dollar = chr(36)
+          pr_expr = dollar + "{{ github.event.pull_request.number || 672 }}"
+          base_expr = dollar + "{{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}"
+          new = f'''      - name: Run Banking FX certification lanes
                   shell: bash
                   env:
-                    AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || 672 }}
-                    AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}
+                    AUTHORITY_PR_NUMBER: {pr_expr}
+                    AUTHORITY_BASE_REF: {base_expr}
                   run: |
                     set -euo pipefail
                     node --test scripts/player-cross-cutting-authority.test.mjs
-                    git diff --name-only "origin/${AUTHORITY_BASE_REF}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
+                    git diff --name-only "origin/${{AUTHORITY_BASE_REF}}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
                     node scripts/verify-player-cross-cutting-authority.mjs \\
                       --changed-files /tmp/player-cross-cutting-changed-files.txt \\
-                      --pr-number "${AUTHORITY_PR_NUMBER}" \\
-                      --base-ref "${AUTHORITY_BASE_REF}"
+                      --pr-number "${{AUTHORITY_PR_NUMBER}}" \\
+                      --base-ref "${{AUTHORITY_BASE_REF}}"
           '''
           if old not in text:
               raise SystemExit('Expected repaired B2 authority block was not found')
@@ -100,6 +107,8 @@ jobs:
               raise SystemExit('Repaired B2 Chromium lane missing')
           if 'Verify Banking FX database acceptance' not in text:
               raise SystemExit('Repaired B2 database lane missing')
+          if pr_expr not in text or base_expr not in text:
+              raise SystemExit('Dynamic stacked-PR authority expressions missing')
 
           path.write_text(text)
           PY
@@ -107,13 +116,12 @@ jobs:
           git add .github/workflows/banking-fx-clearing-v1.yml
           test -z "$(git diff --name-only --diff-filter=U)"
           git diff --check
+          git diff --cached --check
 
       - name: Commit two-parent convergence
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(funding): converge repaired B2 parent"
           PARENT_COUNT="$(git cat-file -p HEAD | grep -c '^parent ')"
           test "$PARENT_COUNT" = "2"
