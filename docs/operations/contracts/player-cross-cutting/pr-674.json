@@ -9,12 +9,6 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    ".github/c1-bootstrap/c1bundle.part00.b64",
-    ".github/c1-bootstrap/c1bundle.part01.b64",
-    ".github/c1-bootstrap/c1bundle.part02.b64",
-    ".github/c1-bootstrap/c1bundle.part03.b64",
-    ".github/c1-bootstrap/c1bundle.part04.b64",
-    ".github/workflows/c1-implementation-bootstrap.yml",
     ".github/workflows/multicurrency-store-funding-v1.yml",
     "backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql",
     "backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
