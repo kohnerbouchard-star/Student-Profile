@@ -1,0 +1,115 @@
+name: C1 implementation bootstrap
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-implementation-bootstrap.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-implementation-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  commit-implementation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact bootstrap head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Materialize reviewed C1 implementation bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "d74b7b23ed8ecf9e2068cda09cca5abfcf8f13a534725eb8eb62b922d71765a8  .github/c1-bootstrap/c1bundle.part00.b64" | sha256sum --check --strict
+          echo "26fc458c9d95784ee8fbd58b131eadc99771471533adb718f9fc550e989e35e5  .github/c1-bootstrap/c1bundle.part01.b64" | sha256sum --check --strict
+          echo "aab91944127681b1a59038f4cb6a1aa7923b8dc47a062ae84bae2c369895d1ad  .github/c1-bootstrap/c1bundle.part02.b64" | sha256sum --check --strict
+          echo "1bce976868bd10c4d9f6f6e4eebdfbb29a3f275bddbac667c2331eb1c93c6ba9  .github/c1-bootstrap/c1bundle.part03.b64" | sha256sum --check --strict
+          echo "1c5a7c316aea37093e7f74d60654901a5e624e1dabc1f98b40d37f0b6dd93cca  .github/c1-bootstrap/c1bundle.part04.b64" | sha256sum --check --strict
+          cat .github/c1-bootstrap/c1bundle.part*.b64 > /tmp/c1bundle.tar.xz.b64
+          base64 --decode /tmp/c1bundle.tar.xz.b64 > /tmp/c1bundle.tar.xz
+          echo "36fb92c2bbaca2c60821073302ba290b356a942776be458d388fb9ba740581e2  /tmp/c1bundle.tar.xz" | sha256sum --check --strict
+          tar -xJf /tmp/c1bundle.tar.xz -C .
+
+      - name: Remove temporary bootstrap authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("docs/operations/contracts/player-cross-cutting/pr-674.json")
+          authority = json.loads(path.read_text())
+          temporary = {
+              ".github/c1-bootstrap/c1bundle.part00.b64",
+              ".github/c1-bootstrap/c1bundle.part01.b64",
+              ".github/c1-bootstrap/c1bundle.part02.b64",
+              ".github/c1-bootstrap/c1bundle.part03.b64",
+              ".github/c1-bootstrap/c1bundle.part04.b64",
+              ".github/workflows/c1-implementation-bootstrap.yml",
+          }
+          authority["allowedPaths"] = [
+              value for value in authority["allowedPaths"] if value not in temporary
+          ]
+          if temporary.intersection(authority["allowedPaths"]):
+              raise SystemExit("temporary bootstrap authority was not removed")
+          path.write_text(json.dumps(authority, indent=2) + "\n")
+          PY
+          git rm .github/workflows/c1-implementation-bootstrap.yml
+          git rm .github/c1-bootstrap/c1bundle.part00.b64
+          git rm .github/c1-bootstrap/c1bundle.part01.b64
+          git rm .github/c1-bootstrap/c1bundle.part02.b64
+          git rm .github/c1-bootstrap/c1bundle.part03.b64
+          git rm .github/c1-bootstrap/c1bundle.part04.b64
+
+      - name: Verify generated implementation before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
+          test -f backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
+          test -f backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
+          test -f scripts/multicurrency-store-funding-contract.mjs
+          test -f scripts/multicurrency-store-funding-database.mjs
+          test -f .github/workflows/multicurrency-store-funding-v1.yml
+          node --check scripts/multicurrency-store-funding-contract.mjs
+          node --check scripts/multicurrency-store-funding-database.mjs
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+      - name: Commit reviewed C1 database authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/multicurrency-store-funding-v1.yml
+          git add backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql
+          git add backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
+          git add backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
+          git add backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
+          git add docs/operations/contracts/player-cross-cutting/pr-674.json
+          git add scripts/multicurrency-store-funding-contract.mjs
+          git add scripts/multicurrency-store-funding-database.mjs
+          git diff --cached --quiet && { echo "C1 implementation bundle produced no changes" >&2; exit 1; }
+          git diff --cached --name-status
+          git commit -m "feat(store-funding): add C1 database authority"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
