@@ -120,6 +120,7 @@ jobs:
             parseFundingReceipt,
             parseSeededQuote,
             parseSeededReceipt,
+            publicRecord,
           } from "./playerStoreFundingPublicResponse.ts";'''.replace("          ", "")
           if read_store_import not in prefix:
               raise SystemExit("C1 read-store import block not found")
@@ -188,6 +189,7 @@ jobs:
               "function parseFundingQuote(": "export function parseFundingQuote(",
               "function parseFundingReceipt(": "export function parseFundingReceipt(",
               "function mapFundingRpcError(": "export function mapFundingRpcError(",
+              "function publicRecord(": "export function publicRecord(",
               "function invalidPublicResponse(": "export function invalidPublicResponse(",
               "error: RpcError,": "error: PlayerStoreFundingRpcError,",
           }
@@ -272,6 +274,7 @@ jobs:
           assert.match(fundingResponse, /UUID_ANY/u);
           assert.match(fundingResponse, /lines\.length < 1 \|\| lines\.length > 3/u);
           assert.match(fundingResponse, /mapFundingRpcError/u);
+          assert.match(fundingResponse, /export function publicRecord/u);
           '''.replace("          ", "")
           if assertion_anchor not in contract:
               raise SystemExit("C1 contract assertion anchor not found")
