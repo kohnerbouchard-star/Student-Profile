@@ -1,11 +1,14 @@
 import { ApiRequestError } from "./errors.js";
 
 const LISTING = /^lst_[0-9a-f]{32}$/;
+const RESERVATION = /^mpr_[0-9a-f]{32}$/;
 const ORDER = /^ord_[0-9a-f]{32}$/;
+const ACCOUNT = /^bac_[0-9a-f]{32}$/;
 const IDEMPOTENCY = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/;
 const KEYS = new Set([
   "marketplace", "marketplaceListing", "marketplaceActivate",
-  "marketplacePurchase", "marketplaceCancel", "marketplaceDispute"
+  "marketplacePurchase", "marketplaceSettlement", "marketplaceCancel",
+  "marketplaceDispute"
 ]);
 
 function requiredText(value, field, endpointKey) {
@@ -36,6 +39,36 @@ function expectedVersion(payload, endpointKey) {
     body: { code: "player_marketplace_version_invalid", endpointKey }
   });
 }
+function allocations(payload, endpointKey) {
+  const source = payload?.allocations;
+  if (!Array.isArray(source) || source.length < 1 || source.length > 3) {
+    throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+      body: { code: "player_marketplace_allocations_invalid", endpointKey }
+    });
+  }
+  const seen = new Set();
+  return source.map((entry) => {
+    const accountKey = String(entry?.sourceAccountKey || "").trim().toLowerCase();
+    const targetAmount = Number(entry?.targetAmount);
+    if (!ACCOUNT.test(accountKey) || seen.has(accountKey) || !Number.isFinite(targetAmount) || targetAmount <= 0) {
+      throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+        body: { code: "player_marketplace_allocations_invalid", endpointKey }
+      });
+    }
+    seen.add(accountKey);
+    return { sourceAccountKey: accountKey, targetAmount };
+  });
+}
+function clientSubmittedAt(value, endpointKey) {
+  if (value === null || value === undefined || value === "") return null;
+  const result = String(value).trim();
+  if (!Number.isFinite(Date.parse(result))) {
+    throw new ApiRequestError(`clientSubmittedAt is invalid for ${endpointKey}.`, {
+      body: { code: "player_marketplace_timestamp_invalid", endpointKey }
+    });
+  }
+  return new Date(result).toISOString();
+}
 
 export function hasMarketplaceBackendRoute(endpointKey) {
   return KEYS.has(endpointKey);
@@ -61,17 +94,47 @@ export function resolveMarketplaceBackendRequest({ endpointKey, payload = {}, pa
       }
     };
   }
-  if (["marketplaceActivate", "marketplacePurchase", "marketplaceCancel"].includes(endpointKey)) {
+  if (["marketplaceActivate", "marketplaceCancel"].includes(endpointKey)) {
     const listingId = publicKey(params.listingId || payload.listingId, LISTING, "listingId", endpointKey);
-    const action = endpointKey === "marketplaceActivate" ? "activate" : endpointKey === "marketplacePurchase" ? "purchase" : "cancel";
+    const action = endpointKey === "marketplaceActivate" ? "activate" : "cancel";
     return {
       endpointKey,
       method: "POST",
       path: `/players/me/marketplace/listings/${encodeURIComponent(listingId)}/${action}`,
       payload: {
-        ...(endpointKey === "marketplacePurchase" ? { quantity: Number(payload.quantity) } : {}),
         expectedVersion: expectedVersion(payload, endpointKey),
         idempotencyKey: idempotency(payload, endpointKey)
+      }
+    };
+  }
+  if (endpointKey === "marketplacePurchase") {
+    const listingId = publicKey(params.listingId || payload.listingId, LISTING, "listingId", endpointKey);
+    return {
+      endpointKey,
+      method: "POST",
+      path: `/players/me/marketplace/listings/${encodeURIComponent(listingId)}/quotes`,
+      payload: {
+        quantity: Number(payload.quantity),
+        expectedVersion: expectedVersion(payload, endpointKey),
+        allocations: allocations(payload, endpointKey),
+        idempotencyKey: idempotency(payload, endpointKey)
+      }
+    };
+  }
+  if (endpointKey === "marketplaceSettlement") {
+    const reservationId = publicKey(
+      params.reservationId || payload.reservationId || payload.reservationKey,
+      RESERVATION,
+      "reservationId",
+      endpointKey
+    );
+    return {
+      endpointKey,
+      method: "POST",
+      path: `/players/me/marketplace/reservations/${encodeURIComponent(reservationId)}/settlements`,
+      payload: {
+        idempotencyKey: idempotency(payload, endpointKey),
+        clientSubmittedAt: clientSubmittedAt(payload.clientSubmittedAt, endpointKey)
       }
     };
   }
