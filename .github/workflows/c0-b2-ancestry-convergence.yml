@@ -1,0 +1,120 @@
+name: C0 B2 ancestry convergence
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-funding-core-v1
+    paths:
+      - .github/workflows/c0-b2-ancestry-convergence.yml
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact C0 convergence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard source and repaired B2 parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
+          test "$(git rev-parse HEAD^)" = "04643f4eb1c2af14ddfaa9981578adf7b2b9ad06"
+          git fetch origin feat/banking-fx-clearing-v1
+          test "$(git rev-parse origin/feat/banking-fx-clearing-v1)" = "029ea568adc722f0b7c1cd57a02c49f88ceaf716"
+
+      - name: Merge repaired B2 ancestry and resolve the reviewed workflow overlap
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          git merge --no-commit --no-ff origin/feat/banking-fx-clearing-v1
+          MERGE_STATUS=$?
+          set -e
+
+          if [ "$MERGE_STATUS" -ne 0 ]; then
+            CONFLICTS="$(git diff --name-only --diff-filter=U)"
+            test "$CONFLICTS" = ".github/workflows/banking-fx-clearing-v1.yml"
+            git checkout --theirs .github/workflows/banking-fx-clearing-v1.yml
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/banking-fx-clearing-v1.yml')
+          text = path.read_text()
+
+          text = text.replace(
+              '      - docs/operations/contracts/player-cross-cutting/pr-672.json\n',
+              '      - docs/operations/contracts/player-cross-cutting/pr-672.json\n'
+              '      - docs/operations/contracts/player-cross-cutting/pr-673.json\n',
+              1,
+          )
+          text = text.replace(
+              '      - docs/roadmaps/banking-fx-clearing-scope-v1.md\n',
+              '      - docs/roadmaps/banking-fx-clearing-scope-v1.md\n'
+              '      - docs/roadmaps/multicurrency-funding-core-scope-v1.md\n',
+              1,
+          )
+
+          old = '''      - name: Run Banking FX certification lanes
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    node --test scripts/player-cross-cutting-authority.test.mjs
+                    git diff --name-only origin/feat/canonical-fx-authority-v1...HEAD | sort -u > /tmp/player-cross-cutting-changed-files.txt
+                    node scripts/verify-player-cross-cutting-authority.mjs \\
+                      --changed-files /tmp/player-cross-cutting-changed-files.txt \\
+                      --pr-number 672 \\
+                      --base-ref feat/canonical-fx-authority-v1
+          '''
+          new = '''      - name: Run Banking FX certification lanes
+                  shell: bash
+                  env:
+                    AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || 672 }}
+                    AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}
+                  run: |
+                    set -euo pipefail
+                    node --test scripts/player-cross-cutting-authority.test.mjs
+                    git diff --name-only "origin/${AUTHORITY_BASE_REF}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
+                    node scripts/verify-player-cross-cutting-authority.mjs \\
+                      --changed-files /tmp/player-cross-cutting-changed-files.txt \\
+                      --pr-number "${AUTHORITY_PR_NUMBER}" \\
+                      --base-ref "${AUTHORITY_BASE_REF}"
+          '''
+          if old not in text:
+              raise SystemExit('Expected repaired B2 authority block was not found')
+          text = text.replace(old, new, 1)
+
+          if text.count('pr-673.json') != 1:
+              raise SystemExit('C0 PR authority path count invalid')
+          if text.count('multicurrency-funding-core-scope-v1.md') != 1:
+              raise SystemExit('C0 scope path count invalid')
+          if 'Verify Banking FX Chromium acceptance' not in text:
+              raise SystemExit('Repaired B2 Chromium lane missing')
+          if 'Verify Banking FX database acceptance' not in text:
+              raise SystemExit('Repaired B2 database lane missing')
+
+          path.write_text(text)
+          PY
+
+          git add .github/workflows/banking-fx-clearing-v1.yml
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git diff --check
+
+      - name: Commit two-parent convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(funding): converge repaired B2 parent"
+          PARENT_COUNT="$(git cat-file -p HEAD | grep -c '^parent ')"
+          test "$PARENT_COUNT" = "2"
+          git push origin HEAD:feat/multicurrency-funding-core-v1
