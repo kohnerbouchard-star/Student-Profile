@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.multicurrency-marketplace-funding-pr-675.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 675,
+  "baseRef": "feat/multicurrency-store-funding-v1",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "docs/operations/contracts/player-cross-cutting/pr-675.json",
+    "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-675.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "database-replay",
+    "banking-fx-clearing-v1",
+    "multicurrency-funding-core-v1",
+    "multicurrency-store-funding-v1",
+    "marketplace-preconvergence",
+    "multicurrency-marketplace-funding-v1"
+  ]
+}
