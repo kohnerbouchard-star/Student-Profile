@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/banking-fx-clearing-v1.yml",
     ".github/workflows/multicurrency-funding-core-v1.yml",
     "backend/supabase/migrations/20260827090000_multicurrency_funding_quote_v1.sql",
     "backend/supabase/migrations/20260827091000_multicurrency_funding_composer_v1.sql",
