@@ -1,0 +1,1257 @@
+name: C1 backend API implementation
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-backend-api-implementation.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-backend-api-implementation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact implementation head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Materialize C1 funded Store contracts and repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts <<'EOF'
+          import type { PlayerStoreOfferPublicQuoteDto, PlayerStoreOfferPublicReceiptDto } from "./playerStoreOfferPublicContracts.ts";
+          import type { PlayerStorePublicQuoteDto, PlayerStorePublicReceiptDto } from "./playerStorePublicContracts.ts";
+
+          export const PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN = /^bac_[0-9a-f]{32}$/u;
+          export const PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN = /^pfq_[0-9a-f]{32}$/u;
+          export const PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN = /^pfr_[0-9a-f]{32}$/u;
+
+          export interface PlayerStoreFundingAllocationInput {
+            readonly sourceAccountKey: string;
+            readonly targetAmount: number;
+          }
+
+          export interface PlayerStoreFundingQuoteLineDto {
+            readonly lineNumber: number;
+            readonly sourceAccountKey: string;
+            readonly sourceCurrencyCode: string;
+            readonly sourceMinorUnit: number;
+            readonly targetCurrencyCode: string;
+            readonly targetMinorUnit: number;
+            readonly postedAmount: number;
+            readonly heldAmount: number;
+            readonly availableAmount: number;
+            readonly targetContribution: number;
+            readonly sourceDebit: number;
+            readonly referenceRate: number;
+            readonly customerRate: number;
+            readonly effectiveRate: number;
+            readonly spreadRate: number;
+            readonly requiresFx: boolean;
+            readonly roundingDisclosure: string;
+          }
+
+          export interface PlayerStoreFundingQuoteDto {
+            readonly quoteKey: string;
+            readonly fundingContextKind: string;
+            readonly fundingContextKey: string;
+            readonly targetCurrencyCode: string;
+            readonly targetMinorUnit: number;
+            readonly targetAmount: number;
+            readonly fixingKey: string;
+            readonly policyVersion: string;
+            readonly requiresFx: boolean;
+            readonly expiresAt: string;
+            readonly lines: readonly PlayerStoreFundingQuoteLineDto[];
+          }
+
+          export interface PlayerStoreFundingReceiptLineDto {
+            readonly lineNumber: number;
+            readonly sourceAccountKey: string;
+            readonly sourceCurrencyCode: string;
+            readonly targetContribution: number;
+            readonly sourceDebit: number;
+            readonly referenceRate: number;
+            readonly customerRate: number;
+            readonly effectiveRate: number;
+            readonly spreadRate: number;
+            readonly requiresFx: boolean;
+          }
+
+          export interface PlayerStoreFundingReceiptDto {
+            readonly receiptKey: string;
+            readonly quoteKey: string;
+            readonly bankTransactionKey: string;
+            readonly targetAccountKey: string;
+            readonly fundingContextKind: string;
+            readonly fundingContextKey: string;
+            readonly targetCurrencyCode: string;
+            readonly targetAmount: number;
+            readonly targetReserveDrawAmount: number;
+            readonly sourceDomain: string;
+            readonly sourceAction: string;
+            readonly createdAt: string;
+            readonly lines: readonly PlayerStoreFundingReceiptLineDto[];
+          }
+
+          export type PlayerStoreSeededFundingQuoteDto = PlayerStorePublicQuoteDto & {
+            readonly quoteStatus: "created" | "used" | "expired" | "cancelled";
+            readonly replayed: boolean;
+            readonly fundingQuote: PlayerStoreFundingQuoteDto;
+          };
+
+          export type PlayerStoreSeededFundingReceiptDto = PlayerStorePublicReceiptDto & {
+            readonly fundingReceipt: PlayerStoreFundingReceiptDto;
+          };
+
+          export type PlayerStoreBusinessFundingQuoteDto = PlayerStoreOfferPublicQuoteDto & {
+            readonly fundingQuote: PlayerStoreFundingQuoteDto;
+          };
+
+          export type PlayerStoreBusinessFundingReceiptDto = PlayerStoreOfferPublicReceiptDto & {
+            readonly fundingReceipt: PlayerStoreFundingReceiptDto;
+          };
+
+          export interface PlayerStoreFundingPublicScope {
+            readonly gameSessionId: string;
+            readonly playerId: string;
+          }
+
+          export interface PlayerStoreFundingPublicRepository {
+            createSeededQuote(input: PlayerStoreFundingPublicScope & {
+              readonly itemKey: string;
+              readonly quantity: number;
+              readonly allocations: readonly PlayerStoreFundingAllocationInput[];
+              readonly idempotencyKey: string;
+              readonly effectiveAt: string;
+            }): Promise<PlayerStoreSeededFundingQuoteDto>;
+            settleSeededPurchase(input: PlayerStoreFundingPublicScope & {
+              readonly quoteKey: string;
+              readonly idempotencyKey: string;
+              readonly clientSubmittedAt: string | null;
+            }): Promise<PlayerStoreSeededFundingReceiptDto>;
+            createBusinessOfferQuote(input: PlayerStoreFundingPublicScope & {
+              readonly offerKey: string;
+              readonly quantity: number;
+              readonly expectedVersion: number;
+              readonly allocations: readonly PlayerStoreFundingAllocationInput[];
+              readonly idempotencyKey: string;
+            }): Promise<PlayerStoreBusinessFundingQuoteDto>;
+            settleBusinessOfferPurchase(input: PlayerStoreFundingPublicScope & {
+              readonly offerKey: string;
+              readonly quoteKey: string;
+              readonly quantity: number;
+              readonly expectedVersion: number;
+              readonly idempotencyKey: string;
+            }): Promise<PlayerStoreBusinessFundingReceiptDto>;
+            readBusinessOfferReceipt(input: PlayerStoreFundingPublicScope & {
+              readonly receiptKey: string;
+            }): Promise<PlayerStoreBusinessFundingReceiptDto>;
+          }
+          EOF
+
+          cat > backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts <<'EOF'
+          import {
+            PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN,
+            type PlayerStoreBusinessFundingQuoteDto,
+            type PlayerStoreBusinessFundingReceiptDto,
+            type PlayerStoreFundingAllocationInput,
+            type PlayerStoreFundingPublicRepository,
+            type PlayerStoreFundingPublicScope,
+            type PlayerStoreFundingQuoteDto,
+            type PlayerStoreFundingQuoteLineDto,
+            type PlayerStoreFundingReceiptDto,
+            type PlayerStoreFundingReceiptLineDto,
+            type PlayerStoreSeededFundingQuoteDto,
+            type PlayerStoreSeededFundingReceiptDto,
+          } from "../contracts/playerStoreFundingPublicContracts.ts";
+          import {
+            PLAYER_STORE_OFFER_KEY_PATTERN,
+            PLAYER_STORE_OFFER_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_OFFER_RECEIPT_KEY_PATTERN,
+          } from "../contracts/playerStoreOfferPublicContracts.ts";
+          import {
+            PLAYER_STORE_ITEM_KEY_PATTERN,
+            PLAYER_STORE_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_RECEIPT_KEY_PATTERN,
+            PlayerStorePublicError,
+          } from "../contracts/playerStorePublicContracts.ts";
+          import {
+            type PlayerStoreOfferClient,
+            PlayerStoreOfferPublicReadStore,
+            type PlayerStoreOfferQueryResponse,
+          } from "./playerStoreOfferPublicReadStore.ts";
+
+          const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
+          const GAME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+          const CURRENCY = /^[A-Z0-9_]{3,16}$/u;
+          const FIXING_KEY = /^fxf_[0-9a-f]{32}$/u;
+          const BANK_TRANSACTION_KEY = /^btx_[0-9a-f]{32}$/u;
+          const BUSINESS_KEY = /^biz_[0-9a-f]{32}$/u;
+          const PARTY_KEY = /^pty_[0-9a-f]{32}$/u;
+          const CATALOG_ITEM_KEY = /^itm_[0-9a-f]{32}$/u;
+          const CANONICAL_ITEM_KEY = /^[a-z0-9][a-z0-9._-]{0,159}$/u;
+
+          export class SupabasePlayerStoreFundingPublicRepository
+            implements PlayerStoreFundingPublicRepository {
+            private readonly readStore: PlayerStoreOfferPublicReadStore;
+
+            constructor(private readonly client: PlayerStoreOfferClient) {
+              this.readStore = new PlayerStoreOfferPublicReadStore(client);
+            }
+
+            async createSeededQuote(input: PlayerStoreFundingPublicScope & {
+              readonly itemKey: string;
+              readonly quantity: number;
+              readonly allocations: readonly PlayerStoreFundingAllocationInput[];
+              readonly idempotencyKey: string;
+              readonly effectiveAt: string;
+            }): Promise<PlayerStoreSeededFundingQuoteDto> {
+              const scope = normalizeScope(input);
+              const raw = await this.call(
+                "create_seeded_store_funding_quote_v1",
+                {
+                  p_game_session_id: scope.gameSessionId,
+                  p_player_id: scope.playerId,
+                  p_item_key: input.itemKey,
+                  p_quantity: input.quantity,
+                  p_allocations: input.allocations,
+                  p_idempotency_key: input.idempotencyKey,
+                  p_effective_at: input.effectiveAt,
+                },
+                "quote",
+              );
+              return parseSeededQuote(raw);
+            }
+
+            async settleSeededPurchase(input: PlayerStoreFundingPublicScope & {
+              readonly quoteKey: string;
+              readonly idempotencyKey: string;
+              readonly clientSubmittedAt: string | null;
+            }): Promise<PlayerStoreSeededFundingReceiptDto> {
+              const scope = normalizeScope(input);
+              const raw = await this.call(
+                "settle_seeded_store_funding_v1",
+                {
+                  p_game_session_id: scope.gameSessionId,
+                  p_player_id: scope.playerId,
+                  p_quote_key: input.quoteKey,
+                  p_idempotency_key: input.idempotencyKey,
+                  p_client_submitted_at: input.clientSubmittedAt,
+                  p_request_metadata: {},
+                },
+                "purchase",
+              );
+              return parseSeededReceipt(raw);
+            }
+
+            async createBusinessOfferQuote(input: PlayerStoreFundingPublicScope & {
+              readonly offerKey: string;
+              readonly quantity: number;
+              readonly expectedVersion: number;
+              readonly allocations: readonly PlayerStoreFundingAllocationInput[];
+              readonly idempotencyKey: string;
+            }): Promise<PlayerStoreBusinessFundingQuoteDto> {
+              const scope = normalizeScope(input);
+              const raw = record(await this.call(
+                "create_business_store_offer_funding_quote_v1",
+                {
+                  p_game_session_id: scope.gameSessionId,
+                  p_buyer_player_id: scope.playerId,
+                  p_offer_key: input.offerKey,
+                  p_quantity: input.quantity,
+                  p_expected_offer_version: input.expectedVersion,
+                  p_allocations: input.allocations,
+                  p_idempotency_key: input.idempotencyKey,
+                },
+                "quote",
+              ));
+              const sellerPartyKey = key(raw.sellerPartyKey, PARTY_KEY, "sellerPartyKey");
+              const businessKey = key(raw.businessKey, BUSINESS_KEY, "businessKey");
+              const identity = await this.readStore.requireBusinessIdentity(
+                scope.gameSessionId,
+                sellerPartyKey,
+                businessKey,
+              );
+              return parseBusinessQuote(raw, identity.businessName);
+            }
+
+            async settleBusinessOfferPurchase(input: PlayerStoreFundingPublicScope & {
+              readonly offerKey: string;
+              readonly quoteKey: string;
+              readonly quantity: number;
+              readonly expectedVersion: number;
+              readonly idempotencyKey: string;
+            }): Promise<PlayerStoreBusinessFundingReceiptDto> {
+              const scope = normalizeScope(input);
+              const raw = record(await this.call(
+                "settle_business_store_offer_funding_v1",
+                {
+                  p_game_session_id: scope.gameSessionId,
+                  p_buyer_player_id: scope.playerId,
+                  p_offer_key: input.offerKey,
+                  p_quote_key: input.quoteKey,
+                  p_quantity: input.quantity,
+                  p_expected_offer_version: input.expectedVersion,
+                  p_idempotency_key: input.idempotencyKey,
+                },
+                "purchase",
+              ));
+              const sellerPartyKey = key(raw.sellerPartyKey, PARTY_KEY, "sellerPartyKey");
+              const businessKey = key(raw.businessKey, BUSINESS_KEY, "businessKey");
+              const identity = await this.readStore.requireBusinessIdentity(
+                scope.gameSessionId,
+                sellerPartyKey,
+                businessKey,
+                { requireActive: false },
+              );
+              return parseBusinessReceipt(raw, identity.businessName);
+            }
+
+            async readBusinessOfferReceipt(input: PlayerStoreFundingPublicScope & {
+              readonly receiptKey: string;
+            }): Promise<PlayerStoreBusinessFundingReceiptDto> {
+              const scope = normalizeScope(input);
+              const raw = record(await this.call(
+                "read_business_store_offer_funding_receipt_v1",
+                {
+                  p_game_session_id: scope.gameSessionId,
+                  p_buyer_player_id: scope.playerId,
+                  p_receipt_key: input.receiptKey,
+                },
+                "receipt",
+              ));
+              const sellerPartyKey = key(raw.sellerPartyKey, PARTY_KEY, "sellerPartyKey");
+              const businessKey = key(raw.businessKey, BUSINESS_KEY, "businessKey");
+              const identity = await this.readStore.requireBusinessIdentity(
+                scope.gameSessionId,
+                sellerPartyKey,
+                businessKey,
+                { requireActive: false },
+              );
+              return parseBusinessReceipt(raw, identity.businessName);
+            }
+
+            private async call(
+              functionName: string,
+              args: Record<string, unknown>,
+              phase: "quote" | "purchase" | "receipt",
+            ): Promise<unknown> {
+              const response = await this.client.rpc<unknown>(functionName, args) as
+                PlayerStoreOfferQueryResponse<unknown>;
+              if (response.error) throw mapRpcError(response.error, phase);
+              if (!response.data) throw invalidResponse();
+              return response.data;
+            }
+          }
+
+          function normalizeScope(input: PlayerStoreFundingPublicScope): PlayerStoreFundingPublicScope {
+            const gameSessionId = String(input.gameSessionId || "").trim().toLowerCase();
+            const playerId = String(input.playerId || "").trim().toLowerCase();
+            if (!GAME_UUID.test(gameSessionId) || !GAME_UUID.test(playerId)) {
+              throw new PlayerStorePublicError(
+                "player_store_funding_scope_invalid",
+                "Player Store funding scope is invalid.",
+                500,
+                false,
+              );
+            }
+            return { gameSessionId, playerId };
+          }
+
+          function parseSeededQuote(value: unknown): PlayerStoreSeededFundingQuoteDto {
+            const row = record(value);
+            return {
+              quoteKey: key(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN, "quoteKey"),
+              quoteStatus: status(row.quoteStatus),
+              itemKey: key(row.itemKey, PLAYER_STORE_ITEM_KEY_PATTERN, "itemKey"),
+              itemName: text(row.itemName, "itemName"),
+              quantity: integer(row.quantity, "quantity", 1),
+              baseUnitPrice: amount(row.baseUnitPrice, "baseUnitPrice", 0),
+              inflationMultiplier: amount(row.inflationMultiplier, "inflationMultiplier", 0),
+              locationMultiplier: amount(row.locationMultiplier, "locationMultiplier", 0),
+              scarcityMultiplier: amount(row.scarcityMultiplier, "scarcityMultiplier", 0),
+              discountAmount: amount(row.discountAmount, "discountAmount", 0),
+              finalUnitPrice: amount(row.finalUnitPrice, "finalUnitPrice", 0),
+              finalTotalPrice: amount(row.finalTotalPrice, "finalTotalPrice", 0),
+              currencyCode: currency(row.currencyCode),
+              itemCurrencyCode: currency(row.itemCurrencyCode),
+              playerCurrencyCode: currency(row.playerCurrencyCode),
+              exchangeRate: amount(row.exchangeRate, "exchangeRate", 0),
+              itemLocalFinalUnitPrice: amount(row.itemLocalFinalUnitPrice, "itemLocalFinalUnitPrice", 0),
+              itemLocalFinalTotalPrice: amount(row.itemLocalFinalTotalPrice, "itemLocalFinalTotalPrice", 0),
+              pricingVersion: text(row.pricingVersion, "pricingVersion"),
+              expiresAt: iso(row.expiresAt, "expiresAt"),
+              replayed: bool(row.replayed, "replayed"),
+              fundingQuote: parseFundingQuote(row.fundingQuote),
+            };
+          }
+
+          function parseSeededReceipt(value: unknown): PlayerStoreSeededFundingReceiptDto {
+            const row = record(value);
+            return {
+              receiptKey: key(row.receiptKey, PLAYER_STORE_RECEIPT_KEY_PATTERN, "receiptKey"),
+              quoteKey: key(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN, "quoteKey"),
+              itemKey: key(row.itemKey, PLAYER_STORE_ITEM_KEY_PATTERN, "itemKey"),
+              itemName: text(row.itemName, "itemName"),
+              quantity: integer(row.quantity, "quantity", 1),
+              finalUnitPrice: amount(row.finalUnitPrice, "finalUnitPrice", 0),
+              finalTotalPrice: amount(row.finalTotalPrice, "finalTotalPrice", 0),
+              currencyCode: currency(row.currencyCode),
+              inventoryQuantityOwned: integer(row.inventoryQuantityOwned, "inventoryQuantityOwned", 0),
+              completedAt: iso(row.completedAt, "completedAt"),
+              alreadyCompleted: bool(row.alreadyCompleted, "alreadyCompleted"),
+              fundingReceipt: parseFundingReceipt(row.fundingReceipt),
+            };
+          }
+
+          function parseBusinessQuote(
+            row: Record<string, unknown>,
+            businessName: string,
+          ): PlayerStoreBusinessFundingQuoteDto {
+            return {
+              quoteKey: key(row.quoteKey, PLAYER_STORE_OFFER_QUOTE_KEY_PATTERN, "quoteKey"),
+              quoteStatus: status(row.quoteStatus),
+              offerKey: key(row.offerKey, PLAYER_STORE_OFFER_KEY_PATTERN, "offerKey"),
+              offerVersion: integer(row.offerVersion, "offerVersion", 1),
+              businessKey: key(row.businessKey, BUSINESS_KEY, "businessKey"),
+              businessName,
+              sellerPartyKey: key(row.sellerPartyKey, PARTY_KEY, "sellerPartyKey"),
+              sellerName: businessName,
+              catalogItemKey: key(row.catalogItemKey, CATALOG_ITEM_KEY, "catalogItemKey"),
+              canonicalItemKey: key(row.canonicalItemKey, CANONICAL_ITEM_KEY, "canonicalItemKey"),
+              storeItemKey: key(row.storeItemKey, PLAYER_STORE_ITEM_KEY_PATTERN, "storeItemKey"),
+              quantity: integer(row.quantity, "quantity", 1),
+              availableQuantityAtQuote: integer(row.availableQuantityAtQuote, "availableQuantityAtQuote", 1),
+              unitPrice: amount(row.finalUnitPrice, "unitPrice", 0),
+              totalPrice: amount(row.finalTotalPrice, "totalPrice", 0),
+              currencyCode: currency(row.buyerCurrencyCode),
+              expiresAt: iso(row.expiresAt, "expiresAt"),
+              pricingVersion: pricingVersion(row.pricingVersion),
+              replayed: bool(row.replayed, "replayed"),
+              fundingQuote: parseFundingQuote(row.fundingQuote),
+            };
+          }
+
+          function parseBusinessReceipt(
+            row: Record<string, unknown>,
+            businessName: string,
+          ): PlayerStoreBusinessFundingReceiptDto {
+            return {
+              receiptKey: key(row.receiptKey, PLAYER_STORE_OFFER_RECEIPT_KEY_PATTERN, "receiptKey"),
+              quoteKey: key(row.quoteKey, PLAYER_STORE_OFFER_QUOTE_KEY_PATTERN, "quoteKey"),
+              offerKey: key(row.offerKey, PLAYER_STORE_OFFER_KEY_PATTERN, "offerKey"),
+              businessKey: key(row.businessKey, BUSINESS_KEY, "businessKey"),
+              businessName,
+              sellerPartyKey: key(row.sellerPartyKey, PARTY_KEY, "sellerPartyKey"),
+              sellerName: businessName,
+              catalogItemKey: key(row.catalogItemKey, CATALOG_ITEM_KEY, "catalogItemKey"),
+              canonicalItemKey: key(row.canonicalItemKey, CANONICAL_ITEM_KEY, "canonicalItemKey"),
+              storeItemKey: key(row.storeItemKey, PLAYER_STORE_ITEM_KEY_PATTERN, "storeItemKey"),
+              quantity: integer(row.quantity, "quantity", 1),
+              unitPrice: amount(row.unitPrice, "unitPrice", 0),
+              totalPrice: amount(row.totalPrice, "totalPrice", 0),
+              currencyCode: currency(row.currencyCode),
+              offerVersionBefore: integer(row.offerVersionBefore, "offerVersionBefore", 1),
+              offerVersionAfter: integer(row.offerVersionAfter, "offerVersionAfter", 2),
+              remainingListedQuantity: integer(row.remainingListedQuantity, "remainingListedQuantity", 0),
+              completedAt: iso(row.completedAt, "completedAt"),
+              alreadyCompleted: bool(row.replayed, "replayed"),
+              fundingReceipt: parseFundingReceipt(row.fundingReceipt),
+            };
+          }
+
+          function parseFundingQuote(value: unknown): PlayerStoreFundingQuoteDto {
+            const row = record(value);
+            const lines = array(row.lines, "lines").map(parseFundingQuoteLine);
+            if (lines.length < 1 || lines.length > 3) throw invalidResponse();
+            return {
+              quoteKey: key(row.quote_key, PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN, "fundingQuoteKey"),
+              fundingContextKind: text(row.funding_context_kind, "fundingContextKind"),
+              fundingContextKey: publicContextKey(row.funding_context_key),
+              targetCurrencyCode: currency(row.target_currency_code),
+              targetMinorUnit: integer(row.target_minor_unit, "targetMinorUnit", 0, 18),
+              targetAmount: amount(row.target_amount, "targetAmount", 0),
+              fixingKey: key(row.fixing_key, FIXING_KEY, "fixingKey"),
+              policyVersion: policy(row.policy_version),
+              requiresFx: bool(row.requires_fx, "requiresFx"),
+              expiresAt: iso(row.expires_at, "expiresAt"),
+              lines,
+            };
+          }
+
+          function parseFundingQuoteLine(value: unknown): PlayerStoreFundingQuoteLineDto {
+            const row = record(value);
+            return {
+              lineNumber: integer(row.line_number, "lineNumber", 1, 3),
+              sourceAccountKey: key(row.source_account_key, PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN, "sourceAccountKey"),
+              sourceCurrencyCode: currency(row.source_currency_code),
+              sourceMinorUnit: integer(row.source_minor_unit, "sourceMinorUnit", 0, 18),
+              targetCurrencyCode: currency(row.target_currency_code),
+              targetMinorUnit: integer(row.target_minor_unit, "targetMinorUnit", 0, 18),
+              postedAmount: amount(row.posted_amount, "postedAmount"),
+              heldAmount: amount(row.held_amount, "heldAmount", 0),
+              availableAmount: amount(row.available_amount, "availableAmount"),
+              targetContribution: amount(row.target_contribution, "targetContribution", 0),
+              sourceDebit: amount(row.source_debit, "sourceDebit", 0),
+              referenceRate: amount(row.reference_rate, "referenceRate", 0),
+              customerRate: amount(row.customer_rate, "customerRate", 0),
+              effectiveRate: amount(row.effective_rate, "effectiveRate", 0),
+              spreadRate: amount(row.spread_rate, "spreadRate", 0),
+              requiresFx: bool(row.requires_fx, "requiresFx"),
+              roundingDisclosure: text(row.rounding_disclosure, "roundingDisclosure"),
+            };
+          }
+
+          function parseFundingReceipt(value: unknown): PlayerStoreFundingReceiptDto {
+            const row = record(value);
+            const lines = array(row.lines, "lines").map(parseFundingReceiptLine);
+            if (lines.length < 1 || lines.length > 3) throw invalidResponse();
+            return {
+              receiptKey: key(row.receipt_key, PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN, "fundingReceiptKey"),
+              quoteKey: key(row.quote_key, PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN, "fundingQuoteKey"),
+              bankTransactionKey: key(row.bank_transaction_key, BANK_TRANSACTION_KEY, "bankTransactionKey"),
+              targetAccountKey: key(row.target_account_key, PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN, "targetAccountKey"),
+              fundingContextKind: text(row.funding_context_kind, "fundingContextKind"),
+              fundingContextKey: publicContextKey(row.funding_context_key),
+              targetCurrencyCode: currency(row.target_currency_code),
+              targetAmount: amount(row.target_amount, "targetAmount", 0),
+              targetReserveDrawAmount: amount(row.target_reserve_draw_amount, "targetReserveDrawAmount", 0),
+              sourceDomain: text(row.source_domain, "sourceDomain"),
+              sourceAction: text(row.source_action, "sourceAction"),
+              createdAt: iso(row.created_at, "createdAt"),
+              lines,
+            };
+          }
+
+          function parseFundingReceiptLine(value: unknown): PlayerStoreFundingReceiptLineDto {
+            const row = record(value);
+            return {
+              lineNumber: integer(row.line_number, "lineNumber", 1, 3),
+              sourceAccountKey: key(row.source_account_key, PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN, "sourceAccountKey"),
+              sourceCurrencyCode: currency(row.source_currency_code),
+              targetContribution: amount(row.target_contribution, "targetContribution", 0),
+              sourceDebit: amount(row.source_debit, "sourceDebit", 0),
+              referenceRate: amount(row.reference_rate, "referenceRate", 0),
+              customerRate: amount(row.customer_rate, "customerRate", 0),
+              effectiveRate: amount(row.effective_rate, "effectiveRate", 0),
+              spreadRate: amount(row.spread_rate, "spreadRate", 0),
+              requiresFx: bool(row.requires_fx, "requiresFx"),
+            };
+          }
+
+          function mapRpcError(
+            error: { readonly message?: string; readonly code?: string },
+            phase: "quote" | "purchase" | "receipt",
+          ): PlayerStorePublicError {
+            const source = `${error.code || ""} ${error.message || ""}`.toUpperCase();
+            const code = [...source.matchAll(/[A-Z][A-Z0-9_]{4,}/gu)]
+              .map((match) => match[0])
+              .find((candidate) => /^(?:STORE|PURCHASE|FUNDING|BANK|FX|PLAYER)_/u.test(candidate)) || "";
+            if (/REQUEST_INVALID|ALLOCATIONS?_INVALID|PRECISION_INVALID|CURRENCY_PRECISION/u.test(code)) {
+              return publicError("invalid_player_store_request", "Store funding request is invalid.", 400);
+            }
+            if (code.includes("SELF_PURCHASE")) {
+              return publicError("store_offer_self_purchase_forbidden", "A Player cannot purchase from their own Business.", 403);
+            }
+            if (code.includes("IDEMPOTENCY") || code.endsWith("_CONFLICT")) {
+              return publicError("store_idempotency_conflict", "This idempotency key was already used for another Store request.", 409);
+            }
+            if (code.includes("VERSION_CONFLICT") || code.includes("OFFER_CONFLICT")) {
+              return publicError("store_offer_version_conflict", "The Store offer changed before the request could complete.", 409);
+            }
+            if (code.includes("INSUFFICIENT_STOCK")) {
+              return publicError("store_insufficient_stock", "Store stock is insufficient.", 409);
+            }
+            if (code.includes("FUNDING_INSUFFICIENT") || code.includes("INSUFFICIENT_FUNDS")) {
+              return publicError("store_insufficient_balance", "Available Checking funds are insufficient for this purchase.", 409);
+            }
+            if (/LIQUIDITY|FACILITY|CLEARING|RESERVE|CAP_/u.test(code)) {
+              return publicError("store_fx_liquidity_unavailable", "Retail checkout FX capacity is unavailable.", 409);
+            }
+            if (code.includes("TOTAL_MISMATCH")) {
+              return publicError("store_funding_total_mismatch", "The selected account allocations must equal the Store bill.", 409);
+            }
+            if (code.includes("QUOTE_EXPIRED") || code.includes("RATE_VERSION_STALE")) {
+              return publicError("store_quote_expired", "The Store funding quote has expired.", 409);
+            }
+            if (code.includes("RECEIPT_NOT_FOUND")) {
+              return publicError("store_offer_receipt_not_found", "Store offer receipt was not found.", 404);
+            }
+            if (/NOT_FOUND|UNAVAILABLE|STATUS_INVALID|MISMATCH|RESERVED/u.test(code)) {
+              return publicError(
+                phase === "quote" ? "store_quote_not_available" : "store_purchase_unavailable",
+                phase === "quote" ? "Store funding quote is not available." : "Store purchase is not available.",
+                409,
+              );
+            }
+            return publicError(
+              phase === "quote" ? "player_store_funding_quote_failed" :
+                phase === "receipt" ? "player_store_funding_receipt_failed" :
+                "player_store_funding_purchase_failed",
+              phase === "quote" ? "Store funding quote could not be created." :
+                phase === "receipt" ? "Store funding receipt could not be loaded." :
+                "Store purchase could not be completed.",
+              500,
+            );
+          }
+
+          function record(value: unknown): Record<string, unknown> {
+            if (!value || typeof value !== "object" || Array.isArray(value) || UUID.test(JSON.stringify(value))) {
+              throw invalidResponse();
+            }
+            return value as Record<string, unknown>;
+          }
+
+          function array(value: unknown, field: string): readonly unknown[] {
+            if (!Array.isArray(value)) throw new Error(`Invalid ${field}`);
+            return value;
+          }
+
+          function text(value: unknown, field: string): string {
+            const candidate = typeof value === "string" ? value.trim() : "";
+            if (!candidate || candidate.length > 400) throw new Error(`Invalid ${field}`);
+            return candidate;
+          }
+
+          function key(value: unknown, pattern: RegExp, field: string): string {
+            const candidate = text(value, field);
+            if (!pattern.test(candidate)) throw new Error(`Invalid ${field}`);
+            return candidate;
+          }
+
+          function publicContextKey(value: unknown): string {
+            const candidate = text(value, "fundingContextKey");
+            if (UUID.test(candidate) || candidate.length > 240) throw invalidResponse();
+            return candidate;
+          }
+
+          function currency(value: unknown): string {
+            return key(value, CURRENCY, "currencyCode");
+          }
+
+          function amount(value: unknown, field: string, minimum = Number.NEGATIVE_INFINITY): number {
+            const candidate = typeof value === "number" ? value :
+              typeof value === "string" && /^-?[0-9]+(?:\.[0-9]+)?$/u.test(value) ? Number(value) : Number.NaN;
+            if (!Number.isFinite(candidate) || candidate < minimum || Math.abs(candidate) >= 1_000_000_000_000_000) {
+              throw new Error(`Invalid ${field}`);
+            }
+            return candidate;
+          }
+
+          function integer(value: unknown, field: string, minimum: number, maximum = Number.MAX_SAFE_INTEGER): number {
+            const candidate = Number(value);
+            if (!Number.isSafeInteger(candidate) || candidate < minimum || candidate > maximum) {
+              throw new Error(`Invalid ${field}`);
+            }
+            return candidate;
+          }
+
+          function bool(value: unknown, field: string): boolean {
+            if (typeof value !== "boolean") throw new Error(`Invalid ${field}`);
+            return value;
+          }
+
+          function iso(value: unknown, field: string): string {
+            const candidate = text(value, field);
+            const timestamp = Date.parse(candidate);
+            if (!Number.isFinite(timestamp)) throw new Error(`Invalid ${field}`);
+            return new Date(timestamp).toISOString();
+          }
+
+          function status(value: unknown): "created" | "used" | "expired" | "cancelled" {
+            const candidate = text(value, "quoteStatus").toLowerCase();
+            if (!new Set(["created", "used", "expired", "cancelled"]).has(candidate)) throw invalidResponse();
+            return candidate as "created" | "used" | "expired" | "cancelled";
+          }
+
+          function policy(value: unknown): string {
+            return key(value, /^fx-policy-v[1-9][0-9]*$/u, "policyVersion");
+          }
+
+          function pricingVersion(value: unknown): "business-offer-fixed-price-v2" {
+            if (value !== "business-offer-fixed-price-v2") throw invalidResponse();
+            return value;
+          }
+
+          function invalidResponse(): PlayerStorePublicError {
+            return publicError("player_store_funding_response_invalid", "Store funding returned an invalid public response.", 500);
+          }
+
+          function publicError(code: string, message: string, status: number): PlayerStorePublicError {
+            return new PlayerStorePublicError(code, message, status, false);
+          }
+          EOF
+
+      - name: Patch authenticated handler, request boundary, catalog availability, and receipt read
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          def replace(path, old, new):
+              file = Path(path)
+              text = file.read_text()
+              if old not in text:
+                  raise SystemExit(f"marker missing in {path}: {old[:120]!r}")
+              file.write_text(text.replace(old, new, 1))
+
+          validation = "backend/src/domains/store/api/playerStorePublicRequestValidation.ts"
+          replace(validation,
+              'import type { PlayerStorePublicRoute } from "./playerStorePublicRoutePaths.ts";',
+              'import type { PlayerStoreFundingAllocationInput } from "../contracts/playerStoreFundingPublicContracts.ts";\nimport type { PlayerStorePublicRoute } from "./playerStorePublicRoutePaths.ts";')
+          replace(validation,
+              'assertAllowedFields(body, ["itemKey", "quantity"]);',
+              'assertAllowedFields(body, ["itemKey", "quantity", "allocations", "idempotencyKey"]);')
+          replace(validation,
+              '      "expectedVersion",\n      "idempotencyKey",',
+              '      "expectedVersion",\n      "allocations",\n      "idempotencyKey",')
+          marker = 'export function readPlayerStoreIdempotencyKey(value: unknown): string {'
+          helper = '''export function readPlayerStoreFundingAllocations(
+            value: unknown,
+          ): readonly PlayerStoreFundingAllocationInput[] {
+            if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
+              throw invalidRequest("allocations must contain one to three Checking accounts.");
+            }
+            const seen = new Set<string>();
+            return Object.freeze(value.map((entry, index) => {
+              if (!isRecord(entry) || Object.keys(entry).sort().join(",") !== "sourceAccountKey,targetAmount") {
+                throw invalidRequest(`allocations[${index}] is invalid.`);
+              }
+              const sourceAccountKey = typeof entry.sourceAccountKey === "string"
+                ? entry.sourceAccountKey.trim().toLowerCase()
+                : "";
+              if (!/^bac_[0-9a-f]{32}$/u.test(sourceAccountKey) || seen.has(sourceAccountKey)) {
+                throw invalidRequest("Allocation Checking account keys must be unique public bac_ keys.");
+              }
+              const targetAmount = entry.targetAmount;
+              const decimal = typeof targetAmount === "number" ? String(targetAmount) : "";
+              if (
+                typeof targetAmount !== "number" || !Number.isFinite(targetAmount) ||
+                targetAmount <= 0 || targetAmount >= 1_000_000_000_000_000 ||
+                !/^[0-9]+(?:\\.[0-9]{1,18})?$/u.test(decimal)
+              ) {
+                throw invalidRequest("Each targetAmount must be a positive decimal number.");
+              }
+              seen.add(sourceAccountKey);
+              return Object.freeze({ sourceAccountKey, targetAmount });
+            }));
+          }
+
+          '''
+          replace(validation, marker, helper + marker)
+
+          handler = "backend/src/domains/store/api/playerStorePublicHttpHandler.ts"
+          replace(handler,
+              'import type { PlayerStoreOfferPublicRepository } from "../contracts/playerStoreOfferPublicContracts.ts";',
+              'import type { PlayerStoreFundingPublicRepository } from "../contracts/playerStoreFundingPublicContracts.ts";\nimport type { PlayerStoreOfferPublicRepository } from "../contracts/playerStoreOfferPublicContracts.ts";')
+          replace(handler,
+              'import { SupabasePlayerStoreOfferPublicRepository } from "../infrastructure/supabasePlayerStoreOfferPublicRepository.ts";',
+              'import { SupabasePlayerStoreFundingPublicRepository } from "../infrastructure/supabasePlayerStoreFundingPublicRepository.ts";\nimport { SupabasePlayerStoreOfferPublicRepository } from "../infrastructure/supabasePlayerStoreOfferPublicRepository.ts";')
+          replace(handler,
+              '  readPlayerStoreExpectedVersion,\n  readPlayerStoreIdempotencyKey,',
+              '  readPlayerStoreExpectedVersion,\n  readPlayerStoreFundingAllocations,\n  readPlayerStoreIdempotencyKey,')
+          replace(handler,
+              '  readonly createOfferRepository?: (\n    client: EdgeSupabaseClient,\n  ) => PlayerStoreOfferPublicRepository;\n  readonly now?: () => string;',
+              '  readonly createOfferRepository?: (\n    client: EdgeSupabaseClient,\n  ) => PlayerStoreOfferPublicRepository;\n  readonly createFundingRepository?: (\n    client: EdgeSupabaseClient,\n  ) => PlayerStoreFundingPublicRepository;\n  readonly now?: () => string;')
+          replace(handler,
+              '    const createOfferRepository = () =>\n      dependencies.createOfferRepository\n        ? dependencies.createOfferRepository(client)\n        : new SupabasePlayerStoreOfferPublicRepository(client as never);',
+              '    const createOfferRepository = () =>\n      dependencies.createOfferRepository\n        ? dependencies.createOfferRepository(client)\n        : new SupabasePlayerStoreOfferPublicRepository(client as never);\n    const fundingRepository = dependencies.createFundingRepository\n      ? dependencies.createFundingRepository(client)\n      : new SupabasePlayerStoreFundingPublicRepository(client as never);')
+          old_quote = '''      const quote = await repository.createQuote({
+                ...publicScope,
+                itemKey: readPlayerStoreItemKey(body.itemKey),
+                quantity: readPlayerStoreQuantity(body.quantity),
+                nowIso: (dependencies.now ?? (() => new Date().toISOString()))(),
+              });'''
+          new_quote = '''      const quote = await fundingRepository.createSeededQuote({
+                ...publicScope,
+                itemKey: readPlayerStoreItemKey(body.itemKey),
+                quantity: readPlayerStoreQuantity(body.quantity),
+                allocations: readPlayerStoreFundingAllocations(body.allocations),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                effectiveAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+              });'''
+          replace(handler, old_quote, new_quote)
+          old_purchase = '''      const receipt = await repository.purchase({
+                ...publicScope,
+                quoteKey: readPlayerStoreQuoteKey(body.quoteKey),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                clientSubmittedAt: readPlayerStoreOptionalTimestamp(
+                  body.clientSubmittedAt,
+                ),
+              });'''
+          new_purchase = '''      const receipt = await fundingRepository.settleSeededPurchase({
+                ...publicScope,
+                quoteKey: readPlayerStoreQuoteKey(body.quoteKey),
+                idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+                clientSubmittedAt: readPlayerStoreOptionalTimestamp(
+                  body.clientSubmittedAt,
+                ),
+              });'''
+          replace(handler, old_purchase, new_purchase)
+          replace(handler,
+              '      const quote = await offerRepository.createBusinessOfferQuote({',
+              '      const quote = await fundingRepository.createBusinessOfferQuote({')
+          replace(handler,
+              '        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),\n        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),',
+              '        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),\n        allocations: readPlayerStoreFundingAllocations(body.allocations),\n        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),')
+          replace(handler,
+              '        quote: projectPlayerStorePublicOfferQuote(quote),',
+              '        quote,')
+          replace(handler,
+              '      const receipt = await offerRepository.purchaseBusinessOffer({',
+              '      const receipt = await fundingRepository.settleBusinessOfferPurchase({')
+          replace(handler,
+              '      const publicReceipt = projectPlayerStorePublicOfferReceipt(receipt);',
+              '      const publicReceipt = receipt;')
+          replace(handler,
+              '    const receipt = await offerRepository.readBusinessOfferReceipt({',
+              '    const receipt = await fundingRepository.readBusinessOfferReceipt({')
+          replace(handler,
+              '      receipt: projectPlayerStorePublicOfferReceipt(receipt),',
+              '      receipt,')
+          replace(handler,
+              '  projectPlayerStorePublicOfferProduct,\n  projectPlayerStorePublicOfferQuote,\n  projectPlayerStorePublicOfferReceipt,',
+              '  projectPlayerStorePublicOfferProduct,')
+
+          offer_contracts = "backend/src/domains/store/contracts/playerStoreOfferPublicContracts.ts"
+          replace(offer_contracts,
+              '  buyerPlayerId: string,\n  buyerCurrencyCode: string,\n  unreservedBusinessOfferKeys:',
+              '  buyerPlayerId: string,\n  unreservedBusinessOfferKeys:')
+          replace(offer_contracts,
+              '        identity.currencyCode === offer.currencyCode &&\n        buyerCurrencyCode === offer.currencyCode &&\n        unreservedBusinessOfferKeys.has(offer.offerKey))',
+              '        identity.currencyCode === offer.currencyCode &&\n        unreservedBusinessOfferKeys.has(offer.offerKey))')
+
+          offer_repo = "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.ts"
+          replace(offer_repo,
+              '      const buyerCurrencyCode = await this.readStore.readBuyerCurrencyCode(\n        scope,\n      );\n',
+              '')
+          replace(offer_repo,
+              '          scope.playerId,\n          buyerCurrencyCode,\n          unreservedBusinessOfferKeys,',
+              '          scope.playerId,\n          unreservedBusinessOfferKeys,')
+
+          settlement = Path("backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql")
+          source = settlement.read_text()
+          read_function = r'''
+
+          create or replace function public.read_business_store_offer_funding_receipt_v1(
+            p_game_session_id uuid,
+            p_buyer_player_id uuid,
+            p_receipt_key text
+          )
+          returns jsonb
+          language plpgsql
+          stable
+          security definer
+          set search_path = pg_catalog, public, private, economy_private, pg_temp
+          as $function$
+          declare
+            v_receipt_key text := lower(btrim(coalesce(p_receipt_key, '')));
+            v_receipt_id uuid;
+          begin
+            if p_game_session_id is null
+               or p_buyer_player_id is null
+               or v_receipt_key !~ '^spr_[0-9a-f]{32}$'
+            then
+              raise exception 'STORE_OFFER_FUNDED_RECEIPT_READ_REQUEST_INVALID' using errcode = '22023';
+            end if;
+
+            select receipt_row.id
+            into v_receipt_id
+            from public.store_offer_purchase_receipts as receipt_row
+            where receipt_row.game_session_id = p_game_session_id
+              and receipt_row.buyer_player_id = p_buyer_player_id
+              and receipt_row.public_key = v_receipt_key
+              and receipt_row.funding_receipt_id is not null;
+            if not found then
+              raise exception 'STORE_OFFER_FUNDED_RECEIPT_NOT_FOUND' using errcode = 'P0001';
+            end if;
+
+            return economy_private.read_store_offer_funding_receipt_result_v1(
+              v_receipt_id,
+              true
+            );
+          end
+          $function$;
+
+          revoke all on function public.read_business_store_offer_funding_receipt_v1(
+            uuid, uuid, text
+          ) from public, anon, authenticated;
+          grant execute on function public.read_business_store_offer_funding_receipt_v1(
+            uuid, uuid, text
+          ) to service_role;
+          '''
+          if "read_business_store_offer_funding_receipt_v1" not in source:
+              if not source.rstrip().endswith("commit;"):
+                  raise SystemExit("settlement migration commit marker missing")
+              source = source.rstrip()[:-len("commit;")].rstrip() + read_function + "\n\ncommit;\n"
+              settlement.write_text(source)
+
+          assertions = "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql"
+          replace(assertions,
+              "  if to_regprocedure(\n    'public.settle_business_store_offer_funding_v1(uuid,uuid,text,text,integer,bigint,text)'\n  ) is null then\n    raise exception 'C1_ASSERT_BUSINESS_SETTLEMENT_MISSING';\n  end if;",
+              "  if to_regprocedure(\n    'public.settle_business_store_offer_funding_v1(uuid,uuid,text,text,integer,bigint,text)'\n  ) is null then\n    raise exception 'C1_ASSERT_BUSINESS_SETTLEMENT_MISSING';\n  end if;\n\n  if to_regprocedure(\n    'public.read_business_store_offer_funding_receipt_v1(uuid,uuid,text)'\n  ) is null then\n    raise exception 'C1_ASSERT_BUSINESS_RECEIPT_READ_MISSING';\n  end if;")
+          replace(assertions,
+              "  if has_function_privilege(\n    'service_role',\n    'private.store_funding_normalize_allocations_v1(jsonb)',",
+              "  if has_function_privilege(\n    'anon',\n    'public.read_business_store_offer_funding_receipt_v1(uuid,uuid,text)',\n    'EXECUTE'\n  ) or has_function_privilege(\n    'authenticated',\n    'public.read_business_store_offer_funding_receipt_v1(uuid,uuid,text)',\n    'EXECUTE'\n  ) or not has_function_privilege(\n    'service_role',\n    'public.read_business_store_offer_funding_receipt_v1(uuid,uuid,text)',\n    'EXECUTE'\n  ) then\n    raise exception 'C1_ASSERT_BUSINESS_RECEIPT_READ_GRANTS_INVALID';\n  end if;\n\n  if has_function_privilege(\n    'service_role',\n    'private.store_funding_normalize_allocations_v1(jsonb)',")
+
+          authority_path = Path("docs/operations/contracts/player-cross-cutting/pr-674.json")
+          authority = json.loads(authority_path.read_text())
+          additions = [
+            "backend/src/domains/store/api/playerStoreBusinessOfferPublicHttpHandler.test.ts",
+            "backend/src/domains/store/api/playerStorePublicHttpHandler.test.ts",
+            "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
+            "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
+            "backend/src/domains/store/api/playerStorePublicRequestValidation.ts",
+            "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
+            "backend/src/domains/store/contracts/playerStoreOfferPublicContracts.ts",
+            "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
+            "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.ts",
+          ]
+          authority["allowedPaths"] = sorted(set(authority["allowedPaths"] + additions))
+          authority_path.write_text(json.dumps(authority, indent=2) + "\n")
+          PY
+
+      - name: Patch focused backend acceptance tests and permanent C1 workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          support = Path("backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts")
+          text = support.read_text()
+          text = text.replace(
+            'import type {\n  PlayerStoreOfferPublicRepository,',
+            'import type { PlayerStoreFundingPublicRepository } from "../contracts/playerStoreFundingPublicContracts.ts";\nimport type {\n  PlayerStoreOfferPublicRepository,',
+            1,
+          )
+          text = text.replace(
+            'export const CATALOG_ITEM_KEY = "itm_0123456789abcdef0123456789abcdef";',
+            'export const CATALOG_ITEM_KEY = "itm_0123456789abcdef0123456789abcdef";\nexport const FUNDING_QUOTE_KEY = "pfq_0123456789abcdef0123456789abcdef";\nexport const FUNDING_RECEIPT_KEY = "pfr_0123456789abcdef0123456789abcdef";\nexport const SOURCE_ACCOUNT_KEY = "bac_11111111111111111111111111111111";\nexport const TARGET_ACCOUNT_KEY = "bac_22222222222222222222222222222222";\nexport const BANK_TRANSACTION_KEY = "btx_0123456789abcdef0123456789abcdef";\nexport const ALLOCATIONS = Object.freeze([{ sourceAccountKey: SOURCE_ACCOUNT_KEY, targetAmount: 100 }]);',
+            1,
+          )
+          text = text.replace(
+            '  offerRepository: PlayerStoreOfferPublicRepository =\n    new CapturingOfferRepository(),\n) {',
+            '  offerRepository: PlayerStoreOfferPublicRepository =\n    new CapturingOfferRepository(),\n  fundingRepository: PlayerStoreFundingPublicRepository =\n    new CapturingFundingRepository(),\n) {',
+            1,
+          )
+          text = text.replace(
+            '    createOfferRepository: () => offerRepository,\n    now:',
+            '    createOfferRepository: () => offerRepository,\n    createFundingRepository: () => fundingRepository,\n    now:',
+            1,
+          )
+          text = text.replace(
+            '    idempotencyKey: "store.offer.quote.12345678",\n  };',
+            '    allocations: [{ sourceAccountKey: SOURCE_ACCOUNT_KEY, targetAmount: 90 }],\n    idempotencyKey: "store.offer.quote.12345678",\n  };',
+            1,
+          )
+          class_marker = 'export class CapturingRepository implements PlayerStorePublicRepository {'
+          funding_class = r'''export class CapturingFundingRepository implements PlayerStoreFundingPublicRepository {
+            readonly seededQuoteInputs: unknown[] = [];
+            readonly seededPurchaseInputs: unknown[] = [];
+            readonly businessQuoteInputs: unknown[] = [];
+            readonly businessPurchaseInputs: unknown[] = [];
+            readonly receiptInputs: unknown[] = [];
+            quoteError: unknown = null;
+
+            createSeededQuote(input: unknown) {
+              this.seededQuoteInputs.push(input);
+              return Promise.resolve({
+                quoteKey: QUOTE_KEY, quoteStatus: "created" as const,
+                itemKey: "field_permit", itemName: "Field Permit", quantity: 2,
+                baseUnitPrice: 50, inflationMultiplier: 1, locationMultiplier: 1,
+                scarcityMultiplier: 1, discountAmount: 0, finalUnitPrice: 50,
+                finalTotalPrice: 100, currencyCode: "NRC", itemCurrencyCode: "NRC",
+                playerCurrencyCode: "NRC", exchangeRate: 1,
+                itemLocalFinalUnitPrice: 50, itemLocalFinalTotalPrice: 100,
+                expiresAt: "2026-07-19T02:03:00.000Z", pricingVersion: "store-pricing-v1",
+                replayed: false, fundingQuote: fundingQuote(100),
+              });
+            }
+
+            settleSeededPurchase(input: unknown) {
+              this.seededPurchaseInputs.push(input);
+              return Promise.resolve({
+                receiptKey: RECEIPT_KEY, quoteKey: QUOTE_KEY, itemKey: "field_permit",
+                itemName: "Field Permit", quantity: 2, finalUnitPrice: 50,
+                finalTotalPrice: 100, currencyCode: "NRC", inventoryQuantityOwned: 2,
+                completedAt: "2026-07-19T02:01:01.000Z", alreadyCompleted: false,
+                fundingReceipt: fundingReceipt(100),
+              });
+            }
+
+            createBusinessOfferQuote(input: unknown) {
+              this.businessQuoteInputs.push(input);
+              if (this.quoteError) return Promise.reject(this.quoteError);
+              return Promise.resolve({
+                quoteKey: QUOTE_KEY, quoteStatus: "created" as const, offerKey: OFFER_KEY,
+                offerVersion: 7, businessKey: BUSINESS_KEY, businessName: "North Field Supply",
+                sellerPartyKey: SELLER_PARTY_KEY, sellerName: "North Field Supply",
+                catalogItemKey: CATALOG_ITEM_KEY, canonicalItemKey: "field_permit",
+                storeItemKey: "field_permit", quantity: 2, availableQuantityAtQuote: 4,
+                unitPrice: 45, totalPrice: 90, currencyCode: "NRC",
+                expiresAt: "2026-07-19T02:03:00.000Z",
+                pricingVersion: "business-offer-fixed-price-v2" as const,
+                replayed: false, fundingQuote: fundingQuote(90),
+              });
+            }
+
+            settleBusinessOfferPurchase(input: unknown) {
+              this.businessPurchaseInputs.push(input);
+              return Promise.resolve(this.businessReceipt(false));
+            }
+
+            readBusinessOfferReceipt(input: unknown) {
+              this.receiptInputs.push(input);
+              return Promise.resolve(this.businessReceipt(true));
+            }
+
+            private businessReceipt(alreadyCompleted: boolean) {
+              return {
+                receiptKey: OFFER_RECEIPT_KEY, quoteKey: QUOTE_KEY, offerKey: OFFER_KEY,
+                businessKey: BUSINESS_KEY, businessName: "North Field Supply",
+                sellerPartyKey: SELLER_PARTY_KEY, sellerName: "North Field Supply",
+                catalogItemKey: CATALOG_ITEM_KEY, canonicalItemKey: "field_permit",
+                storeItemKey: "field_permit", quantity: 2, unitPrice: 45,
+                totalPrice: 90, currencyCode: "NRC", offerVersionBefore: 7,
+                offerVersionAfter: 8, remainingListedQuantity: 2,
+                completedAt: "2026-07-19T02:01:01.000Z", alreadyCompleted,
+                fundingReceipt: fundingReceipt(90),
+              };
+            }
+          }
+
+          function fundingQuote(targetAmount: number) {
+            return {
+              quoteKey: FUNDING_QUOTE_KEY, fundingContextKind: "store.seeded",
+              fundingContextKey: QUOTE_KEY, targetCurrencyCode: "NRC", targetMinorUnit: 2,
+              targetAmount, fixingKey: "fxf_0123456789abcdef0123456789abcdef",
+              policyVersion: "fx-policy-v1", requiresFx: false,
+              expiresAt: "2026-07-19T02:03:00.000Z",
+              lines: [{ lineNumber: 1, sourceAccountKey: SOURCE_ACCOUNT_KEY,
+                sourceCurrencyCode: "NRC", sourceMinorUnit: 2, targetCurrencyCode: "NRC",
+                targetMinorUnit: 2, postedAmount: 1000, heldAmount: 0,
+                availableAmount: 1000, targetContribution: targetAmount,
+                sourceDebit: targetAmount, referenceRate: 1, customerRate: 1,
+                effectiveRate: 1, spreadRate: 0, requiresFx: false,
+                roundingDisclosure: "Same-currency funding uses rate 1." }],
+            };
+          }
+
+          function fundingReceipt(targetAmount: number) {
+            return {
+              receiptKey: FUNDING_RECEIPT_KEY, quoteKey: FUNDING_QUOTE_KEY,
+              bankTransactionKey: BANK_TRANSACTION_KEY, targetAccountKey: TARGET_ACCOUNT_KEY,
+              fundingContextKind: "store.seeded", fundingContextKey: QUOTE_KEY,
+              targetCurrencyCode: "NRC", targetAmount, targetReserveDrawAmount: 0,
+              sourceDomain: "store", sourceAction: "seeded_store_purchase_funding",
+              createdAt: "2026-07-19T02:01:01.000Z",
+              lines: [{ lineNumber: 1, sourceAccountKey: SOURCE_ACCOUNT_KEY,
+                sourceCurrencyCode: "NRC", targetContribution: targetAmount,
+                sourceDebit: targetAmount, referenceRate: 1, customerRate: 1,
+                effectiveRate: 1, spreadRate: 0, requiresFx: false }],
+            };
+          }
+
+          '''
+          if 'export class CapturingFundingRepository' not in text:
+              text = text.replace(class_marker, funding_class + class_marker, 1)
+          support.write_text(text)
+
+          public_test = Path("backend/src/domains/store/api/playerStorePublicHttpHandler.test.ts")
+          text = public_test.read_text()
+          text = text.replace('  CapturingOfferRepository,\n  CapturingRepository,', '  ALLOCATIONS,\n  CapturingFundingRepository,\n  CapturingOfferRepository,\n  CapturingRepository,', 1)
+          text = text.replace(
+            '  const quoteResponse = await handlePlayerStorePublicRequest(\n    createPlayerStoreRequest("POST", "/players/me/store/quotes", {\n      itemKey: "field_permit",\n      quantity: 2,\n    }),',
+            '  const fundingRepository = new CapturingFundingRepository();\n  const quoteResponse = await handlePlayerStorePublicRequest(\n    createPlayerStoreRequest("POST", "/players/me/store/quotes", {\n      itemKey: "field_permit",\n      quantity: 2,\n      allocations: ALLOCATIONS,\n      idempotencyKey: "store.seeded.quote.12345678",\n    }),',
+            1,
+          )
+          text = text.replace('    createPlayerStoreHandlerDependencies(repository),\n  );\n  const quoteBody', '    createPlayerStoreHandlerDependencies(repository, offerRepository, fundingRepository),\n  );\n  const quoteBody', 1)
+          old_expect = '''  assertEquals(repository.quoteInputs[0], {
+            gameSessionId: GAME_ID,
+            playerId: PLAYER_ID,
+            itemKey: "field_permit",
+            quantity: 2,
+            nowIso: "2026-07-19T02:00:00.000Z",
+          });'''
+          new_expect = '''  assertEquals(fundingRepository.seededQuoteInputs[0], {
+            gameSessionId: GAME_ID,
+            playerId: PLAYER_ID,
+            itemKey: "field_permit",
+            quantity: 2,
+            allocations: ALLOCATIONS,
+            idempotencyKey: "store.seeded.quote.12345678",
+            effectiveAt: "2026-07-19T02:00:00.000Z",
+          });
+          assertEquals(repository.quoteInputs.length, 0);'''
+          text = text.replace(old_expect, new_expect, 1)
+          text = text.replace('  const repository = new CapturingRepository();\n  const response = await handlePlayerStorePublicRequest(', '  const repository = new CapturingRepository();\n  const fundingRepository = new CapturingFundingRepository();\n  const response = await handlePlayerStorePublicRequest(', 1)
+          text = text.replace('    createPlayerStoreHandlerDependencies(repository),\n  );\n  const body = await response.json();', '    createPlayerStoreHandlerDependencies(repository, new CapturingOfferRepository(), fundingRepository),\n  );\n  const body = await response.json();', 1)
+          text = text.replace('  assertEquals(repository.purchaseInputs[0], {', '  assertEquals(fundingRepository.seededPurchaseInputs[0], {', 1)
+          text = text.replace('  assertNoUuid(body);', '  assertEquals(repository.purchaseInputs.length, 0);\n  assertNoUuid(body);', 1)
+          public_test.write_text(text)
+
+          business_test = Path("backend/src/domains/store/api/playerStoreBusinessOfferPublicHttpHandler.test.ts")
+          text = business_test.read_text()
+          text = text.replace('  CapturingOfferRepository,\n  CapturingRepository,', '  CapturingFundingRepository,\n  CapturingOfferRepository,\n  CapturingRepository,', 1)
+          text = text.replace('  const offerRepository = new CapturingOfferRepository();\n  const response =', '  const offerRepository = new CapturingOfferRepository();\n  const fundingRepository = new CapturingFundingRepository();\n  const response =', 1)
+          text = text.replace('    createPlayerStoreHandlerDependencies(repository, offerRepository),\n  );', '    createPlayerStoreHandlerDependencies(repository, offerRepository, fundingRepository),\n  );', 1)
+          text = text.replace('  assertEquals(offerRepository.quoteInputs, [{', '  assertEquals(fundingRepository.businessQuoteInputs, [{', 1)
+          text = text.replace('    expectedVersion: 7,\n    idempotencyKey:', '    expectedVersion: 7,\n    allocations: [{ sourceAccountKey: "bac_11111111111111111111111111111111", targetAmount: 90 }],\n    idempotencyKey:', 1)
+          text = text.replace('  assertEquals(repository.quoteInputs.length, 0);', '  assertEquals(offerRepository.quoteInputs.length, 0);\n  assertEquals(repository.quoteInputs.length, 0);', 1)
+          second_marker = '  const offerRepository = new CapturingOfferRepository();\n  const purchaseResponse ='
+          text = text.replace(second_marker, '  const offerRepository = new CapturingOfferRepository();\n  const fundingRepository = new CapturingFundingRepository();\n  const purchaseResponse =', 1)
+          text = text.replace('    createPlayerStoreHandlerDependencies(repository, offerRepository),\n  );\n  const purchaseBody', '    createPlayerStoreHandlerDependencies(repository, offerRepository, fundingRepository),\n  );\n  const purchaseBody', 1)
+          text = text.replace('  assertEquals(offerRepository.purchaseInputs, [{', '  assertEquals(fundingRepository.businessPurchaseInputs, [{', 1)
+          text = text.replace('    createPlayerStoreHandlerDependencies(repository, offerRepository),\n  );\n  const receiptBody', '    createPlayerStoreHandlerDependencies(repository, offerRepository, fundingRepository),\n  );\n  const receiptBody', 1)
+          text = text.replace('  assertEquals(offerRepository.receiptInputs, [{', '  assertEquals(fundingRepository.receiptInputs, [{', 1)
+          business_test.write_text(text)
+
+          workflow = Path(".github/workflows/multicurrency-store-funding-v1.yml")
+          text = workflow.read_text()
+          path_marker = '      - backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql\n'
+          backend_paths = '''      - backend/src/domains/store/api/playerStoreBusinessOfferPublicHttpHandler.test.ts
+                - backend/src/domains/store/api/playerStorePublicHttpHandler.test.ts
+                - backend/src/domains/store/api/playerStorePublicHttpHandler.ts
+                - backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts
+                - backend/src/domains/store/api/playerStorePublicRequestValidation.ts
+                - backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts
+                - backend/src/domains/store/contracts/playerStoreOfferPublicContracts.ts
+                - backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
+                - backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.ts
+          '''
+          if 'playerStoreFundingPublicContracts.ts' not in text:
+              text = text.replace(path_marker, path_marker + backend_paths, 1)
+              push_marker = '      - backend/supabase/migrations/2026082709*_multicurrency_store_funding_*.sql\n'
+              text = text.replace(push_marker, push_marker + backend_paths, 1)
+          setup_marker = '''      - name: Install pinned dependencies
+                shell: bash
+                run: |
+                  set -euo pipefail
+                  npm install --global npm@10.9.8
+                  npm ci --ignore-scripts
+          '''
+          setup_replacement = setup_marker + '''
+              - name: Set up Deno
+                uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+                with:
+                  deno-version: v2.9.3
+          '''
+          if 'Verify authenticated C1 Store funding API' not in text:
+              text = text.replace(setup_marker, setup_replacement, 1)
+              contract_marker = '          node scripts/multicurrency-store-funding-contract.mjs\n'
+              api_test = '''          npm --prefix backend ci --ignore-scripts
+                    npm --prefix backend run test:player-store-public
+              '''
+              text = text.replace(contract_marker, contract_marker + api_test, 1)
+          workflow.write_text(text)
+          PY
+
+      - name: Expand C1 source contract to bind authenticated API paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/multicurrency-store-funding-contract.mjs")
+          text = path.read_text()
+          old = '''  assertions: "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql",
+          });'''
+          new = '''  assertions: "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql",
+            handler: "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
+            validation: "backend/src/domains/store/api/playerStorePublicRequestValidation.ts",
+            fundingContracts: "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
+            fundingRepository: "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
+          });'''
+          if old not in text:
+              raise SystemExit("source contract paths marker missing")
+          text = text.replace(old, new, 1)
+          old_reads = '''const assertions = text(paths.assertions);
+          '''
+          new_reads = '''const assertions = text(paths.assertions);
+          const handler = text(paths.handler);
+          const validation = text(paths.validation);
+          const fundingContracts = text(paths.fundingContracts);
+          const fundingRepository = text(paths.fundingRepository);
+          '''
+          text = text.replace(old_reads, new_reads, 1)
+          marker = 'assert.match(assertions, /has_function_privilege/u);\n'
+          additions = '''assert.match(assertions, /read_business_store_offer_funding_receipt_v1/u);
+          assert.match(handler, /createFundingRepository/u);
+          assert.match(handler, /readPlayerStoreFundingAllocations/u);
+          assert.match(fundingContracts, /one|PlayerStoreFundingAllocationInput/u);
+          assert.match(fundingRepository, /create_seeded_store_funding_quote_v1/u);
+          assert.match(fundingRepository, /settle_seeded_store_funding_v1/u);
+          assert.match(fundingRepository, /create_business_store_offer_funding_quote_v1/u);
+          assert.match(fundingRepository, /settle_business_store_offer_funding_v1/u);
+          assert.match(fundingRepository, /read_business_store_offer_funding_receipt_v1/u);
+          assert.match(validation, /allocations must contain one to three Checking accounts/u);
+          assert.doesNotMatch(handler, /repository\.purchase\(/u);
+          assert.doesNotMatch(handler, /repository\.createQuote\(/u);
+          '''
+          if marker not in text:
+              raise SystemExit("source contract assertion marker missing")
+          text = text.replace(marker, marker + additions, 1)
+          path.write_text(text)
+          PY
+
+      - name: Verify bounded implementation source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8 >/dev/null
+          npm ci --ignore-scripts >/dev/null
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+          test -f backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts
+          test -f backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
+          grep -F "create_seeded_store_funding_quote_v1" backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
+          grep -F "read_business_store_offer_funding_receipt_v1" backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
+
+      - name: Commit C1 authenticated API cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            .github/workflows/multicurrency-store-funding-v1.yml \
+            backend/src/domains/store/api/playerStoreBusinessOfferPublicHttpHandler.test.ts \
+            backend/src/domains/store/api/playerStorePublicHttpHandler.test.ts \
+            backend/src/domains/store/api/playerStorePublicHttpHandler.ts \
+            backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts \
+            backend/src/domains/store/api/playerStorePublicRequestValidation.ts \
+            backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts \
+            backend/src/domains/store/contracts/playerStoreOfferPublicContracts.ts \
+            backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts \
+            backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.ts \
+            backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql \
+            backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql \
+            docs/operations/contracts/player-cross-cutting/pr-674.json \
+            scripts/multicurrency-store-funding-contract.mjs
+          git commit -m "feat(store-funding): cut authenticated Store API to C1"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
