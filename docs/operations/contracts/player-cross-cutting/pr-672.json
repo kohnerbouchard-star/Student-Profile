@@ -110,6 +110,7 @@
     "scripts/business-phase10-atomic-settlement-concurrency.mjs",
     "scripts/business-phase10-atomic-settlement-database-support.mjs",
     "scripts/business-phase10-atomic-settlement-database.mjs",
+    "scripts/business-phase10-player-store-browser-acceptance.mjs",
     "scripts/business-phase10-player-store-cutover-contract.mjs",
     "scripts/game-creation-provisioning-local-acceptance.mjs",
     "scripts/local-edge-runtime-contract.test.mjs",
