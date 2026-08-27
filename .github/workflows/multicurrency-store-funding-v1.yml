@@ -1,0 +1,177 @@
+name: multicurrency-store-funding-v1
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/multicurrency-store-funding-v1.yml
+      - backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql
+      - backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
+      - backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
+      - backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
+      - docs/operations/contracts/player-cross-cutting/pr-674.json
+      - docs/roadmaps/multicurrency-store-funding-scope-v1.md
+      - scripts/multicurrency-store-funding-contract.mjs
+      - scripts/multicurrency-store-funding-database.mjs
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/multicurrency-store-funding-v1.yml
+      - backend/supabase/migrations/2026082709*_multicurrency_store_funding_*.sql
+      - docs/operations/contracts/player-cross-cutting/pr-674.json
+      - docs/roadmaps/multicurrency-store-funding-scope-v1.md
+      - scripts/multicurrency-store-funding-*.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: multicurrency-store-funding-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: Verify multi-currency Store funding source and scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Verify PR authority and C1 source contracts
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || '674' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/multicurrency-funding-core-v1' }}
+        run: |
+          set -euo pipefail
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c1-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c1-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/multicurrency-funding-core-contract.mjs
+          node scripts/business-phase10-atomic-settlement-contract.mjs
+          node scripts/business-phase10-offer-aware-quote-contract.mjs
+          node scripts/business-phase10-player-store-cutover-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+  disposable-database:
+    name: Verify multi-currency Store funding database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="/tmp/multicurrency-store-funding-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay zero-to-head twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+
+      - name: Run C1 Store funding database acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: node scripts/multicurrency-store-funding-database.mjs
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Capture disposable diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/multicurrency-store-funding-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/multicurrency-store-funding-docker.log || true
+          docker system df 2>&1 | tee -a /tmp/multicurrency-store-funding-docker.log || true
+
+      - name: Upload disposable diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multicurrency-store-funding-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/multicurrency-store-funding-startup.log
+            /tmp/multicurrency-store-funding-status.log
+            /tmp/multicurrency-store-funding-docker.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
