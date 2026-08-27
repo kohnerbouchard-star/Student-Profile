@@ -1,0 +1,335 @@
+name: C1 structural repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-structural-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-structural-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Split C1 response parsing from repository transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          repository_path = Path(
+              "backend/src/domains/store/infrastructure/"
+              "supabasePlayerStoreFundingPublicRepository.ts"
+          )
+          response_path = Path(
+              "backend/src/domains/store/infrastructure/"
+              "playerStoreFundingPublicResponse.ts"
+          )
+          text = repository_path.read_text()
+          marker = "function parseSeededQuote("
+          if text.count(marker) != 1:
+              raise SystemExit("expected exactly one C1 parser split marker")
+          prefix, tail = text.split(marker, 1)
+          tail = marker + tail
+
+          old_contract_import = '''import {
+            PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN,
+            type PlayerStoreBusinessFundingQuoteDto,
+            type PlayerStoreBusinessFundingReceiptDto,
+            type PlayerStoreFundingPublicRepository,
+            type PlayerStoreFundingPublicScope,
+            type PlayerStoreFundingQuoteDto,
+            type PlayerStoreFundingQuoteLineDto,
+            type PlayerStoreFundingReceiptDto,
+            type PlayerStoreFundingReceiptLineDto,
+            type PlayerStoreSeededFundingQuoteDto,
+            type PlayerStoreSeededFundingReceiptDto,
+          } from "../contracts/playerStoreFundingPublicContracts.ts";'''.replace("          ", "")
+          new_contract_import = '''import {
+            type PlayerStoreBusinessFundingQuoteDto,
+            type PlayerStoreBusinessFundingReceiptDto,
+            type PlayerStoreFundingPublicRepository,
+            type PlayerStoreFundingPublicScope,
+            type PlayerStoreSeededFundingQuoteDto,
+            type PlayerStoreSeededFundingReceiptDto,
+          } from "../contracts/playerStoreFundingPublicContracts.ts";'''.replace("          ", "")
+          if old_contract_import not in prefix:
+              raise SystemExit("C1 funding contract import block not found")
+          prefix = prefix.replace(old_contract_import, new_contract_import, 1)
+
+          old_public_import = '''import {
+            PLAYER_STORE_ITEM_KEY_PATTERN,
+            PLAYER_STORE_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_RECEIPT_KEY_PATTERN,
+            PlayerStorePublicError,
+          } from "../contracts/playerStorePublicContracts.ts";'''.replace("          ", "")
+          new_public_import = '''import {
+            PlayerStorePublicError,
+          } from "../contracts/playerStorePublicContracts.ts";'''.replace("          ", "")
+          if old_public_import not in prefix:
+              raise SystemExit("C1 Store public import block not found")
+          prefix = prefix.replace(old_public_import, new_public_import, 1)
+
+          read_store_import = '''import {
+            type PlayerStoreOfferClient,
+            PlayerStoreOfferPublicReadStore,
+            type PlayerStoreOfferQueryResponse,
+          } from "./playerStoreOfferPublicReadStore.ts";'''.replace("          ", "")
+          parser_import = '''import {
+            invalidPublicResponse,
+            mapFundingRpcError,
+            parseFundingQuote,
+            parseFundingReceipt,
+            parseSeededQuote,
+            parseSeededReceipt,
+          } from "./playerStoreFundingPublicResponse.ts";'''.replace("          ", "")
+          if read_store_import not in prefix:
+              raise SystemExit("C1 read-store import block not found")
+          prefix = prefix.replace(
+              read_store_import,
+              read_store_import + "\n" + parser_import,
+              1,
+          )
+
+          old_constants = '''const UUID_EXACT =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+          const UUID_ANY =
+            /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
+          const FIXING_KEY = /^fxf_[0-9a-f]{32}$/u;
+          const BANK_TRANSACTION_KEY = /^btx_[0-9a-f]{32}$/u;
+          const CURRENCY_CODE = /^[A-Z0-9_]{3,16}$/u;
+
+          interface RpcError {
+            readonly message?: string;
+            readonly code?: string;
+          }
+
+          '''.replace("          ", "")
+          new_constants = '''const UUID_EXACT =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+
+          '''.replace("          ", "")
+          if old_constants not in prefix:
+              raise SystemExit("C1 repository constants block not found")
+          prefix = prefix.replace(old_constants, new_constants, 1)
+          repository_path.write_text(prefix.rstrip() + "\n")
+
+          response_imports = '''import {
+            PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN,
+            type PlayerStoreFundingQuoteDto,
+            type PlayerStoreFundingQuoteLineDto,
+            type PlayerStoreFundingReceiptDto,
+            type PlayerStoreFundingReceiptLineDto,
+            type PlayerStoreSeededFundingQuoteDto,
+            type PlayerStoreSeededFundingReceiptDto,
+          } from "../contracts/playerStoreFundingPublicContracts.ts";
+          import {
+            PLAYER_STORE_ITEM_KEY_PATTERN,
+            PLAYER_STORE_QUOTE_KEY_PATTERN,
+            PLAYER_STORE_RECEIPT_KEY_PATTERN,
+            PlayerStorePublicError,
+          } from "../contracts/playerStorePublicContracts.ts";
+
+          const UUID_ANY =
+            /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
+          const FIXING_KEY = /^fxf_[0-9a-f]{32}$/u;
+          const BANK_TRANSACTION_KEY = /^btx_[0-9a-f]{32}$/u;
+          const CURRENCY_CODE = /^[A-Z0-9_]{3,16}$/u;
+
+          export interface PlayerStoreFundingRpcError {
+            readonly message?: string;
+            readonly code?: string;
+          }
+
+          '''.replace("          ", "")
+          replacements = {
+              "function parseSeededQuote(": "export function parseSeededQuote(",
+              "function parseSeededReceipt(": "export function parseSeededReceipt(",
+              "function parseFundingQuote(": "export function parseFundingQuote(",
+              "function parseFundingReceipt(": "export function parseFundingReceipt(",
+              "function mapFundingRpcError(": "export function mapFundingRpcError(",
+              "function invalidPublicResponse(": "export function invalidPublicResponse(",
+              "error: RpcError,": "error: PlayerStoreFundingRpcError,",
+          }
+          for old, new in replacements.items():
+              if old not in tail:
+                  raise SystemExit(f"C1 helper export target not found: {old}")
+              tail = tail.replace(old, new, 1)
+          response_path.write_text(response_imports + tail)
+          PY
+
+      - name: Extend permanent C1 certification to adapter and inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow_path = Path(".github/workflows/multicurrency-store-funding-v1.yml")
+          workflow = workflow_path.read_text()
+          anchor = "      - .github/workflows/multicurrency-store-funding-v1.yml\n"
+          additions = (
+              "      - backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts\n"
+              "      - backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts\n"
+              "      - backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts\n"
+              "      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json\n"
+          )
+          if workflow.count(anchor) != 2:
+              raise SystemExit("expected two C1 workflow path-filter anchors")
+          workflow = workflow.replace(anchor, anchor + additions)
+          command_anchor = "          node scripts/validate-supabase-migrations.mjs\n"
+          command_additions = (
+              "          node scripts/architecture/build-architecture-inventory.mjs\n"
+              "          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json\n"
+              "          node scripts/architecture/architecture-ratchet-v2.mjs\n"
+          )
+          if workflow.count(command_anchor) != 1:
+              raise SystemExit("expected one C1 migration-validation command anchor")
+          workflow = workflow.replace(
+              command_anchor,
+              command_anchor + command_additions,
+              1,
+          )
+          workflow_path.write_text(workflow)
+
+          contract_path = Path("scripts/multicurrency-store-funding-contract.mjs")
+          contract = contract_path.read_text()
+          paths_anchor = (
+              '  assertions: "backend/supabase/migrations/'
+              '20260827094500_multicurrency_store_funding_assertions_v1.sql",\n'
+          )
+          paths_additions = (
+              '  fundingContracts: "backend/src/domains/store/contracts/'
+              'playerStoreFundingPublicContracts.ts",\n'
+              '  fundingResponse: "backend/src/domains/store/infrastructure/'
+              'playerStoreFundingPublicResponse.ts",\n'
+              '  fundingRepository: "backend/src/domains/store/infrastructure/'
+              'supabasePlayerStoreFundingPublicRepository.ts",\n'
+          )
+          if paths_anchor not in contract:
+              raise SystemExit("C1 contract paths anchor not found")
+          contract = contract.replace(paths_anchor, paths_anchor + paths_additions, 1)
+          reads_anchor = "const assertions = text(paths.assertions);\n"
+          reads_additions = (
+              "const fundingContracts = text(paths.fundingContracts);\n"
+              "const fundingResponse = text(paths.fundingResponse);\n"
+              "const fundingRepository = text(paths.fundingRepository);\n"
+          )
+          if reads_anchor not in contract:
+              raise SystemExit("C1 contract reads anchor not found")
+          contract = contract.replace(reads_anchor, reads_anchor + reads_additions, 1)
+          assertion_anchor = "assert.match(scope, /No merge, deployment/iu);\n"
+          assertion_additions = '''
+          assert.match(fundingContracts, /PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN/u);
+          assert.match(fundingContracts, /PlayerStoreFundingPublicRepository/u);
+          assert.match(fundingContracts, /PlayerStoreFundingAllocationInput/u);
+          assert.match(fundingRepository, /playerStoreFundingPublicResponse\.ts/u);
+          assert.match(fundingRepository, /create_seeded_store_funding_quote_v1/u);
+          assert.match(fundingRepository, /settle_seeded_store_funding_v1/u);
+          assert.match(fundingRepository, /create_business_store_offer_funding_quote_v1/u);
+          assert.match(fundingRepository, /settle_business_store_offer_funding_v1/u);
+          assert.match(fundingRepository, /read_business_store_offer_funding_receipt_v1/u);
+          assert.match(fundingResponse, /UUID_ANY/u);
+          assert.match(fundingResponse, /lines\.length < 1 \|\| lines\.length > 3/u);
+          assert.match(fundingResponse, /mapFundingRpcError/u);
+          '''.replace("          ", "")
+          if assertion_anchor not in contract:
+              raise SystemExit("C1 contract assertion anchor not found")
+          contract = contract.replace(
+              assertion_anchor,
+              assertion_anchor + assertion_additions,
+              1,
+          )
+          contract_path.write_text(contract)
+          PY
+
+      - name: Regenerate architecture inventory and verify repair
+        shell: bash
+        env:
+          BASE_REF: feat/multicurrency-funding-core-v1
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          npm --prefix backend run typecheck
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          {
+            git diff --name-only "origin/${BASE_REF}...HEAD"
+            git diff --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u > /tmp/c1-structural-changed-files.txt
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c1-structural-changed-files.txt \
+            --pr-number 674 \
+            --base-ref "$BASE_REF"
+          test "$(wc -l < backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts)" -lt 500
+          test "$(wc -l < backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts)" -lt 500
+          git diff --check
+
+      - name: Commit bounded structural repair and remove transport workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/c1-structural-repair.yml
+          git add \
+            .github/workflows/multicurrency-store-funding-v1.yml \
+            backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts \
+            backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json \
+            scripts/multicurrency-store-funding-contract.mjs
+          cat > /tmp/c1-expected-staged.txt <<'EOF'
+          .github/workflows/c1-structural-repair.yml
+          .github/workflows/multicurrency-store-funding-v1.yml
+          backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts
+          backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
+          docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          scripts/multicurrency-store-funding-contract.mjs
+          EOF
+          sed -i 's/^          //' /tmp/c1-expected-staged.txt
+          git diff --cached --name-only | sort -u > /tmp/c1-actual-staged.txt
+          diff -u /tmp/c1-expected-staged.txt /tmp/c1-actual-staged.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor(store-funding): split C1 response mapping below ratchet"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
