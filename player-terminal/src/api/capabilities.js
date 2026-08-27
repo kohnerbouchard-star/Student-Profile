@@ -70,6 +70,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
   businessTerminate: "businessEmployeeTerminate",
   businessManufacturingStart: "businessProduction",
   businessManufacturingCancel: "businessProduction",
+  marketplaceSettlement: "marketplacePurchase",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
   storeQuote: "storePurchase",
