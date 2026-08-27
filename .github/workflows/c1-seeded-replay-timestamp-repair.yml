@@ -1,0 +1,95 @@
+name: C1 seeded replay timestamp repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-seeded-replay-timestamp-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-seeded-replay-timestamp-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Reuse the original seeded settlement timestamp on replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/multicurrency-store-funding-database.mjs")
+          text = path.read_text()
+
+          insertion_marker = (
+              "const buyerInventoryBeforeSeeded = inventoryQuantity(gameOne, buyer);\n\n"
+              "const seededReceipt = serviceJson(`"
+          )
+          insertion = '''const buyerInventoryBeforeSeeded = inventoryQuantity(gameOne, buyer);
+          const seededClientSubmittedAt = runSql(
+            "select statement_timestamp()::text;",
+          ).output;
+          assert.ok(Number.isFinite(Date.parse(seededClientSubmittedAt)));
+
+          const seededReceipt = serviceJson(`'''
+          if "const seededClientSubmittedAt = runSql(" not in text:
+              if insertion_marker not in text:
+                  raise SystemExit("seeded timestamp insertion marker missing")
+              text = text.replace(insertion_marker, insertion, 1)
+
+          start = text.index("const seededReceipt = serviceJson(`")
+          end = text.index("// Business Store offer:", start)
+          segment = text[start:end]
+          old = "    statement_timestamp(),\n    '{}'::jsonb"
+          new = "    ${sqlLiteral(seededClientSubmittedAt)}::timestamptz,\n    '{}'::jsonb"
+          count = segment.count(old)
+          if count != 2:
+              raise SystemExit(f"expected two seeded settlement timestamps, found {count}")
+          segment = segment.replace(old, new)
+          text = text[:start] + segment + text[end:]
+
+          path.write_text(text)
+          PY
+
+      - name: Verify bounded fixture-only repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/multicurrency-store-funding-database.mjs
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+          test "$(git diff --name-only)" = "scripts/multicurrency-store-funding-database.mjs"
+          test "$(grep -c '\${sqlLiteral(seededClientSubmittedAt)}::timestamptz' scripts/multicurrency-store-funding-database.mjs)" -eq 2
+          grep -F "const seededClientSubmittedAt = runSql(" scripts/multicurrency-store-funding-database.mjs
+
+      - name: Commit repaired replay fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/multicurrency-store-funding-database.mjs
+          git commit -m "fix(store-funding): preserve seeded replay request identity"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
