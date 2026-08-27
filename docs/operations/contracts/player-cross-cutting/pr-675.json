@@ -10,6 +10,7 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+    "backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
@@ -43,6 +44,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
     "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
