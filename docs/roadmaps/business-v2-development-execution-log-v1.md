@@ -1618,3 +1618,39 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 ### Next authorized step
 
 **`BUSINESS-V2-10A4C0` — shared multi-currency funding core is OPEN** on `feat/multicurrency-funding-core-v1`, stacked from the clean B2 documentation handoff. C0 may implement one immutable server-authoritative funding quote using at most three canonical Player Checking accounts and a private atomic funding composer that consumes B2 FX for foreign-currency legs. Store, Marketplace, Stocks, and Business-specific integration remain closed for C1-C4. Phase 11 remains closed until the full 10A.4 dependency chain reaches its own final certification.
+
+---
+
+## 2026-08-28 — Multi-Currency Store Funding C1 EXACT-HEAD VERIFIED
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-10A4C1`.
+- Owner: `feat/multicurrency-store-funding-v1` / stacked draft PR #674 over C0 draft PR #673.
+- Parent C0 implementation: `fd1511d716c1efd291cf6f45415a32a8d7550db4`; parent clean handoff: `0aec6cd3b97058a918ff60acdef0143cfcd97d06`.
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`; PR #674 remains draft, open, unmerged, and undeployed.
+- This later documentation-only record does not replace the exact implementation SHA.
+
+### Implemented boundary
+
+- Seeded/NPC Store bills settle in item currency to the named Store revenue Checking account.
+- Business seller-offer bills settle in offer currency to the seller Business's canonical active Checking account.
+- Buyers may allocate the exact Store bill across one to three unique canonical Player Checking accounts. Same-currency legs use rate `1`; foreign legs consume certified C0 retail funding and B1/B2 fixing, clearing, reserve, and facility authorities.
+- Store retains commercial, quote/receipt, stock, withdrawal, Inventory, acquisition-basis, COGS/margin, and Store-root-first lock authority. C0 retains funding quote/composer authority; B2 retains balanced Banking and FX clearing.
+- Store and C0 evidence is linked immutably. Payment, target credit, FX effects, Inventory delivery, receipts, quote consumption, and seller/system evidence commit atomically or roll back together.
+- No Store wallet, duplicate exchange-rate engine, Savings checkout, parallel balance table, or fabricated single-ledger-entry cross-currency receipt was introduced.
+
+### Exact-head evidence
+
+- **`multicurrency-store-funding-v1` — PASS** (`33114174603`): source/scope job `98664460581`; disposable zero-to-head replay-twice/database-acceptance/lint job `98664460167`.
+- **`Business Player Store Cutover V2` — PASS** (`33114174711`): connected two-browser rerun `98676659699`; database replay/lint `98676660883`; Player Chromium `98676661493`; serial/concurrency/two-game acceptance `98676700370`; retained authority/quality/security `98676700536`; Backend/all-Edge Store verification `98676705692`.
+- The first connected attempt's sanitized artifact showed two independent transient local-runtime `503` reads for Contracts and Messages that each recovered to `200`; every Store settlement and isolation assertion was already true. The unchanged exact SHA passed the strict console-clean journey on rerun. No code, economic invariant, or test expectation was weakened.
+- All 20 pull-request-triggered workflows returned for the implementation SHA completed successfully.
+- Durable evidence: `docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md` and `docs/roadmaps/multicurrency-store-funding-scope-v1.md`.
+
+### Exit and next item
+
+- C1 exit criteria are met and the checkpoint is `IMPLEMENTED_NOT_MERGED`.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
+- **`BUSINESS-V2-10A4C2` — Marketplace multi-currency funding is OPEN** only after the clean C1 documentation handoff. Stocks remain C3, Business treasury/procurement remains C4, final Store/FX convergence remains 10A.4D, and Phase 11 remains closed until the dependency chain is complete.

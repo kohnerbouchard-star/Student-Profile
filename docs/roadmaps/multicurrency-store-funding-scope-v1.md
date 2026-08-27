@@ -1,7 +1,7 @@
 # Multi-Currency Store Funding Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C1`  
-**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed
+**Status:** `IMPLEMENTED_NOT_MERGED` — exact-head implementation certified; PR #674 remains draft, open, unmerged, and undeployed
 **Branch:** `feat/multicurrency-store-funding-v1`  
 **Parent branch:** `feat/multicurrency-funding-core-v1`  
 **Parent draft PR:** #673  
@@ -267,6 +267,16 @@ No merge, deployment, scheduler installation, secret mutation, staging/productio
 - Player Store browser coverage for account selection, exact allocation, quote detail, confirmation, replay, expiry, insufficient funds, FX liquidity failure, version/stock conflict, and responsive/accessibility behavior.
 - Retained C0, B2, B1, Store seller-offer, listing inventory, withdrawal safety, atomic settlement, Player Terminal, Database Replay, Backend Typecheck, all Edge roots, security, repository quality, public-payload UUID denial, and two-game isolation gates.
 - Observed concurrency must include opposite account selection order and prove canonical Banking lock order avoids deadlock while Store offer/item roots remain first.
+
+## Certified implementation and evidence
+
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- **Permanent C1 certification workflow:** `multicurrency-store-funding-v1`, run `33114174603` — source/scope job `98664460581` and disposable-database job `98664460167`, both successful.
+- **Retained connected Store certification:** `Business Player Store Cutover V2`, run `33114174711`. Exact-SHA connected two-browser rerun job `98676659699` completed successfully without changing implementation or weakening the browser assertion.
+- All 20 pull-request-triggered workflows returned for the implementation source completed successfully, including C1, C0/B2, Database Replay, Store seller-offer/listing/withdrawal/quote/atomic/cutover, Player Chromium, Backend Typecheck, Repository Quality, Supply Chain Security, runtime wiring, Business economy/workforce/manufacturing, timezone/calendar, Admin API, and staging preflight.
+- The first connected attempt recorded two transient local-runtime `503` responses for independent Contracts and Messages reads; both recovered to `200` on built-in retry and all Store settlement/isolation evidence was already true. The unchanged exact SHA passed the strict zero-console-error journey on rerun. No production source, monetary invariant, or test expectation was relaxed.
+- Durable details are recorded in `docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md`. This and later documentation-only commits must never replace the exact implementation SHA as the C1 certification identity.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation is authorized or claimed.
 
 ## Completion boundary
 
