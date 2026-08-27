@@ -4,10 +4,14 @@ on:
   pull_request:
     paths:
       - .github/workflows/multicurrency-store-funding-v1.yml
+      - backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts
+      - backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts
+      - backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
       - backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql
       - backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql
       - backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql
       - backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-674.json
       - docs/roadmaps/multicurrency-store-funding-scope-v1.md
       - scripts/multicurrency-store-funding-contract.mjs
@@ -17,7 +21,11 @@ on:
       - feat/multicurrency-store-funding-v1
     paths:
       - .github/workflows/multicurrency-store-funding-v1.yml
+      - backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts
+      - backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts
+      - backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts
       - backend/supabase/migrations/2026082709*_multicurrency_store_funding_*.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-674.json
       - docs/roadmaps/multicurrency-store-funding-scope-v1.md
       - scripts/multicurrency-store-funding-*.mjs
@@ -80,6 +88,9 @@ jobs:
           node scripts/business-phase10-offer-aware-quote-contract.mjs
           node scripts/business-phase10-player-store-cutover-contract.mjs
           node scripts/validate-supabase-migrations.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          node scripts/architecture/architecture-ratchet-v2.mjs
           git diff --check
 
   disposable-database:
