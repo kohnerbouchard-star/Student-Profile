@@ -9,8 +9,17 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/multicurrency-funding-core-v1.yml",
+    "backend/supabase/migrations/20260827090000_multicurrency_funding_quote_v1.sql",
+    "backend/supabase/migrations/20260827091000_multicurrency_funding_composer_v1.sql",
+    "backend/supabase/migrations/20260827092000_multicurrency_funding_assertions_v1.sql",
     "docs/operations/contracts/player-cross-cutting/pr-673.json",
-    "docs/roadmaps/multicurrency-funding-core-scope-v1.md"
+    "docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md",
+    "docs/roadmaps/multicurrency-funding-core-scope-v1.md",
+    "scripts/multicurrency-funding-concurrency.mjs",
+    "scripts/multicurrency-funding-core-contract.mjs",
+    "scripts/multicurrency-funding-core-simulation.mjs",
+    "scripts/multicurrency-funding-database.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-673.json",
@@ -23,6 +32,7 @@
     "player-production-secret-provision-contract",
     "player-api-read-resilience",
     "database-replay",
-    "banking-fx-clearing-v1"
+    "banking-fx-clearing-v1",
+    "multicurrency-funding-core-v1"
   ]
 }
