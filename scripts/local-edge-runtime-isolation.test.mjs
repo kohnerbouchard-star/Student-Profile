@@ -101,11 +101,23 @@ test("restarts the exact Edge and Kong containers and proves three stable gatewa
     ],
   );
   assert.equal(requests.length, 12);
-  assert.equal(requests[0].apikey, undefined);
-  assert.ok(requests.slice(1).every(({ apikey }) => apikey?.startsWith("sb_publishable_")));
+  assert.ok(
+    requests
+      .filter(({ url }) => new URL(url).pathname !== "/")
+      .every(({ apikey }) => apikey?.startsWith("sb_publishable_")),
+  );
+  assert.ok(
+    requests
+      .filter(({ url }) => new URL(url).pathname === "/")
+      .every(({ apikey, origin }) => apikey === undefined && origin === undefined),
+  );
+  assert.ok(
+    requests
+      .filter(({ url }) => new URL(url).pathname.endsWith("/bootstrap-api/health"))
+      .every(({ method, origin }) => method === "GET" && origin === undefined),
+  );
   assert.equal(requests[1].origin, "http://127.0.0.1:4173");
   assert.equal(requests[2].origin, "http://127.0.0.1:4173");
-  assert.equal(requests[3].origin, undefined);
   assert.deepEqual(sleeps, [500, 500, 1_000]);
   assert.equal(logs.some((value) => value.includes("sb_publishable_")), false);
   assert.equal(logs.some((value) => value.includes(EDGE_CONTAINER)), false);
