@@ -1,0 +1,96 @@
+name: C1 seeded stock fixture repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-stock-fixture-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c1-seeded-stock-fixture-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Repair canonical seeded-stock fixture direction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path("scripts/multicurrency-store-funding-database.mjs")
+          text = path.read_text()
+          pattern = re.compile(
+              r"  runJson\(`\n    select economy_private\.post_inventory_transaction_v2\(.*?"
+              r"  assert\.equal\(stock, quantity, \"Store stock projection did not follow canonical Inventory\.\"\);\n",
+              re.DOTALL,
+          )
+          replacement = '''  runSql(`
+            update public.store_items
+            set stock_quantity = ${quantity}
+            where game_session_id = ${sqlLiteral(game.id)}::uuid
+              and id = ${sqlLiteral(game.storeItemId)}::uuid;
+          `);
+
+          const canonicalQuantity = Number(runSql(`
+            select holding_row.quantity_owned
+            from public.inventory_holdings as holding_row
+            where holding_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+              and holding_row.inventory_account_id = ${sqlLiteral(state.accountId)}::uuid
+              and holding_row.game_item_id = ${sqlLiteral(state.gameItemId)}::uuid;
+          `).output);
+          assert.equal(
+            canonicalQuantity,
+            quantity,
+            "Canonical Store holding did not follow the Store stock root.",
+          );
+          '''
+          updated, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f"expected one seeded-stock fixture block, replaced {count}")
+          path.write_text(updated)
+          PY
+
+      - name: Verify repaired fixture before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/multicurrency-store-funding-database.mjs
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+          test "$(git diff --name-only)" = "scripts/multicurrency-store-funding-database.mjs"
+          ! grep -F "Store stock projection did not follow canonical Inventory." scripts/multicurrency-store-funding-database.mjs
+          grep -F "Canonical Store holding did not follow the Store stock root." scripts/multicurrency-store-funding-database.mjs
+
+      - name: Commit repaired fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/multicurrency-store-funding-database.mjs
+          git commit -m "fix(store-funding): seed canonical Store stock correctly"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
