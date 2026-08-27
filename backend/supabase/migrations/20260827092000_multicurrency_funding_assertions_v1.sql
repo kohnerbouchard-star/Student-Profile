@@ -69,6 +69,8 @@ begin
     end if;
   end loop;
 
+  -- Public quote command is intentionally a thin, service-only staging
+  -- boundary. Economic/pricing authority remains in the private core.
   select proc_row.oid, pg_get_functiondef(proc_row.oid),
     coalesce(array_to_string(proc_row.proconfig, ','), '')
   into v_oid, v_definition, v_search_path
@@ -90,13 +92,40 @@ begin
     raise exception 'PURCHASE_FUNDING_QUOTE_RPC_PRIVILEGE_INVALID';
   end if;
   if v_search_path not like '%search_path=pg_catalog, public, private, extensions, pg_temp%'
+     or v_definition not like '%drop table if exists pg_temp.purchase_funding_line_stage_v1%'
+     or v_definition not like '%private.create_purchase_funding_quote_core_v1%'
+  then
+    raise exception 'PURCHASE_FUNDING_QUOTE_WRAPPER_CONTRACT_INVALID';
+  end if;
+
+  select proc_row.oid, pg_get_functiondef(proc_row.oid),
+    coalesce(array_to_string(proc_row.proconfig, ','), '')
+  into v_oid, v_definition, v_search_path
+  from pg_catalog.pg_proc as proc_row
+  join pg_catalog.pg_namespace as namespace_row
+    on namespace_row.oid = proc_row.pronamespace
+  where namespace_row.nspname = 'private'
+    and proc_row.proname = 'create_purchase_funding_quote_core_v1'
+  order by proc_row.oid desc
+  limit 1;
+
+  if v_oid is null then
+    raise exception 'PURCHASE_FUNDING_QUOTE_CORE_MISSING';
+  end if;
+  if has_function_privilege('anon', v_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', v_oid, 'EXECUTE')
+     or has_function_privilege('service_role', v_oid, 'EXECUTE')
+  then
+    raise exception 'PURCHASE_FUNDING_QUOTE_CORE_EXPOSED';
+  end if;
+  if v_search_path not like '%search_path=pg_catalog, public, private, extensions, pg_temp%'
      or v_definition not like '%jsonb_array_length(p_allocations) not between 1 and 3%'
      or v_definition not like '%account_row.account_kind = ''checking''%'
      or v_definition not like '%v_customer_rate := (v_reference_rate * 0.99)%'
      or v_definition not like '%private.purchase_funding_ceil_minor_v1%'
      or v_definition not like '%PURCHASE_FUNDING_TOTAL_MISMATCH%'
   then
-    raise exception 'PURCHASE_FUNDING_QUOTE_RPC_CONTRACT_INVALID';
+    raise exception 'PURCHASE_FUNDING_QUOTE_CORE_CONTRACT_INVALID';
   end if;
 
   select proc_row.oid, pg_get_functiondef(proc_row.oid),
