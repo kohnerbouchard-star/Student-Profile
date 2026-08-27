@@ -16,11 +16,7 @@ import {
   type PlayerRequestScope,
   resolvePlayerRequestScope,
 } from "../../players/api/playerRequestScope.ts";
-import {
-  MARKETPLACE_FUNDING_ACCOUNT_KEY_PATTERN,
-  type PlayerMarketplaceFundingAllocationInput,
-  type PlayerMarketplaceFundingRepository,
-} from "../contracts/playerMarketplaceFundingContracts.ts";
+import type { PlayerMarketplaceFundingRepository } from "../contracts/playerMarketplaceFundingContracts.ts";
 import {
   MARKETPLACE_IDEMPOTENCY_KEY_PATTERN,
   MARKETPLACE_ITEM_KEY_PATTERN,
@@ -31,6 +27,10 @@ import {
 } from "../contracts/playerMarketplaceContracts.ts";
 import { SupabasePlayerMarketplaceFundingRepository } from "../infrastructure/supabasePlayerMarketplaceFundingRepository.ts";
 import { SupabasePlayerMarketplaceRepository } from "../infrastructure/supabasePlayerMarketplaceRepository.ts";
+import {
+  readMarketplaceClientTimestamp,
+  readMarketplaceFundingAllocations,
+} from "./playerMarketplaceFundingHttpInputs.ts";
 import type { PlayerMarketplaceRoute } from "./playerMarketplaceRoutePaths.ts";
 
 const MAX_BODY_BYTES = 8192;
@@ -108,9 +108,8 @@ export async function handlePlayerMarketplaceRequest(
       });
     }
 
-    // C2 retires the former reserve-and-settle single request. Keep the public
-    // address only as a bounded tombstone so older clients cannot bypass quote
-    // review, account allocation, current fixing, or settlement revalidation.
+    // The former reserve-and-settle request is retained only as a bounded
+    // tombstone so old clients cannot bypass quote review and revalidation.
     if (route.kind === "purchase") {
       return privateError(
         410,
@@ -141,7 +140,7 @@ export async function handlePlayerMarketplaceRequest(
           "expectedVersion",
           Number.MAX_SAFE_INTEGER,
         ),
-        allocations: fundingAllocations(body.allocations),
+        allocations: readMarketplaceFundingAllocations(body.allocations),
         idempotencyKey: idempotency(body.idempotencyKey),
         effectiveAt: (dependencies.now ?? (() => new Date()))().toISOString(),
       });
@@ -164,7 +163,9 @@ export async function handlePlayerMarketplaceRequest(
         playerId: scope.playerUuid,
         reservationKey: route.reservationKey,
         idempotencyKey: idempotency(body.idempotencyKey),
-        clientSubmittedAt: nullableTimestamp(body.clientSubmittedAt),
+        clientSubmittedAt: readMarketplaceClientTimestamp(
+          body.clientSubmittedAt,
+        ),
       });
       return privateResponse(200, {
         ok: true,
@@ -300,7 +301,9 @@ function resolveScope(request: Request, client: EdgeSupabaseClient) {
 
 function rejectClientScope(request: Request): void {
   const url = new URL(request.url);
-  if (url.search) throw invalid("Marketplace routes do not accept query parameters.");
+  if (url.search) {
+    throw invalid("Marketplace routes do not accept query parameters.");
+  }
   for (const header of [
     "x-player-id",
     "x-player-session-id",
@@ -352,42 +355,12 @@ function exactKeys(
 ): void {
   const allowedSet = new Set(allowed);
   const keys = Object.keys(body);
-  if (keys.some((key) => !allowedSet.has(key)) || keys.length !== allowed.length) {
+  if (
+    keys.some((key) => !allowedSet.has(key)) ||
+    keys.length !== allowed.length
+  ) {
     throw invalid("Marketplace request contains missing or unexpected fields.");
   }
-}
-
-function fundingAllocations(
-  value: unknown,
-): readonly PlayerMarketplaceFundingAllocationInput[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
-    throw invalid("Choose between one and three Checking accounts.");
-  }
-  const seen = new Set<string>();
-  const result = value.map((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw invalid("Marketplace funding allocation is invalid.");
-    }
-    const row = entry as Record<string, unknown>;
-    exactKeys(row, ["sourceAccountKey", "targetAmount"]);
-    const sourceAccountKey = typeof row.sourceAccountKey === "string"
-      ? row.sourceAccountKey.trim().toLowerCase()
-      : "";
-    if (!MARKETPLACE_FUNDING_ACCOUNT_KEY_PATTERN.test(sourceAccountKey)) {
-      throw invalid("Marketplace funding account is invalid.");
-    }
-    if (seen.has(sourceAccountKey)) {
-      throw invalid("Marketplace funding accounts must be unique.");
-    }
-    seen.add(sourceAccountKey);
-    const targetAmount = positiveNumber(
-      row.targetAmount,
-      "targetAmount",
-      999_999_999_999_999,
-    );
-    return Object.freeze({ sourceAccountKey, targetAmount });
-  });
-  return Object.freeze(result);
 }
 
 function itemKey(value: unknown): string {
@@ -450,14 +423,6 @@ function positiveNumber(value: unknown, field: string, max: number): number {
     throw invalid(`${field} is invalid.`);
   }
   return result;
-}
-
-function nullableTimestamp(value: unknown): string | null {
-  if (value === null || value === undefined || value === "") return null;
-  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
-    throw invalid("clientSubmittedAt is invalid.");
-  }
-  return new Date(value).toISOString();
 }
 
 function boundedText(
