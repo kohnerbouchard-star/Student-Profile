@@ -1,0 +1,63 @@
+name: C1 backend API implementation transport repair
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-backend-api-implementation-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Repair exact handler block indentation in implementation workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/c1-backend-api-implementation.yml')
+          text = path.read_text()
+          replacements = {
+              "'''      const quote = await repository.createQuote({\n      ...publicScope,\n      itemKey: readPlayerStoreItemKey(body.itemKey),\n      quantity: readPlayerStoreQuantity(body.quantity),\n      nowIso: (dependencies.now ?? (() => new Date().toISOString()))(),\n    });'''":
+              "'''      const quote = await repository.createQuote({\n        ...publicScope,\n        itemKey: readPlayerStoreItemKey(body.itemKey),\n        quantity: readPlayerStoreQuantity(body.quantity),\n        nowIso: (dependencies.now ?? (() => new Date().toISOString()))(),\n      });'''",
+              "'''      const quote = await fundingRepository.createSeededQuote({\n      ...publicScope,\n      itemKey: readPlayerStoreItemKey(body.itemKey),\n      quantity: readPlayerStoreQuantity(body.quantity),\n      allocations: readPlayerStoreFundingAllocations(body.allocations),\n      idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n      effectiveAt: (dependencies.now ?? (() => new Date().toISOString()))(),\n    });'''":
+              "'''      const quote = await fundingRepository.createSeededQuote({\n        ...publicScope,\n        itemKey: readPlayerStoreItemKey(body.itemKey),\n        quantity: readPlayerStoreQuantity(body.quantity),\n        allocations: readPlayerStoreFundingAllocations(body.allocations),\n        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n        effectiveAt: (dependencies.now ?? (() => new Date().toISOString()))(),\n      });'''",
+              "'''      const receipt = await repository.purchase({\n      ...publicScope,\n      quoteKey: readPlayerStoreQuoteKey(body.quoteKey),\n      idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n      clientSubmittedAt: readPlayerStoreOptionalTimestamp(\n        body.clientSubmittedAt,\n      ),\n    });'''":
+              "'''      const receipt = await repository.purchase({\n        ...publicScope,\n        quoteKey: readPlayerStoreQuoteKey(body.quoteKey),\n        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n        clientSubmittedAt: readPlayerStoreOptionalTimestamp(\n          body.clientSubmittedAt,\n        ),\n      });'''",
+              "'''      const receipt = await fundingRepository.settleSeededPurchase({\n      ...publicScope,\n      quoteKey: readPlayerStoreQuoteKey(body.quoteKey),\n      idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n      clientSubmittedAt: readPlayerStoreOptionalTimestamp(\n        body.clientSubmittedAt,\n      ),\n    });'''":
+              "'''      const receipt = await fundingRepository.settleSeededPurchase({\n        ...publicScope,\n        quoteKey: readPlayerStoreQuoteKey(body.quoteKey),\n        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),\n        clientSubmittedAt: readPlayerStoreOptionalTimestamp(\n          body.clientSubmittedAt,\n        ),\n      });'''",
+          }
+          changed = 0
+          for old, new in replacements.items():
+              if old in text:
+                  text = text.replace(old, new, 1)
+                  changed += 1
+          if changed != 4:
+              raise SystemExit(f'expected four transport marker repairs, changed {changed}')
+          path.write_text(text)
+          PY
+          git diff --check
+
+      - name: Commit repaired implementation workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c1-backend-api-implementation.yml
+          git commit -m "fix(store-funding): make API implementation transport exact"
+          git push origin HEAD:refs/heads/feat/multicurrency-store-funding-v1
