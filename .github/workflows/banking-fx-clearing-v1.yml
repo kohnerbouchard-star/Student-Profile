@@ -12,7 +12,9 @@ on:
       - backend/src/security/**
       - backend/supabase/**
       - docs/operations/contracts/player-cross-cutting/pr-672.json
+      - docs/operations/contracts/player-cross-cutting/pr-673.json
       - docs/roadmaps/banking-fx-clearing-scope-v1.md
+      - docs/roadmaps/multicurrency-funding-core-scope-v1.md
       - player-terminal/**
       - scripts/banking-fx-*.mjs
       - scripts/banking-fx-*.sql
@@ -77,14 +79,17 @@ jobs:
 
       - name: Run Banking FX certification lanes
         shell: bash
+        env:
+          AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || 672 }}
+          AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}
         run: |
           set -euo pipefail
           node --test scripts/player-cross-cutting-authority.test.mjs
-          git diff --name-only origin/feat/canonical-fx-authority-v1...HEAD | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          git diff --name-only "origin/${AUTHORITY_BASE_REF}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
           node scripts/verify-player-cross-cutting-authority.mjs \
             --changed-files /tmp/player-cross-cutting-changed-files.txt \
-            --pr-number 672 \
-            --base-ref feat/canonical-fx-authority-v1
+            --pr-number "${AUTHORITY_PR_NUMBER}" \
+            --base-ref "${AUTHORITY_BASE_REF}"
           node --check scripts/business-phase10-atomic-settlement-database-support.mjs
           npm run --prefix backend test:banking-fx-clearing
           node scripts/validate-supabase-migrations.mjs
