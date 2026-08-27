@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "feat/multicurrency-funding-core-v1"
-          test "$(git rev-parse HEAD^)" = "314a1a687a6b463cd3c611ed3701bc5592f53f9f"
+          test "$(git rev-parse HEAD^)" = "4a873fc80205b4a904e762df7d7e33f804c8baab"
           git fetch origin feat/banking-fx-clearing-v1
           test "$(git rev-parse origin/feat/banking-fx-clearing-v1)" = "029ea568adc722f0b7c1cd57a02c49f88ceaf716"
 
@@ -81,6 +81,8 @@ jobs:
           dollar = chr(36)
           pr_expr = dollar + "{{ github.event.pull_request.number || 672 }}"
           base_expr = dollar + "{{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}"
+          shell_pr = dollar + "{AUTHORITY_PR_NUMBER}"
+          shell_base = dollar + "{AUTHORITY_BASE_REF}"
           new = f'''      - name: Run Banking FX certification lanes
                   shell: bash
                   env:
@@ -89,11 +91,11 @@ jobs:
                   run: |
                     set -euo pipefail
                     node --test scripts/player-cross-cutting-authority.test.mjs
-                    git diff --name-only "origin/${{AUTHORITY_BASE_REF}}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
+                    git diff --name-only "origin/{shell_base}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
                     node scripts/verify-player-cross-cutting-authority.mjs \\
                       --changed-files /tmp/player-cross-cutting-changed-files.txt \\
-                      --pr-number "${{AUTHORITY_PR_NUMBER}}" \\
-                      --base-ref "${{AUTHORITY_BASE_REF}}"
+                      --pr-number "{shell_pr}" \\
+                      --base-ref "{shell_base}"
           '''
           if old not in text:
               raise SystemExit('Expected repaired B2 authority block was not found')
@@ -109,6 +111,8 @@ jobs:
               raise SystemExit('Repaired B2 database lane missing')
           if pr_expr not in text or base_expr not in text:
               raise SystemExit('Dynamic stacked-PR authority expressions missing')
+          if shell_pr not in text or shell_base not in text:
+              raise SystemExit('Dynamic shell authority variables missing')
 
           path.write_text(text)
           PY
