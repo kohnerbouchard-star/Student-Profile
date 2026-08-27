@@ -9,11 +9,16 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/c1-structural-repair.yml",
     ".github/workflows/multicurrency-store-funding-v1.yml",
+    "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
+    "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+    "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
     "backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql",
     "backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
     "backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql",
     "backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
     "docs/roadmaps/multicurrency-store-funding-scope-v1.md",
     "scripts/multicurrency-store-funding-contract.mjs",
@@ -22,6 +27,9 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts",
+    "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+    "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
     "scripts/multicurrency-store-funding-contract.mjs",
     "scripts/multicurrency-store-funding-database.mjs",
