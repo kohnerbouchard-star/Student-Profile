@@ -1,0 +1,272 @@
+name: C1 documentation finalizer
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-store-funding-v1
+    paths:
+      - .github/workflows/c1-documentation-finalizer.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact documentation head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Write durable C1 certification records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          implementation_sha = "1cf6f413f10a761265cdec6076ceb9b2b3afcbf5"
+          scope_path = Path("docs/roadmaps/multicurrency-store-funding-scope-v1.md")
+          handoff_path = Path("docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md")
+          log_path = Path("docs/roadmaps/business-v2-development-execution-log-v1.md")
+
+          scope = scope_path.read_text()
+          old_status = "**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed"
+          new_status = "**Status:** `IMPLEMENTED_NOT_MERGED` — exact-head implementation certified; PR #674 remains draft, open, unmerged, and undeployed"
+          if old_status not in scope and new_status not in scope:
+              raise SystemExit("C1 scope status marker was not found")
+          scope = scope.replace(old_status, new_status, 1)
+
+          certification_section = '''## Certified implementation and evidence
+
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- **Permanent C1 certification workflow:** `multicurrency-store-funding-v1`, run `33114174603` — source/scope job `98664460581` and disposable-database job `98664460167`, both successful.
+- **Retained connected Store certification:** `Business Player Store Cutover V2`, run `33114174711`. The exact-SHA connected two-browser job rerun `98676659699` completed successfully without changing implementation or weakening the browser assertion.
+- All 20 pull-request-triggered workflows returned for the exact implementation source completed successfully. This includes C1, C0, B2, complete Database Replay, Store seller-offer/listing/withdrawal/quote/atomic-settlement/cutover gates, Player Chromium, Backend Typecheck, Repository Quality, Supply Chain Security, runtime wiring, Business economy/workforce/manufacturing, timezone/calendar, Admin API, and staging preflight.
+- The first connected Store attempt recorded two transient local-runtime `503` responses for independent `contracts` and `messages` reads; both requests recovered to `200` on their built-in retry and all Store settlement/isolation evidence was already true. The same exact SHA then passed the strict zero-console-error journey on rerun. No production source, C0/B1/B2 monetary invariant, or test expectation was relaxed.
+- The durable implementation handoff is `docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md`. This and later documentation-only commits must never replace `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5` as the C1 certification identity.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation is authorized or claimed.
+
+'''
+          marker = "## Completion boundary\n"
+          if certification_section.strip() not in scope:
+              if marker not in scope:
+                  raise SystemExit("C1 scope completion marker was not found")
+              scope = scope.replace(marker, certification_section + marker, 1)
+          scope_path.write_text(scope)
+
+          handoff = '''# Multi-Currency Store Funding Implementation Handoff v1
+
+## Canonical status
+
+- Roadmap item: `BUSINESS-V2-10A4C1`.
+- Owner branch: `feat/multicurrency-store-funding-v1`.
+- Stacked draft PR: #674, base `feat/multicurrency-funding-core-v1` / draft PR #673.
+- Parent C0 exact implementation and verification source: `fd1511d716c1efd291cf6f45415a32a8d7550db4`.
+- Parent C0 clean documentation handoff/base: `0aec6cd3b97058a918ff60acdef0143cfcd97d06`.
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- **Permanent C1 certification run:** `33114174603`.
+- **Retained connected Store certification run:** `33114174711`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
+- This and every later documentation-only handoff is later than the tested implementation source and must never replace `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5` as the C1 certification identity.
+- PR #674 remains draft, open, mergeable, unmerged, and undeployed. No scheduler installation, secret mutation, staging/production SQL, or live database mutation is claimed.
+
+## Certification issue resolved without source change
+
+The first exact-head connected Store job completed the commercial journey and recorded successful payment, inventory, receipt, replay, withdrawal-ordering, and two-game-isolation evidence, but its strict browser assertion rejected two console errors. The sanitized artifact showed one bodyless `503` for `GET /players/me/contracts` and one for `GET /players/me/messages` during the second-game login fan-out. Each independent read automatically retried and returned `200` one second later; neither request was a Store quote, purchase, settlement, receipt, Banking, FX, or Inventory operation.
+
+The failed job was rerun at the unchanged exact implementation SHA. Rerun job `98676659699` passed the two-browser journey, evidence-privacy scan, artifact publication, and final enforcement. No application code, workflow assertion, resilience policy, Store settlement rule, C0 funding rule, B1 fixing rule, B2 clearing rule, or architecture ratchet was weakened. The original artifact remains evidence of the diagnosed local-runtime transient; the successful exact-SHA rerun is the certification result.
+
+## Implemented authority
+
+C1 makes both retained Store supply classes consume the shared C0 purchase-funding authority while preserving Store ownership of commercial and Inventory semantics:
+
+- seeded/NPC bills remain denominated in the authoritative Store item currency and credit a named game-scoped `store.seeded-revenue` Checking account;
+- Business seller-offer bills remain denominated in the offer currency and credit the seller Business's canonical active Checking account;
+- the Buyer selects one to three unique canonical active Player Checking accounts and supplies positive allocations expressed in the Store bill currency;
+- exact allocations must equal the authoritative Store total, with no browser-authored price, currency, recipient, rate, fee, balance, hold, fixing, facility, or transaction identity;
+- same-currency legs use rate `1`, zero spread, and no FX facility;
+- foreign legs consume the certified C0 retail checkout policy and B1/B2 fixing, clearing, reserve, and bounded-liquidity authorities;
+- Store quote identity remains separate from `pfq_...` funding identity, and Store receipt identity remains separate from `pfr_...` funding evidence;
+- Store item/offer, stock, withdrawal eligibility, quote lifecycle, Inventory custody/delivery, Buyer acquisition basis, Business COGS/margin, and offer/item-first lock order remain Store authority;
+- C0 remains the only funding quote/composer authority and B2 remains the only balanced Banking/clearing authority;
+- matching replay resolves before mutable price, stock, balance, hold, fixing, or facility reinterpretation, while conflicting reuse fails closed;
+- payment, target credit, FX effects, Inventory movement, Store receipt, funding receipt, quote consumption, and seller/system evidence commit atomically or roll back together.
+
+C1 creates no Store wallet, no duplicate FX engine, no reusable foreign balance, no Savings checkout path, no parallel Inventory projection, and no alternate Store money journal.
+
+## Durable implementation surface
+
+### Forward migrations
+
+- `backend/supabase/migrations/20260827093000_multicurrency_store_funding_schema_v1.sql`
+- `backend/supabase/migrations/20260827093500_multicurrency_store_funding_quote_commands_v1.sql`
+- `backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql`
+- `backend/supabase/migrations/20260827094500_multicurrency_store_funding_assertions_v1.sql`
+
+The schema migration binds existing seeded and Business Store quotes/receipts to C0 quote, receipt, Banking transaction, recipient-account, context-hash, and idempotency evidence. Compatibility rows remain readable, but a funded Store receipt cannot fabricate the former single-ledger-entry model.
+
+The quote commands preserve Store quote identity, normalize Store bills to the target currency's supported minor unit, resolve the canonical recipient account, bind immutable Store context to one C0 quote, and cap Store usability at the earlier commercial/funding expiry.
+
+The settlement commands preserve Store-root-first locking, validate Store and C0 context equality, invoke the private C0 composer inside the Store transaction, deliver canonical Inventory, preserve Buyer acquisition basis and Business COGS/margin, consume both quote authorities once, and publish bounded Store plus nested funding evidence.
+
+### Public Store integration
+
+- `backend/src/domains/store/contracts/playerStoreFundingPublicContracts.ts`
+- `backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts`
+- `backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts`
+
+These files enforce public-key-only input/output, one-to-three-account allocation parsing, trusted server scope, bounded C0 evidence projection, stable error mapping, and no internal UUID publication. The inherited authenticated Store surface and connected browser journey consume this authority without introducing a second client-side balance or exchange-rate cache.
+
+### Permanent verification
+
+- `.github/workflows/multicurrency-store-funding-v1.yml`
+- `scripts/multicurrency-store-funding-contract.mjs`
+- `scripts/multicurrency-store-funding-database.mjs`
+- immutable PR authority `docs/operations/contracts/player-cross-cutting/pr-674.json`
+- controlling scope `docs/roadmaps/multicurrency-store-funding-scope-v1.md`
+
+## Exact-head verification on `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`
+
+### Permanent C1 gate
+
+**`multicurrency-store-funding-v1` — PASS** (`33114174603`):
+
+- `Verify multi-currency Store funding source and scope` — success (`98664460581`): exact PR authority, exact changed-path boundary, C1 source contracts, migration/source validation, and clean diff.
+- `Verify multi-currency Store funding database` — success (`98664460167`): disposable PostgreSQL startup, complete zero-to-head replay twice, C1 Store-funding database acceptance, rebuilt-schema lint, diagnostics publication, and clean teardown.
+
+The database acceptance proves seeded/NPC and Business-offer funded quoting and settlement; one-, two-, and three-account allocations; same, mixed, and foreign source currencies; exact target credit; exact stock and Buyer Inventory movement; immutable Store/C0 evidence; replay/conflict; Store and funding expiry; balance, hold, fixing, facility, stock, version, and withdrawal races; rollback; public-key privacy; and two-game isolation.
+
+### Retained connected Store gate
+
+**`Business Player Store Cutover V2` — PASS** (`33114174711`) with all six jobs successful after the exact-SHA connected-job rerun:
+
+- connected authenticated Buyer/seller Store journey in two games — `98676659699`;
+- complete database replay twice and rebuilt-schema lint — `98676660883`;
+- standalone Player Terminal plus full Chromium — `98676661493`;
+- serial settlement, observed ordering races, and two-game isolation — `98676700370`;
+- retained Store authority, repository quality, and supply-chain security — `98676700536`;
+- public Store projection, capabilities, rate limits, Backend TypeScript, and all Edge roots — `98676705692`.
+
+The successful connected journey retained the strict zero-console-error requirement and proved Buyer/seller convergence, immutable receipt identity, seeded compatibility, replay without resubmission, post-commit read recovery, withdrawal-first and purchase-first ordering, privacy scanning, and game isolation.
+
+### Complete exact-head workflow inventory
+
+All 20 pull-request-triggered workflows returned for the implementation source completed successfully:
+
+- `multicurrency-store-funding-v1` — `33114174603`.
+- `Business Player Store Cutover V2` — `33114174711`.
+- `banking-fx-clearing-v1` — `33114174729`.
+- `Database Replay` — `33114174644`.
+- `Backend Typecheck` — `33114174728`.
+- `Repository Quality` — `33114174740`.
+- `Supply Chain Security` — `33114174605`.
+- `Runtime Interaction Wiring` — `33114174607`.
+- `Business Store Atomic Settlement V2` — `33114174623`.
+- `Business Store Offer-Aware Quotes V2` — `33114174722`.
+- `Business Store Listing Inventory V2` — `33114174777`.
+- `Business Store Withdrawal Safety V2` — `33114174608`.
+- `Business Store Seller Offers V2` — `33114174732`.
+- `Business Timed Manufacturing V2` — `33114174490`.
+- `Business Workforce Payroll V2` — `33114174654`.
+- `Business Economy V2` — `33114174611`.
+- `Exchange Calendar Runtime` — `33114174646`.
+- `Required Game Market Timezone` — `33114174606`.
+- `Admin API Check` — `33114174530`.
+- `Staging Readiness Preflight` — `33114174723`.
+
+No failed, cancelled, timed-out, action-required, queued, or in-progress workflow remained at certification. Vercel's commit status also returned success. Conditional diagnostic and unauthorized release/deployment paths remained skipped where not applicable.
+
+## Exit result
+
+- Store-owned seeded/NPC and Business-offer quote/receipt identity: **met**.
+- One-to-three canonical Player Checking accounts and exact funded-total equality: **met**.
+- Same-currency and certified 1.00% retail checkout FX funding: **met**.
+- Exact named seeded-system or seller-Business Checking credit: **met**.
+- Atomic C0/B2 funding, Store stock, Buyer Inventory, receipt, COGS/margin, and quote lifecycle: **met**.
+- Replay, conflict, expiry, rollback, stock/withdrawal/balance/hold/fixing/facility races, and two-game isolation: **met**.
+- Public-key-only browser boundary and no competing Store FX/Banking/Inventory authority: **met**.
+- Complete source, database, Backend/all Edge, repository, security, Player, Chromium, and connected exact-head matrix: **met**.
+- Merge, deployment, scheduler, secrets, staging/production SQL, and live-environment completion: **not claimed**.
+
+## Next authorized roadmap item
+
+`BUSINESS-V2-10A4C2` may begin on a new stacked branch `feat/multicurrency-marketplace-funding-v1` from the clean C1 documentation handoff.
+
+C2 is limited to making Marketplace settlement preserve listing currency and consume the certified shared C0 funding authority without competing treasury balance writes. Stocks remain C3, Business foreign-Checking treasury/procurement remains C4, and final Store/FX convergence remains 10A.4D. No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation is authorized by this handoff.
+'''
+          handoff_path.write_text(handoff)
+
+          log_entry = '''
+
+---
+
+## 2026-08-28 — Multi-Currency Store Funding C1 EXACT-HEAD VERIFIED
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-10A4C1`.
+- Owner: `feat/multicurrency-store-funding-v1` / stacked draft PR #674 over C0 draft PR #673.
+- Parent C0 implementation: `fd1511d716c1efd291cf6f45415a32a8d7550db4`; parent clean handoff: `0aec6cd3b97058a918ff60acdef0143cfcd97d06`.
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE` because PR #674 remains draft, open, unmerged, and undeployed.
+- This later documentation-only record does not replace the exact implementation SHA.
+
+### Implemented boundary
+
+- Seeded/NPC Store bills settle in the item currency to the named game-scoped Store revenue Checking account.
+- Business seller-offer bills settle in the offer currency to the seller Business's canonical active Checking account.
+- Buyers may allocate the exact Store bill across one to three unique canonical Player Checking accounts. Same-currency legs use rate `1`; foreign legs consume the certified C0 retail checkout quote/composer and B1/B2 fixing, clearing, reserve, and facility authorities.
+- Store retains item/offer, pricing, quote/receipt, stock, withdrawal, Inventory, acquisition-basis, COGS/margin, and Store-root-first lock authority. C0 retains funding quote/composer authority, and B2 retains balanced monetary posting and FX clearing authority.
+- Store and C0 evidence is linked immutably. Payment, target credit, FX effects, Inventory delivery, Store receipt, funding receipt, quote consumption, and seller/system evidence commit atomically or roll back together.
+- No Store wallet, duplicate exchange-rate engine, Savings checkout, parallel balance table, or fabricated single-ledger-entry cross-currency receipt was introduced.
+
+### Exact-head evidence
+
+- **`multicurrency-store-funding-v1` — PASS** (`33114174603`): source/scope job `98664460581`; disposable zero-to-head replay-twice/database-acceptance/lint job `98664460167`.
+- **`Business Player Store Cutover V2` — PASS** (`33114174711`): the exact-SHA connected two-browser rerun `98676659699` passed alongside database replay/lint `98676660883`, Player Chromium `98676661493`, serial/concurrency/two-game acceptance `98676700370`, retained authority/quality/security `98676700536`, and Backend/all-Edge Store verification `98676705692`.
+- The first connected attempt's sanitized artifact showed two independent transient local-runtime `503` reads for Contracts and Messages that each recovered to `200`; every Store settlement and isolation assertion was already true. The unchanged exact SHA passed the strict console-clean journey on rerun. No code, economic invariant, or test expectation was weakened.
+- All 20 pull-request-triggered workflows returned for the implementation SHA completed successfully, including C1, C0/B2, Database Replay, Store seller-offer/listing/withdrawal/quote/atomic/cutover, Backend Typecheck, Repository Quality, Supply Chain Security, runtime wiring, Business economy/workforce/manufacturing, Player Chromium, timezone/calendar, Admin API, and staging preflight.
+- Durable detailed evidence: `docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md` and `docs/roadmaps/multicurrency-store-funding-scope-v1.md`.
+
+### Exit and next item
+
+- C1 exit criteria are met and the checkpoint is `IMPLEMENTED_NOT_MERGED`.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
+- **`BUSINESS-V2-10A4C2` — Marketplace multi-currency funding is OPEN** only after this clean C1 documentation handoff. Stocks remain C3, Business treasury/procurement remains C4, final Store/FX convergence remains 10A.4D, and Phase 11 remains closed until the dependency chain is complete.
+'''
+          log = log_path.read_text()
+          marker_text = "## 2026-08-28 — Multi-Currency Store Funding C1 EXACT-HEAD VERIFIED"
+          if marker_text not in log:
+              if not log.endswith("\n"):
+                  log += "\n"
+              log += log_entry.lstrip("\n")
+              log_path.write_text(log)
+          PY
+
+      - name: Commit C1 certification records
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add \
+            docs/roadmaps/business-v2-development-execution-log-v1.md \
+            docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md \
+            docs/roadmaps/multicurrency-store-funding-scope-v1.md
+          if git diff --cached --quiet; then
+            echo "C1 certification records are already present."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(store-funding): certify C1 exact implementation"
+          git push origin HEAD:feat/multicurrency-store-funding-v1
