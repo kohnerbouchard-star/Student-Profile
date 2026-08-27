@@ -74,8 +74,8 @@ jobs:
           scope_path = Path("docs/roadmaps/multicurrency-store-funding-scope-v1.md")
           scope = scope_path.read_text()
           scope = scope.replace(
-              "**Status:** `SCOPE_ONLY` — no runtime implementation or certification claimed",
-              "**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed",
+              "**Status:** `SCOPE_ONLY` — no runtime implementation or certification claimed  \n",
+              "**Status:** `IMPLEMENTATION_IN_PROGRESS` — database authority under verification; no certification claimed\n",
               1,
           )
           sentence = (
