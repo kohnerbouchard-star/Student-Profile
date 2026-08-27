@@ -11,6 +11,18 @@ const paths = Object.freeze({
   contracts: "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
   response: "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
   repository: "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceFundingRepository.ts",
+  route: "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
+  handler: "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
+  handlerTest: "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
+  endpoints: "player-terminal/src/api/endpoints.js",
+  backendRoutes: "player-terminal/src/api/marketplace-backend-routes.js",
+  capabilities: "player-terminal/src/api/capabilities.js",
+  resourcePlan: "player-terminal/src/api/resource-plan.js",
+  playerReadModel: "player-terminal/src/features/marketplace/marketplace-funding-read-model.js",
+  playerFlow: "player-terminal/src/features/marketplace/marketplace-funding-flow.js",
+  playerPage: "player-terminal/src/pages/marketplace-page.js",
+  playerMain: "player-terminal/src/main.js",
+  playerTest: "player-terminal/tests/marketplace-funding-flow.mjs",
   scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
   authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
 });
@@ -138,6 +150,93 @@ includesAll("repository", source.repository, [
   "settle_marketplace_funding_v1",
   "p_allocations",
   "p_reservation_key",
+]);
+
+includesAll("authenticated route", source.route, [
+  'readonly kind: "quote"',
+  'readonly kind: "settlement"',
+  "|quotes",
+  "/settlements",
+  "MARKETPLACE_RESERVATION_KEY_PATTERN",
+]);
+includesAll("authenticated handler", source.handler, [
+  "createFundingRepository",
+  "fundingAllocations",
+  "createQuote",
+  "fundingRepository.settle",
+  "player_marketplace_purchase_retired",
+  "clientSubmittedAt",
+]);
+for (const forbidden of ["unitPrice: body", "currencyCode: body", "targetAccountKey"]) {
+  assert.ok(
+    !source.handler.includes(forbidden),
+    `Player handler trusts forbidden monetary field: ${forbidden}`,
+  );
+}
+includesAll("authenticated handler tests", source.handlerTest, [
+  "explicit funding quote and settlement confirmation",
+  "player_marketplace_purchase_retired",
+  "duplicate accounts",
+  "assertNoUuid",
+]);
+
+includesAll("Player endpoints", source.endpoints, [
+  "/marketplace/listings/:listingId/quotes",
+  "/marketplace/reservations/:reservationId/settlements",
+]);
+includesAll("Player backend routes", source.backendRoutes, [
+  "marketplaceSettlement",
+  "/quotes",
+  "/settlements",
+  "allocations(payload",
+  "clientSubmittedAt",
+]);
+includesAll("Player capability mapping", source.capabilities, [
+  'marketplaceSettlement: "marketplacePurchase"',
+]);
+includesAll("Player resource plan", source.resourcePlan, [
+  'marketplacePurchase: Object.freeze([])',
+  'marketplaceSettlement: Object.freeze(["dashboard", "marketplace", "inventory", "banking", "bankingFx"])',
+  'optional: Object.freeze(["inventory", "banking", "bankingFx"])',
+]);
+includesAll("Player funding read model", source.playerReadModel, [
+  "normalizeMarketplaceFundingQuote",
+  "normalizeMarketplaceFundingOrder",
+  "INTERNAL_UUID",
+  "customerRate",
+  "effectiveRate",
+  "roundingDisclosure",
+]);
+includesAll("Player funding flow", source.playerFlow, [
+  "installMarketplaceFundingFlow",
+  'api.execute(\n        "marketplacePurchase"',
+  'api.execute(\n        "marketplaceSettlement"',
+  "readAllocations",
+  "currentFundingQuote",
+  "refreshResources",
+]);
+includesAll("Player Marketplace page", source.playerPage, [
+  'data-player-marketplace-funding-form="quote"',
+  'name="sourceAccountKey"',
+  'name="targetAmount"',
+  'data-player-marketplace-funding-form="settlement"',
+  "IMMUTABLE FUNDING QUOTE",
+  "Reference",
+  "Customer",
+  "Effective",
+]);
+assert.ok(
+  !source.playerPage.includes('data-endpoint="marketplacePurchase"'),
+  "Legacy direct Marketplace purchase form remains active.",
+);
+includesAll("Player composition", source.playerMain, [
+  "installMarketplaceFundingFlow",
+  "marketplaceFunding.destroy()",
+]);
+includesAll("Player funding test", source.playerTest, [
+  "quote from settlement confirmation",
+  "rejects UUIDs and incoherent totals",
+  "legacy purchase tombstone",
 ]);
 
 const authority = JSON.parse(source.authority);
