@@ -1531,3 +1531,90 @@ Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentati
 - Exact boundary: Banking account identity, balanced grouped posting, holds, clearing/reserve/fee capacity, capped facility evidence, standard/instant Player FX, authoritative Banking reads/routes/UI, readiness, and cross-domain hold enforcement. Multi-account retail funding and Store/Marketplace/Stocks/Business currency convergence remain closed for C0-C4.
 - Key collision controls: an explicit superseding interface decision leaves `fxf_...` exclusively with B1 fixing keys and assigns B2 clearing evidence `fxc_...` or internal identity; #668 retains the global roadmap; PR #624 overlapping Player files are avoided until re-audited; broad `service_role` monetary DML is revoked explicitly rather than treated as safe through RLS alone.
 - Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/canonical-fx-authority-v1`, then implement only B2 and certify one exact head before opening C0.
+
+---
+## 2026-08-27 — Banking FX clearing EXACT-HEAD VERIFIED: B2 certification recovery complete
+
+### Certified source and status
+
+- Roadmap item: `BUSINESS-V2-10A4B2`.
+- **Exact implementation and verification source:** `ce931f8320861117e64eba4403b84d6e7fe8da25`.
+- Permanent B2 certification workflow: `banking-fx-clearing-v1`, run `33045836351`.
+- Canonical checkpoint status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE` because PR #672 remains draft, open, unmerged, and undeployed.
+- Later documentation-only commits do not replace `ce931f8320861117e64eba4403b84d6e7fe8da25` as the tested implementation identity.
+- No merge, staging deployment, production deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred during the B2 recovery/certification tranche.
+
+### Recovery defects closed
+
+1. Banking/FX game-owned tables are registered with the canonical resumable whole-game purge authority, and the database acceptance harness uses the actual `fx_settlement_receipts` authority.
+2. Business and Player monetary identity is resolved by `business_id` or `player_id`; a Business owner's Player identity is not treated as the Business's monetary identity.
+3. Retained Store settlement fixtures no longer overwrite `account_balances`. Test funding goes through canonical `record_business_ledger_entry_v2` and `record_player_ledger_entry` calls, preserving the B2 projection guard and balanced journal semantics.
+4. The permanent Banking/FX workflow now has separate source/static, disposable-PostgreSQL, and Chromium lanes. The broken self-mutating certification finalizer is not part of the permanent workflow.
+5. The previously failing connected Player Store Buyer-funding journey is green without weakening Banking or bypassing account holds/projection authority.
+
+### Durable B2 surface
+
+- Forward migrations: `20260826010811_banking_fx_purge_registry_v1.sql`, `20260826090000_banking_account_identity_v1.sql`, `20260826091000_banking_transaction_holds_v1.sql`, `20260826092000_fx_clearing_liquidity_v1.sql`, `20260826093000_player_banking_fx_v1.sql`, `20260826094000_player_banking_fx_commands_v1.sql`, `20260826095000_player_banking_fx_order_commands_v1.sql`, `20260826096000_player_banking_fx_settlement_v1.sql`, `20260826097000_player_banking_fx_worker_v1.sql`, `20260826098000_banking_fx_readiness_v1.sql`, `20260826100000_business_bank_identity_runtime_v1.sql`, `20260826101000_banking_staff_adjustment_compatibility_v1.sql`, and `20260826102000_banking_fx_postcutover_purge_registry_v1.sql`.
+- Canonical B2 records: `bank_accounts`, `bank_transactions`, `bank_account_holds`, `bank_account_hold_events`, `fx_liquidity_cap_snapshots`, `fx_liquidity_events`, `fx_quotes`, `fx_orders`, `fx_order_events`, `fx_settlement_receipts`, and private `fx_order_runtime_state`, while `ledger_entries` and `account_balances` remain the sole money journal/projection.
+- Service commands/read projections include the balanced Player/Business ledger gateways, canonical account/activity reads, quote/overview/history/order reads, standard submit/cancel, instant execution, and leased standard-order claim/settle/fail commands.
+- Player Banking FX routes remain exact-path parsed under `/players/me/banking/fx` for overview, history, orders, quotes, standard submission, instant execution, and standard cancellation.
+- Detailed files, RPCs, routes, migrations, browser/database evidence, and next-step boundaries are recorded in `docs/roadmaps/banking-fx-clearing-implementation-handoff-v1.md` and `docs/roadmaps/banking-fx-clearing-scope-v1.md`.
+
+### Permanent three-lane B2 gate on `ce931f83...`
+
+- **Source/static — PASS** (`98429498128`): exact-SHA guard, PR authority verification, Banking/FX tests, Deno/backend checks, migration validation, local Edge runtime contract, and `git diff --check`.
+- **Disposable PostgreSQL — PASS** (`98429498313`): disposable Supabase/PostgreSQL startup, zero-to-head database reset, Banking/FX database acceptance, rebuilt-database lint, and clean teardown.
+- **Chromium — PASS** (`98429498040`): exact-SHA guard, Player Terminal dependencies, Chromium installation, browser-only runtime fixture, and full Playwright browser verification.
+- Parent workflow run `33045836351`: **success**.
+
+### Complete inherited exact-head matrix
+
+All 30 pull-request-triggered workflow runs returned for `ce931f8320861117e64eba4403b84d6e7fe8da25` completed successfully. High-signal evidence includes:
+
+- Database Replay `33045836076` — **PASS**.
+- Business Player Store Cutover V2 `33045836240` — **PASS**, including connected authenticated Buyer/seller Store journey in two games and full Chromium.
+- Business Store Atomic Settlement V2 `33045836230` — **PASS**.
+- Business Store Seller Offers V2 `33045836311` — **PASS**.
+- Business Store Withdrawal Safety V2 `33045836342` — **PASS**.
+- Business Store Listing Inventory V2 `33045836231` — **PASS**.
+- Player Terminal Verify `33045836354` — **PASS**.
+- Backend Typecheck `33045836366` — **PASS**.
+- Repository Quality `33045836246` — **PASS**.
+- Beta Security Contract `33045836157` — **PASS**.
+- Supply Chain Security `33045836208` — **PASS**.
+- Business Banking Runtime `33045836219` — **PASS**.
+- Player Local Currency Authority `33045836277` — **PASS**.
+- Business Economy V2 `33045836303` — **PASS**.
+- Business Timed Manufacturing V2 `33045836323` — **PASS**.
+- Business Workforce Hiring V2 `33045836267` — **PASS**.
+- Business Workforce Payroll V2 `33045836126` — **PASS**.
+- Business Workforce Production Payroll V2 `33045836302` — **PASS**.
+- Marketplace Preconvergence `33045836116` — **PASS**.
+- Environment Neutral Browser `33045836347` — **PASS**.
+- Progression Runtime `33045836266` — **PASS**.
+- Runtime Interaction Wiring `33045836299` — **PASS**.
+- World Runtime `33045836348` — **PASS**.
+- Required Game Market Timezone `33045836180` — **PASS**.
+- Exchange Calendar Runtime `33045836279` — **PASS**.
+- Admin API Check `33045836109` — **PASS**.
+- Admin Game Lifecycle Controls `33045836310` — **PASS**.
+- Staging Readiness Preflight `33045836289` — **PASS**.
+
+The exact source exposed 60 completed check runs with no failure, cancellation, timeout, or pending/in-progress check at certification. Conditional diagnostics and unauthorized release/deployment steps remained skipped where not applicable.
+
+### B2 exit result
+
+- Canonical Player/Business/system bank-account identity: **met**.
+- Historical amount preservation and deterministic account/journal backfill: **met**.
+- Per-currency balanced grouped posting and compatibility-offset evidence: **met**.
+- Holds and posted/held/available balance enforcement: **met**.
+- FX clearing/reserve/fee accounts and bounded facility snapshots: **met**.
+- Standard delayed FX and instant FX with separate fee authority: **met**.
+- Player Banking public routes/read model/UI and browser-safe public keys: **met**.
+- Retained Store/Business/Marketplace/Banking compatibility at the B2 boundary: **met**.
+- Static, disposable-database, Chromium, connected Store, two-game, security, repository, backend/all Edge, and inherited exact-head gates: **met**.
+- Merge/deployment/live-environment completion: **not claimed**.
+
+### Next authorized step
+
+**`BUSINESS-V2-10A4C0` — shared multi-currency funding core is OPEN** on `feat/multicurrency-funding-core-v1`, stacked from the clean B2 documentation handoff. C0 may implement one immutable server-authoritative funding quote using at most three canonical Player Checking accounts and a private atomic funding composer that consumes B2 FX for foreign-currency legs. Store, Marketplace, Stocks, and Business-specific integration remain closed for C1-C4. Phase 11 remains closed until the full 10A.4 dependency chain reaches its own final certification.
