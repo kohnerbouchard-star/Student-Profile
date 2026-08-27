@@ -17,7 +17,9 @@
     "docs/operations/contracts/player-cross-cutting/pr-674.json",
     "docs/roadmaps/multicurrency-store-funding-scope-v1.md",
     "scripts/multicurrency-store-funding-contract.mjs",
-    "scripts/multicurrency-store-funding-database.mjs"
+    "scripts/multicurrency-store-funding-database.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-674.json",

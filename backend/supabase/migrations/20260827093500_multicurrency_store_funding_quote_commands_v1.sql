@@ -116,6 +116,9 @@ declare
   v_stock_account public.inventory_accounts%rowtype;
   v_stock_holding public.inventory_holdings%rowtype;
   v_pricing record;
+  v_target_decimals integer;
+  v_bill_unit_price numeric(14, 2);
+  v_bill_total_price numeric(14, 2);
   v_store_pricing_version text;
   v_store_quote_id uuid := extensions.gen_random_uuid();
   v_store_quote_key text;
@@ -267,6 +270,16 @@ begin
     raise exception 'STORE_FUNDED_QUOTE_INSUFFICIENT_STOCK' using errcode = 'P0001';
   end if;
 
+  select currency_row.decimal_places
+  into v_target_decimals
+  from public.currencies as currency_row
+  where currency_row.code = upper(v_item.currency_code)
+    and currency_row.status = 'active';
+  if not found or v_target_decimals not between 0 and 2 then
+    raise exception 'STORE_FUNDED_QUOTE_CURRENCY_PRECISION_UNSUPPORTED'
+      using errcode = 'P0001';
+  end if;
+
   select *
   into strict v_pricing
   from public.resolve_store_quote_pricing_v2(
@@ -288,11 +301,30 @@ begin
     raise exception 'STORE_FUNDED_QUOTE_PRICING_INVALID' using errcode = 'P0001';
   end if;
 
+  -- The retained Store pricing resolver rounds to two decimals. Normalize the
+  -- authoritative item-currency bill to that currency's actual minor unit
+  -- before C0 validates and prices any source-account legs. Per-unit rounding
+  -- keeps quantity pricing coherent and avoids an unrepresentable merchant bill.
+  v_bill_unit_price := round(
+    v_pricing.item_local_final_unit_price,
+    v_target_decimals
+  );
+  v_bill_total_price := round(
+    v_bill_unit_price * p_quantity,
+    v_target_decimals
+  );
+  if v_bill_unit_price <= 0 or v_bill_total_price <= 0 then
+    raise exception 'STORE_FUNDED_QUOTE_MINOR_UNIT_NORMALIZATION_INVALID'
+      using errcode = 'P0001';
+  end if;
+
   v_store_pricing_version := concat(
     'store-funded-v1:country:',
     lower(v_country.country_code),
     ':snapshot:',
-    v_pricing.snapshot_sequence
+    v_pricing.snapshot_sequence,
+    ':minor-unit:',
+    v_target_decimals
   );
 
   v_target_account_id := private.ensure_system_bank_account_v1(
@@ -327,7 +359,7 @@ begin
     'canonicalItemKey', v_game_item.canonical_key,
     'quantity', p_quantity,
     'currencyCode', upper(v_item.currency_code),
-    'totalPrice', v_pricing.final_total_price::text,
+    'totalPrice', v_bill_total_price::text,
     'pricingVersion', v_store_pricing_version,
     'targetAccountKey', v_target_account_key
   ));
@@ -337,7 +369,7 @@ begin
     p_game_session_id,
     p_player_id,
     upper(v_item.currency_code),
-    v_pricing.final_total_price,
+    v_bill_total_price,
     'store.seeded',
     v_store_quote_key,
     v_context_hash,
@@ -357,7 +389,7 @@ begin
      or v_funding_quote.funding_context_key <> v_store_quote_key
      or v_funding_quote.funding_context_hash <> v_context_hash
      or v_funding_quote.target_currency_code <> upper(v_item.currency_code)
-     or v_funding_quote.target_amount <> v_pricing.final_total_price
+     or v_funding_quote.target_amount <> v_bill_total_price
   then
     raise exception 'STORE_FUNDED_QUOTE_BINDING_FAILED' using errcode = 'P0001';
   end if;
@@ -407,15 +439,15 @@ begin
     upper(v_item.currency_code),
     upper(v_item.currency_code),
     1,
-    v_pricing.item_local_final_unit_price,
-    v_pricing.item_local_final_total_price,
+    v_bill_unit_price,
+    v_bill_total_price,
     v_pricing.base_unit_price,
     v_pricing.inflation_multiplier,
     v_pricing.location_multiplier,
     v_pricing.scarcity_multiplier,
     0,
-    v_pricing.final_unit_price,
-    v_pricing.final_total_price,
+    v_bill_unit_price,
+    v_bill_total_price,
     v_store_pricing_version,
     'CREATED',
     v_expires_at,
@@ -472,6 +504,7 @@ declare
   v_listing_account public.inventory_accounts%rowtype;
   v_listing_holding public.inventory_holdings%rowtype;
   v_available bigint;
+  v_target_decimals integer;
   v_unit_price numeric(18, 4);
   v_total_price numeric(18, 4);
   v_store_quote_id uuid := extensions.gen_random_uuid();
@@ -687,8 +720,24 @@ begin
     raise exception 'STORE_OFFER_FUNDED_QUOTE_INSUFFICIENT_STOCK' using errcode = 'P0001';
   end if;
 
+  select currency_row.decimal_places
+  into v_target_decimals
+  from public.currencies as currency_row
+  where currency_row.code = v_offer.currency_code
+    and currency_row.status = 'active';
+  if not found or v_target_decimals not between 0 and 18 then
+    raise exception 'STORE_OFFER_FUNDED_QUOTE_CURRENCY_PRECISION_UNSUPPORTED'
+      using errcode = 'P0001';
+  end if;
+
   v_unit_price := round(v_offer.unit_price, 4);
   v_total_price := round(v_unit_price * p_quantity, 4);
+  if v_unit_price is distinct from round(v_unit_price, v_target_decimals)
+     or v_total_price is distinct from round(v_total_price, v_target_decimals)
+  then
+    raise exception 'STORE_OFFER_FUNDED_QUOTE_PRICE_PRECISION_INVALID'
+      using errcode = 'P0001';
+  end if;
   if v_total_price <= 0
      or v_total_price <> round(v_total_price, 2)
   then

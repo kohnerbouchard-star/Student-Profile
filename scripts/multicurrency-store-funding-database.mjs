@@ -198,7 +198,9 @@ function seedSeededStock(game, quantity) {
     select jsonb_build_object(
       'accountId', item_row.inventory_account_id,
       'gameItemId', item_row.game_item_id,
-      'storeItemId', item_row.id
+      'storeItemId', item_row.id,
+      'currencyCode', item_row.currency_code,
+      'unitCost', item_row.price
     )::text
     from public.store_items as item_row
     where item_row.game_session_id = ${sqlLiteral(game.id)}::uuid
@@ -222,8 +224,8 @@ function seedSeededStock(game, quantity) {
         'storeItemId', ${sqlLiteral(state.storeItemId)}::uuid,
         'quantityDelta', ${quantity},
         'reservationDelta', 0,
-        'unitCost', 2.50,
-        'currencyCode', 'ECO',
+        'unitCost', ${state.unitCost},
+        'currencyCode', ${sqlLiteral(state.currencyCode)},
         'metadata', jsonb_build_object('fixture', true)
       ))
     )::text;
@@ -289,17 +291,39 @@ for (const key of [ecoKey, nrcKey, yrcKey]) {
 
 // Seeded/NPC Store: one same-currency Checking account, exact system credit,
 // canonical inventory delivery, immutable Store/C0 linkage, and replay.
-const seededTotal = runSql(`
-  select final_total_price::text
+const seededPricing = runJson(`
+  select jsonb_build_object(
+    'currencyCode', pricing.item_currency_code,
+    'decimalPlaces', currency_row.decimal_places,
+    'unitPrice', round(
+      pricing.item_local_final_unit_price,
+      currency_row.decimal_places
+    ),
+    'finalTotal', round(
+      round(pricing.item_local_final_unit_price, currency_row.decimal_places) * 2,
+      currency_row.decimal_places
+    )
+  )::text
   from public.resolve_store_quote_pricing_v2(
     ${sqlLiteral(gameOne.id)}::uuid,
     ${sqlLiteral(gameOne.storeItemId)}::uuid,
     ${sqlLiteral(FIXTURE.countryId)}::uuid,
-    'ECO',
+    (select currency_code from public.store_items
+     where game_session_id = ${sqlLiteral(gameOne.id)}::uuid
+       and id = ${sqlLiteral(gameOne.storeItemId)}::uuid),
     2,
     statement_timestamp()
-  );
-`).output;
+  ) as pricing
+  join public.currencies as currency_row
+    on currency_row.code = pricing.item_currency_code;
+`);
+const seededTotal = String(seededPricing.finalTotal);
+const seededSourceKey = accountKey(
+  gameOne.id,
+  buyer,
+  seededPricing.currencyCode,
+);
+assert.match(seededSourceKey, /^bac_[0-9a-f]{32}$/u);
 assert.equal(Number(seededTotal) > 0, true);
 
 const seededQuote = serviceJson(`
@@ -309,7 +333,7 @@ const seededQuote = serviceJson(`
     'fixture_widget_one',
     2,
     ${sqlLiteral(JSON.stringify([
-      { sourceAccountKey: ecoKey, targetAmount: seededTotal },
+      { sourceAccountKey: seededSourceKey, targetAmount: seededTotal },
     ]))}::jsonb,
     'c1-seeded-quote-0001',
     statement_timestamp()
@@ -317,7 +341,7 @@ const seededQuote = serviceJson(`
 `);
 assert.match(seededQuote.quoteKey, /^quote_[0-9a-f]{32}$/u);
 assert.match(seededQuote.fundingQuote.quote_key, /^pfq_[0-9a-f]{32}$/u);
-assert.equal(seededQuote.currencyCode, "ECO");
+assert.equal(seededQuote.currencyCode, seededPricing.currencyCode);
 assert.equal(Number(seededQuote.finalTotalPrice), Number(seededTotal));
 assert.equal(seededQuote.fundingQuote.lines.length, 1);
 assert.equal(seededQuote.fundingQuote.lines[0].requires_fx, false);
