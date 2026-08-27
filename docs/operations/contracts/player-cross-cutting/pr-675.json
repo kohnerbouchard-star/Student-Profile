@@ -9,7 +9,6 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    ".github/workflows/c2-architecture-inventory-finalizer.yml",
     ".github/workflows/multicurrency-marketplace-funding-v1.yml",
     "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
     "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
