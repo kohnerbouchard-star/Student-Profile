@@ -1,13 +1,15 @@
 # Banking FX Clearing Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4B2`
-**Status:** `IN_PROGRESS` — controlling scope only; runtime implementation begins after the immutable scope handoff
+**Status:** `IMPLEMENTED_NOT_MERGED` — exact certified implementation source `ce931f8320861117e64eba4403b84d6e7fe8da25`; PR #672 remains draft, open, unmerged, and undeployed
 **Branch:** `feat/banking-fx-clearing-v1`
 **Parent branch:** `feat/canonical-fx-authority-v1`
 **Parent draft PR:** #671
 **Exact parent implementation:** `41bc2d978fe67cd06a8f2133f7310075492ecd99`
 **Exact parent documentation handoff:** `5e427e8f5b39e5b77cac0c912873fe505493565d`
 **Scope commit:** `ce50306400b3173a489e2413f0531cef58c863a6`
+**Exact certified B2 source:** `ce931f8320861117e64eba4403b84d6e7fe8da25`
+**Permanent B2 certification run:** `33045836351`
 **Production deployment authorized:** No
 
 ## Decision
@@ -129,8 +131,22 @@ The governing invariants are:
 - Exercise hold enforcement through account transfers, loans, staff correction, provisioning, Store, Business Store, Marketplace settlement/reversal, Stocks, Travel, Story payments, Business formation/material/production, and payroll/recovery. Payroll must allocate from available balance or fail atomically before employee credit.
 - Run Banking, Business Banking, Economy ledger, B1 FX, World, Store, Inventory, Marketplace, Stocks, Business, security, repository-quality, Player Terminal, Chromium, all Backend TypeScript, every Edge root, route/capability/rate-limit parity, public-payload UUID denial, and `git diff --check`.
 
+## Certification closure — 2026-08-27
+
+B2's certification recovery is complete at exact implementation and verification source `ce931f8320861117e64eba4403b84d6e7fe8da25`.
+
+The permanent workflow `banking-fx-clearing-v1` run `33045836351` passed three exact-SHA lanes: source/static (`98429498128`), disposable PostgreSQL (`98429498313`), and Chromium (`98429498040`). The self-mutating certification finalizer was removed; the permanent workflow is read-only.
+
+The complete exact-head PR matrix also passed. Thirty pull-request-triggered workflows completed successfully, including Database Replay (`33045836076`), Player Terminal Verify (`33045836354`), Business Player Store Cutover V2 (`33045836240`), Business Store Atomic Settlement V2 (`33045836230`), Store seller/withdrawal/listing gates, Business Banking, workforce/payroll/manufacturing, Marketplace, security, repository quality, World/calendar, Admin, and runtime wiring. The exact source exposed 60 terminal check runs with no failure, cancellation, timeout, or pending/in-progress check.
+
+The inherited connected Store blocker is resolved without bypassing Banking. Retained Store acceptance now funds Player and Business balances through canonical ledger commands rather than direct `account_balances` writes, and Business/Player account identity resolves by `business_id` or `player_id` rather than treating a Business owner as the Business monetary identity.
+
+The detailed durable migration/table/RPC/route and exact-run inventory is recorded in `docs/roadmaps/banking-fx-clearing-implementation-handoff-v1.md`. No runtime implementation after `ce931f8320861117e64eba4403b84d6e7fe8da25` is required for this certification claim; later documentation-only commits must not replace that tested source identity.
+
+No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred as part of this certification closure.
+
 ## Completion boundary
 
-This checkpoint may become `IMPLEMENTED_NOT_MERGED` only after one exact implementation SHA passes the complete local and exact-head gate and a later documentation-only handoff records files, migrations, tables, RPCs/routes, workflow jobs, browser/database evidence, blockers, and the next exact item.
+This checkpoint is `IMPLEMENTED_NOT_MERGED` because one exact implementation SHA has passed the complete exact-head matrix and the later documentation-only handoff records the implementation surface and evidence.
 
-It may not become `VERIFIED_COMPLETE` while unmerged or without required runtime evidence. After its clean handoff, the next exact item is `BUSINESS-V2-10A4C0` on `feat/multicurrency-funding-core-v1`.
+It may not become `VERIFIED_COMPLETE` while unmerged or without required runtime evidence. After this clean B2 handoff, the next exact item is `BUSINESS-V2-10A4C0` on `feat/multicurrency-funding-core-v1`.
