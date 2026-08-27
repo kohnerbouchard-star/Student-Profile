@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.multicurrency-funding-core-pr-673.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 673,
+  "baseRef": "feat/banking-fx-clearing-v1",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "docs/operations/contracts/player-cross-cutting/pr-673.json",
+    "docs/roadmaps/multicurrency-funding-core-scope-v1.md"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-673.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "database-replay",
+    "banking-fx-clearing-v1"
+  ]
+}
