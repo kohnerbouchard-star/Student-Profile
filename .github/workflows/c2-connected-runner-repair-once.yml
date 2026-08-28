@@ -1,0 +1,401 @@
+name: C2 connected runner repair once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-connected-runner-repair-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out C2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Cut connected runner over to quote and settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          runner_path = Path("player-terminal/tools/connected-marketplace-mutation-runner.mjs")
+          source = runner_path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one exact replacement, found {count}: {old[:100]!r}")
+              source = source.replace(old, new, 1)
+
+          replace_once(
+              'const LISTING_ID = /^lst_[0-9a-f]{32}$/;\nconst ORDER_ID = /^ord_[0-9a-f]{32}$/;',
+              'const LISTING_ID = /^lst_[0-9a-f]{32}$/;\nconst RESERVATION_ID = /^mpr_[0-9a-f]{32}$/;\nconst ORDER_ID = /^ord_[0-9a-f]{32}$/;',
+          )
+          replace_once(
+              '  purchase: { completed: false, persisted: false, replaySafe: false, unauthenticatedRejected: false },',
+              '  purchase: { quoteCreated: false, quoteReplaySafe: false, completed: false, persisted: false, replaySafe: false, unauthenticatedRejected: false },',
+          )
+
+          seed = r'''function seedMarketplace() {
+            const row = psql(`
+              with scope as (
+                select game.id as game_id, seller.id as seller_id, buyer.id as buyer_id
+                from public.game_sessions game
+                join public.players seller on seller.game_session_id = game.id
+                join public.players buyer on buyer.game_session_id = game.id
+                where game.name = '${GAME_NAME}'
+                  and seller.player_identifier_normalized = '${PLAYERS.seller.id}'
+                  and buyer.player_identifier_normalized = '${PLAYERS.buyer.id}'
+                limit 1
+              ), selected_item as (
+                select item.id as item_id, item.item_key
+                from public.store_items item, scope
+                where item.game_session_id = scope.game_id
+                order by item.created_at, item.id
+                limit 1
+              ), selected_currency as (
+                select coalesce(
+                  (
+                    select account.currency_code
+                    from public.bank_accounts account
+                    join public.economic_parties party
+                      on party.id = account.party_id
+                     and party.game_session_id = account.game_session_id
+                    join scope on scope.game_id = account.game_session_id
+                    where party.party_kind = 'player'
+                      and party.player_id = scope.seller_id
+                      and party.status = 'active'
+                      and account.account_kind = 'checking'
+                      and account.status = 'active'
+                    order by account.created_at, account.id
+                    limit 1
+                  ),
+                  'ECO'
+                ) as currency_code
+              )
+              select
+                scope.game_id,
+                scope.seller_id,
+                scope.buyer_id,
+                selected_item.item_id,
+                selected_item.item_key,
+                selected_currency.currency_code
+              from scope, selected_item, selected_currency;
+            `, true).split("|");
+            if (row.length !== 6) {
+              throw new Error("Marketplace fixture could not resolve game, players, item, and currency.");
+            }
+            const [gameId, sellerId, buyerId, itemId, itemKey, currency] = row;
+
+            psql(`
+              insert into public.inventory_holdings (
+                game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved
+              ) values ('${gameId}', '${sellerId}', '${itemId}', 10, 0)
+              on conflict on constraint inventory_holdings_scope_unique
+              do update set
+                quantity_owned = greatest(public.inventory_holdings.quantity_owned, 10),
+                quantity_reserved = 0;
+
+              insert into public.marketplace_policies (
+                game_session_id,
+                marketplace_enabled,
+                cross_country_trading_enabled,
+                moderation_required,
+                disputes_enabled
+              ) values ('${gameId}', true, true, false, true)
+              on conflict (game_session_id) do update set
+                marketplace_enabled = true,
+                cross_country_trading_enabled = true,
+                moderation_required = false,
+                disputes_enabled = true;
+
+              select public.record_player_ledger_entry(
+                '${gameId}',
+                '${sellerId}',
+                'checking',
+                1000,
+                '${currency}',
+                'credit',
+                'ledger',
+                'staff_player_balance_adjustment',
+                null,
+                'system',
+                null,
+                jsonb_build_object(
+                  'disposable', true,
+                  'bankTransactionIdempotencyKey',
+                  'connected-marketplace-seller-seed-v1-${currency}'
+                )
+              );
+              select public.record_player_ledger_entry(
+                '${gameId}',
+                '${buyerId}',
+                'checking',
+                1000,
+                '${currency}',
+                'credit',
+                'ledger',
+                'staff_player_balance_adjustment',
+                null,
+                'system',
+                null,
+                jsonb_build_object(
+                  'disposable', true,
+                  'bankTransactionIdempotencyKey',
+                  'connected-marketplace-buyer-seed-v1-${currency}'
+                )
+              );
+            `);
+
+            const buyerAccountKey = psql(`
+              select account.public_key
+              from public.bank_accounts account
+              join public.economic_parties party
+                on party.id = account.party_id
+               and party.game_session_id = account.game_session_id
+              where account.game_session_id = '${gameId}'
+                and party.party_kind = 'player'
+                and party.player_id = '${buyerId}'
+                and party.status = 'active'
+                and account.account_kind = 'checking'
+                and account.currency_code = '${currency}'
+                and account.status = 'active'
+              order by account.created_at, account.id
+              limit 1;
+            `, true);
+            if (!/^bac_[0-9a-f]{32}$/u.test(buyerAccountKey)) {
+              throw new Error("Marketplace fixture could not resolve the Buyer Checking account.");
+            }
+            return { itemKey, currency, buyerAccountKey };
+          }
+
+          function instrument'''
+          source, count = re.subn(
+              r'function seedMarketplace\(\) \{[\s\S]*?\n\}\n\nfunction instrument',
+              seed,
+              source,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not replace the connected Marketplace fixture.")
+
+          replace_once(
+              '    if (!url.includes("/functions/v1/classroom-api/")) return;',
+              '    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/proxy/")) return;',
+          )
+          replace_once(
+              '  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-player-session-token", "x-request-id"]);',
+              '  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);',
+          )
+          replace_once(
+              '    const response = await fetch(url, { method, headers, body, cache: "no-store" });',
+              '    const response = await fetch(url, { method, headers, body, cache: "no-store", credentials: "include" });',
+          )
+          replace_once(
+              '  await form.locator(\'[name="unitPrice"]\').fill(String(price));\n  await form.locator(\'[name="condition"]\').selectOption("Used");',
+              '  await form.locator(\'[name="unitPrice"]\').fill(String(price));\n  const currencyField = form.locator(\'[name="currencyCode"]\');\n  if (await currencyField.count()) {\n    await currencyField.evaluate((element, value) => { element.value = value; }, fixtureData.currency);\n  }\n  await form.locator(\'[name="condition"]\').selectOption("Used");',
+          )
+
+          purchase = r'''async function purchaseListing(page, listing, fixtureData) {
+            await reloadMarketplace(page);
+            const card = page.locator(`[data-player-marketplace-select="${listing.listingId}"]`);
+            await card.waitFor({ state: "visible", timeout: 30_000 });
+            await card.click();
+
+            const quoteForm = page.locator(
+              `[data-player-marketplace-funding-form="quote"][data-listing-id="${listing.listingId}"]`,
+            );
+            await quoteForm.waitFor({ state: "visible", timeout: 30_000 });
+            await quoteForm.locator('[name="quantity"]').fill("1");
+            await quoteForm.locator('[name="sourceAccountKey"]').first().selectOption(
+              fixtureData.buyerAccountKey,
+            );
+            const targetAmountInput = quoteForm.locator('[name="targetAmount"]').first();
+            const targetAmount = Number(await targetAmountInput.inputValue());
+            if (!(targetAmount > 0)) {
+              throw new Error("Marketplace quote form did not expose a positive exact bill.");
+            }
+
+            const quoteResponsePromise = page.waitForResponse(
+              (response) =>
+                new URL(response.url()).pathname.endsWith(
+                  `/players/me/marketplace/listings/${listing.listingId}/quotes`,
+                ) && response.request().method() === "POST",
+              { timeout: 60_000 },
+            );
+            await quoteForm.locator('button[type="submit"]').click();
+            const quoteResponse = await quoteResponsePromise;
+            const quotePayload = await parseJson(quoteResponse);
+            const reservationId = String(
+              quotePayload?.reservation?.reservationKey || "",
+            ).trim();
+            if (
+              ![200, 201].includes(quoteResponse.status()) ||
+              quotePayload?.ok !== true ||
+              !RESERVATION_ID.test(reservationId) ||
+              quotePayload?.reservation?.fundingQuote?.fundingContextKey !== reservationId
+            ) {
+              throw new Error(
+                `Marketplace funding quote failed: ${quoteResponse.status()} ${redact(JSON.stringify(quotePayload))}`,
+              );
+            }
+            evidence.purchase.quoteCreated = true;
+
+            const originalQuote = await capture(quoteResponse);
+            const quoteReplay = await replay(page, originalQuote);
+            if (
+              quoteReplay.status !== 200 ||
+              quoteReplay.payload?.ok !== true ||
+              quoteReplay.payload?.outcome !== "replayed" ||
+              quoteReplay.payload?.reservation?.reservationKey !== reservationId
+            ) {
+              throw new Error(
+                `Marketplace quote replay failed: ${quoteReplay.status} ${redact(JSON.stringify(quoteReplay.payload))}`,
+              );
+            }
+            evidence.purchase.quoteReplaySafe = true;
+
+            const settlementForm = page.locator(
+              `[data-player-marketplace-funding-form="settlement"][data-reservation-id="${reservationId}"]`,
+            );
+            await settlementForm.waitFor({ state: "visible", timeout: 30_000 });
+            const settlementResponsePromise = page.waitForResponse(
+              (response) =>
+                new URL(response.url()).pathname.endsWith(
+                  `/players/me/marketplace/reservations/${reservationId}/settlements`,
+                ) && response.request().method() === "POST",
+              { timeout: 60_000 },
+            );
+            await settlementForm.locator('button[type="submit"]').click();
+            const settlementResponse = await settlementResponsePromise;
+            const settlementPayload = await parseJson(settlementResponse);
+            const orderId = String(settlementPayload?.order?.orderKey || "").trim();
+            if (
+              settlementResponse.status() !== 200 ||
+              settlementPayload?.ok !== true ||
+              !ORDER_ID.test(orderId) ||
+              settlementPayload?.order?.reservationKey !== reservationId
+            ) {
+              throw new Error(
+                `Marketplace settlement failed: ${settlementResponse.status()} ${redact(JSON.stringify(settlementPayload))}`,
+              );
+            }
+            const originalSettlement = await capture(settlementResponse);
+            evidence.purchase.completed = true;
+
+            await reloadMarketplace(page);
+            const orderOption = page.locator(
+              `form[data-endpoint="marketplaceDispute"] option[value="${orderId}"]`,
+            );
+            await orderOption.waitFor({ state: "attached", timeout: 30_000 });
+            evidence.purchase.persisted = true;
+
+            const settlementReplay = await replay(page, originalSettlement);
+            if (
+              settlementReplay.status !== 200 ||
+              settlementReplay.payload?.ok !== true ||
+              settlementReplay.payload?.outcome !== "replayed" ||
+              settlementReplay.payload?.order?.orderKey !== orderId
+            ) {
+              throw new Error(
+                `Marketplace settlement replay failed: ${settlementReplay.status} ${redact(JSON.stringify(settlementReplay.payload))}`,
+              );
+            }
+            evidence.purchase.replaySafe = true;
+
+            const unauthorized = await request(new URL(originalSettlement.url).pathname, {
+              method: originalSettlement.method,
+              headers: platformHeaders(fixtureData.key),
+              body: originalSettlement.body,
+            });
+            if (![401, 403].includes(unauthorized.status)) {
+              throw new Error(
+                `Unauthenticated Marketplace settlement returned ${unauthorized.status}.`,
+              );
+            }
+            evidence.purchase.unauthenticatedRejected = true;
+            return orderId;
+          }
+
+          async function disputeOrder'''
+          source, count = re.subn(
+              r'async function purchaseListing\(page, listing, fixtureData\) \{[\s\S]*?\n\}\n\nasync function disputeOrder',
+              purchase,
+              source,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not replace the connected Marketplace purchase flow.")
+
+          runner_path.write_text(source)
+
+          contract_path = Path("scripts/multicurrency-marketplace-funding-contract.mjs")
+          contract = contract_path.read_text()
+          old_path = '  playerTest: "player-terminal/tests/marketplace-funding-flow.mjs",\n'
+          new_path = old_path + '  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",\n'
+          if contract.count(old_path) != 1:
+              raise SystemExit("Could not register the connected runner in the C2 contract.")
+          contract = contract.replace(old_path, new_path, 1)
+          anchor = '''includesAll("Player funding test", source.playerTest, [
+            "quote from settlement confirmation",
+            "rejects UUIDs and incoherent totals",
+            "legacy purchase tombstone",
+          ]);
+          '''
+          addition = anchor + '''includesAll("connected Marketplace runner", source.connectedRunner, [
+            'data-player-marketplace-funding-form=\\"quote\\"',
+            "/quotes",
+            'data-player-marketplace-funding-form=\\"settlement\\"',
+            "/settlements",
+            "buyerAccountKey",
+            "quoteReplaySafe",
+            "record_player_ledger_entry",
+          ]);
+          for (const forbidden of [
+            "account_type = 'cash'",
+            "/purchase",
+            'data-endpoint=\\"marketplacePurchase\\"',
+          ]) {
+            assert.ok(
+              !source.connectedRunner.includes(forbidden),
+              `Connected Marketplace runner retained a retired funding path: ${forbidden}`,
+            );
+          }
+          '''
+          if contract.count(anchor) != 1:
+              raise SystemExit("Could not extend the C2 connected-runner contract.")
+          contract_path.write_text(contract.replace(anchor, addition, 1))
+          PY
+
+          node --check player-terminal/tools/connected-marketplace-mutation-runner.mjs
+          node scripts/multicurrency-marketplace-funding-contract.mjs
+          node --test player-terminal/tests/marketplace-funding-flow.mjs
+          node player-terminal/tests/marketplace-connected-lifecycle.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --check
+
+      - name: Commit connected runner cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            player-terminal/tools/connected-marketplace-mutation-runner.mjs \
+            scripts/multicurrency-marketplace-funding-contract.mjs \
+            docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "test(marketplace-funding): cut connected runner over to funded settlement"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
