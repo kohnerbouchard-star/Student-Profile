@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/multicurrency-marketplace-funding-v1.yml
+      - backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts
       - backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts
       - backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts
       - backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts
@@ -29,7 +30,11 @@ on:
       - player-terminal/src/features/marketplace/marketplace-funding-read-model.js
       - player-terminal/src/main.js
       - player-terminal/src/pages/marketplace-page.js
+      - player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+      - player-terminal/tests/marketplace-connected-lifecycle.mjs
       - player-terminal/tests/marketplace-funding-flow.mjs
+      - player-terminal/tests/smoke.mjs
+      - player-terminal/tools/connected-marketplace-mutation-runner.mjs
       - scripts/multicurrency-marketplace-funding-contract.mjs
       - scripts/multicurrency-marketplace-funding-concurrency.mjs
       - scripts/multicurrency-marketplace-funding-database.mjs
@@ -52,7 +57,10 @@ on:
       - player-terminal/src/features/marketplace/**
       - player-terminal/src/main.js
       - player-terminal/src/pages/marketplace-page.js
-      - player-terminal/tests/marketplace-funding-flow.mjs
+      - player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+      - player-terminal/tests/marketplace-*.mjs
+      - player-terminal/tests/smoke.mjs
+      - player-terminal/tools/connected-marketplace-mutation-runner.mjs
       - scripts/multicurrency-marketplace-funding-*.mjs
   workflow_dispatch:
 
@@ -116,6 +124,9 @@ jobs:
             --base-ref "$BASE_REF"
           node scripts/multicurrency-marketplace-funding-contract.mjs
           node --test player-terminal/tests/marketplace-funding-flow.mjs
+          node player-terminal/tests/smoke.mjs
+          node player-terminal/tests/marketplace-connected-lifecycle.mjs
+          node --check player-terminal/tools/connected-marketplace-mutation-runner.mjs
           node scripts/validate-supabase-migrations.mjs
           npm --prefix backend run typecheck
           npm --prefix backend run test:player-marketplace
