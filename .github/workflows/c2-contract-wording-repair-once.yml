@@ -1,0 +1,53 @@
+name: C2 structural contract wording repair once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-contract-wording-repair-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Align structural contract with retired route discriminant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path("scripts/multicurrency-marketplace-funding-contract.mjs")
+          source = path.read_text()
+          old = '''  'readonly action: "legacy" | "quote"',
+          '''
+          new = '''  'readonly action: "retired" | "quote"',
+          '''
+          if source.count(old) != 1:
+              raise SystemExit("Expected exactly one obsolete route-discriminant assertion.")
+          path.write_text(source.replace(old, new, 1))
+          PY
+          node scripts/multicurrency-marketplace-funding-contract.mjs
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git diff --check
+
+      - name: Commit corrected contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/multicurrency-marketplace-funding-contract.mjs
+          git commit -m "test(marketplace-funding): align retired route contract"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
