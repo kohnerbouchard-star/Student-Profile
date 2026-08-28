@@ -1,0 +1,63 @@
+name: C2 session fixture repair once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-session-fixture-repair-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out C2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Repair Marketplace browser session serialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("player-terminal/tests/browser/marketplace-lifecycle-core.mjs")
+          source = path.read_text()
+          replacements = [
+              (
+                  "await page.addInitScript(({ csrfToken }) => {",
+                  "await page.addInitScript(({ csrfToken, now }) => {",
+              ),
+              ("      storedAt: NOW,", "      storedAt: now,"),
+              (
+                  "  }, { csrfToken: CSRF_TOKEN });",
+                  "  }, { csrfToken: CSRF_TOKEN, now: NOW });",
+              ),
+          ]
+          for old, new in replacements:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected one replacement target for {old!r}, found {count}")
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          PY
+
+          node --check player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+          git diff --check
+
+      - name: Commit repaired fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+          git commit -m "test(marketplace-funding): serialize browser session timestamp"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
