@@ -15,6 +15,7 @@ const PLAYERS = Object.freeze({
   buyer: { id: "BROWSER-PLAYER-BETA", accessCode: "BROWSER-BETA-ACCESS-002" },
 });
 const LISTING_ID = /^lst_[0-9a-f]{32}$/;
+const RESERVATION_ID = /^mpr_[0-9a-f]{32}$/;
 const ORDER_ID = /^ord_[0-9a-f]{32}$/;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
@@ -23,7 +24,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
   listing: { created: false, activated: false, persisted: false },
-  purchase: { completed: false, persisted: false, replaySafe: false, unauthenticatedRejected: false },
+  purchase: { quoteCreated: false, quoteReplaySafe: false, completed: false, persisted: false, replaySafe: false, unauthenticatedRejected: false },
   dispute: { opened: false, persisted: false },
   cancellation: { created: false, cancelled: false, persisted: false },
   requests: [],
@@ -114,31 +115,118 @@ function seedMarketplace() {
       limit 1
     ), selected_currency as (
       select coalesce(
-        (select balance.currency_code from public.account_balances balance, scope where balance.game_session_id = scope.game_id and balance.player_id = scope.seller_id and balance.account_type = 'cash' limit 1),
+        (
+          select account.currency_code
+          from public.bank_accounts account
+          join public.economic_parties party
+            on party.id = account.party_id
+           and party.game_session_id = account.game_session_id
+          join scope on scope.game_id = account.game_session_id
+          where party.party_kind = 'player'
+            and party.player_id = scope.seller_id
+            and party.status = 'active'
+            and account.account_kind = 'checking'
+            and account.status = 'active'
+          order by account.created_at, account.id
+          limit 1
+        ),
         'ECO'
       ) as currency_code
     )
-    select scope.game_id, scope.seller_id, scope.buyer_id, selected_item.item_id, selected_item.item_key, selected_currency.currency_code
+    select
+      scope.game_id,
+      scope.seller_id,
+      scope.buyer_id,
+      selected_item.item_id,
+      selected_item.item_key,
+      selected_currency.currency_code
     from scope, selected_item, selected_currency;
   `, true).split("|");
-  if (row.length !== 6) throw new Error("Marketplace fixture could not resolve game, players, item, and currency.");
+  if (row.length !== 6) {
+    throw new Error("Marketplace fixture could not resolve game, players, item, and currency.");
+  }
   const [gameId, sellerId, buyerId, itemId, itemKey, currency] = row;
 
   psql(`
-    insert into public.inventory_holdings (game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved)
-    values ('${gameId}', '${sellerId}', '${itemId}', 10, 0)
+    insert into public.inventory_holdings (
+      game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved
+    ) values ('${gameId}', '${sellerId}', '${itemId}', 10, 0)
     on conflict on constraint inventory_holdings_scope_unique
-    do update set quantity_owned = greatest(public.inventory_holdings.quantity_owned, 10), quantity_reserved = 0;
+    do update set
+      quantity_owned = greatest(public.inventory_holdings.quantity_owned, 10),
+      quantity_reserved = 0;
 
-    insert into public.marketplace_policies (game_session_id, marketplace_enabled, cross_country_trading_enabled, moderation_required, disputes_enabled)
-    values ('${gameId}', true, true, false, true)
-    on conflict (game_session_id) do update
-    set marketplace_enabled = true, cross_country_trading_enabled = true, moderation_required = false, disputes_enabled = true;
+    insert into public.marketplace_policies (
+      game_session_id,
+      marketplace_enabled,
+      cross_country_trading_enabled,
+      moderation_required,
+      disputes_enabled
+    ) values ('${gameId}', true, true, false, true)
+    on conflict (game_session_id) do update set
+      marketplace_enabled = true,
+      cross_country_trading_enabled = true,
+      moderation_required = false,
+      disputes_enabled = true;
 
-    select public.record_player_ledger_entry('${gameId}', '${sellerId}', 'cash', 1000, '${currency}', 'credit', 'acceptance', 'marketplace_seller_seed', gen_random_uuid(), 'system', null, '{"disposable":true}'::jsonb);
-    select public.record_player_ledger_entry('${gameId}', '${buyerId}', 'cash', 1000, '${currency}', 'credit', 'acceptance', 'marketplace_buyer_seed', gen_random_uuid(), 'system', null, '{"disposable":true}'::jsonb);
+    select public.record_player_ledger_entry(
+      '${gameId}',
+      '${sellerId}',
+      'checking',
+      1000,
+      '${currency}',
+      'credit',
+      'ledger',
+      'staff_player_balance_adjustment',
+      null,
+      'system',
+      null,
+      jsonb_build_object(
+        'disposable', true,
+        'bankTransactionIdempotencyKey',
+        'connected-marketplace-seller-seed-v1-${currency}'
+      )
+    );
+    select public.record_player_ledger_entry(
+      '${gameId}',
+      '${buyerId}',
+      'checking',
+      1000,
+      '${currency}',
+      'credit',
+      'ledger',
+      'staff_player_balance_adjustment',
+      null,
+      'system',
+      null,
+      jsonb_build_object(
+        'disposable', true,
+        'bankTransactionIdempotencyKey',
+        'connected-marketplace-buyer-seed-v1-${currency}'
+      )
+    );
   `);
-  return { itemKey, currency };
+
+  const buyerAccountKey = psql(`
+    select account.public_key
+    from public.bank_accounts account
+    join public.economic_parties party
+      on party.id = account.party_id
+     and party.game_session_id = account.game_session_id
+    where account.game_session_id = '${gameId}'
+      and party.party_kind = 'player'
+      and party.player_id = '${buyerId}'
+      and party.status = 'active'
+      and account.account_kind = 'checking'
+      and account.currency_code = '${currency}'
+      and account.status = 'active'
+    order by account.created_at, account.id
+    limit 1;
+  `, true);
+  if (!/^bac_[0-9a-f]{32}$/u.test(buyerAccountKey)) {
+    throw new Error("Marketplace fixture could not resolve the Buyer Checking account.");
+  }
+  return { itemKey, currency, buyerAccountKey };
 }
 
 function instrument(page, label) {
@@ -148,7 +236,7 @@ function instrument(page, label) {
   page.on("pageerror", (error) => evidence.pageErrors.push(`${label}: ${redact(error?.message || error)}`));
   page.on("response", async (response) => {
     const url = response.url();
-    if (!url.includes("/functions/v1/classroom-api/")) return;
+    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/proxy/")) return;
     evidence.requests.push({ label, method: response.request().method(), path: redact(new URL(url).pathname), status: response.status() });
     if (!(response.headers()["content-type"] || "").includes("application/json")) return;
     const body = await response.text().catch(() => "");
@@ -199,13 +287,13 @@ async function reloadMarketplace(page) {
 async function capture(response) {
   const record = response.request();
   const headers = await record.allHeaders();
-  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-player-session-token", "x-request-id"]);
+  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);
   return { url: response.url(), method: record.method(), body: record.postData() || "{}", headers: Object.fromEntries(Object.entries(headers).filter(([name]) => allowed.has(name.toLowerCase()))) };
 }
 
 async function replay(page, original) {
   return page.evaluate(async ({ url, method, headers, body }) => {
-    const response = await fetch(url, { method, headers, body, cache: "no-store" });
+    const response = await fetch(url, { method, headers, body, cache: "no-store", credentials: "include" });
     return { status: response.status, payload: await response.json().catch(() => null) };
   }, original);
 }
@@ -219,6 +307,10 @@ async function createListing(page, fixtureData, price) {
   await form.locator('[name="itemKey"]').selectOption(fixtureData.itemKey);
   await form.locator('[name="quantity"]').fill("1");
   await form.locator('[name="unitPrice"]').fill(String(price));
+  const currencyField = form.locator('[name="currencyCode"]');
+  if (await currencyField.count()) {
+    await currencyField.evaluate((element, value) => { element.value = value; }, fixtureData.currency);
+  }
   await form.locator('[name="condition"]').selectOption("Used");
   const responsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/marketplace/listings") && response.request().method() === "POST",
@@ -258,37 +350,118 @@ async function purchaseListing(page, listing, fixtureData) {
   const card = page.locator(`[data-player-marketplace-select="${listing.listingId}"]`);
   await card.waitFor({ state: "visible", timeout: 30_000 });
   await card.click();
-  const form = page.locator(`form[data-endpoint="marketplacePurchase"] input[name="listingId"][value="${listing.listingId}"]`).locator("xpath=ancestor::form[1]");
-  await form.locator('[name="quantity"]').fill("1");
-  const responsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith(`/players/me/marketplace/listings/${listing.listingId}/purchase`) && response.request().method() === "POST",
+
+  const quoteForm = page.locator(
+    `[data-player-marketplace-funding-form="quote"][data-listing-id="${listing.listingId}"]`,
+  );
+  await quoteForm.waitFor({ state: "visible", timeout: 30_000 });
+  await quoteForm.locator('[name="quantity"]').fill("1");
+  await quoteForm.locator('[name="sourceAccountKey"]').first().selectOption(
+    fixtureData.buyerAccountKey,
+  );
+  const targetAmountInput = quoteForm.locator('[name="targetAmount"]').first();
+  const targetAmount = Number(await targetAmountInput.inputValue());
+  if (!(targetAmount > 0)) {
+    throw new Error("Marketplace quote form did not expose a positive exact bill.");
+  }
+
+  const quoteResponsePromise = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith(
+        `/players/me/marketplace/listings/${listing.listingId}/quotes`,
+      ) && response.request().method() === "POST",
     { timeout: 60_000 },
   );
-  await form.locator('button[type="submit"]').click();
-  const response = await responsePromise;
-  const payload = await parseJson(response);
-  const orderId = String(payload?.target?.id || "").trim();
-  if (response.status() !== 200 || payload?.ok !== true || !ORDER_ID.test(orderId)) throw new Error(`Purchase listing failed: ${response.status()} ${redact(JSON.stringify(payload))}`);
-  const original = await capture(response);
+  await quoteForm.locator('button[type="submit"]').click();
+  const quoteResponse = await quoteResponsePromise;
+  const quotePayload = await parseJson(quoteResponse);
+  const reservationId = String(
+    quotePayload?.reservation?.reservationKey || "",
+  ).trim();
+  if (
+    ![200, 201].includes(quoteResponse.status()) ||
+    quotePayload?.ok !== true ||
+    !RESERVATION_ID.test(reservationId) ||
+    quotePayload?.reservation?.fundingQuote?.fundingContextKey !== reservationId
+  ) {
+    throw new Error(
+      `Marketplace funding quote failed: ${quoteResponse.status()} ${redact(JSON.stringify(quotePayload))}`,
+    );
+  }
+  evidence.purchase.quoteCreated = true;
+
+  const originalQuote = await capture(quoteResponse);
+  const quoteReplay = await replay(page, originalQuote);
+  if (
+    quoteReplay.status !== 200 ||
+    quoteReplay.payload?.ok !== true ||
+    quoteReplay.payload?.outcome !== "replayed" ||
+    quoteReplay.payload?.reservation?.reservationKey !== reservationId
+  ) {
+    throw new Error(
+      `Marketplace quote replay failed: ${quoteReplay.status} ${redact(JSON.stringify(quoteReplay.payload))}`,
+    );
+  }
+  evidence.purchase.quoteReplaySafe = true;
+
+  const settlementForm = page.locator(
+    `[data-player-marketplace-funding-form="settlement"][data-reservation-id="${reservationId}"]`,
+  );
+  await settlementForm.waitFor({ state: "visible", timeout: 30_000 });
+  const settlementResponsePromise = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith(
+        `/players/me/marketplace/reservations/${reservationId}/settlements`,
+      ) && response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await settlementForm.locator('button[type="submit"]').click();
+  const settlementResponse = await settlementResponsePromise;
+  const settlementPayload = await parseJson(settlementResponse);
+  const orderId = String(settlementPayload?.order?.orderKey || "").trim();
+  if (
+    settlementResponse.status() !== 200 ||
+    settlementPayload?.ok !== true ||
+    !ORDER_ID.test(orderId) ||
+    settlementPayload?.order?.reservationKey !== reservationId
+  ) {
+    throw new Error(
+      `Marketplace settlement failed: ${settlementResponse.status()} ${redact(JSON.stringify(settlementPayload))}`,
+    );
+  }
+  const originalSettlement = await capture(settlementResponse);
   evidence.purchase.completed = true;
 
   await reloadMarketplace(page);
-  const orderOption = page.locator(`form[data-endpoint="marketplaceDispute"] option[value="${orderId}"]`);
+  const orderOption = page.locator(
+    `form[data-endpoint="marketplaceDispute"] option[value="${orderId}"]`,
+  );
   await orderOption.waitFor({ state: "attached", timeout: 30_000 });
   evidence.purchase.persisted = true;
 
-  const replayResult = await replay(page, original);
-  if (replayResult.status !== 200 || replayResult.payload?.ok !== true || replayResult.payload?.outcome !== "replayed") {
-    throw new Error(`Purchase replay failed: ${replayResult.status} ${redact(JSON.stringify(replayResult.payload))}`);
+  const settlementReplay = await replay(page, originalSettlement);
+  if (
+    settlementReplay.status !== 200 ||
+    settlementReplay.payload?.ok !== true ||
+    settlementReplay.payload?.outcome !== "replayed" ||
+    settlementReplay.payload?.order?.orderKey !== orderId
+  ) {
+    throw new Error(
+      `Marketplace settlement replay failed: ${settlementReplay.status} ${redact(JSON.stringify(settlementReplay.payload))}`,
+    );
   }
   evidence.purchase.replaySafe = true;
 
-  const unauthorized = await request(new URL(original.url).pathname, {
-    method: original.method,
+  const unauthorized = await request(new URL(originalSettlement.url).pathname, {
+    method: originalSettlement.method,
     headers: platformHeaders(fixtureData.key),
-    body: original.body,
+    body: originalSettlement.body,
   });
-  if (![401, 403].includes(unauthorized.status)) throw new Error(`Unauthenticated Marketplace purchase returned ${unauthorized.status}.`);
+  if (![401, 403].includes(unauthorized.status)) {
+    throw new Error(
+      `Unauthenticated Marketplace settlement returned ${unauthorized.status}.`,
+    );
+  }
   evidence.purchase.unauthenticatedRejected = true;
   return orderId;
 }

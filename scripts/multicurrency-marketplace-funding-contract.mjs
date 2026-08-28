@@ -24,6 +24,7 @@ const paths = Object.freeze({
   playerPage: "player-terminal/src/pages/marketplace-page.js",
   playerMain: "player-terminal/src/main.js",
   playerTest: "player-terminal/tests/marketplace-funding-flow.mjs",
+  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
   scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
   authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
 });
@@ -250,6 +251,25 @@ includesAll("Player funding test", source.playerTest, [
   "rejects UUIDs and incoherent totals",
   "legacy purchase tombstone",
 ]);
+includesAll("connected Marketplace runner", source.connectedRunner, [
+  'data-player-marketplace-funding-form=\"quote\"',
+  "/quotes",
+  'data-player-marketplace-funding-form=\"settlement\"',
+  "/settlements",
+  "buyerAccountKey",
+  "quoteReplaySafe",
+  "record_player_ledger_entry",
+]);
+for (const forbidden of [
+  "account_type = 'cash'",
+  "/purchase",
+  'data-endpoint=\"marketplacePurchase\"',
+]) {
+  assert.ok(
+    !source.connectedRunner.includes(forbidden),
+    `Connected Marketplace runner retained a retired funding path: ${forbidden}`,
+  );
+}
 
 const authority = JSON.parse(source.authority);
 assert.equal(authority.pullRequestNumber, 675);
