@@ -1,0 +1,51 @@
+name: C2 active listing fixture repair once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-active-listing-fixture-repair-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out C2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Repair seller-side active-listing persistence assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("player-terminal/tools/connected-marketplace-mutation-runner.mjs")
+          source = path.read_text()
+          old = '  const card = page.locator(`[data-player-marketplace-select="${listing.listingId}"]`);\n  await card.waitFor({ state: "visible", timeout: 30_000 });\n  evidence.listing.persisted = true;'
+          new = '  const cancelControl = page.locator(\n    `form[data-endpoint="marketplaceCancel"] input[name="listingId"][value="${listing.listingId}"]`,\n  );\n  await cancelControl.waitFor({ state: "attached", timeout: 30_000 });\n  const staleActivateControl = page.locator(\n    `form[data-endpoint="marketplaceActivate"] input[name="listingId"][value="${listing.listingId}"]`,\n  );\n  if (await staleActivateControl.count()) {\n    throw new Error("Activated seller listing still rendered the draft activation control.");\n  }\n  evidence.listing.persisted = true;'
+          count = source.count(old)
+          if count != 1:
+              raise SystemExit(f"expected one seller listing-card assertion, found {count}")
+          path.write_text(source.replace(old, new, 1))
+          PY
+          node --check player-terminal/tools/connected-marketplace-mutation-runner.mjs
+          git diff --check
+
+      - name: Commit repaired fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add player-terminal/tools/connected-marketplace-mutation-runner.mjs
+          git commit -m "test(marketplace-funding): verify seller-owned active listing"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
