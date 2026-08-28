@@ -354,8 +354,16 @@ async function activateListing(page, listing) {
   if (response.status() !== 200 || payload?.ok !== true || payload?.target?.status !== "active") throw new Error(`Activate listing failed: ${response.status()}.`);
   evidence.listing.activated = true;
   await reloadMarketplace(page);
-  const card = page.locator(`[data-player-marketplace-select="${listing.listingId}"]`);
-  await card.waitFor({ state: "visible", timeout: 30_000 });
+  const cancelControl = page.locator(
+    `form[data-endpoint="marketplaceCancel"] input[name="listingId"][value="${listing.listingId}"]`,
+  );
+  await cancelControl.waitFor({ state: "attached", timeout: 30_000 });
+  const staleActivateControl = page.locator(
+    `form[data-endpoint="marketplaceActivate"] input[name="listingId"][value="${listing.listingId}"]`,
+  );
+  if (await staleActivateControl.count()) {
+    throw new Error("Activated seller listing still rendered the draft activation control.");
+  }
   evidence.listing.persisted = true;
 }
 
