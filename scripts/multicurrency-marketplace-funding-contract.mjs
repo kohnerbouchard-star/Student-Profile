@@ -155,7 +155,7 @@ includesAll("repository", source.repository, [
 
 includesAll("authenticated route", source.route, [
   'readonly kind: "purchase"',
-  'readonly action: "legacy" | "quote"',
+  'readonly action: "retired" | "quote"',
   'readonly action: "settlement"',
   "|quotes",
   "/settlements",
