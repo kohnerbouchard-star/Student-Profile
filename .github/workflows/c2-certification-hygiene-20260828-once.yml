@@ -1,0 +1,117 @@
+name: C2 certification hygiene once
+
+on:
+  push:
+    branches:
+      - automation/c0-certification-fallback-20260827
+    paths:
+      - .github/workflows/c2-certification-hygiene-20260828-once.yml
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      C2_BRANCH: feat/multicurrency-marketplace-funding-v1
+      AUTOMATION_BRANCH: automation/c0-certification-fallback-20260827
+      C2_PR: "675"
+    steps:
+      - name: Check out automation branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: automation/c0-certification-fallback-20260827
+          fetch-depth: 0
+
+      - name: Read terminal C2 controller state
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINALIZER_ID=""
+          FINALIZER_STATUS=""
+          FINALIZER_CONCLUSION=""
+          LOCAL_ID=""
+          LOCAL_CONCLUSION=""
+          for ATTEMPT in $(seq 1 100); do
+            RUNS="$(gh api --method GET "/repos/${REPOSITORY}/actions/runs?branch=${C2_BRANCH}&per_page=100")"
+            FINALIZER_ID="$(jq -r '[.workflow_runs[] | select(.name == "C2 exact-head finalizer once")][0].id // empty' <<<"$RUNS")"
+            FINALIZER_STATUS="$(jq -r '[.workflow_runs[] | select(.name == "C2 exact-head finalizer once")][0].status // empty' <<<"$RUNS")"
+            FINALIZER_CONCLUSION="$(jq -r '[.workflow_runs[] | select(.name == "C2 exact-head finalizer once")][0].conclusion // empty' <<<"$RUNS")"
+            LOCAL_ID="$(jq -r '[.workflow_runs[] | select(.name == "C2 local certification once")][0].id // empty' <<<"$RUNS")"
+            LOCAL_CONCLUSION="$(jq -r '[.workflow_runs[] | select(.name == "C2 local certification once")][0].conclusion // empty' <<<"$RUNS")"
+            if [[ -n "$FINALIZER_ID" && "$FINALIZER_STATUS" == "completed" ]]; then
+              break
+            fi
+            sleep 15
+          done
+          test -n "$FINALIZER_ID"
+          test "$FINALIZER_STATUS" = "completed"
+          echo "finalizer_id=${FINALIZER_ID}" >> "$GITHUB_OUTPUT"
+          echo "finalizer_conclusion=${FINALIZER_CONCLUSION}" >> "$GITHUB_OUTPUT"
+          echo "local_id=${LOCAL_ID}" >> "$GITHUB_OUTPUT"
+          echo "local_conclusion=${LOCAL_CONCLUSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Remove stranded C2 carriers without touching implementation
+        id: c2_cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$C2_BRANCH"
+          git checkout -B "$C2_BRANCH" "origin/${C2_BRANCH}"
+          rm -f \
+            .github/workflows/c2-local-certification-20260828-once.yml \
+            .github/workflows/c2-exact-head-finalizer-20260828-once.yml
+          if ! git diff --quiet; then
+            git diff --check
+            git add -A
+            git commit -m "chore(c2): remove terminal certification carriers"
+            git push origin "HEAD:${C2_BRANCH}"
+          fi
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Record exact terminal outcome on PR #675
+        shell: bash
+        env:
+          FINALIZER_ID: ${{ steps.state.outputs.finalizer_id }}
+          FINALIZER_CONCLUSION: ${{ steps.state.outputs.finalizer_conclusion }}
+          LOCAL_ID: ${{ steps.state.outputs.local_id }}
+          LOCAL_CONCLUSION: ${{ steps.state.outputs.local_conclusion }}
+          CLEAN_HEAD: ${{ steps.c2_cleanup.outputs.head }}
+        run: |
+          set -euo pipefail
+          cat > /tmp/c2-controller-comment.md <<EOF
+          C2 certification controller reached a terminal state.
+
+          - Clean-tree local run: \`${LOCAL_ID}\` — \`${LOCAL_CONCLUSION}\`
+          - Exact-head finalizer run: \`${FINALIZER_ID}\` — \`${FINALIZER_CONCLUSION}\`
+          - Carrier-free branch head after hygiene: \`${CLEAN_HEAD}\`
+
+          A successful finalizer is authoritative only when the durable implementation handoff is present and records the exact tested implementation SHA. A failed finalizer leaves C2 uncertified and C3 runtime work closed. No merge, deployment, scheduler, secret, or live-database operation was performed by this controller.
+          EOF
+          sed -i 's/^          //' /tmp/c2-controller-comment.md
+          gh pr comment "$C2_PR" --repo "$REPOSITORY" --body-file /tmp/c2-controller-comment.md
+
+      - name: Remove hygiene carrier
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$AUTOMATION_BRANCH"
+          git checkout -B "$AUTOMATION_BRANCH" "origin/${AUTOMATION_BRANCH}"
+          if [[ -f .github/workflows/c2-certification-hygiene-20260828-once.yml ]]; then
+            rm .github/workflows/c2-certification-hygiene-20260828-once.yml
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(c2): remove certification hygiene carrier"
+            git push origin "HEAD:${AUTOMATION_BRANCH}"
+          fi
