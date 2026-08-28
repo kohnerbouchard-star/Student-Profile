@@ -233,7 +233,7 @@ export async function handlePlayerMarketplaceRequest(
         ),
         idempotencyKey: idempotency(body.idempotencyKey),
       });
-    } else {
+    } else if (route.kind === "dispute") {
       exactKeys(body, ["reason", "idempotencyKey"]);
       result = await repository.openDispute({
         gameSessionId: scope.gameId,
@@ -243,6 +243,8 @@ export async function handlePlayerMarketplaceRequest(
         idempotencyKey: idempotency(body.idempotencyKey),
       });
       status = result.outcome === "applied" ? 201 : 200;
+    } else {
+      throw invalid("Marketplace route is malformed.");
     }
 
     return privateResponse(status, {
