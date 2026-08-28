@@ -12,8 +12,39 @@ function object(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 function list(value) {
-  return Array.isArray(value) ? value : [];
-}
+      return Array.isArray(value) ? value : [];
+    }
+    function currencyMinorUnit(terminal, currencyCode) {
+      const code = String(currencyCode || "").trim().toUpperCase();
+      const currencies = list(terminal.getState()?.data?.bankingFx?.currencies);
+      const minorUnit = Number(
+        currencies.find((entry) => entry?.currencyCode === code)?.minorUnit,
+      );
+      return Number.isSafeInteger(minorUnit) && minorUnit >= 0 && minorUnit <= 4
+        ? minorUnit
+        : 2;
+    }
+    function roundCurrency(value, minorUnit) {
+      const factor = 10 ** minorUnit;
+      return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
+    }
+    function estimatedMarketplaceBill(terminal, listing, quantity) {
+      const market = currentMarketplace(terminal);
+      const minorUnit = currencyMinorUnit(terminal, listing?.currencyCode);
+      const subtotal = roundCurrency(
+        Math.max(0, Number(listing?.unitPrice) || 0) * Math.max(0, Number(quantity) || 0),
+        minorUnit,
+      );
+      const feeAmount = roundCurrency(
+        subtotal * Math.max(0, Number(market.platformFeeRate) || 0) / 100,
+        minorUnit,
+      );
+      const taxAmount = roundCurrency(
+        subtotal * Math.max(0, Number(market.taxRate) || 0) / 100,
+        minorUnit,
+      );
+      return roundCurrency(subtotal + feeAmount + taxAmount, minorUnit);
+    }
 function dispatchInvalidSession(error, config, runtime = globalThis) {
   if (Number(error?.status) !== 401) return false;
   const detail = Object.freeze({
@@ -69,11 +100,10 @@ function selectedListing(terminal, form) {
   ) || null;
 }
 function estimatedBill(terminal, form) {
-  const listing = selectedListing(terminal, form);
-  const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
-  const feeRate = Math.max(0, Number(currentMarketplace(terminal).feeRate) || 0);
-  return listing ? quantity * Number(listing.unitPrice) * (1 + feeRate / 100) : 0;
-}
+      const listing = selectedListing(terminal, form);
+      const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
+      return listing ? estimatedMarketplaceBill(terminal, listing, quantity) : 0;
+    }
 function allocationRows(form) {
   return [...form.querySelectorAll("[data-player-marketplace-funding-row]")];
 }
@@ -112,17 +142,22 @@ function updateAllocationSummary(mount, terminal, form) {
     ? allocation.allocations.reduce((sum, row) => sum + row.targetAmount, 0)
     : 0;
   const listing = selectedListing(terminal, form);
-  const currencyCode = String(listing?.currencyCode || "ECO").toUpperCase();
+    const currencyCode = String(listing?.currencyCode || "ECO").toUpperCase();
+    const minorUnit = currencyMinorUnit(terminal, currencyCode);
   const estimateNode = form.querySelector("[data-player-marketplace-estimated-total]");
   const allocatedNode = form.querySelector("[data-player-marketplace-allocated-total]");
   const remainingNode = form.querySelector("[data-player-marketplace-remaining-total]");
   if (estimateNode) estimateNode.textContent = formatCurrency(estimate, currencyCode);
   if (allocatedNode) allocatedNode.textContent = formatCurrency(funded, currencyCode);
   if (remainingNode) {
-    remainingNode.textContent = formatCurrency(Math.max(estimate - funded, 0), currencyCode);
+    remainingNode.textContent = formatCurrency(
+    Math.max(roundCurrency(estimate - funded, minorUnit), 0),
+    currencyCode,
+  );
   }
   const submit = form.querySelector('button[type="submit"]');
-  const coherent = !allocation.error && estimate > 0 && Math.abs(funded - estimate) <= 0.005;
+  const coherent = !allocation.error && estimate > 0 &&
+    Math.abs(roundCurrency(funded, minorUnit) - estimate) <= 10 ** -(minorUnit + 6);
   if (submit) submit.disabled = !coherent;
 }
 function invalidateQuote(mount, terminal) {
@@ -160,9 +195,26 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
       return;
     }
     if (quantity > Number(listing.quantity)) {
-      showError(mount, "The requested quantity exceeds the available listing quantity.");
-      return;
-    }
+    showError(mount, "The requested quantity exceeds the available listing quantity.");
+    return;
+  }
+  const minorUnit = currencyMinorUnit(terminal, listing.currencyCode);
+  if (allocation.allocations.some((row) =>
+    Math.abs(row.targetAmount - roundCurrency(row.targetAmount, minorUnit)) >
+      10 ** -(minorUnit + 6)
+  )) {
+    showError(mount, `Use ${minorUnit} decimal places for ${listing.currencyCode}.`);
+    return;
+  }
+  const expectedTotal = estimatedMarketplaceBill(terminal, listing, quantity);
+  const allocatedTotal = roundCurrency(
+    allocation.allocations.reduce((sum, row) => sum + row.targetAmount, 0),
+    minorUnit,
+  );
+  if (Math.abs(allocatedTotal - expectedTotal) > 10 ** -(minorUnit + 6)) {
+    showError(mount, "Funding allocations must pay the exact listing-currency bill.");
+    return;
+  }
     const button = form.querySelector('button[type="submit"]');
     const restore = setButtonProcessing(button, "Pricing quote");
     pending = true;

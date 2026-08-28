@@ -13,11 +13,46 @@ function localDate(value) {
   const timestamp = Date.parse(String(value || ""));
   return Number.isFinite(timestamp) ? new Date(timestamp).toLocaleString() : "Unavailable";
 }
-function decimalInput(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number <= 0) return "";
-  return number.toFixed(4).replace(/0+$/u, "").replace(/\.$/u, "");
-}
+function currencyMinorUnit(data, currencyCode) {
+      const code = String(currencyCode || "").trim().toUpperCase();
+      const currencies = Array.isArray(data?.bankingFx?.currencies)
+        ? data.bankingFx.currencies
+        : [];
+      const minorUnit = Number(
+        currencies.find((entry) => entry?.currencyCode === code)?.minorUnit,
+      );
+      return Number.isSafeInteger(minorUnit) && minorUnit >= 0 && minorUnit <= 4
+        ? minorUnit
+        : 2;
+    }
+    function roundCurrency(value, minorUnit) {
+      const factor = 10 ** minorUnit;
+      return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
+    }
+    function estimatedMarketplaceBill(data, market, listing, quantity = 1) {
+      const minorUnit = currencyMinorUnit(data, listing?.currencyCode);
+      const subtotal = roundCurrency(
+        Math.max(0, Number(listing?.unitPrice) || 0) * Math.max(0, Number(quantity) || 0),
+        minorUnit,
+      );
+      const feeAmount = roundCurrency(
+        subtotal * Math.max(0, Number(market?.platformFeeRate) || 0) / 100,
+        minorUnit,
+      );
+      const taxAmount = roundCurrency(
+        subtotal * Math.max(0, Number(market?.taxRate) || 0) / 100,
+        minorUnit,
+      );
+      return roundCurrency(subtotal + feeAmount + taxAmount, minorUnit);
+    }
+    function decimalInput(value, minorUnit = 4) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number <= 0) return "";
+      const precision = Number.isSafeInteger(minorUnit)
+        ? Math.min(4, Math.max(0, minorUnit))
+        : 4;
+      return number.toFixed(precision).replace(/0+$/u, "").replace(/\.$/u, "");
+    }
 function listingCard(listing, selected) {
   const rating = Number(listing.rating);
   const sellerContext = Number.isFinite(rating)
@@ -51,12 +86,13 @@ function checkingAccounts(data) {
 function accountOptions(accounts, selectedKey = "") {
   return `<option value="">Choose Checking account</option>${accounts.map((account) => `<option value="${escapeHtml(account.accountKey)}" ${account.accountKey === selectedKey ? "selected" : ""}>${escapeHtml(account.currencyCode)} · ${escapeHtml(formatCurrency(account.availableAmount, account.currencyCode))} available</option>`).join("")}`;
 }
-function fundingAccountRows(accounts, estimatedTotal) {
-  return [0, 1, 2].map((index) => {
-    const first = index === 0 ? accounts[0] : null;
-    return `<fieldset data-player-marketplace-funding-row><legend>ACCOUNT ${index + 1}</legend><label>CHECKING ACCOUNT<select name="sourceAccountKey" ${index === 0 ? "required" : ""}>${accountOptions(accounts, first?.accountKey || "")}</select></label><label>LISTING-CURRENCY ALLOCATION<input name="targetAmount" type="number" min="0.0001" step="0.0001" value="${index === 0 ? escapeHtml(decimalInput(estimatedTotal)) : ""}" ${index === 0 ? "required" : ""} /></label></fieldset>`;
-  }).join("");
-}
+function fundingAccountRows(accounts, estimatedTotal, minorUnit) {
+      const increment = decimalInput(10 ** -minorUnit, minorUnit);
+      return [0, 1, 2].map((index) => {
+        const first = index === 0 ? accounts[0] : null;
+        return `<fieldset data-player-marketplace-funding-row><legend>ACCOUNT ${index + 1}</legend><label>CHECKING ACCOUNT<select name="sourceAccountKey" ${index === 0 ? "required" : ""}>${accountOptions(accounts, first?.accountKey || "")}</select></label><label>LISTING-CURRENCY ALLOCATION<input name="targetAmount" type="number" min="${escapeHtml(increment)}" step="${escapeHtml(increment)}" value="${index === 0 ? escapeHtml(decimalInput(estimatedTotal, minorUnit)) : ""}" ${index === 0 ? "required" : ""} /></label></fieldset>`;
+      }).join("");
+    }
 function quoteLine(line, targetCurrencyCode) {
   const treatment = line.requiresFx
     ? `${line.sourceCurrencyCode} → ${targetCurrencyCode} retail FX`
@@ -71,13 +107,13 @@ function fundingQuotePanel(quote) {
 function purchasePanel(data, market, selected, enabled) {
   if (!selected) return renderEmptyState({ title: "No listing selected", detail: "No active Marketplace listing is available.", iconName: "marketplace" });
   const accounts = checkingAccounts(data);
-  const feeRate = Number.isFinite(Number(market.feeRate)) ? Number(market.feeRate) : 0;
-  const estimatedTotal = selected.unitPrice * (1 + feeRate / 100);
+  const minorUnit = currencyMinorUnit(data, selected.currencyCode);
+    const estimatedTotal = estimatedMarketplaceBill(data, market, selected, 1);
   const currentQuote = market.currentFundingQuote?.listingKey === selected.id
     ? market.currentFundingQuote
     : null;
   const accountForm = accounts.length
-    ? `<form data-player-marketplace-funding-form="quote" data-listing-id="${escapeHtml(selected.id)}"><label>QUANTITY<input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantity)}" value="1" required /></label><div class="player-terminal-marketplace-funding-accounts">${fundingAccountRows(accounts, estimatedTotal)}</div><div class="player-terminal-marketplace-total"><small>ESTIMATED LISTING-CURRENCY BILL</small><strong data-player-marketplace-estimated-total>${escapeHtml(formatCurrency(estimatedTotal, selected.currencyCode))}</strong><span>Allocated <strong data-player-marketplace-allocated-total>${escapeHtml(formatCurrency(estimatedTotal, selected.currencyCode))}</strong> · Remaining <strong data-player-marketplace-remaining-total>${escapeHtml(formatCurrency(0, selected.currencyCode))}</strong></span></div><button class="player-terminal-primary-button" type="submit" ${enabled ? "" : "disabled"}>${icon("eye")} Review exact funding quote</button></form>`
+    ? `<form data-player-marketplace-funding-form="quote" data-listing-id="${escapeHtml(selected.id)}"><label>QUANTITY<input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantity)}" value="1" required /></label><div class="player-terminal-marketplace-funding-accounts">${fundingAccountRows(accounts, estimatedTotal, minorUnit)}</div><div class="player-terminal-marketplace-total"><small>ESTIMATED LISTING-CURRENCY BILL</small><strong data-player-marketplace-estimated-total>${escapeHtml(formatCurrency(estimatedTotal, selected.currencyCode))}</strong><span>Allocated <strong data-player-marketplace-allocated-total>${escapeHtml(formatCurrency(estimatedTotal, selected.currencyCode))}</strong> · Remaining <strong data-player-marketplace-remaining-total>${escapeHtml(formatCurrency(0, selected.currencyCode))}</strong></span></div><button class="player-terminal-primary-button" type="submit" ${enabled ? "" : "disabled"}>${icon("eye")} Review exact funding quote</button></form>`
     : `<div class="player-terminal-route-error" role="status"><small>CHECKING ACCOUNTS REQUIRED</small><p>Open Banking and provision an active Checking account before purchasing from Marketplace.</p></div>`;
   return `<header class="player-terminal-panel-header"><div><span>LISTING REVIEW</span><strong>${escapeHtml(selected.name)}</strong></div>${renderStatusPill(selected.condition, selected.condition === "New" ? "green" : "amber")}</header><div class="player-terminal-marketplace-detail-hero"><span><img src="${escapeHtml(resolveLegacyMarketplaceItemImage(selected.image))}" alt="" /></span><div><small>${escapeHtml(selected.category)} · ${escapeHtml(selected.country)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p></div></div><dl class="player-terminal-marketplace-facts"><div><dt>UNIT PRICE</dt><dd>${escapeHtml(formatCurrency(selected.unitPrice, selected.currencyCode))}</dd></div><div><dt>AVAILABLE</dt><dd>${escapeHtml(selected.quantity)}</dd></div><div><dt>SELLER</dt><dd>${escapeHtml(selected.seller)}</dd></div><div><dt>EXPIRES</dt><dd>${escapeHtml(localDate(selected.expiresAt))}</dd></div></dl><p class="player-terminal-form-error" data-player-marketplace-funding-error role="alert" tabindex="-1" hidden></p>${accountForm}${fundingQuotePanel(currentQuote)}`;
 }

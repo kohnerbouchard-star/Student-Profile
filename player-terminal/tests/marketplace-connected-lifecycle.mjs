@@ -62,13 +62,13 @@ const quoteRoute = resolveMarketplaceBackendRequest({
     listingId,
     quantity: 1,
     expectedVersion: 7,
-    allocations: [{ sourceAccountKey: accountKey, targetAmount: 15.525 }],
+    allocations: [{ sourceAccountKey: accountKey, targetAmount: 15.53 }],
     idempotencyKey: key,
   },
 });
 assert.equal(quoteRoute.path, `/players/me/marketplace/listings/${listingId}/quotes`);
 assert.deepEqual(quoteRoute.payload.allocations, [
-  { sourceAccountKey: accountKey, targetAmount: 15.525 },
+  { sourceAccountKey: accountKey, targetAmount: 15.53 },
 ]);
 assert.equal(quoteRoute.payload.expectedVersion, 7);
 assert.equal("listingId" in quoteRoute.payload, false);
