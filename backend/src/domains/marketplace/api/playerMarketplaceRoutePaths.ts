@@ -8,9 +8,16 @@ import {
 export type PlayerMarketplaceRoute =
   | { readonly kind: "collection" }
   | { readonly kind: "activate"; readonly listingKey: string }
-  | { readonly kind: "quote"; readonly listingKey: string }
-  | { readonly kind: "purchase"; readonly listingKey: string }
-  | { readonly kind: "settlement"; readonly reservationKey: string }
+  | {
+    readonly kind: "purchase";
+    readonly action: "legacy" | "quote";
+    readonly listingKey: string;
+  }
+  | {
+    readonly kind: "purchase";
+    readonly action: "settlement";
+    readonly reservationKey: string;
+  }
   | { readonly kind: "cancel"; readonly listingKey: string }
   | { readonly kind: "dispute"; readonly orderKey: string }
   | { readonly kind: "malformed" };
@@ -48,10 +55,14 @@ export function readPlayerMarketplaceRoutePath(
       return { kind: "malformed" };
     }
     const action = listingAction[2];
+    if (action === "quotes") {
+      return { kind: "purchase", action: "quote", listingKey };
+    }
+    if (action === "purchase") {
+      return { kind: "purchase", action: "legacy", listingKey };
+    }
     return {
-      kind: action === "quotes"
-        ? "quote"
-        : action as "activate" | "purchase" | "cancel",
+      kind: action as "activate" | "cancel",
       listingKey,
     };
   }
@@ -62,7 +73,7 @@ export function readPlayerMarketplaceRoutePath(
   if (settlement) {
     const reservationKey = decoded(settlement[1]);
     return MARKETPLACE_RESERVATION_KEY_PATTERN.test(reservationKey)
-      ? { kind: "settlement", reservationKey }
+      ? { kind: "purchase", action: "settlement", reservationKey }
       : { kind: "malformed" };
   }
 
