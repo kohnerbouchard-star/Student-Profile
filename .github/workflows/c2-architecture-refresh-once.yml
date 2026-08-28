@@ -1,0 +1,44 @@
+name: C2 architecture refresh once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-architecture-refresh-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out C2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Regenerate and verify architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --check
+          git diff --exit-code --quiet -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json && {
+            echo "Architecture inventory was already current."
+            exit 1
+          }
+
+      - name: Commit generated inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "chore(architecture): refresh C2 inventory"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
