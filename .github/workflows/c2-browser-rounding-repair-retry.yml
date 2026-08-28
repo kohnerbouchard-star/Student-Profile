@@ -1,0 +1,92 @@
+name: C2 browser and rounding repair retry
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-browser-rounding-repair-retry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Materialize and run reviewed repair script
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 949f930abca7660698549029125804919f09104d:.github/workflows/c2-browser-rounding-repair-once.yml > /tmp/prior-carrier.yml
+          python3 <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+          import re
+
+          carrier = Path('/tmp/prior-carrier.yml').read_text()
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = carrier.index(start_marker) + len(start_marker)
+          end = carrier.index(end_marker, start)
+          script = dedent(carrier[start:end])
+
+          replacement = '''def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              source = target.read_text()
+              old_text = dedent(old).strip()
+              new_text = dedent(new).strip()
+              tokens = re.split(r"\\s+", old_text)
+              pattern = r"\\s+".join(re.escape(token) for token in tokens)
+              matches = list(re.finditer(pattern, source, flags=re.S))
+              if len(matches) != 1:
+                  raise SystemExit(
+                      f"{path}: expected one flexible replacement target, found {len(matches)}"
+                  )
+              match = matches[0]
+              target.write_text(source[:match.start()] + new_text + source[match.end():])
+          '''
+          script, count = re.subn(
+              r'def replace_once\(path: str, old: str, new: str\) -> None:\n.*?target\.write_text\(source\.replace\(old, new, 1\)\)\n',
+              replacement,
+              script,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Could not replace prior exact-match helper.')
+          script = script.replace(
+              'from pathlib import Path\n',
+              'from pathlib import Path\nfrom textwrap import dedent\nimport re\n',
+              1,
+          )
+          Path('/tmp/c2-browser-rounding-repair.py').write_text(script)
+          PY
+
+          python3 /tmp/c2-browser-rounding-repair.py
+          git diff --check
+          node --check player-terminal/src/pages/marketplace-page.js
+          node --check player-terminal/src/features/marketplace/marketplace-funding-flow.js
+          node --check player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+          node player-terminal/tests/marketplace-connected-lifecycle.mjs
+          node --test player-terminal/tests/marketplace-funding-flow.mjs
+
+      - name: Commit repaired runtime and browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            player-terminal/src/pages/marketplace-page.js \
+            player-terminal/src/features/marketplace/marketplace-funding-flow.js \
+            player-terminal/tests/marketplace-connected-lifecycle.mjs \
+            player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+          git commit -m "fix(marketplace-funding): mirror currency rounding in browser checkout"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
