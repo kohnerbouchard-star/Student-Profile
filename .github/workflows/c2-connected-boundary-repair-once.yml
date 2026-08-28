@@ -52,44 +52,15 @@ jobs:
               'const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);',
               'const allowed = new Set(["accept", "apikey", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);',
           )
-          replace_once(
-              runner,
-              '''function instrument(page, label) {
-  page.on("console", (message) => {''',
-              '''function instrument(page, label) {
-  page.on("request", (request) => {
-    const url = request.url();
-    if (!url.includes("/functions/v1/player-web-session-api/")) return;
-    const headers = request.headers();
-    if (
-      headers.authorization !== undefined ||
-      headers["x-player-session-token"] !== undefined ||
-      headers["x-econovaria-player-session-token"] !== undefined
-    ) {
-      evidence.pageErrors.push(
-        `${label}: browser exposed a Player credential on ${redact(url)}`,
-      );
-    }
-  });
-  page.on("console", (message) => {''',
-          )
+          old_instrument = 'function instrument(page, label) {\n  page.on("console", (message) => {'
+          new_instrument = 'function instrument(page, label) {\n  page.on("request", (request) => {\n    const url = request.url();\n    if (!url.includes("/functions/v1/player-web-session-api/")) return;\n    const headers = request.headers();\n    if (\n      headers.authorization !== undefined ||\n      headers["x-player-session-token"] !== undefined ||\n      headers["x-econovaria-player-session-token"] !== undefined\n    ) {\n      evidence.pageErrors.push(\n        `${label}: browser exposed a Player credential on ${redact(url)}`,\n      );\n    }\n  });\n  page.on("console", (message) => {'
+          replace_once(runner, old_instrument, new_instrument)
 
           contract = "scripts/multicurrency-marketplace-funding-contract.mjs"
-          replace_once(
-              contract,
-              '''  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
-  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
-});''',
-              '''  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
-  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
-  workflow: ".github/workflows/multicurrency-marketplace-funding-v1.yml",
-  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
-});''',
-          )
-          replace_once(
-              contract,
-              '''const authority = JSON.parse(source.authority);''',
-              '''includesAll("connected browser workflow", source.workflow, [
+          old_paths = '  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",\n  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",\n});'
+          new_paths = '  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",\n  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",\n  workflow: ".github/workflows/multicurrency-marketplace-funding-v1.yml",\n  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",\n});'
+          replace_once(contract, old_paths, new_paths)
+          contract_insert = '''includesAll("connected browser workflow", source.workflow, [
   "connected-browser:",
   "Verify connected multi-currency Marketplace funding browser journey",
   "node scripts/player-multiplayer-browser-acceptance.mjs",
@@ -113,7 +84,11 @@ assert.ok(
   "Connected Marketplace replay retained browser Authorization forwarding.",
 );
 
-const authority = JSON.parse(source.authority);''',
+const authority = JSON.parse(source.authority);'''
+          replace_once(
+              contract,
+              'const authority = JSON.parse(source.authority);',
+              contract_insert,
           )
           PY
 
