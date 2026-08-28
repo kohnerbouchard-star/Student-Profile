@@ -1,0 +1,134 @@
+name: C2 connected boundary repair once
+
+on:
+  push:
+    branches:
+      - feat/multicurrency-marketplace-funding-v1
+    paths:
+      - .github/workflows/c2-connected-boundary-repair-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out C2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/multicurrency-marketplace-funding-v1
+          fetch-depth: 0
+
+      - name: Repair connected browser boundary and structural contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              source = target.read_text()
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement target, found {count}: {old!r}")
+              target.write_text(source.replace(old, new, 1))
+
+          runner = "player-terminal/tools/connected-marketplace-mutation-runner.mjs"
+          replace_once(
+              runner,
+              'response.url().includes("/functions/v1/classroom-api/players/login") &&',
+              'response.url().includes("/functions/v1/player-web-session-api/login") &&',
+          )
+          replace_once(
+              runner,
+              'if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/proxy/")) return;',
+              'if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/")) return;',
+          )
+          replace_once(
+              runner,
+              'const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);',
+              'const allowed = new Set(["accept", "apikey", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);',
+          )
+          replace_once(
+              runner,
+              '''function instrument(page, label) {
+  page.on("console", (message) => {''',
+              '''function instrument(page, label) {
+  page.on("request", (request) => {
+    const url = request.url();
+    if (!url.includes("/functions/v1/player-web-session-api/")) return;
+    const headers = request.headers();
+    if (
+      headers.authorization !== undefined ||
+      headers["x-player-session-token"] !== undefined ||
+      headers["x-econovaria-player-session-token"] !== undefined
+    ) {
+      evidence.pageErrors.push(
+        `${label}: browser exposed a Player credential on ${redact(url)}`,
+      );
+    }
+  });
+  page.on("console", (message) => {''',
+          )
+
+          contract = "scripts/multicurrency-marketplace-funding-contract.mjs"
+          replace_once(
+              contract,
+              '''  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
+  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
+});''',
+              '''  scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
+  authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
+  workflow: ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
+});''',
+          )
+          replace_once(
+              contract,
+              '''const authority = JSON.parse(source.authority);''',
+              '''includesAll("connected browser workflow", source.workflow, [
+  "connected-browser:",
+  "Verify connected multi-currency Marketplace funding browser journey",
+  "node scripts/player-multiplayer-browser-acceptance.mjs",
+  "node player-terminal/tools/connected-marketplace-mutation-runner.mjs",
+  "player-marketplace-mutation-browser-acceptance.json",
+  "Enforce connected Marketplace evidence",
+]);
+includesAll("connected Marketplace runner", source.connectedRunner, [
+  "/functions/v1/player-web-session-api/login",
+  'credentials: "include"',
+  "quoteReplaySafe",
+  "replaySafe",
+  "unauthenticatedRejected",
+]);
+assert.ok(
+  !source.connectedRunner.includes("/functions/v1/classroom-api/players/login"),
+  "Connected Marketplace browser journey retained the direct legacy Player login path.",
+);
+assert.ok(
+  !source.connectedRunner.includes('"authorization", "content-type"'),
+  "Connected Marketplace replay retained browser Authorization forwarding.",
+);
+
+const authority = JSON.parse(source.authority);''',
+          )
+          PY
+
+          node --check player-terminal/tools/connected-marketplace-mutation-runner.mjs
+          node --check scripts/multicurrency-marketplace-funding-contract.mjs
+          git diff --check
+
+      - name: Commit repaired connected boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            player-terminal/tools/connected-marketplace-mutation-runner.mjs \
+            scripts/multicurrency-marketplace-funding-contract.mjs
+          git commit -m "test(marketplace-funding): enforce connected BFF boundary"
+          git push origin HEAD:feat/multicurrency-marketplace-funding-v1
