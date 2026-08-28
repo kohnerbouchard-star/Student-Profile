@@ -54,7 +54,7 @@ jobs:
           '''
           script, count = re.subn(
               r'def replace_once\(path: str, old: str, new: str\) -> None:\n.*?target\.write_text\(source\.replace\(old, new, 1\)\)\n',
-              replacement,
+              lambda _match: replacement,
               script,
               count=1,
               flags=re.S,
