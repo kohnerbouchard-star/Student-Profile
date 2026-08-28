@@ -27,6 +27,8 @@ const paths = Object.freeze({
   connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
   scope: "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
   authority: "docs/operations/contracts/player-cross-cutting/pr-675.json",
+  workflow: ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+  connectedRunner: "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
 });
 
 const source = Object.fromEntries(await Promise.all(
@@ -270,6 +272,30 @@ for (const forbidden of [
     `Connected Marketplace runner retained a retired funding path: ${forbidden}`,
   );
 }
+
+includesAll("connected browser workflow", source.workflow, [
+  "connected-browser:",
+  "Verify connected multi-currency Marketplace funding browser journey",
+  "node scripts/player-multiplayer-browser-acceptance.mjs",
+  "node player-terminal/tools/connected-marketplace-mutation-runner.mjs",
+  "player-marketplace-mutation-browser-acceptance.json",
+  "Enforce connected Marketplace evidence",
+]);
+includesAll("connected Marketplace runner", source.connectedRunner, [
+  "/functions/v1/player-web-session-api/login",
+  'credentials: "include"',
+  "quoteReplaySafe",
+  "replaySafe",
+  "unauthenticatedRejected",
+]);
+assert.ok(
+  !source.connectedRunner.includes("/functions/v1/classroom-api/players/login"),
+  "Connected Marketplace browser journey retained the direct legacy Player login path.",
+);
+assert.ok(
+  !source.connectedRunner.includes('"authorization", "content-type"'),
+  "Connected Marketplace replay retained browser Authorization forwarding.",
+);
 
 const authority = JSON.parse(source.authority);
 assert.equal(authority.pullRequestNumber, 675);

@@ -230,13 +230,27 @@ function seedMarketplace() {
 }
 
 function instrument(page, label) {
+  page.on("request", (request) => {
+    const url = request.url();
+    if (!url.includes("/functions/v1/player-web-session-api/")) return;
+    const headers = request.headers();
+    if (
+      headers.authorization !== undefined ||
+      headers["x-player-session-token"] !== undefined ||
+      headers["x-econovaria-player-session-token"] !== undefined
+    ) {
+      evidence.pageErrors.push(
+        `${label}: browser exposed a Player credential on ${redact(url)}`,
+      );
+    }
+  });
   page.on("console", (message) => {
     if (message.type() === "error") evidence.consoleErrors.push(`${label}: ${redact(message.text())}`);
   });
   page.on("pageerror", (error) => evidence.pageErrors.push(`${label}: ${redact(error?.message || error)}`));
   page.on("response", async (response) => {
     const url = response.url();
-    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/proxy/")) return;
+    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/")) return;
     evidence.requests.push({ label, method: response.request().method(), path: redact(new URL(url).pathname), status: response.status() });
     if (!(response.headers()["content-type"] || "").includes("application/json")) return;
     const body = await response.text().catch(() => "");
@@ -254,7 +268,7 @@ async function login(browser, gameCode, player, label) {
   await page.locator("#playerId").fill(player.id);
   await page.locator("#playerAccessCode").fill(player.accessCode);
   const loginResponse = page.waitForResponse(
-    (response) => response.url().includes("/functions/v1/classroom-api/players/login") && response.request().method() === "POST",
+    (response) => response.url().includes("/functions/v1/player-web-session-api/login") && response.request().method() === "POST",
     { timeout: 60_000 },
   );
   await page.locator("#playerForm button[type='submit']").click();
@@ -287,7 +301,7 @@ async function reloadMarketplace(page) {
 async function capture(response) {
   const record = response.request();
   const headers = await record.allHeaders();
-  const allowed = new Set(["accept", "apikey", "authorization", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);
+  const allowed = new Set(["accept", "apikey", "content-type", "idempotency-key", "x-idempotency-key", "x-econovaria-csrf-token", "x-request-id"]);
   return { url: response.url(), method: record.method(), body: record.postData() || "{}", headers: Object.fromEntries(Object.entries(headers).filter(([name]) => allowed.has(name.toLowerCase()))) };
 }
 
