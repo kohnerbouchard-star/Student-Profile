@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1150,
+    "sourceFiles": 1153,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 55,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 9,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 127
+    "capabilityStrings": 129
   },
   "domains": [
     {
@@ -261,7 +261,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 22,
+      "sourceFiles": 23,
       "publicBoundaryFiles": []
     },
     {
@@ -4227,8 +4227,10 @@
       {
         "capability": "marketplace.purchase",
         "locations": [
+          "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
           "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
-          "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts"
+          "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
         ]
       },
       {
@@ -4246,6 +4248,12 @@
         "capability": "news.arrival",
         "locations": [
           "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "order.binding",
+        "locations": [
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
         ]
       },
       {
@@ -4331,6 +4339,12 @@
           "backend/src/domains/crafting/api/playerCraftingHttpHandler.test.ts",
           "backend/src/domains/crafting/api/playerCraftingNegativeStateHttpHandler.test.ts",
           "backend/src/domains/crafting/infrastructure/supabasePlayerCraftingRepository.test.ts"
+        ]
+      },
+      {
+        "capability": "reservation.binding",
+        "locations": [
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
         ]
       },
       {

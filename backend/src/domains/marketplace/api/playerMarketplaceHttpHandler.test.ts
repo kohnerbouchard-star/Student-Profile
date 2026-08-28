@@ -41,7 +41,7 @@ Deno.test("Marketplace routes accept only reviewed public identifiers", () => {
     kind: "purchase", action: "quote", listingKey: LISTING,
   });
   assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/listings/${LISTING}/purchase`), {
-    kind: "purchase", action: "legacy", listingKey: LISTING,
+    kind: "purchase", action: "retired", listingKey: LISTING,
   });
   assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/reservations/${RESERVATION}/settlements`), {
     kind: "purchase", action: "settlement", reservationKey: RESERVATION,

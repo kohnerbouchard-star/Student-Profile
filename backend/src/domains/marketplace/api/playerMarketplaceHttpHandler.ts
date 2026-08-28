@@ -108,7 +108,7 @@ export async function handlePlayerMarketplaceRequest(
       });
     }
 
-    if (route.kind === "purchase" && route.action === "legacy") {
+    if (route.kind === "purchase" && route.action === "retired") {
       return privateError(
         410,
         "player_marketplace_purchase_retired",

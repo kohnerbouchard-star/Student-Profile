@@ -10,7 +10,7 @@ export type PlayerMarketplaceRoute =
   | { readonly kind: "activate"; readonly listingKey: string }
   | {
     readonly kind: "purchase";
-    readonly action: "legacy" | "quote";
+    readonly action: "retired" | "quote";
     readonly listingKey: string;
   }
   | {
@@ -59,7 +59,7 @@ export function readPlayerMarketplaceRoutePath(
       return { kind: "purchase", action: "quote", listingKey };
     }
     if (action === "purchase") {
-      return { kind: "purchase", action: "legacy", listingKey };
+      return { kind: "purchase", action: "retired", listingKey };
     }
     return {
       kind: action as "activate" | "cancel",
