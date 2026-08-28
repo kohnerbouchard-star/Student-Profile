@@ -37,9 +37,15 @@ type SettlementInput = Parameters<PlayerMarketplaceFundingRepository["settle"]>[
 
 Deno.test("Marketplace routes accept only reviewed public identifiers", () => {
   assertEquals(readPlayerMarketplaceRoutePath("/players/me/marketplace/listings"), { kind: "collection" });
-  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/listings/${LISTING}/quotes`), { kind: "quote", listingKey: LISTING });
-  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/listings/${LISTING}/purchase`), { kind: "purchase", listingKey: LISTING });
-  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/reservations/${RESERVATION}/settlements`), { kind: "settlement", reservationKey: RESERVATION });
+  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/listings/${LISTING}/quotes`), {
+    kind: "purchase", action: "quote", listingKey: LISTING,
+  });
+  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/listings/${LISTING}/purchase`), {
+    kind: "purchase", action: "legacy", listingKey: LISTING,
+  });
+  assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/reservations/${RESERVATION}/settlements`), {
+    kind: "purchase", action: "settlement", reservationKey: RESERVATION,
+  });
   assertEquals(readPlayerMarketplaceRoutePath(`/players/me/marketplace/orders/${ORDER}/disputes`), { kind: "dispute", orderKey: ORDER });
   assertEquals(readPlayerMarketplaceRoutePath("/players/me/marketplace/listings/private/quotes"), { kind: "malformed" });
 });
