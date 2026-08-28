@@ -20,8 +20,10 @@ on:
       - backend/supabase/migrations/20260827102000_multicurrency_marketplace_funding_assertions_v1.sql
       - backend/supabase/migrations/20260827102500_multicurrency_marketplace_funding_purge_registry_v1.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
       - docs/operations/contracts/player-cross-cutting/pr-675.json
       - docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md
+      - docs/seed-content/executable/beta-pack-v1/**
       - player-terminal/src/api/capabilities.js
       - player-terminal/src/api/endpoints.js
       - player-terminal/src/api/marketplace-backend-routes.js
@@ -31,13 +33,19 @@ on:
       - player-terminal/src/main.js
       - player-terminal/src/pages/marketplace-page.js
       - player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+      - player-terminal/tests/browser/marketplace-lifecycle.spec.mjs
       - player-terminal/tests/marketplace-connected-lifecycle.mjs
       - player-terminal/tests/marketplace-funding-flow.mjs
       - player-terminal/tests/smoke.mjs
       - player-terminal/tools/connected-marketplace-mutation-runner.mjs
+      - scripts/build-physical-economy-runtime-pack.mjs
+      - scripts/econovaria-local-gateway.py
+      - scripts/game-creation-provisioning-local-acceptance.mjs
       - scripts/multicurrency-marketplace-funding-contract.mjs
       - scripts/multicurrency-marketplace-funding-concurrency.mjs
       - scripts/multicurrency-marketplace-funding-database.mjs
+      - scripts/player-multiplayer-browser-acceptance-core.mjs
+      - scripts/player-multiplayer-browser-acceptance.mjs
   push:
     branches:
       - feat/multicurrency-marketplace-funding-v1
@@ -48,8 +56,10 @@ on:
       - backend/supabase/functions/player-api/runtime.ts
       - backend/supabase/migrations/2026082710*_multicurrency_marketplace_funding_*.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
       - docs/operations/contracts/player-cross-cutting/pr-675.json
       - docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md
+      - docs/seed-content/executable/beta-pack-v1/**
       - player-terminal/src/api/capabilities.js
       - player-terminal/src/api/endpoints.js
       - player-terminal/src/api/marketplace-backend-routes.js
@@ -58,10 +68,16 @@ on:
       - player-terminal/src/main.js
       - player-terminal/src/pages/marketplace-page.js
       - player-terminal/tests/browser/marketplace-lifecycle-core.mjs
+      - player-terminal/tests/browser/marketplace-lifecycle.spec.mjs
       - player-terminal/tests/marketplace-*.mjs
       - player-terminal/tests/smoke.mjs
       - player-terminal/tools/connected-marketplace-mutation-runner.mjs
+      - scripts/build-physical-economy-runtime-pack.mjs
+      - scripts/econovaria-local-gateway.py
+      - scripts/game-creation-provisioning-local-acceptance.mjs
       - scripts/multicurrency-marketplace-funding-*.mjs
+      - scripts/player-multiplayer-browser-acceptance-core.mjs
+      - scripts/player-multiplayer-browser-acceptance.mjs
   workflow_dispatch:
 
 permissions:
@@ -249,3 +265,320 @@ jobs:
       - name: Stop disposable stack
         if: always()
         run: npx supabase stop --workdir backend --no-backup || true
+
+  connected-browser:
+    name: Verify connected multi-currency Marketplace funding browser journey
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR: /tmp/econovaria-player-browser
+      ECONOVARIA_BROWSER_LICENSE_CODE: PLAYER-E2E-LICENSE-001
+      ECONOVARIA_BROWSER_ADMIN_EMAIL: player.e2e@example.test
+      ECONOVARIA_BROWSER_ADMIN_PASSWORD: Player-E2E-Admin-2026!
+      ECONOVARIA_BROWSER_GAME_NAME: Player Multiplayer E2E
+      ECONOVARIA_GATEWAY_REQUEST_TIMEOUT_SECONDS: "180"
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/player-multiplayer-browser-acceptance.mjs
+          node --check scripts/player-multiplayer-browser-acceptance-core.mjs
+          node --check player-terminal/tools/connected-marketplace-mutation-runner.mjs
+          python3 -m py_compile scripts/econovaria-local-gateway.py
+          node --test scripts/local-staging-gateway-contract.test.mjs
+          npx playwright install --with-deps chromium
+
+      - name: Build exact authorized physical-economy pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Start disposable full Supabase runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/c2-marketplace-connected-supabase-startup.log
+          : > "$LOG"
+          mkdir -p backend/supabase/functions
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Full Supabase startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database and refresh REST schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+          eval "$(npx supabase status --workdir backend -o env)"
+          SERVER_KEY="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$SERVER_KEY"
+          cat > /tmp/c2-auth-throttle-readiness.json <<'JSON'
+          {
+            "p_buckets": [
+              {"dimension":"account","keyHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+              {"dimension":"device","keyHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+              {"dimension":"ip","keyHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+            ]
+          }
+          JSON
+          for ATTEMPT in $(seq 1 60); do
+            STATUS="$(curl --silent --show-error \
+              --output /tmp/c2-auth-throttle-response.json \
+              --write-out '%{http_code}' \
+              --max-time 5 \
+              --request POST \
+              --header "apikey: ${SERVER_KEY}" \
+              --header "Authorization: Bearer ${SERVER_KEY}" \
+              --header "Content-Type: application/json" \
+              --data-binary @/tmp/c2-auth-throttle-readiness.json \
+              http://127.0.0.1:54321/rest/v1/rpc/auth_throttle_check_v2 || true)"
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Authentication throttle RPC was not ready after PostgREST restart." >&2
+          exit 1
+
+      - name: Provision canonical source content
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/c2-marketplace-source-provisioning.log
+
+      - name: Seed one disposable browser license
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          insert into public.purchase_codes (
+            code_hash,
+            status,
+            max_redemptions,
+            redeemed_count
+          ) values (
+            encode(extensions.digest('PLAYER-E2E-LICENSE-001', 'sha256'), 'hex'),
+            'active',
+            1,
+            0
+          );
+          SQL
+
+      - name: Start same-origin Player gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(npx supabase status --workdir backend -o env)"
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
+          python3 scripts/econovaria-local-gateway.py \
+            --local-supabase \
+            --port 4173 \
+            > /tmp/c2-marketplace-connected-gateway.log 2>&1 &
+          echo $! > /tmp/c2-marketplace-connected-gateway.pid
+          for ATTEMPT in $(seq 1 90); do
+            STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              http://127.0.0.1:4173/ || true)"
+            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --request OPTIONS \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/player-api || true)"
+            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --request OPTIONS \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
+            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/c2-marketplace-connected-gateway.log
+          exit 1
+
+      - name: Create exact connected Admin, game, and two-Player fixture
+        id: multiplayer_fixture
+        continue-on-error: true
+        run: node scripts/player-multiplayer-browser-acceptance.mjs
+
+      - name: Execute connected Marketplace quote and settlement journey
+        id: marketplace_browser
+        if: steps.multiplayer_fixture.outcome == 'success'
+        continue-on-error: true
+        run: node player-terminal/tools/connected-marketplace-mutation-runner.mjs
+
+      - name: Capture sanitized connected diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p /tmp/c2-marketplace-connected-sanitized
+          for SOURCE in \
+            /tmp/c2-marketplace-connected-supabase-startup.log \
+            /tmp/c2-marketplace-source-provisioning.log \
+            /tmp/c2-marketplace-connected-gateway.log; do
+            if [ -f "$SOURCE" ]; then
+              NAME="$(basename "$SOURCE")"
+              sed -E \
+                's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/BROWSER-[A-Z0-9-]+/[browser-credential-redacted]/g; s/[0-9a-f]{64}/[digest-redacted]/gi' \
+                "$SOURCE" > "/tmp/c2-marketplace-connected-sanitized/$NAME"
+            fi
+          done
+          npx supabase status --workdir backend 2>&1 | \
+            sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g' \
+            > /tmp/c2-marketplace-connected-sanitized/supabase-status.log || true
+          docker ps -a > /tmp/c2-marketplace-connected-sanitized/docker-ps.log 2>&1 || true
+
+      - name: Upload connected Marketplace evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multicurrency-marketplace-connected-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/econovaria-player-browser/player-multiplayer-browser-acceptance.json
+            /tmp/econovaria-player-browser/player-marketplace-mutation-browser-acceptance.json
+            /tmp/c2-marketplace-connected-sanitized
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce connected Marketplace evidence
+        if: always()
+        shell: bash
+        env:
+          FIXTURE_OUTCOME: ${{ steps.multiplayer_fixture.outcome }}
+          MARKETPLACE_OUTCOME: ${{ steps.marketplace_browser.outcome }}
+        run: |
+          set -euo pipefail
+          test "$FIXTURE_OUTCOME" = "success"
+          test "$MARKETPLACE_OUTCOME" = "success"
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const fixture = JSON.parse(await readFile(
+            "/tmp/econovaria-player-browser/player-multiplayer-browser-acceptance.json",
+            "utf8",
+          ));
+          const marketplace = JSON.parse(await readFile(
+            "/tmp/econovaria-player-browser/player-marketplace-mutation-browser-acceptance.json",
+            "utf8",
+          ));
+
+          if (
+            fixture.failure ||
+            fixture.playersCreatedThroughRenderedUi !== 2 ||
+            fixture.concurrentLogin !== true ||
+            fixture.adminUsesHttpOnlyBff !== true ||
+            fixture.gameCode?.formatValid !== true ||
+            fixture.gameCode?.prefilledWithoutTruncation !== true ||
+            fixture.rawInternalIdentifiersRecorded !== false ||
+            fixture.plaintextCredentialsRecorded !== false ||
+            !Array.isArray(fixture.playerJourneys) ||
+            fixture.playerJourneys.length !== 2 ||
+            fixture.playerJourneys.some((journey) =>
+              journey.loggedOut !== true ||
+              journey.rawUuidVisible !== false ||
+              journey.consoleErrors?.length ||
+              journey.pageErrors?.length
+            )
+          ) {
+            throw new Error("Connected multiplayer fixture evidence is incomplete.");
+          }
+
+          for (const group of ["listing", "purchase", "dispute", "cancellation"]) {
+            const values = Object.values(marketplace[group] || {});
+            if (!values.length || values.some((value) => value !== true)) {
+              throw new Error(`Connected Marketplace ${group} evidence is incomplete.`);
+            }
+          }
+          if (
+            marketplace.failure ||
+            marketplace.responseUuidLeak !== false ||
+            marketplace.consoleErrors?.length ||
+            marketplace.pageErrors?.length
+          ) {
+            throw new Error("Connected Marketplace browser evidence contains an error or privacy violation.");
+          }
+          const paths = (marketplace.requests || []).map((entry) => String(entry.path || ""));
+          if (!paths.some((path) => path.includes("/functions/v1/player-web-session-api/proxy/players/me/marketplace/"))) {
+            throw new Error("Marketplace journey did not traverse the same-origin Player BFF.");
+          }
+          if (paths.some((path) => path.includes("/functions/v1/player-api/players/login"))) {
+            throw new Error("Marketplace journey used the retired direct Player login boundary.");
+          }
+          NODE
+
+      - name: Stop connected runtime
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -f /tmp/c2-marketplace-connected-gateway.pid ]; then
+            kill "$(cat /tmp/c2-marketplace-connected-gateway.pid)" 2>/dev/null || true
+          fi
+          rm -f backend/supabase/functions/.env
+          npx supabase stop --workdir backend --no-backup || true
