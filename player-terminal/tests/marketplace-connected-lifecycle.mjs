@@ -237,7 +237,7 @@ const html = renderMarketplacePage({
 }, { marketplaceCategory: "All", marketplaceListingId: listingId });
 
 for (const expected of [
-  `value="${listingId}"`,
+  `data-listing-id="${listingId}"`,
   "data-endpoint=\"marketplaceListing\"",
   "data-endpoint=\"marketplaceActivate\"",
   "data-endpoint=\"marketplaceCancel\"",
