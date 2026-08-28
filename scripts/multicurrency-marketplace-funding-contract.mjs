@@ -12,6 +12,7 @@ const paths = Object.freeze({
   response: "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
   repository: "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceFundingRepository.ts",
   route: "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
+  inputs: "backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts",
   handler: "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
   handlerTest: "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
   endpoints: "player-terminal/src/api/endpoints.js",
@@ -153,19 +154,28 @@ includesAll("repository", source.repository, [
 ]);
 
 includesAll("authenticated route", source.route, [
-  'readonly kind: "quote"',
-  'readonly kind: "settlement"',
+  'readonly kind: "purchase"',
+  'readonly action: "legacy" | "quote"',
+  'readonly action: "settlement"',
   "|quotes",
   "/settlements",
   "MARKETPLACE_RESERVATION_KEY_PATTERN",
 ]);
+includesAll("funding HTTP input boundary", source.inputs, [
+  "readMarketplaceFundingAllocations",
+  "readMarketplaceClientTimestamp",
+  "MARKETPLACE_FUNDING_ACCOUNT_KEY_PATTERN",
+  "Marketplace funding accounts must be valid and unique",
+]);
 includesAll("authenticated handler", source.handler, [
   "createFundingRepository",
-  "fundingAllocations",
+  "readMarketplaceFundingAllocations",
+  "readMarketplaceClientTimestamp",
   "createQuote",
   "fundingRepository.settle",
   "player_marketplace_purchase_retired",
-  "clientSubmittedAt",
+  'route.action === "quote"',
+  'route.action === "settlement"',
 ]);
 for (const forbidden of ["unitPrice: body", "currencyCode: body", "targetAccountKey"]) {
   assert.ok(
@@ -178,6 +188,8 @@ includesAll("authenticated handler tests", source.handlerTest, [
   "player_marketplace_purchase_retired",
   "duplicate accounts",
   "assertNoUuid",
+  'action: "quote"',
+  'action: "settlement"',
 ]);
 
 includesAll("Player endpoints", source.endpoints, [
