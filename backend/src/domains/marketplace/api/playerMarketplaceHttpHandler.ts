@@ -108,9 +108,7 @@ export async function handlePlayerMarketplaceRequest(
       });
     }
 
-    // The former reserve-and-settle request is retained only as a bounded
-    // tombstone so old clients cannot bypass quote review and revalidation.
-    if (route.kind === "purchase") {
+    if (route.kind === "purchase" && route.action === "legacy") {
       return privateError(
         410,
         "player_marketplace_purchase_retired",
@@ -120,7 +118,7 @@ export async function handlePlayerMarketplaceRequest(
 
     const body = await strictJsonObject(request);
 
-    if (route.kind === "quote") {
+    if (route.kind === "purchase" && route.action === "quote") {
       exactKeys(body, [
         "quantity",
         "expectedVersion",
@@ -153,7 +151,7 @@ export async function handlePlayerMarketplaceRequest(
       });
     }
 
-    if (route.kind === "settlement") {
+    if (route.kind === "purchase" && route.action === "settlement") {
       exactKeys(body, ["idempotencyKey", "clientSubmittedAt"]);
       const fundingRepository = dependencies.createFundingRepository
         ? dependencies.createFundingRepository(client)
