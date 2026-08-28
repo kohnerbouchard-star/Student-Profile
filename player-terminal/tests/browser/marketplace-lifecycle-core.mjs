@@ -451,7 +451,7 @@ async function installSession(page) {
     secure: false,
     sameSite: "Strict",
   }]);
-  await page.addInitScript(({ csrfToken }) => {
+  await page.addInitScript(({ csrfToken, now }) => {
     sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
       authenticated: true,
       sessionExpiresAt: "2099-08-28T03:00:00.000Z",
@@ -471,9 +471,9 @@ async function installSession(page) {
         code: "MARKET42",
         status: "active",
       },
-      storedAt: NOW,
+      storedAt: now,
     }));
-  }, { csrfToken: CSRF_TOKEN });
+  }, { csrfToken: CSRF_TOKEN, now: NOW });
 }
 
 test("Marketplace purchase reviews exact funding before atomic settlement", async ({ page }) => {
