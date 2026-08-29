@@ -122,7 +122,7 @@ requireTokens(source.scope, "C3 controlling scope", [
   "SCOPE_ONLY",
   "immediate market fills only",
   "stocks.market-liquidity",
-  "C3A",
+  "## Listing-currency authority",
   "C3 may become `IMPLEMENTED_NOT_MERGED` only after one exact implementation SHA",
 ]);
 
