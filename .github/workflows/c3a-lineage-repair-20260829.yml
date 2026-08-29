@@ -1,0 +1,99 @@
+name: C3A migration lineage repair
+
+on:
+  push:
+    branches:
+      - automation/c3-schema-audit-20260829
+    paths:
+      - .github/workflows/c3a-lineage-repair-20260829.yml
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: c3a-migration-lineage-repair-20260829
+  cancel-in-progress: false
+
+env:
+  REPOSITORY: kohnerbouchard-star/Student-Profile
+  PR_NUMBER: "676"
+  FEATURE_BRANCH: feat/multicurrency-stock-funding-v1
+  BASE_REF: feat/multicurrency-marketplace-funding-v1
+  DUPLICATE_MIGRATION: backend/supabase/migrations/20260829100000_multicurrency_stock_funding_schema_v1.sql
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Read live PR and check out its exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_JSON="$(gh api "/repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          test "$(jq -r '.state' <<<"$PR_JSON")" = "open"
+          test "$(jq -r '.draft' <<<"$PR_JSON")" = "true"
+          test "$(jq -r '.merged' <<<"$PR_JSON")" = "false"
+          test "$(jq -r '.head.ref' <<<"$PR_JSON")" = "$FEATURE_BRANCH"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+
+          git clone --no-tags "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --detach "$HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+
+      - name: Remove redundant C3A migration and verify canonical lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+
+          test -f backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql
+          test -f "$DUPLICATE_MIGRATION"
+
+          grep -q 'stock_purchase_funding_quotes_v1' backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+          grep -q 'listing_currency_code' backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+          grep -q 'stocks.market-liquidity' backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+
+          git rm "$DUPLICATE_MIGRATION"
+
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c3a-changed-files.txt
+          grep -vxF "$DUPLICATE_MIGRATION" /tmp/c3a-changed-files.txt > /tmp/c3a-repaired-files.txt || true
+
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c3a-repaired-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+
+          if git grep -n 'stock_purchase_funding_quotes_v1_id_seq' -- ':!docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md'; then
+            echo 'The nonexistent hard-coded C3A sequence reference remains after lineage repair.' >&2
+            exit 1
+          fi
+
+      - name: Commit repaired feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(stock-funding): remove duplicate C3A migration lineage"
+          REPAIR_SHA="$(git rev-parse HEAD)"
+          echo "REPAIR_SHA=$REPAIR_SHA" >> "$GITHUB_ENV"
+          git push origin "HEAD:${FEATURE_BRANCH}"
+
+      - name: Record repair identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'original_head=%s\nrepair_head=%s\nremoved=%s\n' \
+            "$HEAD_SHA" "$REPAIR_SHA" "$DUPLICATE_MIGRATION"
