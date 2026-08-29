@@ -12,30 +12,33 @@
 
 C3A adds a compatibility-safe schema foundation for Stock Market listing-currency settlement without activating a new execution path.
 
-- Runtime securities receive an authoritative `listing_currency_code` with deterministic `ECO` backfill for existing rows.
-- Existing Stock orders and trades receive immutable listing-currency snapshots for forward compatibility.
-- Existing Stock holdings receive a cost-basis currency snapshot.
-- A private, guarded, RLS-protected Financial Markets purchase-quote table can bind a future Stock commercial quote to one C0 purchase-funding quote.
-- Future funding, Banking-transaction, settlement-transaction, fee, net-settlement, and sell-proceeds evidence columns are nullable and compatibility-safe for historical rows.
-- Canonical currency and C0 quote references are discovered from the rebuilt certified schema rather than duplicated.
+- Stock templates and runtime securities receive one authoritative `listing_currency_code` resolved from the issuer country's active canonical currency.
+- Existing Stock orders and trades receive immutable listing-currency snapshots while remaining in the `legacy` settlement-evidence family.
+- Existing Stock holdings receive an immutable cost-basis currency equal to the runtime security listing currency.
+- Stock orders gain nullable C0 funding, B2 transaction, market-liquidity, destination-account, and price-tick evidence fields for later C3 settlement tranches.
+- A guarded, forced-RLS Stock-domain binding maps each game/listing currency to the canonical zero-balance B2 `stocks.market-liquidity` Checking account.
+- Liquidity identity initialization is idempotent and cannot post ledger entries, alter balances, or create a monetary faucet.
+- Historical direct-ledger orders remain readable without fabricated C0/B2 evidence.
 - The existing calendar-gated execution RPC and legacy immediate execution remain unchanged in C3A.
-- No Stock wallet, shadow balance, new order book, limit-order implementation, partial-fill implementation, or Player execution cutover is introduced.
+- No Stock wallet, shadow balance, purchase quote command, new order book, limit-order implementation, partial-fill implementation, or Player execution cutover is introduced.
 
-## Candidate files
+## Canonical candidate files
 
-- `backend/supabase/migrations/20260829100000_multicurrency_stock_funding_schema_v1.sql`
-- `backend/supabase/migrations/20260829100500_multicurrency_stock_funding_assertions_v1.sql`
-- `scripts/multicurrency-stock-funding-contract.mjs`
-- `scripts/multicurrency-stock-funding-database.mjs`
+- `backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql`
+- `backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql`
+- `scripts/multicurrency-stock-funding-schema-contract.mjs`
+- `scripts/multicurrency-stock-funding-schema-database.mjs`
 - `.github/workflows/multicurrency-stock-funding-v1.yml`
 - deterministic architecture inventory update
+
+The superseded `20260829100000_multicurrency_stock_funding_schema_v1.sql` draft and its stale duplicate contract are not part of the canonical C3A lineage.
 
 ## Required certification before completion
 
 C3A remains pending until one exact candidate SHA passes:
 
 - PR-bound exact-path authority;
-- C3 source and scope contract;
+- C3A source and scope contract;
 - migration validation;
 - Backend and Edge typecheck;
 - retained Stock handler/repository tests;
