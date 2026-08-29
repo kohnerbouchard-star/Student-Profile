@@ -1,7 +1,7 @@
 # Multi-Currency Marketplace Funding Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C2`  
-**Status:** `SCOPE_ONLY` — no C2 runtime implementation or certification claimed  
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/multicurrency-marketplace-funding-v1`  
 **Parent branch:** `feat/multicurrency-store-funding-v1`  
 **Parent draft PR:** #674  
@@ -367,3 +367,18 @@ Stocks remain C3, Business treasury/procurement remains C4, final Store/FX conve
 C2 may become `IMPLEMENTED_NOT_MERGED` only after one exact implementation SHA passes its permanent C2 gate and the full required inherited matrix, and a durable implementation handoff records that source. A later documentation-only handoff must not replace the tested implementation SHA.
 
 C3 must not begin until the C2 handoff exists. C2 certification authorizes development continuation only; it does not authorize merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation.
+
+## Exact implementation certification
+
+- Exact implementation and verification source: `9b95009dd7e73ed70987a0a99716d3ee32f2662d`.
+- Permanent C2 source/database/connected-browser workflow: run `33142563231` — PASS.
+- Database Replay: run `33142563190` — PASS.
+- Player Terminal Verify, including Chromium: run `33142563193` — PASS.
+- Banking FX clearing: run `33142563236` — PASS.
+- Retained C1 Store funding: run `33142563169` — PASS.
+- Retained C0 execution and observed concurrency: run `33143124382` — PASS.
+- Independent exact-source Marketplace Chromium and database certification: run `33143316570` — PASS.
+- Business Store Listing Inventory V2 attempt 2: run `33142563234` — PASS on the unchanged implementation source.
+- PR #675 remains draft, open, unmerged, and undeployed.
+
+The first Business Store Listing Inventory Chromium attempt was not accepted as evidence. Its failed job was rerun without changing the implementation, and attempt 2 completed all three workflow jobs successfully. The later documentation handoff does not replace `9b95009dd7e73ed70987a0a99716d3ee32f2662d` as the tested implementation identity.

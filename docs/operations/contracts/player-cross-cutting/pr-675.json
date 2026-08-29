@@ -29,6 +29,9 @@
     "backend/supabase/migrations/20260827103500_multicurrency_marketplace_financial_posting_compatibility_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-675.json",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "docs/roadmaps/multicurrency-marketplace-funding-implementation-handoff-v1.md",
     "docs/roadmaps/multicurrency-marketplace-funding-scope-v1.md",
     "player-terminal/src/api/capabilities.js",
     "player-terminal/src/api/endpoints.js",
@@ -43,8 +46,8 @@
     "player-terminal/tests/marketplace-funding-flow.mjs",
     "player-terminal/tests/smoke.mjs",
     "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
-    "scripts/multicurrency-marketplace-funding-contract.mjs",
     "scripts/multicurrency-marketplace-funding-concurrency.mjs",
+    "scripts/multicurrency-marketplace-funding-contract.mjs",
     "scripts/multicurrency-marketplace-funding-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -74,15 +77,16 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [
-    "player-terminal-verify",
+    "banking-fx-clearing-v1",
+    "business-store-listing-inventory-v2",
+    "database-replay",
+    "marketplace-preconvergence",
+    "multicurrency-funding-core-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-store-funding-v1",
+    "player-api-read-resilience",
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
-    "player-api-read-resilience",
-    "database-replay",
-    "banking-fx-clearing-v1",
-    "multicurrency-funding-core-v1",
-    "multicurrency-store-funding-v1",
-    "marketplace-preconvergence",
-    "multicurrency-marketplace-funding-v1"
+    "player-terminal-verify"
   ]
 }

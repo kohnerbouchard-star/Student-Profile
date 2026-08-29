@@ -1654,3 +1654,17 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - C1 exit criteria are met and the checkpoint is `IMPLEMENTED_NOT_MERGED`.
 - No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
 - **`BUSINESS-V2-10A4C2` — Marketplace multi-currency funding is OPEN** only after the clean C1 documentation handoff. Stocks remain C3, Business treasury/procurement remains C4, final Store/FX convergence remains 10A.4D, and Phase 11 remains closed until the dependency chain is complete.
+
+## 2026-08-29 — BUSINESS-V2-10A4C2 exact implementation certification
+
+- Status: `IMPLEMENTED_NOT_MERGED`.
+- Exact implementation and verification source: `9b95009dd7e73ed70987a0a99716d3ee32f2662d`.
+- Draft PR: #675, open, draft, mergeable, unmerged, and undeployed at closeout.
+- Marketplace listing currency remains authoritative through quote, settlement, order, dispute, and refund.
+- One-to-three canonical Checking-account funding consumes C0 retail checkout FX, B1 fixing, and B2 Banking/clearing/liquidity authority.
+- Buyer funding, seller/fee/tax distribution, Inventory delivery, listing/reservation/order mutation, and immutable evidence commit atomically.
+- Funded refunds reverse original source-account and FX evidence without current-rate repricing.
+- Permanent C2 gate `33142563231`, Database Replay `33142563190`, Player Terminal `33142563193`, Banking FX `33142563236`, retained C1 `33142563169`, retained C0 `33143124382`, independent browser/database `33143316570`, and Store-listing rerun `33142563234` attempt 2 passed on the exact source.
+- The initial inherited Store-listing Chromium failure was superseded by a successful unchanged-source job rerun and is not accepted as final evidence.
+- No merge, deployment, scheduler, secret, staging/production SQL, or live-database operation occurred.
+- Next authorized work: C3 Stock Market multi-currency funding intake on a separate stacked draft branch after this clean documentation handoff.

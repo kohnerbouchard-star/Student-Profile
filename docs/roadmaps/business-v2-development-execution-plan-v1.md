@@ -747,3 +747,15 @@ All required workflows passed on the certified source, including Business Workfo
 ### Next authorized step
 
 **Phase 6 — timed manufacturing is OPEN.** Build a bounded production-job lifecycle that atomically reserves/moves BOM materials to WIP, retains certified labor/equipment capacity across server time, calculates completion server-side, completes through a bounded worker, posts exact catalog output to Finished Goods, and releases/consumes capacity exactly once. Do not widen into Store seller offers, IPO, merge, staging, or production deployment.
+
+## Phase 10A.4C2 — Multi-Currency Marketplace Funding
+
+**Status:** `IMPLEMENTED_NOT_MERGED`
+**Exact implementation and verification source:** `9b95009dd7e73ed70987a0a99716d3ee32f2662d`
+**Draft PR:** #675
+
+Marketplace resale now preserves listing currency and consumes the shared C0/B1/B2 funding authority for one-to-three-Checking-account purchases. Funding, seller/fee/tax distribution, canonical Inventory delivery, Marketplace order completion, immutable evidence, replay, concurrency, rollback, privacy, two-game isolation, and original-evidence refunds are certified at the exact source above.
+
+Durable evidence: `docs/roadmaps/multicurrency-marketplace-funding-implementation-handoff-v1.md`.
+
+Next authorized checkpoint: `BUSINESS-V2-10A4C3` on a separate stacked draft branch from the clean C2 handoff. No merge or deployment is authorized by this checkpoint.
