@@ -121,20 +121,16 @@ const beforeProvision = json(`
       select count(*)
       from public.ledger_entries
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     ),
     'transactionCount', (
       select count(*)
       from public.bank_transactions
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     )
   )
 `);
 
 assert.equal(Number(beforeProvision.bindingCount), 0);
-assert.equal(Number(beforeProvision.ledgerCount), 0);
-assert.equal(Number(beforeProvision.transactionCount), 0);
 
 const firstProvision = json(`
   select coalesce(
@@ -180,13 +176,11 @@ const bindingState = json(`
       select count(*)
       from public.ledger_entries
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     ),
     'transactionCount', (
       select count(*)
       from public.bank_transactions
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     )
   )
   from public.stock_market_liquidity_accounts as binding_row
@@ -206,8 +200,16 @@ assert.equal(Number(bindingState.bindingCount), 10);
 assert.equal(Number(bindingState.distinctCurrencyCount), 10);
 assert.equal(Number(bindingState.invalidAccountCount), 0);
 assert.equal(Number(bindingState.nonZeroBalanceCount), 0);
-assert.equal(Number(bindingState.ledgerCount), 0);
-assert.equal(Number(bindingState.transactionCount), 0);
+assert.equal(
+  Number(bindingState.ledgerCount),
+  Number(beforeProvision.ledgerCount),
+  "Liquidity identity provisioning must not append a ledger entry.",
+);
+assert.equal(
+  Number(bindingState.transactionCount),
+  Number(beforeProvision.transactionCount),
+  "Liquidity identity provisioning must not append a bank transaction.",
+);
 
 const secondProvision = json(`
   select coalesce(
@@ -255,21 +257,22 @@ const afterReplay = json(`
       select count(*)
       from public.ledger_entries
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     ),
     'transactionCount', (
       select count(*)
       from public.bank_transactions
       where game_session_id = ${sqlLiteral(gameId)}::uuid
-        and source_domain = 'stocks'
     )
   )
 `);
 
 assert.equal(Number(afterReplay.bindingCount), 10);
 assert.equal(Number(afterReplay.nonZeroBalanceCount), 0);
-assert.equal(Number(afterReplay.ledgerCount), 0);
-assert.equal(Number(afterReplay.transactionCount), 0);
+assert.equal(Number(afterReplay.ledgerCount), Number(beforeProvision.ledgerCount));
+assert.equal(
+  Number(afterReplay.transactionCount),
+  Number(beforeProvision.transactionCount),
+);
 
 const alternateCurrency = json(`
   select to_jsonb(currency_row.code)
