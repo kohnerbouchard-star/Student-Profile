@@ -176,7 +176,7 @@ const grossValue = json(`
 assert.ok(Number(grossValue) > 0);
 
 const allocations = JSON.stringify([
-  { account_key: accountKey, target_contribution: String(grossValue) },
+  { sourceAccountKey: accountKey, targetAmount: String(grossValue) },
 ]);
 
 const before = json(`
@@ -241,7 +241,7 @@ assert.equal(Number(first.funding.target_amount), Number(grossValue));
 assert.equal(first.funding.funding_context_kind, "stocks.immediate-buy");
 assert.equal(first.funding.funding_context_key, first.quote_key);
 assert.equal(first.funding.allocations.length, 1);
-assert.equal(first.funding.allocations[0].account_key, accountKey);
+assert.equal(first.funding.allocations[0].source_account_key, accountKey);
 
 const replay = json(`select ${quoteSql()}`);
 assert.deepEqual(replay, first, "C3B exact replay must return the original quote pair.");
