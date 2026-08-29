@@ -184,7 +184,7 @@ jobs:
           done
           exit "$STATUS"
 
-      - name: Replay zero-to-head twice and verify C3B/C3C acceptance
+      - name: Replay C3B and C3C independently zero-to-head twice
         shell: bash
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -192,12 +192,14 @@ jobs:
           set -euo pipefail
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-quote-database.mjs
-          node scripts/multicurrency-stock-buy-settlement-database.mjs
           node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
           npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-buy-quote-database.mjs
           node scripts/multicurrency-stock-buy-settlement-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-buy-quote-database.mjs
           node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-buy-settlement-database.mjs
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
