@@ -9,6 +9,7 @@ on:
       - backend/supabase/functions/player-api/runtime.ts
       - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
       - backend/supabase/migrations/20260827111*_multicurrency_stock_buy_quote_*.sql
+      - backend/supabase/migrations/20260827112*_multicurrency_stock_buy_settlement_*.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-676.json
       - docs/roadmaps/multicurrency-stock-funding-*.md
@@ -18,6 +19,7 @@ on:
       - player-terminal/src/pages/market-page.js
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
+      - scripts/multicurrency-stock-buy-settlement-*.mjs
   push:
     branches:
       - feat/multicurrency-stock-funding-v1
@@ -28,6 +30,7 @@ on:
       - backend/supabase/functions/player-api/runtime.ts
       - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
       - backend/supabase/migrations/20260827111*_multicurrency_stock_buy_quote_*.sql
+      - backend/supabase/migrations/20260827112*_multicurrency_stock_buy_settlement_*.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-676.json
       - docs/roadmaps/multicurrency-stock-funding-*.md
@@ -37,6 +40,7 @@ on:
       - player-terminal/src/pages/market-page.js
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
+      - scripts/multicurrency-stock-buy-settlement-*.mjs
   workflow_dispatch:
 
 permissions:
@@ -48,7 +52,7 @@ concurrency:
 
 jobs:
   source-contract:
-    name: Verify C3B Stock quote source and retained C3A scope
+    name: Verify C3C Stock buy settlement source and retained C3A/C3B scope
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -84,7 +88,7 @@ jobs:
           npm ci --ignore-scripts
           npm --prefix backend ci --ignore-scripts
 
-      - name: Verify PR authority, retained C3A, and C3B source contracts
+      - name: Verify PR authority and C3 source contracts
         shell: bash
         env:
           PR_NUMBER: ${{ github.event.pull_request.number || '676' }}
@@ -100,6 +104,7 @@ jobs:
             --base-ref "$BASE_REF"
           node scripts/multicurrency-stock-funding-schema-contract.mjs
           node scripts/multicurrency-stock-buy-quote-contract.mjs
+          node scripts/multicurrency-stock-buy-settlement-contract.mjs
           node scripts/validate-supabase-migrations.mjs
           npm --prefix backend run typecheck
           git diff --check
@@ -127,9 +132,9 @@ jobs:
         run: deno --version
 
   disposable-database:
-    name: Verify C3B Stock quote database and retained C3A authority
+    name: Verify C3C atomic Stock buy database and retained C3A/C3B authority
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 70
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -179,7 +184,7 @@ jobs:
           done
           exit "$STATUS"
 
-      - name: Replay zero-to-head twice and verify C3B acceptance
+      - name: Replay zero-to-head twice and verify C3B/C3C acceptance
         shell: bash
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -187,8 +192,10 @@ jobs:
           set -euo pipefail
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-quote-database.mjs
+          node scripts/multicurrency-stock-buy-settlement-database.mjs
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-quote-database.mjs
+          node scripts/multicurrency-stock-buy-settlement-database.mjs
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
