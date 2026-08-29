@@ -17,6 +17,7 @@ C3A adds a compatibility-safe schema foundation for Stock Market listing-currenc
 - Existing Stock holdings receive an immutable cost-basis currency equal to the runtime security listing currency.
 - Stock orders gain nullable C0 funding, B2 transaction, market-liquidity, destination-account, and price-tick evidence fields for later C3 settlement tranches.
 - A guarded, forced-RLS Stock-domain binding maps each game/listing currency to the canonical zero-balance B2 `stocks.market-liquidity` Checking account.
+- The new game-scoped liquidity binding is explicitly registered with the canonical resumable game-data purge registry; the global B2 purge invariant remains fail-closed.
 - Liquidity identity initialization is idempotent and cannot post ledger entries, alter balances, or create a monetary faucet.
 - Historical direct-ledger orders remain readable without fabricated C0/B2 evidence.
 - The existing calendar-gated execution RPC and legacy immediate execution remain unchanged in C3A.
@@ -26,6 +27,7 @@ C3A adds a compatibility-safe schema foundation for Stock Market listing-currenc
 
 - `backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql`
 - `backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql`
+- `backend/supabase/migrations/20260827111000_multicurrency_stock_funding_purge_registry_v1.sql`
 - `scripts/multicurrency-stock-funding-schema-contract.mjs`
 - `scripts/multicurrency-stock-funding-schema-database.mjs`
 - `.github/workflows/multicurrency-stock-funding-v1.yml`
@@ -45,6 +47,7 @@ C3A remains pending until one exact candidate SHA passes:
 - deterministic architecture inventory;
 - two complete zero-to-head database replays;
 - C3A rebuilt-database acceptance after each replay;
+- canonical game-data purge registry coverage and the retained B2 purge invariant;
 - rebuilt-schema lint;
 - retained Player Terminal market and Banking contracts;
 - the required inherited B1/B2/C0/C1/C2, Database Replay, calendar/timezone, repository-quality, security, and Player gates triggered by the exact head.

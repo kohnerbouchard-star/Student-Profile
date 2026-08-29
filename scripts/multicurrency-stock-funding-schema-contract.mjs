@@ -8,6 +8,8 @@ const files = Object.freeze({
     "backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql",
   assertions:
     "backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+  purge:
+    "backend/supabase/migrations/20260827111000_multicurrency_stock_funding_purge_registry_v1.sql",
   scope: "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
   audit: "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
   plan: "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
@@ -117,6 +119,15 @@ requireTokens(source.assertions, "C3A database assertions", [
   "C3A_REQUIRED_TRIGGER_MISSING",
 ]);
 
+requireTokens(source.purge, "C3A game-data purge registration", [
+  "private.game_data_purge_table_registry",
+  "stock_market_liquidity_accounts",
+  "STOCK_FUNDING_PURGE_REGISTRY_MISSING",
+  "STOCK_FUNDING_PURGE_REGISTRY_INCOMPLETE",
+  "STOCK_FUNDING_GLOBAL_PURGE_REGISTRY_INCOMPLETE",
+  "on conflict (table_schema, table_name) do nothing",
+]);
+
 requireTokens(source.scope, "C3 controlling scope", [
   "BUSINESS-V2-10A4C3",
   "SCOPE_ONLY",
@@ -163,6 +174,7 @@ assert.equal(authority.secretValuesAllowed, false);
 for (const path of [
   files.schema,
   files.assertions,
+  files.purge,
   files.workflow,
   "scripts/multicurrency-stock-funding-schema-contract.mjs",
   "scripts/multicurrency-stock-funding-schema-database.mjs",
