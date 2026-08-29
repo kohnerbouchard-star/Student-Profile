@@ -1,0 +1,19 @@
+{
+  "roadmap": "BUSINESS-V2-10A4C3A",
+  "pullRequest": 676,
+  "implementationHead": "f5fb9716ee4a8ab209cbc535d3583925c6d261c7",
+  "controllerRun": "33246764165",
+  "conclusion": "failure",
+  "failures": [
+    {
+      "name": "certify-and-finalize",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Verify repaired source boundary"
+      ]
+    }
+  ],
+  "mergePerformed": false,
+  "deploymentPerformed": false,
+  "liveDatabaseMutationPerformed": false
+}
