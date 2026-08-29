@@ -19,7 +19,9 @@
     "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
     "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
     "scripts/multicurrency-stock-funding-schema-contract.mjs",
-    "scripts/multicurrency-stock-funding-schema-database.mjs"
+    "scripts/multicurrency-stock-funding-schema-database.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     ".github/workflows/multicurrency-stock-funding-v1.yml",
