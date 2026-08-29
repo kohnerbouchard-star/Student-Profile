@@ -1,0 +1,50 @@
+{
+  "program": "BETA-BUSINESS-V2-001",
+  "status": "IMPLEMENTED_NOT_MERGED",
+  "audited_at": "2026-08-29T20:19:00+09:00",
+  "integration_pr": 648,
+  "integration_branch": "refactor/business-ux-mechanics-v1",
+  "latest_checkpoint": "BUSINESS-V2-10A4C3A",
+  "latest_checkpoint_branch": "feat/multicurrency-stock-funding-v1",
+  "latest_checkpoint_pr": 676,
+  "exact_implementation_sha": "f5fb9716ee4a8ab209cbc535d3583925c6d261c7",
+  "documentation_head_at_audit": "e90d011eb9ca8062f17f82ab4448d909a87af4bc",
+  "parent_checkpoint": "BUSINESS-V2-10A4C2",
+  "parent_implementation_sha": "9b95009dd7e73ed70987a0a99716d3ee32f2662d",
+  "parent_handoff_sha": "ba033ac4a7759d068233513431891fc9de3ae95a",
+  "required_workflow_runs": {
+    "multicurrency-stock-funding-v1": 33245689981,
+    "database-replay": 33245690010,
+    "backend-typecheck": 33245690000,
+    "banking-fx-clearing-v1": 33245689996,
+    "business-player-store-cutover-v2": 33245689980,
+    "exchange-calendar-runtime": 33245689984,
+    "required-game-market-timezone": 33245689991,
+    "repository-quality": 33245689987,
+    "supply-chain-security": 33245690004,
+    "admin-api-check": 33245690031,
+    "staging-readiness-preflight": 33245690011
+  },
+  "next_authorized_checkpoint": "BUSINESS-V2-10A4C3B",
+  "next_authorized_scope": "Immutable immediate-buy Stock quote bound to the exact current price/tick and one C0 purchase-funding quote. No money or share movement, quote consumption, order/trade creation, Player API/UI cutover, sell settlement, merge, deployment, scheduler/secret mutation, staging/production SQL, or live database mutation.",
+  "remaining_dependency_order": [
+    "BUSINESS-V2-10A4C3B",
+    "BUSINESS-V2-10A4C3C",
+    "BUSINESS-V2-10A4C3D",
+    "BUSINESS-V2-10A4C3E",
+    "BUSINESS-V2-10A4C3F",
+    "BUSINESS-V2-10A4C4",
+    "BUSINESS-V2-10A4D",
+    "BUSINESS-V2-11",
+    "BUSINESS-V2-12",
+    "BUSINESS-V2-13",
+    "BUSINESS-V2-14"
+  ],
+  "release_state": {
+    "merged_to_main": false,
+    "staging_deployed": false,
+    "production_deployed": false,
+    "production_authorized": false
+  },
+  "known_global_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+}
