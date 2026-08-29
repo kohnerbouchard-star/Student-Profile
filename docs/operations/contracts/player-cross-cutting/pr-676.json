@@ -9,32 +9,46 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    "docs/operations/contracts/player-cross-cutting/pr-676.json",
-    "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
-    "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
-    "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
-    "docs/roadmaps/multicurrency-stock-funding-scope-v1.md"
-  ],
-  "requiredFiles": [
+    ".github/workflows/multicurrency-stock-funding-v1.yml",
+    "backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql",
+    "backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-676.json",
     "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
     "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
     "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
     "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
+    "scripts/multicurrency-stock-funding-schema-contract.mjs",
+    "scripts/multicurrency-stock-funding-schema-database.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/multicurrency-stock-funding-v1.yml",
+    "backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql",
+    "backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+    "docs/operations/contracts/player-cross-cutting/pr-676.json",
+    "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
+    "scripts/multicurrency-stock-funding-schema-contract.mjs",
+    "scripts/multicurrency-stock-funding-schema-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [
+    "backend-typecheck",
     "banking-fx-clearing-v1",
     "database-replay",
     "exchange-calendar-runtime",
     "multicurrency-funding-core-v1",
     "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
     "multicurrency-store-funding-v1",
     "player-api-read-resilience",
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
     "player-terminal-verify",
+    "repository-quality",
     "required-game-market-timezone"
   ]
 }
