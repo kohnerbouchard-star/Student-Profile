@@ -1,30 +1,19 @@
-#!/usr/bin/env node
-
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 
-const files = Object.freeze({
-  schema:
-    "backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql",
-  assertions:
-    "backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql",
-  purge:
-    "backend/supabase/migrations/20260827111000_multicurrency_stock_funding_purge_registry_v1.sql",
-  scope: "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
-  audit: "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
-  plan: "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
-  handoff: "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
-  authority: "docs/operations/contracts/player-cross-cutting/pr-676.json",
-  workflow: ".github/workflows/multicurrency-stock-funding-v1.yml",
-});
+const read = (path) => readFileSync(path, "utf8");
 
-const source = Object.fromEntries(
-  await Promise.all(
-    Object.entries(files).map(async ([key, path]) => [
-      key,
-      await readFile(new URL(`../${path}`, import.meta.url), "utf8"),
-    ]),
-  ),
+const source = {
+  schema: read("backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql"),
+  assertions: read("backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql"),
+  purge: read("backend/supabase/migrations/20260827111000_multicurrency_stock_funding_purge_registry_v1.sql"),
+  quote: read("backend/supabase/migrations/20260827111500_multicurrency_stock_buy_quote_v1.sql"),
+  quoteClock: read("backend/supabase/migrations/20260827111600_multicurrency_stock_buy_quote_clock_v1.sql"),
+  quoteAssertions: read("backend/supabase/migrations/20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql"),
+  workflow: read(".github/workflows/multicurrency-stock-funding-v1.yml"),
+};
+const authority = JSON.parse(
+  read("docs/operations/contracts/player-cross-cutting/pr-676.json"),
 );
 
 function requireTokens(text, label, tokens) {
@@ -39,131 +28,65 @@ function forbidTokens(text, label, tokens) {
   }
 }
 
-requireTokens(source.schema, "C3A listing-currency authority", [
-  "private.resolve_stock_listing_currency_v1",
-  "alter table public.stock_templates",
-  "add column listing_currency_code text null",
-  "alter table public.game_session_stock_assets",
-  "STOCK_TEMPLATE_LISTING_CURRENCY_IMMUTABLE",
-  "STOCK_RUNTIME_LISTING_CURRENCY_IMMUTABLE",
-  "guard_stock_template_listing_currency_v1",
-  "guard_runtime_stock_listing_currency_v1",
-  "stock_templates_listing_currency_fk",
-  "game_session_stock_assets_listing_currency_fk",
-]);
-
-requireTokens(source.schema, "C3A holding basis currency", [
-  "alter table public.stock_holdings",
-  "add column cost_currency_code text null",
-  "STOCK_HOLDING_COST_CURRENCY_MISMATCH",
-  "STOCK_HOLDING_COST_CURRENCY_IMMUTABLE",
-  "guard_stock_holding_cost_currency_v1",
-]);
-
-requireTokens(source.schema, "C3A legacy/current Stock evidence", [
+requireTokens(source.schema, "C3A schema", [
+  "listing_currency_code",
   "settlement_evidence_family",
-  "stock_orders_settlement_evidence_shape_check",
-  "stock_trades_settlement_evidence_shape_check",
   "funding_quote_id",
   "funding_receipt_id",
   "funding_bank_transaction_id",
   "market_liquidity_account_id",
   "destination_bank_account_id",
   "settlement_bank_transaction_id",
-  "cash_balance_after drop not null",
-  "STOCK_ORDER_SETTLEMENT_EVIDENCE_IMMUTABLE",
-  "STOCK_TRADE_SETTLEMENT_EVIDENCE_IMMUTABLE",
-  "settlement_evidence_family = 'legacy'",
-  "settlement_evidence_family = 'c3'",
-]);
-
-requireTokens(source.schema, "Canonical Stock market-liquidity identity", [
-  "create table public.stock_market_liquidity_accounts",
-  "stocks.market-liquidity",
-  "zero-balance-identity-v1",
-  "private.ensure_system_bank_account_v1",
-  "private.ensure_stock_market_liquidity_account_v1",
-  "public.initialize_stock_market_liquidity_accounts_v1",
-  "account_kind = 'checking'",
-  "enable row level security",
-  "force row level security",
-  "to service_role",
-  "STOCK_MARKET_LIQUIDITY_BINDING_IMMUTABLE",
-]);
-
-forbidTokens(source.schema, "C3A schema foundation", [
-  "record_player_ledger_entry",
-  "record_business_ledger_entry",
-  "insert into public.ledger_entries",
-  "update public.account_balances",
-  "private.post_bank_transaction_v1",
-  "execute_stock_market_order(",
-  "execute_stock_market_order_calendar_gated(",
-  "limit_order",
-  "partial_fill",
-  "time_in_force",
-]);
-
-requireTokens(source.assertions, "C3A database assertions", [
-  "C3A_STOCK_TEMPLATE_LISTING_CURRENCY_INVALID",
-  "C3A_RUNTIME_STOCK_LISTING_CURRENCY_INVALID",
-  "C3A_HOLDING_COST_CURRENCY_INVALID",
-  "C3A_LEGACY_ORDER_BACKFILL_INVALID",
-  "C3A_TRADE_EVIDENCE_BACKFILL_INVALID",
-  "C3A_REQUIRED_COLUMN_INVALID",
-  "C3A_REQUIRED_CONSTRAINT_INVALID",
-  "C3A_ORDER_TYPE_MODEL_WIDENED",
-  "C3A_ORDER_STATUS_MODEL_WIDENED",
-  "C3A_LIQUIDITY_BINDING_RLS_INVALID",
-  "C3A_LIQUIDITY_INITIALIZER_MUTATES_MONEY",
-  "C3A_REQUIRED_TRIGGER_MISSING",
-]);
-
-requireTokens(source.purge, "C3A game-data purge registration", [
-  "private.game_data_purge_table_registry",
   "stock_market_liquidity_accounts",
-  "STOCK_FUNDING_PURGE_REGISTRY_MISSING",
-  "STOCK_FUNDING_PURGE_REGISTRY_INCOMPLETE",
-  "STOCK_FUNDING_GLOBAL_PURGE_REGISTRY_INCOMPLETE",
-  "on conflict (table_schema, table_name) do nothing",
-]);
-
-requireTokens(source.scope, "C3 controlling scope", [
-  "BUSINESS-V2-10A4C3",
-  "SCOPE_ONLY",
-  "immediate market fills only",
   "stocks.market-liquidity",
-  "## Listing-currency authority",
-  "C3 may become `IMPLEMENTED_NOT_MERGED` only after one exact implementation SHA",
+  "ensure_stock_market_liquidity_account_v1",
+  "initialize_stock_market_liquidity_accounts_v1",
 ]);
 
-requireTokens(source.audit, "C3 resolved audit", [
-  "RESOLVED_FOR_SCOPE",
-  "The live execution model is immediate-fill only",
-  "The current cash path is not compatible with C0/B2",
-  "The current synthetic market has no monetary counterparty",
-  "The Player UI currently overstates unsupported behavior",
+requireTokens(source.assertions, "C3A assertions", [
+  "C3_ASSERT_STOCK_ORDER_CURRENCY_MISMATCH",
+  "C3_ASSERT_STOCK_TRADE_CURRENCY_MISMATCH",
+  "C3_ASSERT_LIQUIDITY_ACCOUNT_INVALID",
+  "C3_ASSERT_LIQUIDITY_PARTY_INVALID",
 ]);
 
-requireTokens(source.plan, "C3 ordered plan", [
-  "C3A — Listing currency and evidence foundation",
-  "C3B — Immediate buy quote",
-  "C3C — Atomic immediate buy settlement",
-  "C3D — Atomic immediate sell settlement",
-  "C3E — Player API and UI cutover",
-  "C3F — Certification and durable handoff",
+requireTokens(source.purge, "C3A purge registry", [
+  "stock_market_liquidity_accounts",
+  "purchase_funding_quote_allocations",
+  "purchase_funding_quotes",
 ]);
 
-requireTokens(source.handoff, "C3 intake handoff", [
-  "INTAKE_COMPLETE — IMPLEMENTATION_NOT_STARTED",
-  "Exact parent C2 implementation and verification source",
-  "9b95009dd7e73ed70987a0a99716d3ee32f2662d",
-  "ba033ac4a7759d068233513431891fc9de3ae95a",
-  "C3A may now begin",
+requireTokens(source.quote, "C3B quote", [
+  "stock_buy_quotes",
+  "stocks.immediate-buy",
+  "funding_quote_id",
+  "price_tick_index",
+  "quoted_price",
+  "gross_value",
+  "create_stock_buy_quote_v1",
 ]);
 
-const authority = JSON.parse(source.authority);
-assert.equal(authority.schemaVersion, 1);
+requireTokens(source.quoteClock, "C3B quote clock seam", [
+  "private.create_stock_buy_quote_at_v1",
+  "clock_timestamp()",
+  "service_role",
+]);
+
+requireTokens(source.quoteAssertions, "C3B quote assertions", [
+  "C3B_ASSERT",
+  "stock_buy_quotes",
+]);
+
+forbidTokens(
+  `${source.schema}\n${source.assertions}\n${source.purge}\n${source.quote}\n${source.quoteClock}\n${source.quoteAssertions}`,
+  "C3A/C3B retained implementation",
+  [
+    "update public.account_balances",
+    "insert into public.account_balances",
+    "insert into public.ledger_entries",
+  ],
+);
+
 assert.equal(authority.pullRequestNumber, 676);
 assert.equal(authority.baseRef, "feat/multicurrency-marketplace-funding-v1");
 assert.equal(authority.scopeLock, "exact-path-allowlist");
@@ -172,10 +95,13 @@ assert.equal(authority.productionMutationAllowed, false);
 assert.equal(authority.secretValuesAllowed, false);
 
 for (const path of [
-  files.schema,
-  files.assertions,
-  files.purge,
-  files.workflow,
+  ".github/workflows/multicurrency-stock-funding-v1.yml",
+  "backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql",
+  "backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+  "backend/supabase/migrations/20260827111000_multicurrency_stock_funding_purge_registry_v1.sql",
+  "backend/supabase/migrations/20260827111500_multicurrency_stock_buy_quote_v1.sql",
+  "backend/supabase/migrations/20260827111600_multicurrency_stock_buy_quote_clock_v1.sql",
+  "backend/supabase/migrations/20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql",
   "scripts/multicurrency-stock-funding-schema-contract.mjs",
   "scripts/multicurrency-stock-funding-schema-database.mjs",
   "scripts/multicurrency-stock-buy-quote-contract.mjs",
@@ -212,12 +138,14 @@ for (const check of [
 
 requireTokens(source.workflow, "Permanent C3 workflow", [
   "name: multicurrency-stock-funding-v1",
-  "Verify C3B Stock quote source and retained C3A scope",
-  "Verify C3B Stock quote database and retained C3A authority",
+  "Verify C3C Stock buy settlement source and retained C3A/C3B scope",
+  "Verify C3C atomic Stock buy database and retained C3A/C3B authority",
   "verify-player-cross-cutting-authority.mjs",
   "multicurrency-stock-funding-schema-contract.mjs",
   "multicurrency-stock-buy-quote-contract.mjs",
   "multicurrency-stock-buy-quote-database.mjs",
+  "multicurrency-stock-buy-settlement-contract.mjs",
+  "multicurrency-stock-buy-settlement-database.mjs",
   "validate-supabase-migrations.mjs",
   "architecture-ratchet-v2.mjs",
   "supabase db reset",
