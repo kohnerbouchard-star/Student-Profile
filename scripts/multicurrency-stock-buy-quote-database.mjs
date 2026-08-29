@@ -106,9 +106,32 @@ function initializeFx(targetGame) {
   assert.equal(Number(state.capCount), 11);
 }
 
+function activateGame(targetGame) {
+  runSql(`
+    update public.game_sessions
+    set lifecycle_state = 'active',
+        status = 'active',
+        started_at = coalesce(started_at, clock_timestamp()),
+        updated_at = clock_timestamp()
+    where id = ${sqlLiteral(targetGame.id)}::uuid;
+  `);
+
+  const state = json(`
+    select jsonb_build_object(
+      'lifecycleState', lifecycle_state,
+      'status', status
+    )
+    from public.game_sessions
+    where id = ${sqlLiteral(targetGame.id)}::uuid
+  `);
+  assert.equal(state.lifecycleState, 'active');
+  assert.equal(state.status, 'active');
+}
+
 resetFixture();
 normalizeFxCountryFixture();
 initializeFx(game);
+activateGame(game);
 
 runSql(`
   select *
