@@ -167,7 +167,7 @@ const bindingState = json(`
          or account_row.status <> 'active'
          or account_row.currency_code <> binding_row.currency_code
          or party_row.party_kind <> 'system'
-         or party_row.party_key <> 'stocks.market-liquidity'
+         or party_row.system_key <> 'stocks.market-liquidity'
     ),
     'nonZeroBalanceCount', count(*) filter (
       where coalesce(balance_row.balance, 0) <> 0
