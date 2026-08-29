@@ -270,8 +270,12 @@ runSql(`
 const accountKey = json(`
   select to_jsonb(account_row.public_key)
   from public.bank_accounts as account_row
+  join public.economic_parties as party_row
+    on party_row.game_session_id = account_row.game_session_id
+   and party_row.id = account_row.party_id
   where account_row.game_session_id = ${sqlLiteral(game.id)}::uuid
-    and account_row.player_id = ${sqlLiteral(playerId)}::uuid
+    and party_row.party_kind = 'player'
+    and party_row.player_id = ${sqlLiteral(playerId)}::uuid
     and account_row.account_kind = 'checking'
     and account_row.currency_code = ${sqlLiteral(asset.currencyCode)}
     and account_row.status = 'active'
