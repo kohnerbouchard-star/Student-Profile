@@ -93,21 +93,6 @@ runSql(`
       expires_at = greatest(expires_at, ${sqlLiteral(openAt)}::timestamptz + interval '1 day')
   where game_session_id = ${sqlLiteral(game.id)}::uuid
     and player_id = ${sqlLiteral(playerId)}::uuid;
-
-  select * from public.record_player_ledger_entry(
-    ${sqlLiteral(game.id)}::uuid,
-    ${sqlLiteral(playerId)}::uuid,
-    'checking',
-    1000,
-    ${sqlLiteral(asset.currencyCode)},
-    'credit',
-    'setup',
-    'c3c_concurrency_seed',
-    ${sqlLiteral(playerId)}::uuid,
-    'system',
-    null,
-    jsonb_build_object('bankTransactionIdempotencyKey', 'c3c-concurrency-listing-currency-seed')
-  );
 `);
 
 const account = json(`
