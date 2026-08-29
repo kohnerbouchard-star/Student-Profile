@@ -1,0 +1,41 @@
+name: C3A terminal marker
+
+on:
+  push:
+    branches:
+      - automation/c3-schema-audit-20260829
+    paths:
+      - .github/certification-receipts/c3a-terminal-20260829.json
+      - .github/workflows/c3a-terminal-marker-20260829.yml
+
+permissions:
+  contents: write
+
+jobs:
+  mark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: automation/c3-schema-audit-20260829
+      - name: Publish exactly one terminal marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECEIPT=.github/certification-receipts/c3a-terminal-20260829.json
+          test -f "$RECEIPT"
+          CONCLUSION="$(jq -r '.conclusion' "$RECEIPT")"
+          mkdir -p .github/certification-receipts
+          rm -f \
+            .github/certification-receipts/c3a-success-20260829.json \
+            .github/certification-receipts/c3a-failure-20260829.json
+          if [ "$CONCLUSION" = "success" ]; then
+            cp "$RECEIPT" .github/certification-receipts/c3a-success-20260829.json
+          else
+            cp "$RECEIPT" .github/certification-receipts/c3a-failure-20260829.json
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/certification-receipts
+          git commit -m "ci(c3a): publish ${CONCLUSION} marker" || exit 0
+          git push origin HEAD:automation/c3-schema-audit-20260829
