@@ -299,7 +299,7 @@ expectSqlError(
   `update public.stock_templates
    set listing_currency_code = ${sqlLiteral(alternateCurrency)}
    where ticker = ${sqlLiteral(firstTicker)};`,
-  /STOCK_TEMPLATE_LISTING_CURRENCY_IMMUTABLE/u,
+  /STOCK_TEMPLATE_LISTING_CURRENCY_MISMATCH/u,
 );
 
 expectSqlError(
@@ -307,7 +307,7 @@ expectSqlError(
    set listing_currency_code = ${sqlLiteral(alternateCurrency)}
    where game_session_id = ${sqlLiteral(gameId)}::uuid
      and ticker = ${sqlLiteral(firstTicker)};`,
-  /STOCK_RUNTIME_LISTING_CURRENCY_IMMUTABLE/u,
+  /STOCK_RUNTIME_LISTING_CURRENCY_MISMATCH/u,
 );
 
 expectSqlError(
