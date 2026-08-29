@@ -178,6 +178,8 @@ for (const path of [
   files.workflow,
   "scripts/multicurrency-stock-funding-schema-contract.mjs",
   "scripts/multicurrency-stock-funding-schema-database.mjs",
+  "scripts/multicurrency-stock-buy-quote-contract.mjs",
+  "scripts/multicurrency-stock-buy-quote-database.mjs",
 ]) {
   assert.ok(
     authority.allowedPaths.includes(path),
@@ -210,15 +212,16 @@ for (const check of [
 
 requireTokens(source.workflow, "Permanent C3 workflow", [
   "name: multicurrency-stock-funding-v1",
-  "Verify C3A Stock funding source and scope",
-  "Verify C3A Stock funding database",
+  "Verify C3B Stock quote source and retained C3A scope",
+  "Verify C3B Stock quote database and retained C3A authority",
   "verify-player-cross-cutting-authority.mjs",
   "multicurrency-stock-funding-schema-contract.mjs",
-  "multicurrency-stock-funding-schema-database.mjs",
+  "multicurrency-stock-buy-quote-contract.mjs",
+  "multicurrency-stock-buy-quote-database.mjs",
   "validate-supabase-migrations.mjs",
   "architecture-ratchet-v2.mjs",
   "supabase db reset",
   "supabase db lint",
 ]);
 
-console.log("Multi-currency Stock funding C3A source contract: PASS");
+console.log("Multi-currency Stock funding retained C3A/C3B source contract: PASS");
