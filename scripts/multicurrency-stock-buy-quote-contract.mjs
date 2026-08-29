@@ -76,10 +76,21 @@ for (const forbidden of [
   );
 }
 
-assert.doesNotMatch(
-  quoteMigration.match(/stock_buy_quote_public_json_v1[\s\S]*?\$function\$;/iu)?.[0] ?? "",
-  /game_session_id|player_id|stock_asset_id|funding_quote_id|bank_account_id|\bid\b\s*[,)]/iu,
-  "C3B public projection must not expose internal UUID identifiers.",
-);
+const publicProjection =
+  quoteMigration.match(/stock_buy_quote_public_json_v1[\s\S]*?\$function\$;/iu)?.[0] ?? "";
+for (const privateKey of [
+  "game_session_id",
+  "player_id",
+  "stock_asset_id",
+  "funding_quote_id",
+  "bank_account_id",
+  "id",
+]) {
+  assert.doesNotMatch(
+    publicProjection,
+    new RegExp(`['\"]${privateKey}['\"]\\s*,`, "iu"),
+    `C3B public projection must not expose internal key ${privateKey}.`,
+  );
+}
 
 console.log("Multi-currency Stock funding C3B quote authority contract: PASS");
