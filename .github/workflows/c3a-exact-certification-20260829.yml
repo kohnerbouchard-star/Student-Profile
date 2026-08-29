@@ -1,0 +1,128 @@
+name: C3A exact certification
+
+on:
+  push:
+    branches:
+      - automation/c3-schema-audit-20260829
+    paths:
+      - .github/workflows/c3a-exact-certification-20260829.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: c3a-exact-certification-20260829
+  cancel-in-progress: false
+
+env:
+  REPOSITORY: kohnerbouchard-star/Student-Profile
+  PR_NUMBER: "676"
+  FEATURE_BRANCH: feat/multicurrency-stock-funding-v1
+  BASE_REF: feat/multicurrency-marketplace-funding-v1
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve and check out live C3 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_JSON="$(gh api "/repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          test "$(jq -r '.state' <<<"$PR_JSON")" = "open"
+          test "$(jq -r '.draft' <<<"$PR_JSON")" = "true"
+          test "$(jq -r '.merged' <<<"$PR_JSON")" = "false"
+          test "$(jq -r '.head.ref' <<<"$PR_JSON")" = "$FEATURE_BRANCH"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+          git clone --no-tags "https://github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --detach "$HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          test ! -e backend/supabase/migrations/20260829100000_multicurrency_stock_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql
+
+      - name: Set up Node and Deno
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify repaired source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c3a-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c3a-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/multicurrency-stock-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          npm --prefix backend run typecheck
+          git diff --check "origin/${BASE_REF}...HEAD"
+          test "$(git grep -n 'stock_purchase_funding_quotes_v1_id_seq' -- . ':!docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md' | wc -l)" = "0"
+
+      - name: Start disposable Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Replay zero-to-head twice and run C3A acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          cd repo
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+          npx supabase db lint --workdir backend --local --level error
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+          npx supabase db lint --workdir backend --local --level error
+
+      - name: Post exact C3A result to PR
+        if: always()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$JOB_STATUS" = "success" ]; then
+            BODY="C3A exact certification PASS on \`${HEAD_SHA}\`. The duplicate 20260829100000 migration is absent; PR authority, C3A source contracts, migration validation, Backend typecheck, two zero-to-head database replays, C3A database acceptance, and database lint passed. This certifies C3A only and does not authorize C3B merge/deployment or any live-database action."
+          else
+            BODY="C3A exact certification FAILED on \`${HEAD_SHA}\`. The workflow stopped fail-closed; no merge, deployment, scheduler, secret, staging/production SQL, or live-database mutation was performed."
+          fi
+          gh api --method POST "/repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$BODY"
+
+      - name: Stop disposable stack
+        if: always()
+        shell: bash
+        run: cd repo && npx supabase stop --workdir backend --no-backup || true
