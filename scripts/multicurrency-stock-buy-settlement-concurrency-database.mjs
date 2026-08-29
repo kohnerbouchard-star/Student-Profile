@@ -111,6 +111,13 @@ const account = json(`
   limit 1
 `);
 
+runSql(`
+  select private.ensure_stock_market_liquidity_account_v1(
+    ${sqlLiteral(game.id)}::uuid,
+    ${sqlLiteral(asset.currencyCode)}
+  );
+`);
+
 const liquidity = json(`
   select jsonb_build_object('id', account_row.id, 'key', account_row.public_key)
   from public.stock_market_liquidity_accounts as binding_row
