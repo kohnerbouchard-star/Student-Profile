@@ -213,6 +213,9 @@ const results = await Promise.all([
 
 const winners = results.filter((result) => result.status === 0);
 const losers = results.filter((result) => result.status !== 0);
+if (winners.length !== 1 || losers.length !== 1) {
+  console.error('C3C concurrent session outcomes:', JSON.stringify(results, null, 2));
+}
 assert.equal(winners.length, 1, `Expected one concurrent winner, received ${winners.length}.`);
 assert.equal(losers.length, 1, `Expected one concurrent loser, received ${losers.length}.`);
 assert.match(losers[0].error, /STOCK_BUY_SETTLEMENT_QUOTE_CONSUMED/u);
