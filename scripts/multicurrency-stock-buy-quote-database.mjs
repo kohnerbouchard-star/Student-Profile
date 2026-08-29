@@ -349,7 +349,7 @@ assert.match(first.quote_key, /^sbq_[0-9a-f]{32}$/u);
 assert.equal(first.ticker, asset.ticker);
 assert.equal(first.listing_currency_code, asset.currencyCode);
 assert.equal(Number(first.quantity), quantity);
-assert.equal(String(first.quoted_price), String(asset.price));
+assert.equal(Number(first.quoted_price), Number(asset.price));
 assert.equal(Number(first.price_tick_index), Number(tick.tickIndex));
 assert.equal(Number(first.gross_value), Number(grossValue));
 assert.match(first.funding.quote_key, /^pfq_[0-9a-f]{32}$/u);
