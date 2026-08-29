@@ -1,0 +1,209 @@
+name: multicurrency-stock-funding-v1
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/multicurrency-stock-funding-v1.yml
+      - backend/src/domains/stocks/**
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-676.json
+      - docs/roadmaps/multicurrency-stock-funding-*.md
+      - player-terminal/src/features/market/**
+      - player-terminal/src/pages/market-page.js
+      - scripts/multicurrency-stock-funding-*.mjs
+  push:
+    branches:
+      - feat/multicurrency-stock-funding-v1
+    paths:
+      - .github/workflows/multicurrency-stock-funding-v1.yml
+      - backend/src/domains/stocks/**
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-676.json
+      - docs/roadmaps/multicurrency-stock-funding-*.md
+      - player-terminal/src/features/market/**
+      - player-terminal/src/pages/market-page.js
+      - scripts/multicurrency-stock-funding-*.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: multicurrency-stock-funding-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: Verify C3A Stock funding source and scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify PR authority and C3A source contracts
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || '676' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/multicurrency-marketplace-funding-v1' }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c3-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c3-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          npm --prefix backend run typecheck
+          git diff --check
+
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+      - name: Upload generated architecture inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multicurrency-stock-funding-architecture-${{ github.event.pull_request.head.sha || github.sha }}
+          path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Post Set up Deno
+        if: always()
+        shell: bash
+        run: deno --version
+
+  disposable-database:
+    name: Verify C3A Stock funding database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="/tmp/multicurrency-stock-funding-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay zero-to-head and verify C3A acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Capture disposable diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/multicurrency-stock-funding-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/multicurrency-stock-funding-docker.log || true
+          docker system df 2>&1 | tee -a /tmp/multicurrency-stock-funding-docker.log || true
+
+      - name: Upload disposable diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multicurrency-stock-funding-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/multicurrency-stock-funding-startup.log
+            /tmp/multicurrency-stock-funding-status.log
+            /tmp/multicurrency-stock-funding-docker.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
