@@ -171,7 +171,7 @@ begin
     v_funding_idempotency
   );
 
-  v_funding_public_key := nullif(btrim(v_funding_result ->> 'quote_key'), '');
+  v_funding_public_key := nullif(btrim(v_funding_result #>> '{quote,quote_key}'), '');
   if v_funding_public_key is null then
     raise exception 'STOCK_BUY_QUOTE_FUNDING_INVALID' using errcode = 'P0001';
   end if;
