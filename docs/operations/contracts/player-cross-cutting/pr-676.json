@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.multicurrency-stock-funding-pr-676.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 676,
+  "baseRef": "feat/multicurrency-marketplace-funding-v1",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "docs/operations/contracts/player-cross-cutting/pr-676.json",
+    "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-scope-v1.md"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-676.json",
+    "docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-implementation-plan-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-intake-handoff-v1.md",
+    "docs/roadmaps/multicurrency-stock-funding-scope-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "banking-fx-clearing-v1",
+    "database-replay",
+    "exchange-calendar-runtime",
+    "multicurrency-funding-core-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-store-funding-v1",
+    "player-api-read-resilience",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-terminal-verify",
+    "required-game-market-timezone"
+  ]
+}
