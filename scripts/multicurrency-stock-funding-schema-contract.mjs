@@ -10,6 +10,7 @@ const source = {
   quote: read("backend/supabase/migrations/20260827111500_multicurrency_stock_buy_quote_v1.sql"),
   quoteClock: read("backend/supabase/migrations/20260827111600_multicurrency_stock_buy_quote_clock_v1.sql"),
   quoteAssertions: read("backend/supabase/migrations/20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql"),
+  quotePurge: read("backend/supabase/migrations/20260827111800_multicurrency_stock_buy_quote_purge_registry_v1.sql"),
   workflow: read(".github/workflows/multicurrency-stock-funding-v1.yml"),
 };
 const authority = JSON.parse(
@@ -41,19 +42,32 @@ requireTokens(source.schema, "C3A schema", [
   "stocks.market-liquidity",
   "ensure_stock_market_liquidity_account_v1",
   "initialize_stock_market_liquidity_accounts_v1",
+  "guard_stock_order_currency_evidence_v1",
+  "guard_stock_trade_currency_evidence_v1",
 ]);
 
 requireTokens(source.assertions, "C3A assertions", [
-  "C3_ASSERT_STOCK_ORDER_CURRENCY_MISMATCH",
-  "C3_ASSERT_STOCK_TRADE_CURRENCY_MISMATCH",
-  "C3_ASSERT_LIQUIDITY_ACCOUNT_INVALID",
-  "C3_ASSERT_LIQUIDITY_PARTY_INVALID",
+  "C3A_STOCK_TEMPLATE_LISTING_CURRENCY_INVALID",
+  "C3A_RUNTIME_STOCK_LISTING_CURRENCY_INVALID",
+  "C3A_HOLDING_COST_CURRENCY_INVALID",
+  "C3A_LEGACY_ORDER_BACKFILL_INVALID",
+  "C3A_TRADE_EVIDENCE_BACKFILL_INVALID",
+  "C3A_REQUIRED_COLUMN_INVALID",
+  "C3A_REQUIRED_CONSTRAINT_INVALID",
+  "C3A_ORDER_TYPE_MODEL_WIDENED",
+  "C3A_ORDER_STATUS_MODEL_WIDENED",
+  "C3A_LIQUIDITY_BINDING_RLS_INVALID",
+  "C3A_LIQUIDITY_INITIALIZER_MUTATES_MONEY",
+  "C3A_REQUIRED_TRIGGER_MISSING",
 ]);
 
 requireTokens(source.purge, "C3A purge registry", [
+  "private.game_data_purge_table_registry",
   "stock_market_liquidity_accounts",
-  "purchase_funding_quote_allocations",
-  "purchase_funding_quotes",
+  "STOCK_FUNDING_PURGE_REGISTRY_MISSING",
+  "STOCK_FUNDING_PURGE_REGISTRY_INCOMPLETE",
+  "STOCK_FUNDING_GLOBAL_PURGE_REGISTRY_INCOMPLETE",
+  "on conflict (table_schema, table_name) do nothing",
 ]);
 
 requireTokens(source.quote, "C3B quote", [
@@ -77,8 +91,15 @@ requireTokens(source.quoteAssertions, "C3B quote assertions", [
   "stock_buy_quotes",
 ]);
 
+requireTokens(source.quotePurge, "C3B quote purge repair", [
+  "stock_buy_quotes",
+  "private.game_data_purge_table_registry",
+  "STOCK_BUY_QUOTE_PURGE_REGISTRY_INCOMPLETE",
+  "STOCK_BUY_QUOTE_GLOBAL_PURGE_REGISTRY_INCOMPLETE",
+]);
+
 forbidTokens(
-  `${source.schema}\n${source.assertions}\n${source.purge}\n${source.quote}\n${source.quoteClock}\n${source.quoteAssertions}`,
+  `${source.schema}\n${source.assertions}\n${source.purge}\n${source.quote}\n${source.quoteClock}\n${source.quoteAssertions}\n${source.quotePurge}`,
   "C3A/C3B retained implementation",
   [
     "update public.account_balances",
@@ -102,10 +123,12 @@ for (const path of [
   "backend/supabase/migrations/20260827111500_multicurrency_stock_buy_quote_v1.sql",
   "backend/supabase/migrations/20260827111600_multicurrency_stock_buy_quote_clock_v1.sql",
   "backend/supabase/migrations/20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql",
+  "backend/supabase/migrations/20260827111800_multicurrency_stock_buy_quote_purge_registry_v1.sql",
   "scripts/multicurrency-stock-funding-schema-contract.mjs",
   "scripts/multicurrency-stock-funding-schema-database.mjs",
   "scripts/multicurrency-stock-buy-quote-contract.mjs",
   "scripts/multicurrency-stock-buy-quote-database.mjs",
+  "scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs",
 ]) {
   assert.ok(
     authority.allowedPaths.includes(path),
@@ -146,6 +169,7 @@ requireTokens(source.workflow, "Permanent C3 workflow", [
   "multicurrency-stock-buy-quote-database.mjs",
   "multicurrency-stock-buy-settlement-contract.mjs",
   "multicurrency-stock-buy-settlement-database.mjs",
+  "multicurrency-stock-buy-settlement-concurrency-database.mjs",
   "validate-supabase-migrations.mjs",
   "architecture-ratchet-v2.mjs",
   "supabase db reset",
