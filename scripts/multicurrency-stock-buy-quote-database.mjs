@@ -18,7 +18,97 @@ function json(sql) {
   return runJson(`select (${sql})::text;`);
 }
 
+function normalizeFxCountryFixture() {
+  runSql(`
+    update public.country_profiles
+    set status = 'disabled'
+    where id = ${sqlLiteral(FIXTURE.countryId)}::uuid
+      and country_code = 'TST'
+      and currency_code = 'ECO';
+  `);
+
+  const activeCount = Number(runSql(`
+    select count(*) from public.country_profiles where status = 'active';
+  `).output);
+  assert.equal(activeCount, 10, "C3B fixture must expose the canonical ten-country FX cohort.");
+}
+
+function initializeFx(targetGame) {
+  runSql(`
+    insert into public.game_settings(game_session_id, stock_market_window)
+    values (
+      ${sqlLiteral(targetGame.id)}::uuid,
+      jsonb_build_object('timezone', 'UTC')
+    )
+    on conflict (game_session_id) do update
+    set stock_market_window = excluded.stock_market_window;
+
+    insert into public.country_economic_snapshots (
+      game_session_id,
+      country_profile_id,
+      snapshot_sequence,
+      effective_at,
+      snapshot_label,
+      difficulty_policy_profile_id,
+      difficulty_preset,
+      metadata,
+      created_at
+    )
+    select
+      ${sqlLiteral(targetGame.id)}::uuid,
+      country_row.id,
+      0,
+      statement_timestamp() - interval '2 minutes',
+      'C3B Stock funding quote acceptance',
+      difficulty_row.id,
+      difficulty_row.preset_key,
+      jsonb_build_object('source', 'multicurrency-stock-buy-quote-database'),
+      statement_timestamp() - interval '3 minutes'
+    from public.country_profiles as country_row
+    join public.difficulty_policy_profiles as difficulty_row
+      on difficulty_row.preset_key = 'standard'
+    where country_row.status = 'active';
+
+    select public.initialize_fx_authority_for_game_v1(
+      ${sqlLiteral(targetGame.id)}::uuid,
+      clock_timestamp() - interval '1 minute',
+      true
+    )::text;
+  `);
+
+  const state = runJson(`
+    select jsonb_build_object(
+      'runtimeReady', runtime.cutover_status = 'ready',
+      'fixingKey', fixing_row.public_key,
+      'fixingValues', (
+        select count(*)
+        from public.fx_fixing_currency_values as value_row
+        where value_row.fixing_id = fixing_row.id
+          and value_row.game_session_id = runtime.game_session_id
+      ),
+      'capCount', (
+        select count(*)
+        from public.fx_liquidity_cap_snapshots as cap_row
+        where cap_row.game_session_id = runtime.game_session_id
+          and cap_row.fixing_id = fixing_row.id
+      )
+    )::text
+    from private.fx_runtime_state as runtime
+    join public.fx_fixings as fixing_row
+      on fixing_row.id = runtime.current_fixing_id
+     and fixing_row.game_session_id = runtime.game_session_id
+    where runtime.game_session_id = ${sqlLiteral(targetGame.id)}::uuid;
+  `);
+
+  assert.equal(state.runtimeReady, true, "C3B FX runtime did not become ready.");
+  assert.match(state.fixingKey, /^fxf_[0-9a-f]{32}$/u);
+  assert.equal(Number(state.fixingValues), 11);
+  assert.equal(Number(state.capCount), 11);
+}
+
 resetFixture();
+normalizeFxCountryFixture();
+initializeFx(game);
 
 runSql(`
   select *
@@ -240,8 +330,9 @@ assert.equal(first.funding.target_currency_code, asset.currencyCode);
 assert.equal(Number(first.funding.target_amount), Number(grossValue));
 assert.equal(first.funding.funding_context_kind, "stocks.immediate-buy");
 assert.equal(first.funding.funding_context_key, first.quote_key);
-assert.equal(first.funding.allocations.length, 1);
-assert.equal(first.funding.allocations[0].source_account_key, accountKey);
+assert.equal(first.funding.lines.length, 1);
+assert.equal(first.funding.lines[0].source_account_key, accountKey);
+assert.equal(Number(first.funding.lines[0].target_contribution), Number(grossValue));
 
 const replay = json(`select ${quoteSql()}`);
 assert.deepEqual(replay, first, "C3B exact replay must return the original quote pair.");
