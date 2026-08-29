@@ -1,0 +1,103 @@
+name: C3A terminal certification reporter
+
+on:
+  push:
+    branches:
+      - automation/c3-schema-audit-20260829
+    paths:
+      - .github/workflows/c3a-terminal-reporter-20260829.yml
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: c3a-terminal-certification-reporter-20260829
+  cancel-in-progress: true
+
+env:
+  REPOSITORY: kohnerbouchard-star/Student-Profile
+  PR_NUMBER: "676"
+  AUTOMATION_BRANCH: automation/c3-schema-audit-20260829
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out automation branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: automation/c3-schema-audit-20260829
+          fetch-depth: 0
+
+      - name: Wait for latest C3A finalizer terminal result
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEADLINE=$((SECONDS + 3300))
+          while true; do
+            RUNS="$(gh api "/repos/${REPOSITORY}/actions/runs?branch=${AUTOMATION_BRANCH}&event=push&per_page=100")"
+            RUN="$(jq '[.workflow_runs[] | select(.name == "C3A certify and finalize")] | sort_by(.created_at) | last' <<<"$RUNS")"
+            RUN_ID="$(jq -r '.id // empty' <<<"$RUN")"
+            STATUS="$(jq -r '.status // empty' <<<"$RUN")"
+            CONCLUSION="$(jq -r '.conclusion // empty' <<<"$RUN")"
+            if [ -n "$RUN_ID" ] && [ "$STATUS" = "completed" ]; then
+              echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+              echo "RUN_CONCLUSION=$CONCLUSION" >> "$GITHUB_ENV"
+              gh api "/repos/${REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100" > /tmp/c3a-finalizer-jobs.json
+              break
+            fi
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              echo "RUN_ID=${RUN_ID:-none}" >> "$GITHUB_ENV"
+              echo "RUN_CONCLUSION=timed_out" >> "$GITHUB_ENV"
+              printf '{"jobs":[]}' > /tmp/c3a-finalizer-jobs.json
+              break
+            fi
+            sleep 20
+          done
+
+      - name: Write terminal receipt outside PR diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_JSON="$(gh api "/repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
+          FAILURES="$(jq '[.jobs[] | {name, conclusion, failed_steps: [.steps[]? | select(.conclusion == "failure") | .name]} | select(.conclusion != "success")]' /tmp/c3a-finalizer-jobs.json)"
+          mkdir -p .github/certification-receipts
+          jq -n \
+            --arg roadmap "BUSINESS-V2-10A4C3A" \
+            --arg pr "676" \
+            --arg implementationHead "$HEAD_SHA" \
+            --arg controllerRun "${RUN_ID:-none}" \
+            --arg conclusion "${RUN_CONCLUSION:-unknown}" \
+            --argjson failures "$FAILURES" \
+            '{
+              roadmap: $roadmap,
+              pullRequest: ($pr | tonumber),
+              implementationHead: $implementationHead,
+              controllerRun: $controllerRun,
+              conclusion: $conclusion,
+              failures: $failures,
+              mergePerformed: false,
+              deploymentPerformed: false,
+              liveDatabaseMutationPerformed: false
+            }' > .github/certification-receipts/c3a-terminal-20260829.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/certification-receipts/c3a-terminal-20260829.json
+          if ! git diff --cached --quiet; then
+            git commit -m "ci(c3a): record terminal certification result"
+            git push origin "HEAD:${AUTOMATION_BRANCH}"
+          fi
+
+          gh api --method POST "/repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            -f body="C3A terminal controller receipt: run \`${RUN_ID:-none}\`, conclusion \`${RUN_CONCLUSION:-unknown}\`, implementation/documentation head \`${HEAD_SHA}\`. The receipt is stored off the PR diff on the C3 automation branch." >/dev/null
+
+      - name: Fail reporter when certification did not pass
+        shell: bash
+        run: test "${RUN_CONCLUSION:-unknown}" = "success"
