@@ -155,12 +155,31 @@ const openAt = json(`
 assert.ok(openAt, "C3C fixture requires a deterministic open exchange instant.");
 
 runSql(`
-  update public.player_sessions
-  set status = 'active', revoked_at = null,
-      expires_at = greatest(expires_at, ${sqlLiteral(openAt)}::timestamptz + interval '1 day')
-  where game_session_id = ${sqlLiteral(game.id)}::uuid
-    and player_id = ${sqlLiteral(playerId)}::uuid;
+  begin;
+  set local role service_role;
+  select * from public.create_player_session_v2(
+    ${sqlLiteral(game.id)}::uuid,
+    ${sqlLiteral(playerId)}::uuid,
+    repeat('c', 64),
+    clock_timestamp() + interval '12 hours'
+  );
+  commit;
 `);
+
+const sessionState = json(`
+  select jsonb_build_object(
+    'count', count(*),
+    'eligible', count(*) filter (
+      where status = 'active'
+        and revoked_at is null
+        and expires_at > ${sqlLiteral(openAt)}::timestamptz
+    )
+  )
+  from public.player_sessions
+  where game_session_id = ${sqlLiteral(game.id)}::uuid
+    and player_id = ${sqlLiteral(playerId)}::uuid
+`);
+assert.equal(Number(sessionState.eligible), 1, "C3C fixture must provision exactly one settlement-eligible Player session.");
 
 runSql(`
   select * from public.record_player_ledger_entry(
