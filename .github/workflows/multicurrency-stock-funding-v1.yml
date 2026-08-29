@@ -8,12 +8,16 @@ on:
       - backend/supabase/functions/classroom-api/index.ts
       - backend/supabase/functions/player-api/runtime.ts
       - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
+      - backend/supabase/migrations/20260827111*_multicurrency_stock_buy_quote_*.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-676.json
       - docs/roadmaps/multicurrency-stock-funding-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
       - scripts/multicurrency-stock-funding-*.mjs
+      - scripts/multicurrency-stock-buy-quote-*.mjs
   push:
     branches:
       - feat/multicurrency-stock-funding-v1
@@ -23,12 +27,16 @@ on:
       - backend/supabase/functions/classroom-api/index.ts
       - backend/supabase/functions/player-api/runtime.ts
       - backend/supabase/migrations/2026082711*_multicurrency_stock_funding_*.sql
+      - backend/supabase/migrations/20260827111*_multicurrency_stock_buy_quote_*.sql
       - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - docs/operations/contracts/player-cross-cutting/pr-676.json
       - docs/roadmaps/multicurrency-stock-funding-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
       - scripts/multicurrency-stock-funding-*.mjs
+      - scripts/multicurrency-stock-buy-quote-*.mjs
   workflow_dispatch:
 
 permissions:
@@ -40,7 +48,7 @@ concurrency:
 
 jobs:
   source-contract:
-    name: Verify C3A Stock funding source and scope
+    name: Verify C3B Stock quote source and retained C3A scope
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -76,7 +84,7 @@ jobs:
           npm ci --ignore-scripts
           npm --prefix backend ci --ignore-scripts
 
-      - name: Verify PR authority and C3A source contracts
+      - name: Verify PR authority, retained C3A, and C3B source contracts
         shell: bash
         env:
           PR_NUMBER: ${{ github.event.pull_request.number || '676' }}
@@ -91,6 +99,7 @@ jobs:
             --pr-number "$PR_NUMBER" \
             --base-ref "$BASE_REF"
           node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/multicurrency-stock-buy-quote-contract.mjs
           node scripts/validate-supabase-migrations.mjs
           npm --prefix backend run typecheck
           git diff --check
@@ -118,7 +127,7 @@ jobs:
         run: deno --version
 
   disposable-database:
-    name: Verify C3A Stock funding database
+    name: Verify C3B Stock quote database and retained C3A authority
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -170,16 +179,16 @@ jobs:
           done
           exit "$STATUS"
 
-      - name: Replay zero-to-head and verify C3A acceptance
+      - name: Replay zero-to-head twice and verify C3B acceptance
         shell: bash
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -euo pipefail
           npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-funding-schema-database.mjs
+          node scripts/multicurrency-stock-buy-quote-database.mjs
           npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-funding-schema-database.mjs
+          node scripts/multicurrency-stock-buy-quote-database.mjs
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
