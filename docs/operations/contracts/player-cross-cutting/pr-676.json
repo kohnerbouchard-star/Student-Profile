@@ -55,6 +55,7 @@
     "scripts/multicurrency-stock-buy-quote-contract.mjs",
     "scripts/multicurrency-stock-buy-quote-database.mjs",
     "scripts/multicurrency-stock-funding-schema-contract.mjs",
+    "scripts/multicurrency-stock-funding-schema-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
