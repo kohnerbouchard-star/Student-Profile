@@ -1,0 +1,273 @@
+name: C3A certify and finalize
+
+on:
+  push:
+    branches:
+      - automation/c3-schema-audit-20260829
+    paths:
+      - .github/workflows/c3a-certify-and-finalize-20260829.yml
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: c3a-certify-and-finalize-20260829
+  cancel-in-progress: false
+
+env:
+  REPOSITORY: kohnerbouchard-star/Student-Profile
+  PR_NUMBER: "676"
+  FEATURE_BRANCH: feat/multicurrency-stock-funding-v1
+  BASE_REF: feat/multicurrency-marketplace-funding-v1
+
+jobs:
+  certify-and-finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve and check out live C3 implementation head
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_JSON="$(gh api "/repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          test "$(jq -r '.state' <<<"$PR_JSON")" = "open"
+          test "$(jq -r '.draft' <<<"$PR_JSON")" = "true"
+          test "$(jq -r '.merged' <<<"$PR_JSON")" = "false"
+          test "$(jq -r '.head.ref' <<<"$PR_JSON")" = "$FEATURE_BRANCH"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+
+          git clone --no-tags "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --detach "$HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          test ! -e backend/supabase/migrations/20260829100000_multicurrency_stock_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827110000_multicurrency_stock_funding_schema_v1.sql
+          test -f backend/supabase/migrations/20260827110500_multicurrency_stock_funding_assertions_v1.sql
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: repo/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify repaired source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c3a-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c3a-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/multicurrency-stock-funding-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          npm --prefix backend run typecheck
+          git diff --check "origin/${BASE_REF}...HEAD"
+          test "$(git grep -n 'stock_purchase_funding_quotes_v1_id_seq' -- . ':!docs/roadmaps/multicurrency-stock-funding-authority-audit-v1.md' | wc -l)" = "0"
+
+      - name: Start disposable Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Replay zero-to-head twice and run C3A database acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          cd repo
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+          npx supabase db lint --workdir backend --local --level error
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-stock-funding-schema-database.mjs
+          npx supabase db lint --workdir backend --local --level error
+
+      - name: Hold exact implementation SHA through required inherited workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUIRED_JSON='[
+            "multicurrency-stock-funding-v1",
+            "Database Replay",
+            "banking-fx-clearing-v1",
+            "Business Player Store Cutover V2",
+            "Backend Typecheck",
+            "Repository Quality",
+            "Supply Chain Security",
+            "Exchange Calendar Runtime",
+            "Required Game Market Timezone"
+          ]'
+          DEADLINE=$((SECONDS + 2100))
+          while true; do
+            RUNS="$(gh api --paginate "/repos/${REPOSITORY}/actions/runs?branch=${FEATURE_BRANCH}&per_page=100")"
+            STATUS="$(jq -n \
+              --argjson required "$REQUIRED_JSON" \
+              --arg sha "$HEAD_SHA" \
+              --argjson pages "[$RUNS]" '
+                def all_runs: [$pages[]?.workflow_runs[]? | select(.head_sha == $sha)];
+                def latest_for($name): (all_runs | map(select(.name == $name)) | sort_by(.created_at) | last);
+                [$required[] as $name | {name: $name, run: latest_for($name)}]
+              ')"
+            echo "$STATUS" | jq -r '.[] | "\(.name): \(.run.status // "missing") / \(.run.conclusion // "pending") / \(.run.id // "none")"'
+
+            MISSING="$(jq '[.[] | select(.run == null)] | length' <<<"$STATUS")"
+            PENDING="$(jq '[.[] | select(.run != null and .run.status != "completed")] | length' <<<"$STATUS")"
+            FAILED="$(jq '[.[] | select(.run != null and .run.status == "completed" and .run.conclusion != "success")] | length' <<<"$STATUS")"
+
+            if [ "$FAILED" -gt 0 ]; then
+              echo "$STATUS" | jq -r '.[] | select(.run.status == "completed" and .run.conclusion != "success") | "FAILED \(.name) run=\(.run.id) conclusion=\(.run.conclusion)"' >&2
+              exit 1
+            fi
+            if [ "$MISSING" -eq 0 ] && [ "$PENDING" -eq 0 ]; then
+              echo "$STATUS" > /tmp/c3a-required-runs.json
+              break
+            fi
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              echo "Timed out waiting for exact-head required workflows." >&2
+              echo "$STATUS" >&2
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Write durable C3A certification handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd repo
+          LIVE_PR="$(gh api "/repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          test "$(jq -r '.head.sha' <<<"$LIVE_PR")" = "$HEAD_SHA"
+          test "$(jq -r '.state' <<<"$LIVE_PR")" = "open"
+          test "$(jq -r '.draft' <<<"$LIVE_PR")" = "true"
+          test "$(jq -r '.merged' <<<"$LIVE_PR")" = "false"
+
+          RUN_EVIDENCE="$(jq -r '.[] | "- \(.name): run `\(.run.id)` — PASS."' /tmp/c3a-required-runs.json)"
+          cat > docs/roadmaps/multicurrency-stock-funding-c3a-handoff-v1.md <<EOF
+          # Multi-Currency Stock Funding C3A Handoff v1
+
+          **Roadmap checkpoint:** \`BUSINESS-V2-10A4C3A\`  
+          **Status:** \`IMPLEMENTED_NOT_MERGED\`  
+          **Branch:** \`${FEATURE_BRANCH}\`  
+          **Draft PR:** #${PR_NUMBER}  
+          **Exact implementation and verification source:** \`${HEAD_SHA}\`  
+          **Parent C2 clean handoff:** \`ba033ac4a7759d068233513431891fc9de3ae95a\`  
+          **Merge or deployment authorized:** No
+
+          ## Implemented boundary
+
+          C3A establishes one immutable listing currency on Stock templates and runtime assets, a named \`stocks.market-liquidity\` B2 system-account identity, and compatibility-safe funding/settlement evidence fields for current Stock orders, trades, and holdings. Historical rows remain readable without fabricated C3 evidence. The active Player buy/sell execution and UI remain outside C3A and are not certified by this checkpoint.
+
+          The redundant \`20260829100000_multicurrency_stock_funding_schema_v1.sql\` migration was removed. The canonical forward lineage is:
+
+          - \`20260827110000_multicurrency_stock_funding_schema_v1.sql\`
+          - \`20260827110500_multicurrency_stock_funding_assertions_v1.sql\`
+
+          The removed migration duplicated the canonical schema and referenced the nonexistent hard-coded sequence \`public.stock_purchase_funding_quotes_v1_id_seq\`. No sequence ACL or database invariant was weakened; the invalid duplicate lineage was eliminated before certification.
+
+          ## Exact-source evidence
+
+          - Dedicated C3A controller run: \`${GITHUB_RUN_ID}\` — source authority, source contracts, migration validation, Backend typecheck, two zero-to-head replays, C3A database acceptance, and database lint — PASS.
+          ${RUN_EVIDENCE}
+
+          ## Safety and next checkpoint
+
+          PR #${PR_NUMBER} remains draft, open, unmerged, and undeployed. No merge, deployment, scheduler installation/change, secret mutation, staging/production SQL, or live-database mutation occurred.
+
+          C3B may now implement the immutable immediate-buy Stock quote and bind it to one C0 purchase-funding quote. C3B must not activate settlement, sell-side payments, limit orders, queued orders, partial fills, margin, or a second FX/Banking authority.
+          EOF
+          sed -i 's/^          //' docs/roadmaps/multicurrency-stock-funding-c3a-handoff-v1.md
+
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('docs/roadmaps/multicurrency-stock-funding-scope-v1.md')
+          text = p.read_text().rstrip()
+          marker = '## C3A exact implementation certification'
+          if marker not in text:
+              text += f'''\n\n{marker}\n\n- Status: `IMPLEMENTED_NOT_MERGED`.\n- Exact C3A implementation and verification source: `{__import__("os").environ["HEAD_SHA"]}`.\n- Canonical migrations: `20260827110000_multicurrency_stock_funding_schema_v1.sql` and `20260827110500_multicurrency_stock_funding_assertions_v1.sql`.\n- The redundant `20260829100000_multicurrency_stock_funding_schema_v1.sql` lineage and its nonexistent hard-coded sequence ACL were removed.\n- Source authority, source contracts, migration validation, Backend typecheck, two zero-to-head replays, C3A database acceptance, database lint, and the required inherited exact-head workflows passed.\n- C3B is the next authorized tranche; no merge or deployment is authorized.\n'''
+          p.write_text(text.rstrip() + '\n')
+          PY
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            docs/roadmaps/multicurrency-stock-funding-c3a-handoff-v1.md \
+            docs/roadmaps/multicurrency-stock-funding-scope-v1.md
+          git commit -m "docs(stock-funding): certify C3A schema foundation"
+          DOC_SHA="$(git rev-parse HEAD)"
+          echo "DOC_SHA=$DOC_SHA" >> "$GITHUB_ENV"
+          git push origin "HEAD:${FEATURE_BRANCH}"
+
+      - name: Update PR with C3A certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY="$(cat <<EOF
+          ## Roadmap checkpoint
+
+          \`BUSINESS-V2-10A4C3\` — Multi-Currency Stock Market Funding.
+
+          ## Current certified tranche
+
+          - **C3A status:** \`IMPLEMENTED_NOT_MERGED\`.
+          - **Exact C3A implementation and verification source:** \`${HEAD_SHA}\`.
+          - **Clean C3A documentation head:** \`${DOC_SHA}\`.
+          - Parent C2 clean handoff: \`ba033ac4a7759d068233513431891fc9de3ae95a\`.
+          - Controlling scope: \`docs/roadmaps/multicurrency-stock-funding-scope-v1.md\`.
+          - C3A handoff: \`docs/roadmaps/multicurrency-stock-funding-c3a-handoff-v1.md\`.
+          - PR-bound authority: \`docs/operations/contracts/player-cross-cutting/pr-676.json\`.
+
+          C3A now provides immutable Stock listing-currency authority, the named \`stocks.market-liquidity\` B2 system-account identity, and compatibility-safe current/legacy Stock funding evidence. The canonical migration lineage is \`20260827110000\` plus \`20260827110500\`; the redundant \`20260829100000\` migration and nonexistent hard-coded sequence ACL were removed.
+
+          Source authority, source contracts, migration validation, Backend typecheck, two zero-to-head database replays, C3A database acceptance, database lint, and the required inherited exact-head workflow matrix passed on \`${HEAD_SHA}\`.
+
+          ## Next authorized tranche
+
+          C3B may implement an immutable immediate-buy quote bound to C0 funding. It must preserve Financial Markets ownership of assets, prices, exchange calendar, orders, trades, holdings, cost basis, P&L, and replay. It must not activate settlement, sell-side payments, limit orders, queued orders, partial fills, margin, or a parallel FX/Banking authority.
+
+          PR #676 remains draft, open, unmerged, and undeployed. No merge, deployment, scheduler change, secret mutation, staging/production SQL, or live-database mutation is authorized or performed.
+          EOF
+          )"
+          BODY="$(sed 's/^          //' <<<"$BODY")"
+          gh api --method PATCH "/repos/${REPOSITORY}/pulls/${PR_NUMBER}" -f body="$BODY" >/dev/null
+
+      - name: Post terminal certification comment
+        if: success()
+        shell: bash
+        run: |
+          gh api --method POST "/repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            -f body="C3A certified at implementation \`${HEAD_SHA}\`; clean documentation head \`${DOC_SHA}\`. C3B is now the next authorized tranche."
+
+      - name: Stop disposable stack
+        if: always()
+        shell: bash
+        run: cd repo && npx supabase stop --workdir backend --no-backup || true
