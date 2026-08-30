@@ -64,10 +64,10 @@ export function quoteBody(
   };
 }
 
-export function legacyBody() {
+export function retiredOrderBody() {
   return {
     ticker: "AURA", expectedPrice: 100, side: "buy", quantity: 3,
-    idempotencyKey: "legacy-order-0001",
+    idempotencyKey: "retired-order-0001",
   };
 }
 
