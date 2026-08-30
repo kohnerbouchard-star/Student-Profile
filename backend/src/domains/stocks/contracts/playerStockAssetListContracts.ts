@@ -23,6 +23,7 @@ export interface PlayerStockAssetRecord {
   readonly companyName: string;
   readonly sector: string;
   readonly countryCode: string;
+  readonly listingCurrencyCode: string;
   readonly description: string | null;
   readonly currentPrice: number;
   readonly previousClose: number;
@@ -64,6 +65,7 @@ export interface PlayerStockAssetDto {
   readonly companyName: string;
   readonly sector: string;
   readonly countryCode: string;
+  readonly listingCurrencyCode: string;
   readonly currentPrice: number;
   readonly previousClose: number;
   readonly changePct: number;
