@@ -40,6 +40,7 @@ Deno.test("player stock asset detail derives authenticated scope and redacts UUI
     historyLimit: 2,
   }]);
   assertEquals(body.asset.assetId, "AURA");
+  assertEquals(body.asset.listingCurrencyCode, "XAL");
   assertEquals(body.history.map((point: any) => point.tickIndex), [41, 42]);
   assertEquals(body.historyLimit, 2);
   assertEquals(body.historyReturned, 2);
@@ -207,6 +208,7 @@ function detailResult(): PlayerStockAssetDetailRepositoryResult {
       companyName: "Aurora Aerospace Systems",
       sector: "AI_AEROSPACE",
       countryCode: "SOLVEND",
+      listingCurrencyCode: "XAL",
       description: "Public company description",
       currentPrice: 105,
       previousClose: 100,
