@@ -4,7 +4,7 @@ import {
   deps,
   expectError,
   G,
-  legacyBody,
+  retiredOrderBody,
   MockRepository,
   quoteBody,
   req,
@@ -20,7 +20,7 @@ Deno.test("player Stock gateway enforces method, session, runner, and auth-befor
   await expectError(await handlePlayerStockMarketTradingRequest(
     req(quoteBody(), { runner: true }), deps()), 400, "stock_runner_secret_not_allowed");
   await expectError(await handlePlayerStockMarketTradingRequest(
-    req(legacyBody()),
+    req(retiredOrderBody()),
     deps({ resolve: () => Promise.resolve({
       ok: false, status: 401,
       error: { code: "invalid_player_session", message: "invalid", retryable: false },
@@ -28,8 +28,8 @@ Deno.test("player Stock gateway enforces method, session, runner, and auth-befor
   ), 401, "invalid_player_session");
   const repo = new MockRepository();
   await expectError(await handlePlayerStockMarketTradingRequest(
-    req(legacyBody()), deps({ repo })), 410, "stock_market_trading_retired");
-  if (repo.inputs.length) throw new Error("Legacy command reached repository");
+    req(retiredOrderBody()), deps({ repo })), 410, "stock_market_trading_retired");
+  if (repo.inputs.length) throw new Error("Retired command reached repository");
 });
 
 Deno.test("player Stock gateway rejects private scope, UUIDs, query scope, and bad funding", async () => {
