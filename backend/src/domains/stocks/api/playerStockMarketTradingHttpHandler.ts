@@ -19,7 +19,7 @@ import {
   type PlayerSafeStockMarketBuySettlementSuccessBody,
   type PlayerSafeStockMarketSellSettlementSuccessBody,
   StockMarketTradingError,
-  type StockMarketTradingRepository,
+  type PlayerStockMarketTradingRepository,
 } from "../contracts/stockMarketTradingContracts.ts";
 import {
   SupabaseStockMarketTradingRepository,
@@ -38,7 +38,7 @@ interface PlayerStockMarketTradingHttpDependencies {
   ) => ReturnType<typeof resolveActivePlayerSession>;
   readonly createRepository?: (
     client: EdgeSupabaseClient,
-  ) => StockMarketTradingRepository;
+  ) => PlayerStockMarketTradingRepository;
 }
 
 export async function handlePlayerStockMarketTradingRequest(

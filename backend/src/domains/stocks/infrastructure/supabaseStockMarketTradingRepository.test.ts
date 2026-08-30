@@ -8,6 +8,36 @@ const Q = "sbq_11111111111111111111111111111111";
 const A = "bac_22222222222222222222222222222222";
 const T = "btx_33333333333333333333333333333333";
 
+Deno.test("Stock repository preserves retained calendar-gated order execution", async () => {
+  const orderId = "00000000-0000-4000-8000-000000000201";
+  const stockAssetId = "00000000-0000-4000-8000-000000000101";
+  const playerSessionId = "00000000-0000-4000-8000-000000000011";
+  const client = new FakeClient({
+    execute_stock_market_order_calendar_gated: [{
+      order_id: orderId, game_session_id: G, player_session_id: playerSessionId,
+      player_id: P, stock_asset_id: stockAssetId, ticker: "AURA", side: "buy",
+      quantity: "5.0000", execution_price: "100.0000", gross_value: "500.00",
+      status: "filled", rejection_reason: null, cash_balance: "9500.00",
+      cash_currency_code: "ECO", holding_quantity: "5.0000", average_cost: "100.0000",
+    }],
+  });
+  const repo = new SupabaseStockMarketTradingRepository(client as any);
+  const result = await repo.executeOrder({
+    gameSessionId: G, playerSessionId, stockAssetId, side: "buy", quantity: 5,
+    idempotencyKey: "retained-order-0001",
+  });
+
+  assertEquals(client.calls[0], {
+    functionName: "execute_stock_market_order_calendar_gated",
+    args: {
+      p_game_session_id: G, p_player_session_id: playerSessionId,
+      p_stock_asset_id: stockAssetId, p_side: "buy", p_quantity: 5,
+      p_idempotency_key: "retained-order-0001",
+    },
+  });
+  assertEquals([result.order.orderId, result.cash.balance, result.holding.quantity], [orderId, 9500, 5]);
+});
+
 Deno.test("Stock repository routes C3B, C3C, and C3D public commands", async () => {
   const client = new FakeClient({
     create_stock_buy_quote_v1: quoteRow(),
@@ -35,7 +65,7 @@ Deno.test("Stock repository routes C3B, C3C, and C3D public commands", async () 
     "create_stock_buy_quote_v1", "settle_stock_buy_quote_v1", "settle_stock_sell_v1",
   ]);
   assertEquals(client.calls[0].args.p_allocations, [{ sourceAccountKey: A, targetAmount: 300 }]);
-  assertEquals(client.calls[2].args.p_destination_account_key, A);
+  assertEquals(client.cal|s[2].args.p_destination_account_key, A);
   assertEquals([quote.quoteKey, quote.listingCurrencyCode, quote.priceTickIndex], [Q, "XAL", 42]);
   assertEquals([buy.holdingQuantityAfter, buy.alreadyCompleted], [8, false]);
   assertEquals([sell.destinationAccountKey, sell.settlementTransactionKey], [A, T]);

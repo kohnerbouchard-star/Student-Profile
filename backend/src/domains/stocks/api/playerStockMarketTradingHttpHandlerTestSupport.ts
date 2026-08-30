@@ -3,7 +3,7 @@ import {
   type StockMarketBuySettlementInput,
   type StockMarketSellSettlementInput,
   StockMarketTradingError,
-  type StockMarketTradingRepository,
+  type PlayerStockMarketTradingRepository,
 } from "../contracts/stockMarketTradingContracts.ts";
 
 export const G = "00000000-0000-4000-8000-000000000001";
@@ -15,7 +15,7 @@ export const B = "bac_33333333333333333333333333333333";
 const T = "btx_44444444444444444444444444444444";
 
 export function deps(options: {
-  repo?: StockMarketTradingRepository;
+  repo?: PlayerStockMarketTradingRepository;
   resolve?: () => Promise<any>;
 } = {}): any {
   return {
@@ -71,7 +71,7 @@ export function legacyBody() {
   };
 }
 
-export class MockRepository implements StockMarketTradingRepository {
+export class MockRepository implements PlayerStockMarketTradingRepository {
   readonly inputs: any[] = [];
   constructor(private readonly error: StockMarketTradingError | null = null) {}
   async createBuyQuote(input: StockMarketBuyQuoteInput) {

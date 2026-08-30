@@ -1,7 +1,7 @@
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
   type StockMarketFundingAllocation,
-  type StockMarketTradingAction,
+  type PlayerStockMarketTradingAction,
   StockMarketTradingError,
 } from "../contracts/stockMarketTradingContracts.ts";
 
@@ -99,10 +99,10 @@ export function parsePlayerStockMarketTradingValue(
   };
 }
 
-function readAction(value: Record<string, unknown>): StockMarketTradingAction {
+function readAction(value: Record<string, unknown>): PlayerStockMarketTradingAction {
   const action = typeof value.action === "string" ? value.action.trim().toLowerCase() : "";
   if (["create_buy_quote", "settle_buy_quote", "settle_sell"].includes(action)) {
-    return action as StockMarketTradingAction;
+    return action as PlayerStockMarketTradingAction;
   }
   if (!action && Object.keys(value).some((key) => LEGACY_ORDER_FIELDS.has(key))) {
     throw new StockMarketTradingError(
