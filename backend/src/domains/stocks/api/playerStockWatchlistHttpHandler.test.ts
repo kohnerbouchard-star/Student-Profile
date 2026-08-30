@@ -28,6 +28,7 @@ Deno.test("player stock watchlist handler reads browser-safe assets", async () =
   assertEquals(response.status, 200);
   assertEquals(response.headers.get("cache-control"), "private, no-store");
   assertEquals(body.assets[0].assetId, "AURA");
+  assertEquals(body.assets[0].listingCurrencyCode, "XAL");
   assertEquals(body.assets[0].isWatchlisted, true);
   const serialized = JSON.stringify(body);
   assertEquals(serialized.includes(GAME_ID), false);
@@ -204,6 +205,7 @@ function asset(): PlayerStockAssetRecord {
     companyName: "Aurora Aerospace Systems",
     sector: "AI_AEROSPACE",
     countryCode: "SOLVEND",
+    listingCurrencyCode: "XAL",
     description: "Public company description",
     currentPrice: 105,
     previousClose: 100,
