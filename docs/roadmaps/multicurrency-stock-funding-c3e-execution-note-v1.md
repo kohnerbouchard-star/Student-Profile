@@ -12,7 +12,7 @@ The authenticated Player Stock trading gateway routes the certified C3 transacti
 - `settle_buy_quote` → `settle_stock_buy_quote_v1`
 - `settle_sell` → `settle_stock_sell_v1`
 
-For the immediate-buy Player Terminal path, `buy_now` is an API-level orchestration only: it creates the immutable C3B buy quote and immediately settles that exact quote through C3C. It does not introduce a new database settlement authority.
+For the immediate-buy Player Terminal path, `buy_now` is an API-level orchestration only: it creates the immutable C3B buy quote and immediately settles that exact quote through C3C. It does not introduce a new database settlement authority. Dedicated gateway coverage asserts that the authenticated scope, one-to-three-account allocation, quote key, and request idempotency context flow from the C3B call into the C3C call without exposing internal UUIDs.
 
 The legacy one-step Player order body remains retired after authentication with `410 stock_market_trading_retired`.
 
