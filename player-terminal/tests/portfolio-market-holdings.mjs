@@ -35,8 +35,8 @@ const asset = {
 
 assert.deepEqual(
   ROUTE_RESOURCE_PLAN.market.optional,
-  ["news", "banking", "portfolio"],
-  "Market route reloads must include the authoritative Portfolio read.",
+  ["news", "banking", "bankingFx", "portfolio", "countries"],
+  "Market route reloads must include authoritative Banking FX, Portfolio, and country metadata reads.",
 );
 
 const portfolio = attachPortfolioHoldings(
