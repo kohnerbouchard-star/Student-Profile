@@ -53,7 +53,7 @@ const TICKER = /^[A-Z0-9][A-Z0-9._-]{0,31}$/u;
 const STOCK_BUY_QUOTE_KEY = /^sbq_[0-9a-f]{32}$/u;
 const BANK_ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/u;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/u;
-const LEGACY_ORDER_FIELDS = new Set(["side", "orderType", "timeInForce", "limitPrice"]);
+const RETIRED_ORDER_FIELDS = new Set(["side", "orderType", "timeInForce", "limitPrice"]);
 
 export function parsePlayerStockMarketTradingValue(
   request: Request,
@@ -117,10 +117,10 @@ function readAction(value: Record<string, unknown>): PlayerStockMarketRequestAct
   if (["create_buy_quote", "buy_now", "settle_buy_quote", "settle_sell"].includes(action)) {
     return action as PlayerStockMarketRequestAction;
   }
-  if (!action && Object.keys(value).some((key) => LEGACY_ORDER_FIELDS.has(key))) {
+  if (!action && Object.keys(value).some((key) => RETIRED_ORDER_FIELDS.has(key))) {
     throw new StockMarketTradingError(
       "stock_market_trading_retired",
-      "The legacy one-step Stock order endpoint is retired. Create a buy quote and settle it, or submit an immediate sell with one destination Checking account.",
+      "The retired one-step Stock order endpoint is unavailable. Create a buy quote and settle it, or submit an immediate sell with one destination Checking account.",
       410,
     );
   }
