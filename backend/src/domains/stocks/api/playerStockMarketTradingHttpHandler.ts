@@ -111,6 +111,28 @@ export async function handlePlayerStockMarketTradingRequest(
         { ok: true, action: body.action, quote },
       );
     }
+    if (body.action === "buy_now") {
+      const quote = await repository.createBuyQuote({
+        ...scope,
+        ticker: body.ticker,
+        quantity: body.quantity,
+        expectedPrice: body.expectedPrice,
+        expectedTickIndex: body.expectedTickIndex,
+        allocations: body.allocations,
+        idempotencyKey: body.idempotencyKey,
+      });
+      const settlement = await repository.settleBuyQuote({
+        ...scope,
+        quoteKey: quote.quoteKey,
+        idempotencyKey: body.idempotencyKey,
+      });
+      return privateJsonResponse(200, {
+        ok: true as const,
+        action: body.action,
+        quote,
+        settlement,
+      });
+    }
     if (body.action === "settle_buy_quote") {
       const settlement = await repository.settleBuyQuote({
         ...scope,
