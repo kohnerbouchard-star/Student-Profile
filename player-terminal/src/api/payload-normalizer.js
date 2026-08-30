@@ -16,6 +16,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const PUBLIC_LOCATION_ID = /^loc_[a-z0-9_]+$/;
 const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
 const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
+const PUBLIC_BANK_ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/;
+const MARKET_TICKER = /^[A-Z0-9][A-Z0-9._-]{0,31}$/;
 const COUNTRY_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const TOKEN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const STORY_OPTION = /^[a-z0-9_]{2,80}$/;
@@ -74,9 +76,73 @@ function normalizeContractChoiceAnswers(raw, endpointKey) {
   return answers;
 }
 
+function positiveNumber(value, endpointKey, field, { integer = false } = {}) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0 || (integer && !Number.isSafeInteger(number))) {
+    throw invalidPayload(endpointKey, field);
+  }
+  return number;
+}
+
+function nonNegativeInteger(value, endpointKey, field) {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) throw invalidPayload(endpointKey, field);
+  return number;
+}
+
+function marketTicker(value, endpointKey) {
+  const ticker = normalizeString("ticker", value, endpointKey).toUpperCase();
+  if (!MARKET_TICKER.test(ticker)) throw invalidPayload(endpointKey, "ticker");
+  return ticker;
+}
+
+function bankAccountKey(value, endpointKey, field) {
+  return requirePattern(value, PUBLIC_BANK_ACCOUNT_KEY, endpointKey, field);
+}
+
+function normalizeMarketOrder(raw, endpointKey) {
+  const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
+  const common = {
+    ticker: marketTicker(raw.ticker, endpointKey),
+    quantity: positiveNumber(raw.quantity, endpointKey, "quantity"),
+    expectedPrice: positiveNumber(raw.expectedPrice, endpointKey, "expectedPrice"),
+    expectedTickIndex: nonNegativeInteger(raw.expectedTickIndex, endpointKey, "expectedTickIndex")
+  };
+  if (action === "buy_now") {
+    const allocations = [];
+    const seen = new Set();
+    for (let index = 1; index <= 3; index += 1) {
+      const keyValue = raw[`sourceAccountKey${index}`];
+      const amountValue = raw[`targetAmount${index}`];
+      const hasKey = String(keyValue || "").trim().length > 0;
+      const hasAmount = String(amountValue || "").trim().length > 0;
+      if (!hasKey && !hasAmount) continue;
+      if (!hasKey || !hasAmount) throw invalidPayload(endpointKey, `funding allocation ${index}`);
+      const sourceAccountKey = bankAccountKey(keyValue, endpointKey, `sourceAccountKey${index}`);
+      if (seen.has(sourceAccountKey)) throw invalidPayload(endpointKey, `sourceAccountKey${index}`);
+      seen.add(sourceAccountKey);
+      allocations.push({
+        sourceAccountKey,
+        targetAmount: positiveNumber(amountValue, endpointKey, `targetAmount${index}`)
+      });
+    }
+    if (!allocations.length) throw invalidPayload(endpointKey, "funding allocation");
+    return { action, ...common, allocations };
+  }
+  if (action === "settle_sell") {
+    return {
+      action,
+      ...common,
+      destinationAccountKey: bankAccountKey(raw.destinationAccountKey, endpointKey, "destinationAccountKey")
+    };
+  }
+  throw invalidPayload(endpointKey, "action");
+}
+
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
   if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
+  if (endpointKey === "marketOrder") return normalizeMarketOrder(raw, endpointKey);
   if (endpointKey === "arrivalClass") return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   if (endpointKey === "travelQuote") {
     const allowedModes = Array.isArray(raw.allowedModes) ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))] : [];
@@ -145,6 +211,5 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
     if (typeof value === "string") payload[key] = normalizeString(key, value, endpointKey);
     else if (typeof value === "boolean") payload[key] = value;
   }
-  if (endpointKey === "marketOrder") payload.timeInForce = "GTC";
   return payload;
 }
