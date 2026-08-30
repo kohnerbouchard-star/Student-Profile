@@ -16,11 +16,15 @@ on:
       - docs/roadmaps/multicurrency-stock-funding-*.md
       - docs/roadmaps/business-v2-current-checkpoint-v1.json
       - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
+      - player-terminal/src/api/backend-routes-core.js
+      - player-terminal/src/api/payload-normalizer.js
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
       - player-terminal/tests/browser/player-terminal-core.mjs
+      - player-terminal/tests/market-order-flow.mjs
       - player-terminal/tests/portfolio-market-holdings.mjs
       - player-terminal/tests/stock-multicurrency-funding.mjs
+      - player-terminal/tests/student-profile-adapter.mjs
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
@@ -42,11 +46,15 @@ on:
       - docs/roadmaps/multicurrency-stock-funding-*.md
       - docs/roadmaps/business-v2-current-checkpoint-v1.json
       - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
+      - player-terminal/src/api/backend-routes-core.js
+      - player-terminal/src/api/payload-normalizer.js
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
       - player-terminal/tests/browser/player-terminal-core.mjs
+      - player-terminal/tests/market-order-flow.mjs
       - player-terminal/tests/portfolio-market-holdings.mjs
       - player-terminal/tests/stock-multicurrency-funding.mjs
+      - player-terminal/tests/student-profile-adapter.mjs
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
@@ -64,7 +72,7 @@ jobs:
   source-contract:
     name: Verify C3E Player Stock cutover and retained C3A/C3B/C3C/C3D authority
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -125,6 +133,8 @@ jobs:
         run: |
           set -euo pipefail
           node --test player-terminal/tests/stock-multicurrency-funding.mjs
+          node --test player-terminal/tests/market-order-flow.mjs
+          node --test player-terminal/tests/student-profile-adapter.mjs
           node player-terminal/tests/portfolio-market-holdings.mjs
 
       - name: Verify deterministic architecture inventory
@@ -193,7 +203,7 @@ jobs:
             npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
             STATUS=${PIPESTATUS[0]}
             set -e
-            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            if [[ "$STATUS" -eq 0 ]]; then exit 0; fi
             npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
             npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
             sleep $((ATTEMPT * 10))
