@@ -18,6 +18,9 @@ on:
       - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
+      - player-terminal/tests/browser/player-terminal-core.mjs
+      - player-terminal/tests/portfolio-market-holdings.mjs
+      - player-terminal/tests/stock-multicurrency-funding.mjs
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
@@ -41,6 +44,9 @@ on:
       - docs/roadmaps/business-v2-roadmap-reconciliation-20260829.md
       - player-terminal/src/features/market/**
       - player-terminal/src/pages/market-page.js
+      - player-terminal/tests/browser/player-terminal-core.mjs
+      - player-terminal/tests/portfolio-market-holdings.mjs
+      - player-terminal/tests/stock-multicurrency-funding.mjs
       - scripts/multicurrency-stock-funding-*.mjs
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
@@ -56,7 +62,7 @@ concurrency:
 
 jobs:
   source-contract:
-    name: Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell
+    name: Verify C3E Player Stock cutover and retained C3A/C3B/C3C/C3D authority
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -114,6 +120,13 @@ jobs:
           npm --prefix backend run typecheck
           git diff --check
 
+      - name: Verify C3E Player Stock funding contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test player-terminal/tests/stock-multicurrency-funding.mjs
+          node player-terminal/tests/portfolio-market-holdings.mjs
+
       - name: Verify deterministic architecture inventory
         shell: bash
         run: |
@@ -137,7 +150,7 @@ jobs:
         run: deno --version
 
   disposable-database:
-    name: Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell
+    name: Verify retained C3B/C3C/C3D atomic Stock database authority for C3E
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
