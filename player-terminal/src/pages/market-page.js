@@ -16,13 +16,23 @@ function chartPath(values, width = 720, height = 260, padding = 18) {
   }).join(" ");
 }
 
-function renderAssetRow(asset, selectedId) {
+function listingCurrencyForAsset(asset, countries, fallback) {
+  const country = countries.find((entry) => entry.id === asset.countryId);
+  return String(asset.listingCurrencyCode || country?.currencyCode || fallback || "ECO").toUpperCase();
+}
+
+function renderAssetRow(asset, selectedId, countries, fallbackCurrency) {
+  const listingCurrency = listingCurrencyForAsset(asset, countries, fallbackCurrency);
   return `<button class="player-terminal-asset-row${asset.id === selectedId ? " is-selected" : ""}" type="button" data-player-market-select="${escapeHtml(asset.id)}">
     <span class="player-terminal-asset-symbol">${escapeHtml(asset.symbol.slice(0, 2))}</span>
     <span><strong>${escapeHtml(asset.symbol)}</strong><small>${escapeHtml(asset.name)}</small></span>
-    <span><strong>${escapeHtml(formatCurrency(asset.price, ""))}</strong><small>${escapeHtml(asset.type)} · ${escapeHtml(asset.sector)}</small></span>
+    <span><strong>${escapeHtml(formatCurrency(asset.price, listingCurrency))}</strong><small>${escapeHtml(asset.type)} · ${escapeHtml(asset.sector)} · ${escapeHtml(listingCurrency)}</small></span>
     ${renderChange(asset.change)}
   </button>`;
+}
+
+function checkingAccountOptions(accounts, selectedKey = "") {
+  return accounts.map((account) => `<option value="${escapeHtml(account.accountKey)}"${account.accountKey === selectedKey ? " selected" : ""}>${escapeHtml(account.currencyCode)} · ${escapeHtml(formatCurrency(account.availableAmount, account.currencyCode))} available</option>`).join("");
 }
 
 export function renderMarketPage(data, ui) {
@@ -36,29 +46,42 @@ export function renderMarketPage(data, ui) {
   const assets = market.assets.filter((asset) => sector === "All" || asset.sector === sector);
   const path = chartPath(selected.history);
   const chartHistory = escapeHtml(JSON.stringify(Array.isArray(selected.history) ? selected.history : []));
-  const currencyCode = data.session.currencyCode;
+  const sessionCurrencyCode = data.session.currencyCode;
+  const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
+  const listingCurrencyCode = listingCurrencyForAsset(selected, data.countries, sessionCurrencyCode);
   const position = marketPositionForAsset(data.portfolio, selected);
   const positionValue = position.owned * selected.price;
   const gain = position.owned ? positionValue - position.owned * position.averageCost : 0;
-  const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
   const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const bankingFxUnavailable = isResourceUnavailable(data, "bankingFx");
   const newsUnavailable = isResourceUnavailable(data, "news");
   const relatedNews = newsUnavailable ? [] : data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
   const composite = market.assets.find((asset) => asset.id === "cel-index");
   const compositeChange = Number(composite?.change) || 0;
-  const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(data.banking.checking.available, currencyCode);
+  const checkingAccounts = bankingFxUnavailable
+    ? []
+    : (Array.isArray(data.bankingFx?.balances) ? data.bankingFx.balances : [])
+      .filter((account) => account.accountKind === "checking" && account.accountKey);
+  const matchingListingAccount = checkingAccounts.find((account) => account.currencyCode === listingCurrencyCode);
+  const primaryFundingKey = matchingListingAccount?.accountKey || checkingAccounts[0]?.accountKey || "";
+  const accountOptions = checkingAccountOptions(checkingAccounts, primaryFundingKey);
+  const defaultTargetAmount = Math.round(Number(selected.price || 0) * 10_000) / 10_000;
+  const accountSummary = checkingAccounts.length
+    ? checkingAccounts.map((account) => `${account.currencyCode} ${formatCurrency(account.availableAmount, account.currencyCode)}`).join(" · ")
+    : "Unavailable";
+  const tradeDisabled = !checkingAccounts.length || market.status === "CLOSED";
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
-      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, understand event exposure, inspect your positions, and place market orders.</p></div>
+      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, fund immediate purchases from canonical Checking accounts, and route sale proceeds to the Checking account you choose.</p></div>
       <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${renderStatusPill(`${market.status} · ${market.nextClose}`, "green")}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
     </header>
 
     <div class="player-terminal-market-summary">
       <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
-      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, currencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
-      <article><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong><span>${bankingUnavailable ? "Balance service unavailable" : "Ready to trade"}</span></article>
+      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, sessionCurrencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
+      <article><small>CHECKING FUNDING</small><strong>${escapeHtml(checkingAccounts.length ? `${checkingAccounts.length} account${checkingAccounts.length === 1 ? "" : "s"}` : "Unavailable")}</strong><span>${escapeHtml(accountSummary)}</span></article>
       <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
     </div>
 
@@ -72,14 +95,14 @@ export function renderMarketPage(data, ui) {
         <div class="player-terminal-filter-row">
           ${market.sectors.map((item) => `<button type="button" class="${item === sector ? "active" : ""}" data-player-market-sector="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}
         </div>
-        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
+        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id, data.countries, sessionCurrencyCode)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-chart-panel">
         <header class="player-terminal-selected-asset-head">
           <div class="player-terminal-selected-symbol">${escapeHtml(selected.symbol.slice(0, 2))}</div>
-          <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
-          <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, currencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
+          <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)} · LISTED IN ${escapeHtml(listingCurrencyCode)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
+          <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, listingCurrencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
         </header>
         <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D" aria-pressed="false">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M" aria-pressed="true">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M" aria-pressed="false">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y" aria-pressed="false">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL" aria-pressed="false">ALL</button><small data-player-market-chart-range-label>1M SERIES</small></div>
         <div class="player-terminal-chart-frame" data-player-market-chart-history="${chartHistory}">
@@ -91,9 +114,9 @@ export function renderMarketPage(data, ui) {
           </svg>
         </div>
         <div class="player-terminal-asset-facts player-terminal-asset-facts-expanded">
-          <span><small>OPEN</small><strong>${escapeHtml(formatCurrency(selected.open, currencyCode))}</strong></span>
-          <span><small>DAY HIGH</small><strong>${escapeHtml(formatCurrency(selected.dayHigh, currencyCode))}</strong></span>
-          <span><small>DAY LOW</small><strong>${escapeHtml(formatCurrency(selected.dayLow, currencyCode))}</strong></span>
+          <span><small>OPEN</small><strong>${escapeHtml(formatCurrency(selected.open, listingCurrencyCode))}</strong></span>
+          <span><small>DAY HIGH</small><strong>${escapeHtml(formatCurrency(selected.dayHigh, listingCurrencyCode))}</strong></span>
+          <span><small>DAY LOW</small><strong>${escapeHtml(formatCurrency(selected.dayLow, listingCurrencyCode))}</strong></span>
           <span><small>VOLUME</small><strong>${escapeHtml(formatCompact(selected.volume))}</strong></span>
           <span><small>MARKET CAP</small><strong>${selected.marketCap ? escapeHtml(formatCompact(selected.marketCap)) : "—"}</strong></span>
           <span><small>P/E RATIO</small><strong>${selected.pe ? escapeHtml(selected.pe.toFixed(1)) : "—"}</strong></span>
@@ -102,29 +125,58 @@ export function renderMarketPage(data, ui) {
         </div>
         <div class="player-terminal-position-strip">
           <div><small>YOUR POSITION</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></div>
-          <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, currencyCode)) : "—"}</strong></div>
-          <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, currencyCode))}</strong></div>
-          <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, currencyCode))}</strong></div>
+          <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, listingCurrencyCode)) : "—"}</strong></div>
+          <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, listingCurrencyCode))}</strong></div>
+          <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, listingCurrencyCode))}</strong></div>
         </div>
         <div class="player-terminal-market-news-strip"><header><small>RELATED INTELLIGENCE</small><button type="button" data-route="news">Open news ${icon("chevronRight")}</button></header><div>${newsUnavailable ? "<p>Related intelligence is unavailable.</p>" : relatedNews.map((item) => `<button type="button" data-player-news-link="${escapeHtml(item.id)}"><span class="is-${escapeHtml(item.tone)}">${icon("news")}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.time)} · ${escapeHtml(item.severity)} impact</small></div></button>`).join("") || "<p>No active stories for this asset.</p>"}</div></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-order-ticket">
-        <header class="player-terminal-panel-header"><div><span>ORDER TICKET</span><strong>${escapeHtml(selected.symbol)}</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}</header>
-        <form data-player-form="market-order" data-endpoint="marketOrder">
-          <input type="hidden" name="assetId" value="${escapeHtml(selected.id)}" />
-          <label>ORDER SIDE<div class="player-terminal-segmented"><label><input type="radio" name="side" value="buy" checked /><span>Buy</span></label><label><input type="radio" name="side" value="sell" /><span>Sell</span></label></div></label>
-          <label>ORDER TYPE<select name="orderType"><option value="market">Market</option><option value="limit">Limit</option></select></label>
-          <label>QUANTITY<input name="quantity" type="number" min="1" step="1" value="10" required /></label>
-          <label>LIMIT PRICE<input name="limitPrice" type="number" min="0" step="0.01" placeholder="Optional for limit order" /></label>
+        <header class="player-terminal-panel-header"><div><span>IMMEDIATE TRADING</span><strong>${escapeHtml(selected.symbol)} · ${escapeHtml(listingCurrencyCode)}</strong></div>${renderStatusPill("C3 QUOTE + SETTLEMENT", "cyan")}</header>
+        <div class="player-terminal-order-estimate"><span>Authoritative funding</span><small>${bankingFxUnavailable ? "Canonical Banking FX account data is unavailable; trading is disabled." : "Only canonical Checking accounts are eligible. Foreign-currency accounts are converted through Banking FX; allocation amounts below are target amounts in the Stock listing currency."}</small></div>
+
+        <form data-player-form="market-buy" data-endpoint="marketOrder">
+          <input type="hidden" name="action" value="buy_now" />
+          <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
+          <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <label>BUY QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" value="1" required /></label>
+          <fieldset>
+            <legend>FUNDING SPLIT · TARGET ${escapeHtml(listingCurrencyCode)}</legend>
+            <label>CHECKING ACCOUNT 1<select name="sourceAccountKey1" required><option value="">Select Checking account</option>${accountOptions}</select></label>
+            <label>TARGET AMOUNT 1<input name="targetAmount1" type="number" min="0.0001" step="0.0001" value="${escapeHtml(String(defaultTargetAmount))}" required /></label>
+            <label>CHECKING ACCOUNT 2<select name="sourceAccountKey2"><option value="">Optional second account</option>${checkingAccountOptions(checkingAccounts)}</select></label>
+            <label>TARGET AMOUNT 2<input name="targetAmount2" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
+            <label>CHECKING ACCOUNT 3<select name="sourceAccountKey3"><option value="">Optional third account</option>${checkingAccountOptions(checkingAccounts)}</select></label>
+            <label>TARGET AMOUNT 3<input name="targetAmount3" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
+          </fieldset>
           <div class="player-terminal-order-review">
-            <span><small>ESTIMATED VALUE</small><strong data-player-market-estimated-value>${escapeHtml(formatCurrency(selected.price * 10, currencyCode))}</strong></span>
-            <span><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong></span>
-            <span><small>ESTIMATED FEES</small><strong data-player-market-estimated-fees>${escapeHtml(formatCurrency(selected.price * 10 * 0.0025, currencyCode))}</strong></span>
+            <span><small>CURRENT PRICE</small><strong>${escapeHtml(formatCurrency(selected.price, listingCurrencyCode))}</strong></span>
+            <span><small>PRICE TICK</small><strong>#${escapeHtml(String(market.tickIndex || 0))}</strong></span>
+            <span><small>DEFAULT TARGET</small><strong>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>${bankingUnavailable ? "Available checking funds could not be pre-validated. The backend will perform the authoritative balance check." : "Price, fees, available funds, and final holdings update only after the order is confirmed."}</small></div>
-          <button class="player-terminal-primary-button" type="submit">${icon("send")} Send order for processing</button>
+          <div class="player-terminal-order-estimate"><span>Buy settlement</span><small>The server creates a locked C3B quote and settles that exact quote through C3C. Price, tick, account ownership, available funds, and FX are revalidated before settlement; any mismatch fails closed.</small></div>
+          <button class="player-terminal-primary-button" type="submit"${tradeDisabled ? " disabled" : ""}>${icon("send")} Buy now</button>
         </form>
+
+        <form data-player-form="market-sell" data-endpoint="marketOrder">
+          <input type="hidden" name="action" value="settle_sell" />
+          <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
+          <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <label>SELL QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
+          <label>PROCEEDS DESTINATION<select name="destinationAccountKey" required><option value="">Select Checking account</option>${accountOptions}</select></label>
+          <div class="player-terminal-order-review">
+            <span><small>OWNED</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></span>
+            <span><small>LISTING CURRENCY</small><strong>${escapeHtml(listingCurrencyCode)}</strong></span>
+            <span><small>DESTINATION FX</small><strong>${checkingAccounts.some((account) => account.currencyCode !== listingCurrencyCode) ? "B2 enabled" : "Not required"}</strong></span>
+          </div>
+          <div class="player-terminal-order-estimate"><span>Sell settlement</span><small>C3D debits shares once, settles proceeds through canonical market liquidity, and credits the selected Checking account. A destination in another currency is converted by the authoritative Banking FX boundary.</small></div>
+          <button class="player-terminal-secondary-button" type="submit"${tradeDisabled || position.owned <= 0 ? " disabled" : ""}>${icon("send")} Sell now</button>
+        </form>
+
+        ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Legacy Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}
       </section>
     </div>
   </section>`;
