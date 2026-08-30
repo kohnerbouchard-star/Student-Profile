@@ -15,6 +15,16 @@ export interface CreateBuyQuoteBody {
   readonly idempotencyKey: string;
 }
 
+export interface BuyNowBody {
+  readonly action: "buy_now";
+  readonly ticker: string;
+  readonly quantity: number;
+  readonly expectedPrice: number;
+  readonly expectedTickIndex: number;
+  readonly allocations: readonly StockMarketFundingAllocation[];
+  readonly idempotencyKey: string;
+}
+
 export interface SettleBuyQuoteBody {
   readonly action: "settle_buy_quote";
   readonly quoteKey: string;
@@ -33,8 +43,11 @@ export interface SettleSellBody {
 
 export type PlayerStockMarketTradingBody =
   | CreateBuyQuoteBody
+  | BuyNowBody
   | SettleBuyQuoteBody
   | SettleSellBody;
+
+type PlayerStockMarketRequestAction = PlayerStockMarketTradingAction | "buy_now";
 
 const TICKER = /^[A-Z0-9][A-Z0-9._-]{0,31}$/u;
 const STOCK_BUY_QUOTE_KEY = /^sbq_[0-9a-f]{32}$/u;
@@ -47,7 +60,7 @@ export function parsePlayerStockMarketTradingValue(
   value: Record<string, unknown>,
 ): PlayerStockMarketTradingBody {
   const action = readAction(value);
-  if (action === "create_buy_quote") {
+  if (action === "create_buy_quote" || action === "buy_now") {
     assertExactKeys(value, [
       "action", "ticker", "quantity", "expectedPrice", "expectedTickIndex",
       "allocations", "idempotencyKey",
@@ -99,10 +112,10 @@ export function parsePlayerStockMarketTradingValue(
   };
 }
 
-function readAction(value: Record<string, unknown>): PlayerStockMarketTradingAction {
+function readAction(value: Record<string, unknown>): PlayerStockMarketRequestAction {
   const action = typeof value.action === "string" ? value.action.trim().toLowerCase() : "";
-  if (["create_buy_quote", "settle_buy_quote", "settle_sell"].includes(action)) {
-    return action as PlayerStockMarketTradingAction;
+  if (["create_buy_quote", "buy_now", "settle_buy_quote", "settle_sell"].includes(action)) {
+    return action as PlayerStockMarketRequestAction;
   }
   if (!action && Object.keys(value).some((key) => LEGACY_ORDER_FIELDS.has(key))) {
     throw new StockMarketTradingError(
@@ -111,7 +124,7 @@ function readAction(value: Record<string, unknown>): PlayerStockMarketTradingAct
       410,
     );
   }
-  throw invalidRequest("action must be create_buy_quote, settle_buy_quote, or settle_sell.");
+  throw invalidRequest("action must be create_buy_quote, buy_now, settle_buy_quote, or settle_sell.");
 }
 
 function assertExactKeys(
