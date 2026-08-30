@@ -18,6 +18,7 @@ export function toPlayerStockAssetDto(
     companyName: asset.companyName,
     sector: asset.sector,
     countryCode: asset.countryCode,
+    listingCurrencyCode: asset.listingCurrencyCode,
     currentPrice: asset.currentPrice,
     previousClose: asset.previousClose,
     changePct: round(changePct),
