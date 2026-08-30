@@ -198,11 +198,13 @@ jobs:
           node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-settlement-database.mjs
+          node scripts/multicurrency-stock-sell-settlement-database.mjs
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-quote-database.mjs
           node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
           npx supabase db reset --workdir backend --local
           node scripts/multicurrency-stock-buy-settlement-database.mjs
+          node scripts/multicurrency-stock-sell-settlement-database.mjs
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
