@@ -46,7 +46,7 @@ export class SupabaseStockMarketTradingRepository
     const response = await this.client.rpc<
       readonly ExecuteStockMarketOrderRpcRow[]
     >("execute_stock_market_order_calendar_gated", args);
-    if (response.error) throw mapLegacyTradingError(response.error);
+    if (response.error) throw mapRetainedTradingError(response.error);
 
     const row = response.data?.[0];
     if (!row) {
@@ -164,11 +164,11 @@ function mapRejectedOrder(rejectionReason: string | null): StockMarketTradingErr
   );
 }
 
-function mapLegacyTradingError(
+function mapRetainedTradingError(
   error: SupabaseTradingQueryError,
 ): StockMarketTradingError {
   const upperMessage = String(error.message ?? "").toUpperCase();
-  if (isLegacySchemaNotAppliedError(error)) {
+  if (isRetainedSchemaNotAppliedError(error)) {
     return new StockMarketTradingError(
       "stock_market_trading_schema_not_applied",
       "Stock market trading schema is not applied.",
@@ -220,7 +220,7 @@ function mapLegacyTradingError(
   );
 }
 
-function isLegacySchemaNotAppliedError(error: SupabaseTradingQueryError): boolean {
+function isRetainedSchemaNotAppliedError(error: SupabaseTradingQueryError): boolean {
   const message = String(error.message ?? "").toLowerCase();
   return error.code === "42P01" || error.code === "42703" ||
     message.includes("does not exist") || message.includes("schema cache");
