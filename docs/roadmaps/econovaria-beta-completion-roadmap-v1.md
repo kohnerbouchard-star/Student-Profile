@@ -2,8 +2,8 @@
 
 **Document ID:** `ECON-BETA-ROADMAP-V1`  
 **Roadmap authority:** Chat 1  
-**Audited main:** `9eb2277e6e16d628c0da2595d05bf99a121002a9`
-**Audit date:** 2026-08-07
+**Audited main:** `80f5eb8e24a364bc878de11acfdf196add878f10`
+**Audit date:** 2026-08-31
 **Current decision:** `BLOCKED`  
 **Production deployment authorized:** No
 
@@ -20,6 +20,17 @@ PR #296 is closed without merge. PR #298 is the preceding merged controller auth
 The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared convergence, #295, continuous pilot, and final go/no-go. Production promotion requires a separate explicit product-owner instruction.
 
 ## Scope Intake
+
+- **`BETA-BUSINESS-V2-001` — Business V2 completion through Phase 14**
+  - Status: `IN_PROGRESS`
+  - Requested scope and defaults: implement `BUSINESS-V2-10A4C4`, `BUSINESS-V2-10A4D`, `BUSINESS-V2-11`, `BUSINESS-V2-12`, `BUSINESS-V2-13`, and `BUSINESS-V2-14A`–`14D` as an unmerged draft stack. Only committed Player Store purchases may create new physical-goods sales after Phase 11; statements close on guarded server-owned payroll periods; IPOs are fixed-price primary issuances; legacy operating periods use a seven-day cadence and later policy changes affect only unopened periods.
+  - Current C4 state: `SCOPED_NOT_IMPLEMENTED`. Existing owner `feat/business-multicurrency-treasury-v1`, draft PR #678, exact head `ffbdcf830922f56a445c0092dbe8d07ede05ae9e`, based on the C3 controller handoff `18fde31be5e1599c7d9a65d681b248fcb4756dc4`; certified C3 implementation identity `058162d7b9688809e885d9e6fe77ed42978c7a03`. C4 must extend B2 account/FX and C0 funding authority to exact Player-or-Business ownership, atomically fund Business procurement, and add the locked authenticated Treasury and Store surfaces without a parallel wallet, ledger, balance, FX, funding, Store, or Inventory authority.
+  - Successor owner sequence: `feat/business-player-store-fx-final-v2` → `refactor/business-store-sales-convergence-v2` → `feat/player-business-workspace-v2` → `feat/admin-business-supervision-v2` → `feat/business-financial-reporting-v2` → `feat/business-common-equity-v2` → `feat/business-ipo-issuance-v2` → `feat/business-financial-market-integration-v2`. A successor branch may be created only from its exact green predecessor handoff, and each gets one bounded draft PR.
+  - Active stack reconciliation: Business foundation PRs #648 and #654–#661, Store PRs #662–#667 and #670, and funding PRs #671–#676 plus C4 PR #678 are open drafts. PRs #661, #664, and #674 are not ancestry-linear with their declared bases; #648 is dirty against current `main`; #670, #671, and #673 have known failing gates. No active owner existed for `10A.4D` or Phases 11–14 at intake, so only those successor branches may be created after predecessor certification. Existing owner branches must not be rebased, replaced, or force-pushed.
+  - Completion and release boundary: every exact-head green tranche remains `IMPLEMENTED_NOT_MERGED` until normal merge to `main` and any required runtime evidence exist. No PR merge, staging/production deployment, scheduler or secret change, staging/production SQL, or live-data mutation is authorized. `BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime-evidence blocker, not a repository-development blocker.
+  - Post-stack integration: after 14D, advance existing integration branch `refactor/business-ux-mechanics-v1` / draft PR #648 without rewriting history, merge then-current `main` into it, reconcile audited main-only changes, and rerun the full zero-to-head/application/security/browser matrix. Do not merge #648.
+  - Separate architecture gates: `ARCH-100G0`, `ARCH-100L2`–`L5`, `ARCH-100I2A/B`, `ARCH-202A/B/C`, `ARCH-207A-D`, and `ARCH-300` remain post-merge gates. This stack must preserve their context and ownership invariants but cannot claim their merged-source completion.
+  - Next exact roadmap item: implement and certify `BUSINESS-V2-10A4C4` on PR #678, update the exact implementation and handoff identities, then open `BUSINESS-V2-10A4D` only from that clean handoff.
 
 - **`ARCH-100` — Canonical request/application context**
   - Status: `IN_PROGRESS`
@@ -180,3 +191,17 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Staging/runtime evidence: pending CI browser validation; production is unchanged.
   - Unresolved blocker: none.
   - Next exact roadmap item: publish the branch, open its pull request, and require the browser and repository checks before merge.
+
+- **`BETA-PROGRESSION-TEST-CLOCK-001` — Deterministic Progression integration-event fixture clock**
+  - Status: `IN_PROGRESS`
+  - Fetched-main reconciliation: owner `fix/player-commerce-transfer-disclosure-20260818`, PR #642; implementation `cbd3c4415c1b2a8170ca7f0783b0e69cbb6691a7`. The correction fixes `NOW` at `2026-07-21T05:00:00.000Z` for all seven trusted Progression integration-event calls and changes no runtime, schema, route, RPC, UI, economic, idempotency, deployment, or Business authority.
+  - Collision boundary: PR #654's embedded copy of `backend/src/domains/progression/services/progressionIntegrationEventService.test.ts` is superseded and receives no implementation credit. C4 and later Business branches must reconcile the fetched-main test fixture rather than restore the stale donor copy.
+  - Evidence and completion boundary: focused Progression 28/28, backend smoke, `typecheck:all`, root tests, architecture/legacy/migration audits, formatting, secret, and diff checks passed at the implementation commit. Exact-head checks and normal merge remain pending, so this item is not `VERIFIED_COMPLETE`.
+  - Next exact roadmap item: preserve the correction during current-main reconciliation of its owning branch and later Business integration.
+
+- **`BETA-PLAYER-ACCEPTANCE-SYNC-001` — Deterministic Player commerce and Business acceptance reconciliation**
+  - Status: `IN_PROGRESS`
+  - Fetched-main reconciliation: owner `fix/player-commerce-transfer-disclosure-20260818`, PR #642; implementation chain through `7cef343c1af875c11d1d47d986a1f89ac0f7ed9d`, `faaabcd92313b9a8db1f2c2c494dc85f0763d436`, `b8ea61925dd5325e880bfc870f126175db684447`, `eb3bbf5f8ce65a4893a6fdf237fefa1704b49d22`, and `49f3988afe2f76aa5e07986b3ed200cd7b80fb3b`.
+  - Scope and collision boundary: deterministic disclosure/focus retries and Business mutation-completion synchronization are test-harness corrections only. PR #648's duplicate harness/manifest edits are superseded and must be de-duplicated during final integration; PR #624 retains its CSS scope. C4 and later Business branches must preserve the fetched-main versions of `scripts/business-banking-player-commerce-browser-acceptance.mjs`, `scripts/business-banking-player-business-browser-acceptance.mjs`, and `docs/operations/contracts/player-cross-cutting-verification-authority-v1.json` when those paths are reconciled.
+  - Evidence and completion boundary: source transforms, authority tests, Player verification, focused Progression, backend smoke, `typecheck:all`, root tests, formatting, secret, and diff checks passed; connected browser evidence and exact-head PR checks remain pending. No runtime, schema, route, RPC, deployment, or live-data change is authorized.
+  - Next exact roadmap item: preserve these acceptance-harness corrections in the final #648 current-main integration and rerun their connected Player gates.
