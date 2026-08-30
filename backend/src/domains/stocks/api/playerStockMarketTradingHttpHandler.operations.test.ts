@@ -45,6 +45,49 @@ Deno.test("player Stock gateway derives scope and creates C3B quotes", async () 
   assertNoUuid(body);
 });
 
+Deno.test("player Stock gateway buy-now composes the certified C3B quote and C3C settlement", async () => {
+  const repo = new MockRepository();
+  const response = await handlePlayerStockMarketTradingRequest(
+    req({
+      action: "buy_now",
+      ticker: "aura",
+      quantity: 3,
+      expectedPrice: 100,
+      expectedTickIndex: 42,
+      allocations: [
+        { sourceAccountKey: A, targetAmount: 200 },
+        { sourceAccountKey: B, targetAmount: 100 },
+      ],
+      idempotencyKey: "stock-buy-now-0001",
+    }),
+    deps({ repo }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(repo.inputs, [
+    {
+      operation: "quote", gameSessionId: G, playerId: P, ticker: "AURA",
+      quantity: 3, expectedPrice: 100, expectedTickIndex: 42,
+      allocations: [
+        { sourceAccountKey: A, targetAmount: 200 },
+        { sourceAccountKey: B, targetAmount: 100 },
+      ],
+      idempotencyKey: "stock-buy-now-0001",
+    },
+    {
+      operation: "buy", gameSessionId: G, playerId: P, quoteKey: Q,
+      idempotencyKey: "stock-buy-now-0001",
+    },
+  ]);
+  assertEquals(
+    [body.action, body.quote.quoteKey, body.settlement.quoteKey],
+    ["buy_now", Q, Q],
+  );
+  assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assertNoUuid(body);
+});
+
 Deno.test("player Stock gateway settles C3C buys and C3D sells with public keys", async () => {
   const repo = new MockRepository();
   const buy = await handlePlayerStockMarketTradingRequest(req({
