@@ -139,7 +139,7 @@ jobs:
   disposable-database:
     name: Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell
     runs-on: ubuntu-24.04
-    timeout-minutes: 70
+    timeout-minutes: 90
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -193,18 +193,20 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -euo pipefail
-          npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-buy-quote-database.mjs
-          node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
-          npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-buy-settlement-database.mjs
-          node scripts/multicurrency-stock-sell-settlement-database.mjs
-          npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-buy-quote-database.mjs
-          node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
-          npx supabase db reset --workdir backend --local
-          node scripts/multicurrency-stock-buy-settlement-database.mjs
-          node scripts/multicurrency-stock-sell-settlement-database.mjs
+          for PASS in 1 2; do
+            echo "C3 exact-head acceptance pass ${PASS}"
+            npx supabase db reset --workdir backend --local
+            node scripts/multicurrency-stock-buy-quote-database.mjs
+            node scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs
+
+            npx supabase db reset --workdir backend --local
+            node scripts/multicurrency-stock-buy-settlement-database.mjs
+            node scripts/multicurrency-stock-sell-settlement-database.mjs
+
+            npx supabase db reset --workdir backend --local
+            node scripts/multicurrency-stock-buy-settlement-database.mjs
+            node scripts/multicurrency-stock-sell-settlement-concurrency-database.mjs
+          done
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
