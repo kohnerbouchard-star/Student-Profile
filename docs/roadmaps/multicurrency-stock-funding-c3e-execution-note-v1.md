@@ -1,6 +1,6 @@
 # Multi-Currency Stock Funding — C3E Execution Note v1
 
-Status: **implemented on the C3 branch; exact-head certification pending**
+Status: **certified as part of C3F at exact implementation `058162d7b9688809e885d9e6fe77ed42978c7a03`; not merged**
 
 Certified predecessor: C3D implementation `9b502b9ffa5e8aaf2f7c8d93d9cd3ccda3a10f15`.
 
@@ -56,7 +56,7 @@ No game, Player, Player-session, Stock-asset, or bank-account UUID is accepted f
 
 ## Verification bound to the permanent workflow
 
-The permanent `multicurrency-stock-funding-v1` workflow now triggers on the C3E Player controller, request adapter, payload normalizer, page, and focused regression tests. Its source job explicitly runs:
+The permanent `multicurrency-stock-funding-v1` workflow triggers on the C3E Player controller, request adapter, payload normalizer, page, and focused regression tests. Its source job explicitly runs:
 
 - Stock funding payload normalization and allocation rejection;
 - immutable quote, expiry, sale review, receipt, and refresh behavior;
@@ -70,8 +70,10 @@ The temporary source-export workflow was removed because it was outside PR #676'
 
 Deterministic regeneration remains at `compatibilityMarkerFiles: 209`, matching the base ceiling. No new persistence authority, cross-domain infrastructure dependency, direct browser database access, direct balance mutation, or direct inventory mutation was introduced.
 
-## Certification boundary
+## Certification result
 
-C3E remains **not certified** until the final exact-head Backend, Player Terminal, Stock funding, Banking FX, Database Replay, browser/privacy, architecture, timezone, security, and retained-stack checks complete successfully. C3F is responsible for pinning the exact implementation SHA and workflow evidence and for deliberately promoting the checkpoint manifest.
+C3E is certified as part of `BUSINESS-V2-10A4C3F` at immutable implementation source `058162d7b9688809e885d9e6fe77ed42978c7a03`. That exact source passed the permanent Stock gate and every pull-request-triggered workflow returned for the head: 27 completed runs and 27 successful conclusions, including Backend, Player Terminal, Banking FX, Database Replay, browser/privacy, architecture, timezone, security, and retained-stack coverage.
 
-No merge or deployment is authorized by this note. C3D remains the certified checkpoint until C3F records durable evidence and updates the authoritative manifest.
+The durable C3 implementation handoff and authoritative checkpoint manifest pin the permanent workflow and job evidence. Later documentation or controller commits do not replace the tested implementation identity. C3D remains the certified predecessor; C3F is the current development checkpoint.
+
+No merge or deployment is authorized by this note.
