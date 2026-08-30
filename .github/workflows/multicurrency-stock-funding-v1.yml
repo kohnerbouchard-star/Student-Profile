@@ -70,7 +70,7 @@ concurrency:
 
 jobs:
   source-contract:
-    name: Verify C3E Player Stock cutover and retained C3A/C3B/C3C/C3D authority
+    name: Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
@@ -160,7 +160,7 @@ jobs:
         run: deno --version
 
   disposable-database:
-    name: Verify retained C3B/C3C/C3D atomic Stock database authority for C3E
+    name: Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
