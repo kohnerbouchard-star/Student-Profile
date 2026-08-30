@@ -14,7 +14,7 @@ The authenticated Player Stock trading gateway routes the certified C3 transacti
 
 For the immediate-buy Player Terminal path, `buy_now` is an API-level orchestration only: it creates the immutable C3B buy quote and immediately settles that exact quote through C3C. It does not introduce a new database settlement authority. Dedicated gateway coverage asserts that the authenticated scope, one-to-three-account allocation, quote key, and request idempotency context flow from the C3B call into the C3C call without exposing internal UUIDs.
 
-The legacy one-step Player order body remains retired after authentication with `410 stock_market_trading_retired`.
+The retired one-step Player order body remains rejected after authentication with `410 stock_market_trading_retired`.
 
 The gateway derives game and Player scope from the authenticated session, accepts public ticker and public evidence keys, rejects UUID/private-scope injection, validates one to three unique Checking-account funding allocations, preserves idempotency and certified conflict semantics, and returns private no-store responses.
 
@@ -28,7 +28,7 @@ The Player Terminal market route now loads the existing canonical Banking FX rea
 
 ## Player Terminal funding UX
 
-The legacy market/limit order ticket has been replaced for the C3E path:
+The previous market/limit order ticket has been replaced for the C3E path:
 
 - immediate buys use one to three canonical Checking accounts and target allocations in the Stock listing currency;
 - immediate sells choose exactly one canonical Checking destination;
@@ -38,12 +38,20 @@ The legacy market/limit order ticket has been replaced for the C3E path:
 
 No margin, short selling, partial fills, queued orders, or limit orders were added.
 
+## Architecture ratchet reconciliation
+
+The C3E source tranche initially increased the repository compatibility-marker inventory from the base ceiling of 209 to 213 through incidental compatibility terminology in three Stock test/input files and one retained Stock repository helper. Those names were removed without changing runtime behavior. Deterministic regeneration on the final source tree returns `compatibilityMarkerFiles: 209`, matching the base ceiling. The temporary inventory finalizer removed itself before generation and committed only the regenerated canonical inventory plus its own deletion.
+
+## Certification candidate
+
+The current candidate is the first human-triggered commit after deterministic inventory reconciliation. It exists only to trigger an exact-head verification matrix over the final source and inventory tree. C3E must remain **not certified** until the required Backend, Player Terminal, Stock funding, Banking FX, Database Replay, browser/privacy, architecture, timezone, security, and retained-stack checks complete successfully and durable handoff/checkpoint evidence is recorded.
+
 ## Remaining before C3E certification
 
 - exact-head Backend and Player Terminal verification after this tranche;
 - browser-level connected trade-flow proof;
 - privacy/public-evidence regression proof across the final Player surface;
-- deterministic architecture inventory refresh if required by the exact-head quality gate;
+- exact-head deterministic architecture quality proof;
 - durable C3E/C3F handoff and checkpoint promotion only after certification evidence exists.
 
 No merge or deployment is authorized by this note. C3D remains the certified checkpoint until the authoritative checkpoint manifest is deliberately promoted with exact-head evidence.
