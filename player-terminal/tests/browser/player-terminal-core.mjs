@@ -153,19 +153,24 @@ test("Store purchase opens quote selection before confirmation", async ({ page }
   await expect(purchase).toBeFocused();
 });
 
-test("limit-order interface remains visible and sends no unsupported order", async ({ page }) => {
+test("C3E immediate Stock ticket replaces the retired limit-order interface", async ({ page }) => {
   await openTerminal(page, "market");
-  const form = page.locator('form[data-player-form="market-order"]');
-  await form.locator('select[name="orderType"]').selectOption("limit");
-  await form.locator('input[name="quantity"]').fill("3");
-  await form.locator('input[name="limitPrice"]').fill("12.50");
-  await form.locator('button[type="submit"]').click();
-  const dialog = page.locator("[data-player-market-order-dialog]");
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
-  await expect(dialog).toContainText("BACKEND INTEGRATION PENDING");
-  await expect(dialog).toContainText("No order was sent");
-  await expect(dialog.locator("[data-player-market-order-confirm]")).toHaveCount(0);
+
+  await expect(page.locator('form[data-player-form="market-order"]')).toHaveCount(0);
+  await expect(page.locator('select[name="orderType"]')).toHaveCount(0);
+  await expect(page.locator('input[name="limitPrice"]')).toHaveCount(0);
+
+  const buy = page.locator('form[data-player-form="market-buy"]');
+  const sell = page.locator('form[data-player-form="market-sell"]');
+  await expect(buy).toBeVisible();
+  await expect(sell).toBeVisible();
+  await expect(buy.locator('input[name="action"]')).toHaveValue("buy_now");
+  await expect(sell.locator('input[name="action"]')).toHaveValue("settle_sell");
+  await expect(buy.locator('select[name="sourceAccountKey1"]')).toBeVisible();
+  await expect(buy.locator('select[name="sourceAccountKey2"]')).toBeVisible();
+  await expect(buy.locator('select[name="sourceAccountKey3"]')).toBeVisible();
+  await expect(sell.locator('select[name="destinationAccountKey"]')).toBeVisible();
+  await expect(page.getByText("C3 QUOTE + SETTLEMENT", { exact: true })).toBeVisible();
 });
 
 test("market search, chart ranges, and Banking export are operational", async ({ page }, testInfo) => {
