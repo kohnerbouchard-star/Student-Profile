@@ -16,13 +16,13 @@ function chartPath(values, width = 720, height = 260, padding = 18) {
   }).join(" ");
 }
 
-function listingCurrencyForAsset(asset, countries, fallback) {
+function listingCurrencyForAsset(asset, countries, defaultCurrency) {
   const country = countries.find((entry) => entry.id === asset.countryId);
-  return String(asset.listingCurrencyCode || country?.currencyCode || fallback || "ECO").toUpperCase();
+  return String(asset.listingCurrencyCode || country?.currencyCode || defaultCurrency || "ECO").toUpperCase();
 }
 
-function renderAssetRow(asset, selectedId, countries, fallbackCurrency) {
-  const listingCurrency = listingCurrencyForAsset(asset, countries, fallbackCurrency);
+function renderAssetRow(asset, selectedId, countries, defaultCurrency) {
+  const listingCurrency = listingCurrencyForAsset(asset, countries, defaultCurrency);
   return `<button class="player-terminal-asset-row${asset.id === selectedId ? " is-selected" : ""}" type="button" data-player-market-select="${escapeHtml(asset.id)}">
     <span class="player-terminal-asset-symbol">${escapeHtml(asset.symbol.slice(0, 2))}</span>
     <span><strong>${escapeHtml(asset.symbol)}</strong><small>${escapeHtml(asset.name)}</small></span>
@@ -176,7 +176,7 @@ export function renderMarketPage(data, ui) {
           <button class="player-terminal-secondary-button" type="submit"${tradeDisabled || position.owned <= 0 ? " disabled" : ""}>${icon("send")} Sell now</button>
         </form>
 
-        ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Legacy Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}
+        ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}
       </section>
     </div>
   </section>`;
