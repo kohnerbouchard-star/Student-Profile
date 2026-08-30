@@ -136,8 +136,8 @@ export function renderMarketPage(data, ui) {
         <header class="player-terminal-panel-header"><div><span>IMMEDIATE TRADING</span><strong>${escapeHtml(selected.symbol)} · ${escapeHtml(listingCurrencyCode)}</strong></div>${renderStatusPill("C3 QUOTE + SETTLEMENT", "cyan")}</header>
         <div class="player-terminal-order-estimate"><span>Authoritative funding</span><small>${bankingFxUnavailable ? "Canonical Banking FX account data is unavailable; trading is disabled." : "Only canonical Checking accounts are eligible. Foreign-currency accounts are converted through Banking FX; allocation amounts below are target amounts in the Stock listing currency."}</small></div>
 
-        <form data-player-form="market-buy" data-endpoint="marketOrder">
-          <input type="hidden" name="action" value="buy_now" />
+        <form data-player-form="market-buy" data-player-market-order-form="buy-quote" data-endpoint="marketOrder">
+          <input type="hidden" name="action" value="create_buy_quote" />
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
           <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
@@ -152,15 +152,15 @@ export function renderMarketPage(data, ui) {
             <label>TARGET AMOUNT 3<input name="targetAmount3" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
           </fieldset>
           <div class="player-terminal-order-review">
-            <span><small>CURRENT PRICE</small><strong>${escapeHtml(formatCurrency(selected.price, listingCurrencyCode))}</strong></span>
-            <span><small>PRICE TICK</small><strong>#${escapeHtml(String(market.tickIndex || 0))}</strong></span>
-            <span><small>DEFAULT TARGET</small><strong>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>ESTIMATED GROSS</small><strong data-player-market-estimated-total>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>FUNDED</small><strong data-player-market-funded-total>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>REMAINING</small><strong data-player-market-remaining-total>${escapeHtml(formatCurrency(0, listingCurrencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Buy settlement</span><small>The server creates a locked C3B quote and settles that exact quote through C3C. Price, tick, account ownership, available funds, and FX are revalidated before settlement; any mismatch fails closed.</small></div>
-          <button class="player-terminal-primary-button" type="submit"${tradeDisabled ? " disabled" : ""}>${icon("send")} Buy now</button>
+          <div class="player-terminal-order-estimate"><span>Quote before settlement</span><small>The server locks the exact C3B price, tick, funding split, FX rates, and expiry. Review that immutable quote before authorizing C3C settlement.</small></div>
+          <button class="player-terminal-primary-button" type="submit"${tradeDisabled ? " disabled" : ""}>${icon("send")} Create exact quote</button>
         </form>
 
-        <form data-player-form="market-sell" data-endpoint="marketOrder">
+        <form data-player-form="market-sell" data-player-market-order-form="sell-review" data-endpoint="marketOrder">
           <input type="hidden" name="action" value="settle_sell" />
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
@@ -168,12 +168,12 @@ export function renderMarketPage(data, ui) {
           <label>SELL QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
           <label>PROCEEDS DESTINATION<select name="destinationAccountKey" required><option value="">Select Checking account</option>${accountOptions}</select></label>
           <div class="player-terminal-order-review">
+            <span><small>ESTIMATED PROCEEDS</small><strong data-player-market-sell-proceeds>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
             <span><small>OWNED</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></span>
-            <span><small>LISTING CURRENCY</small><strong>${escapeHtml(listingCurrencyCode)}</strong></span>
             <span><small>DESTINATION FX</small><strong>${checkingAccounts.some((account) => account.currencyCode !== listingCurrencyCode) ? "B2 enabled" : "Not required"}</strong></span>
           </div>
           <div class="player-terminal-order-estimate"><span>Sell settlement</span><small>C3D debits shares once, settles proceeds through canonical market liquidity, and credits the selected Checking account. A destination in another currency is converted by the authoritative Banking FX boundary.</small></div>
-          <button class="player-terminal-secondary-button" type="submit"${tradeDisabled || position.owned <= 0 ? " disabled" : ""}>${icon("send")} Sell now</button>
+          <button class="player-terminal-secondary-button" type="submit"${tradeDisabled || position.owned <= 0 ? " disabled" : ""}>${icon("send")} Review sale</button>
         </form>
 
         ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}

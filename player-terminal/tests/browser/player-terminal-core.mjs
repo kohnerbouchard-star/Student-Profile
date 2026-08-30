@@ -164,12 +164,19 @@ test("C3E immediate Stock ticket replaces the retired limit-order interface", as
   const sell = page.locator('form[data-player-form="market-sell"]');
   await expect(buy).toBeVisible();
   await expect(sell).toBeVisible();
-  await expect(buy.locator('input[name="action"]')).toHaveValue("buy_now");
+  await expect(buy).toHaveAttribute("data-player-market-order-form", "buy-quote");
+  await expect(sell).toHaveAttribute("data-player-market-order-form", "sell-review");
+  await expect(buy.locator('input[name="action"]')).toHaveValue("create_buy_quote");
   await expect(sell.locator('input[name="action"]')).toHaveValue("settle_sell");
   await expect(buy.locator('select[name="sourceAccountKey1"]')).toBeVisible();
   await expect(buy.locator('select[name="sourceAccountKey2"]')).toBeVisible();
   await expect(buy.locator('select[name="sourceAccountKey3"]')).toBeVisible();
   await expect(sell.locator('select[name="destinationAccountKey"]')).toBeVisible();
+  await expect(buy.locator("[data-player-market-estimated-total]")).toBeVisible();
+  await expect(buy.locator("[data-player-market-funded-total]")).toBeVisible();
+  await expect(buy.locator("[data-player-market-remaining-total]")).toBeVisible();
+  await expect(buy.getByRole("button", { name: /Create exact quote/i })).toBeVisible();
+  await expect(sell.getByRole("button", { name: /Review sale/i })).toBeVisible();
   await expect(page.getByText("C3 QUOTE + SETTLEMENT", { exact: true })).toBeVisible();
 });
 

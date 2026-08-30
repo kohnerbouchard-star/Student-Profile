@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
 const CSRF = "C".repeat(43);
+const STOCK_QUOTE = "sbq_11111111111111111111111111111111";
+const STOCK_SOURCE = "bac_22222222222222222222222222222222";
+const STOCK_DESTINATION = "bac_33333333333333333333333333333333";
+const STOCK_SETTLEMENT = "btx_44444444444444444444444444444444";
 
 const rawSession = {
   gameSession: { id: "game-1", name: "Econovaria Class", status: "active" },
@@ -122,20 +126,56 @@ const responses = {
     },
     refreshRequired: true
   },
-  marketOrder: {
+  marketOrderQuote: {
     ok: true,
-    action: "execute_order",
-    order: {
+    action: "create_buy_quote",
+    quote: {
+      quoteKey: STOCK_QUOTE,
       ticker: "AURA",
-      side: "buy",
+      listingCurrencyCode: "XAL",
+      quantity: 2,
+      quotedPrice: 100,
+      priceTickIndex: 42,
+      grossValue: 200,
+      expiresAt: "2026-08-30T12:05:00.000Z",
+      funding: { lines: [] }
+    }
+  },
+  marketOrderBuySettlement: {
+    ok: true,
+    action: "settle_buy_quote",
+    settlement: {
+      quoteKey: STOCK_QUOTE,
+      ticker: "AURA",
+      listingCurrencyCode: "XAL",
       quantity: 2,
       executionPrice: 100,
+      priceTickIndex: 42,
       grossValue: 200,
-      status: "filled",
-      rejectionReason: null
-    },
-    cash: { accountType: "checking", currencyCode: "ECO", balance: 1050 },
-    holding: { quantity: 2, averageCost: 100 }
+      holdingQuantityAfter: 2,
+      averageCostAfter: 100,
+      filledAt: "2026-08-30T12:01:00.000Z",
+      alreadyCompleted: false,
+      funding: { lines: [] }
+    }
+  },
+  marketOrderSellSettlement: {
+    ok: true,
+    action: "settle_sell",
+    settlement: {
+      ticker: "AURA",
+      listingCurrencyCode: "XAL",
+      quantity: 1,
+      executionPrice: 105,
+      priceTickIndex: 43,
+      grossValue: 105,
+      holdingQuantityAfter: 1,
+      averageCostAfter: 100,
+      filledAt: "2026-08-30T12:02:00.000Z",
+      destinationAccountKey: STOCK_DESTINATION,
+      settlementTransactionKey: STOCK_SETTLEMENT,
+      alreadyCompleted: false
+    }
   },
   bankTransfer: {
     ok: true,
@@ -154,6 +194,11 @@ const calls = [];
 const apiCall = createStudentProfileApiCall({
   request: async (request) => {
     calls.push(structuredClone({ ...request, signal: undefined }));
+    if (request.endpointKey === "marketOrder") {
+      if (request.payload.action === "create_buy_quote") return structuredClone(responses.marketOrderQuote);
+      if (request.payload.action === "settle_buy_quote") return structuredClone(responses.marketOrderBuySettlement);
+      if (request.payload.action === "settle_sell") return structuredClone(responses.marketOrderSellSettlement);
+    }
     return structuredClone(responses[request.endpointKey]);
   }
 });
@@ -224,25 +269,70 @@ assert.equal(calls.at(-1).headers["x-econovaria-csrf-token"], CSRF);
 assert.equal(calls.at(-1).headers["idempotency-key"], "idem-purchase-1");
 assert.equal(calls.at(-1).headers["x-player-session-token"], undefined);
 
-await apiCall(context("marketOrder", "POST", "/market/orders", {
+const quote = await apiCall(context("marketOrder", "POST", "/market/orders", {
+  action: "create_buy_quote",
   ticker: "AURA",
+  quantity: 2,
   expectedPrice: 100,
-  side: "buy",
-  orderType: "market",
-  quantity: 2
-}, { idempotencyKey: "idem-order-1" }));
+  expectedTickIndex: 42,
+  allocations: [{ sourceAccountKey: STOCK_SOURCE, targetAmount: 200 }]
+}, { idempotencyKey: "idem-stock-quote-1" }));
+assert.equal(quote.quote.quoteKey, STOCK_QUOTE);
 assert.equal(calls.at(-1).path, "/players/me/stocks/orders");
 assert.equal(calls.at(-1).headers["x-econovaria-csrf-token"], CSRF);
+assert.equal(calls.at(-1).headers["idempotency-key"], "idem-stock-quote-1");
+assert.deepEqual(calls.at(-1).payload, {
+  action: "create_buy_quote",
+  ticker: "AURA",
+  quantity: 2,
+  expectedPrice: 100,
+  expectedTickIndex: 42,
+  allocations: [{ sourceAccountKey: STOCK_SOURCE, targetAmount: 200 }],
+  idempotencyKey: "idem-stock-quote-1"
+});
 assert.equal("gameSessionId" in calls.at(-1).payload, false);
 assert.equal("playerId" in calls.at(-1).payload, false);
+assert.equal("stockAssetId" in calls.at(-1).payload, false);
+
+const buySettlement = await apiCall(context("marketOrder", "POST", "/market/orders", {
+  action: "settle_buy_quote",
+  quoteKey: STOCK_QUOTE
+}, { idempotencyKey: "idem-stock-buy-1" }));
+assert.equal(buySettlement.settlement.quoteKey, STOCK_QUOTE);
+assert.deepEqual(calls.at(-1).payload, {
+  action: "settle_buy_quote",
+  quoteKey: STOCK_QUOTE,
+  idempotencyKey: "idem-stock-buy-1"
+});
+
+const sellSettlement = await apiCall(context("marketOrder", "POST", "/market/orders", {
+  action: "settle_sell",
+  ticker: "AURA",
+  quantity: 1,
+  expectedPrice: 105,
+  expectedTickIndex: 43,
+  destinationAccountKey: STOCK_DESTINATION
+}, { idempotencyKey: "idem-stock-sell-1" }));
+assert.equal(sellSettlement.settlement.settlementTransactionKey, STOCK_SETTLEMENT);
+assert.deepEqual(calls.at(-1).payload, {
+  action: "settle_sell",
+  ticker: "AURA",
+  quantity: 1,
+  expectedPrice: 105,
+  expectedTickIndex: 43,
+  destinationAccountKey: STOCK_DESTINATION,
+  idempotencyKey: "idem-stock-sell-1"
+});
 
 await assert.rejects(
   apiCall(context("marketOrder", "POST", "/market/orders", {
     playerId: "0c80fe6d-e1d9-4e90-90f4-1b174be727f1",
+    action: "create_buy_quote",
     ticker: "AURA",
+    quantity: 1,
     expectedPrice: 100,
-    side: "buy",
-    quantity: 1
+    expectedTickIndex: 42,
+    allocations: [{ sourceAccountKey: STOCK_SOURCE, targetAmount: 100 }]
   }, { idempotencyKey: "idem-invalid-owner" })),
   (error) => error.code === "INVALID_REQUEST"
 );
@@ -258,4 +348,4 @@ assert.equal("recipientPlayerUuid" in calls.at(-1).payload, false);
 assert.equal("senderPlayerId" in calls.at(-1).payload, false);
 assert.equal("gameSessionId" in calls.at(-1).payload, false);
 
-console.log("Student-Profile adapter passed: authoritative local currency selects the correct Checking/Savings rows even when ECO appears first; cookie-session transport, ownership privacy, CSRF, and idempotent writes remain valid.");
+console.log("Student-Profile adapter passed: C3E quote, buy settlement, and destination-account sale use exact public-key bodies while cookie-session transport, ownership privacy, CSRF, and idempotency remain valid.");

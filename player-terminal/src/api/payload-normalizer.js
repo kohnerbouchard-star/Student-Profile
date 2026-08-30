@@ -15,6 +15,7 @@ const PUBLIC_PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PUBLIC_LOCATION_ID = /^loc_[a-z0-9_]+$/;
 const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
+const PUBLIC_STOCK_BUY_QUOTE_KEY = /^sbq_[0-9a-f]{32}$/;
 const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
 const PUBLIC_BANK_ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/;
 const MARKET_TICKER = /^[A-Z0-9][A-Z0-9._-]{0,31}$/;
@@ -102,18 +103,32 @@ function bankAccountKey(value, endpointKey, field) {
 
 function normalizeMarketOrder(raw, endpointKey) {
   const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
+  if (action === "settle_buy_quote") {
+    return {
+      action,
+      quoteKey: requirePattern(raw.quoteKey, PUBLIC_STOCK_BUY_QUOTE_KEY, endpointKey, "quoteKey")
+    };
+  }
+
   const common = {
     ticker: marketTicker(raw.ticker, endpointKey),
     quantity: positiveNumber(raw.quantity, endpointKey, "quantity"),
     expectedPrice: positiveNumber(raw.expectedPrice, endpointKey, "expectedPrice"),
     expectedTickIndex: nonNegativeInteger(raw.expectedTickIndex, endpointKey, "expectedTickIndex")
   };
-  if (action === "buy_now") {
+  if (action === "create_buy_quote" || action === "buy_now") {
     const allocations = [];
     const seen = new Set();
-    for (let index = 1; index <= 3; index += 1) {
-      const keyValue = raw[`sourceAccountKey${index}`];
-      const amountValue = raw[`targetAmount${index}`];
+    const rawAllocations = Array.isArray(raw.allocations)
+      ? raw.allocations
+      : Array.from({ length: 3 }, (_, offset) => ({
+        sourceAccountKey: raw[`sourceAccountKey${offset + 1}`],
+        targetAmount: raw[`targetAmount${offset + 1}`]
+      }));
+    for (const [offset, row] of rawAllocations.entries()) {
+      const index = offset + 1;
+      const keyValue = row?.sourceAccountKey;
+      const amountValue = row?.targetAmount;
       const hasKey = String(keyValue || "").trim().length > 0;
       const hasAmount = String(amountValue || "").trim().length > 0;
       if (!hasKey && !hasAmount) continue;
@@ -126,7 +141,7 @@ function normalizeMarketOrder(raw, endpointKey) {
         targetAmount: positiveNumber(amountValue, endpointKey, `targetAmount${index}`)
       });
     }
-    if (!allocations.length) throw invalidPayload(endpointKey, "funding allocation");
+    if (!allocations.length || allocations.length > 3) throw invalidPayload(endpointKey, "funding allocation");
     return { action, ...common, allocations };
   }
   if (action === "settle_sell") {

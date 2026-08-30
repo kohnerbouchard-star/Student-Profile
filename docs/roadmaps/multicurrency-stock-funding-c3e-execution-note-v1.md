@@ -1,6 +1,6 @@
 # Multi-Currency Stock Funding — C3E Execution Note v1
 
-Status: **in progress; not certified**
+Status: **implemented on the C3 branch; exact-head certification pending**
 
 Certified predecessor: C3D implementation `9b502b9ffa5e8aaf2f7c8d93d9cd3ccda3a10f15`.
 
@@ -12,7 +12,7 @@ The authenticated Player Stock trading gateway routes the certified C3 transacti
 - `settle_buy_quote` → `settle_stock_buy_quote_v1`
 - `settle_sell` → `settle_stock_sell_v1`
 
-For the immediate-buy Player Terminal path, `buy_now` is an API-level orchestration only: it creates the immutable C3B buy quote and immediately settles that exact quote through C3C. It does not introduce a new database settlement authority. Dedicated gateway coverage asserts that the authenticated scope, one-to-three-account allocation, quote key, and request idempotency context flow from the C3B call into the C3C call without exposing internal UUIDs.
+The Player Terminal now uses the explicit C3B → C3C sequence. A buy form creates an immutable quote first; settlement is a separate confirmation action that submits only the public `sbq_*` quote key. The retained `buy_now` gateway action remains an API-level orchestration for non-Terminal consumers and introduces no new database settlement authority.
 
 The retired one-step Player order body remains rejected after authentication with `410 stock_market_trading_retired`.
 
@@ -22,36 +22,56 @@ The retained calendar-gated `executeOrder` adapter remains available for unrelat
 
 ## Listing-currency and Banking read cutover
 
-Player Stock asset reads now project the immutable `game_session_stock_assets.listing_currency_code` established by C3A. The public Stock DTO carries `listingCurrencyCode`; no session-local currency is substituted for Stock price authority.
+Player Stock asset reads project the immutable `game_session_stock_assets.listing_currency_code` established by C3A. The public Stock DTO carries `listingCurrencyCode`; no session-local currency is substituted for Stock price authority.
 
-The Player Terminal market route now loads the existing canonical Banking FX read model and uses its public `bac_*` Checking accounts for trade funding and proceeds destinations. It does not create a second Stock-owned balance source.
+The Player Terminal market route loads the existing canonical Banking FX read model and uses its public `bac_*` Checking accounts for trade funding and proceeds destinations. It does not create a second Stock-owned balance source.
 
-## Player Terminal funding UX
+## Player Terminal funding and settlement UX
 
 The previous market/limit order ticket has been replaced for the C3E path:
 
 - immediate buys use one to three canonical Checking accounts and target allocations in the Stock listing currency;
-- immediate sells choose exactly one canonical Checking destination;
+- the ticket displays estimated gross, funded total, and remaining total before quote creation;
+- the immutable quote review shows the public quote key, locked price, gross value, funding evidence, FX disclosure, price tick, and expiry before settlement can be authorized;
+- expired quotes are visibly non-executable;
+- immediate sells choose exactly one canonical Checking destination and require a proceeds review before settlement;
+- sell ownership checks use the authoritative Portfolio holdings resource rather than a legacy Market-owned position value;
+- successful buys and sells show immutable public-key receipts, replay status, execution evidence, resulting holdings, and the selected destination or quote key;
+- committed settlements remain successful when the post-write resource refresh fails, with a visible refresh-pending warning;
 - displayed Stock prices, cost basis, position value, and gains use listing currency rather than the Player session currency;
 - foreign-currency Checking selections disclose that conversion is resolved through the authoritative Banking FX boundary;
 - the server revalidates price, tick, account ownership, available funds, holdings, market liquidity, and FX before settlement and fails closed on drift.
 
 No margin, short selling, partial fills, queued orders, or limit orders were added.
 
+## Connected request and privacy boundary
+
+The Student-Profile adapter now maps the Player actions to the exact public request bodies expected by `/players/me/stocks/orders`:
+
+- quote creation sends public ticker, quantity, expected price/tick, one-to-three public `bac_*` allocations, and the idempotency key;
+- quote settlement sends only `action`, the public `sbq_*` quote key, and the idempotency key;
+- sell settlement sends public ticker/evidence, one public destination `bac_*` key, and the idempotency key.
+
+No game, Player, Player-session, Stock-asset, or bank-account UUID is accepted from the browser. The existing HttpOnly cookie session, CSRF header, same-origin request boundary, and private no-store response behavior remain intact.
+
+## Verification bound to the permanent workflow
+
+The permanent `multicurrency-stock-funding-v1` workflow now triggers on the C3E Player controller, request adapter, payload normalizer, page, and focused regression tests. Its source job explicitly runs:
+
+- Stock funding payload normalization and allocation rejection;
+- immutable quote, expiry, sale review, receipt, and refresh behavior;
+- Portfolio-to-Market holdings reconciliation;
+- connected Student-Profile quote, buy-settlement, and sell-settlement request bodies;
+- retained C3A/C3B/C3C/C3D source, migration, backend typecheck, and architecture contracts.
+
+The temporary source-export workflow was removed because it was outside PR #676's exact path authority.
+
 ## Architecture ratchet reconciliation
 
-The C3E source tranche initially increased the repository compatibility-marker inventory from the base ceiling of 209 to 213 through incidental compatibility terminology in three Stock test/input files and one retained Stock repository helper. Those names were removed without changing runtime behavior. Deterministic regeneration on the final source tree returns `compatibilityMarkerFiles: 209`, matching the base ceiling. The temporary inventory finalizer removed itself before generation and committed only the regenerated canonical inventory plus its own deletion.
+Deterministic regeneration remains at `compatibilityMarkerFiles: 209`, matching the base ceiling. No new persistence authority, cross-domain infrastructure dependency, direct browser database access, direct balance mutation, or direct inventory mutation was introduced.
 
-## Certification candidate
+## Certification boundary
 
-The current candidate is the first human-triggered commit after deterministic inventory reconciliation. It exists only to trigger an exact-head verification matrix over the final source and inventory tree. C3E must remain **not certified** until the required Backend, Player Terminal, Stock funding, Banking FX, Database Replay, browser/privacy, architecture, timezone, security, and retained-stack checks complete successfully and durable handoff/checkpoint evidence is recorded.
+C3E remains **not certified** until the final exact-head Backend, Player Terminal, Stock funding, Banking FX, Database Replay, browser/privacy, architecture, timezone, security, and retained-stack checks complete successfully. C3F is responsible for pinning the exact implementation SHA and workflow evidence and for deliberately promoting the checkpoint manifest.
 
-## Remaining before C3E certification
-
-- exact-head Backend and Player Terminal verification after this tranche;
-- browser-level connected trade-flow proof;
-- privacy/public-evidence regression proof across the final Player surface;
-- exact-head deterministic architecture quality proof;
-- durable C3E/C3F handoff and checkpoint promotion only after certification evidence exists.
-
-No merge or deployment is authorized by this note. C3D remains the certified checkpoint until the authoritative checkpoint manifest is deliberately promoted with exact-head evidence.
+No merge or deployment is authorized by this note. C3D remains the certified checkpoint until C3F records durable evidence and updates the authoritative manifest.

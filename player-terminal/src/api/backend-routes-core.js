@@ -151,25 +151,86 @@ const ROUTE_BUILDERS = Object.freeze({
     path: queryPath(`/players/me/stocks/assets/${encodeURIComponent(requiredText(params.assetId || payload.assetId, "assetId", "marketAsset"))}`, { historyLimit: payload.historyLimit ?? 200 }),
   }),
   marketOrder: ({ payload = {} }) => {
-    if (String(payload.orderType || "market").toLowerCase() !== "market") {
-      throw new ApiRequestError("Limit orders are not supported by the current player stock-order route.", { body: { code: "player_limit_orders_not_supported" } });
+    const endpointKey = "marketOrder";
+    const action = requiredText(payload.action, "action", endpointKey).toLowerCase();
+    const requestIdempotencyKey = idempotencyKey(payload, endpointKey);
+    if (action === "settle_buy_quote") {
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          quoteKey: requiredPublicKey(payload.quoteKey, /^sbq_[0-9a-f]{32}$/, "quoteKey", endpointKey),
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
     }
-    const expectedPrice = Number(payload.expectedPrice ?? payload.price);
-    if (!Number.isFinite(expectedPrice) || expectedPrice <= 0) {
-      throw new ApiRequestError("expectedPrice is required for marketOrder.", { body: { code: "player_market_expected_price_invalid" } });
+
+    const ticker = requiredText(payload.ticker, "ticker", endpointKey).toUpperCase();
+    const quantity = Number(payload.quantity);
+    const expectedPrice = Number(payload.expectedPrice);
+    const expectedTickIndex = Number(payload.expectedTickIndex);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(expectedPrice) || expectedPrice <= 0 || !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex < 0) {
+      throw new ApiRequestError("Stock quote and settlement evidence is invalid.", {
+        body: { code: "player_market_evidence_invalid", endpointKey },
+      });
     }
-    return {
-      method: "POST",
-      path: "/players/me/stocks/orders",
-      payload: {
-        ticker: requiredText(payload.ticker || payload.symbol || payload.assetId, "ticker", "marketOrder").toUpperCase(),
-        expectedPrice,
-        side: requiredText(payload.side, "side", "marketOrder").toLowerCase(),
-        quantity: Number(payload.quantity),
-        idempotencyKey: idempotencyKey(payload, "marketOrder"),
-      },
-    };
+    if (action === "create_buy_quote" || action === "buy_now") {
+      const allocations = Array.isArray(payload.allocations)
+        ? payload.allocations.map((row, index) => ({
+          sourceAccountKey: requiredPublicKey(
+            row?.sourceAccountKey,
+            /^bac_[0-9a-f]{32}$/,
+            `allocations[${index}].sourceAccountKey`,
+            endpointKey,
+          ),
+          targetAmount: Number(row?.targetAmount),
+        }))
+        : [];
+      if (allocations.length < 1 || allocations.length > 3 || allocations.some((row) => !Number.isFinite(row.targetAmount) || row.targetAmount <= 0)) {
+        throw new ApiRequestError("Stock funding requires one to three positive Checking allocations.", {
+          body: { code: "player_market_allocations_invalid", endpointKey },
+        });
+      }
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          ticker,
+          quantity,
+          expectedPrice,
+          expectedTickIndex,
+          allocations,
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
+    }
+    if (action === "settle_sell") {
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          ticker,
+          quantity,
+          expectedPrice,
+          expectedTickIndex,
+          destinationAccountKey: requiredPublicKey(
+            payload.destinationAccountKey,
+            /^bac_[0-9a-f]{32}$/,
+            "destinationAccountKey",
+            endpointKey,
+          ),
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
+    }
+    throw new ApiRequestError("The requested Stock trading action is not supported.", {
+      body: { code: "player_market_action_invalid", endpointKey },
+    });
   },
+
   marketWatchlist: ({ params = {}, payload = {} }) => {
     if (typeof payload.enabled !== "boolean") {
       throw new ApiRequestError("enabled must be a boolean for marketWatchlist.", { body: { code: "player_watchlist_state_invalid", endpointKey: "marketWatchlist" } });
