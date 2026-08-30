@@ -40,6 +40,7 @@ Deno.test("player stock asset service returns deterministic player-scoped pagina
     offset: 0,
   }]);
   assertEquals(result.assets.map((value) => value.assetId), ["AURA", "BETA"]);
+  assertEquals(result.assets.map((value) => value.listingCurrencyCode), ["XAL", "XAL"]);
   assertEquals(result.assets.map((value) => value.volume), [1000, 2000]);
   assertEquals(result.assets.map((value) => value.isWatchlisted), [false, true]);
   assertEquals(result.sectors, ["All", "AI_AEROSPACE", "ENERGY"]);
@@ -183,6 +184,7 @@ function asset(overrides: Partial<PlayerStockAssetRecord> = {}): PlayerStockAsse
     companyName: "Aurora Aerospace Systems",
     sector: "AI_AEROSPACE",
     countryCode: "SOLVEND",
+    listingCurrencyCode: "XAL",
     description: "Public company description",
     currentPrice: 105,
     previousClose: 100,
