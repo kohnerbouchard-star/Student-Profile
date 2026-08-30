@@ -56,7 +56,7 @@ concurrency:
 
 jobs:
   source-contract:
-    name: Verify C3D Stock sell settlement source and retained C3A-C3C scope
+    name: Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -137,7 +137,7 @@ jobs:
         run: deno --version
 
   disposable-database:
-    name: Verify C3D Stock sell database and retained C3A-C3C authority
+    name: Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     steps:
