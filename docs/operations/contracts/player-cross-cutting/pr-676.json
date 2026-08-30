@@ -59,6 +59,7 @@
     "player-terminal/src/api/payload-normalizer.js",
     "player-terminal/src/api/resource-plan.js",
     "player-terminal/src/pages/market-page.js",
+    "player-terminal/tests/stock-multicurrency-funding.mjs",
     "scripts/multicurrency-stock-buy-quote-contract.mjs",
     "scripts/multicurrency-stock-buy-quote-database.mjs",
     "scripts/multicurrency-stock-buy-settlement-contract.mjs",
