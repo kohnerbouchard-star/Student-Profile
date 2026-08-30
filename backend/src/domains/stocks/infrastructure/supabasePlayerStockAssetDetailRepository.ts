@@ -47,6 +47,7 @@ const ASSET_SELECT = [
   "company_name",
   "sector_key",
   "country_code",
+  "listing_currency_code",
   "description",
   "current_price",
   "previous_close",
@@ -120,6 +121,7 @@ function toAssetRecord(row: Record<string, unknown>): PlayerStockAssetRecord {
     companyName: requireText(row.company_name),
     sector: requireText(row.sector_key),
     countryCode: requireCountryCode(row.country_code),
+    listingCurrencyCode: requireCurrencyCode(row.listing_currency_code),
     description: optionalText(row.description),
     currentPrice: requireFiniteNumber(row.current_price),
     previousClose: requireFiniteNumber(row.previous_close),
@@ -203,6 +205,12 @@ function requireTicker(value: unknown): string {
 function requireCountryCode(value: unknown): string {
   const text = requireText(value).toUpperCase();
   if (!/^[A-Z][A-Z0-9_]{2,31}$/.test(text)) throw readFailed();
+  return text;
+}
+
+function requireCurrencyCode(value: unknown): string {
+  const text = requireText(value).toUpperCase();
+  if (!/^[A-Z][A-Z0-9_]{1,15}$/.test(text)) throw readFailed();
   return text;
 }
 
