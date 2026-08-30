@@ -36,6 +36,7 @@ Deno.test("player stock watchlist repository scopes list reads and latest ticks"
 
   assertEquals(result.entries.length, 1);
   assertEquals(result.assets.map((asset) => asset.ticker), ["AURA"]);
+  assertEquals(result.assets.map((asset) => asset.listingCurrencyCode), ["XAL"]);
   assertEquals(result.latestTicks.map((tick) => tick.tickIndex), [42]);
   assertEquals(client.lastRange, { from: 0, to: 50 });
   assertEquals(client.rpcCalls, [{
@@ -315,6 +316,7 @@ function assetRow(overrides: Record<string, unknown> = {}) {
     company_name: "Aurora Aerospace Systems",
     sector_key: "AI_AEROSPACE",
     country_code: "SOLVEND",
+    listing_currency_code: "XAL",
     description: "Public company description",
     current_price: 105,
     previous_close: 100,
