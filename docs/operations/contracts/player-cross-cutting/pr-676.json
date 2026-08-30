@@ -68,6 +68,7 @@
     "player-terminal/src/api/payload-normalizer.js",
     "player-terminal/src/api/resource-plan.js",
     "player-terminal/src/pages/market-page.js",
+    "player-terminal/tests/browser/player-terminal-core.mjs",
     "player-terminal/tests/portfolio-market-holdings.mjs",
     "player-terminal/tests/stock-multicurrency-funding.mjs",
     "scripts/multicurrency-stock-buy-quote-contract.mjs",
