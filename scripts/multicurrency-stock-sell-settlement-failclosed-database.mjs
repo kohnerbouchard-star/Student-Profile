@@ -23,7 +23,6 @@ const fixture = json(`
     'quantity', h.quantity,
     'price', a.current_price,
     'currencyCode', a.listing_currency_code,
-    'currencyDecimals', c.decimal_places,
     'tickIndex', t.tick_index,
     'destinationId', destination.id,
     'destinationKey', destination.public_key,
@@ -33,7 +32,6 @@ const fixture = json(`
   from public.stock_holdings h
   join public.game_session_stock_assets a
     on a.id = h.stock_asset_id and a.game_session_id = h.game_session_id
-  join public.currencies c on c.code = a.listing_currency_code
   join lateral (
     select tick_index
     from public.stock_price_ticks t0
@@ -119,17 +117,17 @@ expectSqlError(
 );
 assert.deepEqual(economicState(), before, 'Price-mismatch C3D rejection must not mutate economic state.');
 
-const minorUnit = 10 ** -Number(fixture.currencyDecimals);
-const targetAvailableLiquidity = Number(fixture.price) - minorUnit;
-const holdAmount = Number(fixture.liquidityBalance) - targetAvailableLiquidity;
-assert.ok(holdAmount > 0, 'Liquidity rejection fixture requires market liquidity above one share price before reserving funds.');
-
 runSql(`
   select *
   from private.create_bank_account_hold_v1(
     ${sqlLiteral(game.id)}::uuid,
     ${sqlLiteral(fixture.liquidityId)}::uuid,
-    ${sqlLiteral(holdAmount)}::numeric,
+    (
+      select balance_row.balance
+      from public.account_balances balance_row
+      where balance_row.bank_account_id = ${sqlLiteral(fixture.liquidityId)}::uuid
+        and balance_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+    ),
     'stocks',
     'c3d-test-liquidity-reservation',
     ${sqlLiteral(fixture.assetId)}::uuid,
@@ -150,11 +148,12 @@ const availableLiquidity = Number(json(`
   )
   from public.account_balances balance_row
   where balance_row.bank_account_id = ${sqlLiteral(fixture.liquidityId)}::uuid
+    and balance_row.game_session_id = ${sqlLiteral(game.id)}::uuid
 `));
 
 before = economicState();
 assert.ok(Number(before.holding) >= 1, 'Liquidity rejection fixture must retain sufficient shares.');
-assert.ok(availableLiquidity < Number(fixture.price), 'Liquidity rejection fixture must reserve enough market liquidity to make one-share proceeds unavailable.');
+assert.equal(availableLiquidity, 0, 'Liquidity rejection fixture must reserve the exact posted market-liquidity balance.');
 expectSqlError(
   `select ${sellSql(fixture.price, fixture.tickIndex, 'c3d-liquidity-insufficient')};`,
   /BANK_ACCOUNT_AVAILABLE_BALANCE_INSUFFICIENT/u,
