@@ -14,7 +14,7 @@
     "persistenceOutsideInfrastructure": 54,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 213,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 9,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 129
@@ -2635,27 +2635,6 @@
         ]
       },
       {
-        "file": "backend/src/domains/stocks/api/playerStockMarketTradingHttpHandler.security.test.ts",
-        "markers": [
-          "legacy",
-          "legacybody"
-        ]
-      },
-      {
-        "file": "backend/src/domains/stocks/api/playerStockMarketTradingHttpHandlerTestSupport.ts",
-        "markers": [
-          "legacy",
-          "legacybody"
-        ]
-      },
-      {
-        "file": "backend/src/domains/stocks/api/playerStockMarketTradingInput.ts",
-        "markers": [
-          "legacy",
-          "legacy_order_fields"
-        ]
-      },
-      {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
         "markers": [
           "fallback"
@@ -2672,10 +2651,6 @@
         "markers": [
           "fallbackcode"
         ]
-      },
-      {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.ts",
-        "markers": []
       },
       {
         "file": "backend/src/domains/store/application/adminStoreItemMutation.test.ts",
