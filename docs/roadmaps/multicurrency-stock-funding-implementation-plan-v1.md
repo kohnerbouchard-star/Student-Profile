@@ -1,9 +1,12 @@
 # Multi-Currency Stock Market Funding Implementation Plan v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C3`  
-**Status:** `PLANNED_NOT_IMPLEMENTED`  
+**Certification checkpoint:** `BUSINESS-V2-10A4C3F`  
+**Status:** `IMPLEMENTED_NOT_MERGED`  
 **Branch:** `feat/multicurrency-stock-funding-v1`  
-**Parent clean handoff:** `ba033ac4a7759d068233513431891fc9de3ae95a`
+**Parent clean handoff:** `ba033ac4a7759d068233513431891fc9de3ae95a`  
+**Exact implementation and verification source:** `058162d7b9688809e885d9e6fe77ed42978c7a03`  
+**Durable implementation handoff:** `docs/roadmaps/multicurrency-stock-funding-implementation-handoff-v1.md`
 
 ## Goal
 
@@ -75,7 +78,9 @@ Move immediate Stock Market buys and sells onto authoritative listing-currency, 
 
 ## C3F — Certification and durable handoff
 
-Run one exact implementation SHA through:
+Certification is complete at immutable implementation source `058162d7b9688809e885d9e6fe77ed42978c7a03`. That source passed the permanent C3 gate and every pull-request-triggered workflow returned for the exact head: 27 completed runs and 27 successful conclusions. The durable implementation handoff and authoritative checkpoint manifest pin the permanent run and job evidence. Later documentation or controller commits do not replace the tested implementation identity.
+
+The certified matrix covered:
 
 - C3 source/scope/authority contracts;
 - complete migration replay from zero twice;
@@ -91,7 +96,7 @@ Run one exact implementation SHA through:
 - desktop/mobile Chromium, keyboard, accessibility, and public-payload UUID denial;
 - Repository Quality and Supply Chain Security.
 
-Then record:
+The durable closeout records:
 
 - exact implementation SHA;
 - permanent workflow run IDs and job outcomes;
