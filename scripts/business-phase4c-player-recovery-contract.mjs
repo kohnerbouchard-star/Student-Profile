@@ -9,6 +9,7 @@ const files = {
   contracts: "backend/src/domains/business/contracts/playerBusinessContracts.ts",
   parser: "backend/src/domains/business/application/workforce/businessWorkforceResultParser.ts",
   repository: "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts",
+  databaseErrors: "backend/src/domains/business/infrastructure/playerBusinessDatabaseErrors.ts",
   handler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
   capability: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   normalizer: "player-terminal/src/api/response-normalizer.js",
@@ -37,16 +38,20 @@ for (const token of [
   "payrollPeriodKey",
   "utilizedMinutes !== reservedMinutes + consumedMinutes",
 ]) requireToken(source.parser, token, "server utilization parser");
+const recoveryBoundary = [source.repository, source.databaseErrors].join("\n");
 for (const token of [
   "read_owned_business_workforce_utilization_v2",
   "parseBusinessWorkforceUtilization",
+  "mapPlayerBusinessDatabaseError",
   "BUSINESS_PRODUCTION_RECIPE_AMBIGUOUS",
   "BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE",
   "BUSINESS_LABOR_SKILL_UNAVAILABLE",
   "BUSINESS_LABOR_CAPACITY_UNAVAILABLE",
   "BUSINESS_LABOR_RESERVATION_CONSUMPTION_CONFLICT",
-  'token.split(":", 1)[0]',
-]) requireToken(source.repository, token, "server Business read/recovery path");
+  "message.toUpperCase()",
+  "Object.keys(mappings).find",
+  "business_operation_failed",
+]) requireToken(recoveryBoundary, token, "server Business read/recovery boundary");
 requireToken(source.handler, "await repository.readBusiness(publicScope)", "existing Edge Business read path");
 for (const token of [
   'key: "business"',

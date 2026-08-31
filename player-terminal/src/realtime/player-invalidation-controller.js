@@ -2,7 +2,7 @@ import { PlayerApi } from "../api/player-api.js";
 import { resolveCapabilities } from "../api/capabilities.js";
 import { resourceFreshnessMs, validInvalidationResources } from "../api/freshness.js";
 import { isResourceInvalidated, markResourceInvalidations } from "../api/invalidation-registry.js";
-import { SHELL_OPTIONAL_RESOURCES, SHELL_REQUIRED_RESOURCES, resourcesForRoute } from "../api/resource-plan.js";
+import { dependentResourcesForRoute, SHELL_OPTIONAL_RESOURCES, SHELL_REQUIRED_RESOURCES, resourcesForRoute } from "../api/resource-plan.js";
 import { updateStoreFromSnapshot } from "../core/store.js";
 
 export const DEFAULT_PLAYER_INVALIDATION_EVENT = "econovaria:player-resources-invalidated";
@@ -21,13 +21,16 @@ export function normalizePlayerInvalidationEvent(detail, currentGameSessionId = 
   return validInvalidationResources(requested).slice(0, 20);
 }
 
-export function resourcesVisibleOnRoute(route) {
+export function resourcesVisibleOnRoute(route, data) {
   const plan = resourcesForRoute(route);
-  return new Set([...SHELL_REQUIRED_RESOURCES, ...SHELL_OPTIONAL_RESOURCES, ...plan.required, ...plan.optional]);
+  const dependent = data === undefined
+    ? (Array.isArray(plan.dependent) ? plan.dependent : [])
+    : dependentResourcesForRoute(route, data);
+  return new Set([...SHELL_REQUIRED_RESOURCES, ...SHELL_OPTIONAL_RESOURCES, ...plan.required, ...plan.optional, ...dependent]);
 }
 
-export function shouldRefreshCurrentRoute(route, resources) {
-  const visible = resourcesVisibleOnRoute(route);
+export function shouldRefreshCurrentRoute(route, resources, data) {
+  const visible = resourcesVisibleOnRoute(route, data);
   return validInvalidationResources(resources).some((resource) => visible.has(resource));
 }
 
@@ -49,6 +52,7 @@ function routeCadenceMs(route, resource, config = {}) {
   const plan = resourcesForRoute(route);
   if (plan.required.includes(resource)) return base;
   if (plan.optional.includes(resource)) return base * Math.max(1, Number(config.playerLiveOptionalMultiplier) || DEFAULT_OPTIONAL_MULTIPLIER);
+  if ((plan.dependent || []).includes(resource)) return base * Math.max(1, Number(config.playerLiveOptionalMultiplier) || DEFAULT_OPTIONAL_MULTIPLIER);
   if (SHELL_REQUIRED_RESOURCES.includes(resource)) {
     if (resource === "dashboard" && route === "dashboard") return base;
     return base * Math.max(1, Number(config.playerLiveShellMultiplier) || DEFAULT_SHELL_MULTIPLIER);
@@ -95,7 +99,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   function observeState(state = terminal.getState()) {
     if (state?.status !== "ready") return;
     const now = Date.now();
-    const visible = resourcesVisibleOnRoute(state.route);
+    const visible = resourcesVisibleOnRoute(state.route, state.data);
     for (const resource of visible) {
       const reference = state.data?.[resource];
       if (reference !== undefined && observedReference.get(resource) !== reference) {
@@ -106,13 +110,14 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
     if (state.route !== lastRoute) {
       lastRoute = state.route;
       const plan = resourcesForRoute(state.route);
-      for (const resource of [...plan.required, ...plan.optional]) if (!observedAt.has(resource)) observedAt.set(resource, now);
+      const dependent = dependentResourcesForRoute(state.route, state.data);
+      for (const resource of [...plan.required, ...plan.optional, ...dependent]) if (!observedAt.has(resource)) observedAt.set(resource, now);
     }
   }
 
   function dueResources(state, now = Date.now()) {
     const result = [];
-    for (const resource of resourcesVisibleOnRoute(state.route)) {
+    for (const resource of resourcesVisibleOnRoute(state.route, state.data)) {
       if (SPECIALIZED_RUNTIME_RESOURCES.has(resource)) continue;
       if (!validInvalidationResources([resource]).length || isUnavailableResource(state, resource)) continue;
       if (pending.has(resource) || isResourceInvalidated(resource)) { result.push(resource); continue; }

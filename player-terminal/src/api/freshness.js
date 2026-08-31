@@ -9,6 +9,7 @@ const DEFAULT_FRESHNESS_MS = Object.freeze({
   marketAsset: 5_000,
   portfolio: 10_000,
   business: 30_000,
+  businessTreasury: 10_000,
   contracts: 15_000,
   store: 30_000,
   marketplace: 15_000,

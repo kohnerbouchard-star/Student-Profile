@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
 import { isEndpointEnabled, resolveCapabilities } from "../src/api/capabilities.js";
+import { PlayerApi } from "../src/api/player-api.js";
+import { validInvalidationResources } from "../src/api/freshness.js";
+import { WRITE_INVALIDATIONS, dependentResourcesForRoute, resourcesForRoute } from "../src/api/resource-plan.js";
 import { previewData } from "../src/data/preview-data.js";
+import { resourcesVisibleOnRoute } from "../src/realtime/player-invalidation-controller.js";
 import {
   normalizeBusinessProcurementQuote,
   normalizeBusinessProcurementReceipt,
@@ -535,4 +539,113 @@ const error = renderBusinessPage(pageData("unavailable", false));
 assert.match(error, /Current balances could not be refreshed/u);
 assert.match(error, /Retry treasury/u);
 
-console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, route, capability, state, and precision contracts passed.");
+assert.deepEqual(
+  resourcesForRoute("business").dependent,
+  ["businessTreasury"],
+  "Business treasury must remain a declared route dependency without being fetched speculatively.",
+);
+assert.deepEqual(
+  dependentResourcesForRoute("business", { business: { configured: false } }),
+  [],
+  "A Player without a Business must not resolve an owner-scoped treasury request.",
+);
+assert.deepEqual(
+  dependentResourcesForRoute("business", { business: { configured: true } }),
+  ["businessTreasury"],
+  "A configured Business must retain its treasury route dependency.",
+);
+assert.equal(
+  resourcesVisibleOnRoute("business", { business: { configured: false } }).has("businessTreasury"),
+  false,
+  "Realtime visibility must not reintroduce speculative treasury reads for a Player without a Business.",
+);
+assert.equal(
+  resourcesVisibleOnRoute("business", { business: { configured: true } }).has("businessTreasury"),
+  true,
+  "Realtime visibility must retain treasury for an active Business.",
+);
+
+function businessRouteApi(configuredSource, calls) {
+  return new PlayerApi({
+    usePreviewData: false,
+    requestTimeoutMs: 1000,
+    writeCooldownMs: 250,
+    allowedImageHosts: [],
+    authenticated: true,
+    csrfToken: "C".repeat(43),
+    gameSessionId: "game_business_treasury_route",
+    apiCall: async ({ endpointKey }) => {
+      calls.push(endpointKey);
+      const configured = typeof configuredSource === "object"
+        ? configuredSource.configured === true
+        : configuredSource === true;
+      if (endpointKey === "business") {
+        const business = structuredClone(previewData.business);
+        business.configured = configured;
+        business.company.id = configured ? key.business : "";
+        business.storeSales.businessKey = configured ? key.business : "";
+        business.storeSales.currencyCode = configured ? "ELD" : "";
+        return business;
+      }
+      if (endpointKey === "dashboard") return structuredClone(previewData.dashboard);
+      if (endpointKey === "banking") return structuredClone(previewData.banking);
+      if (endpointKey === "countries") return structuredClone(previewData.countries);
+      if (endpointKey === "store") return structuredClone(previewData.store);
+      if (endpointKey === "businessTreasury") return structuredClone(snapshotRaw);
+      throw Object.assign(new Error(`Unexpected Business route read: ${endpointKey}`), { status: 404 });
+    },
+  });
+}
+
+const unconfiguredCalls = [];
+const unconfiguredRoute = await businessRouteApi(false, unconfiguredCalls).loadRoute("business", { force: true });
+assert.equal(unconfiguredCalls.includes("businessTreasury"), false);
+assert.equal(unconfiguredRoute.data.businessTreasury, null);
+assert.equal(unconfiguredRoute.resourceStatus.businessTreasury.state, "empty");
+assert.equal(unconfiguredRoute.resourceStatus.businessTreasury.code, "RESOURCE_PREREQUISITE_NOT_MET");
+assert.doesNotMatch(
+  renderBusinessPage({ ...pageData(), ...unconfiguredRoute.data }),
+  /data-business-treasury-state=/u,
+  "The no-Business page must render formation without a synthetic treasury error panel.",
+);
+
+const configuredCalls = [];
+const configuredRoute = await businessRouteApi(true, configuredCalls).loadRoute("business", { force: true });
+assert.equal(configuredCalls.filter((entry) => entry === "businessTreasury").length, 1);
+assert.equal(
+  configuredCalls.at(-1),
+  "businessTreasury",
+  "Treasury may be requested only after the canonical Business prerequisite resolves.",
+);
+assert.equal(configuredRoute.resourceStatus.businessTreasury.state, "ready");
+assert.equal(configuredRoute.data.businessTreasury.businessKey, key.business);
+
+assert.equal(
+  WRITE_INVALIDATIONS.businessCreate.includes("businessTreasury"),
+  true,
+  "Formation must refresh the Treasury dependency immediately after the Business commit.",
+);
+assert.deepEqual(
+  validInvalidationResources(["businessTreasury"]),
+  ["businessTreasury"],
+  "Treasury must remain eligible for authenticated realtime invalidation and refresh.",
+);
+const transition = { configured: false };
+const transitionCalls = [];
+const transitionApi = businessRouteApi(transition, transitionCalls);
+const beforeFormation = await transitionApi.loadRoute("business", { force: true });
+assert.equal(beforeFormation.data.businessTreasury, null);
+transition.configured = true;
+const afterFormation = await transitionApi.refreshResources(
+  WRITE_INVALIDATIONS.businessCreate,
+);
+assert.equal(afterFormation.errors.businessTreasury, undefined);
+assert.equal(afterFormation.resourceStatus.businessTreasury.state, "ready");
+assert.equal(afterFormation.data.businessTreasury.businessKey, key.business);
+assert.equal(
+  transitionCalls.filter((entry) => entry === "businessTreasury").length,
+  1,
+  "The false-to-true formation transition must fetch Treasury exactly once without route re-entry.",
+);
+
+console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, prerequisite-gated route, capability, state, and precision contracts passed.");

@@ -9,10 +9,16 @@ const paths = Object.freeze({
   contracts: "backend/src/domains/business/contracts/playerBusinessContracts.ts",
   handler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
   procurement: "backend/src/domains/business/api/playerBusinessStoreProcurement.ts",
+  procurementRequest: "backend/src/domains/business/api/playerBusinessStoreProcurementRequest.ts",
+  fundingProjection: "backend/src/domains/business/api/playerBusinessStoreFundingProjection.ts",
+  fundingProjectionSupport: "backend/src/domains/business/api/playerBusinessStoreFundingProjectionSupport.ts",
+  procurementProjection: "backend/src/domains/business/api/playerBusinessStoreProcurementProjection.ts",
+  projectionSupport: "backend/src/domains/business/api/playerBusinessStoreProjectionSupport.ts",
   routes: "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
   routeTests: "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
   procurementTests: "backend/src/domains/business/api/playerBusinessStoreProcurement.test.ts",
   repository: "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts",
+  databaseErrors: "backend/src/domains/business/infrastructure/playerBusinessDatabaseErrors.ts",
   sharedDispatch: "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
   compatibilityRoutes: "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
   classroomRuntime: "backend/supabase/functions/classroom-api/index.ts",
@@ -24,6 +30,20 @@ const sourceEntries = await Promise.all(
   Object.entries(paths).map(async ([key, path]) => [key, await readFile(path, "utf8")]),
 );
 const source = Object.fromEntries(sourceEntries);
+const procurementRequestBoundary = [
+  source.procurement,
+  source.procurementRequest,
+].join("\n");
+const procurementProjectionBoundary = [
+  source.fundingProjection,
+  source.fundingProjectionSupport,
+  source.procurementProjection,
+  source.projectionSupport,
+].join("\n");
+const repositoryErrorBoundary = [
+  source.repository,
+  source.databaseErrors,
+].join("\n");
 
 function mustMatch(text, pattern, message) {
   assert.match(text, pattern, message);
@@ -103,9 +123,9 @@ mustMatch(source.migration, /public\.resolve_store_quote_pricing_v2\(/u,
   "Business quotes must call canonical Store pricing.");
 mustMatch(source.migration, /'playerId', p_player_id/u,
   "Idempotency request identity must include the authenticated actor.");
-mustNotMatch(source.procurement, /p_effective_at/u,
+mustNotMatch(procurementRequestBoundary, /p_effective_at/u,
   "The browser adapter must never submit pricing time.");
-mustNotMatch(source.procurement, /body\.(?:countryCode|currencyCode)|p_(?:country_code|currency_code)/u,
+mustNotMatch(procurementRequestBoundary, /body\.(?:countryCode|currencyCode)|p_(?:country_code|currency_code)/u,
   "The browser must not author Business pricing geography or currency.");
 
 // Idempotency, isolation, and concurrency.
@@ -168,10 +188,26 @@ mustMatch(source.contracts, /interface BusinessStoreQuoteDto/u);
 mustMatch(source.contracts, /interface BusinessStoreReceiptDto/u);
 mustMatch(source.contracts, /readonly quoteKey: string/u);
 mustMatch(source.contracts, /readonly receiptKey: string/u);
-mustMatch(source.procurement, /readResultPublicKey\(row\.quote_key, "quote_key", "bsq"\)/u);
-mustMatch(source.procurement, /readResultPublicKey\(row\.receipt_key, "receipt_key", "bsr"\)/u);
-mustMatch(source.procurement, /warehouseQuantityOwned/u);
-mustMatch(source.procurement, /warehouseAverageUnitCost/u);
+mustContain(
+  source.procurement,
+  'from "./playerBusinessStoreProcurementRequest.ts"',
+  "The procurement facade must delegate request validation to its bounded module.",
+);
+mustContain(
+  source.procurement,
+  'from "./playerBusinessStoreProcurementProjection.ts"',
+  "The procurement facade must delegate public response projection to its bounded module.",
+);
+mustMatch(source.procurementRequest, /readFundingAllocations/u);
+mustMatch(source.procurementRequest, /assertExactBodyFields/u);
+mustMatch(source.fundingProjection, /playerBusinessStoreFundingProjectionSupport\.ts/u);
+mustMatch(source.procurementProjection, /playerBusinessStoreProjectionSupport\.ts/u);
+mustMatch(source.fundingProjectionSupport, /assertFundingLines/u);
+mustMatch(source.projectionSupport, /readResultPublicKey/u);
+mustMatch(procurementProjectionBoundary, /readResultPublicKey\(quote\.quote_key, "quote_key", "bsq"\)/u);
+mustMatch(procurementProjectionBoundary, /readResultPublicKey\(receipt\.receipt_key, "receipt_key", "bsr"\)/u);
+mustMatch(procurementProjectionBoundary, /warehouseQuantityOwned/u);
+mustMatch(procurementProjectionBoundary, /warehouseAverageUnitCost/u);
 mustMatch(source.procurementTests, /assertNoUuid/u);
 mustMatch(source.procurementTests, /reject browser scope/u);
 
@@ -180,8 +216,8 @@ mustMatch(source.routes, /tail\[2\] === "quotes"[\s\S]{0,100}businessStoreQuote/
 mustMatch(source.routes, /tail\[2\] === "purchases"[\s\S]{0,100}businessStorePurchase/u);
 mustMatch(source.routeTests, /\/player-api\/players\/me\/business\/store\/quotes/u);
 mustMatch(source.routeTests, /\/functions\/v1\/classroom-api\/players\/me\/business\/store\/purchases/u);
-mustMatch(source.sharedDispatch, /route\.kind === "businessStoreQuote"\) return "storeQuote"/u);
-mustMatch(source.sharedDispatch, /route\.kind === "businessStorePurchase"\) return "storePurchase"/u);
+mustMatch(source.sharedDispatch, /route\.kind === "businessStoreQuote"\) return "businessStoreQuote"/u);
+mustMatch(source.sharedDispatch, /route\.kind === "businessStorePurchase"\) return "businessStorePurchase"/u);
 mustMatch(source.compatibilityRoutes, /\{ kind: "businessStoreQuote" \}/u);
 mustMatch(source.compatibilityRoutes, /\{ kind: "businessStorePurchase" \}/u);
 for (const runtime of [source.classroomRuntime, source.playerRuntime]) {
@@ -190,10 +226,11 @@ for (const runtime of [source.classroomRuntime, source.playerRuntime]) {
 }
 
 // Repository errors remain bounded and retry semantics are explicit.
-mustMatch(source.repository, /INSUFFICIENT_BUSINESS_BALANCE/u);
-mustMatch(source.repository, /BUSINESS_STOCKROOM_COST_CURRENCY_MISMATCH/u);
-mustMatch(source.repository, /INVENTORY_POSTING_RESULT_MISSING:[^\n]*true/u);
-mustMatch(source.repository, /IDEMPOTENCY_IN_PROGRESS:[^\n]*true/u);
+mustMatch(source.repository, /mapPlayerBusinessDatabaseError/u);
+mustMatch(repositoryErrorBoundary, /INSUFFICIENT_BUSINESS_BALANCE/u);
+mustMatch(repositoryErrorBoundary, /BUSINESS_STOCKROOM_COST_CURRENCY_MISMATCH/u);
+mustMatch(repositoryErrorBoundary, /INVENTORY_POSTING_RESULT_MISSING:[\s\S]{0,180}true/u);
+mustMatch(repositoryErrorBoundary, /IDEMPOTENCY_IN_PROGRESS:[\s\S]{0,180}true/u);
 
 // The exact-head workflow must exercise every Phase 3B authority surface.
 mustMatch(source.workflow, /backend\/supabase\/migrations\/20260820\*\.sql/u);

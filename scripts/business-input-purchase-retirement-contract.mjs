@@ -10,6 +10,7 @@ const files = Object.freeze({
   executor: "backend/src/domains/business/api/playerBusinessMutationExecutor.ts",
   dispatch: "backend/supabase/functions/_shared/playerBusinessDispatch.ts",
   rateLimit: "backend/src/security/playerRateLimitDispatch.ts",
+  rateLimitRegistry: "backend/src/security/playerRateLimitOperationRegistry.ts",
   capability: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   endpoints: "player-terminal/src/api/endpoints.js",
   browserRoutes: "player-terminal/src/api/business-banking-backend-routes.js",
@@ -26,6 +27,7 @@ const entries = await Promise.all(
   Object.entries(files).map(async ([key, path]) => [key, await readFile(path, "utf8")]),
 );
 const source = Object.fromEntries(entries);
+const rateLimitBoundary = [source.rateLimit, source.rateLimitRegistry].join("\n");
 
 assert.match(
   source.route,
@@ -41,15 +43,28 @@ assert.match(source.handler, /route\.kind === "businessInputPurchase"/u);
 assert.match(source.handler, /jsonError\(410/u);
 assert.match(source.handler, /business_input_purchase_retired/u);
 assert.match(source.handler, /Use Business Store procurement/u);
-const resolvedScopeIndex = source.handler.indexOf(
-  "const scope = await dependencies.resolveScope(request, client, body);",
+assert.match(
+  source.dispatch,
+  /\(applicationContext\) =>[\s\S]{0,260}handlePlayerBusinessRequest\([\s\S]{0,260}applicationContext\)/u,
+  "The reviewed dispatch must forward its authenticated application context.",
+);
+assert.match(
+  source.handler,
+  /const scope = applicationContext[\s\S]{0,220}gameId: applicationContext\.gameSessionId[\s\S]{0,160}playerUuid: applicationContext\.actor\.playerUuid[\s\S]{0,180}: await dependencies\.resolveScope\(request, client, body\)/u,
+  "The Business handler must prefer authenticated application-context scope while retaining its compatibility fallback.",
+);
+const applicationContextScopeIndex = source.handler.indexOf(
+  "const scope = applicationContext",
 );
 const retiredInputIndex = source.handler.indexOf(
   'if (route.kind === "businessInputPurchase")',
 );
-assert.ok(resolvedScopeIndex >= 0, "Business scope resolution must remain present.");
 assert.ok(
-  retiredInputIndex > resolvedScopeIndex,
+  applicationContextScopeIndex >= 0,
+  "Authenticated application-context scope forwarding must remain present.",
+);
+assert.ok(
+  retiredInputIndex > applicationContextScopeIndex,
   "Retired requests must authenticate before receiving 410 Gone.",
 );
 
@@ -66,11 +81,11 @@ assert.match(
   "The compatibility route must retain its reviewed rate-limit dispatch mapping.",
 );
 assert.match(
-  source.rateLimit,
+  rateLimitBoundary,
   /ReviewedPlayerRateLimitEndpointKey[\s\S]{0,180}\| "businessInputPurchase"/u,
 );
 assert.match(
-  source.rateLimit,
+  rateLimitBoundary,
   /businessInputPurchase:[\s\S]{0,120}player\.business\.inputs\.purchase\.retired/u,
 );
 

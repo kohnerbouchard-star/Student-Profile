@@ -12,7 +12,8 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
   business: Object.freeze({
     required: Object.freeze(["business", "countries"]),
-    optional: Object.freeze(["businessWorkforce", "businessTreasury", "store"]),
+    optional: Object.freeze(["businessWorkforce", "store"]),
+    dependent: Object.freeze(["businessTreasury"]),
   }),
   contracts: Object.freeze({ required: Object.freeze(["contracts"]), optional: Object.freeze([]) }),
   store: Object.freeze({ required: Object.freeze(["store"]), optional: Object.freeze(["banking", "inventory"]) }),
@@ -32,7 +33,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   travelExecute: Object.freeze(["worldRuntime", "dashboard", "banking"]),
   travelComplete: Object.freeze(["worldRuntime", "dashboard"]),
   residencyRequest: Object.freeze(["worldRuntime", "dashboard"]),
-  businessCreate: Object.freeze(["dashboard", "business", "banking"]),
+  businessCreate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessProductCreate: Object.freeze(["business"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
   businessManufacturingStart: Object.freeze(["dashboard", "business", "inventory"]),
@@ -97,4 +98,12 @@ export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set([
 
 export function resourcesForRoute(route) {
   return ROUTE_RESOURCE_PLAN[route] || ROUTE_RESOURCE_PLAN.dashboard;
+}
+
+export function dependentResourcesForRoute(route, data = {}) {
+  const plan = resourcesForRoute(route);
+  const dependent = Array.isArray(plan.dependent) ? plan.dependent : [];
+  if (!dependent.length) return [];
+  if (route === "business" && data?.business?.configured === true) return [...dependent];
+  return [];
 }

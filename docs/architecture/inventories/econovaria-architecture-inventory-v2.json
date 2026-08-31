@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1186,
+    "sourceFiles": 1187,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 54,
@@ -103,7 +103,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 41,
+      "sourceFiles": 42,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]

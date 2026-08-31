@@ -25,7 +25,6 @@ import {
   readBusinessStockroom,
 } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
-import { SupabaseBusinessTreasuryRepository } from "../infrastructure/supabaseBusinessTreasuryRepository.ts";
 import { executePlayerBusinessMutation } from "./playerBusinessMutationExecutor.ts";
 import {
   readBusinessRequestBody,
@@ -45,12 +44,7 @@ import {
   readPlayerBusinessManufacturingJobs,
   startPlayerBusinessManufacturingJob,
 } from "./playerBusinessManufacturing.ts";
-import {
-  parseBusinessTreasuryAccountOpenBody,
-  parseBusinessTreasuryCancelBody,
-  parseBusinessTreasuryConsumeBody,
-  parseBusinessTreasuryQuoteBody,
-} from "./playerBusinessTreasury.ts";
+import { dispatchPlayerBusinessTreasuryRequest } from "./playerBusinessTreasuryHttpDispatch.ts";
 
 export interface PlayerBusinessRequestScope {
   readonly gameId: string;
@@ -114,90 +108,14 @@ export async function handlePlayerBusinessRequest(
       playerId: scope.playerUuid,
     };
 
-    if (route.kind === "businessTreasuryRead") {
-      const treasury = dependencies.createTreasuryRepository
-        ? dependencies.createTreasuryRepository(client)
-        : new SupabaseBusinessTreasuryRepository(client);
-      return privateJson(200, await treasury.readSnapshot(publicScope));
-    }
-
-    if (route.kind === "businessTreasuryAccountOpen") {
-      const treasury = dependencies.createTreasuryRepository
-        ? dependencies.createTreasuryRepository(client)
-        : new SupabaseBusinessTreasuryRepository(client);
-      const result = await treasury.openCheckingAccount({
-        ...publicScope,
-        ...parseBusinessTreasuryAccountOpenBody(body),
-      });
-      return privateJson(result.outcome === "replayed" ? 200 : 201, {
-        ok: true,
-        outcome: result.outcome,
-        account: result.value,
-        refreshRequired: true,
-      });
-    }
-
-    if (route.kind === "businessTreasuryFxQuote") {
-      const treasury = dependencies.createTreasuryRepository
-        ? dependencies.createTreasuryRepository(client)
-        : new SupabaseBusinessTreasuryRepository(client);
-      const result = await treasury.createQuote({
-        ...publicScope,
-        ...parseBusinessTreasuryQuoteBody(body),
-      });
-      return privateJson(result.outcome === "replayed" ? 200 : 201, {
-        ok: true,
-        outcome: result.outcome,
-        quote: result.value,
-        refreshRequired: false,
-      });
-    }
-
-    if (
-      route.kind === "businessTreasuryFxStandard" ||
-      route.kind === "businessTreasuryFxInstant"
-    ) {
-      const treasury = dependencies.createTreasuryRepository
-        ? dependencies.createTreasuryRepository(client)
-        : new SupabaseBusinessTreasuryRepository(client);
-      const command = {
-        ...publicScope,
-        ...parseBusinessTreasuryConsumeBody(body),
-      };
-      const result = route.kind === "businessTreasuryFxStandard"
-        ? await treasury.submitStandard(command)
-        : await treasury.executeInstant(command);
-      return privateJson(
-        result.outcome === "replayed"
-          ? 200
-          : route.kind === "businessTreasuryFxStandard"
-          ? 202
-          : 201,
-        {
-          ok: true,
-          outcome: result.outcome,
-          order: result.value,
-          refreshRequired: true,
-        },
-      );
-    }
-
-    if (route.kind === "businessTreasuryFxCancel") {
-      const treasury = dependencies.createTreasuryRepository
-        ? dependencies.createTreasuryRepository(client)
-        : new SupabaseBusinessTreasuryRepository(client);
-      const result = await treasury.cancelStandard({
-        ...publicScope,
-        orderKey: route.orderKey,
-        ...parseBusinessTreasuryCancelBody(body),
-      });
-      return privateJson(200, {
-        ok: true,
-        outcome: result.outcome,
-        order: result.value,
-        refreshRequired: true,
-      });
-    }
+    const treasuryResponse = await dispatchPlayerBusinessTreasuryRequest({
+      route,
+      body,
+      client,
+      publicScope,
+      createTreasuryRepository: dependencies.createTreasuryRepository,
+    });
+    if (treasuryResponse) return treasuryResponse;
 
     if (route.kind === "businessRead") {
       if (route.resource === "stockroom") {

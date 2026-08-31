@@ -30,7 +30,8 @@ const files = {
   classroomRuntime: "backend/supabase/functions/classroom-api/index.ts",
   capabilities:
     "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-  rateLimits: "backend/src/security/playerRateLimitDispatch.ts",
+  rateLimitDispatch: "backend/src/security/playerRateLimitDispatch.ts",
+  rateLimitRegistry: "backend/src/security/playerRateLimitOperationRegistry.ts",
   businessContracts:
     "backend/src/domains/business/contracts/playerBusinessContracts.ts",
   businessRepository:
@@ -104,6 +105,10 @@ source.purchaseFlow = [
   source.purchaseFlow,
   source.purchaseContract,
   source.purchaseConvergence,
+].join("\n");
+source.rateLimits = [
+  source.rateLimitDispatch,
+  source.rateLimitRegistry,
 ].join("\n");
 
 function requireTokens(text, label, tokens) {

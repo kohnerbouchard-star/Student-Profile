@@ -18,6 +18,7 @@ import {
   IDEMPOTENT_WRITE_ENDPOINTS,
   SHELL_OPTIONAL_RESOURCES,
   WRITE_INVALIDATIONS,
+  dependentResourcesForRoute,
   resourcesForRoute
 } from "./resource-plan.js";
 
@@ -98,6 +99,27 @@ function unsupportedResourceStatus() {
     code: "CAPABILITY_UNAVAILABLE",
     retryAfterMs: 0
   });
+}
+
+function prerequisitePendingResourceStatus() {
+  return Object.freeze({
+    state: "empty",
+    status: 0,
+    code: "RESOURCE_PREREQUISITE_NOT_MET",
+    retryAfterMs: 0
+  });
+}
+
+function mergeResourceResults(primary, dependent) {
+  const resourceStatus = Object.freeze({
+    ...(primary.resourceStatus || {}),
+    ...(dependent.resourceStatus || {})
+  });
+  return {
+    data: { ...(primary.data || {}), ...(dependent.data || {}), resourceStatus },
+    errors: { ...(primary.errors || {}), ...(dependent.errors || {}) },
+    resourceStatus
+  };
 }
 
 export class PlayerApi {
@@ -289,7 +311,7 @@ export class PlayerApi {
   async loadRoute(route, { force = false } = {}) {
     const plan = resourcesForRoute(route);
     const keys = [...plan.required, ...plan.optional];
-    const result = await this.loadResources(keys, { force });
+    let result = await this.loadResources(keys, { force });
     const sessionError = Object.values(result.errors).find((error) => Number(error?.status) === 401);
     if (sessionError) throw sessionError;
     const missingRequired = plan.required.find((key) => result.errors[key]);
@@ -298,6 +320,28 @@ export class PlayerApi {
         code: "ROUTE_DATA_UNAVAILABLE",
         endpointKey: missingRequired,
         cause: result.errors[missingRequired]
+      });
+    }
+
+    const plannedDependent = Array.isArray(plan.dependent) ? plan.dependent : [];
+    const dependentKeys = dependentResourcesForRoute(route, result.data);
+    if (dependentKeys.length) {
+      result = mergeResourceResults(
+        result,
+        await this.loadResources(dependentKeys, { force })
+      );
+      const dependentSessionError = Object.values(result.errors)
+        .find((error) => Number(error?.status) === 401);
+      if (dependentSessionError) throw dependentSessionError;
+    } else if (plannedDependent.length) {
+      const skipped = Object.fromEntries(plannedDependent.map((key) => [key, null]));
+      const resourceStatus = Object.fromEntries(
+        plannedDependent.map((key) => [key, prerequisitePendingResourceStatus()])
+      );
+      result = mergeResourceResults(result, {
+        data: { ...skipped, resourceStatus },
+        errors: {},
+        resourceStatus
       });
     }
     return result;

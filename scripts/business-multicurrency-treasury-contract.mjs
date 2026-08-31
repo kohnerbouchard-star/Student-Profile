@@ -14,6 +14,7 @@ const files = Object.freeze({
   repository: "backend/src/domains/business/infrastructure/supabaseBusinessTreasuryRepository.ts",
   requestParser: "backend/src/domains/business/api/playerBusinessTreasury.ts",
   handler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+  treasuryHttpDispatch: "backend/src/domains/business/api/playerBusinessTreasuryHttpDispatch.ts",
   store: "backend/src/domains/business/api/playerBusinessStoreProcurement.ts",
   storeRequest: "backend/src/domains/business/api/playerBusinessStoreProcurementRequest.ts",
   storeFundingProjection: "backend/src/domains/business/api/playerBusinessStoreFundingProjection.ts",
@@ -31,6 +32,10 @@ const files = Object.freeze({
   routes: "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
   routeTests: "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
   clientRoutes: "player-terminal/src/api/business-treasury-backend-routes.js",
+  freshness: "player-terminal/src/api/freshness.js",
+  playerApi: "player-terminal/src/api/player-api.js",
+  resourcePlan: "player-terminal/src/api/resource-plan.js",
+  invalidationController: "player-terminal/src/realtime/player-invalidation-controller.js",
   readModel: "player-terminal/src/features/business-treasury/business-treasury-read-model.js",
   procurementReadModel: "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
   validation: "player-terminal/src/features/business-treasury/business-treasury-validation.js",
@@ -42,6 +47,10 @@ const files = Object.freeze({
   playerTest: "player-terminal/tests/business-multicurrency-treasury.mjs",
   database: "scripts/business-multicurrency-treasury-database.mjs",
   concurrency: "scripts/business-multicurrency-treasury-concurrency.mjs",
+  phase4cRecoveryContract: "scripts/business-phase4c-player-recovery-contract.mjs",
+  phase10StoreCutoverContract: "scripts/business-phase10-player-store-cutover-contract.mjs",
+  storeProcurementAuthorityContract: "scripts/business-store-procurement-authority-contract.mjs",
+  inputPurchaseRetirementContract: "scripts/business-input-purchase-retirement-contract.mjs",
   workflow: ".github/workflows/business-multicurrency-treasury-v1.yml",
 });
 
@@ -193,6 +202,10 @@ includesAll(source.requestParser, [
   "parseBusinessTreasuryCancelBody",
 ], "C4 Player request parser");
 includesAll(source.handler, [
+  "dispatchPlayerBusinessTreasuryRequest",
+  "playerBusinessTreasuryHttpDispatch.ts",
+], "C4 Player HTTP facade");
+includesAll([source.handler, source.treasuryHttpDispatch].join("\n"), [
   "businessTreasuryRead",
   "businessTreasuryAccountOpen",
   "businessTreasuryFxQuote",
@@ -273,6 +286,49 @@ includesAll(source.rateLimitRegistry, [
   "businessStoreQuote",
   "businessStorePurchase",
 ], "C4 reviewed rate-limit operations");
+includesAll(source.phase4cRecoveryContract, [
+  "playerBusinessDatabaseErrors.ts",
+  "recoveryBoundary",
+  "Object.keys(mappings).find",
+], "C4 retained Player Business recovery ratchet");
+includesAll(source.phase10StoreCutoverContract, [
+  "playerRateLimitOperationRegistry.ts",
+  "source.rateLimitRegistry",
+], "C4 retained Player Store rate-limit ratchet");
+includesAll(source.storeProcurementAuthorityContract, [
+  "playerBusinessStoreProcurementProjection.ts",
+  "procurementProjectionBoundary",
+  "repositoryErrorBoundary",
+], "C4 retained Store procurement split-module ratchet");
+includesAll(source.inputPurchaseRetirementContract, [
+  "playerRateLimitOperationRegistry.ts",
+  "applicationContextScopeIndex",
+  "authenticated application context",
+], "C4 retained input-purchase retirement scope ratchet");
+includesAll(source.resourcePlan, [
+  "dependentResourcesForRoute",
+  "businessTreasury",
+  "data?.business?.configured === true",
+], "C4 prerequisite-gated Treasury resource plan");
+includesAll([source.resourcePlan, source.freshness].join("\n"), [
+  'businessCreate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"])',
+  "businessTreasury: 10_000",
+], "C4 post-formation Treasury refresh and invalidation registry");
+includesAll(source.playerApi, [
+  "dependentResourcesForRoute",
+  "prerequisitePendingResourceStatus",
+  "RESOURCE_PREREQUISITE_NOT_MET",
+  "mergeResourceResults",
+], "C4 prerequisite-gated Player resource loader");
+includesAll(source.invalidationController, [
+  "dependentResourcesForRoute",
+  "resourcesVisibleOnRoute(state.route, state.data)",
+], "C4 prerequisite-aware Player invalidation controller");
+includesAll(source.playerTest, [
+  "A Player without a Business must not resolve an owner-scoped treasury request.",
+  "Treasury may be requested only after the canonical Business prerequisite resolves.",
+  "The false-to-true formation transition must fetch Treasury exactly once without route re-entry.",
+], "C4 prerequisite-gated Treasury regression evidence");
 
 includesAll(source.readModel, [
   "normalizeBusinessTreasurySnapshot",
@@ -351,6 +407,10 @@ includesAll(source.workflow, [
   "business-multicurrency-treasury-contract.mjs",
   "business-multicurrency-treasury-database.mjs",
   "business-multicurrency-treasury-concurrency.mjs",
+  "business-input-purchase-retirement-contract.mjs",
+  "business-phase10-player-store-cutover-contract.mjs",
+  "business-phase4c-player-recovery-contract.mjs",
+  "business-store-procurement-authority-contract.mjs",
   "player-business-treasury.spec.mjs",
   "businessTreasuryDatabaseErrors.test.ts",
   "playerRateLimitOperationRegistry",
