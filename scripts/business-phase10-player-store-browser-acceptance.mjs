@@ -1418,7 +1418,7 @@ async function proveWithdrawalFirstRejectsBeforePayment(fixture, sourceAccountKe
       ${sqlLiteral(quoteKey)},
       ${sqlLiteral(`phase10a4-withdrawal-first-purchase-${fixture.game.ordinal}`)}
     )::text;
-  `, "STORE_OFFER_SETTLEMENT_OFFER_STATUS_INVALID");
+  `, "STORE_OFFER_FUNDED_SETTLEMENT_OFFER_STATUS_INVALID");
   const afterRejectedPurchase = await stateSnapshot(fixture);
   evidence.database.withdrawalFirstRejectedBeforePayment =
     JSON.stringify(afterWithdrawal) === JSON.stringify(afterRejectedPurchase) &&
