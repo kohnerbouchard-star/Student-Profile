@@ -3,11 +3,13 @@
 **Roadmap item:** `BUSINESS-V2-11`
 **Status:** `SCOPED_NOT_IMPLEMENTED`
 **Branch:** `refactor/business-store-sales-convergence-v2`
-**Draft PR:** pending
+**Draft PR:** #680
 **Parent branch:** `feat/business-player-store-fx-final-v2`
 **Parent 10A.4D implementation:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`
 **Parent 10A.4D checkpoint/controller:** `f92a61a61bdf336d608936577d8e5e48de11ae94`
 **Merge or deployment authorized:** No
+
+**PR-bound authority:** `docs/operations/contracts/player-cross-cutting/pr-680.json`
 
 ## Decision
 

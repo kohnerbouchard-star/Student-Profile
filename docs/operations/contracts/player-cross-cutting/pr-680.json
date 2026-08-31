@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.business-store-sales-convergence-pr-680.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 680,
+  "baseRef": "feat/business-player-store-fx-final-v2",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/business-store-sales-convergence-v2.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-680.json",
+    "docs/roadmaps/business-store-sales-convergence-authority-audit-v2.md",
+    "docs/roadmaps/business-store-sales-convergence-implementation-handoff-v2.md",
+    "docs/roadmaps/business-store-sales-convergence-implementation-plan-v2.md",
+    "docs/roadmaps/business-store-sales-convergence-scope-v2.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-680.json",
+    "docs/roadmaps/business-store-sales-convergence-authority-audit-v2.md",
+    "docs/roadmaps/business-store-sales-convergence-implementation-plan-v2.md",
+    "docs/roadmaps/business-store-sales-convergence-scope-v2.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "criticalJobChecks": [
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-database",
+    "business-store-sales-convergence-v2-worker",
+    "business-store-sales-convergence-v2-player-admin"
+  ],
+  "requiredChecks": [
+    "backend-typecheck",
+    "business-player-store-fx-final-v2-source",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-database",
+    "business-store-sales-convergence-v2-worker",
+    "business-store-sales-convergence-v2-player-admin",
+    "database-replay",
+    "player-api-read-resilience",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-terminal-verify",
+    "repository-quality"
+  ]
+}

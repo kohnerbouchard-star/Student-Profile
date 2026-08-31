@@ -490,13 +490,19 @@ Phase 11 remains closed until 10A.4D has one exact implementation SHA, all requi
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
-**Status:** NOT STARTED
+**Status:** `SCOPED_NOT_IMPLEMENTED`
 
-- [ ] Remove/replace any independent automatic finished-goods sales authority that competes with Store settlement.
-- [ ] If simulated consumer/NPC demand remains, make it consume active Store offers through the same seller-offer inventory authority.
-- [ ] Keep competition game scoped and based on bounded price/reputation/availability/macroeconomic factors.
+**Owner:** `refactor/business-store-sales-convergence-v2` / draft PR #680, based on exact 10A.4D checkpoint/controller `f92a61a61bdf336d608936577d8e5e48de11ae94`.
 
-Exit: there is one sales inventory authority and one revenue settlement path.
+- [ ] Forward-retire new simulated cycle sales and the Admin outcome-authoring settlement route while preserving historical sale/cycle evidence immutably.
+- [ ] Derive every new physical-goods sale, inventory consumption, revenue, COGS, gross margin, and gross-receipts tax source only from committed Store offer purchase receipts. No simulated/NPC consumer path remains.
+- [ ] Backfill legacy/open Business periods to the versioned seven-day cadence, persist server-owned `next_due_at`, and apply policy changes only to later unopened periods.
+- [ ] Add due-only bounded leases, exact-once claims, replay/conflict guards, and anchored successor periods using database time.
+- [ ] Close payroll before Store-derived tax through canonical held-funds-aware Banking and retain unpaid tax as a liability without rolling back the period.
+- [ ] Add an internal-runner-only Business operations worker with no scheduler/cron or secret configuration change.
+- [ ] Stop treating cached Business totals, valuation, demand, or browser-authored economic inputs as current authority.
+
+Exit: Store settlement is the only new physical-goods sale, inventory-consumption, revenue, and COGS path; due payroll/tax cannot advance early or twice.
 
 ## Phase 12 — Player Business workspace UX convergence
 
