@@ -81,7 +81,9 @@ export function validateBusinessRequestMethodAndFields(
 ): void {
   const isManufacturingCollection =
     route.kind === "businessManufacturingCollection";
-  if (route.kind === "businessRead" && method !== "GET") {
+  const isRead = route.kind === "businessRead" ||
+    route.kind === "businessTreasuryRead";
+  if (isRead && method !== "GET") {
     throw methodNotAllowed("Use GET for this resource.");
   }
   if (
@@ -92,7 +94,7 @@ export function validateBusinessRequestMethodAndFields(
     throw methodNotAllowed("Use GET to read jobs or POST to start a job.");
   }
   if (
-    route.kind !== "businessRead" &&
+    !isRead &&
     !isManufacturingCollection &&
     method !== "POST"
   ) {
@@ -118,12 +120,30 @@ export function validateBusinessRequestMethodAndFields(
 
   const allowed: Record<PlayerBusinessRoute["kind"], readonly string[]> = {
     businessRead: [],
+    businessTreasuryRead: [],
+    businessTreasuryAccountOpen: ["currencyCode", "idempotencyKey"],
+    businessTreasuryFxQuote: [
+      "sourceAccountKey",
+      "targetCurrencyCode",
+      "targetAccountKey",
+      "sourceAmount",
+      "product",
+      "idempotencyKey",
+    ],
+    businessTreasuryFxStandard: ["quoteKey", "idempotencyKey"],
+    businessTreasuryFxInstant: ["quoteKey", "idempotencyKey"],
+    businessTreasuryFxCancel: ["idempotencyKey"],
     businessManufacturingCollection: method === "GET"
       ? []
       : ["productKey", "quantity", "priority", "idempotencyKey"],
     businessManufacturingCancel: ["idempotencyKey"],
     businessCreate: businessCreateFields,
-    businessStoreQuote: ["itemKey", "quantity", "idempotencyKey"],
+    businessStoreQuote: [
+      "itemKey",
+      "quantity",
+      "allocations",
+      "idempotencyKey",
+    ],
     businessStorePurchase: [
       "quoteKey",
       "idempotencyKey",

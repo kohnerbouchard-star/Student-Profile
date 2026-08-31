@@ -1,5 +1,6 @@
 import { ApiRequestError } from "./errors.js";
 import { validateStoreResponse } from "./response-store-validator.js";
+import { normalizeBusinessTreasurySnapshot } from "../features/business-treasury/business-treasury-read-model.js";
 
 const ARRAY_READS = new Set(["countries", "notifications"]);
 const READ_ENDPOINTS = new Set([
@@ -13,6 +14,7 @@ const READ_ENDPOINTS = new Set([
   "portfolio",
   "business",
   "businessWorkforce",
+  "businessTreasury",
   "store",
   "marketplace",
   "contracts",
@@ -377,6 +379,9 @@ function validateEndpointShape(endpointKey, value, context) {
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
   let value = sanitizeValue(unwrap(endpointKey, raw), context.config || {});
   if (!READ_ENDPOINTS.has(endpointKey)) return value;
+  if (endpointKey === "businessTreasury") {
+    return normalizeBusinessTreasurySnapshot(value);
+  }
   if (ARRAY_READS.has(endpointKey)) {
     if (!Array.isArray(value)) throw invalidResponse(endpointKey, context.requestId, context.path);
   } else if (!value || typeof value !== "object" || Array.isArray(value)) {

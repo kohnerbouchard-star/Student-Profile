@@ -14,6 +14,17 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   portfolio: { method: "GET", path: "/portfolio" },
   business: { method: "GET", path: "/business" },
   businessWorkforce: { method: "GET", path: "/business/workforce/candidates" },
+  businessTreasury: { method: "GET", path: "/business/treasury" },
+  businessTreasuryAccountOpen: { method: "POST", path: "/business/treasury/accounts" },
+  businessTreasuryFxQuote: { method: "POST", path: "/business/treasury/fx/quotes" },
+  businessTreasuryFxStandard: { method: "POST", path: "/business/treasury/fx/orders/standard" },
+  businessTreasuryFxInstant: { method: "POST", path: "/business/treasury/fx/orders/instant" },
+  businessTreasuryFxCancel: {
+    method: "POST",
+    path: "/business/treasury/fx/orders/:orderKey/cancel",
+  },
+  businessStoreQuote: { method: "POST", path: "/business/store/quotes" },
+  businessStorePurchase: { method: "POST", path: "/business/store/purchases" },
   businessCreate: { method: "POST", path: "/businesses" },
   businessFormationPropose: { method: "POST", path: "/business/formations" },
   businessFormationRespond: {

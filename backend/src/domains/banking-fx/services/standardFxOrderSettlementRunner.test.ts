@@ -49,6 +49,24 @@ Deno.test("standard FX settlement runner claims once and settles in deterministi
   });
 });
 
+Deno.test("standard FX settlement runner treats Player and Business orders as one owner-neutral queue", async () => {
+  const repository = new FakeRepository([
+    claim(GAME_A, ORDER_A, LEASE_A, "2026-08-27T00:00:00.000Z"),
+    claim(GAME_B, ORDER_B, LEASE_B, "2026-08-27T00:00:00.000Z"),
+  ]);
+  const result = await run(repository);
+
+  assertEquals(repository.settleCalls.map(({ claim }) => claim.orderKey), [
+    ORDER_A,
+    ORDER_B,
+  ]);
+  assertEquals(result.claimedCount, 2);
+  const serialized = JSON.stringify(repository.settleCalls);
+  assertEquals(serialized.includes("playerId"), false);
+  assertEquals(serialized.includes("businessId"), false);
+  assertEquals(serialized.includes("ownerFamily"), false);
+});
+
 Deno.test("standard FX settlement runner terminalizes only explicit permanent errors", async () => {
   const repository = new FakeRepository([
     claim(GAME_A, ORDER_A, LEASE_A, "2026-08-27T00:00:00.000Z"),

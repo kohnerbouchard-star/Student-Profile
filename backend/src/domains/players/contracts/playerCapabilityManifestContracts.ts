@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-26.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-31.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -39,6 +39,11 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "businessProductCreate",
   "businessProduction",
   "businessStatus",
+  "businessTreasuryAccountOpen",
+  "businessTreasuryFxCancel",
+  "businessTreasuryFxInstant",
+  "businessTreasuryFxQuote",
+  "businessTreasuryFxStandard",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -89,6 +94,14 @@ export type PlayerCapabilityEndpointKey =
   | "bankingFxCancel"
   | "bankTransfer"
   | "business"
+  | "businessStoreQuote"
+  | "businessStorePurchase"
+  | "businessTreasury"
+  | "businessTreasuryAccountOpen"
+  | "businessTreasuryFxQuote"
+  | "businessTreasuryFxStandard"
+  | "businessTreasuryFxInstant"
+  | "businessTreasuryFxCancel"
   | "businessWorkforce"
   | "businessCreate"
   | "businessFormationActivate"
@@ -317,6 +330,76 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "business",
     operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
     routeCapabilities: ["business"],
+  },
+  {
+    key: "businessTreasury",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/business/treasury",
+    }],
+    routeCapabilities: ["business"],
+  },
+  {
+    key: "businessTreasuryAccountOpen",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/treasury/accounts",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["businessTreasuryAccountOpen"],
+  },
+  {
+    key: "businessTreasuryFxQuote",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/treasury/fx/quotes",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["businessTreasuryFxQuote"],
+  },
+  {
+    key: "businessTreasuryFxStandard",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/treasury/fx/orders/standard",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["businessTreasuryFxStandard"],
+  },
+  {
+    key: "businessTreasuryFxInstant",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/treasury/fx/orders/instant",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["businessTreasuryFxInstant"],
+  },
+  {
+    key: "businessTreasuryFxCancel",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/treasury/fx/orders/:orderKey/cancel",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["businessTreasuryFxCancel"],
+  },
+  {
+    key: "businessStoreQuote",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/store/quotes",
+    }],
+    routeCapabilities: ["business"],
+  },
+  {
+    key: "businessStorePurchase",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/store/purchases",
+    }],
+    routeCapabilities: ["business"],
+    actionCapabilities: ["storePurchase"],
   },
   {
     key: "businessWorkforce",

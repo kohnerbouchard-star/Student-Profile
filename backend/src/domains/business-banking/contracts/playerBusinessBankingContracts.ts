@@ -17,6 +17,12 @@ export type DelegatedPlayerBusinessRoute = Exclude<
   PlayerBusinessRoute,
   | { readonly kind: "businessManufacturingCollection" }
   | { readonly kind: "businessManufacturingCancel" }
+  | { readonly kind: "businessTreasuryRead" }
+  | { readonly kind: "businessTreasuryAccountOpen" }
+  | { readonly kind: "businessTreasuryFxQuote" }
+  | { readonly kind: "businessTreasuryFxStandard" }
+  | { readonly kind: "businessTreasuryFxInstant" }
+  | { readonly kind: "businessTreasuryFxCancel" }
 >;
 
 export type PlayerBusinessBankingRoute =
@@ -75,7 +81,10 @@ export interface PlayerBusinessBankingRepository {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<LoansSnapshotDto>;
-  execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
+  execute(
+    command: string,
+    args: Readonly<Record<string, unknown>>,
+  ): Promise<Record<string, unknown>>;
 }
 
 export class PlayerBusinessBankingError extends PlayerBusinessError {

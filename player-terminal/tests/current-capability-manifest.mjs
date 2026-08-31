@@ -24,7 +24,7 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-08-26.1");
+assert.equal(manifest.manifestVersion, "2026-08-31.1");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);

@@ -4,6 +4,7 @@ import { installToastHostController } from "./accessibility/toast-host-controlle
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
+import { installBusinessTreasuryFlow } from "./features/business-treasury/business-treasury-flow.js";
 import { installStoryDecisionFlow } from "./features/contracts/story-decision-flow.js";
 import { installInventoryActionFlow } from "./features/inventory/inventory-action-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
@@ -44,6 +45,7 @@ const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const marketplaceFunding = installMarketplaceFundingFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
+const businessTreasury = installBusinessTreasuryFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
 const worldRuntime = installWorldRuntimeFlow({ mount, terminal, config });
@@ -58,6 +60,7 @@ terminal.destroy = () => {
   worldRuntime.destroy();
   storyDeliveries.destroy();
   notifications.destroy();
+  businessTreasury.destroy();
   bankingReads.destroy();
   marketplaceFunding.destroy();
   marketOrders.destroy();

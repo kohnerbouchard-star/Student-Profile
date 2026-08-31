@@ -10,16 +10,22 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import type { PlayerRequestApplicationContext } from "../../players/index.ts";
 import {
   PlayerBusinessError,
   type PlayerBusinessRepository,
   type PlayerBusinessRoute,
 } from "../contracts/playerBusinessContracts.ts";
 import {
+  BusinessTreasuryError,
+  type BusinessTreasuryRepositoryV1,
+} from "../contracts/businessTreasuryContracts.ts";
+import {
   readBusinessRecipes,
   readBusinessStockroom,
 } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
+import { SupabaseBusinessTreasuryRepository } from "../infrastructure/supabaseBusinessTreasuryRepository.ts";
 import { executePlayerBusinessMutation } from "./playerBusinessMutationExecutor.ts";
 import {
   readBusinessRequestBody,
@@ -39,6 +45,12 @@ import {
   readPlayerBusinessManufacturingJobs,
   startPlayerBusinessManufacturingJob,
 } from "./playerBusinessManufacturing.ts";
+import {
+  parseBusinessTreasuryAccountOpenBody,
+  parseBusinessTreasuryCancelBody,
+  parseBusinessTreasuryConsumeBody,
+  parseBusinessTreasuryQuoteBody,
+} from "./playerBusinessTreasury.ts";
 
 export interface PlayerBusinessRequestScope {
   readonly gameId: string;
@@ -56,18 +68,23 @@ export interface PlayerBusinessHttpHandlerDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerBusinessRepository;
+  readonly createTreasuryRepository?: (
+    client: EdgeSupabaseClient,
+  ) => BusinessTreasuryRepositoryV1;
 }
 
 export async function handlePlayerBusinessRequest(
   request: Request,
   route: PlayerBusinessRoute,
   dependencies: PlayerBusinessHttpHandlerDependencies,
+  applicationContext?: PlayerRequestApplicationContext,
 ): Promise<Response> {
   try {
     validateBusinessRequestEnvelope(request);
     const body = await readBusinessRequestBody(
       request,
       route.kind === "businessRead" ||
+        route.kind === "businessTreasuryRead" ||
         (route.kind === "businessManufacturingCollection" &&
           request.method === "GET"),
     );
@@ -83,7 +100,12 @@ export async function handlePlayerBusinessRequest(
     }
 
     const client = dependencies.createServiceClient(environment.value);
-    const scope = await dependencies.resolveScope(request, client, body);
+    const scope = applicationContext
+      ? {
+        gameId: applicationContext.gameSessionId,
+        playerUuid: applicationContext.actor.playerUuid,
+      }
+      : await dependencies.resolveScope(request, client, body);
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerBusinessRepository(client);
@@ -91,6 +113,91 @@ export async function handlePlayerBusinessRequest(
       gameSessionId: scope.gameId,
       playerId: scope.playerUuid,
     };
+
+    if (route.kind === "businessTreasuryRead") {
+      const treasury = dependencies.createTreasuryRepository
+        ? dependencies.createTreasuryRepository(client)
+        : new SupabaseBusinessTreasuryRepository(client);
+      return privateJson(200, await treasury.readSnapshot(publicScope));
+    }
+
+    if (route.kind === "businessTreasuryAccountOpen") {
+      const treasury = dependencies.createTreasuryRepository
+        ? dependencies.createTreasuryRepository(client)
+        : new SupabaseBusinessTreasuryRepository(client);
+      const result = await treasury.openCheckingAccount({
+        ...publicScope,
+        ...parseBusinessTreasuryAccountOpenBody(body),
+      });
+      return privateJson(result.outcome === "replayed" ? 200 : 201, {
+        ok: true,
+        outcome: result.outcome,
+        account: result.value,
+        refreshRequired: true,
+      });
+    }
+
+    if (route.kind === "businessTreasuryFxQuote") {
+      const treasury = dependencies.createTreasuryRepository
+        ? dependencies.createTreasuryRepository(client)
+        : new SupabaseBusinessTreasuryRepository(client);
+      const result = await treasury.createQuote({
+        ...publicScope,
+        ...parseBusinessTreasuryQuoteBody(body),
+      });
+      return privateJson(result.outcome === "replayed" ? 200 : 201, {
+        ok: true,
+        outcome: result.outcome,
+        quote: result.value,
+        refreshRequired: false,
+      });
+    }
+
+    if (
+      route.kind === "businessTreasuryFxStandard" ||
+      route.kind === "businessTreasuryFxInstant"
+    ) {
+      const treasury = dependencies.createTreasuryRepository
+        ? dependencies.createTreasuryRepository(client)
+        : new SupabaseBusinessTreasuryRepository(client);
+      const command = {
+        ...publicScope,
+        ...parseBusinessTreasuryConsumeBody(body),
+      };
+      const result = route.kind === "businessTreasuryFxStandard"
+        ? await treasury.submitStandard(command)
+        : await treasury.executeInstant(command);
+      return privateJson(
+        result.outcome === "replayed"
+          ? 200
+          : route.kind === "businessTreasuryFxStandard"
+          ? 202
+          : 201,
+        {
+          ok: true,
+          outcome: result.outcome,
+          order: result.value,
+          refreshRequired: true,
+        },
+      );
+    }
+
+    if (route.kind === "businessTreasuryFxCancel") {
+      const treasury = dependencies.createTreasuryRepository
+        ? dependencies.createTreasuryRepository(client)
+        : new SupabaseBusinessTreasuryRepository(client);
+      const result = await treasury.cancelStandard({
+        ...publicScope,
+        orderKey: route.orderKey,
+        ...parseBusinessTreasuryCancelBody(body),
+      });
+      return privateJson(200, {
+        ok: true,
+        outcome: result.outcome,
+        order: result.value,
+        refreshRequired: true,
+      });
+    }
 
     if (route.kind === "businessRead") {
       if (route.resource === "stockroom") {
@@ -111,14 +218,13 @@ export async function handlePlayerBusinessRequest(
         );
       }
       const snapshot = await repository.readBusiness(publicScope);
-      const manufacturingJobs =
-        snapshot.configured && snapshot.company.id
-          ? await readPlayerBusinessManufacturingJobs(
-            client,
-            publicScope,
-            snapshot.company.id,
-          )
-          : [];
+      const manufacturingJobs = snapshot.configured && snapshot.company.id
+        ? await readPlayerBusinessManufacturingJobs(
+          client,
+          publicScope,
+          snapshot.company.id,
+        )
+        : [];
       return privateJson(200, { ...snapshot, manufacturingJobs });
     }
 
@@ -209,7 +315,11 @@ export async function handlePlayerBusinessRequest(
     if (route.kind === "businessStorePurchase") {
       return privateJson(200, {
         ok: true,
-        receipt: await purchaseBusinessStoreQuote(repository, publicScope, body),
+        receipt: await purchaseBusinessStoreQuote(
+          repository,
+          publicScope,
+          body,
+        ),
         refreshRequired: true,
       });
     }
@@ -222,6 +332,13 @@ export async function handlePlayerBusinessRequest(
     );
     return privateJson(200, { ok: true, result, refreshRequired: true });
   } catch (error) {
+    if (error instanceof BusinessTreasuryError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
     if (error instanceof PlayerBusinessError) {
       return jsonError(error.status, {
         code: error.code,
@@ -248,6 +365,7 @@ function privateJson(status: number, body: unknown): Response {
   return jsonResponse(status, body, {
     "cache-control": "private, no-store, max-age=0",
     "pragma": "no-cache",
-    "vary": "authorization, x-player-session-token",
+    "vary":
+      "Origin, Authorization, X-Player-Session-Token, X-Econovaria-Device-Id",
   });
 }

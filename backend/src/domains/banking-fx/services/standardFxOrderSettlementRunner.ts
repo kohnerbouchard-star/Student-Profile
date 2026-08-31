@@ -1,4 +1,8 @@
 export interface StandardFxOrderClaim {
+  /**
+   * The leased order is deliberately owner-neutral. Player-or-Business owner
+   * resolution remains atomic inside the database settlement command.
+   */
   readonly gameSessionId: string;
   readonly orderKey: string;
   readonly leaseToken: string;
@@ -12,6 +16,7 @@ export interface StandardFxOrderCommandResult {
 }
 
 export interface StandardFxOrderSettlementRepository {
+  /** Claims every due standard order without filtering by owner family. */
   claimDueOrders(input: {
     readonly workerName: string;
     readonly limit: number;

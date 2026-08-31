@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1162,
+    "sourceFiles": 1186,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 54,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 9,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 129
+    "capabilityStrings": 134
   },
   "domains": [
     {
@@ -103,7 +103,7 @@
         "contracts",
         "infrastructure"
       ],
-      "sourceFiles": 24,
+      "sourceFiles": 41,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -3236,6 +3236,10 @@
         "lines": 908
       },
       {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 894
+      },
+      {
         "file": "backend/supabase/functions/classroom-api/index.ts",
         "lines": 888
       },
@@ -3278,10 +3282,6 @@
       {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
         "lines": 821
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 811
       },
       {
         "file": "backend/src/supabase/tableTypes.ts",
@@ -3582,6 +3582,12 @@
     ],
     "capabilityStrings": [
       {
+        "capability": "account.balance",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
+        ]
+      },
+      {
         "capability": "account.read",
         "locations": [
           "admin/admin-auth.js",
@@ -3729,6 +3735,14 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "business.store-procurement",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStoreProcurement.testSupport.ts",
+          "backend/src/domains/business/api/playerBusinessStoreProcurementProjection.ts",
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js"
         ]
       },
       {
@@ -4249,6 +4263,7 @@
       {
         "capability": "order.binding",
         "locations": [
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js",
           "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
         ]
       },
@@ -4321,6 +4336,20 @@
         "capability": "proposed.amount",
         "locations": [
           "backend/src/domains/business-banking/domain/businessBankingEconomicSimulation.ts"
+        ]
+      },
+      {
+        "capability": "quote.binding",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
+        ]
+      },
+      {
+        "capability": "receipt.binding",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
         ]
       },
       {
@@ -4444,6 +4473,12 @@
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "store.seeded",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStoreProcurement.test.ts"
         ]
       },
       {

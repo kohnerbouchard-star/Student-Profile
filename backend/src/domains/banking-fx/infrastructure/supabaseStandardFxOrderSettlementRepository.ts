@@ -41,7 +41,11 @@ interface ClaimRow {
 
 const TERMINAL_SETTLEMENT_CODES = new Set([
   "BANK_ACCOUNT_NOT_FOUND",
+  "BUSINESS_ACCOUNT_OWNER_INVALID",
+  "BUSINESS_NOT_FOUND",
   "FUNDING_INSUFFICIENT",
+  "FX_ORDER_OWNER_INVALID",
+  "FX_ORDER_OWNER_MISSING",
   "FX_ORDER_PRODUCT_INVALID",
   "FX_ORDER_RESERVATION_CONFLICT",
   "FX_SAME_CURRENCY_NOT_REQUIRED",
@@ -77,6 +81,8 @@ export class SupabaseStandardFxOrderSettlementRepository
     readonly leaseSeconds: number;
     readonly now: string;
   }): Promise<readonly StandardFxOrderClaim[]> {
+    // The claim RPC intentionally receives no owner selector. The database
+    // leases Player- and Business-owned orders from the same ordered queue.
     const response = await this.client.rpc<readonly ClaimRow[]>(
       "claim_due_standard_fx_orders_v1",
       {
@@ -247,7 +253,7 @@ function mapRpcError(
     );
   }
   const domainCode = source.match(
-    /\b(?:BANK|FUNDING|FX)_[A-Z0-9_]{2,95}\b/u,
+    /\b(?:BANK|BUSINESS|FUNDING|FX)_[A-Z0-9_]{2,95}\b/u,
   )?.[0];
   if (domainCode && TERMINAL_SETTLEMENT_CODES.has(domainCode)) {
     return new StandardFxOrderSettlementError(

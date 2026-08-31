@@ -1,0 +1,355 @@
+/* C4 Business treasury and funded procurement additions to the accepted Player Terminal. */
+.player-terminal-business-treasury,
+.player-terminal-business-procurement {
+  min-width: 0;
+  padding: var(--player-space-4);
+}
+
+.player-terminal-business-procurement {
+  grid-column: 1 / -1;
+}
+
+.player-terminal-business-treasury-meta,
+.player-terminal-business-procurement-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--player-space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-block: var(--player-space-3);
+  padding: var(--player-space-3);
+  border: 1px solid rgba(0, 212, 255, .13);
+  border-radius: var(--player-radius-sm);
+  background: rgba(2, 8, 16, .42);
+}
+
+.player-terminal-business-treasury-meta span,
+.player-terminal-business-procurement-summary span {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.player-terminal-business-treasury-meta span,
+.player-terminal-business-procurement-summary small {
+  color: var(--player-color-text-muted);
+  font-size: .6875rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.player-terminal-business-treasury-meta strong,
+.player-terminal-business-procurement-summary strong {
+  overflow-wrap: anywhere;
+  color: var(--player-color-text);
+  font-size: .8125rem;
+}
+
+.player-terminal-business-treasury-accounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--player-space-3);
+  margin-bottom: var(--player-space-4);
+}
+
+.player-terminal-business-treasury-account,
+.player-terminal-business-treasury-evidence,
+.player-terminal-business-procurement-receipt {
+  min-width: 0;
+  border: 1px solid rgba(0, 212, 255, .16);
+  border-radius: var(--player-radius-sm);
+  background: linear-gradient(145deg, rgba(10, 29, 52, .9), rgba(6, 16, 33, .96));
+}
+
+.player-terminal-business-treasury-account {
+  padding: var(--player-space-3);
+}
+
+.player-terminal-business-treasury-account.is-restricted {
+  border-color: rgba(245, 158, 11, .32);
+}
+
+.player-terminal-business-treasury-account header,
+.player-terminal-business-treasury-quote header,
+.player-terminal-business-procurement-quote header,
+.player-terminal-business-procurement-receipt header,
+.player-terminal-business-treasury-ledger > section > header {
+  display: flex;
+  gap: var(--player-space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.player-terminal-business-treasury-account header > div,
+.player-terminal-business-treasury-quote header > div,
+.player-terminal-business-procurement-quote header > div,
+.player-terminal-business-procurement-receipt header > div,
+.player-terminal-business-treasury-ledger > section > header {
+  min-width: 0;
+}
+
+.player-terminal-business-treasury-account header small,
+.player-terminal-business-treasury-quote small,
+.player-terminal-business-procurement-quote small,
+.player-terminal-business-procurement-receipt small,
+.player-terminal-business-treasury-ledger header small {
+  display: block;
+  color: var(--player-color-cyan);
+  font-size: .6875rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
+.player-terminal-business-treasury-account header strong,
+.player-terminal-business-treasury-quote header strong,
+.player-terminal-business-procurement-quote header strong,
+.player-terminal-business-procurement-receipt header strong {
+  display: block;
+  margin-top: .2rem;
+  overflow-wrap: anywhere;
+  font-size: .875rem;
+}
+
+.player-terminal-business-treasury-account dl,
+.player-terminal-business-treasury-quote dl,
+.player-terminal-business-procurement-quote dl,
+.player-terminal-business-procurement-receipt dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--player-space-2);
+  margin: var(--player-space-3) 0 0;
+}
+
+.player-terminal-business-treasury-account dl div,
+.player-terminal-business-treasury-quote dl div,
+.player-terminal-business-procurement-quote dl div,
+.player-terminal-business-procurement-receipt dl div {
+  min-width: 0;
+  padding: var(--player-space-2);
+  border: 1px solid rgba(148, 182, 197, .12);
+  border-radius: var(--player-radius-sm);
+  background: rgba(2, 8, 16, .36);
+}
+
+.player-terminal-business-treasury-account dt,
+.player-terminal-business-treasury-quote dt,
+.player-terminal-business-procurement-quote dt,
+.player-terminal-business-procurement-receipt dt {
+  color: var(--player-color-text-muted);
+  font-size: .625rem;
+  letter-spacing: .04em;
+}
+
+.player-terminal-business-treasury-account dd,
+.player-terminal-business-treasury-quote dd,
+.player-terminal-business-procurement-quote dd,
+.player-terminal-business-procurement-receipt dd {
+  margin: .2rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.player-terminal-business-treasury-actions {
+  display: grid;
+  gap: var(--player-space-3);
+}
+
+.player-terminal-business-treasury-actions form,
+.player-terminal-business-procurement > form,
+.player-terminal-business-procurement-quote form {
+  display: grid;
+  gap: var(--player-space-3);
+}
+
+.player-terminal-business-treasury-actions [data-player-business-treasury-form="quote"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.player-terminal-business-treasury-actions [data-player-business-treasury-form="quote"] button {
+  grid-column: 1 / -1;
+}
+
+.player-terminal-business-treasury-quote,
+.player-terminal-business-procurement-quote,
+.player-terminal-business-treasury-recovery {
+  margin-top: var(--player-space-3);
+  padding: var(--player-space-3);
+  border: 1px solid rgba(0, 212, 255, .2);
+  border-radius: var(--player-radius-sm);
+  background: rgba(0, 212, 255, .05);
+}
+
+.player-terminal-business-treasury-quote.is-empty,
+.player-terminal-business-procurement-quote.is-empty {
+  display: grid;
+  gap: var(--player-space-2);
+}
+
+.player-terminal-business-treasury-freshness {
+  display: flex;
+  gap: var(--player-space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--player-space-3);
+  padding: var(--player-space-3);
+  border: 1px solid rgba(245, 158, 11, .3);
+  border-radius: var(--player-radius-sm);
+  background: rgba(245, 158, 11, .06);
+}
+
+.player-terminal-business-treasury-freshness p {
+  margin: 0;
+  color: var(--player-color-text-muted);
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.player-terminal-business-treasury-quote.is-expired,
+.player-terminal-business-procurement-quote.is-expired {
+  border-color: rgba(245, 158, 11, .36);
+  background: rgba(245, 158, 11, .06);
+}
+
+.player-terminal-business-treasury-quote > p,
+.player-terminal-business-procurement-quote p,
+.player-terminal-business-procurement > form > p,
+.player-terminal-business-procurement-receipt > p,
+.player-terminal-business-treasury-recovery p {
+  margin: var(--player-space-3) 0 0;
+  color: var(--player-color-text-muted);
+  font-size: .75rem;
+  line-height: 1.55;
+}
+
+.player-terminal-business-treasury-ledger {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--player-space-3);
+  margin-top: var(--player-space-4);
+}
+
+.player-terminal-business-treasury-ledger > section {
+  display: grid;
+  align-content: start;
+  gap: var(--player-space-2);
+  min-width: 0;
+}
+
+.player-terminal-business-treasury-evidence {
+  display: flex;
+  gap: var(--player-space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--player-space-3);
+}
+
+.player-terminal-business-treasury-evidence > div {
+  min-width: 0;
+}
+
+.player-terminal-business-treasury-evidence small,
+.player-terminal-business-treasury-evidence strong,
+.player-terminal-business-treasury-evidence p {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-business-treasury-evidence small {
+  color: var(--player-color-cyan);
+  font-size: .625rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.player-terminal-business-treasury-evidence strong {
+  margin-top: .25rem;
+  font-size: .8125rem;
+}
+
+.player-terminal-business-treasury-evidence p {
+  margin: .25rem 0 0;
+  color: var(--player-color-text-muted);
+  font-size: .6875rem;
+  line-height: 1.45;
+}
+
+.player-terminal-business-treasury-recovery {
+  border-color: rgba(74, 222, 128, .3);
+  background: rgba(74, 222, 128, .06);
+}
+
+.player-terminal-business-treasury-loading {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--player-space-3);
+  margin-top: var(--player-space-3);
+}
+
+.player-terminal-business-treasury-loading i {
+  min-height: 6rem;
+  border-radius: var(--player-radius-sm);
+  background: linear-gradient(100deg, rgba(148, 182, 197, .08), rgba(0, 212, 255, .12), rgba(148, 182, 197, .08));
+  background-size: 200% 100%;
+  animation: player-business-treasury-loading 1.5s linear infinite;
+}
+
+.player-terminal-business-procurement-intent,
+.player-terminal-business-procurement-allocation {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(8rem, .65fr);
+  gap: var(--player-space-3);
+}
+
+.player-terminal-business-procurement-allocations {
+  display: grid;
+  gap: var(--player-space-2);
+}
+
+.player-terminal-business-procurement-allocation {
+  padding: var(--player-space-3);
+  border: 1px solid rgba(0, 212, 255, .12);
+  border-radius: var(--player-radius-sm);
+  background: rgba(2, 8, 16, .34);
+}
+
+.player-terminal-business-procurement-receipt {
+  margin-top: var(--player-space-3);
+  padding: var(--player-space-3);
+  border-color: rgba(74, 222, 128, .26);
+}
+
+@keyframes player-business-treasury-loading {
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 64rem) {
+  .player-terminal-business-treasury-ledger {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 42rem) {
+  .player-terminal-business-treasury-actions [data-player-business-treasury-form="quote"],
+  .player-terminal-business-procurement-intent,
+  .player-terminal-business-procurement-allocation,
+  .player-terminal-business-treasury-account dl,
+  .player-terminal-business-treasury-quote dl,
+  .player-terminal-business-procurement-quote dl,
+  .player-terminal-business-procurement-receipt dl {
+    grid-template-columns: 1fr;
+  }
+
+  .player-terminal-business-treasury-evidence,
+  .player-terminal-business-treasury-meta,
+  .player-terminal-business-treasury-freshness {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-terminal-business-treasury-loading i {
+    animation: none;
+  }
+}

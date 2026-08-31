@@ -1,5 +1,6 @@
 import { resolveBusinessBankingBackendRequest } from "./business-banking-backend-routes.js";
 import { ApiRequestError } from "./errors.js";
+import { BUSINESS_TREASURY_ROUTE_BUILDERS } from "./business-treasury-backend-routes.js";
 
 function requiredText(value, fieldName, endpointKey) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -8,7 +9,6 @@ function requiredText(value, fieldName, endpointKey) {
     body: { code: "player_route_context_missing", fieldName, endpointKey },
   });
 }
-
 function publicStoryDeliveryId(value) {
   const deliveryId = requiredText(value, "deliveryId", "storyDeliveryState").toLowerCase();
   if (/^ndl_[0-9a-f]{32}$/.test(deliveryId)) return deliveryId;
@@ -97,6 +97,7 @@ function notificationDeliveryIds(payload, endpointKey) {
 }
 
 const ROUTE_BUILDERS = Object.freeze({
+  ...BUSINESS_TREASURY_ROUTE_BUILDERS,
   session: () => ({ method: "GET", path: "/players/me" }),
   capabilities: () => ({ method: "GET", path: "/players/me/capabilities" }),
   dashboard: () => ({

@@ -66,6 +66,10 @@ Deno.test("standard FX settlement repository calls the bounded leased claim RPC"
     p_lease_seconds: 300,
     p_now: NOW,
   }]);
+  const serialized = JSON.stringify(client.calls[0]);
+  assertEquals(serialized.includes("player"), false);
+  assertEquals(serialized.includes("business"), false);
+  assertEquals(serialized.includes("owner"), false);
 });
 
 Deno.test("standard FX settlement repository binds settlement and failure commands to the lease", async () => {
@@ -140,6 +144,8 @@ Deno.test("standard FX settlement repository terminalizes only reviewed permanen
       ["FUNDING_INSUFFICIENT", true, false],
       ["BANK_ACCOUNT_NOT_FOUND", true, false],
       ["FX_ORDER_RESERVATION_CONFLICT", true, false],
+      ["FX_ORDER_OWNER_INVALID", true, false],
+      ["BUSINESS_ACCOUNT_OWNER_INVALID", true, false],
       ["FX_LIQUIDITY_UNAVAILABLE", false, true],
       ["FX_ORDER_LEASE_INVALID", false, true],
       ["57014", false, true],

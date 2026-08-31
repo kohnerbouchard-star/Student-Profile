@@ -1,7 +1,26 @@
+import type {
+  BusinessFundingQuoteV1,
+  BusinessFundingReceiptV1,
+  BusinessMoneyV1,
+} from "./businessTreasuryContracts.ts";
+
 export type PlayerBusinessRoute =
   | {
     readonly kind: "businessRead";
-    readonly resource?: "overview" | "stockroom" | "recipes" | "workforceCandidates";
+    readonly resource?:
+      | "overview"
+      | "stockroom"
+      | "recipes"
+      | "workforceCandidates";
+  }
+  | { readonly kind: "businessTreasuryRead" }
+  | { readonly kind: "businessTreasuryAccountOpen" }
+  | { readonly kind: "businessTreasuryFxQuote" }
+  | { readonly kind: "businessTreasuryFxStandard" }
+  | { readonly kind: "businessTreasuryFxInstant" }
+  | {
+    readonly kind: "businessTreasuryFxCancel";
+    readonly orderKey: string;
   }
   | {
     readonly kind: "businessManufacturingCollection";
@@ -14,8 +33,16 @@ export type PlayerBusinessRoute =
   }
   | { readonly kind: "businessCreate"; readonly operation: "directCreate" }
   | { readonly kind: "businessCreate"; readonly operation: "formationPropose" }
-  | { readonly kind: "businessCreate"; readonly operation: "formationRespond"; readonly formationKey: string }
-  | { readonly kind: "businessCreate"; readonly operation: "formationActivate"; readonly formationKey: string }
+  | {
+    readonly kind: "businessCreate";
+    readonly operation: "formationRespond";
+    readonly formationKey: string;
+  }
+  | {
+    readonly kind: "businessCreate";
+    readonly operation: "formationActivate";
+    readonly formationKey: string;
+  }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
   | { readonly kind: "businessCandidateHire"; readonly candidateKey: string }
@@ -108,7 +135,8 @@ export const BUSINESS_STOCKROOM_LOCATION_KEYS = [
   "in_transit",
 ] as const;
 
-export type BusinessStockroomLocationKey = typeof BUSINESS_STOCKROOM_LOCATION_KEYS[number];
+export type BusinessStockroomLocationKey =
+  typeof BUSINESS_STOCKROOM_LOCATION_KEYS[number];
 
 export interface BusinessStockroomLocationDto {
   readonly accountKey: string;
@@ -174,17 +202,24 @@ export interface BusinessStoreQuoteDto {
   readonly itemCurrencyCode: string;
   readonly settlementCurrencyCode: string;
   readonly baseUnitPrice: number;
+  readonly baseUnitPriceMoney: BusinessMoneyV1;
   readonly inflationMultiplier: number;
   readonly locationMultiplier: number;
   readonly scarcityMultiplier: number;
   readonly itemLocalFinalUnitPrice: number;
   readonly itemLocalFinalTotalPrice: number;
+  readonly itemLocalFinalUnit: BusinessMoneyV1;
+  readonly itemLocalFinalTotal: BusinessMoneyV1;
   readonly exchangeRate: number;
   readonly finalUnitPrice: number;
   readonly finalTotalPrice: number;
+  readonly finalUnit: BusinessMoneyV1;
+  readonly finalTotal: BusinessMoneyV1;
   readonly pricingVersion: string;
   readonly expiresAt: string;
   readonly replayed: boolean;
+  readonly fundingTargetAccountKey: string;
+  readonly fundingQuote: BusinessFundingQuoteV1;
 }
 
 export interface BusinessStoreReceiptDto {
@@ -196,11 +231,15 @@ export interface BusinessStoreReceiptDto {
   readonly quantity: number;
   readonly finalUnitPrice: number;
   readonly finalTotalPrice: number;
+  readonly finalUnit: BusinessMoneyV1;
+  readonly finalTotal: BusinessMoneyV1;
   readonly currencyCode: string;
   readonly warehouseQuantityOwned: number;
   readonly warehouseAverageUnitCost: number;
+  readonly warehouseAverageUnitCostMoney: BusinessMoneyV1;
   readonly completedAt: string;
   readonly alreadyCompleted: boolean;
+  readonly fundingReceipt: BusinessFundingReceiptV1;
 }
 
 export interface BusinessWorkforceCandidateDto {
@@ -321,11 +360,26 @@ export interface BusinessSnapshotDto {
 }
 
 export interface PlayerBusinessRepository {
-  readEconomicContext?(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<PlayerEconomicContext>;
-  assertBusinessCreationAllowed?(input: { readonly gameSessionId: string; readonly playerId: string; readonly idempotencyKey: string }): Promise<void>;
-  readBusiness(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<BusinessSnapshotDto>;
-  readWorkforceCandidates?(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<BusinessWorkforceSnapshotDto>;
-  execute(command: string, args: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>>;
+  readEconomicContext?(
+    input: { readonly gameSessionId: string; readonly playerId: string },
+  ): Promise<PlayerEconomicContext>;
+  assertBusinessCreationAllowed?(
+    input: {
+      readonly gameSessionId: string;
+      readonly playerId: string;
+      readonly idempotencyKey: string;
+    },
+  ): Promise<void>;
+  readBusiness(
+    input: { readonly gameSessionId: string; readonly playerId: string },
+  ): Promise<BusinessSnapshotDto>;
+  readWorkforceCandidates?(
+    input: { readonly gameSessionId: string; readonly playerId: string },
+  ): Promise<BusinessWorkforceSnapshotDto>;
+  execute(
+    command: string,
+    args: Readonly<Record<string, unknown>>,
+  ): Promise<Record<string, unknown>>;
 }
 
 export class PlayerBusinessError extends Error {
@@ -342,6 +396,12 @@ export class PlayerBusinessError extends Error {
 
 const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessRead",
+  "businessTreasuryRead",
+  "businessTreasuryAccountOpen",
+  "businessTreasuryFxQuote",
+  "businessTreasuryFxStandard",
+  "businessTreasuryFxInstant",
+  "businessTreasuryFxCancel",
   "businessManufacturingCollection",
   "businessManufacturingCancel",
   "businessCreate",
@@ -357,6 +417,8 @@ const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessStatus",
 ]);
 
-export function isPlayerBusinessRoute(route: { readonly kind: string }): route is PlayerBusinessRoute {
+export function isPlayerBusinessRoute(
+  route: { readonly kind: string },
+): route is PlayerBusinessRoute {
   return BUSINESS_ROUTE_KINDS.has(route.kind as PlayerBusinessRoute["kind"]);
 }

@@ -55,6 +55,50 @@ export function readPlayerBusinessRoutePath(
   ) {
     return { kind: "businessRead", resource: "workforceCandidates" };
   }
+  if (
+    tail.length === 2 && tail[0] === "business" &&
+    tail[1] === "treasury"
+  ) {
+    return { kind: "businessTreasuryRead" };
+  }
+  if (
+    tail.length === 3 && tail[0] === "business" &&
+    tail[1] === "treasury" && tail[2] === "accounts"
+  ) {
+    return { kind: "businessTreasuryAccountOpen" };
+  }
+  if (
+    tail.length === 4 && tail[0] === "business" &&
+    tail[1] === "treasury" && tail[2] === "fx" &&
+    tail[3] === "quotes"
+  ) {
+    return { kind: "businessTreasuryFxQuote" };
+  }
+  if (
+    tail.length === 5 && tail[0] === "business" &&
+    tail[1] === "treasury" && tail[2] === "fx" &&
+    tail[3] === "orders" && tail[4] === "standard"
+  ) {
+    return { kind: "businessTreasuryFxStandard" };
+  }
+  if (
+    tail.length === 5 && tail[0] === "business" &&
+    tail[1] === "treasury" && tail[2] === "fx" &&
+    tail[3] === "orders" && tail[4] === "instant"
+  ) {
+    return { kind: "businessTreasuryFxInstant" };
+  }
+  if (
+    tail.length === 6 && tail[0] === "business" &&
+    tail[1] === "treasury" && tail[2] === "fx" &&
+    tail[3] === "orders" && tail[5] === "cancel" &&
+    validKey(decodeSegment(tail[4]), "fxo")
+  ) {
+    return {
+      kind: "businessTreasuryFxCancel",
+      orderKey: decodeSegment(tail[4]),
+    };
+  }
   if (tail.length === 1 && tail[0] === "businesses") {
     return { kind: "businessCreate", operation: "directCreate" };
   }
@@ -182,4 +226,12 @@ function validKey(value: string | undefined, prefix: string): boolean {
     value && PUBLIC_KEY.test(value.toLowerCase()) &&
       value.toLowerCase().startsWith(`${prefix}_`),
   );
+}
+
+function decodeSegment(value: string | undefined): string {
+  try {
+    return decodeURIComponent(value ?? "").trim().toLowerCase();
+  } catch {
+    return "";
+  }
 }

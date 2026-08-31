@@ -1,8 +1,8 @@
 import {
   handlePlayerBusinessRequest,
-  readPlayerBusinessRoutePath,
   type PlayerBusinessRequestScope,
   type PlayerBusinessRoute,
+  readPlayerBusinessRoutePath,
 } from "../../../src/domains/business/index.ts";
 import { resolvePlayerRequestScope } from "../../../src/domains/players/api/playerRequestScope.ts";
 import { resolveActivePlayerSession } from "../../../src/domains/players/api/playerSessionHttpHelpers.ts";
@@ -26,11 +26,11 @@ export async function dispatchPlayerBusinessRequest(
   return dispatchRateLimitedReviewedPlayerRequest(
     request,
     endpointKey(route, request.method),
-    () =>
+    (applicationContext) =>
       handlePlayerBusinessRequest(request, route, {
         createServiceClient: dependencies.createServiceClient,
         resolveScope: resolveBusinessScope,
-      }),
+      }, applicationContext),
     { createServiceClient: dependencies.createServiceClient },
   );
 }
@@ -52,6 +52,14 @@ function endpointKey(
   method: string,
 ):
   | "business"
+  | "businessTreasury"
+  | "businessTreasuryAccountOpen"
+  | "businessTreasuryFxQuote"
+  | "businessTreasuryFxStandard"
+  | "businessTreasuryFxInstant"
+  | "businessTreasuryFxCancel"
+  | "businessStoreQuote"
+  | "businessStorePurchase"
   | "businessCreate"
   | "businessFormationPropose"
   | "businessFormationRespond"
@@ -71,6 +79,22 @@ function endpointKey(
   | "businessTerminate"
   | "businessStatus" {
   if (route.kind === "businessRead") return "business";
+  if (route.kind === "businessTreasuryRead") return "businessTreasury";
+  if (route.kind === "businessTreasuryAccountOpen") {
+    return "businessTreasuryAccountOpen";
+  }
+  if (route.kind === "businessTreasuryFxQuote") {
+    return "businessTreasuryFxQuote";
+  }
+  if (route.kind === "businessTreasuryFxStandard") {
+    return "businessTreasuryFxStandard";
+  }
+  if (route.kind === "businessTreasuryFxInstant") {
+    return "businessTreasuryFxInstant";
+  }
+  if (route.kind === "businessTreasuryFxCancel") {
+    return "businessTreasuryFxCancel";
+  }
   if (route.kind === "businessCreate") {
     if (route.operation === "formationPropose") {
       return "businessFormationPropose";
@@ -91,8 +115,8 @@ function endpointKey(
   if (route.kind === "businessManufacturingCancel") {
     return "businessManufacturingCancel";
   }
-  if (route.kind === "businessStoreQuote") return "storeQuote";
-  if (route.kind === "businessStorePurchase") return "storePurchase";
+  if (route.kind === "businessStoreQuote") return "businessStoreQuote";
+  if (route.kind === "businessStorePurchase") return "businessStorePurchase";
   return ({
     businessWorkforce: "businessWorkforce",
     businessCandidateHire: "businessCandidateHire",

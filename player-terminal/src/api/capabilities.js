@@ -18,6 +18,11 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "businessProductCreate",
   "businessProduction",
   "businessStatus",
+  "businessTreasuryAccountOpen",
+  "businessTreasuryFxCancel",
+  "businessTreasuryFxInstant",
+  "businessTreasuryFxQuote",
+  "businessTreasuryFxStandard",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -70,6 +75,8 @@ const ENDPOINT_ACTIONS = Object.freeze({
   businessTerminate: "businessEmployeeTerminate",
   businessManufacturingStart: "businessProduction",
   businessManufacturingCancel: "businessProduction",
+  businessStoreQuote: "storePurchase",
+  businessStorePurchase: "storePurchase",
   marketplaceSettlement: "marketplacePurchase",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
@@ -118,8 +125,18 @@ export function resolveCapabilities({ config, session, dashboard }) {
     action,
     LOCAL_ACTION_CAPABILITIES.has(action) || preview || mergedCapability(sources, action, "actions")
   ]));
+  const manifestBound = Array.isArray(session?.capabilityEndpointKeys);
+  const endpointKeys = manifestBound
+    ? Object.freeze(Object.fromEntries(session.capabilityEndpointKeys
+      .filter((key) => typeof key === "string" && key.trim())
+      .map((key) => [key.trim(), true])))
+    : null;
 
-  return Object.freeze({ routes: Object.freeze(routes), actions: Object.freeze(actions) });
+  return Object.freeze({
+    routes: Object.freeze(routes),
+    actions: Object.freeze(actions),
+    endpointKeys,
+  });
 }
 
 export function isRouteEnabled(capabilities, route) {
@@ -132,5 +149,7 @@ export function isActionEnabled(capabilities, action) {
 
 export function isEndpointEnabled(capabilities, endpointKey) {
   const action = ENDPOINT_ACTIONS[endpointKey];
-  return action ? isActionEnabled(capabilities, action) : false;
+  if (!action || !isActionEnabled(capabilities, action)) return false;
+  return capabilities?.endpointKeys === null || capabilities?.endpointKeys === undefined ||
+    capabilities.endpointKeys?.[endpointKey] === true;
 }

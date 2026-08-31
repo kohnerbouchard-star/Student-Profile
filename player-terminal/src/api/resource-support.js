@@ -10,6 +10,7 @@ const RESOURCE_ENDPOINT_KEYS = Object.freeze({
   marketAsset: "marketAsset",
   portfolio: "portfolio",
   business: "business",
+  businessTreasury: "businessTreasury",
   contracts: "contracts",
   store: "store",
   marketplace: "marketplace",

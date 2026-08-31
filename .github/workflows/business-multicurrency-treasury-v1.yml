@@ -1,0 +1,350 @@
+name: business-multicurrency-treasury-v1
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/business-multicurrency-treasury-v1.yml
+      - backend/src/domains/banking-fx/**
+      - backend/src/domains/business-banking/**
+      - backend/src/domains/business/**
+      - backend/src/domains/players/contracts/playerCapabilityManifestContracts*
+      - backend/src/security/playerRateLimitDispatch*
+      - backend/src/security/playerRateLimitOperationRegistry*
+      - backend/supabase/functions/_shared/playerBusinessDispatch*
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/2026083110*_business_multicurrency_*.sql
+      - backend/supabase/migrations/20260831101000_business_treasury_fx_commands_v1.sql
+      - backend/supabase/migrations/20260831102000_business_procurement_funding_v1.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-678.json
+      - docs/roadmaps/business-multicurrency-treasury-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - player-terminal/css/player-terminal-business-v2.css
+      - player-terminal/index.html
+      - player-terminal/src/api/**
+      - player-terminal/src/features/business-treasury/**
+      - player-terminal/src/integrations/student-profile-capability-manifest.js
+      - player-terminal/src/main.js
+      - player-terminal/src/pages/business-page.js
+      - player-terminal/tests/browser/player-business-treasury.spec.mjs
+      - player-terminal/tests/business-banking-surface.mjs
+      - player-terminal/tests/business-multicurrency-treasury.mjs
+      - player-terminal/tests/current-capability-manifest.mjs
+      - player-terminal/tests/student-profile-adapter.mjs
+      - scripts/business-multicurrency-treasury-*.mjs
+  push:
+    branches:
+      - feat/business-multicurrency-treasury-v1
+    paths:
+      - .github/workflows/business-multicurrency-treasury-v1.yml
+      - backend/src/domains/banking-fx/**
+      - backend/src/domains/business-banking/**
+      - backend/src/domains/business/**
+      - backend/src/domains/players/contracts/playerCapabilityManifestContracts*
+      - backend/src/security/playerRateLimitDispatch*
+      - backend/src/security/playerRateLimitOperationRegistry*
+      - backend/supabase/functions/_shared/playerBusinessDispatch*
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/2026083110*_business_multicurrency_*.sql
+      - backend/supabase/migrations/20260831101000_business_treasury_fx_commands_v1.sql
+      - backend/supabase/migrations/20260831102000_business_procurement_funding_v1.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-678.json
+      - docs/roadmaps/business-multicurrency-treasury-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - player-terminal/css/player-terminal-business-v2.css
+      - player-terminal/index.html
+      - player-terminal/src/api/**
+      - player-terminal/src/features/business-treasury/**
+      - player-terminal/src/integrations/student-profile-capability-manifest.js
+      - player-terminal/src/main.js
+      - player-terminal/src/pages/business-page.js
+      - player-terminal/tests/browser/player-business-treasury.spec.mjs
+      - player-terminal/tests/business-banking-surface.mjs
+      - player-terminal/tests/business-multicurrency-treasury.mjs
+      - player-terminal/tests/current-capability-manifest.mjs
+      - player-terminal/tests/student-profile-adapter.mjs
+      - scripts/business-multicurrency-treasury-*.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-multicurrency-treasury-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: Verify C4 source, public contracts, and retained application boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify PR authority and C4 source contracts
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || '678' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/multicurrency-stock-funding-v1' }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/c4-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/c4-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/business-multicurrency-treasury-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          npm --prefix backend run typecheck
+          git diff --check
+
+      - name: Verify focused backend contracts
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business/api/playerBusinessTreasury.test.ts \
+            src/domains/business/api/playerBusinessStoreProcurement.test.ts \
+            src/domains/business/api/playerBusinessRoutePaths.test.ts \
+            src/domains/business/infrastructure/businessTreasuryDatabaseErrors.test.ts \
+            src/domains/business/infrastructure/supabaseBusinessTreasuryRepository.test.ts \
+            src/domains/business/infrastructure/supabasePlayerBusinessRepository.test.ts \
+            src/domains/players/contracts/playerCapabilityManifestContracts.test.ts \
+            src/security/playerRateLimitDispatch.test.ts \
+            src/domains/banking-fx/services/standardFxOrderSettlementRunner.test.ts \
+            src/domains/banking-fx/infrastructure/supabaseStandardFxOrderSettlementRepository.test.ts
+
+      - name: Verify retained Store, Marketplace, Stocks, and Banking contracts
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npm run test:player-store-public
+          npm run test:player-marketplace
+          npm run test:banking-fx-clearing
+          npm run typecheck:stock-edge
+          npm run test:stock-market-calendar
+
+      - name: Verify retained funding, workforce, manufacturing, and Store authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/multicurrency-marketplace-funding-contract.mjs
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/multicurrency-stock-buy-quote-contract.mjs
+          node scripts/multicurrency-stock-buy-settlement-contract.mjs
+          node scripts/multicurrency-stock-sell-settlement-contract.mjs
+          node scripts/business-workforce-hiring-contract.mjs
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
+          node scripts/business-phase6-manufacturing-start-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase10-store-purchase-settlement-foundation-contract.mjs
+          node scripts/business-phase10-offer-aware-quote-contract.mjs
+          node scripts/business-phase10-atomic-settlement-contract.mjs
+
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+  disposable-database:
+    name: Verify C4 database, replay, isolation, rollback, and concurrency
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="/tmp/business-multicurrency-treasury-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            if [[ "$STATUS" -eq 0 ]]; then exit 0; fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay retained C0 and C4 zero-to-head evidence
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/banking-fx-database-acceptance.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-concurrency.mjs
+          for PASS in 1 2; do
+            echo "C4 exact-head database pass ${PASS}"
+            npx supabase db reset --workdir backend --local
+            node scripts/business-multicurrency-treasury-database.mjs
+            npx supabase db reset --workdir backend --local
+            node scripts/business-multicurrency-treasury-concurrency.mjs
+          done
+
+      - name: Capture rebuilt-schema lint evidence
+        shell: bash
+        run: npx supabase db lint --workdir backend --local --level warning 2>&1 | tee /tmp/business-multicurrency-treasury-db-lint.log
+
+      - name: Upload rebuilt-schema lint evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-multicurrency-treasury-db-lint-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/business-multicurrency-treasury-db-lint.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Capture disposable diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/business-multicurrency-treasury-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/business-multicurrency-treasury-docker.log || true
+
+      - name: Stop disposable Postgres service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup
+
+  player-browser:
+    name: Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install Player dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix player-terminal ci --ignore-scripts
+          npm --prefix player-terminal exec -- playwright install --with-deps chromium
+
+      - name: Verify Player source and retained adapters
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix player-terminal run check
+          node --test player-terminal/tests/business-multicurrency-treasury.mjs
+          node --experimental-strip-types --test player-terminal/tests/current-capability-manifest.mjs
+          node --test player-terminal/tests/business-banking-surface.mjs
+          node --test player-terminal/tests/student-profile-adapter.mjs
+
+      - name: Verify desktop and mobile Chromium journeys
+        shell: bash
+        working-directory: player-terminal
+        run: |
+          set -euo pipefail
+          npm exec -- playwright test \
+            tests/browser/player-business-treasury.spec.mjs \
+            --project=chromium-desktop --project=chromium-mobile
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-multicurrency-treasury-browser-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            player-terminal/playwright-report
+            player-terminal/test-results
+          if-no-files-found: ignore
+          retention-days: 14

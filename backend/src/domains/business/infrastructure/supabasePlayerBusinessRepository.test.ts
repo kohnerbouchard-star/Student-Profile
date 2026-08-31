@@ -236,6 +236,97 @@ Deno.test("Player Business fails closed when committed sale activity is missing"
   );
 });
 
+Deno.test(
+  "Player Business maps C4 procurement funding failures case-insensitively and sanitizes unknown diagnostics",
+  async () => {
+    const cases = [
+      [
+        "p0001: business_store_procurement_payment_retired",
+        "business_store_procurement_payment_retired",
+        410,
+        false,
+      ],
+      [
+        "PURCHASE_FUNDING_QUOTE_EXPIRED",
+        "purchase_funding_quote_expired",
+        409,
+        false,
+      ],
+      [
+        "purchase_funding_quote_conflict: changed request",
+        "purchase_funding_quote_conflict",
+        409,
+        false,
+      ],
+      ["BANK_ACCOUNT_NOT_FOUND", "bank_account_not_found", 404, false],
+      ["BANK_ACCOUNT_NOT_ACTIVE", "bank_account_not_active", 409, false],
+      [
+        "BANK_ACCOUNT_CURRENCY_INVALID",
+        "bank_account_currency_invalid",
+        409,
+        false,
+      ],
+      ["FUNDING_INSUFFICIENT", "funding_insufficient", 409, false],
+      [
+        "PURCHASE_FUNDING_TARGET_ROUNDS_TO_ZERO",
+        "purchase_funding_target_rounds_to_zero",
+        409,
+        false,
+      ],
+      [
+        "FX_LIQUIDITY_UNAVAILABLE",
+        "fx_liquidity_unavailable",
+        409,
+        true,
+      ],
+    ] as const;
+
+    for (const [message, code, status, retryable] of cases) {
+      const error = await executeError(message);
+      assertEquals(
+        [error.code, error.status, error.retryable],
+        [code, status, retryable],
+      );
+    }
+
+    const unknown = await executeError(
+      "relation private.business_owner_identity secret diagnostic",
+    );
+    assertEquals(
+      [unknown.code, unknown.status, unknown.message],
+      [
+        "business_operation_failed",
+        500,
+        "The business operation could not be completed.",
+      ],
+    );
+  },
+);
+
+async function executeError(message: string): Promise<{
+  readonly code: unknown;
+  readonly status: unknown;
+  readonly retryable: unknown;
+  readonly message: unknown;
+}> {
+  const repository = new SupabasePlayerBusinessRepository({
+    rpc() {
+      return Promise.resolve({ data: null, error: { message } });
+    },
+  } as never);
+  try {
+    await repository.execute("purchase_business_store_quote_v2", {});
+  } catch (error) {
+    return error as {
+      readonly code: unknown;
+      readonly status: unknown;
+      readonly retryable: unknown;
+      readonly message: unknown;
+    };
+  }
+  throw new Error(`Expected database failure: ${message}`);
+}
+
 function fixtureClient(overrides: Record<string, unknown[]>) {
   const fixtures: Record<string, unknown[]> = {
     business_entities: [],
