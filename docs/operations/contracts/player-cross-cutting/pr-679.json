@@ -96,8 +96,10 @@
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-679.json",
     "docs/roadmaps/business-player-store-fx-final-authority-audit-v2.md",
+    "docs/roadmaps/business-player-store-fx-final-implementation-handoff-v2.md",
     "docs/roadmaps/business-player-store-fx-final-implementation-plan-v2.md",
     "docs/roadmaps/business-player-store-fx-final-scope-v2.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],

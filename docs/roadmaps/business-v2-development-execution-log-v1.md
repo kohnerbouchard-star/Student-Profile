@@ -1715,3 +1715,42 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data was changed. Database and connected evidence used disposable local CI services only.
 - `BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime-evidence blocker and prevents `VERIFIED_COMPLETE`; it does not block this repository implementation record.
 - The next exact item is `BUSINESS-V2-10A4D` on `feat/business-player-store-fx-final-v2`, created only from the separate clean C4 documentation/controller handoff.
+
+## 2026-08-31 — BUSINESS-V2-10A4D exact implementation certification
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-10A4D`.
+- Owner: `feat/business-player-store-fx-final-v2` / draft PR #679 over C4F controller `51ffd008ed84f6a9acd029c8941b3f9b40733735`.
+- **Exact implementation and verification source:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`.
+- Status: `IMPLEMENTED_NOT_MERGED`, never `VERIFIED_COMPLETE`; PR #679 remains draft, open, unmerged, and undeployed.
+- Implementation progression: scope `efdb0f0bb630c3a3ad6978e72229e774783c61d2`; PR authority `55c0c46b9d8cc6d187a2b3851bc8e6cc97c45cb1`; initial implementation candidate `995306c64a57afbb9e7dabe29bf0b29eded152ec`; public-decimal repair `73e4457639973f0620bbd1bddb8d708eb9dd970b`; database fixed-scale evidence repair `7109d546df4d4b51210c155e615ae71fb24f63d1`; funded withdrawal-assertion repair and final exact source `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`.
+
+### Implemented boundary
+
+- Both Player Edge roots now compose one `SupabasePlayerStoreFundingPublicRepository` for seeded/NPC and Business seller-offer quotes, settlements, and immutable receipt reads. Narrow catalog/history adapters remain read-only, and no live root composes the legacy Store purchase mutation.
+- Player checkout accepts one to three ordered unique Checking public keys, positive non-final target contributions, and one final null contribution. The server derives the final remainder after authoritative price, currency, precision, quantity, version, and seller evidence are fixed.
+- C0 retains funding authority and B1/B2 retain fixing, FX, holds, liquidity/reserve, balanced posting, clearing, replay, and conflict authority. D creates no wallet, balance, ledger, Store receipt, Inventory authority, or alternate composer.
+- Seeded and Business settlement preserves offer currency/version, seller proceeds, listing custody, Inventory delivery, public receipt identity, nested funding quote/receipt evidence, refresh recovery, and purchase-versus-withdrawal ordering.
+- Public monetary responses use canonical decimal strings without changing stored evidence. Connected database evidence accepts only PostgreSQL's harmless trailing zero padding beyond the currency minor unit and continues rejecting nonzero excess precision.
+- Player UI removes `LOCAL WALLET`, `LOCAL AVAILABLE BALANCE`, THD, and same-currency-only behavior while adding allocation, final-remainder, accepted fixing/spread/rounding, immutable receipt, expiry/conflict, and recovery states in the retained Player Terminal shell.
+
+### Migration, routes, and RPCs
+
+- Forward migration: `20260831103001_business_player_store_fx_final_v2.sql`. It adds bounded nullable offer bindings/guards to existing Store evidence and function-only convergence; it adds no table, RLS policy, direct monetary DML grant, C0/B2 composer, or purge registration.
+- Authenticated routes: `GET /players/me/store/items`; `POST /players/me/store/quotes`; `GET` and `POST /players/me/store/purchases`; `POST /players/me/store/offer-quotes`; `POST /players/me/store/offer-purchases`; `GET /players/me/store/receipts/{spr_...}`.
+- Principal service-only RPCs: `create_system_store_offer_funding_quote_v2`, redefined `settle_seeded_store_funding_v1`, `settle_system_store_offer_funding_v2`, `settle_business_store_offer_funding_v2`, `read_business_store_offer_funding_receipt_v1`, and `read_store_catalog_offer_groups_v2`.
+- Exact implementation groups, public contracts, routes, private helpers, workflow files, and evidence are recorded in `docs/roadmaps/business-player-store-fx-final-implementation-handoff-v2.md`.
+
+### Exact-head evidence
+
+- Permanent D run `33377788370`: connected two-browser/two-game Store job `99443203694`; source/authority/all-Edge/retained-contract job `99443203926`; zero-to-head replay-twice/database/concurrency/advisor job `99443204017`; desktop/mobile Chromium/accessibility job `99443204056` — all passed.
+- Retained Store cutover run `33377788283`: connected Buyer/seller two-game job `99443148484`, serial/concurrency/isolation job `99443148440`, public Store/Edge job `99443148210`, replay/lint job `99443148195`, Player Chromium job `99443148081`, and retained authority/quality/security job `99443148341` — all passed.
+- All 35 pull-request-triggered workflows returned for `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b` completed successfully. The matrix covers Admin/Player/Backend, database replay, Store phases, Banking FX, C0-C4, Marketplace, Stocks, Business workforce/manufacturing/economy, security, architecture, repository, supply chain, timezone, and runtime/browser gates.
+- Superseded candidates failed closed on noncanonical public decimal strings, PostgreSQL fixed-scale zero padding in direct evidence, and a stale pre-funding withdrawal error name. The final repairs changed no stored economics, lock order, economic authority, privacy rule, or acceptance criterion.
+
+### Safety, blocker, and next item
+
+- No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data changed. Database and connected evidence used disposable local/CI services only.
+- `BETA-LIVE-MIGRATION-PARITY-001` remains the release/runtime-evidence blocker and prevents `VERIFIED_COMPLETE`; it does not block this repository implementation record.
+- The next exact item is `BUSINESS-V2-11` on `refactor/business-store-sales-convergence-v2`, created only from the separate clean 10A.4D documentation/checkpoint controller. Phase 11 retires new simulated sales and Admin-authored settlement; derives new revenue, COGS, and tax only from Store receipts; introduces guarded versioned seven-day periods and exact-once leases; runs payroll before tax; carries unpaid tax as liability; and makes no scheduler change.

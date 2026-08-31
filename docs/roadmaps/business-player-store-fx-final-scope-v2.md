@@ -1,12 +1,13 @@
 # Business Player Store / FX Final Convergence Scope v2
 
 **Roadmap item:** `BUSINESS-V2-10A4D`
-**Status:** `SCOPED_NOT_IMPLEMENTED`
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/business-player-store-fx-final-v2`
 **Draft PR:** #679
 **Parent branch:** `feat/business-multicurrency-treasury-v1`
 **Parent C4 implementation:** `46bfc611834dca4db3084d9dce8197c499d61fcd`
 **Parent C4F controller:** `51ffd008ed84f6a9acd029c8941b3f9b40733735`
+**Exact implementation and verification source:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`
 **Merge or deployment authorized:** No
 
 ## Decision
@@ -105,8 +106,12 @@ Add durable `business-player-store-fx-final-v2` static, database, concurrency, a
 - no legacy Store purchase authority is composed;
 - retained C0-C4, Store, Marketplace, Stocks, Banking, Inventory, workforce, manufacturing, Backend/all Edge, Player Chromium, accessibility, security, and repository gates pass.
 
+## Certification result
+
+The locked scope is implemented at exact source `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`. All 35 pull-request-triggered workflows returned for that SHA passed. Permanent run `33377788370` passed source, replay/database/concurrency, Player desktop/mobile/accessibility, and the connected two-browser/two-game Store journey; retained Store cutover run `33377788283` passed its connected Buyer/seller journey and withdrawal-race evidence. The implementation adds the one forward migration, composes one funded mutation authority in both Edge roots, preserves full funding evidence for seeded and Business offers, and removes same-currency wallet assumptions without changing C0/B2 authority or stored economics.
+
 ## Safety and next boundary
 
 This branch and its pull request remain draft, unmerged, and undeployed. No scheduler/cron, secret, staging/production SQL, staging/production deployment, or live-data mutation is authorized. Disposable local/CI database mutation is permitted only for replay and acceptance evidence.
 
-`BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime blocker. Phase 11 remains closed until one exact 10A.4D implementation SHA and its later clean documentation/controller handoff are green.
+`BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime blocker. Phase 11 is the next item only after this exact implementation receives a separate clean documentation handoff and checkpoint/controller head.

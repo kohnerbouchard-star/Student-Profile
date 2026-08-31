@@ -1,9 +1,10 @@
 # Business Player Store / FX Final Convergence Implementation Plan v2
 
 **Roadmap item:** `BUSINESS-V2-10A4D`
-**Status:** `PLANNED`
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/business-player-store-fx-final-v2`
 **Parent C4F controller:** `51ffd008ed84f6a9acd029c8941b3f9b40733735`
+**Exact implementation and verification source:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`
 
 ## D1 — Authority and runtime cutover
 
@@ -53,6 +54,8 @@
 3. Record `IMPLEMENTED_NOT_MERGED`, migrations, routes, functions, files, workflow runs, browser/runtime evidence, blockers, and next exact item in the roadmap and execution log.
 4. Add a clean implementation handoff commit, then a separate checkpoint/controller commit that preserves the exact implementation identity.
 5. Verify the terminal documentation head, update the draft PR, and only then create the Phase 11 branch.
+
+Certification result: exact implementation `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b` passed all 35 pull-request-triggered workflows. Permanent run `33377788370` passed connected job `99443203694`, source job `99443203926`, database/concurrency job `99443204017`, and desktop/mobile Player job `99443204056`; retained Store cutover run `33377788283` passed its connected Buyer/seller two-game job `99443148484`. PR #679 remains draft, unmerged, and undeployed. No scheduler, secret, staging/production SQL, or live data changed, so the result is `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
 
 ## Stop conditions
 
