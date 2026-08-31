@@ -84,6 +84,8 @@
     "scripts/business-multicurrency-treasury-contract.mjs",
     "scripts/business-player-store-fx-final-concurrency.mjs",
     "scripts/business-player-store-fx-final-contract.mjs",
+    "scripts/business-player-store-fx-final-database-decimal.mjs",
+    "scripts/business-player-store-fx-final-database-decimal.test.mjs",
     "scripts/business-player-store-fx-final-database.mjs",
     "scripts/multicurrency-funding-core-contract.mjs",
     "scripts/multicurrency-store-funding-contract.mjs",

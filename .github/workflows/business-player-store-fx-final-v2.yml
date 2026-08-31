@@ -149,6 +149,7 @@ jobs:
             --pr-number "$PR_NUMBER" \
             --base-ref "$BASE_REF"
           node scripts/business-player-store-fx-final-contract.mjs
+          node --test scripts/business-player-store-fx-final-database-decimal.test.mjs
           node --test scripts/player-local-currency-authority-contract.test.mjs
           node scripts/validate-supabase-migrations.mjs
           git diff --check "origin/${BASE_REF}...HEAD"

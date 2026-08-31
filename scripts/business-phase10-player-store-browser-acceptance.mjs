@@ -5,6 +5,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { promisify } from "node:util";
 import { chromium } from "playwright";
+import {
+  scaledDatabaseDecimal,
+} from "./business-player-store-fx-final-database-decimal.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -310,15 +313,6 @@ function exactDecimal(value, precision, label, { positive = false } = {}) {
   const canonicalFraction = fraction.replace(/0+$/u, "");
   assert(value === (canonicalFraction ? `${BigInt(whole)}.${canonicalFraction}` : String(BigInt(whole))), `${label} is not canonical.`);
   return scaled;
-}
-
-function scaledDatabaseDecimal(value, precision, label) {
-  const text = String(value ?? "").trim();
-  const match = /^(?:0|[1-9][0-9]{0,30})(?:\.([0-9]{1,18}))?$/u.exec(text);
-  assert(match && (match[1] || "").length <= precision, `${label} has invalid precision.`);
-  const [whole, fraction = ""] = text.split(".");
-  return BigInt(whole) * (10n ** BigInt(precision)) +
-    BigInt((fraction + "0".repeat(precision)).slice(0, precision) || "0");
 }
 
 function assertExactKeys(value, expected, label) {
