@@ -184,20 +184,25 @@ requireTokens(source.routes, "Player Store route parser", [
 requireTokens(source.handler, "authenticated Player Store handler", [
   "resolvePlayerRequestScope",
   "resolveActivePlayerSession",
-  "SupabasePlayerStorePublicRepository",
-  "SupabasePlayerStoreOfferPublicRepository",
-  "createOfferRepository",
+  "SupabasePlayerStoreFundingPublicRepository",
+  "SupabasePlayerStoreOfferProductPublicRepository",
+  "SupabasePlayerStorePublicReadRepository",
+  "createFundingRepository",
+  "createOfferProductRepository",
+  "createReadRepository",
   "listOfferProducts",
+  "createSystemOfferQuote",
+  "settleSystemOfferPurchase",
   "createBusinessOfferQuote",
-  "purchaseBusinessOffer",
+  "settleBusinessOfferPurchase",
   "readBusinessOfferReceipt",
   'route.kind === "offerQuotes"',
   'route.kind === "offerPurchases"',
   "receiptKey: route.receiptKey",
   '"offerKey"',
   '"expectedVersion"',
+  '"allocations"',
   '"idempotencyKey"',
-  '"clientSubmittedAt"',
   '"cache-control", "private, no-store"',
   "FORBIDDEN_SCOPE_HEADERS",
 ]);
@@ -209,6 +214,8 @@ forbidTokens(source.handler, "Player Store trusted browser boundary", [
   'body.sellerKey',
   'body.unitPrice',
   'body.currencyCode',
+  "new SupabasePlayerStorePublicRepository",
+  "new SupabasePlayerStoreOfferPublicRepository",
 ]);
 
 const productDto = interfaceBlock(
@@ -287,6 +294,7 @@ requireTokens(receiptDto, "Buyer receipt DTO", [
   "offerVersionBefore",
   "offerVersionAfter",
   "remainingListedQuantity",
+  "inventoryTransactionKey",
   "completedAt",
 ]);
 for (const [label, dto] of [["Buyer quote DTO", quoteDto], ["Buyer receipt DTO", receiptDto]]) {
@@ -294,7 +302,6 @@ for (const [label, dto] of [["Buyer quote DTO", quoteDto], ["Buyer receipt DTO",
     "gameSessionId",
     "buyerPlayerId",
     "inventoryAccountKey",
-    "inventoryTransactionKey",
     "sourceUnitCost",
     "costOfGoodsSold",
     "grossMargin",
@@ -435,7 +442,7 @@ requireTokens(source.responseNormalizer, "Player Store response privacy", [
   "validateStoreResponse",
   "validStoreOfferPurchasability",
   "offer.purchasable === true",
-  "seeded_offer",
+  "system_offer",
   "storeSales",
   "spr_",
   "sof_",
@@ -481,7 +488,7 @@ requireTokens(source.modal, "Business offer receipt modal", [
   'tabindex="-1"',
 ]);
 requireTokens(source.resourcePlan, "purchase convergence", [
-  'storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking"])',
+  'storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"])',
   "storeOfferPurchase",
   "storeOfferQuote",
 ]);

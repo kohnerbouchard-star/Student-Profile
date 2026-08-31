@@ -1,12 +1,10 @@
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 import { handlePlayerStorePublicRequest } from "../api/playerStorePublicHttpHandler.ts";
 import type {
-  PlayerStorePublicPurchaseHistoryItemDto,
-  PlayerStorePublicReceiptDto,
-  PlayerStorePublicRepository,
-  PlayerStorePublicScope,
-} from "../contracts/playerStorePublicContracts.ts";
-import { SupabasePlayerStorePublicRepository } from "../infrastructure/supabasePlayerStorePublicRepository.ts";
+  PlayerStoreFundingPublicRepository,
+  PlayerStoreSeededFundingReceiptDto,
+} from "../contracts/playerStoreFundingPublicContracts.ts";
+import { SupabasePlayerStoreFundingPublicRepository } from "../infrastructure/supabasePlayerStoreFundingPublicRepository.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -20,7 +18,7 @@ const RECEIPT_KEY = "receipt_22222222222222222222222222222222";
 const IDEMPOTENCY_KEY = "store.negative.12345678";
 
 const SETTLEMENT_MIGRATION = new URL(
-  "../../../../supabase/migrations/20260624084500_add_store_country_currency_purchase_fields_v1.sql",
+  "../../../../supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql",
   import.meta.url,
 );
 const SESSION_HELPERS = new URL(
@@ -28,31 +26,30 @@ const SESSION_HELPERS = new URL(
   import.meta.url,
 );
 
-Deno.test("Store settlement source enforces quote expiry, stock, balance, and idempotency guards", async () => {
+Deno.test("funded Store settlement preserves expiry, stock, idempotency, and C0 composition guards", async () => {
   const source = await Deno.readTextFile(SETTLEMENT_MIGRATION);
-  for (const fragment of [
-    "RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT'",
-    "IF v_idempotency.status = 'COMPLETED' THEN",
-    "IF v_quote.expires_at <= v_now THEN",
-    "RAISE EXCEPTION 'QUOTE_EXPIRED'",
-    "IF v_item.stock_quantity < v_quote.quantity THEN",
-    "RAISE EXCEPTION 'INSUFFICIENT_STOCK'",
-    "IF NOT FOUND OR v_balance.balance < v_quote.final_total_price THEN",
-    "RAISE EXCEPTION 'INSUFFICIENT_BALANCE'",
-  ]) {
+  for (
+    const fragment of [
+      "STORE_FUNDED_SETTLEMENT_IDEMPOTENCY_CONFLICT",
+      "STORE_FUNDED_SETTLEMENT_QUOTE_EXPIRED",
+      "STORE_FUNDED_SETTLEMENT_INSUFFICIENT_STOCK",
+      "compose_purchase_funding_v1",
+      "post_inventory_transaction_v2",
+    ]
+  ) {
     assertEquals(source.includes(fragment), true);
   }
 });
 
-Deno.test("Player session resolution rejects paused and ended games before Store repository work", async () => {
+Deno.test("Player session resolution rejects paused and ended games before funded Store work", async () => {
   const source = await Deno.readTextFile(SESSION_HELPERS);
   assertEquals(source.includes('.from("game_sessions")'), true);
   assertEquals(source.includes('.eq("status", "active")'), true);
 
   for (const gameStatus of ["paused", "ended"]) {
-    const repository = new CountingRepository();
+    const repository = new CountingFundingRepository();
     const response = await handlePlayerStorePublicRequest(
-      request("POST", "/players/me/store/purchases", purchaseBody()),
+      request(),
       { kind: "purchases" },
       {
         ...dependencies(repository),
@@ -73,21 +70,29 @@ Deno.test("Player session resolution rejects paused and ended games before Store
   }
 });
 
-Deno.test("Player Store maps authoritative purchase failures to stable public errors", async () => {
+Deno.test("Player Store maps funded purchase failures to stable public errors", async () => {
   const cases = [
-    ["QUOTE_EXPIRED", "store_quote_expired", false],
-    ["INSUFFICIENT_STOCK", "store_insufficient_stock", false],
-    ["INSUFFICIENT_BALANCE", "store_insufficient_balance", false],
-    ["IDEMPOTENCY_CONFLICT", "store_idempotency_conflict", false],
-    ["IDEMPOTENCY_IN_PROGRESS", "store_purchase_in_progress", true],
+    ["STORE_FUNDED_SETTLEMENT_QUOTE_EXPIRED", "store_quote_expired", false],
+    [
+      "STORE_FUNDED_SETTLEMENT_INSUFFICIENT_STOCK",
+      "store_insufficient_stock",
+      false,
+    ],
+    ["FUNDING_INSUFFICIENT", "store_insufficient_balance", false],
+    [
+      "STORE_FUNDED_SETTLEMENT_IDEMPOTENCY_CONFLICT",
+      "store_idempotency_conflict",
+      false,
+    ],
+    ["STORE_FUNDED_SETTLEMENT_IN_PROGRESS", "store_purchase_in_progress", true],
   ] as const;
 
   for (const [rpcMessage, expectedCode, retryable] of cases) {
-    const repository = new SupabasePlayerStorePublicRepository(
+    const repository = new SupabasePlayerStoreFundingPublicRepository(
       errorClient(rpcMessage) as never,
     );
     const response = await handlePlayerStorePublicRequest(
-      request("POST", "/players/me/store/purchases", purchaseBody()),
+      request(),
       { kind: "purchases" },
       dependencies(repository),
     );
@@ -96,15 +101,15 @@ Deno.test("Player Store maps authoritative purchase failures to stable public er
   }
 });
 
-Deno.test("Duplicate Store request replays one receipt without duplicate economic writes", async () => {
-  const repository = new ReplayRepository();
+Deno.test("Duplicate funded Store request replays one receipt without duplicate economic writes", async () => {
+  const repository = new ReplayFundingRepository();
   const first = await handlePlayerStorePublicRequest(
-    request("POST", "/players/me/store/purchases", purchaseBody()),
+    request(),
     { kind: "purchases" },
     dependencies(repository),
   );
   const replay = await handlePlayerStorePublicRequest(
-    request("POST", "/players/me/store/purchases", purchaseBody()),
+    request(),
     { kind: "purchases" },
     dependencies(repository),
   );
@@ -122,15 +127,7 @@ Deno.test("Duplicate Store request replays one receipt without duplicate economi
   assertNoUuid(replayBody);
 });
 
-function purchaseBody() {
-  return {
-    quoteKey: QUOTE_KEY,
-    idempotencyKey: IDEMPOTENCY_KEY,
-    clientSubmittedAt: "2026-07-19T04:00:00.000Z",
-  };
-}
-
-function dependencies(repository: PlayerStorePublicRepository) {
+function dependencies(repository: PlayerStoreFundingPublicRepository) {
   return {
     createServiceClient: () => ({} as never),
     readEnvironment: () => ({
@@ -142,11 +139,15 @@ function dependencies(repository: PlayerStorePublicRepository) {
       },
     }),
     resolveScope: () =>
-      Promise.resolve({
-        gameId: GAME_ID,
-        playerUuid: PLAYER_ID,
-      }),
-    createRepository: () => repository,
+      Promise.resolve({ gameId: GAME_ID, playerUuid: PLAYER_ID }),
+    createReadRepository: () => ({
+      listItems: () => Promise.resolve([]),
+      listPurchases: () => Promise.resolve([]),
+    }),
+    createOfferProductRepository: () => ({
+      listOfferProducts: () => Promise.resolve([]),
+    }),
+    createFundingRepository: () => repository,
   };
 }
 
@@ -159,64 +160,114 @@ function errorClient(message: string) {
   };
 }
 
-class CountingRepository implements PlayerStorePublicRepository {
+class CountingFundingRepository implements PlayerStoreFundingPublicRepository {
   purchaseCalls = 0;
 
-  listItems(_scope: PlayerStorePublicScope) {
-    return Promise.resolve([]);
+  createSystemOfferQuote(): never {
+    throw new Error("Not used.");
   }
 
-  createQuote(_input: any) {
-    return Promise.reject(new Error("Not used."));
-  }
-
-  purchase(_input: any): Promise<PlayerStorePublicReceiptDto> {
+  settleSystemOfferPurchase(): Promise<PlayerStoreSeededFundingReceiptDto> {
     this.purchaseCalls += 1;
     return Promise.reject(new Error("Store purchase must not run."));
   }
 
-  listPurchases(
-    _input: PlayerStorePublicScope & { readonly limit: number },
-  ): Promise<readonly PlayerStorePublicPurchaseHistoryItemDto[]> {
-    return Promise.resolve([]);
+  createBusinessOfferQuote(): never {
+    throw new Error("Not used.");
+  }
+
+  settleBusinessOfferPurchase(): never {
+    throw new Error("Not used.");
+  }
+
+  readBusinessOfferReceipt(): never {
+    throw new Error("Not used.");
   }
 }
 
-class ReplayRepository extends CountingRepository {
+class ReplayFundingRepository extends CountingFundingRepository {
   economicWrites = 0;
-  private receipt: PlayerStorePublicReceiptDto | null = null;
+  private receipt: PlayerStoreSeededFundingReceiptDto | null = null;
 
-  override purchase(_input: any): Promise<PlayerStorePublicReceiptDto> {
+  override settleSystemOfferPurchase(): Promise<PlayerStoreSeededFundingReceiptDto> {
     this.purchaseCalls += 1;
     if (this.receipt) {
       return Promise.resolve({ ...this.receipt, alreadyCompleted: true });
     }
     this.economicWrites += 1;
-    this.receipt = {
-      receiptKey: RECEIPT_KEY,
-      quoteKey: QUOTE_KEY,
-      itemKey: "field_permit",
-      itemName: "Field Permit",
-      quantity: 1,
-      finalUnitPrice: 50,
-      finalTotalPrice: 50,
-      currencyCode: "NRC",
-      inventoryQuantityOwned: 1,
-      completedAt: "2026-07-19T04:00:01.000Z",
-      alreadyCompleted: false,
-    };
+    this.receipt = seededReceipt();
     return Promise.resolve(this.receipt);
   }
 }
 
-function request(method: string, path: string, body?: unknown): Request {
-  const headers = new Headers({ "x-player-session-token": "player-token" });
-  const init: RequestInit = { method, headers };
-  if (body !== undefined) {
-    headers.set("content-type", "application/json");
-    init.body = JSON.stringify(body);
-  }
-  return new Request(`https://example.test${path}`, init);
+function seededReceipt(): PlayerStoreSeededFundingReceiptDto {
+  return {
+    receiptKey: RECEIPT_KEY,
+    quoteKey: QUOTE_KEY,
+    itemKey: "field_permit",
+    itemName: "Field Permit",
+    quantity: 1,
+    finalUnitPrice: 50,
+    finalTotalPrice: 50,
+    currencyCode: "NRC",
+    inventoryQuantityOwned: 1,
+    offerKey: `sof_${"1".repeat(32)}`,
+    sellerKind: "seeded",
+    sellerPartyKey: `pty_${"1".repeat(32)}`,
+    sellerName: "Econovaria Store",
+    offerVersionBefore: 1,
+    offerVersionAfter: 1,
+    remainingSellerQuantity: 4,
+    sellerProceeds: 50,
+    inventoryTransactionKey: `itx_${"1".repeat(32)}`,
+    contextDigest: "c".repeat(64),
+    completedAt: "2026-07-19T04:00:01.000Z",
+    alreadyCompleted: false,
+    fundingReceipt: {
+      receiptKey: "pfr_11111111111111111111111111111111",
+      quoteKey: "pfq_11111111111111111111111111111111",
+      bankTransactionKey: "btx_11111111111111111111111111111111",
+      targetAccountKey: "bac_22222222222222222222222222222222",
+      fundingContextKind: "store.system-offer",
+      fundingContextKey: QUOTE_KEY,
+      targetCurrencyCode: "NRC",
+      targetMinorUnit: 2,
+      targetAmount: "50.00",
+      targetReserveDrawAmount: "0.00",
+      sourceDomain: "store",
+      sourceAction: "seeded_purchase",
+      createdAt: "2026-07-19T04:00:01.000Z",
+      lines: [{
+        lineNumber: 1,
+        sourceAccountKey: "bac_11111111111111111111111111111111",
+        sourceCurrencyCode: "NRC",
+        sourceMinorUnit: 2,
+        targetCurrencyCode: "NRC",
+        targetMinorUnit: 2,
+        targetContribution: "50.00",
+        sourceDebit: "50.00",
+        referenceRate: "1.000000000000000000",
+        customerRate: "1.000000000000000000",
+        effectiveRate: "1.000000000000000000",
+        spreadRate: "0.000000000000000000",
+        requiresFx: false,
+      }],
+    },
+  };
+}
+
+function request(): Request {
+  return new Request("https://example.test/players/me/store/purchases", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-player-session-token": "player-token",
+    },
+    body: JSON.stringify({
+      quoteKey: QUOTE_KEY,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    }),
+  });
 }
 
 async function assertError(
@@ -234,8 +285,13 @@ async function assertError(
 
 function assertNoUuid(value: unknown): void {
   const serialized = JSON.stringify(value);
-  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized)) {
-    throw new Error(`Player Store negative-state response leaked an internal UUID: ${serialized}`);
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(serialized)
+  ) {
+    throw new Error(
+      `Player Store negative-state response leaked an internal UUID: ${serialized}`,
+    );
   }
 }
 

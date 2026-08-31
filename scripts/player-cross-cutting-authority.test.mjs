@@ -37,6 +37,7 @@ function manifest() {
       "scripts/player-cross-cutting-authority.test.mjs",
       "scripts/verify-player-cross-cutting-authority.mjs",
     ],
+    criticalJobChecks: ["banking-fx-clearing-v1"],
     requiredChecks: [
       "player-terminal-verify",
       "player-edge-trusted-ip-entrypoint-contract",
@@ -59,6 +60,7 @@ test("cross-cutting Player authority accepts only its PR-bound exact scope", () 
     manifestPath: AUTHORITY_PATH,
   });
   assert.equal(result.changedPathCount, value.allowedPaths.length);
+  assert.equal(result.criticalJobCheckCount, 1);
 });
 
 test("cross-cutting Player authority rejects an unreviewed path", () => {
@@ -125,6 +127,23 @@ test("cross-cutting Player authority rejects identity and production drift", () 
       manifestPath: AUTHORITY_PATH,
     }),
     /deny production mutation/u,
+  );
+});
+
+test("cross-cutting Player authority binds every critical job as a required check", () => {
+  const value = manifest();
+  value.requiredChecks = value.requiredChecks.filter((check) =>
+    check !== "banking-fx-clearing-v1"
+  );
+  assert.throws(
+    () => verifyAuthority({
+      manifest: value,
+      changedPaths: value.allowedPaths,
+      pullRequestNumber: AUTHORIZED_PR,
+      baseRef: AUTHORIZED_BASE,
+      manifestPath: AUTHORITY_PATH,
+    }),
+    /Critical workflow job is not bound as a required check/u,
   );
 });
 

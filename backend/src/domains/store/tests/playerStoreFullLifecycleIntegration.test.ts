@@ -1,10 +1,13 @@
 import { handlePlayerStorePublicRequest } from "../api/playerStorePublicHttpHandler.ts";
 import type {
+  PlayerStoreFundingPublicRepository,
+  PlayerStoreSeededFundingQuoteDto,
+  PlayerStoreSeededFundingReceiptDto,
+} from "../contracts/playerStoreFundingPublicContracts.ts";
+import type {
   PlayerStorePublicItemDto,
   PlayerStorePublicPurchaseHistoryItemDto,
-  PlayerStorePublicQuoteDto,
-  PlayerStorePublicReceiptDto,
-  PlayerStorePublicRepository,
+  PlayerStorePublicReadRepository,
 } from "../contracts/playerStorePublicContracts.ts";
 
 declare const Deno: {
@@ -16,7 +19,11 @@ const PLAYER_ID = "00000000-0000-4000-8000-000000000002";
 const QUOTE_KEY = "quote_11111111111111111111111111111111";
 const RECEIPT_KEY = "receipt_22222222222222222222222222222222";
 const ITEM_KEY = "field_permit";
+const SYSTEM_OFFER_KEY = `sof_${"1".repeat(32)}`;
+const SYSTEM_PARTY_KEY = `pty_${"1".repeat(32)}`;
+const CONTEXT_DIGEST = "c".repeat(64);
 const IDEMPOTENCY_KEY = "store.lifecycle.12345678";
+const ACCOUNT_KEY = "bac_11111111111111111111111111111111";
 
 Deno.test("public Player Store lifecycle settles once and refreshes catalog, receipt, ledger, and inventory state", async () => {
   const repository = new SharedStoreRepository();
@@ -30,24 +37,25 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
         supabaseServiceRoleKey: "service",
       },
     }),
-    resolveScope: () => Promise.resolve({
-      gameId: GAME_ID,
-      playerUuid: PLAYER_ID,
-      activeSessionId: "00000000-0000-4000-8000-000000000003",
-      sessionValid: true,
-      sessionExpiresAt: "2026-07-20T00:00:00.000Z",
-      authorizationContext: {
-        actorType: "player",
-        source: "player_session",
-        gameScope: "session",
-        resourceScope: "own_player",
-      },
-    }),
-    createRepository: () => repository,
-    createOfferRepository: () => ({
+    resolveScope: () =>
+      Promise.resolve({
+        gameId: GAME_ID,
+        playerUuid: PLAYER_ID,
+        activeSessionId: "00000000-0000-4000-8000-000000000003",
+        sessionValid: true,
+        sessionExpiresAt: "2026-07-20T00:00:00.000Z",
+        authorizationContext: {
+          actorType: "player",
+          source: "player_session",
+          gameScope: "session",
+          resourceScope: "own_player",
+        },
+      }),
+    createReadRepository: () => repository,
+    createOfferProductRepository: () => ({
       listOfferProducts: () => Promise.resolve([]),
-    } as never),
-    now: () => "2026-07-19T03:00:00.000Z",
+    }),
+    createFundingRepository: () => repository,
   };
   const playerBodies: unknown[] = [];
 
@@ -65,8 +73,11 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
 
   const quote = await handlePlayerStorePublicRequest(
     request("POST", "/players/me/store/quotes", {
-      itemKey: ITEM_KEY,
+      offerKey: SYSTEM_OFFER_KEY,
       quantity: 2,
+      expectedVersion: 1,
+      allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
+      idempotencyKey: "store.lifecycle.quote.12345678",
     }),
     { kind: "quotes" },
     dependencies,
@@ -83,7 +94,6 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
     request("POST", "/players/me/store/purchases", {
       quoteKey: QUOTE_KEY,
       idempotencyKey: IDEMPOTENCY_KEY,
-      clientSubmittedAt: "2026-07-19T03:00:30.000Z",
     }),
     { kind: "purchases" },
     dependencies,
@@ -104,7 +114,6 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
     request("POST", "/players/me/store/purchases", {
       quoteKey: QUOTE_KEY,
       idempotencyKey: IDEMPOTENCY_KEY,
-      clientSubmittedAt: "2026-07-19T03:00:30.000Z",
     }),
     { kind: "purchases" },
     dependencies,
@@ -144,9 +153,14 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
   for (const body of playerBodies) assertNoUuid(body);
 });
 
-type MutableStoreItem = Omit<PlayerStorePublicItemDto, "stockQuantity"> & { stockQuantity: number };
+type MutableStoreItem = Omit<PlayerStorePublicItemDto, "stockQuantity"> & {
+  stockQuantity: number;
+};
 
-class SharedStoreRepository implements PlayerStorePublicRepository {
+class SharedStoreRepository
+  implements
+    PlayerStorePublicReadRepository,
+    PlayerStoreFundingPublicRepository {
   readonly items: MutableStoreItem[] = [{
     itemKey: ITEM_KEY,
     name: "Field Permit",
@@ -164,19 +178,20 @@ class SharedStoreRepository implements PlayerStorePublicRepository {
   inventoryQuantity = 0;
   ledgerWrites = 0;
   inventoryEvents = 0;
-  private quote: PlayerStorePublicQuoteDto | null = null;
-  private receipt: PlayerStorePublicReceiptDto | null = null;
+  private quote: PlayerStoreSeededFundingQuoteDto | null = null;
+  private receipt: PlayerStoreSeededFundingReceiptDto | null = null;
   private purchaseKey = "";
 
   listItems() {
     return Promise.resolve(this.items.map((item) => ({ ...item })));
   }
 
-  createQuote(input: any): Promise<PlayerStorePublicQuoteDto> {
-    const item = this.items.find((candidate) => candidate.itemKey === input.itemKey);
+  createSystemOfferQuote(input: any): Promise<PlayerStoreSeededFundingQuoteDto> {
+    const item = this.items[0];
     if (!item) throw new Error("item unavailable");
     this.quote = {
       quoteKey: QUOTE_KEY,
+      quoteStatus: "created",
       itemKey: item.itemKey,
       itemName: item.name,
       quantity: input.quantity,
@@ -195,11 +210,22 @@ class SharedStoreRepository implements PlayerStorePublicRepository {
       itemLocalFinalTotalPrice: item.price * input.quantity,
       expiresAt: "2026-07-19T03:03:00.000Z",
       pricingVersion: "store-pricing-v1",
+      replayed: false,
+      offerKey: input.offerKey,
+      offerVersion: input.expectedVersion,
+      sellerKind: "seeded",
+      sellerPartyKey: SYSTEM_PARTY_KEY,
+      sellerName: "Econovaria Store",
+      availableQuantityAtQuote: item.stockQuantity,
+      contextDigest: CONTEXT_DIGEST,
+      fundingQuote: fundingQuote("100.00"),
     };
     return Promise.resolve(this.quote);
   }
 
-  purchase(input: any): Promise<PlayerStorePublicReceiptDto> {
+  settleSystemOfferPurchase(
+    input: any,
+  ): Promise<PlayerStoreSeededFundingReceiptDto> {
     if (this.receipt && input.idempotencyKey === this.purchaseKey) {
       return Promise.resolve({ ...this.receipt, alreadyCompleted: true });
     }
@@ -208,7 +234,9 @@ class SharedStoreRepository implements PlayerStorePublicRepository {
     }
     const item = this.items[0];
     if (item.stockQuantity < this.quote.quantity) throw new Error("stock");
-    if (this.cashBalance < this.quote.finalTotalPrice) throw new Error("balance");
+    if (this.cashBalance < this.quote.finalTotalPrice) {
+      throw new Error("balance");
+    }
 
     this.cashBalance -= this.quote.finalTotalPrice;
     item.stockQuantity -= this.quote.quantity;
@@ -226,8 +254,19 @@ class SharedStoreRepository implements PlayerStorePublicRepository {
       finalTotalPrice: this.quote.finalTotalPrice,
       currencyCode: this.quote.currencyCode,
       inventoryQuantityOwned: this.inventoryQuantity,
+      offerKey: this.quote.offerKey,
+      sellerKind: this.quote.sellerKind,
+      sellerPartyKey: this.quote.sellerPartyKey,
+      sellerName: this.quote.sellerName,
+      offerVersionBefore: this.quote.offerVersion,
+      offerVersionAfter: this.quote.offerVersion,
+      remainingSellerQuantity: item.stockQuantity,
+      sellerProceeds: this.quote.finalTotalPrice,
+      inventoryTransactionKey: `itx_${"1".repeat(32)}`,
+      contextDigest: this.quote.contextDigest,
       completedAt: "2026-07-19T03:00:31.000Z",
       alreadyCompleted: false,
+      fundingReceipt: fundingReceipt("100.00"),
     };
     return Promise.resolve(this.receipt);
   }
@@ -246,6 +285,88 @@ class SharedStoreRepository implements PlayerStorePublicRepository {
       createdAt: this.receipt.completedAt,
     }]);
   }
+
+  createBusinessOfferQuote(): never {
+    throw new Error("Business offer quote is outside this seeded lifecycle.");
+  }
+
+  settleBusinessOfferPurchase(): never {
+    throw new Error(
+      "Business offer settlement is outside this seeded lifecycle.",
+    );
+  }
+
+  readBusinessOfferReceipt(): never {
+    throw new Error("Business offer receipt is outside this seeded lifecycle.");
+  }
+}
+
+function fundingQuote(targetAmount: string) {
+  return {
+    quoteKey: "pfq_11111111111111111111111111111111",
+    fundingContextKind: "store.system-offer",
+    fundingContextKey: QUOTE_KEY,
+    targetCurrencyCode: "NRC",
+    targetMinorUnit: 2,
+    targetAmount,
+    fixingKey: "fxf_11111111111111111111111111111111",
+    policyVersion: "retail-fx-v1",
+    requiresFx: false,
+    expiresAt: "2026-07-19T03:03:00.000Z",
+    lines: [{
+      lineNumber: 1,
+      sourceAccountKey: ACCOUNT_KEY,
+      sourceCurrencyCode: "NRC",
+      sourceMinorUnit: 2,
+      targetCurrencyCode: "NRC",
+      targetMinorUnit: 2,
+      postedAmount: "500.00",
+      heldAmount: "0.00",
+      availableAmount: "500.00",
+      targetContribution: targetAmount,
+      sourceDebit: targetAmount,
+      referenceRate: "1.000000000000000000",
+      customerRate: "1.000000000000000000",
+      effectiveRate: "1.000000000000000000",
+      spreadRate: "0.000000000000000000",
+      requiresFx: false,
+      roundingDisclosure: "No FX conversion or rounding was required.",
+    }],
+  };
+}
+
+function fundingReceipt(targetAmount: string) {
+  const quote = fundingQuote(targetAmount);
+  return {
+    receiptKey: "pfr_11111111111111111111111111111111",
+    quoteKey: quote.quoteKey,
+    bankTransactionKey: "btx_11111111111111111111111111111111",
+    targetAccountKey: "bac_22222222222222222222222222222222",
+    fundingContextKind: quote.fundingContextKind,
+    fundingContextKey: quote.fundingContextKey,
+    targetCurrencyCode: quote.targetCurrencyCode,
+    targetMinorUnit: quote.targetMinorUnit,
+    targetAmount,
+    targetReserveDrawAmount: "0.00",
+    sourceDomain: "store",
+    sourceAction: "seeded_purchase",
+    createdAt: "2026-07-19T03:00:31.000Z",
+    lines: quote.lines.map((line) => ({
+      lineNumber: line.lineNumber,
+      sourceAccountKey: line.sourceAccountKey,
+      sourceCurrencyCode: line.sourceCurrencyCode,
+      sourceMinorUnit: line.sourceMinorUnit,
+      targetCurrencyCode: line.targetCurrencyCode,
+      targetMinorUnit: line.targetMinorUnit,
+      targetContribution: line.targetContribution,
+      sourceDebit: line.sourceDebit,
+      referenceRate: line.referenceRate,
+      customerRate: line.customerRate,
+      effectiveRate: line.effectiveRate,
+      spreadRate: line.spreadRate,
+      requiresFx: line.requiresFx,
+    })),
+  };
 }
 
 function request(method: string, path: string, body?: unknown): Request {
@@ -260,8 +381,13 @@ function request(method: string, path: string, body?: unknown): Request {
 
 function assertNoUuid(value: unknown): void {
   const serialized = JSON.stringify(value);
-  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized)) {
-    throw new Error(`Player Store response leaked an internal UUID: ${serialized}`);
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(serialized)
+  ) {
+    throw new Error(
+      `Player Store response leaked an internal UUID: ${serialized}`,
+    );
   }
 }
 

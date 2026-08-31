@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const paths = Object.freeze({
   scope: "docs/roadmaps/multicurrency-store-funding-scope-v1.md",
@@ -28,6 +28,14 @@ const assertions = text(paths.assertions);
 const fundingContracts = text(paths.fundingContracts);
 const fundingResponse = text(paths.fundingResponse);
 const fundingRepository = text(paths.fundingRepository);
+const fundingErrorsPath =
+  "backend/src/domains/store/infrastructure/playerStoreFundingPublicErrors.ts";
+const finalConvergenceMigrationPath =
+  "backend/supabase/migrations/20260831103001_business_player_store_fx_final_v2.sql";
+const fundingErrors = existsSync(fundingErrorsPath) ? text(fundingErrorsPath) : "";
+const finalConvergenceMigration = existsSync(finalConvergenceMigrationPath)
+  ? text(finalConvergenceMigrationPath)
+  : "";
 
 assert.equal(authority.pullRequestNumber, 674);
 assert.equal(authority.baseRef, "feat/multicurrency-funding-core-v1");
@@ -52,14 +60,26 @@ assert.match(fundingContracts, /PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN/u);
 assert.match(fundingContracts, /PlayerStoreFundingPublicRepository/u);
 assert.match(fundingContracts, /PlayerStoreFundingAllocationInput/u);
 assert.match(fundingRepository, /playerStoreFundingPublicResponse\.ts/u);
-assert.match(fundingRepository, /create_seeded_store_funding_quote_v1/u);
-assert.match(fundingRepository, /settle_seeded_store_funding_v1/u);
+if (finalConvergenceMigration) {
+  assert.match(fundingRepository, /create_system_store_offer_funding_quote_v2/u);
+  assert.doesNotMatch(fundingRepository, /create_seeded_store_funding_quote_v1/u);
+  assert.match(fundingRepository, /settle_system_store_offer_funding_v2/u);
+  assert.doesNotMatch(fundingRepository, /settle_seeded_store_funding_v1/u);
+} else {
+  assert.match(fundingRepository, /create_seeded_store_funding_quote_v1/u);
+  assert.match(fundingRepository, /settle_seeded_store_funding_v1/u);
+}
 assert.match(fundingRepository, /create_business_store_offer_funding_quote_v1/u);
-assert.match(fundingRepository, /settle_business_store_offer_funding_v1/u);
+if (finalConvergenceMigration) {
+  assert.match(fundingRepository, /settle_business_store_offer_funding_v2/u);
+  assert.match(finalConvergenceMigration, /settle_business_store_offer_funding_v1/u);
+} else {
+  assert.match(fundingRepository, /settle_business_store_offer_funding_v1/u);
+}
 assert.match(fundingRepository, /read_business_store_offer_funding_receipt_v1/u);
 assert.match(fundingResponse, /UUID_ANY/u);
 assert.match(fundingResponse, /lines\.length < 1 \|\| lines\.length > 3/u);
-assert.match(fundingResponse, /mapFundingRpcError/u);
+assert.match(`${fundingResponse}\n${fundingErrors}`, /mapFundingRpcError/u);
 assert.match(fundingResponse, /export function publicRecord/u);
 
 for (const [path, source] of [

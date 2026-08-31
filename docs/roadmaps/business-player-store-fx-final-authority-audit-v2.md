@@ -1,8 +1,8 @@
 # Business Player Store / FX Final Authority Audit v2
 
-**Roadmap item:** `BUSINESS-V2-10A4D`  
-**Audit source:** `51ffd008ed84f6a9acd029c8941b3f9b40733735`  
-**Audit date:** 2026-08-31  
+**Roadmap item:** `BUSINESS-V2-10A4D`
+**Audit source:** `51ffd008ed84f6a9acd029c8941b3f9b40733735`
+**Audit date:** 2026-08-31
 **Status:** `RESOLVED_FOR_SCOPE`
 
 ## Repository and owner identity
@@ -48,11 +48,13 @@ The seeded catalog/history and Business offer-product catalog remain available t
 
 ## Proven forward-migration need and collision
 
-The inherited Store funding normalizer requires every allocation amount before authoritative Store pricing. The two active funded quote functions therefore cannot accept a final-null remainder without a forward function-only repair. The Business purchase function also needs a service-only quote-key/idempotency entrypoint that derives immutable offer fields and delegates to the retained atomic command.
+The inherited Store funding normalizer requires every allocation amount before authoritative Store pricing. The two active funded quote functions therefore cannot accept a final-null remainder without a forward repair. Audit of the seeded/NPC path also proved a persisted-evidence defect: the selected system offer and its version/result cannot be reconstructed safely from the legacy quote/receipt rows. The Business purchase function additionally needs a service-only quote-key/idempotency entrypoint that derives immutable offer fields and delegates to the retained atomic command.
 
-`supabase migration new business_player_store_fx_final_v2 --workdir backend` was invoked from the live predecessor as required. At 2026-08-31 03:13 UTC it generated the empty version `20260831031333`, which sorts before C4's reserved `20260831100000`–`20260831103000` migrations. The zero-byte untracked file was removed and is not part of repository history. It was not renamed, preassigned, or populated. Application, browser, and test work may proceed, but SQL implementation must wait for a newly generated version that sorts strictly after the live predecessor.
+`supabase migration new business_player_store_fx_final_v2 --workdir backend` was invoked from the live predecessor as required. At 2026-08-31 03:13 UTC it generated the empty version `20260831031333`, which sorts before C4's reserved `20260831100000`–`20260831103000` migrations. The zero-byte untracked file was removed and was never part of repository history.
 
-The permitted migration may redefine or add functions only. It may not add a table, column, direct DML grant, RLS change, alternate funding composer, or purge-registry entry. It must use a fixed `search_path`, explicit execute revokes from `public`, `anon`, and `authenticated`, and service-only grants.
+The installed CLI exposes no timestamp override. Following Supabase's documented migration-reconciliation procedure for a newer predecessor migration, the validated SQL was generated again through `supabase migration new` and the resulting file was renamed to the first strictly later repository version: `20260831103001_business_player_store_fx_final_v2.sql`. No earlier migration was edited, no timestamp was reserved before the collision was proven, and the selected version is derived mechanically from the exact live predecessor rather than from a planned tranche schedule.
+
+The proven persisted-evidence exception is bounded to nullable bindings on the existing Store evidence tables: `store_purchase_quotes.seller_offer_id`, `seller_offer_version`, and `available_quantity_at_quote`; and `store_purchases.seller_offer_version_after` and `remaining_seller_quantity`. One game-scoped foreign key, two consistency checks, one bounded lookup index, and two immutable validation triggers protect those fields. Historical rows remain nullable and unchanged. No new table, balance, receipt authority, RLS change, direct table/DML grant, alternate funding composer, or purge-registry entry is introduced. All security-definer functions use fixed `search_path` values, explicit execute revokes from `public`, `anon`, and `authenticated`, and service-only command grants.
 
 ## Player Terminal decisions
 

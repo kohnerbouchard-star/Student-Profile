@@ -97,7 +97,11 @@ const api = new PlayerApi(connectedConfig({
 await api.bootstrap();
 assert.deepEqual(calls, ["session", "dashboard", "notifications"], "Bootstrap must load only shell resources.");
 await api.loadRoute("store");
-assert.deepEqual(calls.slice(3).sort(), ["banking", "inventory", "store"], "Store navigation must load Store, Banking, and Inventory together.");
+assert.deepEqual(
+  calls.slice(3).sort(),
+  ["banking", "bankingFx", "inventory", "store"],
+  "Store navigation must load Store, Banking, Banking FX, and Inventory together."
+);
 assert.ok(!calls.includes("business") && !calls.includes("marketplace"), "Unvisited systems must not load during bootstrap.");
 
 let newsReads = 0;

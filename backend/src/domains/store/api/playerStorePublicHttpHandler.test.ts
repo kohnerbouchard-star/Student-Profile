@@ -4,10 +4,12 @@ import {
   readPlayerStorePublicRoutePath,
 } from "./playerStorePublicRoutePaths.ts";
 import {
+  ACCOUNT_KEY,
   assertEquals,
   assertError,
   assertNoInternalFields,
   assertNoUuid,
+  CapturingFundingRepository,
   CapturingOfferRepository,
   CapturingRepository,
   createPlayerStoreHandlerDependencies,
@@ -89,6 +91,7 @@ Deno.test("Player Store route parser separates item and Business-offer paths", (
 Deno.test("Player Store list and quote responses expose public keys only", async () => {
   const repository = new CapturingRepository();
   const offerRepository = new CapturingOfferRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const listResponse = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest("GET", "/players/me/store/items"),
     { kind: "items" },
@@ -104,7 +107,7 @@ Deno.test("Player Store list and quote responses expose public keys only", async
     listBody.products[0].offers.map((offer: { purchasability: string }) =>
       offer.purchasability
     ),
-    ["business_offer", "seeded_offer", "unsupported"],
+    ["business_offer", "system_offer", "system_offer"],
   );
   assertEquals(offerRepository.productInputs, [{
     gameSessionId: GAME_ID,
@@ -115,36 +118,54 @@ Deno.test("Player Store list and quote responses expose public keys only", async
 
   const quoteResponse = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest("POST", "/players/me/store/quotes", {
-      itemKey: "field_permit",
+      offerKey: `sof_${"1".repeat(32)}`,
       quantity: 2,
+      expectedVersion: 2,
+      allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
+      idempotencyKey: "store.seeded.quote.12345678",
     }),
     { kind: "quotes" },
-    createPlayerStoreHandlerDependencies(repository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      new CapturingOfferRepository(),
+      fundingRepository,
+    ),
   );
   const quoteBody = await quoteResponse.json();
 
   assertEquals(quoteResponse.status, 200);
   assertEquals(quoteBody.quote.quoteKey, QUOTE_KEY);
-  assertEquals(repository.quoteInputs[0], {
+  assertEquals(fundingRepository.seededQuoteInputs[0], {
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
-    itemKey: "field_permit",
+    offerKey: `sof_${"1".repeat(32)}`,
     quantity: 2,
-    nowIso: "2026-07-19T02:00:00.000Z",
+    expectedVersion: 2,
+    allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
+    idempotencyKey: "store.seeded.quote.12345678",
   });
+  assertEquals(quoteBody.quote.fundingQuote.targetAmount, "100.00");
+  assertEquals(
+    quoteBody.quote.fundingQuote.lines[0].referenceRate,
+    "1.000000000000000000",
+  );
   assertNoUuid(quoteBody);
 });
 
 Deno.test("Player Store purchase uses session scope and returns public receipt", async () => {
   const repository = new CapturingRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const response = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest("POST", "/players/me/store/purchases", {
       quoteKey: QUOTE_KEY,
       idempotencyKey: "store.test.12345678",
-      clientSubmittedAt: "2026-07-19T02:01:00.000Z",
     }),
     { kind: "purchases" },
-    createPlayerStoreHandlerDependencies(repository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      new CapturingOfferRepository(),
+      fundingRepository,
+    ),
   );
   const body = await response.json();
 
@@ -152,26 +173,113 @@ Deno.test("Player Store purchase uses session scope and returns public receipt",
   assertEquals(body.receipt.receiptKey, RECEIPT_KEY);
   assertEquals(body.receipt.itemKey, "field_permit");
   assertEquals(body.refreshRequired, true);
-  assertEquals(repository.purchaseInputs[0], {
+  assertEquals(fundingRepository.seededPurchaseInputs[0], {
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
     quoteKey: QUOTE_KEY,
     idempotencyKey: "store.test.12345678",
-    clientSubmittedAt: "2026-07-19T02:01:00.000Z",
   });
+  assertEquals(body.receipt.fundingReceipt.targetAmount, "100.00");
   assertNoUuid(body);
+});
+
+Deno.test("Player Store funding intent preserves ordered exact decimals and requires a final server remainder", async () => {
+  const repository = new CapturingRepository();
+  const fundingRepository = new CapturingFundingRepository();
+  const secondAccountKey = `bac_${"a".repeat(32)}`;
+  const response = await handlePlayerStorePublicRequest(
+    createPlayerStoreRequest("POST", "/players/me/store/quotes", {
+      offerKey: `sof_${"1".repeat(32)}`,
+      quantity: 2,
+      expectedVersion: 2,
+      allocations: [{
+        sourceAccountKey: ACCOUNT_KEY,
+        targetAmount: "99999999999999999999.123456789012345678",
+      }, {
+        sourceAccountKey: secondAccountKey,
+        targetAmount: null,
+      }],
+      idempotencyKey: "store.seeded.multi.12345678",
+    }),
+    { kind: "quotes" },
+    createPlayerStoreHandlerDependencies(
+      repository,
+      new CapturingOfferRepository(),
+      fundingRepository,
+    ),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(
+    (fundingRepository.seededQuoteInputs[0] as {
+      allocations: unknown;
+    }).allocations,
+    [{
+      sourceAccountKey: ACCOUNT_KEY,
+      targetAmount: "99999999999999999999.123456789012345678",
+    }, {
+      sourceAccountKey: secondAccountKey,
+      targetAmount: null,
+    }],
+  );
+
+  const invalidAllocations: readonly unknown[] = [
+    [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: 10 }, {
+      sourceAccountKey: secondAccountKey,
+      targetAmount: null,
+    }],
+    [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: "10" }, {
+      sourceAccountKey: ACCOUNT_KEY,
+      targetAmount: null,
+    }],
+    [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }, {
+      sourceAccountKey: secondAccountKey,
+      targetAmount: "10",
+    }],
+    [{
+      sourceAccountKey: ACCOUNT_KEY,
+      targetAmount: null,
+      amount: "10",
+    }],
+  ];
+
+  for (const allocations of invalidAllocations) {
+    const invalid = await handlePlayerStorePublicRequest(
+      createPlayerStoreRequest("POST", "/players/me/store/quotes", {
+        offerKey: `sof_${"1".repeat(32)}`,
+        quantity: 2,
+        expectedVersion: 2,
+        allocations,
+        idempotencyKey: "store.seeded.invalid.12345678",
+      }),
+      { kind: "quotes" },
+      createPlayerStoreHandlerDependencies(
+        repository,
+        new CapturingOfferRepository(),
+        fundingRepository,
+      ),
+    );
+    await assertError(invalid, 400, "invalid_player_store_request");
+  }
+  assertEquals(fundingRepository.seededQuoteInputs.length, 1);
 });
 
 Deno.test("Player Store rejects browser-owned scope and unexpected request fields", async () => {
   const repository = new CapturingRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const bodyScope = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest("POST", "/players/me/store/quotes", {
-      itemKey: "field_permit",
+      offerKey: `sof_${"1".repeat(32)}`,
       quantity: 1,
+      expectedVersion: 2,
       gameSessionId: GAME_ID,
     }),
     { kind: "quotes" },
-    createPlayerStoreHandlerDependencies(repository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      new CapturingOfferRepository(),
+      fundingRepository,
+    ),
   );
   const queryScope = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest(
@@ -192,5 +300,5 @@ Deno.test("Player Store rejects browser-owned scope and unexpected request field
   await assertError(bodyScope, 400, "invalid_player_store_request");
   await assertError(queryScope, 400, "invalid_player_store_request");
   await assertError(headerScope, 400, "invalid_player_store_request");
-  assertEquals(repository.quoteInputs.length, 0);
+  assertEquals(fundingRepository.seededQuoteInputs.length, 0);
 });

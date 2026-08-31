@@ -20,9 +20,10 @@ import {
   PlayerStoreOfferPublicReadStore,
   type PlayerStoreOfferQueryResponse,
 } from "./playerStoreOfferPublicReadStore.ts";
+import { mapFundingRpcError } from "./playerStoreFundingPublicErrors.ts";
 import {
+  assertFundingBinding,
   invalidPublicResponse,
-  mapFundingRpcError,
   parseFundingQuote,
   parseFundingReceipt,
   parseSeededQuote,
@@ -41,41 +42,41 @@ export class SupabasePlayerStoreFundingPublicRepository
     this.readStore = new PlayerStoreOfferPublicReadStore(client);
   }
 
-  async createSeededQuote(
-    input: Parameters<PlayerStoreFundingPublicRepository["createSeededQuote"]>[0],
+  async createSystemOfferQuote(
+    input: Parameters<
+      PlayerStoreFundingPublicRepository["createSystemOfferQuote"]
+    >[0],
   ): Promise<PlayerStoreSeededFundingQuoteDto> {
     const scope = normalizeScope(input);
     const raw = await this.callRpc(
-      "create_seeded_store_funding_quote_v1",
+      "create_system_store_offer_funding_quote_v2",
       {
         p_game_session_id: scope.gameSessionId,
         p_player_id: scope.playerId,
-        p_item_key: input.itemKey,
+        p_offer_key: input.offerKey,
         p_quantity: input.quantity,
+        p_expected_offer_version: input.expectedVersion,
         p_allocations: input.allocations,
         p_idempotency_key: input.idempotencyKey,
-        p_effective_at: input.effectiveAt,
       },
       "quote",
     );
     return parseSeededQuote(raw);
   }
 
-  async settleSeededPurchase(
+  async settleSystemOfferPurchase(
     input: Parameters<
-      PlayerStoreFundingPublicRepository["settleSeededPurchase"]
+      PlayerStoreFundingPublicRepository["settleSystemOfferPurchase"]
     >[0],
   ): Promise<PlayerStoreSeededFundingReceiptDto> {
     const scope = normalizeScope(input);
     const raw = await this.callRpc(
-      "settle_seeded_store_funding_v1",
+      "settle_system_store_offer_funding_v2",
       {
         p_game_session_id: scope.gameSessionId,
         p_player_id: scope.playerId,
         p_quote_key: input.quoteKey,
         p_idempotency_key: input.idempotencyKey,
-        p_client_submitted_at: input.clientSubmittedAt,
-        p_request_metadata: {},
       },
       "purchase",
     );
@@ -88,22 +89,37 @@ export class SupabasePlayerStoreFundingPublicRepository
     >[0],
   ): Promise<PlayerStoreBusinessFundingQuoteDto> {
     const scope = normalizeScope(input);
-    const row = publicRecord(await this.callRpc(
-      "create_business_store_offer_funding_quote_v1",
-      {
-        p_game_session_id: scope.gameSessionId,
-        p_buyer_player_id: scope.playerId,
-        p_offer_key: input.offerKey,
-        p_quantity: input.quantity,
-        p_expected_offer_version: input.expectedVersion,
-        p_allocations: input.allocations,
-        p_idempotency_key: input.idempotencyKey,
-      },
-      "quote",
-    ));
+    const row = publicRecord(
+      await this.callRpc(
+        "create_business_store_offer_funding_quote_v1",
+        {
+          p_game_session_id: scope.gameSessionId,
+          p_buyer_player_id: scope.playerId,
+          p_offer_key: input.offerKey,
+          p_quantity: input.quantity,
+          p_expected_offer_version: input.expectedVersion,
+          p_allocations: input.allocations,
+          p_idempotency_key: input.idempotencyKey,
+        },
+        "quote",
+      ),
+    );
 
     const fundingQuote = parseFundingQuote(row.fundingQuote);
-    const quote = parseBusinessStoreOfferQuote(row);
+    const contextDigest = parseContextDigest(row.contextDigest);
+    const {
+      fundingQuote: _fundingQuote,
+      contextDigest: _contextDigest,
+      ...quotePayload
+    } = row;
+    const quote = parseBusinessStoreOfferQuote(quotePayload);
+    assertFundingBinding(
+      fundingQuote,
+      "store.business-offer",
+      quote.quoteKey,
+      quote.sellerCurrencyCode,
+      quote.sellerTotalPrice,
+    );
     const identity = await this.readStore.requireBusinessIdentity(
       scope.gameSessionId,
       quote.sellerPartyKey,
@@ -111,6 +127,7 @@ export class SupabasePlayerStoreFundingPublicRepository
     );
     return Object.freeze({
       ...projectPlayerStoreOfferQuote(quote, identity),
+      contextDigest,
       fundingQuote,
     });
   }
@@ -122,14 +139,11 @@ export class SupabasePlayerStoreFundingPublicRepository
   ): Promise<PlayerStoreBusinessFundingReceiptDto> {
     const scope = normalizeScope(input);
     const raw = await this.callRpc(
-      "settle_business_store_offer_funding_v1",
+      "settle_business_store_offer_funding_v2",
       {
         p_game_session_id: scope.gameSessionId,
         p_buyer_player_id: scope.playerId,
-        p_offer_key: input.offerKey,
         p_quote_key: input.quoteKey,
-        p_quantity: input.quantity,
-        p_expected_offer_version: input.expectedVersion,
         p_idempotency_key: input.idempotencyKey,
       },
       "purchase",
@@ -160,9 +174,24 @@ export class SupabasePlayerStoreFundingPublicRepository
     raw: unknown,
   ): Promise<PlayerStoreBusinessFundingReceiptDto> {
     const row = publicRecord(raw);
-    const fundingReceipt = parseFundingReceipt(row.fundingReceipt);
-    const { fundingReceipt: _fundingReceipt, ...receiptPayload } = row;
+    const fundingReceipt = parseFundingReceipt(
+      row.fundingReceipt,
+      "business_offer_purchase_funding",
+    );
+    const contextDigest = parseContextDigest(row.contextDigest);
+    const {
+      fundingReceipt: _fundingReceipt,
+      contextDigest: _contextDigest,
+      ...receiptPayload
+    } = row;
     const receipt = parseBusinessStoreOfferReceipt(receiptPayload);
+    assertFundingBinding(
+      fundingReceipt,
+      "store.business-offer",
+      receipt.quoteKey,
+      receipt.currencyCode,
+      receipt.totalPrice,
+    );
     const identity = await this.readStore.requireBusinessIdentity(
       scope.gameSessionId,
       receipt.sellerPartyKey,
@@ -171,6 +200,7 @@ export class SupabasePlayerStoreFundingPublicRepository
     );
     return Object.freeze({
       ...projectPlayerStoreOfferReceipt(receipt, identity),
+      contextDigest,
       fundingReceipt,
     });
   }
@@ -180,14 +210,22 @@ export class SupabasePlayerStoreFundingPublicRepository
     args: Record<string, unknown>,
     phase: "quote" | "purchase" | "receipt",
   ): Promise<unknown> {
-    const response = await this.client.rpc<unknown>(functionName, args) as
-      PlayerStoreOfferQueryResponse<unknown>;
+    const response = await this.client.rpc<unknown>(
+      functionName,
+      args,
+    ) as PlayerStoreOfferQueryResponse<unknown>;
     if (response.error) throw mapFundingRpcError(response.error, phase);
     if (response.data === null || response.data === undefined) {
       throw invalidPublicResponse();
     }
     return response.data;
   }
+}
+
+function parseContextDigest(value: unknown): string {
+  const digest = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!/^[0-9a-f]{64}$/u.test(digest)) throw invalidPublicResponse();
+  return digest;
 }
 
 function normalizeScope(

@@ -68,6 +68,94 @@ function requiredPositiveInteger(value, fieldName, endpointKey) {
   });
 }
 
+function requiredStoreFundingAmount(value, fieldName, endpointKey) {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (
+    /^(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?$/u.test(candidate) &&
+    /[1-9]/u.test(candidate)
+  ) {
+    const [whole, fraction = ""] = candidate.split(".");
+    const canonicalFraction = fraction.replace(/0+$/u, "");
+    return canonicalFraction ? `${whole}.${canonicalFraction}` : whole;
+  }
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: {
+      code: "player_store_funding_amount_invalid",
+      fieldName,
+      endpointKey,
+    },
+  });
+}
+
+function requiredStoreFundingAllocations(value, endpointKey) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
+    throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+      body: {
+        code: "player_store_funding_allocations_invalid",
+        fieldName: "allocations",
+        endpointKey,
+      },
+    });
+  }
+  const accountKeys = new Set();
+  return value.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_allocation_invalid",
+          fieldName: `allocations[${index}]`,
+          endpointKey,
+        },
+      });
+    }
+    const sourceAccountKey = requiredPublicKey(
+      entry.sourceAccountKey,
+      /^bac_[0-9a-f]{32}$/u,
+      `allocations[${index}].sourceAccountKey`,
+      endpointKey,
+    );
+    if (accountKeys.has(sourceAccountKey)) {
+      throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_accounts_duplicate",
+          fieldName: "allocations",
+          endpointKey,
+        },
+      });
+    }
+    accountKeys.add(sourceAccountKey);
+    const finalAllocation = index === value.length - 1;
+    if (finalAllocation && entry.targetAmount !== null) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_remainder_invalid",
+          fieldName: `allocations[${index}].targetAmount`,
+          endpointKey,
+        },
+      });
+    }
+    if (!finalAllocation && entry.targetAmount === null) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_fixed_amount_invalid",
+          fieldName: `allocations[${index}].targetAmount`,
+          endpointKey,
+        },
+      });
+    }
+    return {
+      sourceAccountKey,
+      targetAmount: finalAllocation
+        ? null
+        : requiredStoreFundingAmount(
+          entry.targetAmount,
+          `allocations[${index}].targetAmount`,
+          endpointKey,
+        ),
+    };
+  });
+}
+
 function gameSessionId(payload, session, endpointKey) {
   return requiredText(
     payload?.gameSessionId || session?.gameSessionId,
@@ -245,7 +333,13 @@ const ROUTE_BUILDERS = Object.freeze({
   storeQuote: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/store/quotes",
-    payload: { itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"), quantity: Number(payload.quantity ?? 1) },
+    payload: {
+      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeQuote"),
+      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeQuote"),
+      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeQuote"),
+      allocations: requiredStoreFundingAllocations(payload.allocations, "storeQuote"),
+      idempotencyKey: idempotencyKey(payload, "storeQuote"),
+    },
   }),
   storePurchase: ({ payload = {} }) => ({
     method: "POST",
@@ -253,7 +347,6 @@ const ROUTE_BUILDERS = Object.freeze({
     payload: {
       quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
-      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
     },
   }),
   storeOfferQuote: ({ payload = {} }) => ({
@@ -263,6 +356,7 @@ const ROUTE_BUILDERS = Object.freeze({
       offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeOfferQuote"),
       quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeOfferQuote"),
       expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeOfferQuote"),
+      allocations: requiredStoreFundingAllocations(payload.allocations, "storeOfferQuote"),
       idempotencyKey: idempotencyKey(payload, "storeOfferQuote"),
     },
   }),
@@ -270,10 +364,7 @@ const ROUTE_BUILDERS = Object.freeze({
     method: "POST",
     path: "/players/me/store/offer-purchases",
     payload: {
-      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeOfferPurchase"),
       quoteKey: requiredPublicKey(payload.quoteKey, /^quote_[0-9a-f]{32}$/u, "quoteKey", "storeOfferPurchase"),
-      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeOfferPurchase"),
-      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeOfferPurchase"),
       idempotencyKey: idempotencyKey(payload, "storeOfferPurchase"),
     },
   }),

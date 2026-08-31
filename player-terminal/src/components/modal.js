@@ -12,6 +12,56 @@ function quoteExpiry(value) {
   }).format(new Date(timestamp));
 }
 
+function exactStoreAmount(currencyCode, value) {
+  return `${escapeHtml(currencyCode || "—")} ${escapeHtml(typeof value === "string" ? value : "—")}`;
+}
+
+function renderStoreFundingLines(lines, kind) {
+  return `<div class="player-terminal-store-funding-evidence-lines">${(Array.isArray(lines) ? lines : []).map((line) => `<article>
+    <small>ALLOCATION ${escapeHtml(line.lineNumber)} · ${escapeHtml(line.sourceAccountKey)}</small>
+    <strong>${exactStoreAmount(line.sourceCurrencyCode, line.sourceDebit)} → ${exactStoreAmount(line.targetCurrencyCode, line.targetContribution)}</strong>
+    <dl><div><dt>REFERENCE RATE</dt><dd>${escapeHtml(line.referenceRate)}</dd></div><div><dt>CUSTOMER RATE</dt><dd>${escapeHtml(line.customerRate)}</dd></div><div><dt>EFFECTIVE RATE</dt><dd>${escapeHtml(line.effectiveRate)}</dd></div><div><dt>SPREAD</dt><dd>${escapeHtml(line.spreadRate)}</dd></div></dl>
+    ${kind === "quote" ? `<p>${escapeHtml(line.roundingDisclosure)}</p>` : ""}
+  </article>`).join("")}</div>`;
+}
+
+function renderStoreFundingQuote(quote) {
+  if (!quote?.fundingQuote) return "";
+  const funding = quote.fundingQuote;
+  return `<section class="player-terminal-store-funding-evidence" aria-label="Immutable funding quote">
+    <header><div><small>BANKING FX FUNDING QUOTE</small><strong>${exactStoreAmount(funding.targetCurrencyCode, funding.targetAmount)}</strong></div>${renderStatusPill(funding.requiresFx ? "RETAIL FX" : "SAME CURRENCY", funding.requiresFx ? "purple" : "green")}</header>
+    <dl class="player-terminal-connector-meta"><div><dt>FUNDING QUOTE</dt><dd><code>${escapeHtml(funding.quoteKey)}</code></dd></div><div><dt>FIXING</dt><dd><code>${escapeHtml(funding.fixingKey)}</code></dd></div><div><dt>POLICY</dt><dd>${escapeHtml(funding.policyVersion)}</dd></div><div><dt>FUNDING EXPIRES</dt><dd>${escapeHtml(quoteExpiry(funding.expiresAt))}</dd></div></dl>
+    ${renderStoreFundingLines(funding.lines, "quote")}
+  </section>`;
+}
+
+function renderStoreFundingReceipt(receipt) {
+  if (!receipt?.fundingReceipt) return "";
+  const funding = receipt.fundingReceipt;
+  return `<section class="player-terminal-store-funding-evidence" aria-label="Immutable funding receipt">
+    <header><div><small>IMMUTABLE BANKING FUNDING RECEIPT</small><strong>${exactStoreAmount(funding.targetCurrencyCode, funding.targetAmount)}</strong></div>${renderStatusPill("SETTLED", "green")}</header>
+    <dl class="player-terminal-connector-meta"><div><dt>FUNDING RECEIPT</dt><dd><code>${escapeHtml(funding.receiptKey)}</code></dd></div><div><dt>BANK TRANSACTION</dt><dd><code>${escapeHtml(funding.bankTransactionKey)}</code></dd></div><div><dt>TARGET ACCOUNT</dt><dd><code>${escapeHtml(funding.targetAccountKey)}</code></dd></div><div><dt>RESERVE DRAW</dt><dd>${exactStoreAmount(funding.targetCurrencyCode, funding.targetReserveDrawAmount)}</dd></div></dl>
+    ${renderStoreFundingLines(funding.lines, "receipt")}
+  </section>`;
+}
+
+function renderStoreFundingAllocation(modal) {
+  const accounts = Array.isArray(modal.fundingAccounts) ? modal.fundingAccounts : [];
+  const draft = Array.isArray(modal.allocationDraft) ? modal.allocationDraft : [];
+  const targetCurrencyCode = modal.currencyCode || "—";
+  const precision = Number.isSafeInteger(modal.targetPrecision) ? modal.targetPrecision : 2;
+  const step = precision === 0 ? "1" : `0.${"0".repeat(Math.max(0, precision - 1))}1`;
+  const rows = [0, 1, 2].map((index) => {
+    const selected = String(draft[index]?.sourceAccountKey || "");
+    const nextSelected = String(draft[index + 1]?.sourceAccountKey || "");
+    const final = Boolean(selected && !nextSelected);
+    const disabled = index > 0 && !draft[index - 1]?.sourceAccountKey;
+    const options = accounts.map((account) => `<option value="${escapeHtml(account.accountKey)}" ${selected === account.accountKey ? "selected" : ""}>${escapeHtml(account.currencyCode)} Checking · ${escapeHtml(formatCurrency(account.availableAmount, account.currencyCode))} available · ${escapeHtml(account.accountKey)}</option>`).join("");
+    return `<div class="player-terminal-store-funding-row" data-player-store-funding-row="${index}"><label>ACCOUNT ${index + 1}<select name="sourceAccountKey" data-player-store-funding-account ${disabled ? "disabled" : ""}><option value="">${index === 0 ? "Choose Checking account" : "No additional account"}</option>${options}</select></label><label><span data-player-store-funding-allocation-label>${final ? `Final ${escapeHtml(targetCurrencyCode)} remainder is derived by the server` : selected ? `Fixed ${escapeHtml(targetCurrencyCode)} contribution` : "Optional additional Checking account"}</span><input name="targetAmount" data-player-store-funding-amount inputmode="decimal" step="${escapeHtml(step)}" value="${final ? "" : escapeHtml(draft[index]?.targetAmount || "")}" placeholder="${final ? "SERVER REMAINDER" : "Fixed target amount"}" ${!selected || final ? "disabled" : "required"} /></label></div>`;
+  }).join("");
+  return `<section class="player-terminal-store-funding-allocation" aria-labelledby="storeFundingAllocationTitle"><header><div><small>BANKING FX</small><strong id="storeFundingAllocationTitle">Checking allocation</strong></div>${renderStatusPill(accounts.length ? "EVIDENCE READY" : "UNAVAILABLE", accounts.length ? "cyan" : "amber")}</header><p>Choose one to three canonical Checking accounts in order. Enter fixed target-currency contributions for every non-final account; the server derives the final exact remainder.</p><div>${rows}</div><strong class="player-terminal-store-funding-fixed-total" data-player-store-funding-fixed-total>${escapeHtml(targetCurrencyCode)} 0 fixed · final remainder server-derived</strong></section>`;
+}
+
 function renderStorePurchaseModal(modal) {
   const item = modal.item || {};
   const offer = modal.offer || {};
@@ -24,6 +74,9 @@ function renderStorePurchaseModal(modal) {
 
   if (stage === "receipt") {
     const total = receipt.totalPrice ?? receipt.finalTotalPrice ?? quote.finalTotalPrice ?? 0;
+    const remainingSellerQuantity = Number.isSafeInteger(receipt.remainingListedQuantity)
+      ? receipt.remainingListedQuantity
+      : receipt.remainingSellerQuantity;
     const refreshing = modal.refreshState === "refreshing";
     const replayed = receipt.replayed === true || receipt.alreadyCompleted === true;
     const statusLabel = modal.refreshWarning
@@ -55,8 +108,10 @@ function renderStorePurchaseModal(modal) {
             <div><dt>RECEIPT KEY</dt><dd><code>${escapeHtml(receipt.receiptKey || "Recorded")}</code></dd></div>
             <div><dt>QUOTE KEY</dt><dd><code>${escapeHtml(receipt.quoteKey || quote.quoteKey || "—")}</code></dd></div>
             ${receipt.offerKey ? `<div><dt>OFFER KEY</dt><dd><code>${escapeHtml(receipt.offerKey)}</code></dd></div>` : ""}
-            ${Number.isSafeInteger(receipt.remainingListedQuantity) ? `<div><dt>SELLER STOCK LEFT</dt><dd>${escapeHtml(receipt.remainingListedQuantity)}</dd></div>` : ""}
+            ${receipt.inventoryTransactionKey ? `<div><dt>INVENTORY TRANSACTION</dt><dd><code>${escapeHtml(receipt.inventoryTransactionKey)}</code></dd></div>` : ""}
+            ${Number.isSafeInteger(remainingSellerQuantity) ? `<div><dt>SELLER STOCK LEFT</dt><dd>${escapeHtml(remainingSellerQuantity)}</dd></div>` : ""}
           </dl>
+          ${renderStoreFundingReceipt(receipt)}
         </div>
         <footer class="player-terminal-modal-footer">${refreshRetry}<button class="player-terminal-secondary-button" type="button" data-route="inventory" data-player-local-action="close-modal">${icon("inventory")} Open inventory</button><button class="player-terminal-primary-button" type="button" data-player-local-action="close-modal">Close receipt</button></footer>
       </section>
@@ -81,6 +136,7 @@ function renderStorePurchaseModal(modal) {
             <div><dt>QUOTE EXPIRES</dt><dd>${escapeHtml(quoteExpiry(quote.expiresAt))}</dd></div>
             <div><dt>QUOTE KEY</dt><dd><code>${escapeHtml(quote.quoteKey || "—")}</code></dd></div>
           </dl>
+          ${renderStoreFundingQuote(quote)}
           ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-store-edit ${processing ? "disabled" : ""}>${icon("edit")} Change quantity</button><button class="player-terminal-primary-button" type="button" data-player-store-confirm ${processing ? "disabled" : ""}>${icon("cart")} ${processing ? "Completing purchase…" : "Confirm purchase"}</button></footer>
@@ -101,9 +157,10 @@ function renderStorePurchaseModal(modal) {
           <div><dt>OWNED</dt><dd>${escapeHtml(item.owned ?? 0)}</dd></div>
         </dl>
         <label>QUANTITY<input data-player-store-quantity type="number" min="1" max="${escapeHtml(Math.max(1, Number(offer.availableQuantity ?? item.stock) || 1))}" step="1" inputmode="numeric" value="${escapeHtml(modal.quantity || 1)}" required /></label>
+        ${renderStoreFundingAllocation(modal)}
         ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
       </div>
-      <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-local-action="close-modal">Cancel</button><button class="player-terminal-primary-button" type="button" data-player-store-review ${offer.purchasable === false || offer.purchasability === "unsupported" ? "disabled" : ""}>${icon("cart")} Request quote</button></footer>
+      <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-local-action="close-modal">Cancel</button><button class="player-terminal-primary-button" type="button" data-player-store-review ${modal.fundingReady === false || offer.purchasable === false ? "disabled" : ""}>${icon("cart")} Request funded quote</button></footer>
     </section>
   </div>`;
 }

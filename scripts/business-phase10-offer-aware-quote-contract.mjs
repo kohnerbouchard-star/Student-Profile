@@ -90,6 +90,9 @@ requireTokens(text.repository, "repository", [
   "SupabaseStoreOfferQuoteRepository",
   "create_business_store_offer_quote_v2",
   "store_offer_quote_idempotency_conflict",
+  "store_offer_quote_offer_unavailable",
+]);
+forbidTokens(text.repository, "repository", [
   "store_offer_quote_cross_currency_unsupported",
 ]);
 requireTokens(text.index, "Store exports", [

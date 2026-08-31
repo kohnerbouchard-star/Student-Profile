@@ -16,7 +16,7 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
     dependent: Object.freeze(["businessTreasury"]),
   }),
   contracts: Object.freeze({ required: Object.freeze(["contracts"]), optional: Object.freeze([]) }),
-  store: Object.freeze({ required: Object.freeze(["store"]), optional: Object.freeze(["banking", "inventory"]) }),
+  store: Object.freeze({ required: Object.freeze(["store"]), optional: Object.freeze(["banking", "bankingFx", "inventory"]) }),
   marketplace: Object.freeze({ required: Object.freeze(["marketplace"]), optional: Object.freeze(["inventory", "banking", "bankingFx"]) }),
   inventory: Object.freeze({ required: Object.freeze(["inventory"]), optional: Object.freeze([]) }),
   crafting: Object.freeze({ required: Object.freeze(["crafting"]), optional: Object.freeze(["inventory"]) }),
@@ -57,8 +57,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   ]),
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking", "bankingFx"]),
   marketWatchlist: Object.freeze(["market"]),
-  storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
-  storeOfferPurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
+  storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
+  storeOfferPurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
   marketplaceActivate: Object.freeze(["marketplace", "inventory"]),
   marketplacePurchase: Object.freeze([]),
   marketplaceSettlement: Object.freeze(["dashboard", "marketplace", "inventory", "banking", "bankingFx"]),
@@ -93,6 +93,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
 
 export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set([
   ...Object.keys(WRITE_INVALIDATIONS),
+  "storeQuote",
   "storeOfferQuote",
 ]));
 

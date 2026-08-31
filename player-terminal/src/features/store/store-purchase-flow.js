@@ -3,20 +3,21 @@ import { isEndpointEnabled } from "../../api/capabilities.js";
 import { renderModal } from "../../components/modal.js";
 import { focusFirstInteractive, setButtonProcessing } from "../../core/dom.js";
 import {
-  createSeededStoreOffer,
   dispatchStoreSessionInvalid,
   quoteExpired,
   resolveStorePurchaseFailure,
   validateBusinessOfferQuote,
   validateBusinessOfferReceipt,
-  validateSeededQuote,
-  validateSeededReceipt,
+  validateSystemOfferQuote,
+  validateSystemOfferReceipt,
 } from "./store-purchase-contract.js";
+import { convergeCommittedStorePurchase, refreshStaleStoreOffer } from "./store-purchase-convergence.js";
 import {
-  convergeCommittedStorePurchase,
-  refreshStaleStoreOffer,
-} from "./store-purchase-convergence.js";
-
+  handleStoreFundingModalKeyDown,
+  storeFundingAvailability,
+  storeFundingRequestFromModal,
+  syncStoreFundingForm,
+} from "./store-funding-intent.js";
 export {
   dispatchStoreSessionInvalid,
   resolveStorePurchaseFailure,
@@ -24,15 +25,8 @@ export {
   validateBusinessOfferQuote,
   validateImmutableBusinessOfferReceipt,
 } from "./store-purchase-contract.js";
-
 function storeModalElement(root) {
-  const dialog = root?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
-  return dialog?.closest(".player-terminal-modal-backdrop") || null;
-}
-
-function focusableElements(root) {
-  return [...root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-    .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+  return root?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]')?.closest(".player-terminal-modal-backdrop") || null;
 }
 
 export function installStorePurchaseFlow({ mount, terminal, config }) {
@@ -113,6 +107,11 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const modal = template.content.firstElementChild;
     if (!modal) return;
     overlayHost.append(modal);
+    if (transaction.stage === "select") syncStoreFundingForm(modal, {
+      accounts: transaction.fundingAccounts,
+      targetCurrencyCode: transaction.currencyCode,
+      targetPrecision: transaction.targetPrecision,
+    });
     const root = applicationRoot();
     if (root) {
       root.inert = true;
@@ -147,11 +146,15 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const item = state.data?.store?.items?.find((candidate) => String(candidate.itemKey || candidate.id) === String(itemId));
     if (!item) return;
     const offerKey = String(button.dataset.playerStoreOffer || "");
-    const offer = (Array.isArray(item.offers) && offerKey
+    const offer = Array.isArray(item.offers) && offerKey
       ? item.offers.find((candidate) => candidate.offerKey === offerKey)
-      : null) || createSeededStoreOffer(item);
-    const purchasability = String(button.dataset.playerStorePurchaseMode || offer.purchasability || "seeded_offer");
-    if (!offer.purchasable || purchasability === "unsupported") return;
+      : null;
+    if (!offer || !/^sof_[0-9a-f]{32}$/u.test(offer.offerKey)) return;
+    const purchasability = String(button.dataset.playerStorePurchaseMode || offer.purchasability || "system_offer");
+    if (!offer.purchasable || !new Set(["system_offer", "business_offer"]).has(purchasability)) return;
+    const currencyCode = String(offer.currencyCode || item.currencyCode || "").trim().toUpperCase();
+    const funding = storeFundingAvailability(state.data, currencyCode);
+    if (!funding.ready) return;
     cancelActiveRequest();
     opener = button;
     openerItemKey = String(itemId || "");
@@ -169,7 +172,12 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       refreshWarning: "",
       invalidatedResources: [],
       processing: false,
-      currencyCode: offer.currencyCode || state.data?.session?.currencyCode || "ECO",
+      currencyCode,
+      fundingReady: true,
+      fundingAccounts: funding.accounts,
+      targetPrecision: funding.targetPrecision,
+      allocationDraft: Object.freeze([{ sourceAccountKey: funding.accounts[0].accountKey, targetAmount: null }]),
+      fundingIntent: null,
     };
     renderTransaction();
   }
@@ -177,16 +185,15 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   async function requestQuote(button) {
     const current = transaction;
     if (!current) return;
-    const input = storeModalElement(overlayHost)?.querySelector("[data-player-store-quantity]");
-    const quantity = Number(input?.value);
-    const stock = Number(current.offer?.availableQuantity ?? current.item?.stock);
-    if (!current.offer?.purchasable || current.purchaseMode === "unsupported") {
+    const request = storeFundingRequestFromModal(storeModalElement(overlayHost), current);
+    const quantity = request.quantity;
+    if (!current.offer?.purchasable || !new Set(["system_offer", "business_offer"]).has(current.purchaseMode)) {
       transaction = { ...current, error: "This seller offer is no longer available. Refresh the Store and choose another offer." };
       renderTransaction();
       return;
     }
-    if (!Number.isSafeInteger(quantity) || quantity < 1 || !Number.isSafeInteger(stock) || quantity > stock) {
-      transaction = { ...current, error: `Enter a whole-number quantity between 1 and ${Math.max(1, stock || 1)}.` };
+    if (request.error || !request.intent) {
+      transaction = { ...current, quantity, allocationDraft: request.allocationDraft, error: request.error };
       renderTransaction();
       return;
     }
@@ -201,15 +208,18 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
           offerKey: current.offer.offerKey,
           quantity,
           expectedVersion: current.offer.version,
+          allocations: request.intent.allocations,
         }, {}, { signal })
         : await api.execute("storeQuote", {
-          itemKey: current.item.itemKey || current.item.id,
+          offerKey: current.offer.offerKey,
           quantity,
+          expectedVersion: current.offer.version,
+          allocations: request.intent.allocations,
         }, {}, { signal });
       if (!requestIsCurrent(requestGeneration)) return;
       const quote = businessOffer
-        ? validateBusinessOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity })
-        : validateSeededQuote(operation.result, { item: current.item, quantity });
+        ? validateBusinessOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity, allocationIntent: request.intent })
+        : validateSystemOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity, allocationIntent: request.intent });
       transaction = {
         ...current,
         stage: "review",
@@ -218,7 +228,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         receipt: null,
         error: "",
         refreshState: "idle",
-        refreshWarning: "",
+        allocationDraft: request.allocationDraft,
+        fundingIntent: request.intent,
       };
       renderTransaction();
     } catch (error) {
@@ -230,7 +241,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         dispatchStoreSessionInvalid(error, config);
         return;
       }
-      transaction = { ...current, quantity, error: failure.message };
+      transaction = { ...current, quantity, allocationDraft: request.allocationDraft, error: failure.message };
       renderTransaction();
     }
   }
@@ -262,10 +273,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       api.setSession(config);
       if (current.purchaseMode === "business_offer") {
         operation = await api.execute("storeOfferPurchase", {
-          offerKey: quote.offerKey,
           quoteKey: quote.quoteKey,
-          quantity: quote.quantity,
-          expectedVersion: quote.offerVersion,
         }, {}, { signal });
         if (!requestIsCurrent(requestGeneration)) return;
         receipt = validateBusinessOfferReceipt(operation.result, {
@@ -276,10 +284,9 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       } else {
         operation = await api.execute("storePurchase", {
           quoteKey: quote.quoteKey,
-          clientSubmittedAt: new Date().toISOString(),
         }, {}, { signal });
         if (!requestIsCurrent(requestGeneration)) return;
-        receipt = validateSeededReceipt(operation.result, { item: current.item, quote });
+        receipt = validateSystemOfferReceipt(operation.result, { item: current.item, offer: current.offer, quote });
       }
     } catch (error) {
       if (!requestIsCurrent(requestGeneration)) return;
@@ -313,6 +320,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
             ? "Authoritative Store refresh pending."
             : "",
           processing: false,
+          fundingIntent: null,
         };
       } else {
         transaction = { ...current, error: failure.message, processing: false };
@@ -332,7 +340,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       invalidatedResources: Object.freeze([
         ...new Set(Array.isArray(operation.invalidatedResources)
           ? operation.invalidatedResources
-          : ["dashboard", "store", "inventory", "banking"]),
+          : ["dashboard", "store", "inventory", "banking", "bankingFx"]),
       ]),
     };
     renderTransaction();
@@ -405,8 +413,21 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   function editQuantity() {
     if (!transaction) return;
     cancelActiveRequest();
-    transaction = { ...transaction, stage: "select", quote: null, receipt: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
+    transaction = { ...transaction, stage: "select", quote: null, receipt: null, fundingIntent: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
     renderTransaction();
+  }
+
+  function handleFundingEdit(event) {
+    const modal = storeModalElement(overlayHost);
+    if (!modal || transaction?.stage !== "select" || !event.target.matches?.("[data-player-store-quantity], [data-player-store-funding-account], [data-player-store-funding-amount]")) return;
+    const funding = syncStoreFundingForm(modal, {
+      accounts: transaction.fundingAccounts,
+      targetCurrencyCode: transaction.currencyCode,
+      targetPrecision: transaction.targetPrecision,
+    });
+    const quantity = Number(modal.querySelector("[data-player-store-quantity]")?.value);
+    transaction = { ...transaction, quantity, allocationDraft: funding.allocationDraft, quote: null, receipt: null, fundingIntent: null, error: "" };
+    modal.querySelector(".player-terminal-form-error")?.remove();
   }
 
   function handleClick(event) {
@@ -453,37 +474,13 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     if (confirm) void confirmPurchase(confirm);
   }
 
-  function handleKeyDown(event) {
-    const modal = storeModalElement(overlayHost);
-    if (!modal) return;
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      closeModal();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const focusables = focusableElements(modal);
-    if (!focusables.length) {
-      event.preventDefault();
-      modal.querySelector('[aria-labelledby="storePurchaseModalTitle"]')
-        ?.focus({ preventScroll: true });
-      return;
-    }
-    const first = focusables[0];
-    const last = focusables.at(-1);
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
+  const handleKeyDown = (event) => handleStoreFundingModalKeyDown(event, storeModalElement(overlayHost), closeModal);
 
   mount.addEventListener("click", handleClick, true);
   overlayHost.addEventListener("click", handleClick, true);
   overlayHost.addEventListener("keydown", handleKeyDown, true);
+  overlayHost.addEventListener("input", handleFundingEdit, true);
+  overlayHost.addEventListener("change", handleFundingEdit, true);
 
   return {
     destroy() {
@@ -491,6 +488,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       mount.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("keydown", handleKeyDown, true);
+      overlayHost.removeEventListener("input", handleFundingEdit, true);
+      overlayHost.removeEventListener("change", handleFundingEdit, true);
       closeModal({ restoreFocus: false, force: true });
       overlayHost.remove();
     },

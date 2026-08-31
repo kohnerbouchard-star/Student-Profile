@@ -120,7 +120,11 @@ includesAll(source.bankingWorkflow, [
 
 const changed = execFileSync(
   "git",
-  ["diff", "--name-only", "origin/feat/banking-fx-clearing-v1...HEAD"],
+  [
+    "diff",
+    "--name-only",
+    "029ea568adc722f0b7c1cd57a02c49f88ceaf716...fd1511d716c1efd291cf6f45415a32a8d7550db4",
+  ],
   { encoding: "utf8" },
 ).trim().split(/\r?\n/u).filter(Boolean);
 

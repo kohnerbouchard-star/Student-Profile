@@ -79,11 +79,11 @@ export async function convergeCommittedStorePurchase({
     const refresh = await terminal.refreshResources(current.invalidatedResources);
     if (!requestIsCurrent(requestGeneration)) return null;
     if (Object.keys(refresh?.errors || {}).length) {
-      warnings.push("The purchase completed, but some current balances, Store stock, or inventory could not be refreshed.");
+      warnings.push("The purchase completed, but some current Checking, Banking FX, Store stock, or inventory evidence could not be refreshed.");
     }
   } catch {
     if (!requestIsCurrent(requestGeneration)) return null;
-    warnings.push("The purchase completed, but current balances and inventory could not be refreshed. Use Retry refresh to safely try those reads again.");
+    warnings.push("The purchase completed, but current Checking, Banking FX, Store, and inventory evidence could not be refreshed. Use Retry refresh to safely try those reads again.");
   }
   return warnings;
 }

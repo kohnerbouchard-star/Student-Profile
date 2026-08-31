@@ -460,7 +460,11 @@ assert.ok(!/deploy|production sql|schedule|cron/iu.test(source.workflow), "C4 wo
 
 const changed = execFileSync(
   "git",
-  ["diff", "--name-only", "origin/feat/multicurrency-stock-funding-v1...HEAD"],
+  [
+    "diff",
+    "--name-only",
+    "18fde31be5e1599c7d9a65d681b248fcb4756dc4...51ffd008ed84f6a9acd029c8941b3f9b40733735",
+  ],
   { encoding: "utf8" },
 ).trim().split(/\r?\n/u).filter(Boolean);
 for (const path of changed) {

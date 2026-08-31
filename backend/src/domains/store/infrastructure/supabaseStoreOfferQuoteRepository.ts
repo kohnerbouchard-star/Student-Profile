@@ -67,7 +67,7 @@ function mapStoreOfferQuoteErrorCode(message: string | undefined): string {
     return "store_offer_quote_self_purchase_forbidden";
   }
   if (normalized.includes("CROSS_CURRENCY")) {
-    return "store_offer_quote_cross_currency_unsupported";
+    return "store_offer_quote_offer_unavailable";
   }
   if (normalized.includes("INVENTORY_RESERVED")) {
     return "store_offer_quote_inventory_reserved";

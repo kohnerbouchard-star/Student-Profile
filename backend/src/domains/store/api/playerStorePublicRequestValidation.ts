@@ -1,10 +1,13 @@
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
+  PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN,
+  type PlayerStoreFundingAllocationInput,
+} from "../contracts/playerStoreFundingPublicContracts.ts";
+import {
   PLAYER_STORE_OFFER_KEY_PATTERN,
   PLAYER_STORE_OFFER_QUOTE_KEY_PATTERN,
 } from "../contracts/playerStoreOfferPublicContracts.ts";
 import {
-  PLAYER_STORE_ITEM_KEY_PATTERN,
   PLAYER_STORE_QUOTE_KEY_PATTERN,
   PlayerStorePublicError,
 } from "../contracts/playerStorePublicContracts.ts";
@@ -62,7 +65,13 @@ export function validatePlayerStorePublicMethodAndBody(
     if (method !== "POST") {
       throw methodNotAllowed("Use POST to create a Store quote.");
     }
-    assertAllowedFields(body, ["itemKey", "quantity"]);
+    assertAllowedFields(body, [
+      "offerKey",
+      "quantity",
+      "expectedVersion",
+      "allocations",
+      "idempotencyKey",
+    ]);
     return;
   }
   if (route.kind === "purchases") {
@@ -78,7 +87,6 @@ export function validatePlayerStorePublicMethodAndBody(
     assertAllowedFields(body, [
       "quoteKey",
       "idempotencyKey",
-      "clientSubmittedAt",
     ]);
     return;
   }
@@ -92,6 +100,7 @@ export function validatePlayerStorePublicMethodAndBody(
       "offerKey",
       "quantity",
       "expectedVersion",
+      "allocations",
       "idempotencyKey",
     ]);
     return;
@@ -103,12 +112,8 @@ export function validatePlayerStorePublicMethodAndBody(
       );
     }
     assertAllowedFields(body, [
-      "offerKey",
       "quoteKey",
-      "quantity",
-      "expectedVersion",
       "idempotencyKey",
-      "clientSubmittedAt",
     ]);
     return;
   }
@@ -116,16 +121,6 @@ export function validatePlayerStorePublicMethodAndBody(
     throw methodNotAllowed("Use GET to load a Business Store offer receipt.");
   }
   assertAllowedFields(body, []);
-}
-
-export function readPlayerStoreItemKey(value: unknown): string {
-  const itemKey = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (!PLAYER_STORE_ITEM_KEY_PATTERN.test(itemKey)) {
-    throw invalidRequest(
-      "itemKey must be 1 to 64 lowercase letters, numbers, underscores, or hyphens.",
-    );
-  }
-  return itemKey;
 }
 
 export function readPlayerStoreQuoteKey(value: unknown): string {
@@ -191,33 +186,53 @@ export function readPlayerStoreIdempotencyKey(value: unknown): string {
   return key;
 }
 
-export function readPlayerStoreOptionalTimestamp(
+export function readPlayerStoreFundingAllocations(
   value: unknown,
-): string | null {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+): readonly PlayerStoreFundingAllocationInput[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
     throw invalidRequest(
-      "clientSubmittedAt must be an ISO timestamp when provided.",
+      "allocations must contain one to three ordered Checking accounts.",
     );
   }
-  return new Date(value).toISOString();
-}
 
-export function readPlayerStoreStrictOptionalTimestamp(
-  value: unknown,
-): string | null {
-  if (value === undefined || value === null || value === "") return null;
-  if (
-    typeof value !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value) ||
-    !Number.isFinite(Date.parse(value)) ||
-    new Date(value).toISOString() !== value
-  ) {
-    throw invalidRequest(
-      "clientSubmittedAt must be a canonical ISO timestamp when provided.",
-    );
-  }
-  return value;
+  const accountKeys = new Set<string>();
+  return Object.freeze(value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw invalidRequest(`allocations[${index}] must be an object.`);
+    }
+    assertAllowedAllocationFields(entry, index);
+
+    const sourceAccountKey = typeof entry.sourceAccountKey === "string"
+      ? entry.sourceAccountKey.trim()
+      : "";
+    if (!PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN.test(sourceAccountKey)) {
+      throw invalidRequest(
+        `allocations[${index}].sourceAccountKey is invalid.`,
+      );
+    }
+    if (accountKeys.has(sourceAccountKey)) {
+      throw invalidRequest("allocations must use unique Checking accounts.");
+    }
+    accountKeys.add(sourceAccountKey);
+
+    const finalAllocation = index === value.length - 1;
+    if (finalAllocation) {
+      if (entry.targetAmount !== null) {
+        throw invalidRequest(
+          "The final funding allocation must have targetAmount null.",
+        );
+      }
+      return Object.freeze({ sourceAccountKey, targetAmount: null });
+    }
+
+    const targetAmount = canonicalPositiveDecimal(entry.targetAmount);
+    if (!targetAmount) {
+      throw invalidRequest(
+        `allocations[${index}].targetAmount must be a positive canonical decimal string.`,
+      );
+    }
+    return Object.freeze({ sourceAccountKey, targetAmount });
+  }));
 }
 
 async function readEmptyBody(
@@ -271,6 +286,35 @@ function assertAllowedFields(
       `Player Store request does not accept field: ${unexpected}.`,
     );
   }
+}
+
+function assertAllowedAllocationFields(
+  allocation: Record<string, unknown>,
+  index: number,
+): void {
+  const keys = Object.keys(allocation);
+  if (
+    keys.length !== 2 ||
+    !Object.hasOwn(allocation, "sourceAccountKey") ||
+    !Object.hasOwn(allocation, "targetAmount")
+  ) {
+    throw invalidRequest(
+      `allocations[${index}] must contain only sourceAccountKey and targetAmount.`,
+    );
+  }
+}
+
+function canonicalPositiveDecimal(value: unknown): string | null {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (
+    !/^(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?$/u.test(candidate) ||
+    !/[1-9]/u.test(candidate)
+  ) {
+    return null;
+  }
+  const [whole, fraction = ""] = candidate.split(".");
+  const canonicalFraction = fraction.replace(/0+$/u, "");
+  return canonicalFraction ? `${whole}.${canonicalFraction}` : whole;
 }
 
 function invalidRequest(message: string): PlayerStorePublicError {

@@ -9,7 +9,6 @@ import {
   BUYER_ID,
   CATALOG_ITEM_KEY,
   catalogGroup,
-  COUNTRY_PROFILE_ID,
   FakeClient,
   GAME_ID,
   GAME_ITEM_ID,
@@ -45,63 +44,50 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
         functionName: "read_store_catalog_offer_groups_v2",
         args: { p_game_session_id: GAME_ID },
       }]);
-      assertEquals(client.queries.length, 6);
-      assertEquals(client.queries[0].table, "player_country_assignments");
-      assertEquals(client.queries[0].selection, "country_profile_id");
-      assertEquals(client.queries[0].filters, [
-        ["game_session_id", GAME_ID],
-        ["player_id", BUYER_ID],
-        ["status", "active"],
-      ]);
-      assertEquals(client.queries[1].table, "country_profiles");
-      assertEquals(client.queries[1].selection, "currency_code");
-      assertEquals(client.queries[1].filters, [
-        ["id", COUNTRY_PROFILE_ID],
-        ["status", "active"],
-      ]);
-      assertEquals(client.queries[2].table, "economic_parties");
+      assertEquals(client.queries.length, 4);
+      assertEquals(client.queries[0].table, "economic_parties");
       assertEquals(
-        client.queries[2].selection,
+        client.queries[0].selection,
         "public_key,business:business_entities!economic_parties_business_scope_fk(id,public_key,legal_name,owner_player_id,status,currency_code)",
       );
-      assertEquals(client.queries[2].filters, [
+      assertEquals(client.queries[0].filters, [
         ["game_session_id", GAME_ID],
         ["party_kind", "business"],
         ["status", "active"],
       ]);
-      assertEquals(client.queries[2].inFilters, [
+      assertEquals(client.queries[0].inFilters, [
         ["public_key", [BUSINESS_PARTY_KEY]],
       ]);
-      assertEquals(client.queries[3].table, "business_ownership_positions");
-      assertEquals(client.queries[3].selection, "business_id");
-      assertEquals(client.queries[3].filters, [
+      assertEquals(client.queries[1].table, "business_ownership_positions");
+      assertEquals(client.queries[1].selection, "business_id");
+      assertEquals(client.queries[1].filters, [
         ["game_session_id", GAME_ID],
         ["player_id", BUYER_ID],
         ["status", "active"],
       ]);
-      assertEquals(client.queries[3].inFilters, [
+      assertEquals(client.queries[1].inFilters, [
         ["business_id", [BUSINESS_ID]],
       ]);
-      assertEquals(client.queries[4].table, "store_seller_offers");
+      assertEquals(client.queries[2].table, "store_seller_offers");
       assertEquals(
-        client.queries[4].selection,
+        client.queries[2].selection,
         "public_key,inventory_account_id,game_item_id",
       );
-      assertEquals(client.queries[4].filters, [
+      assertEquals(client.queries[2].filters, [
         ["game_session_id", GAME_ID],
         ["seller_kind", "business"],
         ["status", "active"],
       ]);
-      assertEquals(client.queries[4].inFilters, [
+      assertEquals(client.queries[2].inFilters, [
         ["public_key", [BUSINESS_OFFER_KEY]],
       ]);
-      assertEquals(client.queries[5].table, "inventory_holdings");
+      assertEquals(client.queries[3].table, "inventory_holdings");
       assertEquals(
-        client.queries[5].selection,
+        client.queries[3].selection,
         "inventory_account_id,game_item_id,quantity_reserved",
       );
-      assertEquals(client.queries[5].filters, [["game_session_id", GAME_ID]]);
-      assertEquals(client.queries[5].inFilters, [
+      assertEquals(client.queries[3].filters, [["game_session_id", GAME_ID]]);
+      assertEquals(client.queries[3].inFilters, [
         ["inventory_account_id", [INVENTORY_ACCOUNT_ID]],
       ]);
       assertEquals(products, [{
@@ -114,8 +100,8 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
         currencyCode: "ECO",
         bestOfferKey: BUSINESS_OFFER_KEY,
         bestUnitPrice: 5,
-        totalAvailableQuantity: 30,
-        sellerCount: 2,
+        totalAvailableQuantity: 35,
+        sellerCount: 3,
         offerCount: 3,
         offers: [
           {
@@ -144,7 +130,7 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
             currencyCode: "ECO",
             availableQuantity: 20,
             status: "active",
-            purchasability: "seeded_offer",
+            purchasability: "system_offer",
             purchasable: true,
             version: 1,
           },
@@ -159,8 +145,8 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
             currencyCode: "ECO",
             availableQuantity: 5,
             status: "active",
-            purchasability: "unsupported",
-            purchasable: false,
+            purchasability: "system_offer",
+            purchasable: true,
             version: 2,
           },
         ],
@@ -171,39 +157,29 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
   );
 
   Deno.test(
-    "Store-offer public catalog disables self-owned, non-active, and currency-mismatched Business offers without leaking why",
+    "Store-offer public catalog disables self-owned, non-active, seller-mismatched, and reserved Business offers without leaking why",
     async () => {
       const cases = [
         {
           name: "self-owned",
           identity: businessIdentity({ ownerPlayerId: BUYER_ID }),
-          buyerCurrencyCode: "ECO",
         },
         {
           name: "non-active",
           identity: businessIdentity({ status: "distressed" }),
-          buyerCurrencyCode: "ECO",
         },
         {
           name: "seller-currency-mismatch",
           identity: businessIdentity({ currencyCode: "USD" }),
-          buyerCurrencyCode: "ECO",
-        },
-        {
-          name: "buyer-currency-mismatch",
-          identity: businessIdentity(),
-          buyerCurrencyCode: "USD",
         },
         {
           name: "listing-reserved",
           identity: businessIdentity(),
-          buyerCurrencyCode: "ECO",
           quantityReserved: 1,
         },
         {
           name: "active-co-owner",
           identity: businessIdentity(),
-          buyerCurrencyCode: "ECO",
           coOwner: true,
         },
       ] as const;
@@ -212,7 +188,6 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
         const client = new FakeClient({
           rpc: { read_store_catalog_offer_groups_v2: [catalogGroup()] },
           identities: [testCase.identity],
-          countryProfile: { currency_code: testCase.buyerCurrencyCode },
           holdingReservations: [{
             inventory_account_id: INVENTORY_ACCOUNT_ID,
             game_item_id: GAME_ITEM_ID,
@@ -236,8 +211,8 @@ export function registerPlayerStoreOfferPublicCatalogTests(): void {
         assertEquals(businessOffer.purchasable, false);
         assertEquals(product.bestOfferKey, SEEDED_OFFER_KEY);
         assertEquals(product.bestUnitPrice, 6);
-        assertEquals(product.totalAvailableQuantity, 20);
-        assertEquals(product.sellerCount, 1);
+        assertEquals(product.totalAvailableQuantity, 25);
+        assertEquals(product.sellerCount, 2);
         assertEquals(product.offerCount, 3);
         assertPrivateFieldsAbsent(product);
         assertEquals(JSON.stringify(product).includes(testCase.name), false);

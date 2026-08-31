@@ -63,6 +63,9 @@ export function verifyAuthority({
   const allowedPaths = uniqueStrings(manifest.allowedPaths, "allowedPaths");
   const requiredFiles = uniqueStrings(manifest.requiredFiles, "requiredFiles");
   const requiredChecks = uniqueStrings(manifest.requiredChecks, "requiredChecks");
+  const criticalJobChecks = manifest.criticalJobChecks === undefined
+    ? []
+    : uniqueStrings(manifest.criticalJobChecks, "criticalJobChecks");
   const changed = uniqueStrings(changedPaths, "changedPaths");
   const allowed = new Set(allowedPaths);
 
@@ -85,8 +88,18 @@ export function verifyAuthority({
       requiredChecks.includes("player-api-read-resilience"),
     "Player authority omits a required verification contract.",
   );
+  for (const check of criticalJobChecks) {
+    assert(
+      requiredChecks.includes(check),
+      `Critical workflow job is not bound as a required check: ${check}`,
+    );
+  }
 
-  return { allowedPathCount: allowedPaths.length, changedPathCount: changed.length };
+  return {
+    allowedPathCount: allowedPaths.length,
+    changedPathCount: changed.length,
+    criticalJobCheckCount: criticalJobChecks.length,
+  };
 }
 
 function readOptions(argv) {

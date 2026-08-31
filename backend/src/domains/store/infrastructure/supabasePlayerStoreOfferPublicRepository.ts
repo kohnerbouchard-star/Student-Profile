@@ -45,9 +45,11 @@ const BUYER_RECEIPT_SELECTION = [
   "catalog_item_key",
   "canonical_item_key",
   "store_item_key",
+  "inventory_transaction_key",
   "quantity",
   "unit_price",
   "total_price",
+  "business_credit",
   "currency_code",
   "offer_version_before",
   "offer_version_after",
@@ -79,9 +81,6 @@ export class SupabasePlayerStoreOfferPublicRepository
       const groups = await this.catalogRepository.listCatalogOfferGroups(
         scope.gameSessionId,
       );
-      const buyerCurrencyCode = await this.readStore.readBuyerCurrencyCode(
-        scope,
-      );
       const identities = await this.readStore.readBusinessIdentities(
         scope.gameSessionId,
         businessSellerPartyKeys(groups),
@@ -101,7 +100,6 @@ export class SupabasePlayerStoreOfferPublicRepository
           group,
           identities,
           scope.playerId,
-          buyerCurrencyCode,
           unreservedBusinessOfferKeys,
           buyerOwnedBusinessIds,
         )
@@ -233,9 +231,11 @@ export class SupabasePlayerStoreOfferPublicRepository
         catalogItemKey: receipt.catalogItemKey,
         canonicalItemKey: receipt.canonicalItemKey,
         storeItemKey: receipt.storeItemKey,
+        inventoryTransactionKey: receipt.inventoryTransactionKey,
         quantity: receipt.quantity,
         unitPrice: receipt.unitPrice,
         totalPrice: receipt.totalPrice,
+        sellerProceeds: receipt.sellerProceeds,
         currencyCode: receipt.currencyCode,
         offerVersionBefore: receipt.offerVersionBefore,
         offerVersionAfter: receipt.offerVersionAfter,

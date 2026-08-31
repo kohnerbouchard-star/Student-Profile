@@ -80,7 +80,7 @@ export function registerPlayerStoreOfferPublicCommandTests(): void {
   );
 
   Deno.test(
-    "Store-offer public purchase composes atomic settlement and strips account, transaction, cost, COGS, and seller-credit internals",
+    "Store-offer public purchase composes atomic settlement while stripping account, cost, COGS, and private seller-credit internals",
     async () => {
       const client = new FakeClient({
         rpc: { settle_business_store_offer_v2: settlementResult(false) },
@@ -138,7 +138,7 @@ export function registerPlayerStoreOfferPublicCommandTests(): void {
       assertEquals(receiptQuery.table, "store_offer_purchase_receipts");
       assertEquals(
         receiptQuery.selection,
-        "public_key,quote_key,offer_key,business_key,seller_party_key,catalog_item_key,canonical_item_key,store_item_key,quantity,unit_price,total_price,currency_code,offer_version_before,offer_version_after,remaining_listed_quantity,completed_at",
+        "public_key,quote_key,offer_key,business_key,seller_party_key,catalog_item_key,canonical_item_key,store_item_key,inventory_transaction_key,quantity,unit_price,total_price,business_credit,currency_code,offer_version_before,offer_version_after,remaining_listed_quantity,completed_at",
       );
       assertEquals(receiptQuery.filters, [
         ["game_session_id", GAME_ID],

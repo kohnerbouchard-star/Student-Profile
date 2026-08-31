@@ -12,9 +12,8 @@ export type PlayerStoreOfferPublicSellerKind =
   | "business";
 
 export type PlayerStoreOfferPublicPurchasability =
-  | "seeded_offer"
-  | "business_offer"
-  | "unsupported";
+  | "system_offer"
+  | "business_offer";
 
 export interface PlayerStoreOfferPublicOfferDto {
   readonly offerKey: string;
@@ -86,9 +85,11 @@ export interface PlayerStoreOfferPublicReceiptDto {
   readonly catalogItemKey: string;
   readonly canonicalItemKey: string;
   readonly storeItemKey: string;
+  readonly inventoryTransactionKey: string;
   readonly quantity: number;
   readonly unitPrice: number;
   readonly totalPrice: number;
+  readonly sellerProceeds: number;
   readonly currencyCode: string;
   readonly offerVersionBefore: number;
   readonly offerVersionAfter: number;
@@ -102,11 +103,19 @@ export interface PlayerStoreOfferPublicScope {
   readonly playerId: string;
 }
 
-export interface PlayerStoreOfferPublicRepository {
+export interface PlayerStoreOfferProductPublicRepository {
   listOfferProducts(
     scope: PlayerStoreOfferPublicScope,
   ): Promise<readonly PlayerStoreOfferPublicProductDto[]>;
+}
 
+/**
+ * Combined pre-funding Business-offer port retained for regression coverage.
+ * Live Player Store composition must use the read-only product port and the
+ * funded command port separately.
+ */
+export interface PlayerStoreOfferPublicRepository
+  extends PlayerStoreOfferProductPublicRepository {
   createBusinessOfferQuote(
     input: PlayerStoreOfferPublicScope & {
       readonly offerKey: string;
@@ -177,7 +186,6 @@ export function projectPlayerStoreOfferProduct(
   group: StoreCatalogOfferGroupDto,
   identities: ReadonlyMap<string, PlayerStoreOfferPublicBusinessIdentity>,
   buyerPlayerId: string,
-  buyerCurrencyCode: string,
   unreservedBusinessOfferKeys: ReadonlySet<string>,
   buyerOwnedBusinessIds: ReadonlySet<string>,
 ): PlayerStoreOfferPublicProductDto {
@@ -190,12 +198,12 @@ export function projectPlayerStoreOfferProduct(
     }
     const purchasable = offer.availableQuantity > 0 && (
       offer.sellerKind === "seeded" ||
+      offer.sellerKind === "npc" ||
       (offer.sellerKind === "business" &&
         identity?.businessStatus === "active" &&
         identity.ownerPlayerId !== buyerPlayerId &&
         !buyerOwnedBusinessIds.has(identity.businessId) &&
         identity.currencyCode === offer.currencyCode &&
-        buyerCurrencyCode === offer.currencyCode &&
         unreservedBusinessOfferKeys.has(offer.offerKey))
     );
     return {
@@ -211,15 +219,23 @@ export function projectPlayerStoreOfferProduct(
       status: "active",
       purchasability: offer.sellerKind === "business"
         ? "business_offer"
-        : offer.sellerKind === "seeded"
-        ? "seeded_offer"
-        : "unsupported",
+        : "system_offer",
       purchasable,
       version: offer.version,
     };
   });
   const purchasableOffers = offers.filter((offer) => offer.purchasable);
-  const bestOffer = purchasableOffers[0] ?? null;
+  const purchasableCurrencies = new Set(
+    purchasableOffers.map((offer) => offer.currencyCode),
+  );
+  const bestOffer = purchasableOffers.length && purchasableCurrencies.size === 1
+    ? purchasableOffers.reduce((best, offer) =>
+      offer.unitPrice < best.unitPrice ||
+        (offer.unitPrice === best.unitPrice && offer.offerKey < best.offerKey)
+        ? offer
+        : best
+    )
+    : null;
   return {
     catalogItemKey: group.catalogItemKey,
     canonicalItemKey: group.canonicalItemKey,
@@ -285,9 +301,11 @@ export function projectPlayerStoreOfferReceipt(
     catalogItemKey: receipt.catalogItemKey,
     canonicalItemKey: receipt.canonicalItemKey,
     storeItemKey: receipt.storeItemKey,
+    inventoryTransactionKey: receipt.inventoryTransactionKey,
     quantity: receipt.quantity,
     unitPrice: receipt.unitPrice,
     totalPrice: receipt.totalPrice,
+    sellerProceeds: receipt.businessCredit,
     currencyCode: receipt.currencyCode,
     offerVersionBefore: receipt.offerVersionBefore,
     offerVersionAfter: receipt.offerVersionAfter,
@@ -357,9 +375,15 @@ export function parsePlayerStoreOfferBuyerReceiptRow(
       /^[a-z0-9_-]{1,64}$/u,
       "storeItemKey",
     ),
+    inventoryTransactionKey: pattern(
+      row.inventory_transaction_key,
+      /^itx_[0-9a-f]{32}$/u,
+      "inventoryTransactionKey",
+    ),
     quantity,
     unitPrice,
     totalPrice,
+    sellerProceeds: money(row.business_credit, "sellerProceeds"),
     currencyCode: pattern(
       row.currency_code,
       /^[A-Z0-9_]{3,16}$/u,

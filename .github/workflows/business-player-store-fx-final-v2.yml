@@ -1,0 +1,575 @@
+name: business-player-store-fx-final-v2
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/business-player-store-fx-final-v2.yml
+      - backend/package.json
+      - backend/src/domains/store/**
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/20260831103001_business_player_store_fx_final_v2.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-679.json
+      - docs/roadmaps/business-player-store-fx-final-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - player-terminal/css/player-terminal-economy-items-v2.css
+      - player-terminal/css/routes/player-terminal-shared-overlays.css
+      - player-terminal/src/api/backend-routes-core.js
+      - player-terminal/src/api/preview-transport.js
+      - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/resource-plan.js
+      - player-terminal/src/api/response-store-validator.js
+      - player-terminal/src/components/modal.js
+      - player-terminal/src/data/preview-data.js
+      - player-terminal/src/features/store/**
+      - player-terminal/src/pages/store-page.js
+      - player-terminal/tests/browser/player-store-business-offer-acceptance.spec.mjs
+      - player-terminal/tests/store-connected-purchase.mjs
+      - player-terminal/tests/store-funding-intent.mjs
+      - player-terminal/tests/store-local-currency.mjs
+      - player-terminal/tests/store-purchase-flow.mjs
+      - player-terminal/tests/v75-hardening.mjs
+      - player-terminal/tests/v751-correctness.mjs
+      - scripts/business-phase10-player-store-browser-acceptance.mjs
+      - scripts/business-phase10-offer-aware-quote-contract.mjs
+      - scripts/business-phase10-player-store-cutover-contract.mjs
+      - scripts/business-multicurrency-treasury-contract.mjs
+      - scripts/business-player-store-fx-final-*.mjs
+      - scripts/multicurrency-funding-core-contract.mjs
+      - scripts/multicurrency-store-funding-contract.mjs
+      - scripts/player-cross-cutting-authority.test.mjs
+      - scripts/verify-player-cross-cutting-authority.mjs
+  push:
+    branches:
+      - feat/business-player-store-fx-final-v2
+    paths:
+      - .github/workflows/business-player-store-fx-final-v2.yml
+      - backend/package.json
+      - backend/src/domains/store/**
+      - backend/supabase/functions/classroom-api/index.ts
+      - backend/supabase/functions/player-api/runtime.ts
+      - backend/supabase/migrations/20260831103001_business_player_store_fx_final_v2.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-679.json
+      - docs/roadmaps/business-player-store-fx-final-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - player-terminal/css/player-terminal-economy-items-v2.css
+      - player-terminal/css/routes/player-terminal-shared-overlays.css
+      - player-terminal/src/api/backend-routes-core.js
+      - player-terminal/src/api/preview-transport.js
+      - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/resource-plan.js
+      - player-terminal/src/api/response-store-validator.js
+      - player-terminal/src/components/modal.js
+      - player-terminal/src/data/preview-data.js
+      - player-terminal/src/features/store/**
+      - player-terminal/src/pages/store-page.js
+      - player-terminal/tests/browser/player-store-business-offer-acceptance.spec.mjs
+      - player-terminal/tests/store-*.mjs
+      - player-terminal/tests/v75-hardening.mjs
+      - player-terminal/tests/v751-correctness.mjs
+      - scripts/business-phase10-player-store-browser-acceptance.mjs
+      - scripts/business-phase10-offer-aware-quote-contract.mjs
+      - scripts/business-phase10-player-store-cutover-contract.mjs
+      - scripts/business-multicurrency-treasury-contract.mjs
+      - scripts/business-player-store-fx-final-*.mjs
+      - scripts/multicurrency-funding-core-contract.mjs
+      - scripts/multicurrency-store-funding-contract.mjs
+      - scripts/player-cross-cutting-authority.test.mjs
+      - scripts/verify-player-cross-cutting-authority.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-player-store-fx-final-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: business-player-store-fx-final-v2-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify PR authority, exact scope, and D source contract
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || '679' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/business-multicurrency-treasury-v1' }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/business-player-store-fx-final-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/business-player-store-fx-final-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/business-player-store-fx-final-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check "origin/${BASE_REF}...HEAD"
+
+      - name: Verify funded Store handler, repositories, and both Edge roots
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          npm run test:player-store-public
+          deno test \
+            --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts \
+            src/domains/store/infrastructure/supabasePlayerStorePublicReadRepository.test.ts \
+            src/domains/store/infrastructure/supabasePlayerStoreOfferProductPublicRepository.test.ts
+          node scripts/typecheckAllEdgeRoots.mjs
+
+      - name: Verify retained C0 through C4, Store, Banking, Marketplace, and Stocks gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/multicurrency-funding-core-contract.mjs
+          node scripts/multicurrency-store-funding-contract.mjs
+          node scripts/multicurrency-marketplace-funding-contract.mjs
+          node scripts/multicurrency-stock-funding-schema-contract.mjs
+          node scripts/multicurrency-stock-buy-quote-contract.mjs
+          node scripts/multicurrency-stock-buy-settlement-contract.mjs
+          node scripts/multicurrency-stock-sell-settlement-contract.mjs
+          node scripts/business-multicurrency-treasury-contract.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase10-store-purchase-settlement-foundation-contract.mjs
+          node scripts/business-phase10-offer-aware-quote-contract.mjs
+          node scripts/business-phase10-atomic-settlement-contract.mjs
+          node scripts/business-phase10-player-store-cutover-contract.mjs
+          npm --prefix backend run test:banking-fx-clearing
+          npm --prefix backend run test:player-marketplace
+          npm --prefix backend run typecheck:stock-edge
+
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+  disposable-database:
+    name: business-player-store-fx-final-v2-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned database tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/business-player-store-fx-final-startup.log
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay exact zero-to-head migrations twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          for PASS in 1 2; do
+            echo "10A.4D zero-to-head replay ${PASS}"
+            npx supabase db reset --workdir backend --local
+          done
+
+      - name: Run D serial database acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/business-player-store-fx-final-database.mjs
+
+      - name: Run D observed lock, replay, reverse-order, and withdrawal races
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/business-player-store-fx-final-concurrency.mjs
+
+      - name: Run retained C0, C1, C4, and Store database gates
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/banking-fx-database-acceptance.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-concurrency.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-store-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-multicurrency-treasury-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-multicurrency-treasury-concurrency.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-phase10-atomic-settlement-concurrency.mjs
+
+      - name: Capture rebuilt-schema lint and advisors
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db lint --workdir backend --local --level warning 2>&1 \
+            | tee /tmp/business-player-store-fx-final-db-lint.log
+          npx supabase db advisors \
+            --workdir backend \
+            --local \
+            --type all \
+            --level warn \
+            --fail-on error \
+            --output-format json 2>&1 \
+            | tee /tmp/business-player-store-fx-final-advisors.json
+
+      - name: Upload rebuilt-schema advisor evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-player-store-fx-final-advisors-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/business-player-store-fx-final-db-lint.log
+            /tmp/business-player-store-fx-final-advisors.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Capture disposable diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee /tmp/business-player-store-fx-final-status.log || true
+          docker ps -a 2>&1 | tee /tmp/business-player-store-fx-final-docker.log || true
+
+      - name: Stop disposable Postgres service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  player-browser:
+    name: business-player-store-fx-final-v2-player-browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            player-terminal/package-lock.json
+
+      - name: Install Player dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix player-terminal ci --ignore-scripts
+          npm --prefix player-terminal exec -- playwright install --with-deps chromium
+
+      - name: Verify focused and retained Player source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix player-terminal run check
+          node --test player-terminal/tests/store-funding-intent.mjs
+          node --test player-terminal/tests/store-local-currency.mjs
+          node --test player-terminal/tests/store-purchase-flow.mjs
+          node --test player-terminal/tests/store-connected-purchase.mjs
+          npm --prefix player-terminal run verify
+
+      - name: Verify desktop and mobile Store funding journeys
+        shell: bash
+        working-directory: player-terminal
+        run: |
+          set -euo pipefail
+          npm exec -- playwright test \
+            tests/browser/player-store-business-offer-acceptance.spec.mjs \
+            --project=chromium-desktop \
+            --project=chromium-mobile
+
+      - name: Upload focused browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-player-store-fx-final-browser-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            player-terminal/playwright-report
+            player-terminal/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  connected-two-browser:
+    name: business-player-store-fx-final-v2-connected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/business-player-store-fx-final-runtime-pack.json
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR: /tmp/business-player-store-fx-final-browser-evidence
+      ECONOVARIA_PLAYER_STORE_OUTPUT_DIR: /tmp/business-player-store-fx-final-browser-evidence
+      ECONOVARIA_BROWSER_LICENSE_CODE: PLAYER-D-FUNDED-LICENSE-001
+      ECONOVARIA_BROWSER_ADMIN_EMAIL: player-d-funded@example.test
+      ECONOVARIA_BROWSER_ADMIN_PASSWORD: Player-D-Funded-Admin-2026!
+      ECONOVARIA_BROWSER_GAME_NAME: Business Player Store FX Final
+      ECONOVARIA_GATEWAY_REQUEST_TIMEOUT_SECONDS: "180"
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install connected local-runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          node --check scripts/business-phase10-player-store-browser-acceptance.mjs
+          node --test scripts/local-staging-gateway-contract.test.mjs
+          node --test scripts/local-edge-runtime-isolation.test.mjs
+          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/econovaria-local-gateway-core.py
+          npx playwright install --with-deps chromium
+
+      - name: Build exact authorized physical-economy pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Configure ephemeral local-only function credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
+
+      - name: Start full disposable local Player runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+          npx supabase db reset --workdir backend --local
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+
+          eval "$(npx supabase status --workdir backend -o env)"
+          SERVER_KEY="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$SERVER_KEY"
+          printf '%s\n' \
+            '{' \
+            '  "p_buckets": [' \
+            '    {"dimension":"account","keyHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},' \
+            '    {"dimension":"device","keyHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},' \
+            '    {"dimension":"ip","keyHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}' \
+            '  ]' \
+            '}' \
+            > /tmp/business-player-store-fx-final-postgrest-readiness-request.json
+
+          for ATTEMPT in $(seq 1 60); do
+            STATUS="$(curl --silent --show-error \
+              --output /tmp/business-player-store-fx-final-postgrest-readiness-response.json \
+              --write-out '%{http_code}' \
+              --max-time 5 \
+              --request POST \
+              --header "apikey: ${SERVER_KEY}" \
+              --header "Authorization: Bearer ${SERVER_KEY}" \
+              --header "Content-Type: application/json" \
+              --data-binary @/tmp/business-player-store-fx-final-postgrest-readiness-request.json \
+              http://127.0.0.1:54321/rest/v1/rpc/auth_throttle_check_v2 || true)"
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Authentication throttle RPC was not ready after PostgREST restart." >&2
+          node scripts/redact-econovaria-ci-log.mjs \
+            /tmp/business-player-store-fx-final-postgrest-readiness-response.json \
+            | sed -E 's/[0-9a-f]{64}/[digest-redacted]/gi' >&2 || true
+          exit 1
+
+      - name: Provision canonical local source content
+        shell: bash
+        run: node scripts/game-creation-provisioning-local-acceptance.mjs
+
+      - name: Start same-origin Player gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/econovaria-local-gateway.py --local-supabase --port 4173 \
+            > /tmp/business-player-store-fx-final-gateway.log 2>&1 &
+          echo $! > /tmp/business-player-store-fx-final-gateway.pid
+          for ATTEMPT in $(seq 1 60); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 http://127.0.0.1:4173/ || true)" = "200" ]; then
+              node --input-type=module --eval \
+                'import { restartLocalEdgeRuntime } from "./scripts/local-edge-runtime-isolation.mjs"; await restartLocalEdgeRuntime();'
+              exit 0
+            fi
+            sleep 1
+          done
+          node scripts/redact-econovaria-ci-log.mjs /tmp/business-player-store-fx-final-gateway.log >&2 || true
+          exit 1
+
+      - name: Execute connected authenticated two-browser Store journey
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/business-phase10-player-store-browser-acceptance.mjs 2>&1 \
+            | node scripts/redact-econovaria-ci-log.mjs \
+            | tee /tmp/business-player-store-fx-final-connected.log
+
+      - name: Upload connected browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-player-store-fx-final-connected-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/business-player-store-fx-final-browser-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop disposable local Player runtime
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/business-player-store-fx-final-gateway.pid ]; then
+            kill "$(cat /tmp/business-player-store-fx-final-gateway.pid)" 2>/dev/null || true
+          fi
+          rm -f backend/supabase/functions/.env
+          npx supabase stop --workdir backend --no-backup || true

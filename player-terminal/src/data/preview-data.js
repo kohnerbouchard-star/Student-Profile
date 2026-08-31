@@ -115,14 +115,15 @@ export const previewData = Object.freeze({
       {
         id: "market-lens", itemKey: "market-lens", storeItemKey: "market-lens",
         catalogItemKey: "itm_11111111111111111111111111111111", canonicalItemKey: "market-lens",
-        name: "Market Lens", category: "Equipment", price: 2280, bestUnitPrice: 2280,
-        stock: 11, totalAvailableQuantity: 11, sellerCount: 2, offerCount: 3,
+        name: "Market Lens", category: "Equipment", price: 2200,
+        bestOfferKey: "sof_33333333333333333333333333333333", bestUnitPrice: 2200,
+        stock: 13, totalAvailableQuantity: 13, sellerCount: 3, offerCount: 3,
         currencyCode: "ELD", owned: 1, image: "./assets/store-items/market-lens.svg",
         description: "Unlocks expanded market intelligence for one cycle.",
         offers: [
-          { offerKey: "sof_11111111111111111111111111111111", sellerKey: "pty_11111111111111111111111111111111", sellerPartyKey: "pty_11111111111111111111111111111111", sellerKind: "seeded", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 2400, currencyCode: "ELD", availableQuantity: 8, status: "active", purchasability: "seeded_offer", purchasable: true, version: 1 },
+          { offerKey: "sof_11111111111111111111111111111111", sellerKey: "pty_11111111111111111111111111111111", sellerPartyKey: "pty_11111111111111111111111111111111", sellerKind: "seeded", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 2400, currencyCode: "ELD", availableQuantity: 8, status: "active", purchasability: "system_offer", purchasable: true, version: 1 },
           { offerKey: "sof_22222222222222222222222222222222", sellerKey: "pty_22222222222222222222222222222222", sellerPartyKey: "pty_22222222222222222222222222222222", sellerKind: "business", sellerName: "Crescent Dynamics", businessKey: "biz_22222222222222222222222222222222", businessName: "Crescent Dynamics", unitPrice: 2280, currencyCode: "ELD", availableQuantity: 3, status: "active", purchasability: "business_offer", purchasable: true, version: 4 },
-          { offerKey: "sof_33333333333333333333333333333333", sellerKey: "pty_33333333333333333333333333333333", sellerPartyKey: "pty_33333333333333333333333333333333", sellerKind: "npc", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 2200, currencyCode: "ELD", availableQuantity: 2, status: "active", purchasability: "unsupported", purchasable: false, version: 2 }
+          { offerKey: "sof_33333333333333333333333333333333", sellerKey: "pty_33333333333333333333333333333333", sellerPartyKey: "pty_33333333333333333333333333333333", sellerKind: "npc", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 2200, currencyCode: "ELD", availableQuantity: 2, status: "active", purchasability: "system_offer", purchasable: true, version: 2 }
         ]
       },
       { id: "logistics-scanner", name: "Logistics Scanner", category: "Equipment", price: 1800, stock: 12, owned: 0, image: "./assets/store-items/logistics-scanner.svg", description: "Improves supply-chain contract visibility." },

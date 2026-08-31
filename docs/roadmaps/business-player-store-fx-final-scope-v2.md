@@ -69,7 +69,7 @@ Stable public errors must cover account ownership/type/game, duplicate account, 
 
 Generate one migration from this live predecessor with `supabase migration new`; do not preassign or reuse a timestamp.
 
-The first CLI invocation at 2026-08-31 03:13 UTC produced an empty `20260831031333` file that sorted before C4's reserved `20260831100000`–`20260831103000` migrations. That untracked file was removed without renaming or content. SQL work remains closed until the CLI can generate a version strictly after the live predecessor; non-SQL implementation is not blocked.
+The first CLI invocation at 2026-08-31 03:13 UTC produced an empty `20260831031333` file that sorted before C4's reserved `20260831100000`–`20260831103000` migrations. That untracked file was removed without content. The installed CLI has no timestamp override, so the validated SQL was generated again through the CLI and reconciled using Supabase's documented newer-predecessor procedure: its generated file was renamed to the mechanically next version `20260831103001_business_player_store_fx_final_v2.sql`. No predecessor file changed and no tranche timestamp was preassigned.
 
 The migration is function-only and must:
 
@@ -82,7 +82,7 @@ The migration is function-only and must:
 - preserve Store/C0/B2 lock ordering and avoid pre-locking accounts;
 - use `SECURITY DEFINER`, fixed `search_path`, explicit execute revokes from `public`, `anon`, and `authenticated`, and service-only grants.
 
-No table, column, RLS, direct DML grant, C0/B2 composer, or purge-registry migration is authorized.
+The forward repair may add only the persisted system-offer evidence proven necessary by the audit: nullable `seller_offer_id`, `seller_offer_version`, and `available_quantity_at_quote` bindings on existing Store quotes; nullable `seller_offer_version_after` and `remaining_seller_quantity` results on existing Store purchases; their one game-scoped foreign key, two consistency checks, one bounded lookup index, and two immutable validation triggers. Historical rows remain nullable and untouched. No new table, balance, receipt authority, RLS change, direct table/DML grant, alternate C0/B2 composer, or purge-registry entry is authorized.
 
 ## Player Terminal boundary
 

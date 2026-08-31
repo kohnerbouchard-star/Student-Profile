@@ -21,9 +21,28 @@ function validTimestamp(value) {
 
 function validStoreOfferPurchasability(kind, availableQuantity, purchasable) {
   if (typeof purchasable !== "boolean") return false;
-  if (availableQuantity === 0 || kind === "npc") return purchasable === false;
-  if (kind === "seeded") return purchasable === true;
+  if (availableQuantity === 0) return purchasable === false;
+  if (kind === "seeded" || kind === "npc") return purchasable === true;
   return kind === "business";
+}
+
+function derivedOfferAggregates(offers) {
+  const actionable = offers.filter((offer) =>
+    offer.status === "active" && offer.purchasable === true && offer.availableQuantity > 0
+  );
+  const currencies = new Set(actionable.map((offer) => offer.currencyCode));
+  const comparable = currencies.size <= 1;
+  const best = comparable && actionable.length
+    ? Math.min(...actionable.map((offer) => offer.unitPrice))
+    : null;
+  return {
+    total: actionable.reduce((sum, offer) => sum + offer.availableQuantity, 0),
+    best,
+    bestOffer: best === null
+      ? null
+      : actionable.find((offer) => offer.unitPrice === best)?.offerKey ?? null,
+    sellers: new Set(actionable.map((offer) => offer.sellerPartyKey || offer.sellerKey)).size,
+  };
 }
 
 export function validateStoreResponse(value, context) {
@@ -67,9 +86,7 @@ export function validateStoreResponse(value, context) {
         const kind = String(offer?.sellerKind || "");
         const expectedPurchasability = kind === "business"
           ? "business_offer"
-          : kind === "seeded"
-            ? "seeded_offer"
-            : "unsupported";
+          : "system_offer";
         if (
           offerKeys.length !== offerFields.length || offerKeys.some((key, index) => key !== offerFields[index]) ||
           !/^sof_[0-9a-f]{32}$/u.test(String(offer.offerKey || "")) ||
@@ -82,18 +99,14 @@ export function validateStoreResponse(value, context) {
           )) ||
           (kind !== "business" && (offer.businessKey !== null || offer.businessName !== null)) ||
           !finiteMoney(offer.unitPrice) || (kind === "business" && offer.unitPrice <= 0) ||
-          offer.currencyCode !== product.currencyCode ||
+          !/^[A-Z0-9_]{3,16}$/u.test(String(offer.currencyCode || "")) ||
           !Number.isSafeInteger(offer.availableQuantity) || offer.availableQuantity < 0 ||
           offer.status !== "active" || offer.purchasability !== expectedPurchasability ||
           !validStoreOfferPurchasability(kind, offer.availableQuantity, offer.purchasable) ||
           !Number.isSafeInteger(offer.version) || offer.version < 1
         ) throw invalidStoreResponse(context);
       }
-      const actionable = product.offers.filter((offer) => offer.purchasable === true && offer.availableQuantity > 0);
-      const total = actionable.reduce((sum, offer) => sum + offer.availableQuantity, 0);
-      const best = actionable.length ? Math.min(...actionable.map((offer) => offer.unitPrice)) : null;
-      const bestOffer = actionable.find((offer) => offer.unitPrice === best)?.offerKey ?? null;
-      const sellers = new Set(actionable.map((offer) => offer.sellerPartyKey)).size;
+      const { total, best, bestOffer, sellers } = derivedOfferAggregates(product.offers);
       if (
         product.offerCount !== product.offers.length ||
         product.totalAvailableQuantity !== total || product.bestUnitPrice !== best ||
@@ -116,20 +129,17 @@ export function validateStoreResponse(value, context) {
     for (const offer of item.offers) {
       const kind = String(offer?.sellerKind || "");
       const mode = String(offer?.purchasability || "");
-      const validOfferKey = /^sof_[0-9a-f]{32}$/u.test(String(offer?.offerKey || "")) ||
-        (kind === "seeded" && String(offer?.offerKey || "") === `seeded:${itemKey}`);
+      const validOfferKey = /^sof_[0-9a-f]{32}$/u.test(String(offer?.offerKey || ""));
       const sellerPartyKey = String(offer?.sellerPartyKey || offer?.sellerKey || "");
-      const validSellerKey = /^pty_[0-9a-f]{32}$/u.test(sellerPartyKey) ||
-        (kind === "seeded" && sellerPartyKey === `seeded:${itemKey}`);
+      const validSellerKey = /^pty_[0-9a-f]{32}$/u.test(sellerPartyKey);
       if (
         !offer || typeof offer !== "object" || Array.isArray(offer) ||
         !new Set(["seeded", "npc", "business"]).has(kind) ||
-        !new Set(["seeded_offer", "business_offer", "unsupported"]).has(mode) ||
+        !new Set(["system_offer", "business_offer"]).has(mode) ||
         !validOfferKey || !validSellerKey ||
         typeof offer.sellerName !== "string" || !offer.sellerName.trim() ||
         !finiteMoney(offer.unitPrice) || (kind === "business" && offer.unitPrice <= 0) ||
         !/^[A-Z0-9_]{3,16}$/u.test(String(offer.currencyCode || "")) ||
-        (item.currencyCode && offer.currencyCode !== item.currencyCode) ||
         !Number.isSafeInteger(offer.availableQuantity) || offer.availableQuantity < 0 ||
         offer.status !== "active" ||
         !validStoreOfferPurchasability(kind, offer.availableQuantity, offer.purchasable) ||
@@ -140,21 +150,17 @@ export function validateStoreResponse(value, context) {
           typeof offer.businessName !== "string" || !offer.businessName.trim()
         )) ||
         (kind !== "business" && (offer.businessKey !== null || offer.businessName !== null)) ||
-        (kind === "npc" && mode !== "unsupported") ||
-        (kind === "seeded" && mode !== "seeded_offer")
+        (kind !== "business" && mode !== "system_offer")
       ) throw invalidStoreResponse(context);
     }
-    const actionable = item.offers.filter((offer) => offer.status === "active" && offer.purchasable === true && offer.availableQuantity > 0);
-    const total = actionable.reduce((sum, offer) => sum + offer.availableQuantity, 0);
-    const best = actionable.length ? Math.min(...actionable.map((offer) => offer.unitPrice)) : null;
-    const sellerCount = new Set(actionable.map((offer) => offer.sellerPartyKey || offer.sellerKey)).size;
+    const { total, best, bestOffer, sellers: sellerCount } = derivedOfferAggregates(item.offers);
     if (
       (item.offerCount !== undefined && item.offerCount !== item.offers.length) ||
       (item.sellerCount !== undefined && item.sellerCount !== sellerCount) ||
       (item.totalAvailableQuantity !== undefined && item.totalAvailableQuantity !== total) ||
       (item.stock !== undefined && item.stock !== total) ||
       (item.bestUnitPrice !== undefined && item.bestUnitPrice !== best) ||
-      (item.bestOfferKey !== undefined && item.bestOfferKey !== (actionable.find((offer) => offer.unitPrice === best)?.offerKey ?? null))
+      (item.bestOfferKey !== undefined && item.bestOfferKey !== bestOffer)
     ) throw invalidStoreResponse(context);
   }
 }

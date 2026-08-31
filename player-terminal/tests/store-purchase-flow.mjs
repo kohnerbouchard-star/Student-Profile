@@ -10,8 +10,55 @@ import {
   validateBusinessOfferQuote,
   validateImmutableBusinessOfferReceipt
 } from "../src/features/store/store-purchase-flow.js";
+import {
+  validateSystemOfferQuote,
+  validateSystemOfferReceipt,
+} from "../src/features/store/store-purchase-contract.js";
 import { convergeCommittedStorePurchase } from "../src/features/store/store-purchase-convergence.js";
 import { renderStorePage } from "../src/pages/store-page.js";
+
+const FUNDING_SOURCE_ACCOUNT = `bac_${"a".repeat(32)}`;
+const FUNDING_TARGET_ACCOUNT = `bac_${"b".repeat(32)}`;
+const STORE_CONTEXT_DIGEST = "1".repeat(64);
+const STORE_INVENTORY_TRANSACTION = `itx_${"2".repeat(32)}`;
+
+function fundingQuoteEvidence({ commercialQuoteKey, contextKind, targetCurrencyCode, targetAmount, expiresAt }) {
+  const requiresFx = targetCurrencyCode !== "ECO";
+  return {
+    quoteKey: `pfq_${"c".repeat(32)}`,
+    fundingContextKind: contextKind,
+    fundingContextKey: commercialQuoteKey,
+    targetCurrencyCode,
+    targetMinorUnit: 2,
+    targetAmount: String(targetAmount),
+    fixingKey: `fxf_${"d".repeat(32)}`,
+    policyVersion: "player-retail-funding-v1",
+    requiresFx,
+    expiresAt,
+    lines: [{
+      lineNumber: 1, sourceAccountKey: FUNDING_SOURCE_ACCOUNT,
+      sourceCurrencyCode: "ECO", sourceMinorUnit: 2,
+      targetCurrencyCode, targetMinorUnit: 2,
+      postedAmount: "500", heldAmount: "0", availableAmount: "500",
+      targetContribution: String(targetAmount), sourceDebit: requiresFx ? "101.02" : String(targetAmount),
+      referenceRate: requiresFx ? "1" : "1", customerRate: requiresFx ? "0.99" : "1",
+      effectiveRate: requiresFx ? "0.989902989506" : "1", spreadRate: requiresFx ? "0.01" : "0",
+      requiresFx, roundingDisclosure: "Source debit rounds up; target contribution is exact.",
+    }],
+  };
+}
+
+function fundingReceiptEvidence(quote, sourceAction) {
+  return {
+    receiptKey: `pfr_${"e".repeat(32)}`, quoteKey: quote.quoteKey,
+    bankTransactionKey: `btx_${"f".repeat(32)}`, targetAccountKey: FUNDING_TARGET_ACCOUNT,
+    fundingContextKind: quote.fundingContextKind, fundingContextKey: quote.fundingContextKey,
+    targetCurrencyCode: quote.targetCurrencyCode, targetMinorUnit: quote.targetMinorUnit,
+    targetAmount: quote.targetAmount, targetReserveDrawAmount: "0",
+    sourceDomain: "store", sourceAction, createdAt: "2026-08-25T01:00:30.000Z",
+    lines: quote.lines.map(({ roundingDisclosure, postedAmount, heldAmount, availableAmount, ...line }) => line),
+  };
+}
 
 const capabilities = resolveCapabilities({
   config: { usePreviewData: false, capabilities: { actions: { storePurchase: true } } },
@@ -111,13 +158,13 @@ const liveStoreResponse = {
     catalogItemKey: "itm_11111111111111111111111111111111",
     canonicalItemKey: "market-lens", storeItemKey: "market-lens", name: "Market Lens",
     description: "Market intelligence.", category: "equipment", currencyCode: "NRC",
-    bestOfferKey: "sof_22222222222222222222222222222222", bestUnitPrice: 50,
-    totalAvailableQuantity: 7, sellerCount: 2, offerCount: 3,
+    bestOfferKey: "sof_33333333333333333333333333333333", bestUnitPrice: 45,
+    totalAvailableQuantity: 9, sellerCount: 3, offerCount: 3,
     updatedAt: "2026-08-25T01:00:00.000Z",
     offers: [
-      { offerKey: "sof_33333333333333333333333333333333", sellerKind: "npc", sellerPartyKey: "pty_33333333333333333333333333333333", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 45, currencyCode: "NRC", availableQuantity: 2, status: "active", purchasability: "unsupported", purchasable: false, version: 2 },
+      { offerKey: "sof_33333333333333333333333333333333", sellerKind: "npc", sellerPartyKey: "pty_33333333333333333333333333333333", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 45, currencyCode: "NRC", availableQuantity: 2, status: "active", purchasability: "system_offer", purchasable: true, version: 2 },
       { offerKey: "sof_22222222222222222222222222222222", sellerKind: "business", sellerPartyKey: "pty_22222222222222222222222222222222", sellerName: "Crescent Dynamics", businessKey: "biz_22222222222222222222222222222222", businessName: "Crescent Dynamics", unitPrice: 50, currencyCode: "NRC", availableQuantity: 3, status: "active", purchasability: "business_offer", purchasable: true, version: 4 },
-      { offerKey: "sof_11111111111111111111111111111111", sellerKind: "seeded", sellerPartyKey: "pty_11111111111111111111111111111111", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 55, currencyCode: "NRC", availableQuantity: 4, status: "active", purchasability: "seeded_offer", purchasable: true, version: 1 }
+      { offerKey: "sof_11111111111111111111111111111111", sellerKind: "seeded", sellerPartyKey: "pty_11111111111111111111111111111111", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 55, currencyCode: "NRC", availableQuantity: 4, status: "active", purchasability: "system_offer", purchasable: true, version: 1 }
     ]
   }]
 };
@@ -130,15 +177,47 @@ assert.equal(canonicalItem.offers.length, 3);
 const businessOffer = canonicalItem.offers.find((offer) => offer.purchasability === "business_offer");
 assert.equal(businessOffer.sellerPartyKey, "pty_22222222222222222222222222222222");
 assert.equal(businessOffer.businessKey, "biz_22222222222222222222222222222222");
-assert.equal(canonicalItem.offers.find((offer) => offer.purchasability === "seeded_offer").purchasable, true);
-assert.equal(canonicalItem.offers.find((offer) => offer.purchasability === "unsupported").purchasable, false);
+const seededOffer = canonicalItem.offers.find((offer) => offer.sellerKind === "seeded");
+const npcOffer = canonicalItem.offers.find((offer) => offer.sellerKind === "npc");
+assert.equal(seededOffer.purchasability, "system_offer");
+assert.equal(seededOffer.purchasable, true);
+assert.equal(npcOffer.purchasability, "system_offer");
+assert.equal(npcOffer.purchasable, true);
+
+const mixedCurrencyStoreResponse = structuredClone(liveStoreResponse);
+mixedCurrencyStoreResponse.products[0].offers[2].currencyCode = "ECO";
+mixedCurrencyStoreResponse.products[0].bestOfferKey = null;
+mixedCurrencyStoreResponse.products[0].bestUnitPrice = null;
+const mixedCurrencyStore = mergeTerminalRead(
+  createEmptyReadModels(),
+  "store",
+  normalizeApiResponse("store", mixedCurrencyStoreResponse, {
+    path: "/store/items",
+    requestId: "store-mixed-currency",
+    config: {},
+  }),
+).store;
+assert.equal(mixedCurrencyStore.items[0].bestOfferKey, null);
+assert.equal(mixedCurrencyStore.items[0].bestUnitPrice, null, "Mixed-currency offers must not synthesize a numeric best price.");
+const dishonestMixedCurrencyAggregate = structuredClone(mixedCurrencyStoreResponse);
+dishonestMixedCurrencyAggregate.products[0].bestOfferKey = "sof_22222222222222222222222222222222";
+dishonestMixedCurrencyAggregate.products[0].bestUnitPrice = 50;
+assert.throws(
+  () => normalizeApiResponse("store", dishonestMixedCurrencyAggregate, {
+    path: "/store/items",
+    requestId: "store-mixed-currency-best-claim",
+    config: {},
+  }),
+  (error) => error.code === "INVALID_RESPONSE",
+  "A cross-currency aggregate best-price claim must fail closed.",
+);
 
 const unavailableBusinessStoreResponse = structuredClone(liveStoreResponse);
 unavailableBusinessStoreResponse.products[0].offers[1].purchasable = false;
-unavailableBusinessStoreResponse.products[0].bestOfferKey = "sof_11111111111111111111111111111111";
-unavailableBusinessStoreResponse.products[0].bestUnitPrice = 55;
-unavailableBusinessStoreResponse.products[0].totalAvailableQuantity = 4;
-unavailableBusinessStoreResponse.products[0].sellerCount = 1;
+unavailableBusinessStoreResponse.products[0].bestOfferKey = "sof_33333333333333333333333333333333";
+unavailableBusinessStoreResponse.products[0].bestUnitPrice = 45;
+unavailableBusinessStoreResponse.products[0].totalAvailableQuantity = 6;
+unavailableBusinessStoreResponse.products[0].sellerCount = 2;
 const unavailableBusinessStore = mergeTerminalRead(
   createEmptyReadModels(),
   "store",
@@ -148,8 +227,8 @@ const unavailableBusinessStore = mergeTerminalRead(
     config: {},
   }),
 ).store;
-assert.equal(unavailableBusinessStore.items[0].totalAvailableQuantity, 4);
-assert.equal(unavailableBusinessStore.items[0].bestUnitPrice, 55);
+assert.equal(unavailableBusinessStore.items[0].totalAvailableQuantity, 6);
+assert.equal(unavailableBusinessStore.items[0].bestUnitPrice, 45);
 assert.equal(
   unavailableBusinessStore.items[0].offers.find((offer) => offer.purchasability === "business_offer").purchasable,
   false,
@@ -157,7 +236,7 @@ assert.equal(
 );
 
 const dishonestUnavailableAggregate = structuredClone(unavailableBusinessStoreResponse);
-dishonestUnavailableAggregate.products[0].totalAvailableQuantity = 7;
+dishonestUnavailableAggregate.products[0].totalAvailableQuantity = 9;
 assert.throws(
   () => normalizeApiResponse("store", dishonestUnavailableAggregate, {
     path: "/store/items",
@@ -168,6 +247,113 @@ assert.throws(
   "Buyer-facing Store aggregates must exclude unavailable Business offers.",
 );
 
+const systemContextDigest = "4".repeat(64);
+const npcQuote = validateSystemOfferQuote({ quote: {
+  quoteKey: "quote_44444444444444444444444444444444", quoteStatus: "created",
+  itemKey: canonicalItem.itemKey, itemName: canonicalItem.name, quantity: 1,
+  baseUnitPrice: 45, inflationMultiplier: 1, locationMultiplier: 1,
+  scarcityMultiplier: 1, discountAmount: 0, finalUnitPrice: 45,
+  finalTotalPrice: 45, currencyCode: "NRC", itemCurrencyCode: "NRC",
+  playerCurrencyCode: "NRC", exchangeRate: 1, itemLocalFinalUnitPrice: 45,
+  itemLocalFinalTotalPrice: 45, expiresAt: "2099-08-25T01:02:00.000Z",
+  pricingVersion: "store-system-offer-funded-v2:npc:country:nrc", replayed: false,
+  offerKey: npcOffer.offerKey, offerVersion: npcOffer.version,
+  sellerKind: npcOffer.sellerKind, sellerPartyKey: npcOffer.sellerPartyKey,
+  sellerName: npcOffer.sellerName, availableQuantityAtQuote: npcOffer.availableQuantity,
+  contextDigest: systemContextDigest,
+  fundingQuote: fundingQuoteEvidence({
+    commercialQuoteKey: "quote_44444444444444444444444444444444",
+    contextKind: "store.system-offer", targetCurrencyCode: "NRC", targetAmount: "45",
+    expiresAt: "2099-08-25T01:02:00.000Z",
+  }),
+} }, { item: canonicalItem, offer: npcOffer, quantity: 1 });
+const npcReceiptPayload = {
+  receiptKey: "receipt_44444444444444444444444444444444",
+  quoteKey: npcQuote.quoteKey, itemKey: npcQuote.itemKey,
+  itemName: npcQuote.itemName, quantity: npcQuote.quantity,
+  finalUnitPrice: npcQuote.finalUnitPrice, finalTotalPrice: npcQuote.finalTotalPrice,
+  currencyCode: npcQuote.currencyCode, inventoryQuantityOwned: 2,
+  offerKey: npcQuote.offerKey, sellerKind: npcQuote.sellerKind,
+  sellerPartyKey: npcQuote.sellerPartyKey, sellerName: npcQuote.sellerName,
+  offerVersionBefore: npcQuote.offerVersion, offerVersionAfter: npcQuote.offerVersion + 1,
+  remainingSellerQuantity: 1, sellerProceeds: npcQuote.finalTotalPrice,
+  inventoryTransactionKey: `itx_${"4".repeat(32)}`,
+  completedAt: "2026-08-25T01:00:30.000Z", alreadyCompleted: false,
+  contextDigest: npcQuote.contextDigest,
+  fundingReceipt: fundingReceiptEvidence(npcQuote.fundingQuote, "system_offer_purchase_funding"),
+};
+assert.equal(
+  validateSystemOfferReceipt(
+    { receipt: npcReceiptPayload },
+    { item: canonicalItem, offer: npcOffer, quote: npcQuote },
+  ).inventoryTransactionKey,
+  npcReceiptPayload.inventoryTransactionKey,
+);
+for (const invalidSystemEvidence of [
+  { ...npcReceiptPayload, contextDigest: "5".repeat(64) },
+  { ...npcReceiptPayload, inventoryTransactionKey: "itx_invalid" },
+  { ...npcReceiptPayload, offerVersionAfter: npcQuote.offerVersion },
+]) {
+  assert.throws(
+    () => validateSystemOfferReceipt(
+      { receipt: invalidSystemEvidence },
+      { item: canonicalItem, offer: npcOffer, quote: npcQuote },
+    ),
+    (error) => error.code === "INVALID_RESPONSE",
+    "System-offer receipts must bind seller version, context, and Inventory evidence to the quote.",
+  );
+}
+assert.throws(
+  () => validateSystemOfferQuote(
+    { quote: { ...npcQuote, contextDigest: "invalid" } },
+    { item: canonicalItem, offer: npcOffer, quantity: 1 },
+  ),
+  (error) => error.code === "INVALID_RESPONSE",
+  "System-offer quotes must require a lowercase SHA-256 context digest.",
+);
+
+const seededQuote = validateSystemOfferQuote({ quote: {
+  ...npcQuote,
+  quoteKey: "quote_55555555555555555555555555555555",
+  baseUnitPrice: seededOffer.unitPrice,
+  finalUnitPrice: seededOffer.unitPrice,
+  finalTotalPrice: seededOffer.unitPrice,
+  itemLocalFinalUnitPrice: seededOffer.unitPrice,
+  itemLocalFinalTotalPrice: seededOffer.unitPrice,
+  pricingVersion: "store-system-offer-funded-v2:seeded:country:nrc",
+  offerKey: seededOffer.offerKey,
+  offerVersion: seededOffer.version,
+  sellerKind: seededOffer.sellerKind,
+  sellerPartyKey: seededOffer.sellerPartyKey,
+  sellerName: seededOffer.sellerName,
+  availableQuantityAtQuote: seededOffer.availableQuantity,
+  contextDigest: "7".repeat(64),
+  fundingQuote: fundingQuoteEvidence({
+    commercialQuoteKey: "quote_55555555555555555555555555555555",
+    contextKind: "store.system-offer",
+    targetCurrencyCode: "NRC",
+    targetAmount: String(seededOffer.unitPrice),
+    expiresAt: "2099-08-25T01:02:00.000Z",
+  }),
+} }, { item: canonicalItem, offer: seededOffer, quantity: 1 });
+assert.equal(validateSystemOfferReceipt({ receipt: {
+  ...npcReceiptPayload,
+  receiptKey: "receipt_55555555555555555555555555555555",
+  quoteKey: seededQuote.quoteKey,
+  finalUnitPrice: seededQuote.finalUnitPrice,
+  finalTotalPrice: seededQuote.finalTotalPrice,
+  offerKey: seededQuote.offerKey,
+  sellerKind: seededQuote.sellerKind,
+  sellerPartyKey: seededQuote.sellerPartyKey,
+  sellerName: seededQuote.sellerName,
+  offerVersionBefore: seededQuote.offerVersion,
+  offerVersionAfter: seededQuote.offerVersion,
+  remainingSellerQuantity: 3,
+  sellerProceeds: seededQuote.finalTotalPrice,
+  contextDigest: seededQuote.contextDigest,
+  fundingReceipt: fundingReceiptEvidence(seededQuote.fundingQuote, "system_offer_purchase_funding"),
+} }, { item: canonicalItem, offer: seededOffer, quote: seededQuote }).offerVersionAfter, seededOffer.version);
+
 const businessQuote = validateBusinessOfferQuote({ quote: {
   quoteKey: "quote_22222222222222222222222222222222", quoteStatus: "created",
   offerKey: businessOffer.offerKey, offerVersion: businessOffer.version,
@@ -177,7 +363,12 @@ const businessQuote = validateBusinessOfferQuote({ quote: {
   storeItemKey: canonicalItem.storeItemKey, quantity: 2, availableQuantityAtQuote: 3,
   unitPrice: 50, totalPrice: 100, currencyCode: "NRC",
   expiresAt: "2099-08-25T01:02:00.000Z", pricingVersion: "business-offer-fixed-price-v2",
-  replayed: false
+  replayed: false, contextDigest: STORE_CONTEXT_DIGEST,
+  fundingQuote: fundingQuoteEvidence({
+    commercialQuoteKey: "quote_22222222222222222222222222222222",
+    contextKind: "store.business-offer", targetCurrencyCode: "NRC", targetAmount: "100",
+    expiresAt: "2099-08-25T01:02:00.000Z",
+  }),
 } }, { item: canonicalItem, offer: businessOffer, quantity: 2 });
 assert.equal(businessQuote.offerKey, businessOffer.offerKey);
 const businessReview = renderModal({
@@ -199,7 +390,8 @@ assert.throws(
 for (const invalidQuote of [
   { ...businessQuote, unitPrice: "50", totalPrice: "100" },
   { ...businessQuote, unitPrice: 50.00001, totalPrice: 100.00002 },
-  { ...businessQuote, expiresAt: Date.parse(businessQuote.expiresAt) }
+  { ...businessQuote, expiresAt: Date.parse(businessQuote.expiresAt) },
+  { ...businessQuote, contextDigest: "not-a-context-digest" },
 ]) {
   assert.throws(
     () => validateBusinessOfferQuote({ quote: invalidQuote }, { item: canonicalItem, offer: businessOffer, quantity: 2 }),
@@ -218,15 +410,19 @@ const committedBusinessReceipt = {
   catalogItemKey: businessQuote.catalogItemKey,
   canonicalItemKey: businessQuote.canonicalItemKey,
   storeItemKey: businessQuote.storeItemKey,
+  inventoryTransactionKey: STORE_INVENTORY_TRANSACTION,
   quantity: businessQuote.quantity,
   unitPrice: businessQuote.unitPrice,
   totalPrice: businessQuote.totalPrice,
+  sellerProceeds: businessQuote.totalPrice,
   currencyCode: businessQuote.currencyCode,
   offerVersionBefore: businessQuote.offerVersion,
   offerVersionAfter: businessQuote.offerVersion + 1,
   remainingListedQuantity: 1,
   completedAt: "2026-08-25T01:00:30.000Z",
-  alreadyCompleted: false
+  alreadyCompleted: false,
+  contextDigest: businessQuote.contextDigest,
+  fundingReceipt: fundingReceiptEvidence(businessQuote.fundingQuote, "business_offer_purchase_funding"),
 };
 const rereadBusinessReceipt = validateImmutableBusinessOfferReceipt(
   { receipt: { ...committedBusinessReceipt, alreadyCompleted: true } },
@@ -237,7 +433,10 @@ assert.equal(rereadBusinessReceipt.alreadyCompleted, true, "An immutable receipt
 for (const invalidReceipt of [
   { ...committedBusinessReceipt, unitPrice: "50" },
   { ...committedBusinessReceipt, totalPrice: 100.00001 },
-  { ...committedBusinessReceipt, completedAt: Date.parse(committedBusinessReceipt.completedAt) }
+  { ...committedBusinessReceipt, completedAt: Date.parse(committedBusinessReceipt.completedAt) },
+  { ...committedBusinessReceipt, contextDigest: "3".repeat(64) },
+  { ...committedBusinessReceipt, inventoryTransactionKey: "itx_invalid" },
+  { ...committedBusinessReceipt, sellerProceeds: 99 },
 ]) {
   assert.throws(
     () => validateImmutableBusinessOfferReceipt(
@@ -295,7 +494,7 @@ const convergenceCurrent = {
   offer: businessOffer,
   quote: businessQuote,
   receipt: committedBusinessReceipt,
-  invalidatedResources: ["dashboard", "store", "inventory", "banking"],
+  invalidatedResources: ["dashboard", "store", "inventory", "banking", "bankingFx"],
 };
 const convergenceContext = {
   current: convergenceCurrent,
@@ -308,7 +507,7 @@ const convergenceContext = {
 };
 const timedOutConvergence = await convergeCommittedStorePurchase(convergenceContext);
 assert.equal(timedOutConvergence.length, 1);
-assert.match(timedOutConvergence[0], /balances, Store stock, or inventory could not be refreshed/u);
+assert.match(timedOutConvergence[0], /Checking, Banking FX, Store stock, or inventory evidence could not be refreshed/u);
 const completedConvergence = await convergeCommittedStorePurchase(convergenceContext);
 assert.deepEqual(completedConvergence, []);
 assert.equal(convergenceReceiptReads, 2, "Each safe refresh attempt must reread the immutable receipt exactly once.");
@@ -324,12 +523,17 @@ const storeHtml = renderStorePage({
   store: canonicalStore,
   inventory: { items: [] },
   banking: { balances: [], checking: { currencyCode: "NRC", available: 500 } },
+  bankingFx: {
+    currencies: [{ currencyCode: "NRC", minorUnit: 2 }],
+    balances: [{ accountKey: FUNDING_SOURCE_ACCOUNT, accountKind: "checking", currencyCode: "ECO", availableAmount: 500 }],
+  },
   resourceStatus: {}
 }, { storeCategory: "All" });
 assert.equal((storeHtml.match(/player-terminal-store-card/g) || []).length, 1);
 assert.match(storeHtml, /data-player-store-purchase-mode="business_offer"/);
-assert.match(storeHtml, /data-player-store-purchase-mode="seeded_offer"/);
-assert.match(storeHtml, /data-player-store-purchase-mode="unsupported"[^>]*disabled/);
+assert.equal((storeHtml.match(/data-player-store-purchase-mode="system_offer"/g) || []).length, 2);
+assert.match(storeHtml, /NPC[\s\S]*data-player-store-purchase-mode="system_offer"/);
+assert.doesNotMatch(storeHtml, /data-player-store-purchase-mode="seeded_offer"|data-player-store-purchase-mode="unsupported"/);
 assert.doesNotMatch(storeHtml, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
 const malformedStore = structuredClone(liveStoreResponse);
@@ -473,7 +677,7 @@ assert.ok(source.includes('api.request("storeOfferReceipt"'), "The flow must ver
 assert.ok(source.includes("validateImmutableBusinessOfferReceipt(immutable"), "The receipt reread must be compared to the exact receipt returned by settlement.");
 assert.ok(source.includes("refresh?.errors?.store"), "A failed authoritative Store refresh must be detected before stale offer data can be reused.");
 assert.ok(source.includes("purchasable: false"), "A stale offer must fail closed when authoritative refresh evidence is unavailable.");
-assert.ok(source.includes("purchase completed, but current balances and inventory could not be refreshed"), "A committed purchase must remain completed even when refresh fails.");
+assert.ok(source.includes("purchase completed, but current Checking, Banking FX, Store, and inventory evidence could not be refreshed"), "A committed purchase must remain completed even when refresh fails.");
 const retryStart = source.indexOf("async function retryCommittedRefresh");
 const retryEnd = source.indexOf("function editQuantity", retryStart);
 assert.ok(retryStart > 0 && retryEnd > retryStart, "The receipt must retain a dedicated post-commit refresh retry path.");

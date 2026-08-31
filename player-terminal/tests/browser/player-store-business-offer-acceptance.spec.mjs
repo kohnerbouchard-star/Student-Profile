@@ -4,6 +4,7 @@ const BUSINESS_OFFER_KEY = "sof_22222222222222222222222222222222";
 const BUSINESS_QUOTE_KEY = "quote_22222222222222222222222222222222";
 const BUSINESS_RECEIPT_KEY = "spr_22222222222222222222222222222222";
 const BUSINESS_NAME = "Crescent Dynamics";
+const NPC_OFFER_KEY = "sof_33333333333333333333333333333333";
 
 async function configureWritablePreview(page) {
   await page.addInitScript(() => {
@@ -140,6 +141,24 @@ async function mountRenderedStoreState(page, fixture) {
       expiresAt: "2099-08-25T01:02:00.000Z",
       pricingVersion: "business-offer-fixed-price-v2",
       replayed: false,
+      contextDigest: "2".repeat(64),
+    };
+    const sourceAccount = previewData.bankingFx.balances[0];
+    quote.fundingQuote = {
+      quoteKey: `pfq_${"2".repeat(32)}`, fundingContextKind: "store.business-offer",
+      fundingContextKey: quote.quoteKey, targetCurrencyCode: quote.currencyCode, targetMinorUnit: 2,
+      targetAmount: String(quote.totalPrice), fixingKey: `fxf_${"2".repeat(32)}`,
+      policyVersion: "player-retail-funding-v1", requiresFx: true, expiresAt: quote.expiresAt,
+      lines: [{
+        lineNumber: 1, sourceAccountKey: sourceAccount.accountKey,
+        sourceCurrencyCode: sourceAccount.currencyCode, sourceMinorUnit: 2,
+        targetCurrencyCode: quote.currencyCode, targetMinorUnit: 2,
+        postedAmount: String(sourceAccount.postedAmount), heldAmount: String(sourceAccount.heldAmount),
+        availableAmount: String(sourceAccount.availableAmount), targetContribution: String(quote.totalPrice),
+        sourceDebit: String(quote.totalPrice), referenceRate: "1", customerRate: "0.99",
+        effectiveRate: "0.99", spreadRate: "0.01", requiresFx: true,
+        roundingDisclosure: "Source debit rounds up; target contribution is exact.",
+      }],
     };
     const receipt = {
       receiptKey: stateFixture.receiptKey,
@@ -152,15 +171,29 @@ async function mountRenderedStoreState(page, fixture) {
       catalogItemKey: quote.catalogItemKey,
       canonicalItemKey: quote.canonicalItemKey,
       storeItemKey: quote.storeItemKey,
+      inventoryTransactionKey: `itx_${"2".repeat(32)}`,
       quantity: quote.quantity,
       unitPrice: quote.unitPrice,
       totalPrice: quote.totalPrice,
+      sellerProceeds: quote.totalPrice,
       currencyCode: quote.currencyCode,
       offerVersionBefore: quote.offerVersion,
       offerVersionAfter: quote.offerVersion + 1,
       remainingListedQuantity: 1,
       completedAt: "2026-08-25T01:00:30.000Z",
       alreadyCompleted: stateFixture.kind === "replayed",
+      contextDigest: quote.contextDigest,
+    };
+    receipt.fundingReceipt = {
+      receiptKey: `pfr_${"4".repeat(32)}`, quoteKey: quote.fundingQuote.quoteKey,
+      bankTransactionKey: `btx_${"4".repeat(32)}`, targetAccountKey: `bac_${"9".repeat(32)}`,
+      fundingContextKind: quote.fundingQuote.fundingContextKind,
+      fundingContextKey: quote.fundingQuote.fundingContextKey,
+      targetCurrencyCode: quote.fundingQuote.targetCurrencyCode,
+      targetMinorUnit: quote.fundingQuote.targetMinorUnit, targetAmount: quote.fundingQuote.targetAmount,
+      targetReserveDrawAmount: "0", sourceDomain: "store",
+      sourceAction: "business_offer_purchase_funding", createdAt: receipt.completedAt,
+      lines: quote.fundingQuote.lines.map(({ postedAmount, heldAmount, availableAmount, roundingDisclosure, ...line }) => line),
     };
     const data = {
       ...createEmptyReadModels(),
@@ -171,7 +204,8 @@ async function mountRenderedStoreState(page, fixture) {
         balances: [{ accountType: "checking", currencyCode: "ELD", balance: 20_000 }],
         checking: { currencyCode: "ELD", available: 20_000 },
       },
-      resourceStatus: {},
+      bankingFx: structuredClone(previewData.bankingFx),
+      resourceStatus: { bankingFx: { state: "ready" } },
     };
 
     if (stateFixture.kind === "loading") {
@@ -254,7 +288,7 @@ test("explicit Business offer completes once with keyboard-only modal operation"
 
   const product = page.locator(".player-terminal-store-card", { hasText: "Market Lens" });
   await expect(product).toHaveCount(1);
-  await expect(product).toContainText("TOTAL STOCK 11 · 2 SELLERS");
+  await expect(product).toContainText("TOTAL STOCK 13 · 3 SELLERS");
   await expect(product.getByRole("list", { name: "Offers for Market Lens" })).toBeVisible();
 
   const businessRow = product.locator(`[data-player-store-offer-row="${BUSINESS_OFFER_KEY}"]`);
@@ -267,7 +301,8 @@ test("explicit Business offer completes once with keyboard-only modal operation"
     "aria-label",
     "Purchase Market Lens from Crescent Dynamics at ELD 2,280 per unit",
   );
-  await expect(product.locator('[data-player-store-purchase-mode="unsupported"]')).toBeDisabled();
+  const npcPurchase = product.locator('[data-player-store-offer-row="sof_33333333333333333333333333333333"] [data-player-store-purchase-mode="system_offer"]');
+  await expect(npcPurchase).toBeEnabled();
 
   await tabTo(page, businessPurchase);
   await expectFocused(businessPurchase);
@@ -282,6 +317,10 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expect(dialog.locator(".player-terminal-connector-status")).toHaveAttribute("aria-live", "polite");
   await expect(dialog).toContainText("QUOTE REQUIRED");
   await expect(dialog).toContainText("Crescent Dynamics · Business seller");
+  await expect(dialog).toContainText("Checking allocation");
+  await expect(dialog.locator("[data-player-store-funding-row]")).toHaveCount(3);
+  await expect(dialog.locator("[data-player-store-funding-account]").first()).toHaveValue(`bac_${"1".repeat(32)}`);
+  await expect(dialog).toContainText("Final ELD remainder is derived by the server");
   await expectFocused(quantity);
 
   await page.keyboard.press("Escape");
@@ -312,8 +351,7 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expectFocused(dialog.locator("[data-player-store-quantity]"));
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type("2");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
+  await tabTo(page, review, 8);
   await expectFocused(review);
   await page.keyboard.press("Enter");
 
@@ -329,6 +367,11 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expect(dialog).toContainText("UNIT PRICEELD 2,280");
   await expect(dialog).toContainText("FINAL TOTALELD 4,560");
   await expect(dialog).toContainText(BUSINESS_QUOTE_KEY);
+  await expect(dialog).toContainText("BANKING FX FUNDING QUOTE");
+  await expect(dialog).toContainText("RETAIL FX");
+  await expect(dialog).toContainText("ELD 4560");
+  await expect(dialog).toContainText("player-retail-funding-v1");
+  await expect(dialog).toContainText("Source debit rounds up; target contribution is exact.");
 
   const reviewClose = dialog.getByRole("button", { name: "Close", exact: true });
   const confirm = dialog.locator("[data-player-store-confirm]");
@@ -362,6 +405,9 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expect(dialog).toContainText(BUSINESS_QUOTE_KEY);
   await expect(dialog).toContainText(BUSINESS_OFFER_KEY);
   await expect(dialog).toContainText("SELLER STOCK LEFT1");
+  await expect(dialog).toContainText("IMMUTABLE BANKING FUNDING RECEIPT");
+  await expect(dialog).toContainText("RESERVE DRAWELD 0");
+  await expect(dialog).toContainText(`pfr_${"3".repeat(32)}`);
   await expect(dialog.locator("[data-player-store-refresh-retry]")).toHaveCount(0);
   await expect(dialog).toHaveAttribute("aria-busy", "false");
 
@@ -372,7 +418,70 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expect(dialog).toHaveCount(0);
   await expectFocused(businessPurchase);
   await expect(businessRow).toContainText("1 available");
-  await expect(product).toContainText("TOTAL STOCK 9 · 2 SELLERS");
+  await expect(product).toContainText("TOTAL STOCK 11 · 3 SELLERS");
+});
+
+test("NPC seller uses the same offer-bound funded Store checkout", async ({ page }) => {
+  await openStore(page);
+  await page.evaluate(async () => {
+    const { PreviewTransport } = await import("/src/api/preview-transport.js");
+    const request = PreviewTransport.prototype.request;
+    globalThis.__npcStoreFundingAudit = [];
+    PreviewTransport.prototype.request = async function auditedNpcStoreRequest(context) {
+      if (context.endpointKey === "storeQuote" || context.endpointKey === "storePurchase") {
+        globalThis.__npcStoreFundingAudit.push({
+          endpointKey: context.endpointKey,
+          payload: structuredClone(context.payload),
+        });
+      }
+      return request.call(this, context);
+    };
+  });
+
+  const product = page.locator(".player-terminal-store-card", { hasText: "Market Lens" });
+  const npcRow = product.locator(`[data-player-store-offer-row="${NPC_OFFER_KEY}"]`);
+  const npcPurchase = npcRow.locator(`[data-player-store-offer="${NPC_OFFER_KEY}"]`);
+  await expect(npcRow).toContainText("NPC");
+  await expect(npcRow).toContainText("Crescent Exchange");
+  await expect(npcPurchase).toHaveAttribute("data-player-store-purchase-mode", "system_offer");
+  await expect(npcPurchase).toBeEnabled();
+  await npcPurchase.click();
+
+  let dialog = page.getByRole("dialog", { name: "Market Lens" });
+  await expect(dialog).toContainText("Crescent Exchange · NPC seller");
+  await dialog.locator("[data-player-store-review]").click();
+
+  dialog = page.getByRole("dialog", { name: "Review Market Lens" });
+  await expect(dialog).toContainText("SELLERCrescent Exchange · NPC seller");
+  await expect(dialog).toContainText("OFFER VERSION2");
+  await expect(dialog).toContainText("BANKING FX FUNDING QUOTE");
+  const quoteRequest = await page.evaluate(() => globalThis.__npcStoreFundingAudit
+    .find((entry) => entry.endpointKey === "storeQuote"));
+  expect(quoteRequest).toMatchObject({
+    endpointKey: "storeQuote",
+    payload: {
+      offerKey: NPC_OFFER_KEY,
+      expectedVersion: 2,
+      quantity: 1,
+    },
+  });
+  expect(quoteRequest.payload.allocations).toHaveLength(1);
+  expect(quoteRequest.payload.allocations[0].sourceAccountKey).toMatch(/^bac_[0-9a-f]{32}$/u);
+  await dialog.locator("[data-player-store-confirm]").click();
+
+  dialog = page.getByRole("dialog", { name: "Market Lens" });
+  await expect(dialog).toContainText("PURCHASE RECEIPT");
+  await expect(dialog).toContainText("Crescent Exchange");
+  await expect(dialog).toContainText("SELLER STOCK LEFT1");
+  await expect(dialog).toContainText(NPC_OFFER_KEY);
+  await expect(dialog).toContainText(`itx_${"1".repeat(32)}`);
+  const purchaseRequest = await page.evaluate(() => globalThis.__npcStoreFundingAudit
+    .find((entry) => entry.endpointKey === "storePurchase"));
+  expect(purchaseRequest).toEqual({
+    endpointKey: "storePurchase",
+    payload: { quoteKey: `quote_${"1".repeat(32)}` },
+  });
+  await expect(npcRow).toContainText("1 available");
 });
 
 test("committed refresh retries stay read-only across invalid receipt and resource timeout", async ({ page }) => {

@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1187,
+    "sourceFiles": 1195,
     "edgeEntrypoints": 27,
     "handlerFiles": 62,
     "persistenceOutsideInfrastructure": 54,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 9,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 134
+    "capabilityStrings": 136
   },
   "domains": [
     {
@@ -351,7 +351,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 53,
+      "sourceFiles": 60,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -3192,12 +3192,12 @@
         "lines": 1194
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1139
-      },
-      {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
         "lines": 1132
+      },
+      {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 1115
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -4463,6 +4463,16 @@
         ]
       },
       {
+        "capability": "store.business-offer",
+        "locations": [
+          "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
+          "player-terminal/src/api/preview-transport.js",
+          "player-terminal/src/features/store/store-purchase-contract.js"
+        ]
+      },
+      {
         "capability": "store.manage",
         "locations": [
           "admin/admin-auth.js",
@@ -4479,6 +4489,20 @@
         "capability": "store.seeded",
         "locations": [
           "backend/src/domains/business/api/playerBusinessStoreProcurement.test.ts"
+        ]
+      },
+      {
+        "capability": "store.system-offer",
+        "locations": [
+          "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.test.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts",
+          "backend/src/domains/store/tests/playerStoreFullLifecycleIntegration.test.ts",
+          "backend/src/domains/store/tests/playerStoreNegativeStateIntegration.test.ts",
+          "backend/src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts",
+          "player-terminal/src/api/preview-transport.js",
+          "player-terminal/src/features/store/store-purchase-contract.js"
         ]
       },
       {

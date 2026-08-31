@@ -8,8 +8,51 @@ const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const PUBLISHABLE_KEY = "sb_publishable_store_fixture";
 const quoteKey = "quote_11111111111111111111111111111111";
 const receiptKey = "receipt_22222222222222222222222222222222";
+const SYSTEM_OFFER_KEY = `sof_${"1".repeat(32)}`;
+const SYSTEM_SELLER_KEY = `pty_${"1".repeat(32)}`;
+const SYSTEM_CATALOG_ITEM_KEY = `itm_${"1".repeat(32)}`;
+const SOURCE_ACCOUNT_KEY = `bac_${"a".repeat(32)}`;
+const TARGET_ACCOUNT_KEY = `bac_${"b".repeat(32)}`;
+const SEEDED_CONTEXT_DIGEST = "1".repeat(64);
+const BUSINESS_CONTEXT_DIGEST = "3".repeat(64);
+const ALLOCATIONS = Object.freeze([{ sourceAccountKey: SOURCE_ACCOUNT_KEY, targetAmount: null }]);
 let purchased = false;
 const calls = [];
+
+function fundingQuote({ commercialQuoteKey, contextKind, targetAmount, expiresAt, suffix }) {
+  return {
+    quoteKey: `pfq_${suffix.repeat(32)}`, fundingContextKind: contextKind,
+    fundingContextKey: commercialQuoteKey, targetCurrencyCode: "NRC", targetMinorUnit: 2,
+    targetAmount: String(targetAmount), fixingKey: `fxf_${suffix.repeat(32)}`,
+    policyVersion: "player-retail-funding-v1", requiresFx: true, expiresAt,
+    lines: [{
+      lineNumber: 1, sourceAccountKey: SOURCE_ACCOUNT_KEY, sourceCurrencyCode: "ECO",
+      sourceMinorUnit: 2, targetCurrencyCode: "NRC", targetMinorUnit: 2,
+      postedAmount: "500", heldAmount: "0", availableAmount: "500",
+      targetContribution: String(targetAmount), sourceDebit: String(targetAmount),
+      referenceRate: "1", customerRate: "0.99", effectiveRate: "0.99", spreadRate: "0.01",
+      requiresFx: true, roundingDisclosure: "Source debit rounds up; target contribution is exact.",
+    }],
+  };
+}
+
+function fundingReceipt(quote, sourceAction, suffix) {
+  return {
+    receiptKey: `pfr_${suffix.repeat(32)}`, quoteKey: quote.quoteKey,
+    bankTransactionKey: `btx_${suffix.repeat(32)}`, targetAccountKey: TARGET_ACCOUNT_KEY,
+    fundingContextKind: quote.fundingContextKind, fundingContextKey: quote.fundingContextKey,
+    targetCurrencyCode: quote.targetCurrencyCode, targetMinorUnit: quote.targetMinorUnit,
+    targetAmount: quote.targetAmount, targetReserveDrawAmount: "0", sourceDomain: "store",
+    sourceAction, createdAt: "2026-07-19T03:00:31.000Z",
+    lines: quote.lines.map(({ postedAmount, heldAmount, availableAmount, roundingDisclosure, ...line }) => line),
+  };
+}
+
+const seededFundingQuote = fundingQuote({
+  commercialQuoteKey: quoteKey, contextKind: "store.system-offer", targetAmount: "100",
+  expiresAt: "2099-07-19T03:03:00.000Z", suffix: "1",
+});
+const seededFundingReceipt = fundingReceipt(seededFundingQuote, "system_offer_purchase_funding", "2");
 
 const manifest = {
   ok: true,
@@ -89,6 +132,7 @@ const apiCall = createStudentProfileApiCall({
     }
     if (request.path === "/players/me/capabilities") return manifest;
     if (request.path === "/players/me/store/items") {
+      const availableQuantity = purchased ? 3 : 5;
       return {
         ok: true,
         items: [{
@@ -98,27 +142,67 @@ const apiCall = createStudentProfileApiCall({
           category: "license",
           price: 50,
           currencyCode: "NRC",
-          stockQuantity: purchased ? 3 : 5,
+          stockQuantity: availableQuantity,
           status: "active",
           visibility: "visible",
           sortOrder: 1,
           updatedAt: "2026-07-19T03:00:00.000Z"
-        }]
+        }],
+        products: [{
+          catalogItemKey: SYSTEM_CATALOG_ITEM_KEY,
+          canonicalItemKey: "field_permit",
+          storeItemKey: "field_permit",
+          name: "Field Permit",
+          description: "Access permit",
+          category: "license",
+          currencyCode: "NRC",
+          bestOfferKey: SYSTEM_OFFER_KEY,
+          bestUnitPrice: 50,
+          totalAvailableQuantity: availableQuantity,
+          sellerCount: 1,
+          offerCount: 1,
+          offers: [{
+            offerKey: SYSTEM_OFFER_KEY,
+            sellerKind: "seeded",
+            sellerPartyKey: SYSTEM_SELLER_KEY,
+            sellerName: "Econovaria Store",
+            businessKey: null,
+            businessName: null,
+            unitPrice: 50,
+            currencyCode: "NRC",
+            availableQuantity,
+            status: "active",
+            purchasability: "system_offer",
+            purchasable: availableQuantity > 0,
+            version: 1,
+          }],
+          updatedAt: "2026-07-19T03:00:00.000Z",
+        }],
       };
     }
     if (request.path === "/players/me/store/quotes") {
-      assert.deepEqual(request.payload, { itemKey: "field_permit", quantity: 2 });
+      assert.deepEqual(request.payload, {
+        offerKey: SYSTEM_OFFER_KEY,
+        quantity: 2,
+        expectedVersion: 1,
+        allocations: ALLOCATIONS,
+        idempotencyKey: request.payload.idempotencyKey,
+      });
       return {
         ok: true,
         quote: {
-          quoteKey,
-          itemKey: "field_permit",
-          itemName: "Field Permit",
-          quantity: 2,
-          finalUnitPrice: 50,
-          finalTotalPrice: 100,
-          currencyCode: "NRC",
-          expiresAt: "2099-07-19T03:03:00.000Z"
+          quoteKey, quoteStatus: "created", itemKey: "field_permit", itemName: "Field Permit",
+          quantity: 2, baseUnitPrice: 50, inflationMultiplier: 1, locationMultiplier: 1,
+          scarcityMultiplier: 1, discountAmount: 0, finalUnitPrice: 50, finalTotalPrice: 100,
+          currencyCode: "NRC", itemCurrencyCode: "NRC", playerCurrencyCode: "NRC",
+          exchangeRate: 1, itemLocalFinalUnitPrice: 50, itemLocalFinalTotalPrice: 100,
+          expiresAt: "2099-07-19T03:03:00.000Z",
+          pricingVersion: "store-system-offer-funded-v2:seeded:country:nrc",
+          replayed: false, contextDigest: SEEDED_CONTEXT_DIGEST,
+          offerKey: SYSTEM_OFFER_KEY, offerVersion: 1, sellerKind: "seeded",
+          sellerPartyKey: SYSTEM_SELLER_KEY, sellerName: "Econovaria Store",
+          availableQuantityAtQuote: 5,
+          fundingQuote: seededFundingQuote,
         }
       };
     }
@@ -141,8 +225,19 @@ const apiCall = createStudentProfileApiCall({
           finalTotalPrice: 100,
           currencyCode: "NRC",
           inventoryQuantityOwned: 2,
+          offerKey: SYSTEM_OFFER_KEY,
+          sellerKind: "seeded",
+          sellerPartyKey: SYSTEM_SELLER_KEY,
+          sellerName: "Econovaria Store",
+          offerVersionBefore: 1,
+          offerVersionAfter: 1,
+          remainingSellerQuantity: 3,
+          sellerProceeds: 100,
+          inventoryTransactionKey: `itx_${"1".repeat(32)}`,
           completedAt: "2026-07-19T03:00:31.000Z",
-          alreadyCompleted: false
+          alreadyCompleted: false,
+          contextDigest: SEEDED_CONTEXT_DIGEST,
+          fundingReceipt: seededFundingReceipt,
         },
         refreshRequired: true
       };
@@ -209,8 +304,10 @@ assert.equal(storeRead.data.store.items[0].itemKey, "field_permit");
 assert.equal(storeRead.data.store.items[0].stock, 5);
 
 const quote = await api.execute("storeQuote", {
-  itemKey: "field_permit",
+  offerKey: SYSTEM_OFFER_KEY,
   quantity: 2,
+  expectedVersion: 1,
+  allocations: ALLOCATIONS,
   gameSessionId: "browser-owned-game",
   itemId: "browser-owned-item"
 });
@@ -226,11 +323,9 @@ await assert.rejects(
 
 const purchase = await api.execute("storePurchase", {
   quoteKey,
-  clientSubmittedAt: "2026-07-19T03:00:30.000Z",
-  quoteId: "browser-owned-quote"
 });
 assert.equal(purchase.result.receipt.receiptKey, receiptKey);
-assert.deepEqual(purchase.invalidatedResources, ["dashboard", "store", "inventory", "banking"]);
+assert.deepEqual(purchase.invalidatedResources, ["dashboard", "store", "inventory", "banking", "bankingFx"]);
 
 const refreshed = await api.refreshResources(["store", "inventory"]);
 assert.equal(Object.keys(refreshed.errors).length, 0);
@@ -241,7 +336,13 @@ assert.equal("banking" in refreshed.data, false, "Banking remains manifest-disab
 
 const quoteRequest = calls.find((request) => request.endpointKey === "storeQuote");
 assert.equal(quoteRequest.path, "/players/me/store/quotes");
-assert.deepEqual(quoteRequest.payload, { itemKey: "field_permit", quantity: 2 });
+assert.deepEqual(quoteRequest.payload, {
+  offerKey: SYSTEM_OFFER_KEY,
+  quantity: 2,
+  expectedVersion: 1,
+  allocations: ALLOCATIONS,
+  idempotencyKey: quoteRequest.payload.idempotencyKey,
+});
 assert.equal(quoteRequest.headers["x-econovaria-csrf-token"], CSRF_TOKEN);
 
 const purchaseRequest = calls.find((request) => request.endpointKey === "storePurchase");
@@ -265,6 +366,11 @@ const BUSINESS_KEY = "biz_33333333333333333333333333333333";
 const SELLER_PARTY_KEY = "pty_33333333333333333333333333333333";
 const CATALOG_ITEM_KEY = "itm_33333333333333333333333333333333";
 const businessCalls = [];
+const businessFundingQuote = fundingQuote({
+  commercialQuoteKey: OFFER_QUOTE_KEY, contextKind: "store.business-offer", targetAmount: "96",
+  expiresAt: "2099-08-25T01:02:00.000Z", suffix: "3",
+});
+const businessFundingReceipt = fundingReceipt(businessFundingQuote, "business_offer_purchase_funding", "4");
 
 const businessApiCall = createStudentProfileApiCall({
   request: async (request) => {
@@ -294,7 +400,7 @@ const businessApiCall = createStudentProfileApiCall({
           sellerCount: 2, offerCount: 2, updatedAt: "2026-08-25T01:00:00.000Z",
           offers: [
             { offerKey: OFFER_KEY, sellerKind: "business", sellerPartyKey: SELLER_PARTY_KEY, sellerName: "Northstar Optics", businessKey: BUSINESS_KEY, businessName: "Northstar Optics", unitPrice: 48, currencyCode: "NRC", availableQuantity: 3, status: "active", purchasability: "business_offer", purchasable: true, version: 3 },
-            { offerKey: "sof_44444444444444444444444444444444", sellerKind: "seeded", sellerPartyKey: "pty_44444444444444444444444444444444", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 50, currencyCode: "NRC", availableQuantity: 4, status: "active", purchasability: "seeded_offer", purchasable: true, version: 1 }
+            { offerKey: "sof_44444444444444444444444444444444", sellerKind: "seeded", sellerPartyKey: "pty_44444444444444444444444444444444", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 50, currencyCode: "NRC", availableQuantity: 4, status: "active", purchasability: "system_offer", purchasable: true, version: 1 }
           ]
         }]
       };
@@ -304,6 +410,7 @@ const businessApiCall = createStudentProfileApiCall({
         offerKey: OFFER_KEY,
         quantity: 2,
         expectedVersion: 3,
+        allocations: ALLOCATIONS,
         idempotencyKey: request.payload.idempotencyKey
       });
       assert.match(request.payload.idempotencyKey, /^ptr_storeOfferQuote_/);
@@ -314,15 +421,13 @@ const businessApiCall = createStudentProfileApiCall({
         storeItemKey: "market_lens", quantity: 2, availableQuantityAtQuote: 3,
         unitPrice: 48, totalPrice: 96, currencyCode: "NRC",
         expiresAt: "2099-08-25T01:02:00.000Z", pricingVersion: "business-offer-fixed-price-v2",
-        replayed: false
+        replayed: false, contextDigest: BUSINESS_CONTEXT_DIGEST,
+        fundingQuote: businessFundingQuote,
       } };
     }
     if (request.path === "/players/me/store/offer-purchases") {
       assert.deepEqual(request.payload, {
-        offerKey: OFFER_KEY,
         quoteKey: OFFER_QUOTE_KEY,
-        quantity: 2,
-        expectedVersion: 3,
         idempotencyKey: request.payload.idempotencyKey
       });
       assert.match(request.payload.idempotencyKey, /^ptr_storeOfferPurchase_/);
@@ -330,10 +435,12 @@ const businessApiCall = createStudentProfileApiCall({
         receiptKey: OFFER_RECEIPT_KEY, quoteKey: OFFER_QUOTE_KEY, offerKey: OFFER_KEY,
         businessKey: BUSINESS_KEY, businessName: "Northstar Optics", sellerPartyKey: SELLER_PARTY_KEY,
         sellerName: "Northstar Optics", catalogItemKey: CATALOG_ITEM_KEY, canonicalItemKey: "market_lens",
-        storeItemKey: "market_lens", quantity: 2, unitPrice: 48, totalPrice: 96,
+        storeItemKey: "market_lens", inventoryTransactionKey: `itx_${"3".repeat(32)}`,
+        quantity: 2, unitPrice: 48, totalPrice: 96, sellerProceeds: 96,
         currencyCode: "NRC", offerVersionBefore: 3, offerVersionAfter: 4,
         remainingListedQuantity: 1, completedAt: "2026-08-25T01:00:30.000Z",
-        alreadyCompleted: false
+        alreadyCompleted: false, contextDigest: BUSINESS_CONTEXT_DIGEST,
+        fundingReceipt: businessFundingReceipt,
       }, refreshRequired: true };
     }
     if (request.path === `/players/me/store/receipts/${OFFER_RECEIPT_KEY}`) {
@@ -341,10 +448,12 @@ const businessApiCall = createStudentProfileApiCall({
         receiptKey: OFFER_RECEIPT_KEY, quoteKey: OFFER_QUOTE_KEY, offerKey: OFFER_KEY,
         businessKey: BUSINESS_KEY, businessName: "Northstar Optics", sellerPartyKey: SELLER_PARTY_KEY,
         sellerName: "Northstar Optics", catalogItemKey: CATALOG_ITEM_KEY, canonicalItemKey: "market_lens",
-        storeItemKey: "market_lens", quantity: 2, unitPrice: 48, totalPrice: 96,
+        storeItemKey: "market_lens", inventoryTransactionKey: `itx_${"3".repeat(32)}`,
+        quantity: 2, unitPrice: 48, totalPrice: 96, sellerProceeds: 96,
         currencyCode: "NRC", offerVersionBefore: 3, offerVersionAfter: 4,
         remainingListedQuantity: 1, completedAt: "2026-08-25T01:00:30.000Z",
-        alreadyCompleted: true
+        alreadyCompleted: true, contextDigest: BUSINESS_CONTEXT_DIGEST,
+        fundingReceipt: businessFundingReceipt,
       } };
     }
     throw new Error(`Unexpected Business Store request ${request.method} ${request.path}`);
@@ -374,6 +483,7 @@ const offerQuote = await businessApi.execute("storeOfferQuote", {
   offerKey: OFFER_KEY,
   quantity: 2,
   expectedVersion: 3,
+  allocations: ALLOCATIONS,
   sellerName: "browser-must-not-forward",
   unitPrice: 1,
   businessKey: "browser-must-not-forward",
@@ -383,16 +493,13 @@ assert.equal(offerQuote.result.quote.quoteKey, OFFER_QUOTE_KEY);
 assert.equal(offerQuote.idempotencyKey.startsWith("ptr_storeOfferQuote_"), true);
 
 const offerPurchase = await businessApi.execute("storeOfferPurchase", {
-  offerKey: OFFER_KEY,
   quoteKey: OFFER_QUOTE_KEY,
-  quantity: 2,
-  expectedVersion: 3,
   sellerPartyKey: "browser-must-not-forward",
   itemKey: "browser-must-not-forward",
   totalPrice: 1
 });
 assert.equal(offerPurchase.result.receipt.receiptKey, OFFER_RECEIPT_KEY);
-assert.deepEqual(offerPurchase.invalidatedResources, ["dashboard", "store", "inventory", "banking"]);
+assert.deepEqual(offerPurchase.invalidatedResources, ["dashboard", "store", "inventory", "banking", "bankingFx"]);
 assert.equal(offerPurchase.idempotencyKey.startsWith("ptr_storeOfferPurchase_"), true);
 
 const immutableReceipt = await businessApi.request("storeOfferReceipt", {

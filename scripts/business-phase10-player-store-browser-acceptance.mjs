@@ -51,6 +51,7 @@ const EXPECTED_COMMITTED_REFRESH_RESOURCES = Object.freeze([
   "store",
   "inventory",
   "banking",
+  "bankingFx",
 ]);
 
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/iu;
@@ -77,10 +78,37 @@ const PUBLIC = Object.freeze({
   withdrawal: /^swr_[0-9a-f]{32}$/u,
   inventoryTransaction: /^itx_[0-9a-f]{32}$/u,
   inventoryAccount: /^iac_[0-9a-f]{32}$/u,
+  account: /^bac_[0-9a-f]{32}$/u,
+  fundingQuote: /^pfq_[0-9a-f]{32}$/u,
+  fundingReceipt: /^pfr_[0-9a-f]{32}$/u,
+  bankTransaction: /^btx_[0-9a-f]{32}$/u,
+  fixing: /^fxf_[0-9a-f]{32}$/u,
   storeItem: /^[a-z0-9_-]{1,64}$/u,
   canonicalItem: /^[a-z0-9][a-z0-9._-]{0,159}$/u,
   currency: /^[A-Z0-9_]{3,16}$/u,
 });
+const FUNDING_QUOTE_FIELDS = Object.freeze([
+  "quoteKey", "fundingContextKind", "fundingContextKey", "targetCurrencyCode",
+  "targetMinorUnit", "targetAmount", "fixingKey", "policyVersion", "requiresFx",
+  "expiresAt", "lines",
+]);
+const FUNDING_QUOTE_LINE_FIELDS = Object.freeze([
+  "lineNumber", "sourceAccountKey", "sourceCurrencyCode", "sourceMinorUnit",
+  "targetCurrencyCode", "targetMinorUnit", "postedAmount", "heldAmount",
+  "availableAmount", "targetContribution", "sourceDebit", "referenceRate",
+  "customerRate", "effectiveRate", "spreadRate", "requiresFx", "roundingDisclosure",
+]);
+const FUNDING_RECEIPT_FIELDS = Object.freeze([
+  "receiptKey", "quoteKey", "bankTransactionKey", "targetAccountKey",
+  "fundingContextKind", "fundingContextKey", "targetCurrencyCode", "targetMinorUnit",
+  "targetAmount", "targetReserveDrawAmount", "sourceDomain", "sourceAction",
+  "createdAt", "lines",
+]);
+const FUNDING_RECEIPT_LINE_FIELDS = Object.freeze([
+  "lineNumber", "sourceAccountKey", "sourceCurrencyCode", "sourceMinorUnit",
+  "targetCurrencyCode", "targetMinorUnit", "targetContribution", "sourceDebit",
+  "referenceRate", "customerRate", "effectiveRate", "spreadRate", "requiresFx",
+]);
 
 const PLAYERS = Object.freeze({
   game1: Object.freeze({
@@ -148,6 +176,7 @@ const evidence = {
     gamesCreated: 0,
     playersCreated: 0,
     buyersFunded: 0,
+    foreignBuyerAccountsFunded: 0,
     licenseMaxRedemptions: 0,
     licenseRedeemedCount: 0,
     licenseFinalStatus: "",
@@ -156,10 +185,12 @@ const evidence = {
   browser: {
     businessOfferExplicitlySelected: false,
     authoritativeQuoteRendered: false,
+    immutableFundingQuoteRendered: false,
     settlementProcessingGuardRendered: false,
     settlementProcessingFocusContained: false,
     settlementProcessingDismissalBlocked: false,
     immutableReceiptRendered: false,
+    immutableFundingReceiptRendered: false,
     immutableReceiptReloaded: false,
     postCommitRefreshFailureForced: false,
     postCommitInvalidReceiptResponses: 0,
@@ -175,6 +206,9 @@ const evidence = {
     replayUsedSameOriginPageFetch: false,
     replayReturnedSameReceipt: false,
     retainedSeededStorePurchaseCompleted: false,
+    retainedSeededAllForeignFundingSelected: false,
+    businessAllForeignFundingSelected: false,
+    twoBrowserCrossCurrencyPurchaseCompleted: false,
     buyerConvergedWithoutReload: false,
     sellerConvergedWithoutReload: false,
     sharedReceiptIdentityVisible: false,
@@ -203,9 +237,13 @@ const evidence = {
     offerVersionBefore: 0,
     offerVersionAfter: 0,
     remainingListedQuantity: 0,
+    fundingQuoteKey: "",
+    fundingReceiptKey: "",
+    fundingTransactionKey: "",
   },
   database: {
-    buyerCheckingDebitedExactly: false,
+    fundingSourcesDebitedExactly: false,
+    targetCheckingUnchangedForAllForeign: false,
     businessCashCreditedExactly: false,
     listingHoldingDebitedExactly: false,
     listingVersionAdvancedExactly: false,
@@ -215,8 +253,10 @@ const evidence = {
     quoteConsumedExactly: false,
     receiptExact: false,
     ledgerPostingCount: 0,
-    debitPostingCount: 0,
-    creditPostingCount: 0,
+    sourceDebitPostingCount: 0,
+    recipientCreditPostingCount: 0,
+    fundingReceiptCount: 0,
+    fundingTransactionCount: 0,
     inventoryTransactionCount: 0,
     inventoryLineCount: 0,
     purchasedEventCount: 0,
@@ -257,6 +297,36 @@ function amount(value) {
 
 function sameAmount(left, right) {
   return Math.abs(amount(left) - amount(right)) < 0.00005;
+}
+
+function exactDecimal(value, precision, label, { positive = false } = {}) {
+  assert(typeof value === "string", `${label} must be a canonical decimal string.`);
+  const match = /^(?:0|[1-9][0-9]{0,14})(?:\.([0-9]{1,18}))?$/u.exec(value);
+  assert(match && (match[1] || "").length <= precision, `${label} has invalid precision.`);
+  const [whole, fraction = ""] = value.split(".");
+  const scaled = BigInt(whole) * (10n ** BigInt(precision)) +
+    BigInt((fraction + "0".repeat(precision)).slice(0, precision) || "0");
+  assert(!positive || scaled > 0n, `${label} must be positive.`);
+  const canonicalFraction = fraction.replace(/0+$/u, "");
+  assert(value === (canonicalFraction ? `${BigInt(whole)}.${canonicalFraction}` : String(BigInt(whole))), `${label} is not canonical.`);
+  return scaled;
+}
+
+function scaledDatabaseDecimal(value, precision, label) {
+  const text = String(value ?? "").trim();
+  const match = /^(?:0|[1-9][0-9]{0,30})(?:\.([0-9]{1,18}))?$/u.exec(text);
+  assert(match && (match[1] || "").length <= precision, `${label} has invalid precision.`);
+  const [whole, fraction = ""] = text.split(".");
+  return BigInt(whole) * (10n ** BigInt(precision)) +
+    BigInt((fraction + "0".repeat(precision)).slice(0, precision) || "0");
+}
+
+function assertExactKeys(value, expected, label) {
+  assert(value && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
+  assert(
+    JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort()),
+    `${label} changed its exact public field set.`,
+  );
 }
 
 function uiAmount(value) {
@@ -717,6 +787,57 @@ async function fundBuyer(admin, game, buyer, currencyCode) {
   evidence.provisioning.buyersFunded += 1;
 }
 
+async function fundForeignBuyerChecking(game, buyer, targetCurrencyCode) {
+  const currencyCode = targetCurrencyCode === "NRC" ? "YRC" : "NRC";
+  assert(currencyCode !== targetCurrencyCode, "Foreign funding fixture selected the Store target currency.");
+  await psql(`
+    select *
+    from public.record_player_ledger_entry(
+      ${sqlLiteral(game.id)}::uuid,
+      ${sqlLiteral(buyer.id)}::uuid,
+      'checking',
+      ${CREDIT_AMOUNT},
+      ${sqlLiteral(currencyCode)},
+      'credit',
+      'setup',
+      'initial_balance_seed',
+      ${sqlLiteral(buyer.id)}::uuid,
+      'system',
+      null,
+      jsonb_build_object(
+        'bankTransactionIdempotencyKey',
+        ${sqlLiteral(`phase10a4-foreign-funding-${game.ordinal}`)}
+      )
+    );
+  `);
+  const account = await psql(`
+    select jsonb_build_object(
+      'accountKey', account_row.public_key,
+      'currencyCode', account_row.currency_code,
+      'balance', balance_row.balance::text
+    )::text
+    from public.bank_accounts as account_row
+    join public.economic_parties as party_row
+      on party_row.id = account_row.party_id
+     and party_row.game_session_id = account_row.game_session_id
+    join public.account_balances as balance_row
+      on balance_row.bank_account_id = account_row.id
+     and balance_row.game_session_id = account_row.game_session_id
+    where account_row.game_session_id = ${sqlLiteral(game.id)}::uuid
+      and account_row.account_kind = 'checking'
+      and account_row.status = 'active'
+      and account_row.currency_code = ${sqlLiteral(currencyCode)}
+      and party_row.party_kind = 'player'
+      and party_row.player_id = ${sqlLiteral(buyer.id)}::uuid
+      and party_row.status = 'active';
+  `, { json: true });
+  assertPublic(account.accountKey, PUBLIC.account, "Foreign Buyer Checking account");
+  assert(account.currencyCode === currencyCode, "Foreign Buyer Checking currency is invalid.");
+  assert(amount(account.balance) === CREDIT_AMOUNT, "Foreign Buyer Checking funding is invalid.");
+  evidence.provisioning.foreignBuyerAccountsFunded += 1;
+  return account;
+}
+
 async function createBusinessOfferFixture(game, buyer, seller, economicContext) {
   const businessName = `Phase 10A4 Seller Business ${game.ordinal}`;
   const creation = await psql(`
@@ -1015,10 +1136,22 @@ async function stateSnapshot(fixture) {
       'receiptCount', (select count(*) from public.store_offer_purchase_receipts
         where game_session_id = scope.game_session_id
           and buyer_player_id = scope.buyer_id and offer_id = scope.offer_id),
-      'settlementLedgerCount', (select count(*) from public.ledger_entries
+      'fundingReceiptCount', (select count(*) from public.purchase_funding_receipts
         where game_session_id = scope.game_session_id
           and source_domain = 'store'
-          and source_action in ('business_offer_purchase_debit','business_offer_purchase_credit')
+          and source_action = 'business_offer_purchase_funding'
+          and source_id in (select id from public.store_offer_purchase_receipts
+            where game_session_id = scope.game_session_id and offer_id = scope.offer_id)),
+      'fundingTransactionCount', (select count(*) from public.bank_transactions
+        where game_session_id = scope.game_session_id
+          and source_domain = 'store'
+          and source_action = 'business_offer_purchase_funding'
+          and source_id in (select id from public.store_offer_purchase_receipts
+            where game_session_id = scope.game_session_id and offer_id = scope.offer_id)),
+      'fundingLedgerCount', (select count(*) from public.ledger_entries
+        where game_session_id = scope.game_session_id
+          and source_domain = 'store'
+          and source_action = 'business_offer_purchase_funding'
           and source_id in (select id from public.store_offer_purchase_receipts
             where game_session_id = scope.game_session_id and offer_id = scope.offer_id)),
       'inventoryTransactionCount', (select count(*) from public.inventory_transactions
@@ -1042,6 +1175,38 @@ async function stateSnapshot(fixture) {
     )::text
     from scope;
   `, { json: true });
+}
+
+async function fundingSourceBalances(fixture, fundingQuote) {
+  const accountKeys = fundingQuote.lines.map((line) => line.sourceAccountKey);
+  const balances = await psql(`
+    select coalesce(
+      jsonb_object_agg(account_row.public_key, balance_row.balance::text),
+      '{}'::jsonb
+    )::text
+    from public.bank_accounts as account_row
+    join public.economic_parties as party_row
+      on party_row.id = account_row.party_id
+     and party_row.game_session_id = account_row.game_session_id
+    join public.account_balances as balance_row
+      on balance_row.bank_account_id = account_row.id
+     and balance_row.game_session_id = account_row.game_session_id
+    where account_row.game_session_id = ${sqlLiteral(fixture.game.id)}::uuid
+      and account_row.public_key in (
+        select jsonb_array_elements_text(${sqlLiteral(JSON.stringify(accountKeys))}::jsonb)
+      )
+      and account_row.account_kind = 'checking'
+      and account_row.status = 'active'
+      and party_row.party_kind = 'player'
+      and party_row.player_id = ${sqlLiteral(fixture.buyer.id)}::uuid
+      and party_row.status = 'active';
+  `, { json: true });
+  assert(
+    Object.keys(balances).length === accountKeys.length &&
+      accountKeys.every((accountKey) => Object.hasOwn(balances, accountKey)),
+    "Funding source balance vector is incomplete.",
+  );
+  return balances;
 }
 
 async function receiptVector(fixture, receiptKey) {
@@ -1077,21 +1242,53 @@ async function receiptVector(fixture, receiptKey) {
       'quoteQuantity', quote.quantity,
       'quoteUnitPrice', quote.final_unit_price,
       'quoteTotalPrice', quote.final_total_price,
+      'fundingReceiptCount', (select count(*) from public.purchase_funding_receipts as funding
+        where funding.game_session_id = receipt.game_session_id
+          and funding.id = receipt.funding_receipt_id
+          and funding.bank_transaction_id = receipt.bank_transaction_id
+          and funding.quote_id = quote.funding_quote_id
+          and funding.source_domain = 'store'
+          and funding.source_action = 'business_offer_purchase_funding'
+          and funding.source_id = receipt.id),
+      'fundingTransactionCount', (select count(*) from public.bank_transactions as transaction_row
+        where transaction_row.game_session_id = receipt.game_session_id
+          and transaction_row.id = receipt.bank_transaction_id
+          and transaction_row.source_domain = 'store'
+          and transaction_row.source_action = 'business_offer_purchase_funding'
+          and transaction_row.source_id = receipt.id),
+      'fundingQuoteLineCount', (select count(*) from public.purchase_funding_quote_lines
+        where game_session_id = receipt.game_session_id
+          and quote_id = quote.funding_quote_id),
       'ledgerPostingCount', (select count(*) from public.ledger_entries
-        where game_session_id = receipt.game_session_id and source_id = receipt.id
+        where game_session_id = receipt.game_session_id
+          and bank_transaction_id = receipt.bank_transaction_id
+          and source_id = receipt.id
           and source_domain = 'store'
-          and source_action in ('business_offer_purchase_debit','business_offer_purchase_credit')),
-      'debitPostingCount', (select count(*) from public.ledger_entries
-        where game_session_id = receipt.game_session_id and source_id = receipt.id
-          and player_id = receipt.buyer_player_id and business_id is null
-          and account_type = 'checking' and entry_type = 'debit'
-          and amount = -receipt.total_price
-          and source_domain = 'store' and source_action = 'business_offer_purchase_debit'),
-      'creditPostingCount', (select count(*) from public.ledger_entries
-        where game_session_id = receipt.game_session_id and source_id = receipt.id
-          and business_id = receipt.business_id and entry_type = 'credit'
+          and source_action = 'business_offer_purchase_funding'),
+      'sourceDebitPostingCount', (select count(*) from public.ledger_entries
+        where game_session_id = receipt.game_session_id
+          and bank_transaction_id = receipt.bank_transaction_id
+          and source_id = receipt.id
+          and entry_type = 'debit'
+          and line_metadata ->> 'lineRole' = 'purchase_funding_source_debit'
+          and source_domain = 'store'
+          and source_action = 'business_offer_purchase_funding'),
+      'recipientCreditPostingCount', (select count(*) from public.ledger_entries
+        where game_session_id = receipt.game_session_id
+          and bank_transaction_id = receipt.bank_transaction_id
+          and source_id = receipt.id
+          and entry_type = 'credit'
           and amount = receipt.total_price
-          and source_domain = 'store' and source_action = 'business_offer_purchase_credit'),
+          and line_metadata ->> 'lineRole' = 'purchase_funding_recipient_credit'
+          and source_domain = 'store'
+          and source_action = 'business_offer_purchase_funding'),
+      'recipientCreditAmount', coalesce((select sum(amount) from public.ledger_entries
+        where game_session_id = receipt.game_session_id
+          and bank_transaction_id = receipt.bank_transaction_id
+          and source_id = receipt.id
+          and line_metadata ->> 'lineRole' = 'purchase_funding_recipient_credit'
+          and source_domain = 'store'
+          and source_action = 'business_offer_purchase_funding'), 0),
       'inventoryTransactionCount', (select count(*) from public.inventory_transactions
         where game_session_id = receipt.game_session_id and id = receipt.inventory_transaction_id
           and public_key = receipt.inventory_transaction_key
@@ -1115,8 +1312,8 @@ async function receiptVector(fixture, receiptKey) {
           and inventory_account_id = receipt.buyer_inventory_account_id
           and game_item_id = receipt.game_item_id
           and quantity_delta = receipt.quantity
-          and unit_cost = receipt.source_unit_cost
-          and currency_code = receipt.cost_currency_code),
+          and unit_cost = receipt.unit_price
+          and currency_code = receipt.currency_code),
       'purchasedEventCount', (select count(*) from public.inventory_events
         where game_session_id = receipt.game_session_id
           and player_id = receipt.buyer_player_id
@@ -1162,27 +1359,37 @@ function paymentAndInventoryVector(snapshot) {
     buyerAverageUnitCost: amount(snapshot.buyerAverageUnitCost),
     buyerCostCurrencyCode: snapshot.buyerCostCurrencyCode,
     receiptCount: Number(snapshot.receiptCount),
-    settlementLedgerCount: Number(snapshot.settlementLedgerCount),
+    fundingReceiptCount: Number(snapshot.fundingReceiptCount),
+    fundingTransactionCount: Number(snapshot.fundingTransactionCount),
+    fundingLedgerCount: Number(snapshot.fundingLedgerCount),
     inventoryTransactionCount: Number(snapshot.inventoryTransactionCount),
     purchasedEventCount: Number(snapshot.purchasedEventCount),
     businessActivityCount: Number(snapshot.businessActivityCount),
   };
 }
 
-async function proveWithdrawalFirstRejectsBeforePayment(fixture) {
+async function proveWithdrawalFirstRejectsBeforePayment(fixture, sourceAccountKey) {
   const before = await stateSnapshot(fixture);
   const quote = await psql(`
-    select public.create_business_store_offer_quote_v2(
+    select public.create_business_store_offer_funding_quote_v1(
       ${sqlLiteral(fixture.game.id)}::uuid,
       ${sqlLiteral(fixture.buyer.id)}::uuid,
       ${sqlLiteral(fixture.offerKey)},
       ${BUSINESS_PURCHASE_QUANTITY},
       ${Number(before.offerVersion)},
+      ${sqlLiteral(JSON.stringify([
+        { sourceAccountKey, targetAmount: null },
+      ]))}::jsonb,
       ${sqlLiteral(`phase10a4-withdrawal-first-quote-${fixture.game.ordinal}`)}
     )::text;
   `, { json: true });
   const quoteKey = assertPublic(quote.quoteKey, PUBLIC.quote, "Withdrawal-first quote");
   assert(Number(quote.offerVersion) === Number(before.offerVersion), "Withdrawal-first quote version is invalid.");
+  assert(
+    quote.fundingQuote?.requires_fx === true &&
+      quote.fundingQuote?.lines?.every((line) => line.requires_fx === true),
+    "Withdrawal-first quote did not retain all-foreign funding evidence.",
+  );
 
   const withdrawal = await psql(`
     select public.request_business_store_offer_withdrawal_v2(
@@ -1211,13 +1418,10 @@ async function proveWithdrawalFirstRejectsBeforePayment(fixture) {
   assert(afterWithdrawal.offerStatus === "withdrawal_pending", "Withdrawal-first offer did not enter withdrawal_pending.");
 
   await expectPsqlFailure(`
-    select public.settle_business_store_offer_v2(
+    select public.settle_business_store_offer_funding_v2(
       ${sqlLiteral(fixture.game.id)}::uuid,
       ${sqlLiteral(fixture.buyer.id)}::uuid,
-      ${sqlLiteral(fixture.offerKey)},
       ${sqlLiteral(quoteKey)},
-      ${BUSINESS_PURCHASE_QUANTITY},
-      ${Number(before.offerVersion)},
       ${sqlLiteral(`phase10a4-withdrawal-first-purchase-${fixture.game.ordinal}`)}
     )::text;
   `, "STORE_OFFER_SETTLEMENT_OFFER_STATUS_INVALID");
@@ -1225,7 +1429,9 @@ async function proveWithdrawalFirstRejectsBeforePayment(fixture) {
   evidence.database.withdrawalFirstRejectedBeforePayment =
     JSON.stringify(afterWithdrawal) === JSON.stringify(afterRejectedPurchase) &&
     Number(afterRejectedPurchase.receiptCount) === 0 &&
-    Number(afterRejectedPurchase.settlementLedgerCount) === 0 &&
+    Number(afterRejectedPurchase.fundingReceiptCount) === 0 &&
+    Number(afterRejectedPurchase.fundingTransactionCount) === 0 &&
+    Number(afterRejectedPurchase.fundingLedgerCount) === 0 &&
     Number(afterRejectedPurchase.inventoryTransactionCount) === 0 &&
     Number(afterRejectedPurchase.purchasedEventCount) === 0 &&
     Number(afterRejectedPurchase.businessActivityCount) === 0;
@@ -1591,6 +1797,13 @@ function responseBusinessReceipt(payload) {
     PUBLIC.offer.test(String(candidate.offerKey || ""))) || null;
 }
 
+function responseSeededQuote(payload) {
+  return walkObjects(payload).find((candidate) => PUBLIC.quote.test(String(candidate.quoteKey || "")) &&
+    PUBLIC.offer.test(String(candidate.offerKey || "")) &&
+    ["seeded", "npc"].includes(candidate.sellerKind) &&
+    Object.hasOwn(candidate, "finalTotalPrice")) || null;
+}
+
 function responseSeededReceipt(payload) {
   return walkObjects(payload).find((candidate) => PUBLIC.seededReceipt.test(String(candidate.receiptKey || ""))) || null;
 }
@@ -1644,7 +1857,104 @@ async function assertReciprocalGameStoreExposure(session, ownFixture, otherFixtu
   evidence.browser.game2OfferVisibleInGame2Store = true;
 }
 
-function assertQuote(quote, fixture) {
+function assertFundingAllocations(allocations, label) {
+  assert(Array.isArray(allocations) && allocations.length >= 1 && allocations.length <= 3, `${label} must contain one to three allocations.`);
+  const seen = new Set();
+  allocations.forEach((allocation, index) => {
+    assertExactKeys(allocation, ["sourceAccountKey", "targetAmount"], `${label}[${index}]`);
+    const accountKey = assertPublic(allocation.sourceAccountKey, PUBLIC.account, `${label}[${index}] account`);
+    assert(!seen.has(accountKey), `${label} repeated a Checking account.`);
+    seen.add(accountKey);
+    if (index === allocations.length - 1) {
+      assert(allocation.targetAmount === null, `${label} final target amount must be null.`);
+    } else {
+      exactDecimal(allocation.targetAmount, 18, `${label}[${index}] target amount`, { positive: true });
+    }
+  });
+  return allocations;
+}
+
+function assertFundingQuoteEvidence(funding, expected) {
+  assertExactKeys(funding, FUNDING_QUOTE_FIELDS, "Funding quote");
+  assertPublic(funding.quoteKey, PUBLIC.fundingQuote, "Funding quote");
+  assertPublic(funding.fixingKey, PUBLIC.fixing, "Funding fixing");
+  assert(funding.fundingContextKind === expected.contextKind, "Funding quote context kind is invalid.");
+  assert(funding.fundingContextKey === expected.commercialQuoteKey, "Funding quote context key is invalid.");
+  assert(funding.targetCurrencyCode === expected.targetCurrencyCode, "Funding quote target currency is invalid.");
+  assert(Number.isSafeInteger(funding.targetMinorUnit) && funding.targetMinorUnit >= 0 && funding.targetMinorUnit <= 18, "Funding quote target precision is invalid.");
+  assert(typeof funding.policyVersion === "string" && funding.policyVersion.trim(), "Funding quote policy is unavailable.");
+  assert(typeof funding.requiresFx === "boolean", "Funding quote FX state is invalid.");
+  const expiresAt = Date.parse(funding.expiresAt);
+  assert(Number.isFinite(expiresAt) && new Date(expiresAt).toISOString() === funding.expiresAt && expiresAt >= Date.parse(expected.commercialExpiresAt), "Funding quote expiry is invalid.");
+  const target = exactDecimal(funding.targetAmount, funding.targetMinorUnit, "Funding quote target amount", { positive: true });
+  assert(target === exactDecimal(String(expected.targetAmount), funding.targetMinorUnit, "Commercial target amount", { positive: true }), "Funding quote target amount changed the commercial bill.");
+  assert(Array.isArray(funding.lines) && funding.lines.length === expected.allocations.length, "Funding quote line count changed the allocation intent.");
+  const allocationsByAccount = new Map(
+    expected.allocations.map((allocation) => [allocation.sourceAccountKey, allocation]),
+  );
+  const lineAccountKeys = funding.lines.map((line) => line.sourceAccountKey);
+  const canonicalLineAccountKeys = [...lineAccountKeys].sort();
+  assert(
+    lineAccountKeys.every((accountKey, index) => accountKey === canonicalLineAccountKeys[index]),
+    "Funding quote lines are not in canonical source-account order.",
+  );
+  let contributionTotal = 0n;
+  funding.lines.forEach((line, index) => {
+    assertExactKeys(line, FUNDING_QUOTE_LINE_FIELDS, `Funding quote line ${index + 1}`);
+    assert(line.lineNumber === index + 1, "Funding quote line order is invalid.");
+    const allocation = allocationsByAccount.get(line.sourceAccountKey);
+    assert(allocation && PUBLIC.account.test(line.sourceAccountKey), "Funding quote returned an unexpected source account.");
+    assert(PUBLIC.currency.test(line.sourceCurrencyCode) && PUBLIC.currency.test(line.targetCurrencyCode), "Funding quote line currency is invalid.");
+    assert(Number.isSafeInteger(line.sourceMinorUnit) && line.sourceMinorUnit >= 0 && line.sourceMinorUnit <= 18, "Funding quote source precision is invalid.");
+    assert(line.targetCurrencyCode === funding.targetCurrencyCode && line.targetMinorUnit === funding.targetMinorUnit, "Funding quote line target binding is invalid.");
+    const posted = exactDecimal(line.postedAmount, line.sourceMinorUnit, "Funding posted amount");
+    const held = exactDecimal(line.heldAmount, line.sourceMinorUnit, "Funding held amount");
+    const available = exactDecimal(line.availableAmount, line.sourceMinorUnit, "Funding available amount");
+    assert(posted - held === available, "Funding quote available balance does not reconcile.");
+    const contribution = exactDecimal(line.targetContribution, funding.targetMinorUnit, "Funding target contribution", { positive: true });
+    contributionTotal += contribution;
+    exactDecimal(line.sourceDebit, line.sourceMinorUnit, "Funding source debit", { positive: true });
+    const reference = exactDecimal(line.referenceRate, 18, "Funding reference rate", { positive: true });
+    const customer = exactDecimal(line.customerRate, 18, "Funding customer rate", { positive: true });
+    exactDecimal(line.effectiveRate, 18, "Funding effective rate", { positive: true });
+    const spread = exactDecimal(line.spreadRate, 18, "Funding spread rate");
+    assert(typeof line.requiresFx === "boolean" && typeof line.roundingDisclosure === "string" && line.roundingDisclosure.trim(), "Funding quote line disclosure is invalid.");
+    if (line.requiresFx) {
+      assert(line.sourceCurrencyCode !== line.targetCurrencyCode && spread === exactDecimal("0.01", 18, "Retail spread") && customer < reference, "Funding quote FX evidence is invalid.");
+    } else {
+      const one = exactDecimal("1", 18, "Unity rate");
+      assert(line.sourceCurrencyCode === line.targetCurrencyCode && spread === 0n && reference === one && customer === one, "Funding quote same-currency evidence is invalid.");
+    }
+    const fixed = allocation.targetAmount;
+    if (fixed !== null) assert(contribution === exactDecimal(fixed, funding.targetMinorUnit, "Fixed target contribution", { positive: true }), "Funding quote changed a fixed allocation.");
+  });
+  assert(contributionTotal === target && funding.requiresFx === funding.lines.some((line) => line.requiresFx), "Funding quote aggregate does not reconcile.");
+  return funding;
+}
+
+function assertFundingReceiptEvidence(funding, quote, sourceAction) {
+  assertExactKeys(funding, FUNDING_RECEIPT_FIELDS, "Funding receipt");
+  assertPublic(funding.receiptKey, PUBLIC.fundingReceipt, "Funding receipt");
+  assertPublic(funding.bankTransactionKey, PUBLIC.bankTransaction, "Funding transaction");
+  assertPublic(funding.targetAccountKey, PUBLIC.account, "Funding target account");
+  assert(funding.quoteKey === quote.quoteKey && funding.fundingContextKind === quote.fundingContextKind && funding.fundingContextKey === quote.fundingContextKey, "Funding receipt changed quote identity.");
+  assert(funding.targetCurrencyCode === quote.targetCurrencyCode && funding.targetMinorUnit === quote.targetMinorUnit, "Funding receipt changed target currency.");
+  assert(funding.sourceDomain === "store" && funding.sourceAction === sourceAction, "Funding receipt source evidence is invalid.");
+  assert(exactDecimal(funding.targetAmount, funding.targetMinorUnit, "Funding receipt target", { positive: true }) === exactDecimal(quote.targetAmount, quote.targetMinorUnit, "Quoted funding target", { positive: true }), "Funding receipt changed target amount.");
+  exactDecimal(funding.targetReserveDrawAmount, funding.targetMinorUnit, "Funding reserve draw");
+  const createdAt = Date.parse(funding.createdAt);
+  assert(Number.isFinite(createdAt) && new Date(createdAt).toISOString() === funding.createdAt, "Funding receipt timestamp is invalid.");
+  assert(Array.isArray(funding.lines) && funding.lines.length === quote.lines.length, "Funding receipt line count changed.");
+  funding.lines.forEach((line, index) => {
+    assertExactKeys(line, FUNDING_RECEIPT_LINE_FIELDS, `Funding receipt line ${index + 1}`);
+    for (const field of FUNDING_RECEIPT_LINE_FIELDS) {
+      assert(line[field] === quote.lines[index][field], `Funding receipt changed immutable line field ${field}.`);
+    }
+  });
+  return funding;
+}
+
+function assertQuote(quote, fixture, allocations) {
   assert(quote, "Business quote response is missing.");
   assertPublic(quote.quoteKey, PUBLIC.quote, "Business quote");
   assert(quote.quoteStatus === "created", "Business quote status is not created.");
@@ -1660,6 +1970,14 @@ function assertQuote(quote, fixture) {
   assert(sameAmount(quote.unitPrice, BUSINESS_UNIT_PRICE), "Business quote unit price is invalid.");
   assert(sameAmount(quote.totalPrice, BUSINESS_UNIT_PRICE * BUSINESS_PURCHASE_QUANTITY), "Business quote total is invalid.");
   assert(quote.currencyCode === fixture.currencyCode, "Business quote currency is invalid.");
+  return assertFundingQuoteEvidence(quote.fundingQuote, {
+    commercialQuoteKey: quote.quoteKey,
+    contextKind: "store.business-offer",
+    targetCurrencyCode: quote.currencyCode,
+    targetAmount: String(quote.totalPrice),
+    commercialExpiresAt: quote.expiresAt,
+    allocations,
+  });
 }
 
 function assertBrowserScopeHeaders(headers, label) {
@@ -1677,6 +1995,7 @@ function assertExactQuoteRequest(postData, headers, fixture) {
   const body = JSON.parse(postData || "null");
   assert(body && typeof body === "object" && !Array.isArray(body), "Business quote request body is invalid.");
   const expectedKeys = [
+    "allocations",
     "expectedVersion",
     "idempotencyKey",
     "offerKey",
@@ -1689,11 +2008,34 @@ function assertExactQuoteRequest(postData, headers, fixture) {
   assert(body.offerKey === fixture.offerKey, "Business quote request changed the offer.");
   assert(Number(body.quantity) === BUSINESS_PURCHASE_QUANTITY, "Business quote request changed quantity.");
   assert(Number(body.expectedVersion) === fixture.initialOfferVersion, "Business quote request changed expectedVersion.");
+  assertFundingAllocations(body.allocations, "Business quote allocations");
   assert(typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 8, "Business quote idempotency key is invalid.");
   assert(headers["x-idempotency-key"] === body.idempotencyKey, "Business quote body/header idempotency keys differ.");
   assertBrowserScopeHeaders(headers, "Business quote request");
   UUID_PATTERN.lastIndex = 0;
   assert(!UUID_PATTERN.test(postData), "Business quote request body exposed an internal UUID.");
+  return body;
+}
+
+function assertExactSeededQuoteRequest(postData, headers, offer) {
+  const body = JSON.parse(postData || "null");
+  assertExactKeys(
+    body,
+    ["allocations", "expectedVersion", "idempotencyKey", "offerKey", "quantity"],
+    "System-offer quote request",
+  );
+  assert(
+    body.offerKey === offer.offerKey &&
+      Number(body.expectedVersion) === Number(offer.version) &&
+      Number(body.quantity) === 1,
+    "System-offer quote request changed the selected offer, version, or quantity.",
+  );
+  assertFundingAllocations(body.allocations, "Seeded quote allocations");
+  assert(typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 8, "Seeded quote idempotency key is invalid.");
+  assert(headers["x-idempotency-key"] === body.idempotencyKey, "Seeded quote body/header idempotency keys differ.");
+  assertBrowserScopeHeaders(headers, "Seeded quote request");
+  UUID_PATTERN.lastIndex = 0;
+  assert(!UUID_PATTERN.test(postData), "Seeded quote request body exposed an internal UUID.");
   return body;
 }
 
@@ -1727,6 +2069,11 @@ function assertReceipt(receipt, fixture, quote) {
   assert(Number(receipt.offerVersionBefore) === fixture.initialOfferVersion, "Business receipt before-version is invalid.");
   assert(Number(receipt.offerVersionAfter) === fixture.initialOfferVersion + 1, "Business receipt after-version is invalid.");
   assert(Number(receipt.remainingListedQuantity) === BUSINESS_LISTING_QUANTITY - BUSINESS_PURCHASE_QUANTITY, "Business receipt remaining stock is invalid.");
+  return assertFundingReceiptEvidence(
+    receipt.fundingReceipt,
+    quote.fundingQuote,
+    "business_offer_purchase_funding",
+  );
 }
 
 function assertImmutableReceiptReread(committedReceipt, immutableReceipt) {
@@ -1749,24 +2096,18 @@ function assertImmutableReceiptReread(committedReceipt, immutableReceipt) {
   );
 }
 
-function assertExactPurchaseRequest(postData, headers, fixture, quote) {
+function assertExactPurchaseRequest(postData, headers, quote) {
   const body = JSON.parse(postData || "null");
   assert(body && typeof body === "object" && !Array.isArray(body), "Business purchase request body is invalid.");
   const expectedKeys = [
-    "expectedVersion",
     "idempotencyKey",
-    "offerKey",
-    "quantity",
     "quoteKey",
   ];
   assert(
     JSON.stringify(Object.keys(body).sort()) === JSON.stringify(expectedKeys),
     "Business purchase request carried fields outside the public command contract.",
   );
-  assert(body.offerKey === fixture.offerKey, "Business purchase request changed the offer.");
   assert(body.quoteKey === quote.quoteKey, "Business purchase request changed the quote.");
-  assert(Number(body.quantity) === BUSINESS_PURCHASE_QUANTITY, "Business purchase request changed quantity.");
-  assert(Number(body.expectedVersion) === fixture.initialOfferVersion, "Business purchase request changed expectedVersion.");
   assert(typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 8, "Business purchase idempotency key is invalid.");
   assert(headers["x-idempotency-key"] === body.idempotencyKey, "Body/header idempotency keys differ.");
   assertBrowserScopeHeaders(headers, "Business purchase request");
@@ -1815,12 +2156,42 @@ async function replayThroughPage(session, request, body) {
   return JSON.parse(result.body);
 }
 
-function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
+function verifyDatabaseVectors(
+  before,
+  after,
+  vector,
+  fixture,
+  quote,
+  receipt,
+  fundingQuote,
+  sourceBalancesBefore,
+  sourceBalancesAfter,
+) {
   const total = amount(receipt.totalPrice);
-  evidence.database.buyerCheckingDebitedExactly = sameAmount(
-    amount(before.buyerChecking) - amount(after.buyerChecking),
-    total,
-  );
+  evidence.database.fundingSourcesDebitedExactly = fundingQuote.lines.every((line) => {
+    const precision = Number(line.sourceMinorUnit);
+    return scaledDatabaseDecimal(
+      sourceBalancesBefore[line.sourceAccountKey],
+      precision,
+      "Funding source balance before",
+    ) - scaledDatabaseDecimal(
+      sourceBalancesAfter[line.sourceAccountKey],
+      precision,
+      "Funding source balance after",
+    ) === exactDecimal(
+      line.sourceDebit,
+      precision,
+      "Funding source debit",
+      { positive: true },
+    );
+  });
+  evidence.database.targetCheckingUnchangedForAllForeign =
+    fundingQuote.requiresFx === true &&
+    fundingQuote.lines.every((line) =>
+      line.requiresFx === true &&
+      line.sourceCurrencyCode !== fundingQuote.targetCurrencyCode
+    ) &&
+    sameAmount(before.buyerChecking, after.buyerChecking);
   evidence.database.businessCashCreditedExactly = sameAmount(
     amount(after.businessCash) - amount(before.businessCash),
     total,
@@ -1837,7 +2208,7 @@ function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
   const afterQuantity = Number(after.buyerQuantity);
   const expectedAverage = amount((
     beforeQuantity * amount(before.buyerAverageUnitCost) +
-    BUSINESS_PURCHASE_QUANTITY * fixture.sourceUnitCost
+    BUSINESS_PURCHASE_QUANTITY * amount(receipt.unitPrice)
   ) / (beforeQuantity + BUSINESS_PURCHASE_QUANTITY));
   evidence.database.buyerInventoryCreditedExactly =
     afterQuantity === beforeQuantity + BUSINESS_PURCHASE_QUANTITY;
@@ -1874,14 +2245,17 @@ function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
     Number(after.quoteCount) - Number(before.quoteCount) === 1 &&
     Number(after.receiptCount) - Number(before.receiptCount) === 1;
   evidence.database.ledgerPostingCount = Number(vector.ledgerPostingCount);
-  evidence.database.debitPostingCount = Number(vector.debitPostingCount);
-  evidence.database.creditPostingCount = Number(vector.creditPostingCount);
+  evidence.database.sourceDebitPostingCount = Number(vector.sourceDebitPostingCount);
+  evidence.database.recipientCreditPostingCount = Number(vector.recipientCreditPostingCount);
+  evidence.database.fundingReceiptCount = Number(vector.fundingReceiptCount);
+  evidence.database.fundingTransactionCount = Number(vector.fundingTransactionCount);
   evidence.database.inventoryTransactionCount = Number(vector.inventoryTransactionCount);
   evidence.database.inventoryLineCount = Number(vector.inventoryLineCount);
   evidence.database.purchasedEventCount = Number(vector.purchasedEventCount);
   evidence.database.businessActivityCount = Number(vector.businessActivityCount);
 
-  assert(evidence.database.buyerCheckingDebitedExactly, "Buyer Checking did not debit by the exact receipt total.");
+  assert(evidence.database.fundingSourcesDebitedExactly, "Selected Buyer funding sources did not debit by their immutable source amounts.");
+  assert(evidence.database.targetCheckingUnchangedForAllForeign, "All-foreign funding mutated the Buyer's target-currency Checking account.");
   assert(evidence.database.businessCashCreditedExactly, "Business cash did not credit by the exact receipt total.");
   assert(evidence.database.listingHoldingDebitedExactly, "Listing holding did not debit by the exact quantity.");
   assert(evidence.database.listingVersionAdvancedExactly, "Listing holding version did not advance exactly once.");
@@ -1890,16 +2264,34 @@ function verifyDatabaseVectors(before, after, vector, fixture, quote, receipt) {
   assert(evidence.database.buyerCostAndProvenanceExact, "Buyer Inventory cost or provenance is invalid.");
   assert(evidence.database.quoteConsumedExactly, "Business quote consumption vector is invalid.");
   assert(evidence.database.receiptExact, "Immutable Business receipt vector is invalid.");
-  assert(Number(vector.ledgerPostingCount) === 4, "Settlement did not create exactly four ledger postings.");
-  assert(Number(vector.debitPostingCount) === 1, "Settlement did not create exactly one Buyer debit posting.");
-  assert(Number(vector.creditPostingCount) === 1, "Settlement did not create exactly one Business credit posting.");
+  assert(Number(vector.fundingReceiptCount) === 1, "Settlement did not bind exactly one canonical funding receipt.");
+  assert(Number(vector.fundingTransactionCount) === 1, "Settlement did not bind exactly one canonical bank transaction.");
+  assert(
+    Number(vector.fundingQuoteLineCount) === fundingQuote.lines.length,
+    "Settlement funding quote lines do not reconcile to the immutable public quote.",
+  );
+  assert(
+    Number(vector.sourceDebitPostingCount) === fundingQuote.lines.length,
+    "Settlement did not create exactly one canonical source debit per funding line.",
+  );
+  assert(
+    Number(vector.recipientCreditPostingCount) === 1 &&
+      sameAmount(vector.recipientCreditAmount, total),
+    "Settlement did not create one exact canonical Business recipient credit.",
+  );
+  assert(
+    Number(vector.ledgerPostingCount) >= fundingQuote.lines.length + 1,
+    "Settlement canonical funding journal omitted required source or recipient postings.",
+  );
   assert(Number(vector.inventoryTransactionCount) === 1, "Settlement did not create exactly one Inventory transaction.");
   assert(Number(vector.inventoryLineCount) === 2, "Settlement did not create exactly two Inventory lines.");
   assert(Number(vector.listingLineCount) === 1 && Number(vector.buyerLineCount) === 1, "Settlement Inventory line roles are invalid.");
   assert(Number(vector.purchasedEventCount) === 1, "Settlement did not create exactly one PURCHASED event.");
   assert(Number(vector.businessActivityCount) === 1, "Settlement did not create exactly one Business activity event.");
   assert(
-    Number(after.settlementLedgerCount) - Number(before.settlementLedgerCount) === 4 &&
+    Number(after.fundingReceiptCount) - Number(before.fundingReceiptCount) === 1 &&
+      Number(after.fundingTransactionCount) - Number(before.fundingTransactionCount) === 1 &&
+      Number(after.fundingLedgerCount) - Number(before.fundingLedgerCount) === Number(vector.ledgerPostingCount) &&
       Number(after.inventoryTransactionCount) - Number(before.inventoryTransactionCount) === 1 &&
       Number(after.purchasedEventCount) - Number(before.purchasedEventCount) === 1 &&
       Number(after.businessActivityCount) - Number(before.businessActivityCount) === 1,
@@ -1935,15 +2327,28 @@ async function assertBuyerUiConvergence(session, fixture, after) {
   evidence.browser.buyerConvergedWithoutReload = true;
 }
 
-async function completeSeededCompatibilityPurchase(session, fixture) {
+async function completeSeededCompatibilityPurchase(session, fixture, foreignAccount) {
   await openRoute(session, "store", '[data-page="store"]');
   const businessRow = session.page.locator(`[data-player-store-offer-row="${fixture.offerKey}"]`);
   const card = businessRow.locator("xpath=ancestor::article[1]");
-  const seededButton = card.locator('[data-player-store-purchase-mode="seeded_offer"]:not([disabled])').first();
+  const seededButton = card.locator('[data-player-store-purchase-mode="system_offer"]:not([disabled])').first();
   await seededButton.waitFor({ state: "visible", timeout: 30_000 });
+  const selectedOfferKey = await seededButton.getAttribute("data-player-store-offer");
+  const selectedOffer = walkObjects(session.storePayload).find((candidate) =>
+    candidate.offerKey === selectedOfferKey &&
+    ["seeded", "npc"].includes(candidate.sellerKind) &&
+    Number(candidate.version) > 0
+  );
+  assert(selectedOffer, "Connected Store payload omitted the selected seeded/NPC public offer.");
   await seededButton.click();
   const modal = session.page.locator('[aria-labelledby="storePurchaseModalTitle"]');
   await modal.waitFor({ state: "visible", timeout: 30_000 });
+  const fundingAccount = modal.locator("[data-player-store-funding-account]").first();
+  await fundingAccount.selectOption(foreignAccount.accountKey);
+  assert(
+    await fundingAccount.inputValue() === foreignAccount.accountKey,
+    "Retained seeded purchase did not select the explicit foreign Checking account.",
+  );
   await modal.locator("[data-player-store-quantity]").fill("1");
   const quoteResponsePromise = session.page.waitForResponse((response) => {
     const path = new URL(response.url()).pathname;
@@ -1952,7 +2357,44 @@ async function completeSeededCompatibilityPurchase(session, fixture) {
   await modal.locator("[data-player-store-review]").click();
   const quoteResponse = await quoteResponsePromise;
   assert(quoteResponse.status() === 200, `Retained seeded quote returned ${quoteResponse.status()}.`);
+  const quotePayload = await parsedPlaywrightResponse(quoteResponse);
+  const quote = responseSeededQuote(quotePayload);
+  assert(quote, "Retained seeded Store quote did not return its public quote.");
+  const quoteHeaders = await quoteResponse.request().allHeaders();
+  const quoteBody = assertExactSeededQuoteRequest(
+    quoteResponse.request().postData(),
+    quoteHeaders,
+    selectedOffer,
+  );
+  assert(
+    quote.offerKey === selectedOffer.offerKey &&
+      Number(quote.offerVersion) === Number(selectedOffer.version),
+    "System-offer quote response changed the selected public offer identity.",
+  );
+  const fundingQuote = assertFundingQuoteEvidence(quote.fundingQuote, {
+    commercialQuoteKey: quote.quoteKey,
+    contextKind: "store.system-offer",
+    targetCurrencyCode: quote.currencyCode,
+    targetAmount: String(quote.finalTotalPrice),
+    commercialExpiresAt: quote.expiresAt,
+    allocations: quoteBody.allocations,
+  });
+  assert(
+    quoteBody.allocations.length === 1 &&
+      quoteBody.allocations[0].sourceAccountKey === foreignAccount.accountKey &&
+      quoteBody.allocations[0].targetAmount === null &&
+      fundingQuote.requiresFx === true &&
+      fundingQuote.lines.every((line) =>
+        line.requiresFx === true &&
+        line.sourceCurrencyCode === foreignAccount.currencyCode &&
+        line.sourceCurrencyCode !== fundingQuote.targetCurrencyCode
+      ),
+    "Retained seeded quote did not preserve explicit all-foreign funding intent.",
+  );
+  evidence.browser.retainedSeededAllForeignFundingSelected = true;
   await modal.getByText("AUTHORITATIVE QUOTE", { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  const quoteText = await modal.innerText();
+  assert(quoteText.includes(fundingQuote.quoteKey) && quoteText.includes(fundingQuote.fixingKey), "Retained seeded quote omitted immutable funding evidence.");
 
   const purchaseResponsePromise = session.page.waitForResponse((response) => {
     const path = new URL(response.url()).pathname;
@@ -1964,12 +2406,27 @@ async function completeSeededCompatibilityPurchase(session, fixture) {
   const payload = await parsedPlaywrightResponse(purchaseResponse);
   const receipt = responseSeededReceipt(payload);
   assert(receipt, "Retained seeded Store purchase did not return its receipt.");
+  const purchaseHeaders = await purchaseResponse.request().allHeaders();
+  assertExactPurchaseRequest(purchaseResponse.request().postData(), purchaseHeaders, quote);
+  const fundingReceipt = assertFundingReceiptEvidence(
+    receipt.fundingReceipt,
+    fundingQuote,
+    "system_offer_purchase_funding",
+  );
+  assert(
+    receipt.offerKey === selectedOffer.offerKey &&
+      receipt.sellerKind === selectedOffer.sellerKind &&
+      PUBLIC.inventoryTransaction.test(String(receipt.inventoryTransactionKey || "")),
+    "System-offer receipt omitted canonical offer or Inventory evidence.",
+  );
   await modal.getByText("PURCHASE RECEIPT", { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
   await session.page.waitForFunction(() => {
     const dialog = document.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
     return dialog && dialog.getAttribute("aria-busy") === "false" &&
       /(?:COMPLETED|ALREADY COMPLETED)/u.test(dialog.textContent || "");
   }, undefined, { timeout: 90_000 });
+  const receiptText = await modal.innerText();
+  assert(receiptText.includes(fundingReceipt.receiptKey) && receiptText.includes(fundingReceipt.bankTransactionKey), "Retained seeded receipt omitted immutable funding evidence.");
   evidence.browser.retainedSeededStorePurchaseCompleted = true;
   await modal.locator('[data-player-local-action="close-modal"]').first().click();
   await modal.waitFor({ state: "detached", timeout: 30_000 });
@@ -1980,13 +2437,16 @@ function assertEvidenceComplete() {
   assert(evidence.provisioning.gamesCreated === 2, "Connected acceptance must provision exactly two games.");
   assert(evidence.provisioning.playersCreated === 4, "Connected acceptance must provision Buyer and Seller in each game.");
   assert(evidence.provisioning.buyersFunded === 2, "Connected acceptance must fund both Buyers.");
+  assert(evidence.provisioning.foreignBuyerAccountsFunded === 2, "Connected acceptance must fund one foreign Checking account for each Buyer.");
   assert(evidence.provisioning.businessOffersCreated === 2, "Connected acceptance must create one Business offer per game.");
   assert(evidence.browser.businessOfferExplicitlySelected, "Rendered Store did not explicitly select the Business offer.");
   assert(evidence.browser.authoritativeQuoteRendered, "Rendered Store did not show the authoritative Business quote.");
+  assert(evidence.browser.immutableFundingQuoteRendered, "Rendered Store did not show immutable funding quote evidence.");
   assert(evidence.browser.settlementProcessingGuardRendered, "Settlement processing guard was not rendered.");
   assert(evidence.browser.settlementProcessingFocusContained, "Settlement processing focus escaped the dialog.");
   assert(evidence.browser.settlementProcessingDismissalBlocked, "Settlement processing dialog could be dismissed or duplicated.");
   assert(evidence.browser.immutableReceiptRendered, "Rendered Store did not show the immutable Business receipt.");
+  assert(evidence.browser.immutableFundingReceiptRendered, "Rendered Store did not show immutable funding receipt evidence.");
   assert(evidence.browser.immutableReceiptReloaded, "Rendered Store did not reload the immutable receipt through the authenticated page.");
   assert(evidence.browser.postCommitRefreshFailureForced, "Connected acceptance did not force the post-commit read failure.");
   assert(
@@ -2019,6 +2479,9 @@ function assertEvidenceComplete() {
   assert(evidence.browser.replayUsedSameOriginPageFetch, "Business settlement replay did not use same-origin page fetch.");
   assert(evidence.browser.replayReturnedSameReceipt, "Business settlement replay changed immutable receipt identity.");
   assert(evidence.browser.retainedSeededStorePurchaseCompleted, "Retained seeded Store purchase did not complete.");
+  assert(evidence.browser.retainedSeededAllForeignFundingSelected, "Retained seeded Store purchase did not use all-foreign funding.");
+  assert(evidence.browser.businessAllForeignFundingSelected, "Business Store purchase did not use all-foreign funding.");
+  assert(evidence.browser.twoBrowserCrossCurrencyPurchaseCompleted, "Buyer and Seller browsers did not converge on one cross-currency purchase.");
   assert(evidence.browser.buyerConvergedWithoutReload, "Buyer did not converge without reload.");
   assert(evidence.browser.sellerConvergedWithoutReload, "Seller did not converge without reload.");
   assert(evidence.browser.sharedReceiptIdentityVisible, "Buyer and Seller did not render the same receipt identity.");
@@ -2030,6 +2493,8 @@ function assertEvidenceComplete() {
   assert(!evidence.browser.sensitiveValueObservedInPlayerDom, "Player DOM exposed a sensitive value.");
   assert(evidence.browser.consoleErrors.length === 0, "Player browser emitted console errors.");
   assert(evidence.browser.pageErrors.length === 0, "Player browser emitted page errors.");
+  assert(evidence.database.fundingSourcesDebitedExactly, "Canonical funding source debits were not proven.");
+  assert(evidence.database.targetCheckingUnchangedForAllForeign, "All-foreign target Checking isolation was not proven.");
   assert(evidence.database.replayZeroDelta, "Idempotent replay changed authoritative database state.");
   assert(evidence.database.game2ZeroMutation, "Game 1 acceptance mutated Game 2 state.");
   assert(evidence.database.game1ZeroMutationFromGame2Probe, "Game 2 acceptance mutated Game 1 state.");
@@ -2097,6 +2562,16 @@ async function main() {
   ]);
   await fundBuyer(admin, game1, game1Buyer, game1Economic.currencyCode);
   await fundBuyer(admin, game2, game2Buyer, game2Economic.currencyCode);
+  const game1ForeignAccount = await fundForeignBuyerChecking(
+    game1,
+    game1Buyer,
+    game1Economic.currencyCode,
+  );
+  const game2ForeignAccount = await fundForeignBuyerChecking(
+    game2,
+    game2Buyer,
+    game2Economic.currencyCode,
+  );
   const fixture1 = await createBusinessOfferFixture(game1, game1Buyer, game1Seller, game1Economic);
   const fixture2 = await createBusinessOfferFixture(game2, game2Buyer, game2Seller, game2Economic);
 
@@ -2138,12 +2613,18 @@ async function main() {
     await businessButton.waitFor({ state: "visible", timeout: 30_000 });
     assert(await businessButton.isEnabled(), "The explicit Business offer action is disabled.");
     const productCard = businessRow.locator("xpath=ancestor::article[1]");
-    assert(await productCard.locator('[data-player-store-purchase-mode="seeded_offer"]').count() > 0, "The retained seeded Store offer is not on the same canonical product card.");
+    assert(await productCard.locator('[data-player-store-purchase-mode="system_offer"]').count() > 0, "The retained seeded/NPC Store offer is not on the same canonical product card.");
     evidence.browser.businessOfferExplicitlySelected = true;
 
     await businessButton.click();
     const modal = buyerSession.page.locator('[aria-labelledby="storePurchaseModalTitle"]');
     await modal.waitFor({ state: "visible", timeout: 30_000 });
+    const businessFundingAccount = modal.locator("[data-player-store-funding-account]").first();
+    await businessFundingAccount.selectOption(game1ForeignAccount.accountKey);
+    assert(
+      await businessFundingAccount.inputValue() === game1ForeignAccount.accountKey,
+      "Business purchase did not select the explicit foreign Checking account.",
+    );
     await modal.locator("[data-player-store-quantity]").fill(String(BUSINESS_PURCHASE_QUANTITY));
     const quoteResponsePromise = buyerSession.page.waitForResponse((response) =>
       new URL(response.url()).pathname.endsWith("/players/me/store/offer-quotes") &&
@@ -2154,13 +2635,27 @@ async function main() {
     assert(quoteResponse.status() === 200, `Business quote returned ${quoteResponse.status()}.`);
     const quotePayload = await parsedPlaywrightResponse(quoteResponse);
     const quote = responseBusinessQuote(quotePayload);
-    assertQuote(quote, fixture1);
     const quoteRequestHeaders = await quoteResponse.request().allHeaders();
-    assertExactQuoteRequest(
+    const quoteRequestBody = assertExactQuoteRequest(
       quoteResponse.request().postData(),
       quoteRequestHeaders,
       fixture1,
     );
+    const fundingQuote = assertQuote(quote, fixture1, quoteRequestBody.allocations);
+    assert(
+      quoteRequestBody.allocations.length === 1 &&
+        quoteRequestBody.allocations[0].sourceAccountKey === game1ForeignAccount.accountKey &&
+        quoteRequestBody.allocations[0].targetAmount === null &&
+        fundingQuote.requiresFx === true &&
+        fundingQuote.lines.every((line) =>
+          line.requiresFx === true &&
+          line.sourceCurrencyCode === game1ForeignAccount.currencyCode &&
+          line.sourceCurrencyCode !== fundingQuote.targetCurrencyCode
+        ),
+      "Business quote did not preserve explicit all-foreign funding intent.",
+    );
+    evidence.browser.businessAllForeignFundingSelected = true;
+    const sourceBalancesBefore = await fundingSourceBalances(fixture1, fundingQuote);
     await modal.getByText("AUTHORITATIVE QUOTE", { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
     await modal.getByText("CONFIRMATION REQUIRED", { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
     const quoteModalText = await modal.innerText();
@@ -2183,7 +2678,24 @@ async function main() {
     assert(sameAmount(uiAmount(quoteReviewRows["UNIT PRICE"]), quote.unitPrice), "Rendered quote review changed unit price.");
     assert(sameAmount(uiAmount(quoteReviewRows["FINAL TOTAL"]), quote.totalPrice), "Rendered quote review changed total price.");
     assert(quoteReviewRows["QUOTE KEY"] === quote.quoteKey, "Rendered quote review changed quote identity.");
+    assert(quoteModalText.includes(fundingQuote.quoteKey), "Rendered quote omitted immutable funding identity.");
+    assert(quoteModalText.includes(fundingQuote.fixingKey), "Rendered quote omitted immutable fixing identity.");
+    assert(quoteModalText.includes(fundingQuote.policyVersion), "Rendered quote omitted funding policy evidence.");
+    for (const line of fundingQuote.lines) {
+      assert(
+        quoteModalText.includes(line.sourceAccountKey) &&
+          quoteModalText.includes(line.sourceDebit) &&
+          quoteModalText.includes(line.targetContribution) &&
+          quoteModalText.includes(line.referenceRate) &&
+          quoteModalText.includes(line.customerRate) &&
+          quoteModalText.includes(line.effectiveRate) &&
+          quoteModalText.includes(line.spreadRate) &&
+          quoteModalText.includes(line.roundingDisclosure),
+        "Rendered quote omitted immutable per-allocation funding evidence.",
+      );
+    }
     evidence.browser.authoritativeQuoteRendered = true;
+    evidence.browser.immutableFundingQuoteRendered = true;
 
     await installCommittedRefreshAudit(buyerSession);
 
@@ -2300,12 +2812,11 @@ async function main() {
     assert(purchaseResponse.status() === 200, `Business purchase returned ${purchaseResponse.status()}.`);
     const purchasePayload = await parsedPlaywrightResponse(purchaseResponse);
     const receipt = responseBusinessReceipt(purchasePayload);
-    assertReceipt(receipt, fixture1, quote);
+    const fundingReceipt = assertReceipt(receipt, fixture1, quote);
     const requestHeaders = await purchaseResponse.request().allHeaders();
     const purchaseBody = assertExactPurchaseRequest(
       purchaseResponse.request().postData(),
       requestHeaders,
-      fixture1,
       quote,
     );
     const receiptRead = await receiptReadPromise;
@@ -2445,11 +2956,42 @@ async function main() {
       receiptRows["SELLER STOCK LEFT"] === String(receipt.remainingListedQuantity),
       "Rendered receipt changed committed seller stock.",
     );
+    assert(
+      receiptModalText.includes(fundingReceipt.receiptKey) &&
+        receiptModalText.includes(fundingReceipt.bankTransactionKey) &&
+        receiptModalText.includes(fundingReceipt.targetAccountKey) &&
+        receiptModalText.includes(fundingReceipt.targetReserveDrawAmount),
+      "Rendered receipt omitted immutable aggregate funding evidence.",
+    );
+    for (const line of fundingReceipt.lines) {
+      assert(
+        receiptModalText.includes(line.sourceAccountKey) &&
+          receiptModalText.includes(line.sourceDebit) &&
+          receiptModalText.includes(line.targetContribution) &&
+          receiptModalText.includes(line.referenceRate) &&
+          receiptModalText.includes(line.customerRate) &&
+          receiptModalText.includes(line.effectiveRate) &&
+          receiptModalText.includes(line.spreadRate),
+        "Rendered receipt omitted immutable per-allocation funding evidence.",
+      );
+    }
     evidence.browser.immutableReceiptRendered = true;
+    evidence.browser.immutableFundingReceiptRendered = true;
 
     const game1After = await stateSnapshot(fixture1);
+    const sourceBalancesAfter = await fundingSourceBalances(fixture1, fundingQuote);
     const vector = await receiptVector(fixture1, receipt.receiptKey);
-    verifyDatabaseVectors(game1Before, game1After, vector, fixture1, quote, receipt);
+    verifyDatabaseVectors(
+      game1Before,
+      game1After,
+      vector,
+      fixture1,
+      quote,
+      receipt,
+      fundingQuote,
+      sourceBalancesBefore,
+      sourceBalancesAfter,
+    );
 
     evidence.settlement = {
       offerKey: receipt.offerKey,
@@ -2466,6 +3008,9 @@ async function main() {
       offerVersionBefore: Number(receipt.offerVersionBefore),
       offerVersionAfter: Number(receipt.offerVersionAfter),
       remainingListedQuantity: Number(receipt.remainingListedQuantity),
+      fundingQuoteKey: fundingReceipt.quoteKey,
+      fundingReceiptKey: fundingReceipt.receiptKey,
+      fundingTransactionKey: fundingReceipt.bankTransactionKey,
     };
 
     const beforeReplay = await stateSnapshot(fixture1);
@@ -2515,8 +3060,17 @@ async function main() {
     await assertSameDocument(sellerSession, "Seller");
     evidence.browser.sellerConvergedWithoutReload = true;
     evidence.browser.sharedReceiptIdentityVisible = receiptModalText.includes(receipt.receiptKey) && sellerSemanticText.includes(receipt.receiptKey);
+    evidence.browser.twoBrowserCrossCurrencyPurchaseCompleted =
+      evidence.browser.businessAllForeignFundingSelected &&
+      evidence.database.fundingSourcesDebitedExactly &&
+      evidence.database.businessCashCreditedExactly &&
+      evidence.browser.sellerConvergedWithoutReload;
 
-    await completeSeededCompatibilityPurchase(buyerSession, fixture1);
+    await completeSeededCompatibilityPurchase(
+      buyerSession,
+      fixture1,
+      game1ForeignAccount,
+    );
     await provePurchaseFirstLeavesOnlyRemainderWithdrawable(fixture1);
     await assertSafePlayerDom(buyerSession.page);
     await assertSafePlayerDom(sellerSession.page);
@@ -2539,7 +3093,10 @@ async function main() {
       JSON.stringify(game2Before) === JSON.stringify(game2AfterBrowserRead);
     assert(evidence.database.game2ZeroMutation, "Authenticated Game 2 Store read mutated Game 2 state.");
 
-    await proveWithdrawalFirstRejectsBeforePayment(fixture2);
+    await proveWithdrawalFirstRejectsBeforePayment(
+      fixture2,
+      game2ForeignAccount.accountKey,
+    );
     const game1AfterGame2Probe = await stateSnapshot(fixture1);
     evidence.database.game1ZeroMutationFromGame2Probe =
       JSON.stringify(game1BeforeGame2Probe) === JSON.stringify(game1AfterGame2Probe);

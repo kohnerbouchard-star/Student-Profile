@@ -92,16 +92,20 @@ export function parseStoreCatalogOfferGroupRow(
   }
 
   const bestUnitPrice = readNullableMoney(row.best_unit_price, "best_unit_price");
-  const availablePrices = offers
-    .filter((offer) => offer.availableQuantity > 0)
-    .map((offer) => offer.unitPrice);
-  const derivedBestPrice = availablePrices.length
-    ? Math.min(...availablePrices)
+  const availableOffers = offers.filter((offer) =>
+    offer.availableQuantity > 0
+  );
+  const availableCurrencies = new Set(
+    availableOffers.map((offer) => offer.currencyCode),
+  );
+  const derivedBestPrice = availableOffers.length &&
+      availableCurrencies.size === 1
+    ? Math.min(...availableOffers.map((offer) => offer.unitPrice))
     : null;
   if (bestUnitPrice !== derivedBestPrice) {
     throw contractError(
       "invalid_store_offer_group",
-      "best_unit_price must match the least expensive available offer.",
+      "best_unit_price must match a single-currency available offer set and must be null for mixed currencies.",
     );
   }
 

@@ -1,11 +1,13 @@
 import { PlayerStorePublicError } from "../contracts/playerStorePublicContracts.ts";
 import { handlePlayerStorePublicRequest } from "./playerStorePublicHttpHandler.ts";
 import {
+  ACCOUNT_KEY,
   assertEquals,
   assertError,
   assertNoInternalFields,
   assertNoUuid,
   assertPrivateNoStore,
+  CapturingFundingRepository,
   CapturingOfferRepository,
   CapturingRepository,
   createPlayerStoreHandlerDependencies,
@@ -26,6 +28,7 @@ declare const Deno: {
 Deno.test("Player Store Business quote uses trusted scope and strips internal fields", async () => {
   const repository = new CapturingRepository();
   const offerRepository = new CapturingOfferRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const response = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest(
       "POST",
@@ -33,22 +36,27 @@ Deno.test("Player Store Business quote uses trusted scope and strips internal fi
       validOfferQuoteBody(),
     ),
     { kind: "offerQuotes" },
-    createPlayerStoreHandlerDependencies(repository, offerRepository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      offerRepository,
+      fundingRepository,
+    ),
   );
   const body = await response.json();
 
   assertEquals(response.status, 200);
   assertEquals(body.quote.offerKey, OFFER_KEY);
   assertEquals(body.quote.offerVersion, 7);
-  assertEquals(offerRepository.quoteInputs, [{
+  assertEquals(fundingRepository.offerQuoteInputs, [{
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
     offerKey: OFFER_KEY,
     quantity: 2,
     expectedVersion: 7,
+    allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
     idempotencyKey: "store.offer.quote.12345678",
   }]);
-  assertEquals(repository.quoteInputs.length, 0);
+  assertEquals(body.quote.fundingQuote.targetAmount, "90.00");
   assertNoUuid(body);
   assertNoInternalFields(body);
   assertPrivateNoStore(response);
@@ -57,17 +65,18 @@ Deno.test("Player Store Business quote uses trusted scope and strips internal fi
 Deno.test("Player Store Business purchase and receipt read remain Buyer scoped", async () => {
   const repository = new CapturingRepository();
   const offerRepository = new CapturingOfferRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const purchaseResponse = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest("POST", "/players/me/store/offer-purchases", {
-      offerKey: OFFER_KEY,
       quoteKey: QUOTE_KEY,
-      quantity: 2,
-      expectedVersion: 7,
       idempotencyKey: "store.offer.purchase.12345678",
-      clientSubmittedAt: "2026-07-19T02:01:00.000Z",
     }),
     { kind: "offerPurchases" },
-    createPlayerStoreHandlerDependencies(repository, offerRepository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      offerRepository,
+      fundingRepository,
+    ),
   );
   const purchaseBody = await purchaseResponse.json();
 
@@ -75,16 +84,13 @@ Deno.test("Player Store Business purchase and receipt read remain Buyer scoped",
   assertEquals(purchaseBody.receipt.receiptKey, OFFER_RECEIPT_KEY);
   assertEquals(purchaseBody.receipt.offerKey, OFFER_KEY);
   assertEquals(purchaseBody.refreshRequired, true);
-  assertEquals(offerRepository.purchaseInputs, [{
+  assertEquals(fundingRepository.offerPurchaseInputs, [{
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
-    offerKey: OFFER_KEY,
     quoteKey: QUOTE_KEY,
-    quantity: 2,
-    expectedVersion: 7,
     idempotencyKey: "store.offer.purchase.12345678",
   }]);
-  assertEquals(repository.purchaseInputs.length, 0);
+  assertEquals(purchaseBody.receipt.fundingReceipt.targetAmount, "90.00");
   assertNoUuid(purchaseBody);
   assertNoInternalFields(purchaseBody);
 
@@ -94,13 +100,17 @@ Deno.test("Player Store Business purchase and receipt read remain Buyer scoped",
       `/players/me/store/receipts/${OFFER_RECEIPT_KEY}`,
     ),
     { kind: "offerReceipt", receiptKey: OFFER_RECEIPT_KEY },
-    createPlayerStoreHandlerDependencies(repository, offerRepository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      offerRepository,
+      fundingRepository,
+    ),
   );
   const receiptBody = await receiptResponse.json();
 
   assertEquals(receiptResponse.status, 200);
   assertEquals(receiptBody.receipt.receiptKey, OFFER_RECEIPT_KEY);
-  assertEquals(offerRepository.receiptInputs, [{
+  assertEquals(fundingRepository.receiptInputs, [{
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
     receiptKey: OFFER_RECEIPT_KEY,
@@ -113,6 +123,7 @@ Deno.test("Player Store Business purchase and receipt read remain Buyer scoped",
 Deno.test("Player Store Business routes reject mixed authorities and malformed intent", async () => {
   const repository = new CapturingRepository();
   const offerRepository = new CapturingOfferRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const cases: readonly {
     route: { readonly kind: "offerQuotes" | "offerPurchases" };
     path: string;
@@ -207,7 +218,11 @@ Deno.test("Player Store Business routes reject mixed authorities and malformed i
     const response = await handlePlayerStorePublicRequest(
       createPlayerStoreRequest("POST", testCase.path, testCase.body),
       testCase.route,
-      createPlayerStoreHandlerDependencies(repository, offerRepository),
+      createPlayerStoreHandlerDependencies(
+        repository,
+        offerRepository,
+        fundingRepository,
+      ),
     );
     await assertError(response, 400, "invalid_player_store_request");
   }
@@ -218,17 +233,21 @@ Deno.test("Player Store Business routes reject mixed authorities and malformed i
       quantity: 1,
     }),
     { kind: "quotes" },
-    createPlayerStoreHandlerDependencies(repository, offerRepository),
+    createPlayerStoreHandlerDependencies(
+      repository,
+      offerRepository,
+      fundingRepository,
+    ),
   );
   await assertError(itemQuoteWithOffer, 400, "invalid_player_store_request");
-  assertEquals(offerRepository.quoteInputs.length, 0);
-  assertEquals(offerRepository.purchaseInputs.length, 0);
-  assertEquals(repository.quoteInputs.length, 0);
+  assertEquals(fundingRepository.offerQuoteInputs.length, 0);
+  assertEquals(fundingRepository.offerPurchaseInputs.length, 0);
 });
 
 Deno.test("Player Store Business routes reject wrong methods before repository work", async () => {
   const repository = new CapturingRepository();
   const offerRepository = new CapturingOfferRepository();
+  const fundingRepository = new CapturingFundingRepository();
   const cases = [
     ["GET", "/players/me/store/offer-quotes", { kind: "offerQuotes" }],
     ["GET", "/players/me/store/offer-purchases", { kind: "offerPurchases" }],
@@ -242,15 +261,19 @@ Deno.test("Player Store Business routes reject wrong methods before repository w
     const response = await handlePlayerStorePublicRequest(
       createPlayerStoreRequest(method, path),
       route,
-      createPlayerStoreHandlerDependencies(repository, offerRepository),
+      createPlayerStoreHandlerDependencies(
+        repository,
+        offerRepository,
+        fundingRepository,
+      ),
     );
     await assertError(response, 405, "method_not_allowed");
   }
-  assertEquals(offerRepository.totalCalls(), 0);
+  assertEquals(fundingRepository.totalCalls(), 0);
 });
 
 Deno.test("Player Store preserves stable public repository errors and hides unknown failures", async () => {
-  const stable = new CapturingOfferRepository();
+  const stable = new CapturingFundingRepository();
   stable.quoteError = new PlayerStorePublicError(
     "store_offer_withdrawal_pending",
     "Store offer withdrawal is pending.",
@@ -264,7 +287,11 @@ Deno.test("Player Store preserves stable public repository errors and hides unkn
       validOfferQuoteBody(),
     ),
     { kind: "offerQuotes" },
-    createPlayerStoreHandlerDependencies(new CapturingRepository(), stable),
+    createPlayerStoreHandlerDependencies(
+      new CapturingRepository(),
+      new CapturingOfferRepository(),
+      stable,
+    ),
   );
   const stableBody = await stableResponse.json();
   assertEquals(stableResponse.status, 409);
@@ -274,7 +301,7 @@ Deno.test("Player Store preserves stable public repository errors and hides unkn
     retryable: false,
   });
 
-  const unknown = new CapturingOfferRepository();
+  const unknown = new CapturingFundingRepository();
   unknown.quoteError = new Error(`database failed for ${GAME_ID}`);
   const unknownResponse = await handlePlayerStorePublicRequest(
     createPlayerStoreRequest(
@@ -283,7 +310,11 @@ Deno.test("Player Store preserves stable public repository errors and hides unkn
       validOfferQuoteBody(),
     ),
     { kind: "offerQuotes" },
-    createPlayerStoreHandlerDependencies(new CapturingRepository(), unknown),
+    createPlayerStoreHandlerDependencies(
+      new CapturingRepository(),
+      new CapturingOfferRepository(),
+      unknown,
+    ),
   );
   const unknownBody = await unknownResponse.json();
   assertEquals(unknownResponse.status, 500);

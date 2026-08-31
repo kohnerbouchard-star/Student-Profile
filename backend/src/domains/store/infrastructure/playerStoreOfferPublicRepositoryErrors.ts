@@ -80,11 +80,6 @@ const QUOTE_ERRORS: Readonly<Record<string, PublicErrorSpec>> = {
     "Store offer stock is insufficient.",
     409,
   ],
-  store_offer_quote_cross_currency_unsupported: [
-    "store_offer_currency_unavailable",
-    "Store offer currency is unavailable.",
-    409,
-  ],
 };
 const QUOTE_UNAVAILABLE = new Set([
   "store_offer_quote_offer_unavailable",

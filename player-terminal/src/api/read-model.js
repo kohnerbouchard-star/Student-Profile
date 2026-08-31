@@ -619,27 +619,6 @@ function inventoryQuantity(inventoryByItem, itemKey, catalogItemKey = "") {
   return number(holding.quantityOwned ?? holding.quantity);
 }
 
-function seededStoreOffer(item) {
-  const itemKey = text(item.itemKey || item.id || item.itemId);
-  if (!itemKey) return null;
-  return {
-    offerKey: `seeded:${itemKey}`,
-    sellerKey: `seeded:${itemKey}`,
-    sellerPartyKey: `seeded:${itemKey}`,
-    sellerKind: "seeded",
-    sellerName: "Econovaria Store",
-    businessKey: null,
-    businessName: null,
-    unitPrice: number(item.price),
-    currencyCode: text(item.currencyCode),
-    availableQuantity: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
-    status: "active",
-    purchasability: "seeded_offer",
-    purchasable: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))) > 0,
-    version: 1,
-  };
-}
-
 function publicSellerOffer(value) {
   const offer = object(value);
   const sellerKind = text(offer.sellerKind).toLowerCase();
@@ -663,7 +642,6 @@ function publicSellerOffer(value) {
 
 function normalizedSeededStoreItem(item, inventoryByItem) {
   const itemKey = text(item.itemKey || item.id || item.itemId);
-  const offer = seededStoreOffer(item);
   return {
     id: itemKey,
     itemKey,
@@ -673,13 +651,13 @@ function normalizedSeededStoreItem(item, inventoryByItem) {
     name: text(item.name, "Unnamed item"),
     category: text(item.category, "Other"),
     price: number(item.price),
-    bestOfferKey: offer?.availableQuantity > 0 ? offer.offerKey : null,
-    bestUnitPrice: number(item.price),
-    stock: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
-    totalAvailableQuantity: Math.max(0, Math.trunc(number(item.stockQuantity ?? item.stock))),
-    sellerCount: offer && offer.availableQuantity > 0 ? 1 : 0,
-    offerCount: offer ? 1 : 0,
-    offers: offer ? [offer] : [],
+    bestOfferKey: null,
+    bestUnitPrice: null,
+    stock: 0,
+    totalAvailableQuantity: 0,
+    sellerCount: 0,
+    offerCount: 0,
+    offers: [],
     currencyCode: text(item.currencyCode).toUpperCase(),
     owned: inventoryQuantity(inventoryByItem, itemKey),
     image: text(item.image, categoryImage(item)),
@@ -692,14 +670,12 @@ function normalizedCatalogProduct(product, seededItem, inventoryByItem) {
   const itemKey = text(product.storeItemKey || seededItem?.itemKey || seededItem?.id);
   const catalogItemKey = text(product.catalogItemKey);
   const offers = list(product.offers).map(publicSellerOffer);
-  if (seededItem && !offers.some((offer) => offer.sellerKind === "seeded")) {
-    const retainedOffer = seededStoreOffer(seededItem);
-    if (retainedOffer) offers.push(retainedOffer);
-  }
   const activeOffers = offers.filter((offer) => offer.status === "active" && offer.purchasable === true && offer.availableQuantity > 0);
+  const activeCurrencies = new Set(activeOffers.map((offer) => offer.currencyCode));
+  const comparablePrices = activeCurrencies.size <= 1;
   const prices = activeOffers.map((offer) => offer.unitPrice).filter((price) => Number.isFinite(price) && price >= 0);
   const totalAvailableQuantity = activeOffers.reduce((sum, offer) => sum + offer.availableQuantity, 0);
-  const bestUnitPrice = prices.length ? Math.min(...prices) : null;
+  const bestUnitPrice = comparablePrices && prices.length ? Math.min(...prices) : null;
   const bestOfferKey = activeOffers.find((offer) => offer.unitPrice === bestUnitPrice)?.offerKey ?? null;
   const currencyCode = text(product.currencyCode || seededItem?.currencyCode).toUpperCase();
   return {

@@ -20,17 +20,34 @@ const UUID_ANY =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
 const FIXING_KEY = /^fxf_[0-9a-f]{32}$/u;
 const BANK_TRANSACTION_KEY = /^btx_[0-9a-f]{32}$/u;
+const INVENTORY_TRANSACTION_KEY = /^itx_[0-9a-f]{32}$/u;
+const SHA256_DIGEST = /^[0-9a-f]{64}$/u;
+const OFFER_KEY = /^sof_[0-9a-f]{32}$/u;
+const PARTY_KEY = /^pty_[0-9a-f]{32}$/u;
 const CURRENCY_CODE = /^[A-Z0-9_]{3,16}$/u;
 
-export interface PlayerStoreFundingRpcError {
-  readonly message?: string;
-  readonly code?: string;
-}
+export type StoreFundingReceiptAction =
+  | "system_offer_purchase_funding"
+  | "business_offer_purchase_funding";
 
-export function parseSeededQuote(value: unknown): PlayerStoreSeededFundingQuoteDto {
+export function parseSeededQuote(
+  value: unknown,
+): PlayerStoreSeededFundingQuoteDto {
   const row = publicRecord(value);
+  const sellerKind = systemSellerKind(row.sellerKind);
+  const quoteKey = publicKey(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN);
+  const currencyCode = currency(row.currencyCode);
+  const finalTotalPrice = finiteNumber(row.finalTotalPrice, 0);
+  const fundingQuote = parseFundingQuote(row.fundingQuote);
+  assertFundingBinding(
+    fundingQuote,
+    "store.system-offer",
+    quoteKey,
+    currencyCode,
+    finalTotalPrice,
+  );
   return Object.freeze({
-    quoteKey: publicKey(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN),
+    quoteKey,
     quoteStatus: quoteStatus(row.quoteStatus),
     itemKey: publicKey(row.itemKey, PLAYER_STORE_ITEM_KEY_PATTERN),
     itemName: publicText(row.itemName),
@@ -41,8 +58,8 @@ export function parseSeededQuote(value: unknown): PlayerStoreSeededFundingQuoteD
     scarcityMultiplier: finiteNumber(row.scarcityMultiplier, 0),
     discountAmount: finiteNumber(row.discountAmount, 0),
     finalUnitPrice: finiteNumber(row.finalUnitPrice, 0),
-    finalTotalPrice: finiteNumber(row.finalTotalPrice, 0),
-    currencyCode: currency(row.currencyCode),
+    finalTotalPrice,
+    currencyCode,
     itemCurrencyCode: currency(row.itemCurrencyCode),
     playerCurrencyCode: currency(row.playerCurrencyCode),
     exchangeRate: finiteNumber(row.exchangeRate, 0),
@@ -51,33 +68,102 @@ export function parseSeededQuote(value: unknown): PlayerStoreSeededFundingQuoteD
     expiresAt: isoTimestamp(row.expiresAt),
     pricingVersion: publicText(row.pricingVersion),
     replayed: booleanValue(row.replayed),
-    fundingQuote: parseFundingQuote(row.fundingQuote),
+    offerKey: publicKey(row.offerKey, OFFER_KEY),
+    offerVersion: boundedInteger(row.offerVersion, 1),
+    sellerKind,
+    sellerPartyKey: publicKey(row.sellerPartyKey, PARTY_KEY),
+    sellerName: publicText(row.sellerName),
+    availableQuantityAtQuote: boundedInteger(
+      row.availableQuantityAtQuote,
+      1,
+    ),
+    contextDigest: publicKey(row.contextDigest, SHA256_DIGEST),
+    fundingQuote,
   });
 }
 
-export function parseSeededReceipt(value: unknown): PlayerStoreSeededFundingReceiptDto {
+export function parseSeededReceipt(
+  value: unknown,
+): PlayerStoreSeededFundingReceiptDto {
   const row = publicRecord(value);
+  const sellerKind = systemSellerKind(row.sellerKind);
+  const quoteKey = publicKey(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN);
+  const currencyCode = currency(row.currencyCode);
+  const finalTotalPrice = finiteNumber(row.finalTotalPrice, 0);
+  const fundingReceipt = parseFundingReceipt(
+    row.fundingReceipt,
+    "system_offer_purchase_funding",
+  );
+  assertFundingBinding(
+    fundingReceipt,
+    "store.system-offer",
+    quoteKey,
+    currencyCode,
+    finalTotalPrice,
+  );
+  const offerVersionBefore = boundedInteger(row.offerVersionBefore, 1);
+  const offerVersionAfter = boundedInteger(row.offerVersionAfter, 1);
+  if (
+    (sellerKind === "seeded" && offerVersionAfter !== offerVersionBefore) ||
+    (sellerKind === "npc" && offerVersionAfter !== offerVersionBefore + 1)
+  ) throw invalidPublicResponse();
   return Object.freeze({
     receiptKey: publicKey(row.receiptKey, PLAYER_STORE_RECEIPT_KEY_PATTERN),
-    quoteKey: publicKey(row.quoteKey, PLAYER_STORE_QUOTE_KEY_PATTERN),
+    quoteKey,
     itemKey: publicKey(row.itemKey, PLAYER_STORE_ITEM_KEY_PATTERN),
     itemName: publicText(row.itemName),
     quantity: boundedInteger(row.quantity, 1),
     finalUnitPrice: finiteNumber(row.finalUnitPrice, 0),
-    finalTotalPrice: finiteNumber(row.finalTotalPrice, 0),
-    currencyCode: currency(row.currencyCode),
+    finalTotalPrice,
+    currencyCode,
     inventoryQuantityOwned: boundedInteger(row.inventoryQuantityOwned, 0),
+    offerKey: publicKey(row.offerKey, OFFER_KEY),
+    sellerKind,
+    sellerPartyKey: publicKey(row.sellerPartyKey, PARTY_KEY),
+    sellerName: publicText(row.sellerName),
+    offerVersionBefore,
+    offerVersionAfter,
+    remainingSellerQuantity: boundedInteger(row.remainingSellerQuantity, 0),
+    sellerProceeds: finiteNumber(row.sellerProceeds, 0),
+    inventoryTransactionKey: publicKey(
+      row.inventoryTransactionKey,
+      INVENTORY_TRANSACTION_KEY,
+    ),
     completedAt: isoTimestamp(row.completedAt),
     alreadyCompleted: booleanValue(row.alreadyCompleted),
-    fundingReceipt: parseFundingReceipt(row.fundingReceipt),
+    contextDigest: publicKey(row.contextDigest, SHA256_DIGEST),
+    fundingReceipt,
   });
+}
+
+export function assertFundingBinding(
+  evidence: Pick<
+    PlayerStoreFundingQuoteDto | PlayerStoreFundingReceiptDto,
+    | "fundingContextKind"
+    | "fundingContextKey"
+    | "targetCurrencyCode"
+    | "targetAmount"
+  >,
+  expectedContextKind: "store.system-offer" | "store.business-offer",
+  expectedContextKey: string,
+  expectedCurrencyCode: string,
+  expectedAmount: number,
+): void {
+  if (
+    evidence.fundingContextKind !== expectedContextKind ||
+    evidence.fundingContextKey !== expectedContextKey ||
+    evidence.targetCurrencyCode !== expectedCurrencyCode ||
+    Number(evidence.targetAmount) !== expectedAmount
+  ) {
+    throw invalidPublicResponse();
+  }
 }
 
 export function parseFundingQuote(value: unknown): PlayerStoreFundingQuoteDto {
   const row = publicRecord(value);
   const lines = publicArray(row.lines).map(parseFundingQuoteLine);
   if (lines.length < 1 || lines.length > 3) throw invalidPublicResponse();
-  return Object.freeze({
+  const quote = Object.freeze({
     quoteKey: publicKey(
       row.quote_key,
       PLAYER_STORE_FUNDING_QUOTE_KEY_PATTERN,
@@ -86,13 +172,23 @@ export function parseFundingQuote(value: unknown): PlayerStoreFundingQuoteDto {
     fundingContextKey: publicContextKey(row.funding_context_key),
     targetCurrencyCode: currency(row.target_currency_code),
     targetMinorUnit: boundedInteger(row.target_minor_unit, 0, 18),
-    targetAmount: finiteNumber(row.target_amount, 0),
+    targetAmount: positiveDecimal(row.target_amount),
     fixingKey: publicKey(row.fixing_key, FIXING_KEY),
     policyVersion: publicText(row.policy_version),
     requiresFx: booleanValue(row.requires_fx),
     expiresAt: isoTimestamp(row.expires_at),
     lines: Object.freeze(lines),
   });
+  assertFundingLineInvariants(
+    quote.lines,
+    quote.targetCurrencyCode,
+    quote.targetMinorUnit,
+    quote.targetAmount,
+  );
+  if (quote.requiresFx !== quote.lines.some((line) => line.requiresFx)) {
+    throw invalidPublicResponse();
+  }
+  return quote;
 }
 
 function parseFundingQuoteLine(value: unknown): PlayerStoreFundingQuoteLineDto {
@@ -107,25 +203,28 @@ function parseFundingQuoteLine(value: unknown): PlayerStoreFundingQuoteLineDto {
     sourceMinorUnit: boundedInteger(row.source_minor_unit, 0, 18),
     targetCurrencyCode: currency(row.target_currency_code),
     targetMinorUnit: boundedInteger(row.target_minor_unit, 0, 18),
-    postedAmount: finiteNumber(row.posted_amount),
-    heldAmount: finiteNumber(row.held_amount, 0),
-    availableAmount: finiteNumber(row.available_amount),
-    targetContribution: finiteNumber(row.target_contribution, 0),
-    sourceDebit: finiteNumber(row.source_debit, 0),
-    referenceRate: finiteNumber(row.reference_rate, 0),
-    customerRate: finiteNumber(row.customer_rate, 0),
-    effectiveRate: finiteNumber(row.effective_rate, 0),
-    spreadRate: finiteNumber(row.spread_rate, 0),
+    postedAmount: decimal(row.posted_amount),
+    heldAmount: nonNegativeDecimal(row.held_amount),
+    availableAmount: decimal(row.available_amount),
+    targetContribution: positiveDecimal(row.target_contribution),
+    sourceDebit: positiveDecimal(row.source_debit),
+    referenceRate: positiveDecimal(row.reference_rate),
+    customerRate: positiveDecimal(row.customer_rate),
+    effectiveRate: positiveDecimal(row.effective_rate),
+    spreadRate: nonNegativeDecimal(row.spread_rate),
     requiresFx: booleanValue(row.requires_fx),
     roundingDisclosure: publicText(row.rounding_disclosure),
   });
 }
 
-export function parseFundingReceipt(value: unknown): PlayerStoreFundingReceiptDto {
+export function parseFundingReceipt(
+  value: unknown,
+  expectedSourceAction: StoreFundingReceiptAction,
+): PlayerStoreFundingReceiptDto {
   const row = publicRecord(value);
   const lines = publicArray(row.lines).map(parseFundingReceiptLine);
   if (lines.length < 1 || lines.length > 3) throw invalidPublicResponse();
-  return Object.freeze({
+  const receipt = Object.freeze({
     receiptKey: publicKey(
       row.receipt_key,
       PLAYER_STORE_FUNDING_RECEIPT_KEY_PATTERN,
@@ -145,16 +244,29 @@ export function parseFundingReceipt(value: unknown): PlayerStoreFundingReceiptDt
     fundingContextKind: publicText(row.funding_context_kind),
     fundingContextKey: publicContextKey(row.funding_context_key),
     targetCurrencyCode: currency(row.target_currency_code),
-    targetAmount: finiteNumber(row.target_amount, 0),
-    targetReserveDrawAmount: finiteNumber(
+    targetMinorUnit: boundedInteger(row.target_minor_unit, 0, 18),
+    targetAmount: positiveDecimal(row.target_amount),
+    targetReserveDrawAmount: nonNegativeDecimal(
       row.target_reserve_draw_amount,
-      0,
     ),
     sourceDomain: publicText(row.source_domain),
     sourceAction: publicText(row.source_action),
     createdAt: isoTimestamp(row.created_at),
     lines: Object.freeze(lines),
   });
+  assertFundingLineInvariants(
+    receipt.lines,
+    receipt.targetCurrencyCode,
+    receipt.targetMinorUnit,
+    receipt.targetAmount,
+  );
+  if (
+    receipt.sourceDomain !== "store" ||
+    receipt.sourceAction !== expectedSourceAction
+  ) {
+    throw invalidPublicResponse();
+  }
+  return receipt;
 }
 
 function parseFundingReceiptLine(
@@ -168,117 +280,61 @@ function parseFundingReceiptLine(
       PLAYER_STORE_FUNDING_ACCOUNT_KEY_PATTERN,
     ),
     sourceCurrencyCode: currency(row.source_currency_code),
-    targetContribution: finiteNumber(row.target_contribution, 0),
-    sourceDebit: finiteNumber(row.source_debit, 0),
-    referenceRate: finiteNumber(row.reference_rate, 0),
-    customerRate: finiteNumber(row.customer_rate, 0),
-    effectiveRate: finiteNumber(row.effective_rate, 0),
-    spreadRate: finiteNumber(row.spread_rate, 0),
+    sourceMinorUnit: boundedInteger(row.source_minor_unit, 0, 18),
+    targetCurrencyCode: currency(row.target_currency_code),
+    targetMinorUnit: boundedInteger(row.target_minor_unit, 0, 18),
+    targetContribution: positiveDecimal(row.target_contribution),
+    sourceDebit: positiveDecimal(row.source_debit),
+    referenceRate: positiveDecimal(row.reference_rate),
+    customerRate: positiveDecimal(row.customer_rate),
+    effectiveRate: positiveDecimal(row.effective_rate),
+    spreadRate: nonNegativeDecimal(row.spread_rate),
     requiresFx: booleanValue(row.requires_fx),
   });
 }
 
-export function mapFundingRpcError(
-  error: PlayerStoreFundingRpcError,
-  phase: "quote" | "purchase" | "receipt",
-): PlayerStorePublicError {
-  const source = `${error.code ?? ""} ${error.message ?? ""}`.toUpperCase();
-  const code = [...source.matchAll(/[A-Z][A-Z0-9_]{4,}/gu)]
-    .map((match) => match[0])
-    .find((candidate) =>
-      /^(?:STORE|PURCHASE|FUNDING|BANK|FX|PLAYER)_/u.test(candidate)
-    ) ?? "";
+interface FundingInvariantLine {
+  readonly lineNumber: number;
+  readonly sourceAccountKey: string;
+  readonly sourceCurrencyCode: string;
+  readonly targetCurrencyCode: string;
+  readonly targetMinorUnit: number;
+  readonly targetContribution: string;
+  readonly requiresFx: boolean;
+}
 
-  if (/REQUEST_INVALID|ALLOCATIONS?_INVALID|PRECISION_INVALID/u.test(code)) {
-    return publicError(
-      "invalid_player_store_request",
-      "Store funding request is invalid.",
-      400,
-    );
+function assertFundingLineInvariants(
+  lines: readonly FundingInvariantLine[],
+  targetCurrencyCode: string,
+  targetMinorUnit: number,
+  targetAmount: string,
+): void {
+  const sourceAccounts = new Set<string>();
+  let contributionUnits = 0n;
+  for (const [index, line] of lines.entries()) {
+    if (
+      line.lineNumber !== index + 1 ||
+      sourceAccounts.has(line.sourceAccountKey) ||
+      line.targetCurrencyCode !== targetCurrencyCode ||
+      line.targetMinorUnit !== targetMinorUnit ||
+      line.requiresFx !== (line.sourceCurrencyCode !== targetCurrencyCode)
+    ) {
+      throw invalidPublicResponse();
+    }
+    sourceAccounts.add(line.sourceAccountKey);
+    contributionUnits += decimalUnits(line.targetContribution, targetMinorUnit);
   }
-  if (code.includes("SELF_PURCHASE")) {
-    return publicError(
-      "store_offer_self_purchase_forbidden",
-      "A Player cannot purchase from their own Business.",
-      403,
-    );
+  if (contributionUnits !== decimalUnits(targetAmount, targetMinorUnit)) {
+    throw invalidPublicResponse();
   }
-  if (code.includes("IDEMPOTENCY") || code.endsWith("_CONFLICT")) {
-    return publicError(
-      "store_idempotency_conflict",
-      "This idempotency key was already used for another Store request.",
-      409,
-    );
-  }
-  if (code.includes("INSUFFICIENT_STOCK")) {
-    return publicError(
-      "store_insufficient_stock",
-      "Store stock is insufficient.",
-      409,
-    );
-  }
-  if (
-    code.includes("FUNDING_INSUFFICIENT") ||
-    code.includes("INSUFFICIENT_FUNDS")
-  ) {
-    return publicError(
-      "store_insufficient_balance",
-      "Available Checking funds are insufficient for this purchase.",
-      409,
-    );
-  }
-  if (/LIQUIDITY|FACILITY|CLEARING|RESERVE|CAP_/u.test(code)) {
-    return publicError(
-      "store_fx_liquidity_unavailable",
-      "Retail checkout FX capacity is unavailable.",
-      409,
-    );
-  }
-  if (code.includes("TOTAL_MISMATCH")) {
-    return publicError(
-      "store_funding_total_mismatch",
-      "The selected account allocations must equal the Store bill.",
-      409,
-    );
-  }
-  if (code.includes("QUOTE_EXPIRED") || code.includes("RATE_VERSION_STALE")) {
-    return publicError(
-      "store_quote_expired",
-      "The Store funding quote has expired.",
-      409,
-    );
-  }
-  if (code.includes("RECEIPT_NOT_FOUND")) {
-    return publicError(
-      "store_offer_receipt_not_found",
-      "Store offer receipt was not found.",
-      404,
-    );
-  }
-  if (/NOT_FOUND|UNAVAILABLE|STATUS_INVALID|MISMATCH|RESERVED/u.test(code)) {
-    return publicError(
-      phase === "quote"
-        ? "store_quote_not_available"
-        : "store_purchase_unavailable",
-      phase === "quote"
-        ? "Store funding quote is not available."
-        : "Store purchase is not available.",
-      409,
-    );
-  }
-  return publicError(
-    phase === "quote"
-      ? "player_store_funding_quote_failed"
-      : phase === "receipt"
-      ? "player_store_funding_receipt_failed"
-      : "player_store_funding_purchase_failed",
-    phase === "quote"
-      ? "Store funding quote could not be created."
-      : phase === "receipt"
-      ? "Store funding receipt could not be loaded."
-      : "Store purchase could not be completed.",
-    500,
-  );
+}
+
+function decimalUnits(value: string, minorUnit: number): bigint {
+  const [whole, fraction = ""] = value.split(".");
+  const discarded = fraction.slice(minorUnit);
+  if (discarded && /[1-9]/u.test(discarded)) throw invalidPublicResponse();
+  const paddedFraction = fraction.slice(0, minorUnit).padEnd(minorUnit, "0");
+  return BigInt(`${whole}${paddedFraction}`);
 }
 
 export function publicRecord(value: unknown): Record<string, unknown> {
@@ -336,6 +392,29 @@ function finiteNumber(
   return candidate;
 }
 
+function decimal(value: unknown): string {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (
+    !/^-?(?:0|[1-9][0-9]{0,39})(?:\.[0-9]{1,38})?$/u.test(candidate) ||
+    candidate.length > 80
+  ) {
+    throw invalidPublicResponse();
+  }
+  return candidate;
+}
+
+function nonNegativeDecimal(value: unknown): string {
+  const candidate = decimal(value);
+  if (candidate.startsWith("-")) throw invalidPublicResponse();
+  return candidate;
+}
+
+function positiveDecimal(value: unknown): string {
+  const candidate = nonNegativeDecimal(value);
+  if (!/[1-9]/u.test(candidate)) throw invalidPublicResponse();
+  return candidate;
+}
+
 function boundedInteger(
   value: unknown,
   minimum: number,
@@ -375,18 +454,16 @@ function quoteStatus(
   return candidate;
 }
 
+function systemSellerKind(value: unknown): "seeded" | "npc" {
+  if (value === "seeded" || value === "npc") return value;
+  throw invalidPublicResponse();
+}
+
 export function invalidPublicResponse(): PlayerStorePublicError {
-  return publicError(
+  return new PlayerStorePublicError(
     "player_store_funding_response_invalid",
     "Store funding returned an invalid public response.",
     500,
+    false,
   );
-}
-
-function publicError(
-  code: string,
-  message: string,
-  status: number,
-): PlayerStorePublicError {
-  return new PlayerStorePublicError(code, message, status, false);
 }

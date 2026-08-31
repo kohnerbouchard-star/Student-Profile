@@ -15,33 +15,35 @@ import {
   resolvePlayerRequestScope,
 } from "../../players/api/playerRequestScope.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import type { PlayerStoreOfferPublicRepository } from "../contracts/playerStoreOfferPublicContracts.ts";
+import type { PlayerStoreFundingPublicRepository } from "../contracts/playerStoreFundingPublicContracts.ts";
+import type { PlayerStoreOfferProductPublicRepository } from "../contracts/playerStoreOfferPublicContracts.ts";
 import {
   PlayerStorePublicError,
-  type PlayerStorePublicRepository,
+  type PlayerStorePublicReadRepository,
 } from "../contracts/playerStorePublicContracts.ts";
-import { SupabasePlayerStoreOfferPublicRepository } from "../infrastructure/supabasePlayerStoreOfferPublicRepository.ts";
-import { SupabasePlayerStorePublicRepository } from "../infrastructure/supabasePlayerStorePublicRepository.ts";
+import { SupabasePlayerStoreFundingPublicRepository } from "../infrastructure/supabasePlayerStoreFundingPublicRepository.ts";
+import { SupabasePlayerStoreOfferProductPublicRepository } from "../infrastructure/supabasePlayerStoreOfferProductPublicRepository.ts";
+import { SupabasePlayerStorePublicReadRepository } from "../infrastructure/supabasePlayerStorePublicReadRepository.ts";
 import {
   readPlayerStoreExpectedVersion,
+  readPlayerStoreFundingAllocations,
   readPlayerStoreIdempotencyKey,
-  readPlayerStoreItemKey,
   readPlayerStoreOfferKey,
   readPlayerStoreOfferQuoteKey,
-  readPlayerStoreOptionalTimestamp,
   readPlayerStorePublicRequestBody,
   readPlayerStoreQuantity,
   readPlayerStoreQuoteKey,
-  readPlayerStoreStrictOptionalTimestamp,
   readPlayerStoreStrictQuantity,
   validatePlayerStorePublicMethodAndBody,
   validatePlayerStorePublicRequestEnvelope,
 } from "./playerStorePublicRequestValidation.ts";
 import {
   playerStorePrivateJsonResponse,
+  projectPlayerStoreBusinessFundingQuote,
+  projectPlayerStoreBusinessFundingReceipt,
   projectPlayerStorePublicOfferProduct,
-  projectPlayerStorePublicOfferQuote,
-  projectPlayerStorePublicOfferReceipt,
+  projectPlayerStoreSeededFundingQuote,
+  projectPlayerStoreSeededFundingReceipt,
 } from "./playerStorePublicResponseProjection.ts";
 import type { PlayerStorePublicRoute } from "./playerStorePublicRoutePaths.ts";
 
@@ -58,13 +60,15 @@ export interface PlayerStorePublicHttpHandlerDependencies {
     client: EdgeSupabaseClient,
     body: Record<string, unknown>,
   ) => Promise<Pick<PlayerRequestScope, "gameId" | "playerUuid">>;
-  readonly createRepository?: (
+  readonly createReadRepository?: (
     client: EdgeSupabaseClient,
-  ) => PlayerStorePublicRepository;
-  readonly createOfferRepository?: (
+  ) => PlayerStorePublicReadRepository;
+  readonly createOfferProductRepository?: (
     client: EdgeSupabaseClient,
-  ) => PlayerStoreOfferPublicRepository;
-  readonly now?: () => string;
+  ) => PlayerStoreOfferProductPublicRepository;
+  readonly createFundingRepository?: (
+    client: EdgeSupabaseClient,
+  ) => PlayerStoreFundingPublicRepository;
 }
 
 export async function handlePlayerStorePublicRequest(
@@ -92,22 +96,23 @@ export async function handlePlayerStorePublicRequest(
       client,
       body,
     );
-    const repository = dependencies.createRepository
-      ? dependencies.createRepository(client)
-      : new SupabasePlayerStorePublicRepository(client as never);
+    const readRepository = dependencies.createReadRepository
+      ? dependencies.createReadRepository(client)
+      : new SupabasePlayerStorePublicReadRepository(client as never);
+    const offerProductRepository = dependencies.createOfferProductRepository
+      ? dependencies.createOfferProductRepository(client)
+      : new SupabasePlayerStoreOfferProductPublicRepository(client as never);
+    const fundingRepository = dependencies.createFundingRepository
+      ? dependencies.createFundingRepository(client)
+      : new SupabasePlayerStoreFundingPublicRepository(client as never);
     const publicScope = {
       gameSessionId: scope.gameId,
       playerId: scope.playerUuid,
     };
-    const createOfferRepository = () =>
-      dependencies.createOfferRepository
-        ? dependencies.createOfferRepository(client)
-        : new SupabasePlayerStoreOfferPublicRepository(client as never);
-
     if (route.kind === "items") {
       const [items, products] = await Promise.all([
-        repository.listItems(publicScope),
-        createOfferRepository().listOfferProducts(publicScope),
+        readRepository.listItems(publicScope),
+        offerProductRepository.listOfferProducts(publicScope),
       ]);
       return playerStorePrivateJsonResponse(200, {
         ok: true,
@@ -117,68 +122,35 @@ export async function handlePlayerStorePublicRequest(
     }
 
     if (route.kind === "quotes") {
-      const quote = await repository.createQuote({
+      const quote = await fundingRepository.createSystemOfferQuote({
         ...publicScope,
-        itemKey: readPlayerStoreItemKey(body.itemKey),
-        quantity: readPlayerStoreQuantity(body.quantity),
-        nowIso: (dependencies.now ?? (() => new Date().toISOString()))(),
+        offerKey: readPlayerStoreOfferKey(body.offerKey),
+        quantity: readPlayerStoreStrictQuantity(body.quantity),
+        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),
+        allocations: readPlayerStoreFundingAllocations(body.allocations),
+        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
       });
-      return playerStorePrivateJsonResponse(200, { ok: true, quote });
+      return playerStorePrivateJsonResponse(200, {
+        ok: true,
+        quote: projectPlayerStoreSeededFundingQuote(quote),
+      });
     }
 
     if (route.kind === "purchases") {
       if (request.method === "GET") {
-        const purchases = await repository.listPurchases({
+        const purchases = await readRepository.listPurchases({
           ...publicScope,
           limit: 25,
         });
         return playerStorePrivateJsonResponse(200, { ok: true, purchases });
       }
 
-      const receipt = await repository.purchase({
+      const receipt = await fundingRepository.settleSystemOfferPurchase({
         ...publicScope,
         quoteKey: readPlayerStoreQuoteKey(body.quoteKey),
         idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
-        clientSubmittedAt: readPlayerStoreOptionalTimestamp(
-          body.clientSubmittedAt,
-        ),
       });
-      return playerStorePrivateJsonResponse(200, {
-        ok: true,
-        message: receipt.alreadyCompleted
-          ? "Purchase was already completed."
-          : "Purchase complete.",
-        receipt,
-        refreshRequired: true,
-      });
-    }
-
-    const offerRepository = createOfferRepository();
-    if (route.kind === "offerQuotes") {
-      const quote = await offerRepository.createBusinessOfferQuote({
-        ...publicScope,
-        offerKey: readPlayerStoreOfferKey(body.offerKey),
-        quantity: readPlayerStoreStrictQuantity(body.quantity),
-        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),
-        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
-      });
-      return playerStorePrivateJsonResponse(200, {
-        ok: true,
-        quote: projectPlayerStorePublicOfferQuote(quote),
-      });
-    }
-
-    if (route.kind === "offerPurchases") {
-      readPlayerStoreStrictOptionalTimestamp(body.clientSubmittedAt);
-      const receipt = await offerRepository.purchaseBusinessOffer({
-        ...publicScope,
-        offerKey: readPlayerStoreOfferKey(body.offerKey),
-        quoteKey: readPlayerStoreOfferQuoteKey(body.quoteKey),
-        quantity: readPlayerStoreStrictQuantity(body.quantity),
-        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),
-        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
-      });
-      const publicReceipt = projectPlayerStorePublicOfferReceipt(receipt);
+      const publicReceipt = projectPlayerStoreSeededFundingReceipt(receipt);
       return playerStorePrivateJsonResponse(200, {
         ok: true,
         message: publicReceipt.alreadyCompleted
@@ -189,13 +161,45 @@ export async function handlePlayerStorePublicRequest(
       });
     }
 
-    const receipt = await offerRepository.readBusinessOfferReceipt({
+    if (route.kind === "offerQuotes") {
+      const quote = await fundingRepository.createBusinessOfferQuote({
+        ...publicScope,
+        offerKey: readPlayerStoreOfferKey(body.offerKey),
+        quantity: readPlayerStoreStrictQuantity(body.quantity),
+        expectedVersion: readPlayerStoreExpectedVersion(body.expectedVersion),
+        allocations: readPlayerStoreFundingAllocations(body.allocations),
+        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+      });
+      return playerStorePrivateJsonResponse(200, {
+        ok: true,
+        quote: projectPlayerStoreBusinessFundingQuote(quote),
+      });
+    }
+
+    if (route.kind === "offerPurchases") {
+      const receipt = await fundingRepository.settleBusinessOfferPurchase({
+        ...publicScope,
+        quoteKey: readPlayerStoreOfferQuoteKey(body.quoteKey),
+        idempotencyKey: readPlayerStoreIdempotencyKey(body.idempotencyKey),
+      });
+      const publicReceipt = projectPlayerStoreBusinessFundingReceipt(receipt);
+      return playerStorePrivateJsonResponse(200, {
+        ok: true,
+        message: publicReceipt.alreadyCompleted
+          ? "Purchase was already completed."
+          : "Purchase complete.",
+        receipt: publicReceipt,
+        refreshRequired: true,
+      });
+    }
+
+    const receipt = await fundingRepository.readBusinessOfferReceipt({
       ...publicScope,
       receiptKey: route.receiptKey,
     });
     return playerStorePrivateJsonResponse(200, {
       ok: true,
-      receipt: projectPlayerStorePublicOfferReceipt(receipt),
+      receipt: projectPlayerStoreBusinessFundingReceipt(receipt),
     });
   } catch (error) {
     if (error instanceof PlayerStorePublicError) {
