@@ -3,6 +3,7 @@
 **Roadmap item:** `BUSINESS-V2-10A4D`
 **Status:** `SCOPED_NOT_IMPLEMENTED`
 **Branch:** `feat/business-player-store-fx-final-v2`
+**Draft PR:** #679
 **Parent branch:** `feat/business-multicurrency-treasury-v1`
 **Parent C4 implementation:** `46bfc611834dca4db3084d9dce8197c499d61fcd`
 **Parent C4F controller:** `51ffd008ed84f6a9acd029c8941b3f9b40733735`
@@ -67,6 +68,8 @@ Stable public errors must cover account ownership/type/game, duplicate account, 
 ## Forward migration boundary
 
 Generate one migration from this live predecessor with `supabase migration new`; do not preassign or reuse a timestamp.
+
+The first CLI invocation at 2026-08-31 03:13 UTC produced an empty `20260831031333` file that sorted before C4's reserved `20260831100000`–`20260831103000` migrations. That untracked file was removed without renaming or content. SQL work remains closed until the CLI can generate a version strictly after the live predecessor; non-SQL implementation is not blocked.
 
 The migration is function-only and must:
 
