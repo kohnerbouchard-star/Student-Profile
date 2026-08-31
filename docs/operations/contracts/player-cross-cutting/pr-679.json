@@ -87,6 +87,7 @@
     "scripts/business-player-store-fx-final-database.mjs",
     "scripts/multicurrency-funding-core-contract.mjs",
     "scripts/multicurrency-store-funding-contract.mjs",
+    "scripts/player-local-currency-authority-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],

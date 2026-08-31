@@ -400,7 +400,17 @@ function decimal(value: unknown): string {
   ) {
     throw invalidPublicResponse();
   }
-  return candidate;
+  const negative = candidate.startsWith("-");
+  const [whole, fraction = ""] = (negative ? candidate.slice(1) : candidate)
+    .split(".");
+  const canonicalFraction = fraction.replace(/0+$/u, "");
+  const canonicalWhole = String(BigInt(whole));
+  const sign = negative && (canonicalWhole !== "0" || canonicalFraction)
+    ? "-"
+    : "";
+  return canonicalFraction
+    ? `${sign}${canonicalWhole}.${canonicalFraction}`
+    : `${sign}${canonicalWhole}`;
 }
 
 function nonNegativeDecimal(value: unknown): string {

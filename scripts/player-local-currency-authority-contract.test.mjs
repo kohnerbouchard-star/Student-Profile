@@ -296,9 +296,18 @@ assert.doesNotMatch(
 );
 
 assert.match(storePage, /item\.currencyCode/);
-assert.match(storePage, /checkingBalanceForCurrency\(data, localCurrencyCode\)/);
-assert.match(storePage, /matchingRows\.reduce/);
-assert.match(storePage, /GLOBAL SETTLEMENT WALLET/);
-assert.match(storePage, /LOCAL AVAILABLE BALANCE/);
+assert.match(storePage, /storeCheckingAccounts\(data\)/);
+assert.match(storePage, /storeFundingAvailability\(data, currencyCode\)\.ready/);
+assert.match(storePage, /one to three canonical Checking accounts/);
+assert.match(storePage, /Retail FX is disclosed before confirmation/);
+assert.match(storePage, /offerCurrencies\.size > 1/);
+assert.match(storePage, /compare offers/);
+assert.doesNotMatch(storePage, /checkingBalanceForCurrency/);
+assert.doesNotMatch(storePage, /matchingRows\.reduce/);
+assert.doesNotMatch(
+  storePage,
+  /GLOBAL SETTLEMENT WALLET|LOCAL AVAILABLE BALANCE|LOCAL WALLET|same-currency purchase|THD 25/i,
+  "Store checkout must not reintroduce the retired single-currency wallet boundary.",
+);
 
 console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and canonical account identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");

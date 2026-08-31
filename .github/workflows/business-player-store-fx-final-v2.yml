@@ -40,6 +40,7 @@ on:
       - scripts/business-player-store-fx-final-*.mjs
       - scripts/multicurrency-funding-core-contract.mjs
       - scripts/multicurrency-store-funding-contract.mjs
+      - scripts/player-local-currency-authority-contract.test.mjs
       - scripts/player-cross-cutting-authority.test.mjs
       - scripts/verify-player-cross-cutting-authority.mjs
   push:
@@ -80,6 +81,7 @@ on:
       - scripts/business-player-store-fx-final-*.mjs
       - scripts/multicurrency-funding-core-contract.mjs
       - scripts/multicurrency-store-funding-contract.mjs
+      - scripts/player-local-currency-authority-contract.test.mjs
       - scripts/player-cross-cutting-authority.test.mjs
       - scripts/verify-player-cross-cutting-authority.mjs
   workflow_dispatch:
@@ -147,6 +149,7 @@ jobs:
             --pr-number "$PR_NUMBER" \
             --base-ref "$BASE_REF"
           node scripts/business-player-store-fx-final-contract.mjs
+          node --test scripts/player-local-currency-authority-contract.test.mjs
           node scripts/validate-supabase-migrations.mjs
           git diff --check "origin/${BASE_REF}...HEAD"
 

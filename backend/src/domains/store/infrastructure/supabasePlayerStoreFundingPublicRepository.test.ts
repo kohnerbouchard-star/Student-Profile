@@ -39,7 +39,7 @@ Deno.test("funded Store repository preserves ordered final-null intent and omits
       p_idempotency_key: "store.seeded.quote.12345678",
     },
   }]);
-  assertEquals(result.fundingQuote.targetAmount, "100.00");
+  assertEquals(result.fundingQuote.targetAmount, "100");
 });
 
 Deno.test("funded Store repository rejects commercial and funding evidence that are not bound to the same quote", async () => {

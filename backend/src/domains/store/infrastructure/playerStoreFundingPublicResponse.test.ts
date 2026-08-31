@@ -26,14 +26,18 @@ Deno.test("funding projections preserve canonical decimal strings and precision 
   assertEquals("generatedAt" in quote, false);
   assertEquals(
     quote.lines[0].customerRate,
-    "0.995000000000000000",
+    "0.995",
   );
+  assertEquals(quote.lines[0].referenceRate, "1");
+  assertEquals(quote.lines[0].spreadRate, "0.005");
+  assertEquals(quote.lines[0].postedAmount, "200");
   assertEquals(quote.lines[0].sourceMinorUnit, 3);
   assertEquals(receipt.targetAmount, "123.456789012345678901");
   assertEquals(receipt.targetMinorUnit, 18);
   assertEquals("generatedAt" in receipt, false);
   assertEquals(receipt.lines[0].targetCurrencyCode, "NRC");
   assertEquals(receipt.lines[0].targetMinorUnit, 18);
+  assertEquals(receipt.lines[0].spreadRate, "0.005");
 });
 
 Deno.test("funding projections reject numeric money and internal UUIDs", () => {
