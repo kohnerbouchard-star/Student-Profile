@@ -1,12 +1,13 @@
 # Business Multi-Currency Treasury and Procurement Scope v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C4`  
-**Status:** `SCOPED_NOT_IMPLEMENTED`  
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/business-multicurrency-treasury-v1`  
 **Parent branch:** `feat/multicurrency-stock-funding-v1`  
 **Parent draft PR:** #676  
 **Exact parent C3 implementation:** `058162d7b9688809e885d9e6fe77ed42978c7a03`  
 **Exact parent C3F controller handoff:** `18fde31be5e1599c7d9a65d681b248fcb4756dc4`  
+**Exact C4 implementation and verification source:** `46bfc611834dca4db3084d9dce8197c499d61fcd`
 **Merge or deployment authorized:** No
 
 ## Decision

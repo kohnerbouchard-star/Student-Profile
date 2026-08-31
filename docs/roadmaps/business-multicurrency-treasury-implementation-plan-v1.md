@@ -1,9 +1,10 @@
 # Business Multi-Currency Treasury and Procurement Implementation Plan v1
 
 **Roadmap item:** `BUSINESS-V2-10A4C4`  
-**Status:** `PLANNED_NOT_IMPLEMENTED`  
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/business-multicurrency-treasury-v1`  
 **Parent clean C3F controller:** `18fde31be5e1599c7d9a65d681b248fcb4756dc4`
+**Exact implementation and verification source:** `46bfc611834dca4db3084d9dce8197c499d61fcd`
 
 ## Goal
 
@@ -106,6 +107,8 @@ Then record separately:
 - next authorized checkpoint `BUSINESS-V2-10A4D`.
 
 The checkpoint manifest must be promoted only after the implementation SHA is completely green. A later documentation/controller head must also pass its exact-head matrix before C4 is described as fully closed.
+
+**Certification result:** `46bfc611834dca4db3084d9dce8197c499d61fcd` passed the permanent C4 source, zero-to-head replay/database/concurrency, and desktop/mobile Chromium lanes in run `33351825999`, plus every one of the 31 PR-triggered inherited workflows. C4 is therefore `IMPLEMENTED_NOT_MERGED`; merge, deployment, scheduler/secret changes, staging/production SQL, live-data mutation, and `VERIFIED_COMPLETE` remain unauthorized.
 
 ## Planned permanent files
 

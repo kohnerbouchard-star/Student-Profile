@@ -114,10 +114,12 @@
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-678.json",
     "docs/roadmaps/business-multicurrency-treasury-authority-audit-v1.md",
+    "docs/roadmaps/business-multicurrency-treasury-implementation-handoff-v1.md",
     "docs/roadmaps/business-multicurrency-treasury-implementation-plan-v1.md",
     "docs/roadmaps/business-multicurrency-treasury-schema-inventory-v1.md",
     "docs/roadmaps/business-multicurrency-treasury-scope-handoff-v1.md",
     "docs/roadmaps/business-multicurrency-treasury-scope-v1.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],

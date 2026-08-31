@@ -1668,3 +1668,50 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - The initial inherited Store-listing Chromium failure was superseded by a successful unchanged-source job rerun and is not accepted as final evidence.
 - No merge, deployment, scheduler, secret, staging/production SQL, or live-database operation occurred.
 - Next authorized work: C3 Stock Market multi-currency funding intake on a separate stacked draft branch after this clean documentation handoff.
+
+## 2026-08-31 — C3 controller reconciliation before C4 closeout
+
+- `BUSINESS-V2-10A4C3F` remains `IMPLEMENTED_NOT_MERGED` on `feat/multicurrency-stock-funding-v1` / draft PR #676.
+- The immutable C3 implementation identity is `058162d7b9688809e885d9e6fe77ed42978c7a03`; its clean documentation/controller head is `18fde31be5e1599c7d9a65d681b248fcb4756dc4`.
+- Detailed C3 migrations, routes, tests, workflow runs, exclusions, and source-of-truth rules remain in `docs/roadmaps/multicurrency-stock-funding-implementation-handoff-v1.md` and the current-checkpoint manifest. This reconciliation does not replace or recertify C3.
+
+## 2026-08-31 — BUSINESS-V2-10A4C4 exact implementation certification
+
+### Identity and status
+
+- Roadmap item/checkpoint: `BUSINESS-V2-10A4C4` / `BUSINESS-V2-10A4C4F`.
+- Owner: `feat/business-multicurrency-treasury-v1` / draft PR #678 over the C3F controller `18fde31be5e1599c7d9a65d681b248fcb4756dc4`.
+- **Exact implementation and verification source:** `46bfc611834dca4db3084d9dce8197c499d61fcd`.
+- Status: `IMPLEMENTED_NOT_MERGED`, never `VERIFIED_COMPLETE`; PR #678 remains draft, open, unmerged, and undeployed.
+- Implementation progression: scope reconciliation `93e51b0598f1a8fc5da3ea03336ce8735a5d0972`; initial implementation `1746273f3354bdc5bba704fcc0eeeb6f2d9ecf1e`; source/UI repair `08864acb513ae07fd79a63d7c3f72e981e901c4a`; quote-transition repair `1c78c7b9e00aebe91d3c27f93f628d9d5b1d0b85`; final manifest-bound settlement repair and exact implementation `46bfc611834dca4db3084d9dce8197c499d61fcd`.
+
+### Implemented boundary
+
+- C4A generalizes existing B2 FX and C0 funding evidence to exactly one Player or Business owner, backfills existing rows as Player-owned without changing economic evidence, and exposes one zero-value canonical Business Checking account per active currency.
+- C4B adds Business wrappers over unchanged B1/B2 standard and instant FX, preserving the 0.50% spread, next strictly later local 08:00 standard settlement, separate 2.00% instant fee, holds, clearing, liquidity, replay, cancellation, and owner-neutral worker behavior.
+- C4C puts Business one-to-three-account procurement funding behind the retained C0 authority and rejects non-Business, Savings, system, legacy, restricted, closed, duplicate, wrong-game, and wrong-owner sources.
+- C4D binds one commercial Business Store quote to one immutable funding quote and commits funding/FX, target credit, Store stock, Inventory/Warehouse delivery, weighted-average cost, receipt, and activity evidence atomically. Unbound legacy quotes return `410 business_store_procurement_payment_retired`.
+- C4E adds the locked Player Treasury and funded procurement controls with public keys, exact currency/precision evidence, spread/fee/fixing/rounding disclosures, expiry/conflict/cancellation, immutable receipts, accessibility, responsive layout, and refresh recovery.
+- C4F adds the durable `business-multicurrency-treasury-v1` three-lane workflow and exact-head source/database/concurrency/Chromium evidence.
+- The inherited Marketplace settlement UI is now bound to the server-advertised `marketplacePurchase` capability descriptor, which advertises the real quote and settlement operations rather than the retired purchase path.
+
+### Migrations, routes, and RPCs
+
+- Forward migrations: `20260831100000_business_multicurrency_owner_identity_v1.sql`, `20260831101000_business_treasury_fx_commands_v1.sql`, `20260831102000_business_procurement_funding_v1.sql`, and `20260831103000_business_multicurrency_assertions_v1.sql`.
+- No game-scoped table was added, so no C4 purge-registry migration was created.
+- Authenticated routes: Treasury read; account open; FX quote; standard order; instant order; order cancellation; funded Business Store quote; funded Business Store purchase under `/players/me/business/...`.
+- Principal public service-role-only RPCs: `list_player_business_bank_accounts_v1`, `ensure_business_banking_account_v1`, `create_business_fx_quote_v1`, `submit_business_standard_fx_order_v1`, `execute_business_instant_fx_v1`, `cancel_business_standard_fx_order_v1`, `list_business_fx_orders_v1`, `get_business_treasury_overview_v1`, `create_business_purchase_funding_quote_v1`, `create_business_store_quote_v2`, and `purchase_business_store_quote_v2`.
+- Implementation files are grouped under the Business/Business Banking and owner-neutral Banking FX domains, shared Player Business dispatch and both Player Edge roots, Player Terminal Treasury/procurement modules, four migrations, the permanent workflow, and the C4 contract/database/concurrency/browser evidence. The exact inventory is recorded in `docs/roadmaps/business-multicurrency-treasury-implementation-handoff-v1.md`.
+
+### Exact-head evidence
+
+- Permanent C4 run `33351825999`: source/authority/application job `99366568097` — pass; C0/C4 zero-to-head replay, rebuilt-schema lint, database, rollback, isolation, and concurrency job `99366567927` — pass; desktop/mobile Player Chromium and accessibility job `99366568058` — pass.
+- Connected Marketplace run `33351825985` — pass. Sanitized evidence proves listing create/activate/persist, funding quote apply/replay, settlement apply/replay, purchase persistence, dispute, cancellation, unauthenticated rejection, UUID privacy, and clean console/page state.
+- All 31 PR-triggered workflows returned for `46bfc611834dca4db3084d9dce8197c499d61fcd` completed successfully: Admin API, Backend, security, database replay, repository/supply-chain/timezone, Player/runtime/browser, Banking FX, C1-C3 funding, Business Store phases, Business Banking/economy/workforce/manufacturing, progression, world, and permanent C4 gates.
+- Superseded Marketplace attempts failed closed before transport because the connected session did not advertise the synthetic settlement endpoint key. The final repair maps that client operation to the one authoritative server capability and updates the operation manifest; no economic invariant, privacy rule, test expectation, production CORS boundary, or scheduler was weakened.
+
+### Safety, blocker, and next item
+
+- No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data was changed. Database and connected evidence used disposable local CI services only.
+- `BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime-evidence blocker and prevents `VERIFIED_COMPLETE`; it does not block this repository implementation record.
+- The next exact item is `BUSINESS-V2-10A4D` on `feat/business-player-store-fx-final-v2`, created only from the separate clean C4 documentation/controller handoff.
