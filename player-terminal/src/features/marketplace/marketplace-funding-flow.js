@@ -218,6 +218,14 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
     const button = form.querySelector('button[type="submit"]');
     const restore = setButtonProcessing(button, "Pricing quote");
     pending = true;
+    let ownsQuotePending = true;
+    const releaseQuotePending = () => {
+      if (!ownsQuotePending) return;
+      ownsQuotePending = false;
+      restore();
+      pending = false;
+      setBusy(mount, false);
+    };
     setBusy(mount, true);
     clearError(mount);
     try {
@@ -232,6 +240,10 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
         { listingId: listing.id },
       );
       const quote = normalizeMarketplaceFundingQuote(operation.result);
+      // Release the quote operation before rendering its settlement form. This
+      // prevents an immediate confirmation from being discarded as "pending"
+      // while ensuring the quote's finally block cannot release a newer action.
+      releaseQuotePending();
       updateMarketplace(terminal, {
         currentFundingQuote: quote,
         lastFundingOrder: null,
@@ -245,9 +257,7 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
       if (dispatchInvalidSession(error, config)) return;
       showError(mount, resolveMarketplaceFundingFailure(error));
     } finally {
-      restore();
-      pending = false;
-      setBusy(mount, false);
+      releaseQuotePending();
     }
   }
 

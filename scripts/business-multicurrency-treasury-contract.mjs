@@ -38,6 +38,7 @@ const files = Object.freeze({
   invalidationController: "player-terminal/src/realtime/player-invalidation-controller.js",
   readModel: "player-terminal/src/features/business-treasury/business-treasury-read-model.js",
   procurementReadModel: "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
+  marketplaceFundingFlow: "player-terminal/src/features/marketplace/marketplace-funding-flow.js",
   validation: "player-terminal/src/features/business-treasury/business-treasury-validation.js",
   flow: "player-terminal/src/features/business-treasury/business-treasury-flow.js",
   flowSupport: "player-terminal/src/features/business-treasury/business-treasury-flow-support.js",
@@ -45,6 +46,7 @@ const files = Object.freeze({
   style: "player-terminal/css/player-terminal-business-v2.css",
   browser: "player-terminal/tests/browser/player-business-treasury.spec.mjs",
   playerTest: "player-terminal/tests/business-multicurrency-treasury.mjs",
+  marketplaceFundingTest: "player-terminal/tests/marketplace-funding-flow.mjs",
   database: "scripts/business-multicurrency-treasury-database.mjs",
   concurrency: "scripts/business-multicurrency-treasury-concurrency.mjs",
   phase4cRecoveryContract: "scripts/business-phase4c-player-recovery-contract.mjs",
@@ -329,6 +331,15 @@ includesAll(source.playerTest, [
   "Treasury may be requested only after the canonical Business prerequisite resolves.",
   "The false-to-true formation transition must fetch Treasury exactly once without route re-entry.",
 ], "C4 prerequisite-gated Treasury regression evidence");
+includesAll(source.marketplaceFundingFlow, [
+  "ownsQuotePending",
+  "releaseQuotePending();",
+  "updateMarketplace",
+], "C4 retained Marketplace quote-to-settlement transition");
+includesAll(source.marketplaceFundingTest, [
+  "releaseQuotePending();\\n      updateMarketplace",
+  "if (!ownsQuotePending) return",
+], "C4 retained Marketplace transition regression evidence");
 
 includesAll(source.readModel, [
   "normalizeBusinessTreasurySnapshot",
@@ -411,6 +422,7 @@ includesAll(source.workflow, [
   "business-phase10-player-store-cutover-contract.mjs",
   "business-phase4c-player-recovery-contract.mjs",
   "business-store-procurement-authority-contract.mjs",
+  "marketplace-funding-flow.mjs",
   "player-business-treasury.spec.mjs",
   "businessTreasuryDatabaseErrors.test.ts",
   "playerRateLimitOperationRegistry",

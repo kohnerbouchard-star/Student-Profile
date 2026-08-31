@@ -26,6 +26,7 @@ on:
       - player-terminal/index.html
       - player-terminal/src/api/**
       - player-terminal/src/features/business-treasury/**
+      - player-terminal/src/features/marketplace/marketplace-funding-flow.js
       - player-terminal/src/integrations/student-profile-capability-manifest.js
       - player-terminal/src/main.js
       - player-terminal/src/pages/business-page.js
@@ -34,6 +35,7 @@ on:
       - player-terminal/tests/business-banking-surface.mjs
       - player-terminal/tests/business-multicurrency-treasury.mjs
       - player-terminal/tests/current-capability-manifest.mjs
+      - player-terminal/tests/marketplace-funding-flow.mjs
       - player-terminal/tests/student-profile-adapter.mjs
       - scripts/business-multicurrency-treasury-*.mjs
       - scripts/business-input-purchase-retirement-contract.mjs
@@ -67,6 +69,7 @@ on:
       - player-terminal/index.html
       - player-terminal/src/api/**
       - player-terminal/src/features/business-treasury/**
+      - player-terminal/src/features/marketplace/marketplace-funding-flow.js
       - player-terminal/src/integrations/student-profile-capability-manifest.js
       - player-terminal/src/main.js
       - player-terminal/src/pages/business-page.js
@@ -75,6 +78,7 @@ on:
       - player-terminal/tests/business-banking-surface.mjs
       - player-terminal/tests/business-multicurrency-treasury.mjs
       - player-terminal/tests/current-capability-manifest.mjs
+      - player-terminal/tests/marketplace-funding-flow.mjs
       - player-terminal/tests/student-profile-adapter.mjs
       - scripts/business-multicurrency-treasury-*.mjs
       - scripts/business-input-purchase-retirement-contract.mjs
@@ -147,6 +151,7 @@ jobs:
           node scripts/business-phase10-player-store-cutover-contract.mjs
           node scripts/business-phase4c-player-recovery-contract.mjs
           node scripts/business-store-procurement-authority-contract.mjs
+          node --test player-terminal/tests/marketplace-funding-flow.mjs
           node scripts/validate-supabase-migrations.mjs
           npm --prefix backend run typecheck
           git diff --check
