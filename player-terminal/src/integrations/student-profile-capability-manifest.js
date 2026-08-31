@@ -65,7 +65,7 @@ const ENDPOINT_COVERAGE = Object.freeze({
   marketplace: Object.freeze(["marketplace"]),
   marketplaceListing: Object.freeze(["marketplaceListing"]),
   marketplaceActivate: Object.freeze(["marketplaceActivate"]),
-  marketplacePurchase: Object.freeze(["marketplacePurchase"]),
+  marketplacePurchase: Object.freeze(["marketplacePurchase", "marketplaceSettlement"]),
   marketplaceCancel: Object.freeze(["marketplaceCancel"]),
   marketplaceDispute: Object.freeze(["marketplaceDispute"]),
   messages: Object.freeze(["messages"]),

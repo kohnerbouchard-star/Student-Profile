@@ -87,6 +87,14 @@ const ENDPOINT_ACTIONS = Object.freeze({
   storyDeliveries: "storyDeliveryState"
 });
 
+// Some public workflows expose more than one client operation beneath a
+// single server-advertised capability descriptor. Keep the manifest check
+// bound to that authoritative descriptor instead of requiring a synthetic
+// client operation key that the server never advertises.
+const ENDPOINT_MANIFEST_KEYS = Object.freeze({
+  marketplaceSettlement: "marketplacePurchase"
+});
+
 function capabilitySource(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value;
@@ -150,6 +158,7 @@ export function isActionEnabled(capabilities, action) {
 export function isEndpointEnabled(capabilities, endpointKey) {
   const action = ENDPOINT_ACTIONS[endpointKey];
   if (!action || !isActionEnabled(capabilities, action)) return false;
+  const manifestKey = ENDPOINT_MANIFEST_KEYS[endpointKey] || endpointKey;
   return capabilities?.endpointKeys === null || capabilities?.endpointKeys === undefined ||
-    capabilities.endpointKeys?.[endpointKey] === true;
+    capabilities.endpointKeys?.[manifestKey] === true;
 }

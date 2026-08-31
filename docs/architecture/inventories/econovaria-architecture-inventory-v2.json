@@ -3237,7 +3237,7 @@
       },
       {
         "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 894
+        "lines": 901
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",

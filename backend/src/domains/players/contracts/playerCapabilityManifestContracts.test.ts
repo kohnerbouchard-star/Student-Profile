@@ -163,6 +163,20 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
+  const marketplacePurchase = manifest.endpoints.find((endpoint) =>
+    endpoint.key === "marketplacePurchase"
+  );
+  assertEquals(marketplacePurchase?.operations, [
+    {
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings/:listingId/quotes",
+    },
+    {
+      method: "POST",
+      pathTemplate:
+        "/players/me/marketplace/reservations/:reservationId/settlements",
+    },
+  ]);
   const expectedEndpointKeys: readonly PlayerCapabilityEndpointKey[] = [
     "bootstrap",
     "capabilities",
@@ -239,6 +253,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":listingId", `lst_${"b".repeat(32)}`)
+        .replace(":reservationId", `mpr_${"d".repeat(32)}`)
         .replace(":orderId", `ord_${"c".repeat(32)}`)
         .replace(":threadId", `thr_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)

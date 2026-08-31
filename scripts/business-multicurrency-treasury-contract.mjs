@@ -32,6 +32,7 @@ const files = Object.freeze({
   routes: "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
   routeTests: "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
   clientRoutes: "player-terminal/src/api/business-treasury-backend-routes.js",
+  capabilities: "player-terminal/src/api/capabilities.js",
   freshness: "player-terminal/src/api/freshness.js",
   playerApi: "player-terminal/src/api/player-api.js",
   resourcePlan: "player-terminal/src/api/resource-plan.js",
@@ -39,6 +40,7 @@ const files = Object.freeze({
   readModel: "player-terminal/src/features/business-treasury/business-treasury-read-model.js",
   procurementReadModel: "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
   marketplaceFundingFlow: "player-terminal/src/features/marketplace/marketplace-funding-flow.js",
+  capabilityManifest: "player-terminal/src/integrations/student-profile-capability-manifest.js",
   validation: "player-terminal/src/features/business-treasury/business-treasury-validation.js",
   flow: "player-terminal/src/features/business-treasury/business-treasury-flow.js",
   flowSupport: "player-terminal/src/features/business-treasury/business-treasury-flow-support.js",
@@ -47,6 +49,8 @@ const files = Object.freeze({
   browser: "player-terminal/tests/browser/player-business-treasury.spec.mjs",
   playerTest: "player-terminal/tests/business-multicurrency-treasury.mjs",
   marketplaceFundingTest: "player-terminal/tests/marketplace-funding-flow.mjs",
+  currentCapabilityManifestTest: "player-terminal/tests/current-capability-manifest.mjs",
+  backendCapabilityManifest: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   database: "scripts/business-multicurrency-treasury-database.mjs",
   concurrency: "scripts/business-multicurrency-treasury-concurrency.mjs",
   phase4cRecoveryContract: "scripts/business-phase4c-player-recovery-contract.mjs",
@@ -339,7 +343,31 @@ includesAll(source.marketplaceFundingFlow, [
 includesAll(source.marketplaceFundingTest, [
   "releaseQuotePending();\\n      updateMarketplace",
   "if (!ownsQuotePending) return",
+  "endpointKeys: { marketplacePurchase: true }",
 ], "C4 retained Marketplace transition regression evidence");
+includesAll(source.capabilities, [
+  "ENDPOINT_MANIFEST_KEYS",
+  'marketplaceSettlement: "marketplacePurchase"',
+  "capabilities.endpointKeys?.[manifestKey] === true",
+], "C4 retained Marketplace manifest-bound settlement capability");
+includesAll(source.capabilityManifest, [
+  'marketplacePurchase: Object.freeze(["marketplacePurchase", "marketplaceSettlement"])',
+], "C4 retained Marketplace frontend capability coverage");
+includesAll(source.backendCapabilityManifest, [
+  'PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-08-31.2"',
+  "/players/me/marketplace/listings/:listingId/quotes",
+  "/players/me/marketplace/reservations/:reservationId/settlements",
+], "C4 retained Marketplace server capability operations");
+assert.ok(
+  !source.backendCapabilityManifest.includes(
+    "/players/me/marketplace/listings/:listingId/purchase",
+  ),
+  "The server capability manifest must not advertise the retired Marketplace purchase route.",
+);
+includesAll(source.currentCapabilityManifestTest, [
+  'capabilityEndpointKeys: manifest.endpoints.map((endpoint) => endpoint.key)',
+  'isEndpointEnabled(resolved, "marketplaceSettlement")',
+], "C4 exact manifest-bound Marketplace capability evidence");
 
 includesAll(source.readModel, [
   "normalizeBusinessTreasurySnapshot",

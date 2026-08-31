@@ -24,7 +24,7 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-08-31.1");
+assert.equal(manifest.manifestVersion, "2026-08-31.2");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);
@@ -53,7 +53,10 @@ assert.equal(manifest.endpoints.some((endpoint) => endpoint.key === "businessInp
 
 const resolved = resolveCapabilities({
   config: {},
-  session: { capabilities: manifest.capabilities },
+  session: {
+    capabilities: manifest.capabilities,
+    capabilityEndpointKeys: manifest.endpoints.map((endpoint) => endpoint.key),
+  },
   dashboard: {},
 });
 assert.equal(resolved.actions.marketplaceActivate, true);
@@ -68,6 +71,8 @@ assert.equal(resolved.actions.bankingFxInstant, true);
 assert.equal(resolved.actions.bankingFxCancel, true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceActivate"), true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceDispute"), true);
+assert.equal(isEndpointEnabled(resolved, "marketplacePurchase"), true);
+assert.equal(isEndpointEnabled(resolved, "marketplaceSettlement"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationPropose"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationRespond"), true);
 assert.equal(isEndpointEnabled(resolved, "businessFormationActivate"), true);

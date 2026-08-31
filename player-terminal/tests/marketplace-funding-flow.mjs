@@ -226,9 +226,14 @@ test("Marketplace quote is non-mutating while settlement refreshes every affecte
   assert.ok(resourcesForRoute("marketplace").optional.includes("bankingFx"));
   const capabilities = {
     actions: { marketplacePurchase: true },
+    endpointKeys: { marketplacePurchase: true },
   };
   assert.equal(isEndpointEnabled(capabilities, "marketplacePurchase"), true);
   assert.equal(isEndpointEnabled(capabilities, "marketplaceSettlement"), true);
+  assert.equal(isEndpointEnabled({
+    actions: { marketplacePurchase: true },
+    endpointKeys: {},
+  }, "marketplaceSettlement"), false);
 });
 
 test("Marketplace source cutover contains constrained forms and legacy purchase tombstone", async () => {
