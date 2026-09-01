@@ -10,6 +10,10 @@ const ROUTES = Object.freeze({
     method: "GET",
     path: "/players/me/business/recipes",
   }),
+  businessEquipment: () => ({
+    method: "GET",
+    path: "/players/me/business/equipment",
+  }),
   businessWorkforce: () => ({
     method: "GET",
     path: "/players/me/business/workforce/candidates",
