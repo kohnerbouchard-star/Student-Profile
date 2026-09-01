@@ -13,6 +13,7 @@ import {
   resourcesForRoute,
 } from "../src/api/resource-plan.js";
 import { createResourceSupport } from "../src/api/resource-support.js";
+import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 import { previewData } from "../src/data/preview-data.js";
 import { renderBusinessWorkspacePage } from "../src/core/route-renderer.js";
 
@@ -211,6 +212,51 @@ data.businessStockroom = {
     },
   ],
 };
+
+const normalizerContext = { config: {}, requestId: "req_phase12", path: "/players/me/business" };
+assert.deepEqual(
+  normalizeApiResponse("businessStockroom", data.businessStockroom, {
+    ...normalizerContext,
+    path: "/players/me/business/stockroom",
+  }),
+  data.businessStockroom,
+);
+assert.deepEqual(
+  normalizeApiResponse("businessRecipes", data.businessRecipes, {
+    ...normalizerContext,
+    path: "/players/me/business/recipes",
+  }),
+  data.businessRecipes,
+);
+
+const badQuantity = structuredClone(data.businessStockroom);
+badQuantity.locations[0].quantityAvailable = 11;
+assert.throws(
+  () => normalizeApiResponse("businessStockroom", badQuantity, normalizerContext),
+  /incomplete data/u,
+  "Stockroom quantities must reconcile before rendering.",
+);
+const badAccount = structuredClone(data.businessStockroom);
+badAccount.items[0].accountKey = "iac_99999999999999999999999999999999";
+assert.throws(
+  () => normalizeApiResponse("businessStockroom", badAccount, normalizerContext),
+  /incomplete data/u,
+  "Stockroom items must remain bound to their canonical location account.",
+);
+const privateIdentifier = structuredClone(data.businessStockroom);
+privateIdentifier.items[0].name = "00000000-0000-4000-8000-000000000099";
+assert.throws(
+  () => normalizeApiResponse("businessStockroom", privateIdentifier, normalizerContext),
+  /incomplete data/u,
+  "Private UUIDs must not cross the Player Stockroom boundary.",
+);
+const badRecipe = structuredClone(data.businessRecipes);
+badRecipe.recipes[0].accessKey = "not-a-public-access-key";
+assert.throws(
+  () => normalizeApiResponse("businessRecipes", badRecipe, normalizerContext),
+  /incomplete data/u,
+  "Recipe access must retain its public bra_ identity.",
+);
 
 const workspace = renderBusinessWorkspacePage(data);
 for (const token of [
