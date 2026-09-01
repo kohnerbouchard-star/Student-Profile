@@ -1,10 +1,10 @@
 # Player Business Workspace Scope v1
 
-**Roadmap item:** `BUSINESS-V2-12`  
-**Status:** `IN_PROGRESS`  
-**Branch:** `feat/player-business-workspace-v2`  
-**Base:** merged `main` at `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`  
-**Parent implementation identity:** Phase 11 `3cbca309e1e3c55e9b933803d304d2c5cc96f071`  
+**Roadmap item:** `BUSINESS-V2-12`
+**Status:** `IN_PROGRESS`
+**Branch:** `feat/player-business-workspace-v2`
+**Base:** merged `main` at `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`
+**Parent implementation identity:** Phase 11 `3cbca309e1e3c55e9b933803d304d2c5cc96f071`
 **Merge/deployment authorization:** none
 
 ## Objective
