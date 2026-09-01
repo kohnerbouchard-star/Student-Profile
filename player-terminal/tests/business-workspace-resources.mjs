@@ -132,7 +132,8 @@ assert.equal(
 );
 
 const data = structuredClone(previewData);
-const businessKey = data.business.company.id;
+const businessKey = `biz_${"a".repeat(32)}`;
+data.business.company.id = businessKey;
 data.resourceStatus = {
   ...(data.resourceStatus || {}),
   businessStockroom: { state: "ready" },
