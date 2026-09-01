@@ -9,9 +9,11 @@ const PLAYER_ID = "00000000-0000-4000-8000-000000000002";
 const BUSINESS_KEY = `biz_${"a".repeat(32)}`;
 
 Deno.test("Business Stockroom HTTP response exposes one coherent public snapshot", async () => {
-  const client = new FakeClient(snapshotEnvelope());
+  const client = new FakeClient({
+    read_owned_business_stockroom_snapshot_v2: snapshotEnvelope(),
+  });
   const response = await handlePlayerBusinessRequest(
-    request(),
+    request("stockroom"),
     { kind: "businessRead", resource: "stockroom" },
     dependencies(client),
   );
@@ -29,11 +31,13 @@ Deno.test("Business Stockroom HTTP response exposes one coherent public snapshot
 
 Deno.test("Business Stockroom HTTP response fails closed for malformed snapshot envelopes", async () => {
   const client = new FakeClient({
-    ...snapshotEnvelope(),
-    locations: locationRows().slice(0, 3),
+    read_owned_business_stockroom_snapshot_v2: {
+      ...snapshotEnvelope(),
+      locations: locationRows().slice(0, 3),
+    },
   });
   const response = await handlePlayerBusinessRequest(
-    request(),
+    request("stockroom"),
     { kind: "businessRead", resource: "stockroom" },
     dependencies(client),
   );
@@ -41,6 +45,29 @@ Deno.test("Business Stockroom HTTP response fails closed for malformed snapshot 
 
   assertEquals(response.status, 500);
   assertEquals(body.error.code, "business_stockroom_result_invalid");
+});
+
+Deno.test("Business Equipment HTTP response exposes public finite-capacity evidence", async () => {
+  const client = new FakeClient({
+    read_owned_business_equipment_v2: [equipmentRow()],
+  });
+  const response = await handlePlayerBusinessRequest(
+    request("equipment"),
+    { kind: "businessRead", resource: "equipment" },
+    dependencies(client),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.equipment.length, 1);
+  assertEquals(body.equipment[0].businessKey, BUSINESS_KEY);
+  assertEquals(body.equipment[0].installationKey, `bei_${"1".repeat(32)}`);
+  assertEquals(body.equipment[0].equipmentKey, `eqp_${"1".repeat(32)}`);
+  assertEquals(body.equipment[0].availableMinutes, 300);
+  assertEquals(body.equipment[0].utilizationBasisPoints, 3750);
+  assertEquals(client.calls, ["read_owned_business_equipment_v2"]);
+  assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assertNoUuid(JSON.stringify(body));
 });
 
 function dependencies(client: FakeClient) {
@@ -65,9 +92,9 @@ function dependencies(client: FakeClient) {
   };
 }
 
-function request(): Request {
+function request(resource: "stockroom" | "equipment"): Request {
   return new Request(
-    "https://example.test/players/me/business/stockroom",
+    `https://example.test/players/me/business/${resource}`,
     {
       method: "GET",
       headers: { "x-player-session-token": "session-token" },
@@ -128,14 +155,37 @@ function location(
   };
 }
 
+function equipmentRow(): Record<string, unknown> {
+  return {
+    business_key: BUSINESS_KEY,
+    installation_key: `bei_${"1".repeat(32)}`,
+    equipment_key: `eqp_${"1".repeat(32)}`,
+    item_key: `itm_${"e".repeat(32)}`,
+    canonical_key: "machine.press.v1",
+    item_name: "Hydraulic Press",
+    equipment_slot: "operations",
+    capability_keys: ["press", "forming"],
+    installation_status: "installed",
+    period_key: "equipment:12",
+    capacity_minutes: 480,
+    reserved_minutes: 120,
+    consumed_minutes: 60,
+    available_minutes: 300,
+    idle_minutes: 300,
+    utilization_basis_points: 3750,
+    durability_supported: false,
+    repair_supported: false,
+  };
+}
+
 class FakeClient {
   readonly calls: string[] = [];
-  constructor(private readonly snapshot: unknown) {}
+  constructor(private readonly responses: Record<string, unknown>) {}
 
   rpc(name: string) {
     this.calls.push(name);
-    return Promise.resolve(name === "read_owned_business_stockroom_snapshot_v2"
-      ? { data: this.snapshot, error: null }
+    return Promise.resolve(Object.hasOwn(this.responses, name)
+      ? { data: this.responses[name], error: null }
       : { data: null, error: { message: `UNEXPECTED_RPC:${name}` } });
   }
 }
