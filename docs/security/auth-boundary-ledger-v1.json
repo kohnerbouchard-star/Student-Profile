@@ -7,13 +7,14 @@
     "playerIdentity": "Opaque player session token in x-player-session-token, resolved server-side",
     "bootstrapAuthorization": "One-time purchase code plus rate limit, validation, atomic provisioning, and cleanup",
     "serverPrivilege": "Supabase sb_secret_ key, with legacy service_role accepted only as a server-side transition fallback",
-    "serverRunnerAuthorization": "Dedicated STOCK_MARKET_RUNNER_SECRET after publishable apikey validation",
+    "serverRunnerAuthorization": "Publishable apikey plus timestamped path-and-body-bound HMAC using server-held STOCK_MARKET_RUNNER_SECRET and a durable one-time nonce claim",
     "prohibited": [
       "sb_publishable_ key in Authorization",
       "browser-visible sb_secret_ or service_role key",
       "browser-visible legacy anon JWT",
       "browser-visible Staff access JWT or refresh token",
       "client-supplied durable player UUID ownership",
+      "browser cookies, origins, CSRF values, Player identity headers, or bearer credentials on internal worker requests",
       "mixed public, player, and staff authorization in one new Edge function"
     ]
   },
@@ -200,7 +201,7 @@
       "platformJwtVerification": false,
       "applicationIdentity": "apikey validated in function",
       "principalIdentity": "scheduled or controlled server caller",
-      "authorization": "x-stock-market-runner-secret plus method and payload validation",
+      "authorization": "timestamped path-and-body-bound HMAC, durable runner-scoped nonce claim, method and payload validation; legacy raw-secret header rejected",
       "privilegedCredential": "sb_secret_ inside function",
       "browserStorage": "prohibited",
       "implementation": [
@@ -211,7 +212,26 @@
         "backend/supabase/functions/stock-market-trading/index.ts",
         "scripts/trigger-stock-market-tick.mjs"
       ],
-      "status": "migrated_static_secret_followup_hmac_required"
+      "status": "migrated_timestamped_hmac_and_nonce"
+    },
+    {
+      "id": "business-operations-worker",
+      "surface": "server-to-server",
+      "endpoint": "/functions/v1/business-operations-worker",
+      "platformJwtVerification": false,
+      "applicationIdentity": "apikey explicitly validated in function",
+      "principalIdentity": "controlled internal runner only",
+      "authorization": "timestamped exact-path and empty-body HMAC using server-held STOCK_MARKET_RUNNER_SECRET plus durable runner-scoped nonce claim; browser and legacy raw-secret headers rejected",
+      "privilegedCredential": "sb_secret_ inside function only after application identity and runner authorization",
+      "browserStorage": "prohibited",
+      "implementation": [
+        "backend/supabase/functions/business-operations-worker/index.ts",
+        "backend/src/security/internalRunnerAuth.ts",
+        "backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts",
+        "backend/src/domains/business/services/businessOperationsWorker.ts",
+        "backend/src/domains/business/infrastructure/supabaseBusinessOperationsRepository.ts"
+      ],
+      "status": "implemented_not_scheduled_or_deployed"
     },
     {
       "id": "local-gateway",
@@ -258,6 +278,7 @@
     "Every Staff route must validate a real user JWT with auth.getUser before privileged access.",
     "Every Admin mutation must pass valid origin, encrypted cookie, CSRF, current Staff claims, AAL2, game ownership and route policy.",
     "Every Player route must resolve identity from an active opaque session and reject client ownership fields.",
+    "Every internal Business worker request must have an empty body, reject browser identity headers, pass timestamped exact-path/body HMAC verification and claim its nonce before service-role access.",
     "No secret, service-role, legacy anon JWT, purchase code or raw internal UUID may appear in browser runtime configuration or logs.",
     "The legacy classroom-api must receive no direct browser traffic before production cutover.",
     "Connected local and isolated-staging journeys must prove login, refresh, logout, cookie clearing, CSRF denial, MFA denial, permission denial and session revocation."

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createBusinessApi } from "../admin/v2/src/routes/business/BusinessApi.js";
@@ -23,10 +24,11 @@ function business(overrides = {}) {
     currency_code: "SLV",
     status: "active",
     capitalization: 1000,
-    revenue_total: 260,
-    expense_total: 110,
-    profit_total: 150,
-    valuation: 2500,
+    revenue_total: "POISON_REVENUE",
+    expense_total: "POISON_EXPENSE",
+    profit_total: "POISON_PROFIT",
+    valuation: "POISON_VALUATION",
+    demand_index: "POISON_DEMAND",
     reputation_score: 84,
     failure_count: 0,
     updated_at: "2026-08-07T00:00:00.000Z",
@@ -76,7 +78,7 @@ test("Business API converts backend detail to safe error envelopes", async () =>
   });
 });
 
-test("Business read model uses current-main fields and never presents owner_player_id", () => {
+test("Business read model excludes owner UUID and retired cached financial and demand fields", () => {
   const empty = normalizeBusinessReadModel({ data: { businesses: [] } });
   assert.equal(empty.isEmpty, true);
   const one = normalizeBusinessReadModel({ data: { businesses: [business()] } });
@@ -85,6 +87,10 @@ test("Business read model uses current-main fields and never presents owner_play
   assert.equal(one.businesses[0].owner.rosterLabel, "");
   assert.equal(one.businesses[0].owner.status, "");
   assert.equal(JSON.stringify(one).includes(OWNER_UUID), false);
+  for (const field of ["revenueTotal", "expenseTotal", "profitTotal", "valuation", "demandIndex"]) {
+    assert.equal(Object.hasOwn(one.businesses[0], field), false, `read model retained ${field}`);
+  }
+  assert.doesNotMatch(JSON.stringify(one), /POISON_(?:REVENUE|EXPENSE|PROFIT|VALUATION|DEMAND)/u);
   const many = normalizeBusinessReadModel({ data: { businesses: [
     business(),
     business({ public_key: `biz_${"b".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000003", legal_name: "Northreach Logistics", status: "distressed", profit_total: -75 }),
@@ -92,9 +98,26 @@ test("Business read model uses current-main fields and never presents owner_play
   ] } });
   assert.equal(many.businesses.length, 3);
   assert.equal(many.summary.attentionCount, 2);
-  assert.equal(many.businesses[1].profitTotal, -75);
   assert.equal(many.businesses.every((row) => row.owner.displayName === "Owner unavailable"), true);
   assert.equal(JSON.stringify(many).includes("owner_player_id"), false);
+});
+
+test("Business route does not render retired cached aggregates", () => {
+  const source = readFileSync(
+    new URL("../admin/v2/src/routes/business/BusinessRoute.js", import.meta.url),
+    "utf8",
+  );
+  for (const forbidden of [
+    "business.revenueTotal",
+    "business.expenseTotal",
+    "business.profitTotal",
+    "business.valuation",
+    "business.demandIndex",
+    'label: "Valuation"',
+    'label: "Profit"',
+  ]) {
+    assert.equal(source.includes(forbidden), false, `Business route retained ${forbidden}`);
+  }
 });
 
 test("Business controller fails closed before reads and preserves stale data on refresh failure", async () => {

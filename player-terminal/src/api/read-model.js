@@ -157,11 +157,7 @@ function emptyTerminalData() {
         status: "Unavailable",
         industry: "Not configured",
         headquarters: "Not configured",
-        valuation: 0,
-        valuationChange: 0,
         cash: 0,
-        revenue: 0,
-        margin: 0,
         reputation: 0,
         reputationLabel: "No business profile",
         summary: "The player business service is not connected for this game."

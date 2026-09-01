@@ -87,6 +87,7 @@ jobs:
             admin-email-verification
             admin-password-recovery
             bootstrap-api
+            business-operations-worker
             campaign-orchestrator
             game-data-purger
             player-api
@@ -168,6 +169,7 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST business-operations-worker' \
             'POST campaign-orchestrator' \
             'POST game-data-purger' \
             'POST password-reset-api' \
@@ -251,6 +253,7 @@ jobs:
             admin-email-verification
             admin-password-recovery
             bootstrap-api
+            business-operations-worker
             campaign-orchestrator
             game-data-purger
             player-api
@@ -342,6 +345,7 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST business-operations-worker' \
             'POST campaign-orchestrator' \
             'POST game-data-purger' \
             'POST password-reset-api' \
@@ -375,7 +379,7 @@ jobs:
             echo "- Exact source SHA: \`$GITHUB_SHA\`"
             echo '- Staging promoted first: `true`'
             echo '- Production gated on staging: `true`'
-            echo '- Canonical/compat deployed functions: `19`'
+            echo '- Canonical/compat deployed functions: `20`'
             echo '- Allowed staging temporary functions: `8`'
             echo '- Unexpected production functions: `0`'
             echo '- Retired functions present: `0`'

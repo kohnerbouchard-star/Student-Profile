@@ -22,6 +22,7 @@ import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
 import { handleMessagingOperation } from "./messagingOperations.ts";
 import { guardStaffMessagingRateLimit } from "../../../src/security/staffMessagingRateLimitDispatch.ts";
 import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
+import { preDispatchRetiredBusinessSettlement } from "./businessSettlementRetirementDispatch.ts";
 import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
@@ -274,6 +275,19 @@ Deno.serve(async (request: Request) => {
       return adminSecurityFailureResponse(request, security);
     }
     const securedContext = { ...authorizedContext, security };
+
+    const retiredBusinessSettlement = preDispatchRetiredBusinessSettlement({
+      request,
+      path,
+      resolveOwnedGame: (gameId) => ensureOwnedGame(securedContext, gameId),
+    });
+    if (retiredBusinessSettlement.handled) {
+      return json(
+        request,
+        retiredBusinessSettlement.status || 500,
+        retiredBusinessSettlement.body,
+      );
+    }
 
     const globalResponse = await handleGlobalRoute(
       request,

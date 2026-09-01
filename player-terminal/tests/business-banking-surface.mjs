@@ -27,11 +27,7 @@ const data = {
       status: "Active",
       industry: "Manufacturing",
       headquarters: "Lumenor",
-      valuation: 5000,
-      valuationChange: 2,
       cash: 1000,
-      revenue: 800,
-      margin: 20,
       reputation: 65,
       reputationLabel: "Established operator",
       summary: "Ledger-backed enterprise.",
@@ -51,7 +47,7 @@ const data = {
       description: "50/100 quality",
       price: 20,
       margin: 30,
-      demand: "Stable",
+      version: 1,
       icon: "factory",
       version: 2,
     }],
@@ -233,6 +229,9 @@ assert.match(markup, /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S
 assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${businessKey}"`));
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
 assert.doesNotMatch(markup, /name="wagePerCycle"|name="productivityIndex"|name="roleName"|name="unitLaborCost"/u);
+assert.doesNotMatch(markup, /name="baseDemandUnits"|Company value|Cycle revenue|operating margin/u);
+assert.match(markup, /Recent Store sales/);
+assert.match(markup, /Committed seller receipts/);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
 assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);
@@ -256,7 +255,11 @@ const unconfigured = renderBusinessPage({
   },
 });
 assert.match(unconfigured, /data-endpoint="businessCreate"/);
-assert.match(unconfigured, /name="acquireBusinessKey"/);
+assert.match(unconfigured, /Create one game-scoped enterprise/);
+assert.doesNotMatch(
+  unconfigured,
+  /name="acquireBusinessKey"|Create or acquire|acquire an enterprise/iu,
+);
 assertAccessibleForm(unconfigured, "businessCreate");
 
 const assignedCountryCurrency = renderBusinessPage({
@@ -320,6 +323,25 @@ const termination = resolveBusinessBankingBackendRequest({
 assert.equal(termination.path, `/players/me/business/employees/${employeeKey}/terminate`);
 assert.equal(termination.payload.businessKey, businessKey);
 assert.equal(termination.payload.reason, "Role no longer required");
+
+const productCreation = resolveBusinessBankingBackendRequest({
+  endpointKey: "businessProductCreate",
+  method: PLAYER_ENDPOINTS.businessProductCreate.method,
+  path: PLAYER_ENDPOINTS.businessProductCreate.path,
+  params: {},
+  payload: {
+    businessKey,
+    name: "Utility Module",
+    category: "general",
+    unitPrice: 20,
+    unitInputCost: 5,
+    capacityUnits: 100,
+    qualityScore: 50,
+    baseDemandUnits: 99_999,
+    idempotencyKey: "business-product-create-0001",
+  },
+});
+assert.equal(Object.hasOwn(productCreation.payload, "baseDemandUnits"), false);
 
 console.log("Player Business workforce utilization, checking/savings Banking, and Loans surface contract passed.");
 

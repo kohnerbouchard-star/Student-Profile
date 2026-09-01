@@ -522,7 +522,6 @@ async function createProduct(page, admin) {
     await target.locator('[name="unitInputCost"]').fill("0");
     await target.locator('[name="unitLaborCost"]').fill("0");
     await target.locator('[name="capacityUnits"]').fill("100");
-    await target.locator('[name="baseDemandUnits"]').fill("20");
     await target.locator('[name="qualityScore"]').fill("60");
   });
   await requireText(page, PRODUCT_NAME);

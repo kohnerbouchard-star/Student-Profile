@@ -43,6 +43,7 @@ test("auth ledger is complete, unique, and machine-readable", async () => {
     "player-api",
     "classroom-api-compatibility",
     "stock-market-runner-family",
+    "business-operations-worker",
     "local-gateway",
   ]) {
     assert.ok(ids.includes(expected), `missing auth boundary ${expected}`);
@@ -254,13 +255,26 @@ test("explicit Admin session routes cannot be placeholder stubs", async () => {
 });
 
 test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
-  const [config, runner, stockRead, seed, playerRead, trading, scheduler, auth] = await Promise.all([
+  const [
+    config,
+    runner,
+    stockRead,
+    seed,
+    playerRead,
+    trading,
+    businessWorker,
+    businessWorkerHandler,
+    scheduler,
+    auth,
+  ] = await Promise.all([
     read("backend/supabase/config.toml"),
     read("backend/supabase/functions/stock-market-runner/index.ts"),
     read("backend/supabase/functions/stock-market-read/index.ts"),
     read("backend/supabase/functions/stock-market-seed-copy/index.ts"),
     read("backend/supabase/functions/stock-market-player-read/index.ts"),
     read("backend/supabase/functions/stock-market-trading/index.ts"),
+    read("backend/supabase/functions/business-operations-worker/index.ts"),
+    read("backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts"),
     read("scripts/trigger-stock-market-tick.mjs"),
     read("backend/src/security/internalRunnerAuth.ts"),
   ]);
@@ -285,6 +299,37 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
   assert.match(scheduler, /createInternalRunnerHeaders/);
   assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
   assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
+  assert.match(config, /\[functions\.business-operations-worker\][\s\S]*verify_jwt\s*=\s*false/);
+  assert.match(businessWorker, /requirePublishableRequest\(request\)/);
+  assert.match(businessWorker, /authorizeInternalRunnerRequest/);
+  assert.match(businessWorker, /runnerName:\s*"business-operations-worker"/);
+  assert.match(businessWorker, /claim_internal_runner_nonce_v2/);
+  assert.match(businessWorker, /Deno\.env\.get\("STOCK_MARKET_RUNNER_SECRET"\)/);
+  assert.match(businessWorker, /handleBusinessOperationsWorkerRequest/);
+  assert.ok(
+    businessWorker.indexOf("businessOperationsWorkerBrowserRequestFailure(request)") <
+      businessWorker.indexOf("requirePublishableRequest(request)"),
+  );
+  assert.ok(
+    businessWorker.indexOf("requirePublishableRequest(request)") <
+      businessWorker.indexOf("authorizeInternalRunnerRequest(request"),
+  );
+  assert.ok(
+    businessWorker.indexOf("authorizeInternalRunnerRequest(request") <
+      businessWorker.indexOf("return handleBusinessOperationsWorkerRequest"),
+  );
+  assert.doesNotMatch(
+    businessWorker,
+    /request\.headers\.get\(["']x-business-operations-worker-secret["']\)/,
+  );
+  assert.match(businessWorkerHandler, /assertEmptyBody\(request\)/);
+  assert.match(businessWorkerHandler, /bytes\.byteLength\s*!==\s*0/);
+  assert.match(businessWorkerHandler, /authorization/);
+  assert.match(businessWorkerHandler, /cookie/);
+  assert.match(businessWorkerHandler, /origin/);
+  assert.match(businessWorkerHandler, /x-econovaria-csrf-token/);
+  assert.match(businessWorkerHandler, /x-player-session-token/);
+  assert.doesNotMatch(businessWorkerHandler, /access-control-allow-origin/);
 });
 
 test("local launcher never exposes a privileged browser bearer or arbitrary cookie", async () => {

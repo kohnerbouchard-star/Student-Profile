@@ -59,13 +59,41 @@ export function mapPlayerBusinessDatabaseError(
       409,
       "A closed business cannot be reopened through this action.",
     ],
+    BUSINESS_OPERATING_PERIOD_CLOSE_REQUIRED: [
+      409,
+      "The due Business operating period must close before this Business can close.",
+    ],
+    BUSINESS_OPERATING_PERIOD_CLOSE_PENDING: [
+      409,
+      "Active payroll and Store receipt processing must finish before this Business can close.",
+    ],
+    BUSINESS_OUTSTANDING_PAYROLL_LIABILITY: [
+      409,
+      "Unpaid payroll must be recovered before this Business can close.",
+    ],
+    BUSINESS_OUTSTANDING_TAX_LIABILITY: [
+      409,
+      "Assessed unpaid tax must be settled before this Business can close.",
+    ],
     IDEMPOTENCY_KEY_CONFLICT: [
       409,
       "This idempotency key was already used for a different request.",
     ],
     BUSINESS_ALREADY_OWNED: [
       409,
-      "Close the current business before creating or acquiring another one.",
+      "Close the current business before creating another one.",
+    ],
+    BUSINESS_DIRECT_ACQUISITION_RETIRED: [
+      410,
+      "Direct Business acquisition is retired; use registered ownership transfers.",
+    ],
+    BUSINESS_CACHED_FINANCIAL_AUTHORITY_RETIRED: [
+      410,
+      "This cached Business financial mutation is retired.",
+    ],
+    BUSINESS_OWNERSHIP_TRANSFER_VALUATION_AUTHORITY_UNAVAILABLE: [
+      410,
+      "New ownership transfers require authoritative financial reporting.",
     ],
     BUSINESS_FORMATION_ALREADY_PENDING: [
       409,

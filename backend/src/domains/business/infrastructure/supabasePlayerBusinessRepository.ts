@@ -77,7 +77,7 @@ export class SupabasePlayerBusinessRepository
     if (ownedBusinesses.length === 1) {
       throw new PlayerBusinessError(
         "business_already_owned",
-        "Close the current business before creating or acquiring another one.",
+        "Close the current business before creating another one.",
         409,
       );
     }
@@ -88,7 +88,9 @@ export class SupabasePlayerBusinessRepository
     readonly playerId: string;
   }): Promise<BusinessSnapshotDto> {
     const ownedBusinesses = (await rows(
-      this.client.from("business_entities").select("*")
+      this.client.from("business_entities").select(
+        "id,public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capacity_units,reputation_score,created_at",
+      )
         .eq("game_session_id", input.gameSessionId)
         .eq("owner_player_id", input.playerId)
         .order("created_at", { ascending: true }),
@@ -115,7 +117,9 @@ export class SupabasePlayerBusinessRepository
       storeActivityRows,
     ] = await Promise.all([
       rows(
-        this.client.from("business_products").select("*")
+        this.client.from("business_products").select(
+          "public_key,status,category,name,quality_score,unit_price,unit_input_cost,unit_labor_cost,reference_price,version,created_at",
+        )
           .eq("game_session_id", input.gameSessionId).eq(
             "business_id",
             businessId,
@@ -203,9 +207,6 @@ export class SupabasePlayerBusinessRepository
     const capacityUse = capacity > 0
       ? Math.min(100, Math.round((latestOutput / capacity) * 100))
       : 0;
-    const revenue = number(business.revenue_total);
-    const profit = number(business.profit_total);
-
     return {
       configured: true,
       company: {
@@ -215,11 +216,7 @@ export class SupabasePlayerBusinessRepository
         status: title(text(business.status, "active")),
         industry: title(text(business.industry_code, "general")),
         headquarters: text(business.country_code, "Unassigned"),
-        valuation: number(business.valuation),
-        valuationChange: 0,
         cash,
-        revenue,
-        margin: revenue > 0 ? round((profit / revenue) * 100, 1) : 0,
         reputation: number(business.reputation_score, 50),
         reputationLabel: reputationLabel(number(business.reputation_score, 50)),
         summary: `Ledger-backed ${
@@ -253,12 +250,11 @@ export class SupabasePlayerBusinessRepository
             id: text(row.public_key),
             category: title(text(row.category, "general")),
             name: text(row.name, "Unnamed product"),
-            description: `${number(row.quality_score, 50)}/100 quality · ${
-              number(row.base_demand_units)
-            } baseline demand`,
+            description: `${
+              number(row.quality_score, 50)
+            }/100 quality · server-owned transition product`,
             price,
             margin: price > 0 ? round(((price - cost) / price) * 100, 1) : 0,
-            demand: demandLabel(price, number(row.reference_price, price)),
             icon: "factory",
             version: integer(row.version, 1),
           };
@@ -375,14 +371,10 @@ function emptyBusiness(): BusinessSnapshotDto {
       status: "Unavailable",
       industry: "Not configured",
       headquarters: "Not configured",
-      valuation: 0,
-      valuationChange: 0,
       cash: 0,
-      revenue: 0,
-      margin: 0,
       reputation: 0,
       reputationLabel: "No business profile",
-      summary: "Create or acquire a business to begin operating.",
+      summary: "Create a business to begin operating.",
     },
     operations: {
       employees: 0,
@@ -428,10 +420,4 @@ function reputationLabel(score: number): string {
   if (score >= 60) return "Established operator";
   if (score >= 40) return "Developing operator";
   return "At-risk operator";
-}
-function demandLabel(price: number, reference: number): string {
-  const ratio = reference > 0 ? price / reference : 1;
-  if (ratio <= 0.85) return "High";
-  if (ratio <= 1.15) return "Stable";
-  return "Low";
 }

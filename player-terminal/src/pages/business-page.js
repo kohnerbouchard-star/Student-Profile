@@ -19,7 +19,7 @@ function productRow(product, business, currencyCode) {
   return `<article class="player-terminal-business-product">
     <span class="player-terminal-product-icon">${icon(product.icon || "factory")}</span>
     <div><small>${escapeHtml(product.category)}</small><strong>${escapeHtml(product.name)}</strong><p>${escapeHtml(product.description)}</p></div>
-    <dl><div><dt>PRICE</dt><dd>${escapeHtml(formatCurrency(product.price, currencyCode))}</dd></div><div><dt>MARGIN</dt><dd>${escapeHtml(formatPercent(product.margin, 1))}</dd></div><div><dt>DEMAND</dt><dd>${escapeHtml(product.demand)}</dd></div></dl>
+    <dl><div><dt>PRICE</dt><dd>${escapeHtml(formatCurrency(product.price, currencyCode))}</dd></div><div><dt>MARGIN</dt><dd>${escapeHtml(formatPercent(product.margin, 1))}</dd></div><div><dt>VERSION</dt><dd>v${escapeHtml(formatNumber(product.version || 1))}</dd></div></dl>
     <form data-player-form="business-price" data-endpoint="businessPrice" data-product-id="${escapeHtml(product.id)}">
       ${hiddenBusinessKey(business)}
       <input name="productKey" type="hidden" value="${escapeHtml(product.id)}" />
@@ -32,13 +32,12 @@ function productRow(product, business, currencyCode) {
 
 function createBusinessPanel(code) {
   return `<section class="player-terminal-panel player-terminal-business-actions">
-    <header class="player-terminal-panel-header"><div><span>BUSINESS FORMATION</span><strong>Create or acquire an enterprise</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
+    <header class="player-terminal-panel-header"><div><span>BUSINESS FORMATION</span><strong>Create an enterprise</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
     <form data-player-form="business-create" data-endpoint="businessCreate">
       <label>LEGAL NAME<input name="legalName" maxlength="120" required /></label>
       <label>ENTITY TYPE<select name="entityType"><option value="sole_proprietorship">Sole proprietorship</option><option value="partnership">Partnership</option><option value="corporation">Corporation</option><option value="cooperative">Cooperative</option></select></label>
       <label>INDUSTRY CODE<input name="industryCode" maxlength="80" placeholder="manufacturing" required /></label>
       <label>STARTING CAPITAL (${escapeHtml(code)})<input name="capitalization" type="number" min="0" max="10000000" step="0.01" value="0" required /></label>
-      <label>ACQUIRE BUSINESS KEY <small>Optional</small><input name="acquireBusinessKey" maxlength="36" placeholder="biz_…" /></label>
       <button class="player-terminal-primary-button" type="submit">${icon("business")} Submit formation</button>
     </form>
   </section>`;
@@ -52,7 +51,6 @@ function productCreationForm(business) {
     <label>UNIT PRICE<input name="unitPrice" type="number" min="0.01" max="1000000" step="0.01" required /></label>
     <label>INPUT COST<input name="unitInputCost" type="number" min="0" max="1000000" step="0.01" value="0" required /></label>
     <label>CAPACITY UNITS<input name="capacityUnits" type="number" min="1" max="100000" step="1" value="100" required /></label>
-    <label>BASE DEMAND<input name="baseDemandUnits" type="number" min="0" max="100000" step="1" value="20" required /></label>
     <label>QUALITY SCORE<input name="qualityScore" type="number" min="0" max="100" step="1" value="50" required /></label>
     <button class="player-terminal-secondary-button" type="submit">${icon("factory")} Create product</button>
   </form></details>`;
@@ -415,20 +413,23 @@ export function renderBusinessPage(data) {
   const code = playerBusinessCurrencyCode(data);
   if (!business.configured) {
     return `<section class="player-terminal-page player-terminal-business-page" data-page="business">
-      <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Create or acquire one game-scoped enterprise using your authoritative country and currency.</p></div></div>
+      <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Create one game-scoped enterprise using your authoritative country and currency.</p></div></div>
       <div class="player-terminal-business-layout">${createBusinessPanel(code)}</div>
     </section>`;
   }
 
   const capacityTone = business.operations.capacityUse >= 90 ? "red" : business.operations.capacityUse >= 75 ? "amber" : "green";
   const statusLabel = String(business.company.status || "").trim().toUpperCase();
+  const storeSales = business.storeSales && typeof business.storeSales === "object"
+    ? business.storeSales
+    : {};
   return `<section class="player-terminal-page player-terminal-business-page" data-page="business">
     <div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Operate a bounded company model with server-authoritative settlement and accounting.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(statusLabel, "green")}</div></div>
 
     <div class="player-terminal-business-metrics">
-      ${renderMetric({ label: "Company value", value: formatCurrency(business.company.valuation, code), meta: `${business.company.valuationChange >= 0 ? "+" : ""}${business.company.valuationChange.toFixed(1)}% this cycle`, tone: "cyan", iconName: "business" })}
+      ${renderMetric({ label: "Recent Store sales", value: formatNumber(storeSales.recentReceiptCount || 0), meta: `${formatNumber(storeSales.recentQuantitySold || 0)} receipt-backed units`, tone: "cyan", iconName: "store" })}
       ${renderMetric({ label: "Operating cash", value: formatCurrency(business.company.cash, code), meta: "Available for operations", tone: "green", iconName: "wallet" })}
-      ${renderMetric({ label: "Cycle revenue", value: formatCurrency(business.company.revenue, code), meta: `${business.company.margin.toFixed(1)}% operating margin`, tone: "amber", iconName: "chart" })}
+      ${renderMetric({ label: "Store revenue", value: formatCurrency(storeSales.recentGrossRevenue || 0, storeSales.currencyCode || code), meta: "Committed seller receipts", tone: "amber", iconName: "chart" })}
       ${renderMetric({ label: "Reputation", value: `${business.company.reputation}/100`, meta: business.company.reputationLabel, tone: "purple", iconName: "star" })}
     </div>
 

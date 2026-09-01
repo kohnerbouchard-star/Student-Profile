@@ -1,0 +1,546 @@
+name: business-store-sales-convergence-v2
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/business-store-sales-convergence-v2.yml
+      - .github/workflows/admin-v2-loans.yml
+      - .github/workflows/edge-function-inventory-converge.yml
+      - admin/v2/src/routes/business/BusinessController.js
+      - admin/v2/src/routes/business/BusinessRoute.js
+      - backend/package.json
+      - backend/src/domains/business/**
+      - backend/supabase/config.toml
+      - backend/supabase/edge-function-manifest.json
+      - backend/supabase/functions/admin-api/businessBankingOperations*
+      - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
+      - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
+      - backend/supabase/functions/admin-api/index.ts
+      - backend/supabase/functions/business-operations-worker/**
+      - backend/supabase/functions/game-data-purger/**
+      - backend/supabase/migrations/20260831232642_business_operating_period_clock_lease_v1.sql
+      - backend/supabase/migrations/20260831232656_business_store_period_tax_close_v1.sql
+      - backend/supabase/migrations/20260831232707_business_legacy_sales_retirement_v1.sql
+      - backend/supabase/migrations/20260831232719_business_store_sales_convergence_assertions_v1.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-680.json
+      - docs/roadmaps/business-store-sales-convergence-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/business-v2-development-execution-plan-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - docs/security/auth-boundary-ledger-v1.json
+      - docs/security/auth-boundary-map-v1.md
+      - player-terminal/src/api/business-banking-backend-routes.js
+      - player-terminal/src/api/read-model.js
+      - player-terminal/src/data/empty-read-models.js
+      - player-terminal/src/data/preview-data.js
+      - player-terminal/src/pages/business-page.js
+      - player-terminal/tests/business-banking-surface.mjs
+      - scripts/admin-v2-business-api.test.mjs
+      - scripts/admin-v2-loans-api.test.mjs
+      - scripts/auth-boundary-contract.test.mjs
+      - scripts/business-banking-player-business-browser-acceptance.core.mjs
+      - scripts/business-phase4c-payroll-settlement-contract.mjs
+      - scripts/business-store-sales-convergence-*.mjs
+      - scripts/economic-asset-core-staging-acceptance.sql
+      - scripts/local-edge-runtime-contract.test.mjs
+      - scripts/player-cross-cutting-authority.test.mjs
+      - scripts/verify-player-cross-cutting-authority.mjs
+  push:
+    branches:
+      - refactor/business-store-sales-convergence-v2
+    paths:
+      - .github/workflows/business-store-sales-convergence-v2.yml
+      - .github/workflows/admin-v2-loans.yml
+      - .github/workflows/edge-function-inventory-converge.yml
+      - admin/v2/src/routes/business/BusinessController.js
+      - admin/v2/src/routes/business/BusinessRoute.js
+      - backend/package.json
+      - backend/src/domains/business/**
+      - backend/supabase/config.toml
+      - backend/supabase/edge-function-manifest.json
+      - backend/supabase/functions/admin-api/businessBankingOperations*
+      - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
+      - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
+      - backend/supabase/functions/admin-api/index.ts
+      - backend/supabase/functions/business-operations-worker/**
+      - backend/supabase/functions/game-data-purger/**
+      - backend/supabase/migrations/20260831232642_business_operating_period_clock_lease_v1.sql
+      - backend/supabase/migrations/20260831232656_business_store_period_tax_close_v1.sql
+      - backend/supabase/migrations/20260831232707_business_legacy_sales_retirement_v1.sql
+      - backend/supabase/migrations/20260831232719_business_store_sales_convergence_assertions_v1.sql
+      - docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+      - docs/operations/contracts/player-cross-cutting/pr-680.json
+      - docs/roadmaps/business-store-sales-convergence-*.md
+      - docs/roadmaps/business-v2-current-checkpoint-v1.json
+      - docs/roadmaps/business-v2-development-execution-log-v1.md
+      - docs/roadmaps/business-v2-development-execution-plan-v1.md
+      - docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+      - docs/security/auth-boundary-ledger-v1.json
+      - docs/security/auth-boundary-map-v1.md
+      - player-terminal/src/api/business-banking-backend-routes.js
+      - player-terminal/src/api/read-model.js
+      - player-terminal/src/data/empty-read-models.js
+      - player-terminal/src/data/preview-data.js
+      - player-terminal/src/pages/business-page.js
+      - player-terminal/tests/business-banking-surface.mjs
+      - scripts/admin-v2-business-api.test.mjs
+      - scripts/admin-v2-loans-api.test.mjs
+      - scripts/auth-boundary-contract.test.mjs
+      - scripts/business-banking-player-business-browser-acceptance.core.mjs
+      - scripts/business-phase4c-payroll-settlement-contract.mjs
+      - scripts/business-store-sales-convergence-*.mjs
+      - scripts/economic-asset-core-staging-acceptance.sql
+      - scripts/local-edge-runtime-contract.test.mjs
+      - scripts/player-cross-cutting-authority.test.mjs
+      - scripts/verify-player-cross-cutting-authority.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-store-sales-convergence-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: business-store-sales-convergence-v2-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify PR authority and Phase 11 source contract
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || '680' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/business-player-store-fx-final-v2' }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/business-store-sales-convergence-changed-files.txt
+          node --test scripts/player-cross-cutting-authority.test.mjs
+          node scripts/verify-player-cross-cutting-authority.mjs \
+            --changed-files /tmp/business-store-sales-convergence-changed-files.txt \
+            --pr-number "$PR_NUMBER" \
+            --base-ref "$BASE_REF"
+          node scripts/business-store-sales-convergence-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          node --check scripts/business-store-sales-convergence-database.mjs
+          node --check scripts/business-store-sales-convergence-concurrency.mjs
+          node --check scripts/business-banking-player-business-browser-acceptance.core.mjs
+          git diff --check "origin/${BASE_REF}...HEAD"
+
+      - name: Verify Backend and retained Business source boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno fmt --check \
+            backend/src/domains/business/api/businessOperationsWorkerHttpHandler.test.ts \
+            backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts \
+            backend/src/domains/business/api/playerBusinessDemandAuthority.test.ts \
+            backend/src/domains/business/api/playerBusinessMutationExecutor.ts \
+            backend/src/domains/business/api/playerBusinessRequestValidation.ts \
+            backend/src/domains/business/contracts/playerBusinessContracts.ts \
+            backend/src/domains/business/infrastructure/playerBusinessDatabaseErrors.ts \
+            backend/src/domains/business/infrastructure/supabaseBusinessOperationsRepository.test.ts \
+            backend/src/domains/business/infrastructure/supabaseBusinessOperationsRepository.ts \
+            backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.test.ts \
+            backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts \
+            backend/src/domains/business/services/businessOperationsWorker.test.ts \
+            backend/src/domains/business/services/businessOperationsWorker.ts \
+            backend/supabase/functions/admin-api/businessBankingOperations.test.ts \
+            backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts \
+            backend/supabase/functions/admin-api/businessBankingOperations.ts \
+            backend/supabase/functions/admin-api/businessSettlementRetirementDispatch.test.ts \
+            backend/supabase/functions/admin-api/businessSettlementRetirementDispatch.ts \
+            backend/supabase/functions/admin-api/index.ts \
+            backend/supabase/functions/business-operations-worker/index.ts \
+            backend/supabase/functions/game-data-purger/index.ts \
+            backend/supabase/functions/game-data-purger/runtimeBinding.test.ts \
+            backend/supabase/functions/game-data-purger/runtimeBinding.ts
+          deno test \
+            --config backend/supabase/functions/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/supabase/functions/game-data-purger/runtimeBinding.test.ts
+          deno check \
+            --config backend/supabase/functions/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/supabase/functions/game-data-purger/index.ts
+          npm --prefix backend run typecheck
+          deno test \
+            --config backend/supabase/functions/admin-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock \
+            --frozen \
+            backend/supabase/functions/admin-api/businessBankingOperations.test.ts \
+            backend/supabase/functions/admin-api/businessSettlementRetirementDispatch.test.ts
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-payroll-scope-hardening-contract.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase6-manufacturing-completion-contract.mjs
+          node scripts/business-phase6-manufacturing-recovery-contract.mjs
+          node scripts/business-phase7-store-seller-offers-contract.mjs
+          node scripts/business-phase8-store-listing-inventory-contract.mjs
+          node scripts/business-phase9-store-withdrawal-safety-contract.mjs
+          node scripts/business-phase10-atomic-settlement-contract.mjs
+          node scripts/business-phase10-player-store-cutover-contract.mjs
+          node scripts/multicurrency-funding-core-contract.mjs
+          node scripts/business-multicurrency-treasury-contract.mjs
+          node scripts/business-player-store-fx-final-contract.mjs
+          node --test \
+            scripts/economic-asset-core-v2-contract.test.mjs \
+            scripts/store-provenance-authority-contract.test.mjs
+
+      - name: Verify focused Business and Admin convergence behavior
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          deno test \
+            --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/domains/business/api/playerBusinessDemandAuthority.test.ts \
+            src/domains/business/infrastructure/supabasePlayerBusinessRepository.test.ts
+
+      - name: Verify deterministic architecture inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          node scripts/architecture/architecture-ratchet-v2.mjs
+          git diff --exit-code -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+
+  disposable-database:
+    name: business-store-sales-convergence-v2-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned database tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+
+      - name: Start disposable Postgres service
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/business-store-sales-convergence-startup.log
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay exact zero-to-head migrations twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          for PASS in 1 2; do
+            echo "Phase 11 zero-to-head replay ${PASS}"
+            npx supabase db reset --workdir backend --local
+          done
+
+      - name: Run Phase 11 serial database acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/business-store-sales-convergence-database.mjs
+
+      - name: Run Phase 11 claim, purchase-close, and lock-order races
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/business-store-sales-convergence-concurrency.mjs
+
+      - name: Run retained Banking, C0, C4, D, and Store database gates
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+          node scripts/banking-fx-database-acceptance.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/multicurrency-funding-concurrency.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-multicurrency-treasury-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-multicurrency-treasury-concurrency.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-player-store-fx-final-database.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/business-player-store-fx-final-concurrency.mjs
+          npx supabase db reset --workdir backend --local
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/business-store-sales-convergence-source-fixture.log
+          PHYSICAL_ECONOMY_PACK=/tmp/business-store-sales-convergence-runtime-pack.json
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+          PHYSICAL_ECONOMY_PACK="$PHYSICAL_ECONOMY_PACK" \
+            node scripts/full-game-local-e2e-acceptance.mjs \
+            2>&1 | tee /tmp/business-store-sales-convergence-fixture.log
+          psql "$DATABASE_URL" \
+            -X --set=ON_ERROR_STOP=1 --no-psqlrc \
+            --file scripts/economic-asset-core-staging-acceptance.sql \
+            2>&1 | tee /tmp/business-store-sales-convergence-economic-asset.log
+          grep -F 'ECONOMIC_ASSET_CORE_STAGING_ACCEPTANCE_PASS' \
+            /tmp/business-store-sales-convergence-economic-asset.log
+
+      - name: Capture rebuilt-schema lint and advisors
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npx supabase db lint --workdir backend --local --level warning 2>&1 \
+            | tee /tmp/business-store-sales-convergence-db-lint.log
+          LINT_STATUS=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$LINT_STATUS" \
+            > /tmp/business-store-sales-convergence-db-lint-exit-code.txt
+          if [ "$LINT_STATUS" -ne 0 ]; then
+            echo "::warning::Captured inherited database lint findings (exit $LINT_STATUS); Phase 11 source contracts and advisors remain fail-closed."
+          fi
+          npx supabase db advisors \
+            --workdir backend \
+            --local \
+            --type all \
+            --level warn \
+            --fail-on error \
+            --output-format json 2>&1 \
+            | tee /tmp/business-store-sales-convergence-advisors.json
+
+      - name: Upload rebuilt-schema evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-store-sales-convergence-database-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/business-store-sales-convergence-startup.log
+            /tmp/business-store-sales-convergence-db-lint.log
+            /tmp/business-store-sales-convergence-db-lint-exit-code.txt
+            /tmp/business-store-sales-convergence-advisors.json
+            /tmp/business-store-sales-convergence-economic-asset.log
+            /tmp/business-store-sales-convergence-fixture.log
+            /tmp/business-store-sales-convergence-source-fixture.log
+            /tmp/full-game-local-e2e-acceptance.json
+            /tmp/game-creation-provisioning-local-acceptance.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Capture disposable diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee /tmp/business-store-sales-convergence-status.log || true
+          docker ps -a 2>&1 | tee /tmp/business-store-sales-convergence-docker.log || true
+
+      - name: Stop disposable Postgres service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  worker-contract:
+    name: business-store-sales-convergence-v2-worker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned worker dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix backend ci --ignore-scripts
+
+      - name: Verify worker service, repository, HTTP, and internal-runner boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix backend run test:business-operations-worker
+          node --test \
+            scripts/internal-runner-auth-contract.test.mjs \
+            scripts/auth-boundary-contract.test.mjs \
+            scripts/local-edge-runtime-contract.test.mjs \
+            scripts/edge-function-inventory/validate.test.mjs
+          npm --prefix backend run typecheck:edge-all
+
+  player-admin-contract:
+    name: business-store-sales-convergence-v2-player-admin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checked-out SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            player-terminal/package-lock.json
+
+      - name: Install Player and Admin verification dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npm --prefix player-terminal ci --ignore-scripts
+          npm --prefix player-terminal exec -- playwright install --with-deps chromium
+
+      - name: Verify Player and Admin convergence contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/admin-v2-business-api.test.mjs
+          node --test scripts/admin-v2-loans-api.test.mjs
+          node --test player-terminal/tests/business-banking-surface.mjs
+          node --test player-terminal/tests/store-purchase-flow.mjs
+          npm --prefix player-terminal run check
+          npm --prefix player-terminal run verify
+
+      - name: Verify desktop and mobile Business presentation
+        shell: bash
+        working-directory: player-terminal
+        run: |
+          set -euo pipefail
+          npm exec -- playwright test \
+            tests/browser/player-business-treasury.spec.mjs \
+            --project=chromium-desktop \
+            --project=chromium-mobile
+
+      - name: Upload focused browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: business-store-sales-convergence-player-admin-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            player-terminal/playwright-report
+            player-terminal/test-results
+          if-no-files-found: ignore
+          retention-days: 14

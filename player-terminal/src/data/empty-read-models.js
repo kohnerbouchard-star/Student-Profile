@@ -38,11 +38,7 @@ export function createEmptyReadModels() {
         status: "Unavailable",
         industry: "Not configured",
         headquarters: "Not configured",
-        valuation: 0,
-        valuationChange: 0,
         cash: 0,
-        revenue: 0,
-        margin: 0,
         reputation: 0,
         reputationLabel: "Unavailable",
         summary: "Business information is unavailable."

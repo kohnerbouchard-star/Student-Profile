@@ -26,10 +26,26 @@ Deno.test("Player Business projects committed Store sales without internal ident
       currency_code: "NRC",
       status: "active",
       capacity_units: 100,
-      valuation: 0,
-      revenue_total: 0,
-      profit_total: 0,
+      valuation: "POISON_VALUATION",
+      revenue_total: "POISON_REVENUE",
+      expense_total: "POISON_EXPENSE",
+      profit_total: "POISON_PROFIT",
+      demand_index: "POISON_DEMAND",
       reputation_score: 50,
+      created_at: "2026-08-25T01:00:00.000Z",
+    }],
+    business_products: [{
+      public_key: `bpr_${"f".repeat(32)}`,
+      status: "active",
+      category: "manufacturing",
+      name: "Alloy Form",
+      quality_score: 60,
+      unit_price: 10,
+      unit_input_cost: 4,
+      unit_labor_cost: 1,
+      reference_price: 10,
+      version: 1,
+      base_demand_units: "POISON_BASE_DEMAND",
       created_at: "2026-08-25T01:00:00.000Z",
     }],
     account_balances: [{
@@ -79,6 +95,45 @@ Deno.test("Player Business projects committed Store sales without internal ident
   });
 
   assertEquals(snapshot.company.cash, 125);
+  for (const field of ["valuation", "valuationChange", "revenue", "margin"]) {
+    assertEquals(Object.hasOwn(snapshot.company, field), false);
+  }
+  const serializedSnapshot = JSON.stringify(snapshot);
+  for (
+    const poison of [
+      "POISON_VALUATION",
+      "POISON_REVENUE",
+      "POISON_EXPENSE",
+      "POISON_PROFIT",
+      "POISON_DEMAND",
+      "POISON_BASE_DEMAND",
+    ]
+  ) {
+    assertEquals(serializedSnapshot.includes(poison), false);
+  }
+  const businessSelection =
+    client.selections.find((entry) => entry.table === "business_entities")
+      ?.columns ?? "";
+  const productSelection =
+    client.selections.find((entry) => entry.table === "business_products")
+      ?.columns ?? "";
+  for (
+    const forbidden of [
+      "revenue_total",
+      "expense_total",
+      "profit_total",
+      "valuation",
+      "demand_index",
+    ]
+  ) {
+    assertEquals(businessSelection.split(",").includes(forbidden), false);
+  }
+  assertEquals(
+    productSelection.split(",").includes("base_demand_units"),
+    false,
+  );
+  assertEquals(businessSelection, businessSelection.replace("*", ""));
+  assertEquals(productSelection, productSelection.replace("*", ""));
   assertEquals(snapshot.storeSales, {
     businessKey: BUSINESS_KEY,
     currencyCode: "NRC",
@@ -303,6 +358,42 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "Player Business maps guarded operating-period close conflicts to stable 409 responses",
+  async () => {
+    const cases = [
+      [
+        "P0001: BUSINESS_OPERATING_PERIOD_CLOSE_REQUIRED",
+        "business_operating_period_close_required",
+        "The due Business operating period must close before this Business can close.",
+      ],
+      [
+        "business_operating_period_close_pending: active payroll remains",
+        "business_operating_period_close_pending",
+        "Active payroll and Store receipt processing must finish before this Business can close.",
+      ],
+      [
+        "P0001: BUSINESS_OUTSTANDING_PAYROLL_LIABILITY",
+        "business_outstanding_payroll_liability",
+        "Unpaid payroll must be recovered before this Business can close.",
+      ],
+      [
+        "P0001: BUSINESS_OUTSTANDING_TAX_LIABILITY",
+        "business_outstanding_tax_liability",
+        "Assessed unpaid tax must be settled before this Business can close.",
+      ],
+    ] as const;
+
+    for (const [message, code, expectedMessage] of cases) {
+      const error = await executeError(message);
+      assertEquals(
+        [error.code, error.status, error.retryable, error.message],
+        [code, 409, false, expectedMessage],
+      );
+    }
+  },
+);
+
 async function executeError(message: string): Promise<{
   readonly code: unknown;
   readonly status: unknown;
@@ -339,9 +430,14 @@ function fixtureClient(overrides: Record<string, unknown[]>) {
     business_activity_events: [],
     ...overrides,
   };
+  const selections: Array<{ table: string; columns: string }> = [];
   return {
+    selections,
     from(table: string) {
-      return new FixtureBuilder(fixtures[table] ?? []);
+      return new FixtureBuilder(
+        fixtures[table] ?? [],
+        (columns) => selections.push({ table, columns }),
+      );
     },
     rpc() {
       return Promise.resolve({ data: null, error: null });
@@ -354,8 +450,12 @@ class FixtureBuilder implements
     data: unknown[];
     error: null;
   }> {
-  constructor(private readonly data: unknown[]) {}
-  select() {
+  constructor(
+    private readonly data: unknown[],
+    private readonly onSelect: (columns: string) => void,
+  ) {}
+  select(columns: string) {
+    this.onSelect(columns);
     return this;
   }
   eq() {

@@ -158,7 +158,6 @@ export function validateBusinessRequestMethodAndFields(
       "unitInputCost",
       "unitLaborCost",
       "capacityUnits",
-      "baseDemandUnits",
       "qualityScore",
       "idempotencyKey",
     ],
@@ -209,6 +208,18 @@ export function validateBusinessRequestMethodAndFields(
     if (!allowedSet.has(key)) {
       throw invalidRequest(`Unexpected request field: ${key}.`);
     }
+  }
+
+  // Keep the retired field parseable so older clients receive the stable 410
+  // from the mutation executor, but reject malformed acquisition intent before
+  // trusted Player scope resolution. Presence is intentional here: null, an
+  // empty string, and non-string values must not silently become formation.
+  if (
+    route.kind === "businessCreate" &&
+    route.operation === "directCreate" &&
+    Object.hasOwn(body, "acquireBusinessKey")
+  ) {
+    readKey(body.acquireBusinessKey, "acquireBusinessKey", "biz");
   }
 }
 

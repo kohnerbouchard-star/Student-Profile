@@ -32,22 +32,31 @@ test("Loans V2 consumes the economy-scoped authoritative supervisory contract", 
 });
 
 test("Admin Loans backend publishes privacy-safe portfolio, repayment, application and product projections", async () => {
-  const operations = await read("backend/supabase/functions/admin-api/businessBankingOperations.ts");
+  const [operations, supervision] = await Promise.all([
+    read("backend/supabase/functions/admin-api/businessBankingOperations.ts"),
+    read("backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts"),
+  ]);
+  const backend = `${operations}\n${supervision}`;
 
   assert.match(operations, /input\.suffix === "\/economy\/loans"[\s\S]*?request\.method === "GET"/);
   for (const table of ["player_loans", "loan_payments", "loan_applications", "loan_products", "business_entities", "players"]) {
-    assert.match(operations, new RegExp(`from\\("${table}"\\)`, "u"), `missing Loans source ${table}`);
+    assert.match(backend, new RegExp(`from\\("${table}"\\)`, "u"), `missing Loans source ${table}`);
   }
   for (const publicPrefix of ["lon", "pay", "lna", "lop", "biz"]) {
-    assert.match(operations, new RegExp(`publicKey\\([^)]*, "${publicPrefix}"\\)`, "u"));
+    assert.match(backend, new RegExp(`publicKey\\([^)]*, "${publicPrefix}"\\)`, "u"));
   }
-  const supervision = operations.slice(operations.indexOf("async function readLoanSupervision"));
   for (const prohibitedProjection of ["ledger_entry_id", "request_hash", "idempotency_key", "repayment_source"]) {
     assert.doesNotMatch(supervision, new RegExp(`['\"]${prohibitedProjection}['\"]`, "u"));
   }
-  assert.match(operations, /uniqueInternalIds/);
-  assert.match(operations, /playerReference/);
-  assert.match(operations, /currencyTotals/);
+  assert.match(operations, /projectLoanApplicationRows\(data\)/u);
+  assert.doesNotMatch(
+    operations,
+    /"public_key,player_id,business_id,loan_product_id,[^"]*"/u,
+    "legacy loan-application reads must not select internal ownership UUIDs",
+  );
+  assert.match(supervision, /uniqueInternalIds/);
+  assert.match(supervision, /playerReference/);
+  assert.match(supervision, /currencyTotals/);
   assert.ok(operations.includes("(?:economy\\/)?loan-applications"));
   assert.ok(operations.includes("(?:economy\\/)?loans"));
   assert.match(operations, /"\/economy\/loan-products"/);

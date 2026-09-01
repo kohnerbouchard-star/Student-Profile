@@ -66,11 +66,7 @@ export interface BusinessCompanyDto {
   readonly status: string;
   readonly industry: string;
   readonly headquarters: string;
-  readonly valuation: number;
-  readonly valuationChange: number;
   readonly cash: number;
-  readonly revenue: number;
-  readonly margin: number;
   readonly reputation: number;
   readonly reputationLabel: string;
   readonly summary: string;
@@ -83,7 +79,6 @@ export interface BusinessProductDto {
   readonly description: string;
   readonly price: number;
   readonly margin: number;
-  readonly demand: string;
   readonly icon: string;
   readonly version: number;
 }

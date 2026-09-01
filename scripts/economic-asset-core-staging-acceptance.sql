@@ -3,6 +3,122 @@
 begin;
 set local request.jwt.claim.role = 'service_role';
 
+-- The canonical beta Store catalog intentionally contains finished goods, not
+-- every crafting input.  Materialize one rollback-only Store projection when
+-- the connected environment has an active Player/crafting fixture but no
+-- purchasable recipe input.  The surrounding transaction always rolls it back.
+do $fixture$
+declare
+  v_candidate record;
+begin
+  if exists (
+    select 1
+    from public.players p
+    join public.game_sessions g
+      on g.id = p.game_session_id
+     and g.status = 'active'
+     and g.lifecycle_state = 'active'
+    join public.player_country_assignments pca
+      on pca.game_session_id = p.game_session_id
+     and pca.player_id = p.id
+     and pca.status = 'active'
+    join public.country_profiles cp on cp.id = pca.country_profile_id
+    join public.game_session_physical_economy_packs gp
+      on gp.game_session_id = p.game_session_id
+     and gp.status = 'active'
+    join public.physical_economy_recipe_definitions r
+      on r.pack_id = gp.pack_id
+     and r.status = 'active'
+    join public.game_session_recipe_availability a
+      on a.game_session_id = p.game_session_id
+     and a.recipe_id = r.id
+     and a.enabled
+     and a.scarcity_band <> 'unavailable'
+     and a.unlocked_by_default
+    join public.physical_economy_recipe_inputs i on i.recipe_id = r.id
+    join public.game_items gi
+      on gi.game_session_id = p.game_session_id
+     and gi.canonical_key = i.item_key
+     and gi.status = 'active'
+    join public.store_items si
+      on si.game_session_id = p.game_session_id
+     and si.game_item_id = gi.id
+     and si.status = 'active'
+     and si.visibility = 'visible'
+     and si.stock_quantity >= ceil(i.base_quantity * 1.3)::integer + 1
+    where p.status = 'active'
+      and (cardinality(a.country_codes) = 0 or cp.country_code = any(a.country_codes))
+  ) then
+    return;
+  end if;
+
+  select
+    p.game_session_id,
+    cp.currency_code,
+    gi.id as game_item_id,
+    gi.name,
+    ceil(i.base_quantity * 1.3)::integer + 10 as stock_quantity
+  into v_candidate
+  from public.players p
+  join public.game_sessions g
+    on g.id = p.game_session_id
+   and g.status = 'active'
+   and g.lifecycle_state = 'active'
+  join public.player_country_assignments pca
+    on pca.game_session_id = p.game_session_id
+   and pca.player_id = p.id
+   and pca.status = 'active'
+  join public.country_profiles cp on cp.id = pca.country_profile_id
+  join public.game_session_physical_economy_packs gp
+    on gp.game_session_id = p.game_session_id
+   and gp.status = 'active'
+  join public.physical_economy_recipe_definitions r
+    on r.pack_id = gp.pack_id
+   and r.status = 'active'
+  join public.game_session_recipe_availability a
+    on a.game_session_id = p.game_session_id
+   and a.recipe_id = r.id
+   and a.enabled
+   and a.scarcity_band <> 'unavailable'
+   and a.unlocked_by_default
+  join public.physical_economy_recipe_inputs i on i.recipe_id = r.id
+  join public.game_items gi
+    on gi.game_session_id = p.game_session_id
+   and gi.canonical_key = i.item_key
+   and gi.status = 'active'
+  where p.status = 'active'
+    and (cardinality(a.country_codes) = 0 or cp.country_code = any(a.country_codes))
+  order by p.game_session_id, p.id, r.recipe_key, i.line_key
+  limit 1;
+
+  if found then
+    insert into public.store_items (
+      game_session_id,
+      item_key,
+      name,
+      category,
+      price,
+      currency_code,
+      stock_quantity,
+      status,
+      visibility,
+      game_item_id
+    ) values (
+      v_candidate.game_session_id,
+      'economic_probe_' || substring(md5(v_candidate.game_item_id::text), 1, 32),
+      v_candidate.name,
+      'goods',
+      10,
+      v_candidate.currency_code,
+      v_candidate.stock_quantity,
+      'active',
+      'visible',
+      v_candidate.game_item_id
+    );
+  end if;
+end
+$fixture$;
+
 do $probe$
 declare
   v_fixture record;
@@ -12,9 +128,7 @@ declare
   v_product_result record;
   v_contribution_result record;
   v_run_result record;
-  v_settlement_result record;
   v_run_row public.business_production_runs%rowtype;
-  v_sale_row public.business_sales%rowtype;
   v_player_account_id uuid;
   v_purchased_holding public.inventory_holdings%rowtype;
   v_output_holding public.inventory_holdings%rowtype;
@@ -45,13 +159,43 @@ begin
     si.price as store_price,
     r.id as recipe_id,
     r.recipe_key,
-    ceil(i.base_quantity)::integer as primary_required
+    crafting_difficulty.input_multiplier,
+    ceil(
+      i.base_quantity * case
+        when i.scaling_class <> 'elastic_common' then 1
+        else crafting_difficulty.input_multiplier
+      end
+    )::integer as primary_required
   into v_fixture
   from public.players p
   join public.game_sessions g
     on g.id = p.game_session_id
    and g.status = 'active'
    and g.lifecycle_state = 'active'
+  left join public.game_difficulty_policy_settings difficulty_policy
+    on difficulty_policy.game_session_id = p.game_session_id
+  left join public.game_settings game_setting
+    on game_setting.game_session_id = p.game_session_id
+  cross join lateral (
+    select case
+      when difficulty_policy.game_session_id is not null then coalesce(
+        nullif(lower(difficulty_policy.difficulty_preset), 'standard'),
+        'moderate'
+      )
+      else coalesce(
+        nullif(lower(game_setting.difficulty_preset), 'standard'),
+        'moderate'
+      )
+    end as difficulty_key
+  ) effective_difficulty
+  cross join lateral (
+    select case effective_difficulty.difficulty_key
+      when 'easy' then 0.9
+      when 'hard' then 1.15
+      when 'insane' then 1.3
+      else 1
+    end as input_multiplier
+  ) crafting_difficulty
   join public.player_country_assignments pca
     on pca.game_session_id = p.game_session_id
    and pca.player_id = p.id
@@ -79,7 +223,13 @@ begin
    and si.game_item_id = gi.id
    and si.status = 'active'
    and si.visibility = 'visible'
-   and si.stock_quantity >= ceil(i.base_quantity)::integer + 1
+   and si.stock_quantity >= ceil(
+     i.base_quantity * case
+       when i.scaling_class = 'elastic_common'
+         then crafting_difficulty.input_multiplier
+       else 1
+     end
+   )::integer + 1
   where p.status = 'active'
     and (cardinality(a.country_codes) = 0 or cp.country_code = any(a.country_codes))
   order by p.game_session_id, p.id, r.recipe_key, i.line_key, si.item_key
@@ -93,16 +243,19 @@ begin
   from public.record_player_ledger_entry(
     v_fixture.game_id,
     v_fixture.player_id,
-    'cash',
+    'checking',
     1000000,
     v_fixture.currency_code,
     'credit',
-    'validation',
-    'economic_asset_probe_funding',
-    null,
+    'setup',
+    'initial_balance_seed',
+    v_fixture.player_id,
     'system',
     null,
-    jsonb_build_object('rollback_only', true)
+    jsonb_build_object(
+      'rollback_only', true,
+      'bankTransactionIdempotencyKey', 'economic-asset-probe-funding-v2'
+    )
   );
 
   insert into public.store_purchase_quotes (
@@ -172,7 +325,13 @@ begin
     select
       i.line_key,
       i.item_key,
-      ceil(i.base_quantity)::integer as required_quantity,
+      ceil(
+        i.base_quantity * case
+          when i.scaling_class = 'elastic_common'
+            then v_fixture.input_multiplier
+          else 1
+        end
+      )::integer as required_quantity,
       gi.id as game_item_id
     from public.physical_economy_recipe_inputs i
     join public.game_items gi
@@ -301,7 +460,7 @@ begin
     'manufactured_good',
     100,
     0,
-    2,
+    0,
     10,
     10,
     80,
@@ -402,30 +561,31 @@ begin
     raise exception 'ECONOMIC_ASSET_BUSINESS_OUTPUT_FAILED';
   end if;
 
-  select * into v_settlement_result
-  from public.settle_business_cycle_v1(
-    v_fixture.game_id,
-    v_business_key,
-    'economic-asset-probe-settlement-v2',
-    1, 1, 1, 1
-  );
+  begin
+    perform *
+    from public.settle_business_cycle_v1(
+      v_fixture.game_id,
+      v_business_key,
+      'economic-asset-probe-settlement-v2',
+      1, 1, 1, 1
+    );
+    raise exception 'ECONOMIC_ASSET_LEGACY_BUSINESS_SALE_NOT_RETIRED';
+  exception
+    when others then
+      if sqlerrm <> 'BUSINESS_CYCLE_SETTLEMENT_RETIRED' then
+        raise;
+      end if;
+  end;
 
-  select bs.* into v_sale_row
-  from public.business_sales bs
-  where bs.game_session_id = v_fixture.game_id
-    and bs.business_id = v_business_id
-    and bs.product_id = v_product_id
-    and bs.settlement_key = 'economic-asset-probe-settlement-v2';
-
-  if not found
-    or v_sale_row.quantity <> 1
-    or v_sale_row.cost_of_goods_sold <= 0
-    or v_sale_row.net_income <> v_sale_row.gross_revenue
-      - v_sale_row.cost_of_goods_sold
-      - v_sale_row.wage_expense
-      - v_sale_row.tax_expense
-  then
-    raise exception 'ECONOMIC_ASSET_BUSINESS_COGS_FAILED';
+  if exists (
+    select 1
+    from public.business_sales bs
+    where bs.game_session_id = v_fixture.game_id
+      and bs.business_id = v_business_id
+      and bs.product_id = v_product_id
+      and bs.settlement_key = 'economic-asset-probe-settlement-v2'
+  ) then
+    raise exception 'ECONOMIC_ASSET_LEGACY_BUSINESS_SALE_WRITTEN';
   end if;
 
   v_validation := public.validate_economic_asset_core_v2(v_fixture.game_id);
@@ -446,6 +606,12 @@ begin
       and t.source_domain = 'crafting'
       and t.source_action = 'output_granted'
   ) or not exists (
+    select 1 from public.inventory_transactions t
+    where t.game_session_id = v_fixture.game_id
+      and t.status = 'committed'
+      and t.source_domain = 'business'
+      and t.source_action = 'production_output_granted'
+  ) or exists (
     select 1 from public.inventory_transactions t
     where t.game_session_id = v_fixture.game_id
       and t.status = 'committed'

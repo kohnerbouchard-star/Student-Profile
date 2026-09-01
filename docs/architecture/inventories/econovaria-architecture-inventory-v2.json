@@ -8,14 +8,14 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1195,
-    "edgeEntrypoints": 27,
-    "handlerFiles": 62,
-    "persistenceOutsideInfrastructure": 54,
+    "sourceFiles": 1208,
+    "edgeEntrypoints": 28,
+    "handlerFiles": 63,
+    "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 209,
-    "schedulerEntrypoints": 9,
+    "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 136
   },
@@ -101,9 +101,10 @@
         "api",
         "application",
         "contracts",
-        "infrastructure"
+        "infrastructure",
+        "services"
       ],
-      "sourceFiles": 42,
+      "sourceFiles": 49,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -388,6 +389,7 @@
       "backend/supabase/functions/admin-password-recovery/index.ts",
       "backend/supabase/functions/banking-fx-orchestrator/index.ts",
       "backend/supabase/functions/bootstrap-api/index.ts",
+      "backend/supabase/functions/business-operations-worker/index.ts",
       "backend/supabase/functions/campaign-orchestrator/index.ts",
       "backend/supabase/functions/classroom-api/index.ts",
       "backend/supabase/functions/fx-orchestrator/index.ts",
@@ -423,6 +425,7 @@
       "backend/src/domains/banking-fx/api/bankingFxOrchestratorHttpHandler.ts",
       "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.ts",
       "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
+      "backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts",
       "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractHttpHandler.ts",
@@ -477,6 +480,7 @@
     ],
     "schedulers": [
       "backend/supabase/functions/banking-fx-orchestrator/index.ts",
+      "backend/supabase/functions/business-operations-worker/index.ts",
       "backend/supabase/functions/campaign-orchestrator/index.ts",
       "backend/supabase/functions/fx-orchestrator/index.ts",
       "backend/supabase/functions/game-data-purger/index.ts",
@@ -603,6 +607,10 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/bankingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts",
         "layer": "outside-domain"
       },
       {
@@ -2829,7 +2837,7 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+        "file": "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts",
         "markers": [
           "fallback"
         ]
@@ -3197,7 +3205,7 @@
       },
       {
         "file": "player-terminal/src/api/read-model.js",
-        "lines": 1115
+        "lines": 1111
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -3464,6 +3472,10 @@
         "lines": 569
       },
       {
+        "file": "backend/supabase/functions/admin-api/index.ts",
+        "lines": 569
+      },
+      {
         "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
         "lines": 567
       },
@@ -3489,10 +3501,6 @@
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts",
-        "lines": 555
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/index.ts",
         "lines": 555
       },
       {

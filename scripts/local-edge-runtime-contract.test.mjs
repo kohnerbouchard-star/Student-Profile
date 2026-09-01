@@ -54,6 +54,7 @@ const FUNCTION_POLICIES = Object.freeze({
   "classroom-api": true,
   "campaign-orchestrator": false,
   "banking-fx-orchestrator": false,
+  "business-operations-worker": false,
   "game-data-purger": false,
   "fx-orchestrator": false,
   "stock-market-runner": false,
@@ -283,6 +284,30 @@ test("local Supabase starts every declared split Edge security boundary", async 
   assert.match(
     functionSources["banking-fx-orchestrator"],
     /SUPABASE_SERVICE_ROLE_KEY/,
+  );
+  assert.match(
+    functionSources["business-operations-worker"],
+    /businessOperationsWorkerBrowserRequestFailure\(request\)/,
+  );
+  assert.match(
+    functionSources["business-operations-worker"],
+    /authorizeInternalRunnerRequest/,
+  );
+  assert.match(
+    functionSources["business-operations-worker"],
+    /runnerName:\s*"business-operations-worker"/,
+  );
+  assert.match(
+    functionSources["business-operations-worker"],
+    /claim_internal_runner_nonce_v2/,
+  );
+  assert.match(
+    functionSources["business-operations-worker"],
+    /handleBusinessOperationsWorkerRequest/,
+  );
+  assert.doesNotMatch(
+    functionSources["business-operations-worker"],
+    /method\s*===\s*["']OPTIONS["']/,
   );
   for (
     const name of expectedFalse.filter((value) =>

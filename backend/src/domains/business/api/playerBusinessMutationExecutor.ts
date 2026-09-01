@@ -13,7 +13,6 @@ import {
   readKey,
   readMoney,
   readOptionalInteger,
-  readOptionalKey,
   readText,
 } from "./playerBusinessRequestValidation.ts";
 
@@ -35,7 +34,6 @@ export async function executePlayerBusinessMutation(
   body: Record<string, unknown>,
   scope: { readonly gameSessionId: string; readonly playerId: string },
 ): Promise<Record<string, unknown>> {
-  const context = await readEconomicContext(repository, scope);
   const base = {
     p_game_session_id: scope.gameSessionId,
     p_player_id: scope.playerId,
@@ -78,6 +76,18 @@ export async function executePlayerBusinessMutation(
       }
 
       const idempotencyKey = readIdempotencyKey(body.idempotencyKey);
+      if (Object.hasOwn(body, "acquireBusinessKey")) {
+        // Defense in depth for direct executor callers that do not traverse the
+        // HTTP field validator. A malformed retired intent is a bad request;
+        // only a valid retired Business key receives the stable retirement code.
+        readKey(body.acquireBusinessKey, "acquireBusinessKey", "biz");
+        throw new PlayerBusinessError(
+          "business_direct_acquisition_retired",
+          "Direct Business acquisition is retired; use registered ownership transfers.",
+          410,
+        );
+      }
+      const context = await readEconomicContext(repository, scope);
       await repository.assertBusinessCreationAllowed?.({
         ...scope,
         idempotencyKey,
@@ -100,10 +110,7 @@ export async function executePlayerBusinessMutation(
           0,
           10_000_000,
         ),
-        p_acquire_business_key: readOptionalKey(
-          body.acquireBusinessKey,
-          "biz",
-        ),
+        p_acquire_business_key: null,
         p_idempotency_key: idempotencyKey,
       });
     }
@@ -132,12 +139,9 @@ export async function executePlayerBusinessMutation(
           1,
           100_000,
         ),
-        p_base_demand_units: readInteger(
-          body.baseDemandUnits,
-          "baseDemandUnits",
-          0,
-          100_000,
-        ),
+        // The retained V1 RPC still requires this transition argument. It is
+        // server-owned and neutral until recipe activation replaces this route.
+        p_base_demand_units: 0,
         p_quality_score: readInteger(
           body.qualityScore,
           "qualityScore",

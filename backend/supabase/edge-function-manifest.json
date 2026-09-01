@@ -35,6 +35,12 @@
       "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
     },
     {
+      "slug": "business-operations-worker",
+      "entrypoint": "backend/supabase/functions/business-operations-worker/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-signed-runner-auth"
+    },
+    {
       "slug": "banking-fx-orchestrator",
       "entrypoint": "backend/supabase/functions/banking-fx-orchestrator/index.ts",
       "verifyJwt": false,

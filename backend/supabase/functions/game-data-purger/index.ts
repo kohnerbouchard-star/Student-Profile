@@ -2,17 +2,29 @@ import {
   createClient,
   type SupabaseClient,
 } from "https://esm.sh/@supabase/supabase-js@2.108.2";
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "npm:@aws-sdk/client-s3@3.864.0";
+import {
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "npm:@aws-sdk/client-s3@3.864.0";
+import {
+  assertPurgeRuntimeBinding,
+  type PurgeRuntimeBinding,
+  resolvePurgeRuntimeBinding,
+} from "./runtimeBinding.ts";
 
 const SCHEDULER_NAME = "econovaria-game-data-purge-scheduler-v1";
 const SCHEDULER_HEADER = "x-econovaria-purge-scheduler-token";
-const EXPECTED_REGISTRY_SHA256 = "0967d19098bfcc7b013c5f1bed9fcb2918126fe432e779ad4c8465be6f87eaeb";
-const EXPECTED_REGISTRY_TABLES = 133;
-const EXPECTED_FK_GRAPH_SHA256 = "0f48f84c8fd0e71f2cbbfba90f2ded8bba0e6b0a8842e92add335dabb4314840";
-const EXPECTED_FK_GRAPH_EDGES = 216;
-const EXPECTED_DELETE_ORDER_SHA256 = "7c146263607baaf025a4153f5c2007d9e4c955e19e4532f5d530b7248741b8f3";
-const EXPECTED_DELETE_ORDER_TABLES = 129;
-const DB_FINALIZE_CURSOR = 130;
+const EXPECTED_REGISTRY_SHA256 =
+  "68695d3995661af72de99b01fffe0ed301071f1131e6a8e6b92f03febfedb960";
+const EXPECTED_REGISTRY_TABLES = 202;
+const EXPECTED_FK_GRAPH_SHA256 =
+  "779750e69db0f918d3c54dc47765ac12a04d635bcc32760d529d571fd4041ec0";
+const EXPECTED_FK_GRAPH_EDGES = 448;
+const EXPECTED_DELETE_ORDER_SHA256 =
+  "ef50615cdc9e9191b149f45746d639d196aa0cd1eb1d308dfd2fd80ea43a7fa4";
+const EXPECTED_DELETE_ORDER_TABLES = 201;
+const DB_FINALIZE_CURSOR = 202;
 const DB_BATCH_SIZE = 20;
 const R2_BATCH_SIZE = 1000;
 
@@ -26,13 +38,20 @@ Deno.serve(async (request: Request) => {
   if (!supabaseUrl || !serviceRoleKey) {
     return json(500, { ok: false, error: "runtime_config_missing" });
   }
+  let runtimeBinding: PurgeRuntimeBinding;
+  try {
+    runtimeBinding = resolvePurgeRuntimeBinding(supabaseUrl, env("R2_BUCKET"));
+  } catch {
+    return json(500, { ok: false, error: "runtime_config_missing" });
+  }
 
   const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: { headers: { "x-client-info": "econovaria-game-data-purger-v4" } },
   });
 
-  const schedulerToken = String(request.headers.get(SCHEDULER_HEADER) || "").trim();
+  const schedulerToken = String(request.headers.get(SCHEDULER_HEADER) || "")
+    .trim();
   if (!/^[0-9a-f]{64}$/iu.test(schedulerToken)) return unauthorized();
   const schedulerHash = await sha256Hex(
     new TextEncoder().encode(schedulerToken.toLowerCase()),
@@ -45,7 +64,10 @@ Deno.serve(async (request: Request) => {
 
   const claim = await client.rpc("claim_confirmed_game_data_purge_v1");
   if (claim.error) {
-    return json(500, { ok: false, error: `claim_failed:${claim.error.message}` });
+    return json(500, {
+      ok: false,
+      error: `claim_failed:${claim.error.message}`,
+    });
   }
   const claimed = (claim.data || [])[0] as {
     request_id?: string;
@@ -53,7 +75,11 @@ Deno.serve(async (request: Request) => {
     stage?: string;
   } | undefined;
   if (!claimed?.request_id || !claimed.game_session_id || !claimed.stage) {
-    return json(200, { ok: true, work: false, reason: "no_confirmed_armed_purge" });
+    return json(200, {
+      ok: true,
+      work: false,
+      reason: "no_confirmed_armed_purge",
+    });
   }
 
   const requestId = claimed.request_id;
@@ -61,19 +87,27 @@ Deno.serve(async (request: Request) => {
   const stage = claimed.stage;
 
   try {
-    const preflightResponse = await client.rpc("get_game_data_purge_preflight_v1", {
-      p_request_id: requestId,
-    });
+    const preflightResponse = await client.rpc(
+      "get_game_data_purge_preflight_v1",
+      {
+        p_request_id: requestId,
+      },
+    );
     if (preflightResponse.error) {
       throw new Error(`preflight_failed:${preflightResponse.error.message}`);
     }
     const preflight = preflightResponse.data as Record<string, unknown>;
-    assertPreflight(preflight, gameSessionId);
+    assertPreflight(preflight, gameSessionId, runtimeBinding);
 
     if (stage === "r2") {
       return json(
         200,
-        await purgeR2Stage(client, supabaseUrl, requestId, gameSessionId),
+        await purgeR2Stage(
+          client,
+          requestId,
+          gameSessionId,
+          runtimeBinding,
+        ),
       );
     }
     if (stage === "db") {
@@ -87,7 +121,13 @@ Deno.serve(async (request: Request) => {
       p_stage: stage,
       p_error: message,
     });
-    console.error("game_data_purge_failed", requestId, gameSessionId, stage, message);
+    console.error(
+      "game_data_purge_failed",
+      requestId,
+      gameSessionId,
+      stage,
+      message,
+    );
     return json(500, {
       ok: false,
       requestId,
@@ -101,6 +141,7 @@ Deno.serve(async (request: Request) => {
 function assertPreflight(
   preflight: Record<string, unknown>,
   gameSessionId: string,
+  runtimeBinding: PurgeRuntimeBinding,
 ) {
   if (String(preflight.gameSessionId || "") !== gameSessionId) {
     throw new Error("preflight_game_mismatch");
@@ -115,6 +156,7 @@ function assertPreflight(
   if (preflight.leverArmed !== true || preflight.armMatches !== true) {
     throw new Error("preflight_lever_not_armed_for_request");
   }
+  assertPurgeRuntimeBinding(preflight, runtimeBinding);
   if (String(preflight.registrySha256 || "") !== EXPECTED_REGISTRY_SHA256) {
     throw new Error("preflight_registry_digest_mismatch");
   }
@@ -133,7 +175,8 @@ function assertPreflight(
     throw new Error("preflight_delete_order_digest_mismatch");
   }
   if (
-    Number(preflight.deleteOrderTableCount || 0) !== EXPECTED_DELETE_ORDER_TABLES
+    Number(preflight.deleteOrderTableCount || 0) !==
+      EXPECTED_DELETE_ORDER_TABLES
   ) {
     throw new Error("preflight_delete_order_table_count_mismatch");
   }
@@ -144,19 +187,19 @@ function assertPreflight(
 
 async function purgeR2Stage(
   client: SupabaseClient,
-  supabaseUrl: string,
   requestId: string,
   gameSessionId: string,
+  runtimeBinding: PurgeRuntimeBinding,
 ) {
   const endpoint = env("R2_ENDPOINT").replace(/\/+$/u, "");
   const accessKeyId = env("R2_ACCESS_KEY_ID");
   const secretAccessKey = env("R2_SECRET_ACCESS_KEY");
-  const bucket = env("R2_BUCKET");
-  if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
+  if (!endpoint || !accessKeyId || !secretAccessKey) {
     throw new Error("r2_runtime_config_missing");
   }
 
-  const prefix = `${environmentName(supabaseUrl)}/game_session=${gameSessionId}/`;
+  const prefix =
+    `${runtimeBinding.environmentName}/game_session=${gameSessionId}/`;
   const s3 = new S3Client({
     region: "auto",
     endpoint,
@@ -166,22 +209,20 @@ async function purgeR2Stage(
 
   const listed = await s3.send(
     new ListObjectsV2Command({
-      Bucket: bucket,
+      Bucket: runtimeBinding.r2BucketName,
       Prefix: prefix,
       MaxKeys: R2_BATCH_SIZE,
     }),
   );
   const objects = (listed.Contents || []).flatMap((object) =>
-    object.Key
-      ? [{ Key: object.Key, Size: Number(object.Size || 0) }]
-      : []
+    object.Key ? [{ Key: object.Key, Size: Number(object.Size || 0) }] : []
   );
   let deletedObjects = 0;
   let deletedBytes = 0;
   if (objects.length > 0) {
     const deleted = await s3.send(
       new DeleteObjectsCommand({
-        Bucket: bucket,
+        Bucket: runtimeBinding.r2BucketName,
         Delete: {
           Quiet: true,
           Objects: objects.map(({ Key }) => ({ Key })),
@@ -190,7 +231,9 @@ async function purgeR2Stage(
     );
     if ((deleted.Errors || []).length > 0) {
       throw new Error(
-        `r2_delete_objects_failed:${JSON.stringify(deleted.Errors).slice(0, 800)}`,
+        `r2_delete_objects_failed:${
+          JSON.stringify(deleted.Errors).slice(0, 800)
+        }`,
       );
     }
     deletedObjects = objects.length;
@@ -198,7 +241,11 @@ async function purgeR2Stage(
   }
 
   const verify = await s3.send(
-    new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, MaxKeys: 1 }),
+    new ListObjectsV2Command({
+      Bucket: runtimeBinding.r2BucketName,
+      Prefix: prefix,
+      MaxKeys: 1,
+    }),
   );
   const complete = Number(verify.KeyCount || 0) === 0 &&
     (verify.Contents || []).length === 0;
@@ -267,13 +314,6 @@ async function purgeDbStage(
     batch: result,
     finalized: false,
   };
-}
-
-function environmentName(supabaseUrl: string): string {
-  const ref = new URL(supabaseUrl).hostname.split(".")[0] || "unknown";
-  if (ref === "eecvbssdvarfcykcfrny") return "staging";
-  if (ref === "cgiukdjwicykrmtkhudh") return "production";
-  return ref;
 }
 
 function env(name: string): string {

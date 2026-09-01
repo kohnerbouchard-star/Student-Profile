@@ -4,7 +4,7 @@ Status: migration in progress. This document is release-gating evidence, not a p
 
 ## Decision
 
-Econovaria uses four distinct credential classes. They are not interchangeable.
+Econovaria uses five distinct credential classes. They are not interchangeable.
 
 | Credential | Purpose | Permitted transport | Browser-visible |
 |---|---|---|---|
@@ -12,6 +12,7 @@ Econovaria uses four distinct credential classes. They are not interchangeable.
 | Supabase Auth user JWT | Identifies a signed-in staff user | `Authorization: Bearer <JWT>` | Yes, session-scoped |
 | Opaque Player session token | Identifies an active Player session | `x-player-session-token` | Yes, session-scoped |
 | `sb_secret_...` or legacy service-role fallback | Privileged database access after authorization | Edge Function environment only | No |
+| Timestamped internal-runner HMAC | Authorizes one exact server-to-server method, path, query, and body with a durable nonce | `x-econovaria-runner-*` headers | No |
 
 A publishable key is never a user JWT. The browser, local gateway, Edge Functions, tests, and scheduled runners must reject any attempt to use it as a bearer token.
 
@@ -53,7 +54,29 @@ The server hashes the token, resolves one active session, derives the durable Pl
 
 ### Stock-market server functions
 
-The stock runner, seed-copy, market-read, Player-read compatibility, and trading functions are server-to-server surfaces. They validate the publishable `apikey` and the dedicated `x-stock-market-runner-secret`; they do not accept a legacy anon bearer token. Their privileged database client remains function-local. A future hardening iteration should replace the static runner secret with a timestamped HMAC or one-time signed invocation while preserving current idempotency protections.
+The stock runner, seed-copy, market-read, Player-read compatibility, and trading
+functions are server-to-server surfaces. They validate the publishable
+`apikey`, then a
+timestamped HMAC bound to runner name, method, origin, exact path/query, and body
+digest. Every accepted nonce is hashed and claimed durably before privileged
+access. The legacy raw `x-stock-market-runner-secret` request header is rejected;
+`STOCK_MARKET_RUNNER_SECRET` remains only the server-held HMAC key.
+
+### Business operations worker
+
+`business-operations-worker` is an internal-runner-only, all-game due-work
+boundary. It accepts `POST` with a byte-empty body only, validates the
+publishable `apikey`, rejects bearer authorization, cookies, origins, CSRF and
+Player identity headers, and then applies the same timestamped exact-path/body
+HMAC plus durable nonce claim. Its service-role repository may invoke only the
+bounded due-period claim, atomic close, and lease-release RPCs. Game, Business,
+clock, payroll, Store receipt, tax, rates, quantities, and outcome selectors are
+never accepted from the caller. Responses contain aggregate counts only.
+
+This source addition installs no scheduler, cron entry, deployment, secret, or
+live-data change. A controlled internal caller may be composed later through the
+existing runner boundary after normal merge and separately authorized runtime
+work.
 
 ### Local gateway
 
@@ -78,7 +101,8 @@ The publishable key is deployment configuration and does not need to be copied i
 | Admin Player credential bridge | `classroom-api` | `staff-api` | publishable `apikey` plus staff JWT and game binding |
 | Admin write fallback | `classroom-api` | `staff-api` through compatibility alias | publishable `apikey` plus staff JWT and game binding |
 | Admin shell | `admin-api` | `admin-api` | unchanged publishable `apikey` plus staff JWT |
-| Market scheduler | anon bearer plus runner secret | publishable `apikey` plus runner secret | server-to-server only |
+| Market internal runner | anon bearer plus raw runner secret | publishable `apikey` plus timestamped exact-request HMAC and durable nonce | server-to-server only |
+| Business operations internal runner | none | publishable `apikey` plus timestamped exact empty-request HMAC and durable nonce | server-to-server only; no scheduler configured |
 
 ## Compatibility and retirement
 
@@ -101,6 +125,7 @@ The migration is not releasable until all of the following are true:
 - Player calls fail without a valid active Player session and do not trust client ownership UUIDs;
 - bootstrap signup fails closed on invalid purchase code, rate limit, replay, incomplete canonical content, or partial provisioning;
 - stock functions fail without both publishable identity and runner authorization;
+- the Business operations worker rejects browser identity, any non-empty body, stale/invalid/replayed signatures, and returns no Business, period, receipt, lease, UUID, or economic detail;
 - local and staging browser tests exercise Create Game, Admin login, Player login, Player Terminal bootstrap, Admin writes, password recovery, and stock runner invocation;
 - the existing signup 503 has a proven root cause and a passing local provisioning preflight; changing API-key headers alone is not sufficient evidence.
 

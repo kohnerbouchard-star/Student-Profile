@@ -5,8 +5,10 @@ const files = {
   clock: "backend/supabase/migrations/20260822140000_business_payroll_clock_v2.sql",
   payroll: "backend/supabase/migrations/20260822140100_business_payroll_settlement_v2.sql",
   cycle: "backend/supabase/migrations/20260822140200_business_cycle_payroll_cutover_v2.sql",
+  retirement:
+    "backend/supabase/migrations/20260831232707_business_legacy_sales_retirement_v1.sql",
 };
-const [clock, payroll, cycle] = await Promise.all(
+const [clock, payroll, cycle, retirement] = await Promise.all(
   Object.values(files).map((path) => readFile(path, "utf8")),
 );
 
@@ -64,7 +66,36 @@ assert.match(cycle, /IDEMPOTENCY_KEY_CONFLICT/u);
 assert.doesNotMatch(cycle, /'wage_expense',/u);
 assert.doesNotMatch(cycle, /production_labor/u);
 
-for (const [name, source] of Object.entries({ clock, payroll, cycle })) {
+assert.match(
+  retirement,
+  /create or replace function public\.settle_business_payroll_current_period_v2\(/u,
+);
+assert.match(retirement, /BUSINESS_PAYROLL_SETTLEMENT_WORKER_REQUIRED/u);
+assert.match(
+  retirement,
+  /create or replace function public\.recover_business_payroll_run_v2\(/u,
+);
+assert.match(retirement, /BUSINESS_PAYROLL_RECOVERY_WORKER_REQUIRED/u);
+assert.match(
+  retirement,
+  /create or replace function public\.settle_business_cycle_v1\([\s\S]+?BUSINESS_CYCLE_SETTLEMENT_RETIRED/u,
+);
+const retiredCycle = retirement.match(
+  /create or replace function public\.settle_business_cycle_v1\([\s\S]+?\$function\$;/u,
+)?.[0] ?? "";
+assert.ok(retiredCycle, "The exact legacy cycle signature must be forward-retired.");
+assert.doesNotMatch(
+  retiredCycle,
+  /settle_business_payroll_current_period_v2\(/u,
+  "The forward-retired cycle command must not advance payroll.",
+);
+assert.doesNotMatch(
+  retiredCycle,
+  /record_business_ledger_entry_v2\(/u,
+  "Retired payroll commands must not retain a direct ledger path.",
+);
+
+for (const [name, source] of Object.entries({ clock, payroll, cycle, retirement })) {
   assert.match(source, /force row level security/u, `${name} evidence must force RLS`);
   assert.match(
     source,
