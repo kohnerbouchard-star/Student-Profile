@@ -11,6 +11,7 @@ const DEFAULT_FRESHNESS_MS = Object.freeze({
   business: 30_000,
   businessStockroom: 10_000,
   businessRecipes: 30_000,
+  businessEquipment: 10_000,
   businessTreasury: 10_000,
   contracts: 15_000,
   store: 30_000,
