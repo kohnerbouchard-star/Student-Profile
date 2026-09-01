@@ -11,6 +11,7 @@ export type PlayerBusinessRoute =
       | "overview"
       | "stockroom"
       | "recipes"
+      | "equipment"
       | "workforceCandidates";
   }
   | { readonly kind: "businessTreasuryRead" }
@@ -185,6 +186,27 @@ export interface BusinessRecipeAccessDto {
   };
   readonly sourceType: string;
   readonly grantedAt: string;
+}
+
+export interface BusinessEquipmentDto {
+  readonly businessKey: string;
+  readonly installationKey: string;
+  readonly equipmentKey: string;
+  readonly itemKey: string;
+  readonly canonicalKey: string;
+  readonly itemName: string;
+  readonly equipmentSlot: string;
+  readonly capabilityKeys: readonly string[];
+  readonly installationStatus: "installed" | "offline";
+  readonly periodKey: string;
+  readonly capacityMinutes: number;
+  readonly reservedMinutes: number;
+  readonly consumedMinutes: number;
+  readonly availableMinutes: number;
+  readonly idleMinutes: number;
+  readonly utilizationBasisPoints: number;
+  readonly durabilitySupported: boolean;
+  readonly repairSupported: boolean;
 }
 
 export interface BusinessStoreQuoteDto {
