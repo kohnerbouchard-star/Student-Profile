@@ -243,7 +243,7 @@ begin
   from public.record_player_ledger_entry(
     v_fixture.game_id,
     v_fixture.player_id,
-    'checking',
+    'cash',
     1000000,
     v_fixture.currency_code,
     'credit',
