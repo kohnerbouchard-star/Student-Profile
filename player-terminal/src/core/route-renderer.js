@@ -45,6 +45,7 @@ function businessWorkspaceNavigation() {
     ["procurement", "Procurement"],
     ["production", "Production"],
     ["workforce", "Workforce"],
+    ["equipment", "Equipment"],
     ["sales", "Sales"],
     ["finance", "Finance"],
     ["activity", "Activity"],
@@ -52,7 +53,7 @@ function businessWorkspaceNavigation() {
   return `<nav class="player-terminal-panel player-terminal-business-workspace-nav" aria-label="Business workspace">
     <header class="player-terminal-panel-header"><div><span>BUSINESS WORKSPACE</span><strong>Operate from canonical evidence</strong></div>${renderStatusPill("PHASE 12", "cyan")}</header>
     <div class="player-terminal-heading-actions">${links.map(([key, label]) => `<a class="player-terminal-compact-button" href="#business-workspace-${key}" data-business-workspace-link="${escapeHtml(key)}">${escapeHtml(label)}</a>`).join("")}</div>
-    <p>Equipment and Ownership / Governance remain read-only roadmap lanes until their existing server authority is explicitly surfaced here. This workspace does not invent replacement state.</p>
+    <p>Ownership / Governance remains read-only until a current Player-safe server projection is proven. This workspace does not invent replacement state.</p>
   </nav>`;
 }
 
@@ -148,6 +149,47 @@ function renderBusinessStockroomPanel(data) {
   </section>`;
 }
 
+function renderBusinessEquipmentPanel(data) {
+  const ready = resourceReady(data, "businessEquipment");
+  const equipment = ready && Array.isArray(data.businessEquipment?.equipment)
+    ? data.businessEquipment.equipment
+    : [];
+  const installed = equipment.filter((entry) => entry.installationStatus === "installed");
+  const availableMinutes = installed.reduce((sum, entry) => sum + Number(entry.availableMinutes || 0), 0);
+  const reservedMinutes = installed.reduce((sum, entry) => sum + Number(entry.reservedMinutes || 0), 0);
+  const consumedMinutes = installed.reduce((sum, entry) => sum + Number(entry.consumedMinutes || 0), 0);
+  const body = ready
+    ? equipment.length
+      ? equipment.map((entry) => {
+        const committed = Number(entry.reservedMinutes || 0) + Number(entry.consumedMinutes || 0);
+        const capabilities = Array.isArray(entry.capabilityKeys) && entry.capabilityKeys.length
+          ? entry.capabilityKeys.join(" · ")
+          : "No capability keys";
+        const online = entry.installationStatus === "installed";
+        return `<article class="player-terminal-business-product" data-business-equipment-installation="${escapeHtml(entry.installationKey || "")}">
+          <div><small>${escapeHtml(entry.equipmentSlot || "equipment")} · ${escapeHtml(entry.periodKey || "")}</small><strong>${escapeHtml(entry.itemName || entry.canonicalKey || "Equipment")}</strong><p>${escapeHtml(capabilities)}</p></div>
+          <dl><div><dt>AVAILABLE</dt><dd>${escapeHtml(formatNumber(entry.availableMinutes || 0))} min</dd></div><div><dt>COMMITTED</dt><dd>${escapeHtml(formatNumber(committed))} min</dd></div><div><dt>UTILIZATION</dt><dd>${escapeHtml(formatNumber((entry.utilizationBasisPoints || 0) / 100, 2))}%</dd></div></dl>
+          ${renderStatusPill(online ? "ONLINE" : "OFFLINE", online ? "green" : "amber")}
+        </article>`;
+      }).join("")
+      : renderEmptyState({
+        title: "No installed Business equipment",
+        detail: "Production will remain constrained until canonical Business-owned equipment is installed.",
+        iconName: "factory",
+      })
+    : renderEmptyState({
+      title: "Equipment capacity unavailable",
+      detail: "No inferred machine capacity is shown. Refresh the Business workspace to retry the server-owned equipment read.",
+      iconName: "warning",
+    });
+
+  return `<section id="business-workspace-equipment" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="equipment" aria-live="polite">
+    <header class="player-terminal-panel-header"><div><span>EQUIPMENT CAPACITY</span><strong>${ready ? `${escapeHtml(formatNumber(installed.length))} online · ${escapeHtml(formatNumber(equipment.length - installed.length))} offline` : "Authoritative read unavailable"}</strong></div>${renderStatusPill(ready ? "SERVER CAPACITY" : "NO SUBSTITUTE", ready ? "green" : "amber")}</header>
+    ${ready ? `<div class="player-terminal-business-metrics"><span class="player-terminal-metric"><small>AVAILABLE MINUTES</small><strong>${escapeHtml(formatNumber(availableMinutes))}</strong><span>current period</span></span><span class="player-terminal-metric"><small>RESERVED MINUTES</small><strong>${escapeHtml(formatNumber(reservedMinutes))}</strong><span>current period</span></span><span class="player-terminal-metric"><small>CONSUMED MINUTES</small><strong>${escapeHtml(formatNumber(consumedMinutes))}</strong><span>current period</span></span></div>` : ""}
+    <div>${body}</div>
+  </section>`;
+}
+
 function anchorBusinessWorkspaceSections(html) {
   return html
     .replace(
@@ -202,7 +244,7 @@ export function renderBusinessWorkspacePage(data) {
   );
   return appendBusinessWorkspacePanels(
     html,
-    `\n      ${renderBusinessRecipesPanel(data)}\n      ${renderBusinessStockroomPanel(data)}\n      <section id="business-workspace-activity" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="activity"><header class="player-terminal-panel-header"><div><span>ACTIVITY</span><strong>Immutable operational evidence</strong></div>${renderStatusPill("RECEIPT BACKED", "green")}</header><p>Store-sale activity remains paired one-to-one with committed seller receipts above. Treasury FX and procurement retain their immutable receipt evidence in Finance and Procurement; Phase 12 does not create a browser-authored journal.</p></section>`,
+    `\n      ${renderBusinessRecipesPanel(data)}\n      ${renderBusinessStockroomPanel(data)}\n      ${renderBusinessEquipmentPanel(data)}\n      <section id="business-workspace-activity" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="activity"><header class="player-terminal-panel-header"><div><span>ACTIVITY</span><strong>Immutable operational evidence</strong></div>${renderStatusPill("RECEIPT BACKED", "green")}</header><p>Store-sale activity remains paired one-to-one with committed seller receipts above. Treasury FX and procurement retain their immutable receipt evidence in Finance and Procurement; Phase 12 does not create a browser-authored journal.</p></section>`,
   );
 }
 
