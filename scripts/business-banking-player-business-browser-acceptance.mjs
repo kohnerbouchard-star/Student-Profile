@@ -14,6 +14,35 @@ function replaceExactlyOnce(source, label, before, after) {
   return source.replace(before, after);
 }
 
+function adaptMutationCompletion(source) {
+  source = replaceExactlyOnce(
+    source,
+    "Business mutation stale-toast reset",
+    `  await configure(target);
+  const responsePromise = page.waitForResponse(`,
+    `  await configure(target);
+  await page.locator(".player-terminal-toast").evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+  const responsePromise = page.waitForResponse(`,
+  );
+
+  return replaceExactlyOnce(
+    source,
+    "Business mutation reconciliation wait",
+    `  if (response.status() !== 200 || payload?.ok !== true) {
+    throw new Error(\`${"${endpoint}"} returned ${"${response.status()}"}: ${"${redact(JSON.stringify(payload))}"}\`);
+  }
+  return operation;`,
+    `  if (response.status() !== 200 || payload?.ok !== true) {
+    throw new Error(\`${"${endpoint}"} returned ${"${response.status()}"}: ${"${redact(JSON.stringify(payload))}"}\`);
+  }
+  await page.getByText("Action completed and current information refreshed.", { exact: true }).first().waitFor({
+    state: "visible",
+    timeout: 60_000,
+  });
+  return operation;`,
+  );
+}
+
 function adaptDisclosureInteraction(source) {
   const before = `async function exposeForm(target) {
   await target.evaluate((element) => {
@@ -118,8 +147,10 @@ function adaptBusinessReplayVerification(source) {
 async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const canonicalCorePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
-  const source = adaptDisclosureInteraction(
-    adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
+  const source = adaptMutationCompletion(
+    adaptDisclosureInteraction(
+      adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
+    ),
   );
   const temporaryDirectory = await mkdtemp(join(dirname(entryPath), ".business-bff-replay-"));
   const temporaryEntryPath = join(temporaryDirectory, basename(entryPath));
