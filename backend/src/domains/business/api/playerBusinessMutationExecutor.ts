@@ -78,7 +78,7 @@ export async function executePlayerBusinessMutation(
       const idempotencyKey = readIdempotencyKey(body.idempotencyKey);
       if (Object.hasOwn(body, "acquireBusinessKey")) {
         // Defense in depth for direct executor callers that do not traverse the
-        // HTTP field validator. A malformed retired intent is a bad request;
+        // HTTP field validator. A malformed retired intent is invalid input;
         // only a valid retired Business key receives the stable retirement code.
         readKey(body.acquireBusinessKey, "acquireBusinessKey", "biz");
         throw new PlayerBusinessError(
