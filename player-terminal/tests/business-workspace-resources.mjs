@@ -229,17 +229,17 @@ for (const token of [
   "Steel Billet",
   "Steel Widget",
   "Finished Goods",
-  "LEGACY INPUT SUMMARY · COMPATIBILITY ONLY",
+  "HISTORICAL INPUT SUMMARY · NON-AUTHORITATIVE",
 ]) {
   assert.match(workspace, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Workspace must render ${token}.`);
 }
-assert.doesNotMatch(workspace, /business_inventory/u, "The canonical Stockroom surface must not identify the legacy Business inventory table as authority.");
+assert.doesNotMatch(workspace, /business_inventory/u, "The canonical Stockroom surface must not identify the retired aggregate table as authority.");
 
 const unavailable = structuredClone(data);
 unavailable.resourceStatus.businessStockroom = { state: "unavailable" };
 delete unavailable.businessStockroom;
 const unavailableHtml = renderBusinessWorkspacePage(unavailable);
 assert.match(unavailableHtml, /Canonical Stockroom unavailable/u);
-assert.match(unavailableHtml, /legacy Business inventory summary is not used as Stockroom authority/u);
+assert.match(unavailableHtml, /historical aggregate Business inventory summary is not used as Stockroom authority/u);
 
 process.stdout.write("Business workspace resource and rendering verification passed.\n");
