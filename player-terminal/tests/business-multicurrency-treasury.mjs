@@ -554,7 +554,7 @@ assert.deepEqual(
 assert.deepEqual(
   dependentResourcesForRoute("business", { business: { configured: false } }),
   [],
-  "A Player without a Business must not resolve owner-scoped Business dependencies.",
+  "A Player without a Business must not resolve an owner-scoped treasury request.",
 );
 assert.deepEqual(
   dependentResourcesForRoute("business", { business: { configured: true } }),
