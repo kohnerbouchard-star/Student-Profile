@@ -190,6 +190,75 @@ function renderBusinessEquipmentPanel(data) {
   </section>`;
 }
 
+function renderBusinessProcurementPlaceholder(data) {
+  if (data?.businessTreasury?.businessKey === data?.business?.company?.id) return "";
+  return `<section id="business-workspace-procurement" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="procurement" aria-live="polite">
+    <header class="player-terminal-panel-header"><div><span>PROCUREMENT</span><strong>Authoritative funding state unavailable</strong></div>${renderStatusPill("NO SUBSTITUTE", "amber")}</header>
+    ${renderEmptyState({ title: "Procurement unavailable", detail: "Business Treasury must load before funded Store procurement can be quoted. No account, FX, or bill state is inferred in the browser.", iconName: "warning" })}
+  </section>`;
+}
+
+function businessActiveStoreOffers(data, businessKey) {
+  if (!resourceReady(data, "store") || !Array.isArray(data.store?.items)) return [];
+  return data.store.items.flatMap((product) => {
+    const offers = Array.isArray(product?.offers) ? product.offers : [];
+    return offers
+      .filter((offer) =>
+        offer?.sellerKind === "business" && offer.businessKey === businessKey &&
+        offer.status === "active" && Number(offer.availableQuantity) > 0
+      )
+      .map((offer) => ({
+        ...offer,
+        itemKey: product.itemKey || product.id || "",
+        canonicalItemKey: product.canonicalItemKey || product.itemKey || product.id || "",
+        itemName: product.name || product.canonicalItemKey || product.itemKey || "Store item",
+      }));
+  });
+}
+
+function renderBusinessSalesStatePanel(data) {
+  const businessKey = String(data?.business?.company?.id || "");
+  const stockroomReady = resourceReady(data, "businessStockroom");
+  const storeReady = resourceReady(data, "store");
+  const finishedGoods = stockroomReady && Array.isArray(data.businessStockroom?.items)
+    ? data.businessStockroom.items.filter((item) => item.locationKey === "finished_goods")
+    : [];
+  const offers = businessActiveStoreOffers(data, businessKey);
+  const rows = new Map();
+  for (const item of finishedGoods) {
+    const key = String(item.canonicalKey || item.itemKey || "");
+    rows.set(key, {
+      key,
+      name: item.name || key,
+      finishedAvailable: Number(item.quantityAvailable || 0),
+      listedQuantity: 0,
+      offers: [],
+    });
+  }
+  for (const offer of offers) {
+    const key = String(offer.canonicalItemKey || offer.itemKey || "");
+    const row = rows.get(key) || { key, name: offer.itemName || key, finishedAvailable: 0, listedQuantity: 0, offers: [] };
+    row.listedQuantity += Number(offer.availableQuantity || 0);
+    row.offers.push(offer);
+    rows.set(key, row);
+  }
+  const finishedUnits = finishedGoods.reduce((sum, item) => sum + Number(item.quantityAvailable || 0), 0);
+  const listedUnits = offers.reduce((sum, offer) => sum + Number(offer.availableQuantity || 0), 0);
+  const body = rows.size
+    ? [...rows.values()].map((row) => `<article class="player-terminal-business-product" data-business-sales-item="${escapeHtml(row.key)}">
+      <div><small>CANONICAL ITEM</small><strong>${escapeHtml(row.name)}</strong><p>${escapeHtml(row.key)}</p></div>
+      <dl><div><dt>FINISHED GOODS</dt><dd>${escapeHtml(formatNumber(row.finishedAvailable, 4))}</dd></div><div><dt>ACTIVE LISTED</dt><dd>${escapeHtml(formatNumber(row.listedQuantity, 4))}</dd></div><div><dt>OFFERS</dt><dd>${escapeHtml(formatNumber(row.offers.length))}</dd></div></dl>
+      <div>${row.offers.map((offer) => `<small data-business-sales-offer="${escapeHtml(offer.offerKey || "")}">${escapeHtml(formatNumber(offer.availableQuantity || 0, 4))} @ ${escapeHtml(formatCurrency(offer.unitPrice || 0, offer.currencyCode || "ECO"))} · v${escapeHtml(formatNumber(offer.version || 1))}</small>`).join("<br>")}</div>
+    </article>`).join("")
+    : renderEmptyState({ title: "No finished goods or active listings", detail: "Manufactured output appears in Finished Goods; active Business seller offers appear through the canonical Store read.", iconName: "store" });
+  return `<section class="player-terminal-panel player-terminal-business-products" data-business-sales-state aria-live="polite">
+    <header class="player-terminal-panel-header"><div><span>FINISHED GOODS & ACTIVE LISTINGS</span><strong>Canonical custody versus Store offer state</strong></div>${renderStatusPill(stockroomReady && storeReady ? "SERVER READS" : "PARTIAL READ", stockroomReady && storeReady ? "green" : "amber")}</header>
+    <div class="player-terminal-business-metrics"><span class="player-terminal-metric"><small>FINISHED GOODS</small><strong>${escapeHtml(formatNumber(finishedUnits, 4))}</strong><span>available units</span></span><span class="player-terminal-metric"><small>ACTIVE LISTED</small><strong>${escapeHtml(formatNumber(listedUnits, 4))}</strong><span>Store-held units</span></span><span class="player-terminal-metric"><small>ACTIVE OFFERS</small><strong>${escapeHtml(formatNumber(offers.length))}</strong><span>current Business offers</span></span></div>
+    <p>Pending withdrawal timing is not inferred: the current public Store catalog publishes active offers, while withdrawal processing remains server-owned.</p>
+    <div>${body}</div>
+  </section>`;
+}
+
 function anchorBusinessWorkspaceSections(html) {
   return html
     .replace(
@@ -244,7 +313,7 @@ export function renderBusinessWorkspacePage(data) {
   );
   return appendBusinessWorkspacePanels(
     html,
-    `\n      ${renderBusinessRecipesPanel(data)}\n      ${renderBusinessStockroomPanel(data)}\n      ${renderBusinessEquipmentPanel(data)}\n      <section id="business-workspace-activity" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="activity"><header class="player-terminal-panel-header"><div><span>ACTIVITY</span><strong>Immutable operational evidence</strong></div>${renderStatusPill("RECEIPT BACKED", "green")}</header><p>Store-sale activity remains paired one-to-one with committed seller receipts above. Treasury FX and procurement retain their immutable receipt evidence in Finance and Procurement; Phase 12 does not create a browser-authored journal.</p></section>`,
+    `\n      ${renderBusinessProcurementPlaceholder(data)}\n      ${renderBusinessRecipesPanel(data)}\n      ${renderBusinessStockroomPanel(data)}\n      ${renderBusinessEquipmentPanel(data)}\n      ${renderBusinessSalesStatePanel(data)}\n      <section id="business-workspace-activity" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="activity"><header class="player-terminal-panel-header"><div><span>ACTIVITY</span><strong>Immutable operational evidence</strong></div>${renderStatusPill("RECEIPT BACKED", "green")}</header><p>Store-sale activity remains paired one-to-one with committed seller receipts above. Treasury FX and procurement retain their immutable receipt evidence in Finance and Procurement; Phase 12 does not create a browser-authored journal.</p></section>`,
   );
 }
 
