@@ -2,6 +2,14 @@ import { ApiRequestError } from "./errors.js";
 
 const ROUTES = Object.freeze({
   business: () => ({ method: "GET", path: "/players/me/business" }),
+  businessStockroom: () => ({
+    method: "GET",
+    path: "/players/me/business/stockroom",
+  }),
+  businessRecipes: () => ({
+    method: "GET",
+    path: "/players/me/business/recipes",
+  }),
   businessWorkforce: () => ({
     method: "GET",
     path: "/players/me/business/workforce/candidates",
