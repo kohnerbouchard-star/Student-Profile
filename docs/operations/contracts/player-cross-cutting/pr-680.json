@@ -64,6 +64,7 @@
     "player-terminal/src/data/preview-data.js",
     "player-terminal/src/pages/business-page.js",
     "player-terminal/tests/business-banking-surface.mjs",
+    "player-terminal/tools/connected-marketplace-mutation-runner.mjs",
     "scripts/admin-v2-business-api.test.mjs",
     "scripts/admin-v2-loans-api.test.mjs",
     "scripts/auth-boundary-contract.test.mjs",
