@@ -139,6 +139,7 @@ data.resourceStatus = {
   businessStockroom: { state: "ready" },
   businessRecipes: { state: "ready" },
   businessEquipment: { state: "ready" },
+  store: { state: "ready" },
 };
 data.businessRecipes = {
   recipes: [{
@@ -280,6 +281,30 @@ data.businessEquipment = {
     },
   ],
 };
+data.store = {
+  categories: ["All"],
+  items: [{
+    id: "steel-widget",
+    itemKey: "steel-widget",
+    canonicalItemKey: "steel-widget",
+    name: "Steel Widget",
+    offers: [{
+      offerKey: "sof_77777777777777777777777777777777",
+      sellerPartyKey: "pty_77777777777777777777777777777777",
+      sellerKind: "business",
+      sellerName: "Crescent Dynamics",
+      businessKey,
+      businessName: "Crescent Dynamics",
+      unitPrice: 42,
+      currencyCode: "ECO",
+      availableQuantity: 3,
+      status: "active",
+      purchasability: "self_purchase_blocked",
+      purchasable: false,
+      version: 4,
+    }],
+  }],
+};
 
 const normalizerContext = { config: {}, requestId: "req_phase12", path: "/players/me/business" };
 assert.deepEqual(
@@ -342,6 +367,10 @@ for (const token of [
   'id="business-stockroom-warehouse"',
   'id="business-stockroom-finished_goods"',
   'data-business-equipment-installation="bei_11111111111111111111111111111111"',
+  'data-business-sales-offer="sof_77777777777777777777777777777777"',
+  "Procurement unavailable",
+  "FINISHED GOODS & ACTIVE LISTINGS",
+  "Pending withdrawal timing is not inferred",
   "Steel Billet",
   "Steel Widget",
   "Industrial Press",
@@ -367,5 +396,13 @@ delete unavailableEquipment.businessEquipment;
 const unavailableEquipmentHtml = renderBusinessWorkspacePage(unavailableEquipment);
 assert.match(unavailableEquipmentHtml, /Equipment capacity unavailable/u);
 assert.match(unavailableEquipmentHtml, /No inferred machine capacity is shown/u);
+
+const unavailableStore = structuredClone(data);
+unavailableStore.resourceStatus.store = { state: "unavailable" };
+delete unavailableStore.store;
+const unavailableStoreHtml = renderBusinessWorkspacePage(unavailableStore);
+assert.match(unavailableStoreHtml, /FINISHED GOODS & ACTIVE LISTINGS/u);
+assert.match(unavailableStoreHtml, /PARTIAL READ/u);
+assert.match(unavailableStoreHtml, /Pending withdrawal timing is not inferred/u);
 
 process.stdout.write("Business workspace resource and rendering verification passed.\n");
