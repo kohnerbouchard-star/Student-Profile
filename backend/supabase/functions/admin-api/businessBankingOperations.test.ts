@@ -320,7 +320,7 @@ Deno.test("Admin Loans supervision projects authoritative data without internal 
   }
 });
 
-Deno.test("legacy Admin loan application read projects public evidence without internal UUIDs", async () => {
+Deno.test("Admin loan application read projects public evidence without internal UUIDs", async () => {
   const mock = service({
     loan_applications: [{
       public_key: APP_KEY,

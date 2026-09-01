@@ -394,12 +394,11 @@ Deno.test(
   },
 );
 
-async function executeError(message: string): Promise<{
-  readonly code: unknown;
-  readonly status: unknown;
-  readonly retryable: unknown;
-  readonly message: unknown;
-}> {
+type PublicBusinessError = Readonly<
+  Record<"code" | "status" | "retryable" | "message", unknown>
+>;
+
+async function executeError(message: string): Promise<PublicBusinessError> {
   const repository = new SupabasePlayerBusinessRepository({
     rpc() {
       return Promise.resolve({ data: null, error: { message } });
@@ -408,12 +407,7 @@ async function executeError(message: string): Promise<{
   try {
     await repository.execute("purchase_business_store_quote_v2", {});
   } catch (error) {
-    return error as {
-      readonly code: unknown;
-      readonly status: unknown;
-      readonly retryable: unknown;
-      readonly message: unknown;
-    };
+    return error as PublicBusinessError;
   }
   throw new Error(`Expected database failure: ${message}`);
 }

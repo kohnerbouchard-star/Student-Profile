@@ -132,9 +132,8 @@ export async function runBusinessOperationsWorker(input: {
   const recoveredCount = recoveries.filter((result) => result.recovered).length;
   const recoveryReplayedCount = recoveries.filter((result) => result.replayed)
     .length;
-  const recoveryDeferredCount = recoveries.filter((result) =>
-    result.liabilityRemaining
-  ).length;
+  const recoveryDeferredCount =
+    recoveries.filter((result) => result.liabilityRemaining).length;
 
   const taxRecoveries = await input.repository.recoverTaxLiabilities({
     batchLimit,
@@ -142,9 +141,8 @@ export async function runBusinessOperationsWorker(input: {
   assertTaxRecoveryResults(taxRecoveries, batchLimit);
   const taxRecoveredCount = taxRecoveries.filter((result) => result.recovered)
     .length;
-  const taxRecoveryDeferredCount = taxRecoveries.filter((result) =>
-    result.liabilityRemaining
-  ).length;
+  const taxRecoveryDeferredCount =
+    taxRecoveries.filter((result) => result.liabilityRemaining).length;
 
   const claims = await input.repository.claimDueOperatingPeriods({
     batchLimit,

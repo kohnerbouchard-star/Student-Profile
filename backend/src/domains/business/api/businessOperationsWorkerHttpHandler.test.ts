@@ -6,9 +6,9 @@ import type {
   BusinessOperatingPeriodClaim,
   BusinessOperatingPeriodCloseResult,
   BusinessOperatingPeriodReleaseResult,
+  BusinessOperationsWorkerRepository,
   BusinessPayrollLiabilityRecoveryResult,
   BusinessTaxLiabilityRecoveryResult,
-  BusinessOperationsWorkerRepository,
 } from "../services/businessOperationsWorker.ts";
 
 declare const Deno: {
