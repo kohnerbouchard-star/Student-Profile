@@ -96,7 +96,7 @@ export async function readBusinessEquipment(
     throw mapBusinessPhysicalEconomyReadError(response.error.message, "equipment");
   }
 
-  const rows = arrayRowsStrict(response.data, "business_equipment_result_invalid");
+  const rows = arrayRowsStrict(response.data);
   const businessKeys = new Set<string>();
   const installationKeys = new Set<string>();
   const equipmentKeys = new Set<string>();
@@ -120,11 +120,16 @@ export async function readBusinessEquipment(
       0,
       10_000,
     );
+    const installedEvidenceValid = installationStatus === "installed" &&
+      reservedMinutes + consumedMinutes <= capacityMinutes &&
+      availableMinutes === capacityMinutes - reservedMinutes - consumedMinutes &&
+      idleMinutes === availableMinutes;
+    const offlineEvidenceValid = installationStatus === "offline" &&
+      capacityMinutes === 0 && reservedMinutes === 0 && availableMinutes === 0 &&
+      idleMinutes === 0 && utilizationBasisPoints === 0;
     if (
       !/^equipment:[1-9][0-9]*$/u.test(periodKey) ||
-      reservedMinutes + consumedMinutes > capacityMinutes ||
-      availableMinutes > capacityMinutes ||
-      idleMinutes !== availableMinutes ||
+      (!installedEvidenceValid && !offlineEvidenceValid) ||
       installationKeys.has(installationKey) ||
       equipmentKeys.has(equipmentKey)
     ) {
@@ -202,7 +207,7 @@ function arrayRows(value: unknown): Row[] {
   return Array.isArray(value) ? value.filter(isRow) : [];
 }
 
-function arrayRowsStrict(value: unknown, _code: string): Row[] {
+function arrayRowsStrict(value: unknown): Row[] {
   if (!Array.isArray(value) || value.some((entry) => !isRow(entry))) {
     throw invalidEquipmentResult();
   }
