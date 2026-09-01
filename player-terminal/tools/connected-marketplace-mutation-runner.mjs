@@ -297,6 +297,7 @@ async function reloadMarketplace(page) {
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMarketplace(page);
 }
+
 async function capture(response) {
   const record = response.request();
   const headers = await record.allHeaders();
