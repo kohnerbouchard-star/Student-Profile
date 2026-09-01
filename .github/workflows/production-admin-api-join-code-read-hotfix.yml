@@ -46,7 +46,7 @@ jobs:
           test "$FUNCTION_NAME" = "admin-api"
 
       - name: Check out exact authorization commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -78,7 +78,7 @@ jobs:
           NODE
 
       - name: Check out exact production-era source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.SOURCE_COMMIT }}
           fetch-depth: 1
@@ -174,7 +174,7 @@ jobs:
           git diff --check
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
