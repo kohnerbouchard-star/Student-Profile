@@ -109,7 +109,7 @@ jobs:
 
       - name: Upload generated architecture inventory
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase10a3-architecture-inventory
           path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload authority diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase10a3-authority-diagnostics
           path: |
@@ -226,7 +226,7 @@ jobs:
 
       - name: Upload database-settlement diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase10a3-database-settlement-diagnostics
           path: |
@@ -323,7 +323,7 @@ jobs:
 
       - name: Upload database-replay diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase10a3-database-replay-diagnostics
           path: |
@@ -532,7 +532,7 @@ jobs:
 
       - name: Upload Player/Chromium diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase10a3-player-chromium-diagnostics
           path: |
