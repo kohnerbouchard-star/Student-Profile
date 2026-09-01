@@ -15,6 +15,8 @@ const READ_ENDPOINTS = new Set([
   "business",
   "businessWorkforce",
   "businessTreasury",
+  "businessStockroom",
+  "businessRecipes",
   "store",
   "marketplace",
   "contracts",
@@ -38,6 +40,8 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
   portfolio: Object.freeze(["history", "allocation", "countryExposure"]),
   business: Object.freeze(["products", "suppliers"]),
   businessWorkforce: Object.freeze(["candidates"]),
+  businessStockroom: Object.freeze(["locations", "items"]),
+  businessRecipes: Object.freeze(["recipes"]),
   store: Object.freeze(["categories", "items"]),
   marketplace: Object.freeze(["categories", "listings", "myListings"]),
   contracts: Object.freeze(["tabs", "lifecycle", "items"]),
@@ -68,6 +72,12 @@ const MAX_OBJECT_KEYS = 300;
 const MAX_STRING_LENGTH = 5000;
 const URL_KEY = /(?:image|imageUrl|avatar|photo|thumbnail|assetUrl|currencySymbolAsset)$/i;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+const BUSINESS_STOCKROOM_LOCATION_KEYS = Object.freeze([
+  "warehouse",
+  "work_in_progress",
+  "finished_goods",
+  "in_transit",
+]);
 
 function invalidResponse(endpointKey, requestId, path) {
   return new ApiRequestError("This section received incomplete data and could not be opened safely.", {
@@ -235,6 +245,124 @@ function round4(value) {
   return Math.round((value + Number.EPSILON) * 10_000) / 10_000;
 }
 
+function validateBusinessStockroom(value, context) {
+  if (
+    UUID.test(JSON.stringify(value)) ||
+    !/^biz_[0-9a-f]{32}$/u.test(String(value.businessKey || "")) ||
+    value.locations.length !== BUSINESS_STOCKROOM_LOCATION_KEYS.length
+  ) throw invalidResponse("businessStockroom", context.requestId, context.path);
+
+  const locations = new Map();
+  for (const location of value.locations) {
+    const locationKey = String(location?.locationKey || "");
+    if (
+      !location || typeof location !== "object" || Array.isArray(location) ||
+      !/^iac_[0-9a-f]{32}$/u.test(String(location.accountKey || "")) ||
+      !BUSINESS_STOCKROOM_LOCATION_KEYS.includes(locationKey) ||
+      typeof location.label !== "string" || !location.label.trim() ||
+      !Number.isSafeInteger(location.itemCount) || location.itemCount < 0 ||
+      !finiteMoney(location.quantityOwned) ||
+      !finiteMoney(location.quantityReserved) ||
+      !finiteMoney(location.quantityAvailable) ||
+      location.quantityReserved > location.quantityOwned ||
+      round4(location.quantityOwned - location.quantityReserved) !== round4(location.quantityAvailable) ||
+      locations.has(locationKey)
+    ) throw invalidResponse("businessStockroom", context.requestId, context.path);
+    locations.set(locationKey, location);
+  }
+  if (BUSINESS_STOCKROOM_LOCATION_KEYS.some((key) => !locations.has(key))) {
+    throw invalidResponse("businessStockroom", context.requestId, context.path);
+  }
+
+  const aggregates = new Map(BUSINESS_STOCKROOM_LOCATION_KEYS.map((key) => [key, {
+    itemCount: 0,
+    quantityOwned: 0,
+    quantityReserved: 0,
+    quantityAvailable: 0,
+  }]));
+  const itemIdentities = new Set();
+  for (const item of value.items) {
+    const locationKey = String(item?.locationKey || "");
+    const location = locations.get(locationKey);
+    const identity = `${locationKey}:${String(item?.itemKey || "")}`;
+    if (
+      !item || typeof item !== "object" || Array.isArray(item) ||
+      !location ||
+      String(item.accountKey || "") !== location.accountKey ||
+      !/^itm_[0-9a-f]{32}$/u.test(String(item.itemKey || "")) ||
+      !/^[a-z0-9][a-z0-9._:-]{0,127}$/u.test(String(item.canonicalKey || "")) ||
+      typeof item.name !== "string" || !item.name.trim() ||
+      typeof item.itemClass !== "string" || !item.itemClass.trim() ||
+      typeof item.subtype !== "string" || !item.subtype.trim() ||
+      !finiteMoney(item.quantityOwned) ||
+      !finiteMoney(item.quantityReserved) ||
+      !finiteMoney(item.quantityAvailable) ||
+      item.quantityReserved > item.quantityOwned ||
+      round4(item.quantityOwned - item.quantityReserved) !== round4(item.quantityAvailable) ||
+      !finiteMoney(item.averageUnitCost) ||
+      !(
+        item.costCurrencyCode === null ||
+        /^[A-Z0-9_]{3,16}$/u.test(String(item.costCurrencyCode || ""))
+      ) ||
+      !Number.isSafeInteger(item.version) || item.version < 0 ||
+      itemIdentities.has(identity)
+    ) throw invalidResponse("businessStockroom", context.requestId, context.path);
+    itemIdentities.add(identity);
+    const aggregate = aggregates.get(locationKey);
+    aggregate.itemCount += 1;
+    aggregate.quantityOwned += item.quantityOwned;
+    aggregate.quantityReserved += item.quantityReserved;
+    aggregate.quantityAvailable += item.quantityAvailable;
+  }
+
+  for (const locationKey of BUSINESS_STOCKROOM_LOCATION_KEYS) {
+    const location = locations.get(locationKey);
+    const aggregate = aggregates.get(locationKey);
+    if (
+      location.itemCount !== aggregate.itemCount ||
+      round4(location.quantityOwned) !== round4(aggregate.quantityOwned) ||
+      round4(location.quantityReserved) !== round4(aggregate.quantityReserved) ||
+      round4(location.quantityAvailable) !== round4(aggregate.quantityAvailable)
+    ) throw invalidResponse("businessStockroom", context.requestId, context.path);
+  }
+}
+
+function validateBusinessRecipes(value, context) {
+  if (UUID.test(JSON.stringify(value))) {
+    throw invalidResponse("businessRecipes", context.requestId, context.path);
+  }
+  const accessKeys = new Set();
+  const recipeKeys = new Set();
+  for (const recipe of value.recipes) {
+    const availability = recipe?.availability;
+    if (
+      !recipe || typeof recipe !== "object" || Array.isArray(recipe) ||
+      !/^bra_[0-9a-f]{32}$/u.test(String(recipe.accessKey || "")) ||
+      !/^[a-z0-9][a-z0-9._:-]{0,127}$/u.test(String(recipe.recipeKey || "")) ||
+      typeof recipe.name !== "string" || !recipe.name.trim() ||
+      typeof recipe.category !== "string" || !recipe.category.trim() ||
+      !Number.isSafeInteger(recipe.tier) || recipe.tier < 0 ||
+      !Number.isSafeInteger(recipe.workshopTier) || recipe.workshopTier < 0 ||
+      !Number.isSafeInteger(recipe.baseDurationSeconds) || recipe.baseDurationSeconds < 0 ||
+      typeof recipe.difficultyProfile !== "string" || !recipe.difficultyProfile.trim() ||
+      typeof recipe.description !== "string" ||
+      !availability || typeof availability !== "object" || Array.isArray(availability) ||
+      typeof availability.enabled !== "boolean" ||
+      typeof availability.availableInBusinessCountry !== "boolean" ||
+      typeof availability.availableNow !== "boolean" ||
+      typeof availability.scarcityBand !== "string" || !availability.scarcityBand.trim() ||
+      !finiteMoney(availability.eventDurationMultiplier) ||
+      !finiteMoney(availability.routeDisruptionMultiplier) ||
+      typeof recipe.sourceType !== "string" || !recipe.sourceType.trim() ||
+      !validTimestamp(recipe.grantedAt) ||
+      accessKeys.has(recipe.accessKey) ||
+      recipeKeys.has(recipe.recipeKey)
+    ) throw invalidResponse("businessRecipes", context.requestId, context.path);
+    accessKeys.add(recipe.accessKey);
+    recipeKeys.add(recipe.recipeKey);
+  }
+}
+
 function validateBusinessStoreSales(value, context) {
   const snapshot = value.storeSales;
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot) || UUID.test(JSON.stringify(snapshot))) {
@@ -350,6 +478,8 @@ function validateEndpointShape(endpointKey, value, context) {
     validateBusinessWorkforceUtilization(value, context);
     validateBusinessStoreSales(value, context);
   }
+  if (endpointKey === "businessStockroom") validateBusinessStockroom(value, context);
+  if (endpointKey === "businessRecipes") validateBusinessRecipes(value, context);
   if (endpointKey === "store") validateStoreResponse(value, context);
   if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
