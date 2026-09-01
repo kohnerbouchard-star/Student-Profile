@@ -21,6 +21,7 @@ import {
   type BusinessTreasuryRepositoryV1,
 } from "../contracts/businessTreasuryContracts.ts";
 import {
+  readBusinessEquipment,
   readBusinessRecipes,
   readBusinessStockroom,
 } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
@@ -127,6 +128,11 @@ export async function handlePlayerBusinessRequest(
       if (route.resource === "recipes") {
         return privateJson(200, {
           recipes: await readBusinessRecipes(client, publicScope),
+        });
+      }
+      if (route.resource === "equipment") {
+        return privateJson(200, {
+          equipment: await readBusinessEquipment(client, publicScope),
         });
       }
       if (route.resource === "workforceCandidates") {
