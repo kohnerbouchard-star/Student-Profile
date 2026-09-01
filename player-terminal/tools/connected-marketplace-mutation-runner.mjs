@@ -297,7 +297,6 @@ async function reloadMarketplace(page) {
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMarketplace(page);
 }
-
 async function capture(response) {
   const record = response.request();
   const headers = await record.allHeaders();
@@ -315,9 +314,28 @@ async function replay(page, original) {
 async function createListing(page, fixtureData, price) {
   await openMarketplace(page);
   const form = page.locator('form[data-endpoint="marketplaceListing"]');
+  await page.waitForFunction(() => {
+    const select = document.querySelector(
+      'form[data-endpoint="marketplaceListing"] select[name="itemKey"]',
+    );
+    return Boolean(select && !select.disabled && select.value);
+  }, undefined, { timeout: 30_000 });
   const details = form.locator("xpath=ancestor::details[1]");
-  if (await details.count() && !(await details.evaluate((node) => node.open))) await details.locator("summary").click();
-  await form.waitFor({ state: "visible", timeout: 30_000 });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (
+      (await details.count()) &&
+      !(await details.evaluate((node) => node.open))
+    ) {
+      await details.locator("summary").click();
+    }
+    try {
+      await form.waitFor({ state: "visible", timeout: 5_000 });
+      break;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await page.waitForTimeout(250);
+    }
+  }
   await form.locator('[name="itemKey"]').selectOption(fixtureData.itemKey);
   await form.locator('[name="quantity"]').fill("1");
   await form.locator('[name="unitPrice"]').fill(String(price));
