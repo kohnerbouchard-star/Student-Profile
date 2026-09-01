@@ -21,7 +21,9 @@
     "player-terminal/src/api/resource-support.js",
     "player-terminal/src/core/route-renderer.js",
     "player-terminal/src/pages/business-workspace-page.js",
-    "player-terminal/tests/business-workspace-resources.mjs"
+    "player-terminal/tests/business-workspace-resources.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-681.json",
@@ -36,7 +38,9 @@
     "player-terminal/src/api/resource-support.js",
     "player-terminal/src/core/route-renderer.js",
     "player-terminal/src/pages/business-workspace-page.js",
-    "player-terminal/tests/business-workspace-resources.mjs"
+    "player-terminal/tests/business-workspace-resources.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "criticalJobChecks": [
     "business-player-store-fx-final-v2-source",
