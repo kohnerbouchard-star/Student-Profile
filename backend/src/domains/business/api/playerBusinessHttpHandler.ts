@@ -24,6 +24,7 @@ import {
   readBusinessEquipment,
   readBusinessRecipes,
   readBusinessStockroom,
+  readBusinessWorkspaceProjection,
 } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
 import { executePlayerBusinessMutation } from "./playerBusinessMutationExecutor.ts";
@@ -149,7 +150,19 @@ export async function handlePlayerBusinessRequest(
           snapshot.company.id,
         )
         : [];
-      return privateJson(200, { ...snapshot, manufacturingJobs });
+      const workspaceProjection = snapshot.configured
+        ? await readBusinessWorkspaceProjection(client, publicScope)
+        : {
+          governance: null,
+          productionReadiness: [],
+          salesOffers: [],
+          activity: [],
+        };
+      return privateJson(200, {
+        ...snapshot,
+        manufacturingJobs,
+        ...workspaceProjection,
+      });
     }
 
     if (route.kind === "businessManufacturingCollection") {
