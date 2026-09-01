@@ -9,6 +9,13 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+    "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
+    "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
+    "backend/src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts",
+    "backend/src/domains/business/contracts/playerBusinessContracts.ts",
+    "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts",
+    "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
     "docs/operations/contracts/player-cross-cutting/pr-681.json",
     "docs/roadmaps/business-player-workspace-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
@@ -26,6 +33,13 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+    "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
+    "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
+    "backend/src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts",
+    "backend/src/domains/business/contracts/playerBusinessContracts.ts",
+    "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts",
+    "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
     "docs/operations/contracts/player-cross-cutting/pr-681.json",
     "docs/roadmaps/business-player-workspace-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
