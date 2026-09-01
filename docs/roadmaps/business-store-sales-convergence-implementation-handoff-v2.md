@@ -1,12 +1,12 @@
 # Business Store Sales Convergence Implementation Handoff v2
 
-**Roadmap item:** `BUSINESS-V2-11`  
-**Status:** `IMPLEMENTED_NOT_MERGED`  
-**Branch:** `refactor/business-store-sales-convergence-v2`  
-**Draft PR:** #680  
-**Exact implementation and verification source:** `3cbca309e1e3c55e9b933803d304d2c5cc96f071`  
-**Parent 10A.4D controller:** `f92a61a61bdf336d608936577d8e5e48de11ae94`  
-**Parent 10A.4D implementation:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`  
+**Roadmap item:** `BUSINESS-V2-11`
+**Status:** `IMPLEMENTED_NOT_MERGED`
+**Branch:** `refactor/business-store-sales-convergence-v2`
+**Draft PR:** #680
+**Exact implementation and verification source:** `3cbca309e1e3c55e9b933803d304d2c5cc96f071`
+**Parent 10A.4D controller:** `f92a61a61bdf336d608936577d8e5e48de11ae94`
+**Parent 10A.4D implementation:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`
 **Merge or deployment authorized:** No
 
 ## Certified result
