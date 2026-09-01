@@ -55,6 +55,8 @@
     "business-store-sales-convergence-v2-source",
     "business-store-sales-convergence-v2-player-admin",
     "player-api-read-resilience",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
     "player-terminal-verify",
     "repository-quality"
   ]
