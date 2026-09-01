@@ -29,6 +29,7 @@
     "player-terminal/src/api/resource-support.js",
     "player-terminal/src/api/response-normalizer.js",
     "player-terminal/src/core/route-renderer.js",
+    "player-terminal/tests/business-multicurrency-treasury.mjs",
     "player-terminal/tests/business-workspace-resources.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -54,6 +55,7 @@
     "player-terminal/src/api/resource-support.js",
     "player-terminal/src/api/response-normalizer.js",
     "player-terminal/src/core/route-renderer.js",
+    "player-terminal/tests/business-multicurrency-treasury.mjs",
     "player-terminal/tests/business-workspace-resources.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
