@@ -30,6 +30,7 @@ import {
 const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
   "businessStockroom",
   "businessRecipes",
+  "businessEquipment",
   "businessFormationPropose",
   "businessFormationRespond",
   "businessFormationActivate",
