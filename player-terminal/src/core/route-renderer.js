@@ -4,7 +4,7 @@ import { renderDashboardPage } from "../pages/dashboard-page.js";
 import { renderNewsPage } from "../pages/news-page.js";
 import { renderMarketPage } from "../pages/market-page.js";
 import { renderPortfolioPage } from "../pages/portfolio-page.js";
-import { renderBusinessPage as renderLegacyBusinessPage } from "../pages/business-page.js";
+import { renderBusinessPage as renderBaseBusinessPage } from "../pages/business-page.js";
 import { renderStorePage } from "../pages/store-page.js";
 import { renderMarketplacePage } from "../pages/marketplace-page.js";
 import { renderContractsPage } from "../pages/contracts-page.js";
@@ -84,12 +84,12 @@ function renderBusinessRecipesPanel(data) {
       })
     : renderEmptyState({
       title: "Canonical recipes unavailable",
-      detail: "No compatibility recipe data is substituted. Refresh the Business workspace to retry the authoritative read.",
+      detail: "No alternate recipe data is substituted. Refresh the Business workspace to retry the authoritative read.",
       iconName: "warning",
     });
 
   return `<section id="business-workspace-recipes" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="recipes" aria-live="polite">
-    <header class="player-terminal-panel-header"><div><span>CANONICAL RECIPES</span><strong>${ready ? `${escapeHtml(formatNumber(recipes.length))} accessible recipes` : "Authoritative read unavailable"}</strong></div>${renderStatusPill(ready ? "SERVER READ" : "NO FALLBACK", ready ? "green" : "amber")}</header>
+    <header class="player-terminal-panel-header"><div><span>CANONICAL RECIPES</span><strong>${ready ? `${escapeHtml(formatNumber(recipes.length))} accessible recipes` : "Authoritative read unavailable"}</strong></div>${renderStatusPill(ready ? "SERVER READ" : "NO SUBSTITUTE", ready ? "green" : "amber")}</header>
     <div>${content}</div>
   </section>`;
 }
@@ -132,12 +132,12 @@ function renderBusinessStockroomPanel(data) {
     }).join("")
     : renderEmptyState({
       title: "Canonical Stockroom unavailable",
-      detail: "The legacy Business inventory summary is not used as Stockroom authority. Refresh to retry the Inventory-backed read.",
+      detail: "The historical aggregate Business inventory summary is not used as Stockroom authority. Refresh to retry the Inventory-backed read.",
       iconName: "warning",
     });
 
   return `<section id="business-workspace-stockroom" class="player-terminal-panel player-terminal-business-products" data-business-workspace-section="stockroom" aria-live="polite">
-    <header class="player-terminal-panel-header"><div><span>STOCKROOM</span><strong>Warehouse → WIP → Finished Goods → In Transit</strong></div>${renderStatusPill(ready ? "INVENTORY AUTHORITY" : "NO FALLBACK", ready ? "green" : "amber")}</header>
+    <header class="player-terminal-panel-header"><div><span>STOCKROOM</span><strong>Warehouse → WIP → Finished Goods → In Transit</strong></div>${renderStatusPill(ready ? "INVENTORY AUTHORITY" : "NO SUBSTITUTE", ready ? "green" : "amber")}</header>
     <div class="player-terminal-business-metrics">
       ${ready ? STOCKROOM_ORDER.map((key) => {
         const location = byLocation.get(key);
@@ -180,7 +180,7 @@ function anchorBusinessWorkspaceSections(html) {
     )
     .replace(
       "<span>INPUT INVENTORY</span>",
-      "<span>LEGACY INPUT SUMMARY · COMPATIBILITY ONLY</span>",
+      "<span>HISTORICAL INPUT SUMMARY · NON-AUTHORITATIVE</span>",
     );
 }
 
@@ -192,10 +192,10 @@ function appendBusinessWorkspacePanels(html, panels) {
 }
 
 export function renderBusinessWorkspacePage(data) {
-  const legacy = renderLegacyBusinessPage(data);
-  if (data?.business?.configured !== true) return legacy;
+  const base = renderBaseBusinessPage(data);
+  if (data?.business?.configured !== true) return base;
 
-  let html = anchorBusinessWorkspaceSections(legacy);
+  let html = anchorBusinessWorkspaceSections(base);
   html = html.replace(
     '<div class="player-terminal-business-metrics">',
     `${businessWorkspaceNavigation()}\n    <div class="player-terminal-business-metrics">`,
