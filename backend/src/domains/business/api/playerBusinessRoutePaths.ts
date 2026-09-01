@@ -50,6 +50,11 @@ export function readPlayerBusinessRoutePath(
     return { kind: "businessRead", resource: "recipes" };
   }
   if (
+    tail.length === 2 && tail[0] === "business" && tail[1] === "equipment"
+  ) {
+    return { kind: "businessRead", resource: "equipment" };
+  }
+  if (
     tail.length === 3 && tail[0] === "business" &&
     tail[1] === "workforce" && tail[2] === "candidates"
   ) {
