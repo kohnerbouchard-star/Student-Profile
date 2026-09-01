@@ -13,7 +13,7 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
   business: Object.freeze({
     required: Object.freeze(["business", "countries"]),
     optional: Object.freeze(["businessWorkforce", "store"]),
-    dependent: Object.freeze(["businessTreasury"]),
+    dependent: Object.freeze(["businessTreasury", "businessStockroom", "businessRecipes"]),
   }),
   contracts: Object.freeze({ required: Object.freeze(["contracts"]), optional: Object.freeze([]) }),
   store: Object.freeze({ required: Object.freeze(["store"]), optional: Object.freeze(["banking", "bankingFx", "inventory"]) }),
@@ -36,8 +36,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   businessCreate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessProductCreate: Object.freeze(["business"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
-  businessManufacturingStart: Object.freeze(["dashboard", "business", "inventory"]),
-  businessManufacturingCancel: Object.freeze(["dashboard", "business", "inventory"]),
+  businessManufacturingStart: Object.freeze(["dashboard", "business", "businessStockroom", "inventory"]),
+  businessManufacturingCancel: Object.freeze(["dashboard", "business", "businessStockroom", "inventory"]),
   businessPrice: Object.freeze(["business"]),
   businessCandidateHire: Object.freeze(["dashboard", "business", "businessWorkforce", "banking"]),
   businessTerminate: Object.freeze(["dashboard", "business", "banking"]),
@@ -51,6 +51,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   businessStorePurchase: Object.freeze([
     "dashboard",
     "business",
+    "businessStockroom",
     "businessTreasury",
     "store",
     "inventory",
