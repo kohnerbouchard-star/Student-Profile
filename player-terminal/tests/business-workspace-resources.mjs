@@ -13,6 +13,8 @@ import {
   resourcesForRoute,
 } from "../src/api/resource-plan.js";
 import { createResourceSupport } from "../src/api/resource-support.js";
+import { previewData } from "../src/data/preview-data.js";
+import { renderBusinessWorkspacePage } from "../src/pages/business-workspace-page.js";
 
 assert.deepEqual(PLAYER_ENDPOINTS.businessStockroom, {
   method: "GET",
@@ -106,4 +108,136 @@ assert.equal(
   "Treasury FX does not mutate physical stock authority.",
 );
 
-process.stdout.write("Business workspace resource wiring verification passed.\n");
+const data = structuredClone(previewData);
+const businessKey = data.business.company.id;
+data.resourceStatus = {
+  ...(data.resourceStatus || {}),
+  businessStockroom: { state: "ready" },
+  businessRecipes: { state: "ready" },
+};
+data.businessRecipes = {
+  recipes: [{
+    accessKey: "bra_11111111111111111111111111111111",
+    recipeKey: "recipe-steel-widget-v1",
+    name: "Steel Widget",
+    category: "manufacturing",
+    tier: 2,
+    workshopTier: 1,
+    baseDurationSeconds: 180,
+    difficultyProfile: "standard",
+    description: "Convert approved steel inputs into a finished widget.",
+    availability: {
+      enabled: true,
+      availableInBusinessCountry: true,
+      availableNow: true,
+      scarcityBand: "normal",
+      eventDurationMultiplier: 1,
+      routeDisruptionMultiplier: 1,
+    },
+    sourceType: "grant",
+    grantedAt: "2026-09-01T08:00:00.000Z",
+  }],
+};
+data.businessStockroom = {
+  businessKey,
+  locations: [
+    {
+      accountKey: "inv_11111111111111111111111111111111",
+      locationKey: "warehouse",
+      label: "Warehouse",
+      itemCount: 1,
+      quantityOwned: 12,
+      quantityReserved: 2,
+      quantityAvailable: 10,
+    },
+    {
+      accountKey: "inv_22222222222222222222222222222222",
+      locationKey: "work_in_progress",
+      label: "Work in Progress",
+      itemCount: 0,
+      quantityOwned: 0,
+      quantityReserved: 0,
+      quantityAvailable: 0,
+    },
+    {
+      accountKey: "inv_33333333333333333333333333333333",
+      locationKey: "finished_goods",
+      label: "Finished Goods",
+      itemCount: 1,
+      quantityOwned: 4,
+      quantityReserved: 1,
+      quantityAvailable: 3,
+    },
+    {
+      accountKey: "inv_44444444444444444444444444444444",
+      locationKey: "in_transit",
+      label: "In Transit",
+      itemCount: 0,
+      quantityOwned: 0,
+      quantityReserved: 0,
+      quantityAvailable: 0,
+    },
+  ],
+  items: [
+    {
+      accountKey: "inv_11111111111111111111111111111111",
+      locationKey: "warehouse",
+      itemKey: "steel-billet",
+      canonicalKey: "steel-billet",
+      name: "Steel Billet",
+      itemClass: "material",
+      subtype: "input",
+      quantityOwned: 12,
+      quantityReserved: 2,
+      quantityAvailable: 10,
+      averageUnitCost: 2.5,
+      costCurrencyCode: "ECO",
+      version: 3,
+    },
+    {
+      accountKey: "inv_33333333333333333333333333333333",
+      locationKey: "finished_goods",
+      itemKey: "steel-widget",
+      canonicalKey: "steel-widget",
+      name: "Steel Widget",
+      itemClass: "product",
+      subtype: "finished_good",
+      quantityOwned: 4,
+      quantityReserved: 1,
+      quantityAvailable: 3,
+      averageUnitCost: 18.75,
+      costCurrencyCode: "ECO",
+      version: 2,
+    },
+  ],
+};
+
+const workspace = renderBusinessWorkspacePage(data);
+for (const token of [
+  'aria-label="Business workspace"',
+  'data-business-workspace-section="overview"',
+  'data-business-workspace-section="recipes"',
+  'data-business-workspace-section="stockroom"',
+  'data-business-workspace-section="procurement"',
+  'data-business-workspace-section="production"',
+  'data-business-workspace-section="workforce"',
+  'data-business-workspace-section="sales"',
+  'data-business-workspace-section="finance"',
+  'data-business-workspace-section="activity"',
+  "Steel Billet",
+  "Steel Widget",
+  "Finished Goods",
+  "LEGACY INPUT SUMMARY · COMPATIBILITY ONLY",
+]) {
+  assert.match(workspace, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Workspace must render ${token}.`);
+}
+assert.doesNotMatch(workspace, /business_inventory/u, "The canonical Stockroom surface must not identify the legacy Business inventory table as authority.");
+
+const unavailable = structuredClone(data);
+unavailable.resourceStatus.businessStockroom = { state: "unavailable" };
+delete unavailable.businessStockroom;
+const unavailableHtml = renderBusinessWorkspacePage(unavailable);
+assert.match(unavailableHtml, /Canonical Stockroom unavailable/u);
+assert.match(unavailableHtml, /legacy Business inventory summary is not used as Stockroom authority/u);
+
+process.stdout.write("Business workspace resource and rendering verification passed.\n");
