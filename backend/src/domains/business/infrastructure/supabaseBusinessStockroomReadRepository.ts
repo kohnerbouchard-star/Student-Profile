@@ -19,6 +19,9 @@ type BusinessReadScope = {
   readonly playerId: string;
 };
 
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu;
+const PUBLIC_REFERENCE_KEY = /^[a-z]{3,8}_[0-9a-f]{32}$/u;
+
 export async function readBusinessStockroom(
   client: EdgeSupabaseClient,
   input: BusinessReadScope,
@@ -164,15 +167,227 @@ export async function readBusinessEquipment(
   });
 }
 
+export async function readBusinessWorkspaceProjection(
+  client: EdgeSupabaseClient,
+  input: BusinessReadScope,
+): Promise<Record<string, unknown>> {
+  const response = await client.rpc<unknown>(
+    "read_owned_business_workspace_projection_v2",
+    {
+      p_game_session_id: input.gameSessionId,
+      p_player_id: input.playerId,
+    },
+  );
+  if (response.error) {
+    throw mapBusinessPhysicalEconomyReadError(response.error.message, "workspace");
+  }
+  const projection = strictRow(response.data, invalidWorkspaceProjection);
+  if (UUID.test(JSON.stringify(projection))) throw invalidWorkspaceProjection();
+  validateWorkspaceGovernance(projection.governance);
+  validateProductionReadiness(projection.productionReadiness);
+  validateSalesOffers(projection.salesOffers);
+  validateBusinessActivity(projection.activity);
+  return projection;
+}
+
+function validateWorkspaceGovernance(value: unknown): void {
+  const governance = strictRow(value, invalidWorkspaceProjection);
+  publicKey(governance.businessKey, "biz");
+  requiredText(governance.entityType);
+  requiredText(governance.taxClassification);
+  requiredText(governance.formationState);
+  boundedInteger(governance.ownershipModelVersion, 1, 2);
+  boundedInteger(governance.ownerCount, 1, 100_000);
+  nonNegativeIntegerString(governance.totalUnits);
+  nonNegativeIntegerString(governance.totalVotingUnits);
+  if (governance.readOnly !== true) throw invalidWorkspaceProjection();
+  const position = strictRow(governance.currentPosition, invalidWorkspaceProjection);
+  publicKey(position.positionKey, "own");
+  requiredText(position.ownershipKind);
+  nonNegativeIntegerString(position.units);
+  nonNegativeIntegerString(position.votingUnits);
+  boundedInteger(position.ownershipBasisPoints, 0, 10_000);
+  boundedInteger(position.votingBasisPoints, 0, 10_000);
+  timestamp(position.effectiveAt);
+  if (governance.corporateShareStructure !== null) {
+    const structure = strictRow(
+      governance.corporateShareStructure,
+      invalidWorkspaceProjection,
+    );
+    for (const key of [
+      "authorizedShares",
+      "issuedShares",
+      "treasuryShares",
+      "outstandingShares",
+    ]) nonNegativeIntegerString(structure[key]);
+  }
+  const proposals = strictArray(governance.openProposals);
+  const keys = new Set<string>();
+  for (const raw of proposals) {
+    const proposal = strictRow(raw, invalidWorkspaceProjection);
+    const proposalKey = publicKey(proposal.proposalKey, "bgp");
+    if (keys.has(proposalKey)) throw invalidWorkspaceProjection();
+    keys.add(proposalKey);
+    requiredText(proposal.proposalType);
+    enumText(proposal.status, ["open", "approved"] as const);
+    boundedInteger(proposal.approvalThresholdBasisPoints, 1, 10_000);
+    nonNegativeIntegerString(proposal.snapshotTotalVotingUnits);
+    timestamp(proposal.expiresAt);
+    optionalTimestamp(proposal.resolvedAt);
+    optionalTimestamp(proposal.executedAt);
+  }
+}
+
+function validateProductionReadiness(value: unknown): void {
+  const entries = strictArray(value);
+  const products = new Set<string>();
+  for (const raw of entries) {
+    const item = strictRow(raw, invalidWorkspaceProjection);
+    publicKey(item.businessKey, "biz");
+    const productKey = publicKey(item.productKey, "bpr");
+    if (products.has(productKey)) throw invalidWorkspaceProjection();
+    products.add(productKey);
+    requiredText(item.productName);
+    const status = enumText(
+      item.status,
+      ["ready", "blocked", "recipe_unavailable", "recipe_ambiguous"] as const,
+    );
+    if (item.recipeKey !== null) canonicalKey(item.recipeKey);
+    if (status.startsWith("recipe_") && item.recipeKey !== null) {
+      throw invalidWorkspaceProjection();
+    }
+    boundedInteger(item.plannedQuantity, 1, 10_000);
+    strictBoolean(item.nextRunReady);
+    strictBoolean(item.materialReady);
+    strictBoolean(item.laborReady);
+    strictBoolean(item.equipmentReady);
+    for (const key of [
+      "materialMaxUnits",
+      "laborMaxUnits",
+      "equipmentMaxUnits",
+      "maxRunnableUnits",
+      "materialLines",
+      "materialBlockedLines",
+      "laborRequiredMinutes",
+      "laborAvailableMinutes",
+      "laborRequiredHeadcount",
+      "laborAvailableHeadcount",
+      "equipmentRequiredMinutes",
+      "equipmentAvailableMinutes",
+      "equipmentRequiredInstances",
+      "equipmentAvailableInstances",
+    ]) nonNegativeInteger(item[key]);
+    nonNegativeNumber(item.materialRequired);
+    nonNegativeNumber(item.materialAvailable);
+    const bottlenecks = strictArray(item.bottlenecks).map((entry) =>
+      enumText(entry, ["recipe", "material", "labor", "equipment"] as const)
+    );
+    if (new Set(bottlenecks).size !== bottlenecks.length) {
+      throw invalidWorkspaceProjection();
+    }
+    const payrollPeriodKey = requiredText(item.payrollPeriodKey);
+    const equipmentPeriodKey = requiredText(item.equipmentPeriodKey);
+    if (
+      !/^payroll:[1-9][0-9]*$/u.test(payrollPeriodKey) ||
+      !/^equipment:[1-9][0-9]*$/u.test(equipmentPeriodKey)
+    ) throw invalidWorkspaceProjection();
+    if (
+      item.maxRunnableUnits !== Math.min(
+        Number(item.materialMaxUnits),
+        Number(item.laborMaxUnits),
+        Number(item.equipmentMaxUnits),
+      ) ||
+      item.nextRunReady !==
+        (Number(item.maxRunnableUnits) >= Number(item.plannedQuantity)) ||
+      item.materialReady !==
+        (Number(item.materialMaxUnits) >= Number(item.plannedQuantity)) ||
+      item.laborReady !==
+        (Number(item.laborMaxUnits) >= Number(item.plannedQuantity)) ||
+      item.equipmentReady !==
+        (Number(item.equipmentMaxUnits) >= Number(item.plannedQuantity))
+    ) throw invalidWorkspaceProjection();
+  }
+}
+
+function validateSalesOffers(value: unknown): void {
+  const entries = strictArray(value);
+  const offers = new Set<string>();
+  for (const raw of entries) {
+    const offer = strictRow(raw, invalidWorkspaceProjection);
+    const offerKey = publicKey(offer.offerKey, "sof");
+    if (offers.has(offerKey)) throw invalidWorkspaceProjection();
+    offers.add(offerKey);
+    publicKey(offer.itemKey, "itm");
+    canonicalKey(offer.canonicalKey);
+    requiredText(offer.itemName);
+    const status = enumText(
+      offer.status,
+      ["draft", "active", "paused", "withdrawal_pending"] as const,
+    );
+    nonNegativeNumber(offer.unitPrice);
+    const currency = requiredText(offer.currencyCode);
+    if (!/^[A-Z0-9_]{3,16}$/u.test(currency)) throw invalidWorkspaceProjection();
+    const owned = nonNegativeInteger(offer.quantityOwned);
+    const reserved = nonNegativeInteger(offer.quantityReserved);
+    const available = nonNegativeInteger(offer.quantityAvailable);
+    if (reserved > owned || available !== Math.max(owned - reserved, 0)) {
+      throw invalidWorkspaceProjection();
+    }
+    const purchaseAllowed = strictBoolean(offer.purchaseAllowed);
+    if (purchaseAllowed !== (status === "active")) throw invalidWorkspaceProjection();
+    if (status === "withdrawal_pending") {
+      const withdrawal = strictRow(offer.withdrawal, invalidWorkspaceProjection);
+      publicKey(withdrawal.requestKey, "swr");
+      enumText(withdrawal.mode, ["full", "reduce"] as const);
+      if (withdrawal.requestedQuantity !== null) {
+        boundedInteger(withdrawal.requestedQuantity, 1, Number.MAX_SAFE_INTEGER);
+      }
+      enumText(withdrawal.resumeStatus, ["draft", "active", "paused"] as const);
+      timestamp(withdrawal.requestedAt);
+      timestamp(withdrawal.effectiveAt);
+      optionalTimestamp(withdrawal.nextAttemptAt);
+      optionalTimestamp(withdrawal.lastAttemptAt);
+      if (
+        withdrawal.lastBlockReason !== null &&
+        withdrawal.lastBlockReason !== "inventory_reserved"
+      ) throw invalidWorkspaceProjection();
+      nonNegativeInteger(withdrawal.attemptCount);
+    } else if (offer.withdrawal !== null) {
+      throw invalidWorkspaceProjection();
+    }
+    boundedInteger(offer.version, 1, Number.MAX_SAFE_INTEGER);
+  }
+}
+
+function validateBusinessActivity(value: unknown): void {
+  const entries = strictArray(value);
+  const keys = new Set<string>();
+  for (const raw of entries) {
+    const activity = strictRow(raw, invalidWorkspaceProjection);
+    const key = publicKey(activity.activityKey, "bae");
+    if (keys.has(key)) throw invalidWorkspaceProjection();
+    keys.add(key);
+    requiredText(activity.eventType);
+    requiredText(activity.reasonCode);
+    enumText(activity.actorType, ["player", "staff_user", "system"] as const);
+    if (
+      activity.referenceKey !== null &&
+      !PUBLIC_REFERENCE_KEY.test(requiredText(activity.referenceKey))
+    ) throw invalidWorkspaceProjection();
+    timestamp(activity.occurredAt);
+  }
+}
+
 function mapBusinessPhysicalEconomyReadError(
   message: string,
-  resource: "stockroom" | "recipes" | "equipment",
+  resource: "stockroom" | "recipes" | "equipment" | "workspace",
 ): PlayerBusinessError {
   const code = message.trim().split(/\s+/u)[0] ||
     "BUSINESS_PHYSICAL_ECONOMY_READ_FAILED";
   const mappings: Record<string, [number, string]> = {
     PLAYER_REQUIRED: [401, "Player session scope is required."],
     BUSINESS_NOT_FOUND: [404, "Business was not found for this player."],
+    BUSINESS_OWNERSHIP_REQUIRED: [404, "Business ownership was not found for this player."],
     BUSINESS_OWNERSHIP_AMBIGUOUS: [
       409,
       "Multiple active Business ownership positions require resolution.",
@@ -187,7 +402,9 @@ function mapBusinessPhysicalEconomyReadError(
     ? "The Business Stockroom could not be loaded."
     : resource === "recipes"
     ? "Business recipes could not be loaded."
-    : "Business equipment could not be loaded.";
+    : resource === "equipment"
+    ? "Business equipment could not be loaded."
+    : "The Business operating workspace could not be loaded.";
   return new PlayerBusinessError(
     code.toLowerCase(),
     mapped?.[1] ?? resourceMessage,
@@ -203,6 +420,14 @@ function invalidEquipmentResult(): PlayerBusinessError {
   );
 }
 
+function invalidWorkspaceProjection(): PlayerBusinessError {
+  return new PlayerBusinessError(
+    "business_workspace_projection_invalid",
+    "The Business operating workspace returned invalid public evidence.",
+    500,
+  );
+}
+
 function arrayRows(value: unknown): Row[] {
   return Array.isArray(value) ? value.filter(isRow) : [];
 }
@@ -211,6 +436,19 @@ function arrayRowsStrict(value: unknown): Row[] {
   if (!Array.isArray(value) || value.some((entry) => !isRow(entry))) {
     throw invalidEquipmentResult();
   }
+  return value;
+}
+
+function strictArray(value: unknown): unknown[] {
+  if (!Array.isArray(value)) throw invalidWorkspaceProjection();
+  return value;
+}
+
+function strictRow(
+  value: unknown,
+  invalid: () => PlayerBusinessError,
+): Row {
+  if (!isRow(value)) throw invalid();
   return value;
 }
 
@@ -224,30 +462,28 @@ function text(value: unknown, defaultValue = ""): string {
 
 function requiredText(value: unknown): string {
   const result = text(value);
-  if (!result || /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu.test(result)) {
-    throw invalidEquipmentResult();
-  }
+  if (!result || UUID.test(result)) throw invalidEquipmentResult();
   return result;
 }
 
 function publicKey(value: unknown, prefix: string): string {
   const result = text(value).toLowerCase();
   if (!new RegExp(`^${prefix}_[0-9a-f]{32}$`, "u").test(result)) {
-    throw invalidEquipmentResult();
+    throw invalidWorkspaceProjection();
   }
   return result;
 }
 
 function canonicalKey(value: unknown): string {
   const result = text(value);
-  if (!/^[a-z0-9][a-z0-9._:-]{0,127}$/u.test(result)) {
-    throw invalidEquipmentResult();
+  if (!/^[a-z0-9][a-z0-9._:-]{0,159}$/u.test(result)) {
+    throw invalidWorkspaceProjection();
   }
   return result;
 }
 
 function strictBoolean(value: unknown): boolean {
-  if (typeof value !== "boolean") throw invalidEquipmentResult();
+  if (typeof value !== "boolean") throw invalidWorkspaceProjection();
   return value;
 }
 
@@ -256,7 +492,7 @@ function enumText<const T extends readonly string[]>(
   allowed: T,
 ): T[number] {
   const result = text(value).toLowerCase();
-  if (!allowed.includes(result)) throw invalidEquipmentResult();
+  if (!allowed.includes(result)) throw invalidWorkspaceProjection();
   return result as T[number];
 }
 
@@ -280,10 +516,33 @@ function nonNegativeInteger(value: unknown): number {
   return boundedInteger(value, 0, Number.MAX_SAFE_INTEGER);
 }
 
+function nonNegativeNumber(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) throw invalidWorkspaceProjection();
+  return parsed;
+}
+
+function nonNegativeIntegerString(value: unknown): string {
+  const result = text(value);
+  if (!/^(0|[1-9][0-9]*)$/u.test(result)) throw invalidWorkspaceProjection();
+  return result;
+}
+
+function timestamp(value: unknown): string {
+  const result = text(value);
+  if (!result || !Number.isFinite(Date.parse(result))) throw invalidWorkspaceProjection();
+  return result;
+}
+
+function optionalTimestamp(value: unknown): string | null {
+  if (value === null) return null;
+  return timestamp(value);
+}
+
 function boundedInteger(value: unknown, minimum: number, maximum: number): number {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
-    throw invalidEquipmentResult();
+    throw invalidWorkspaceProjection();
   }
   return parsed;
 }
