@@ -3,7 +3,7 @@ import { renderDashboardPage } from "../pages/dashboard-page.js";
 import { renderNewsPage } from "../pages/news-page.js";
 import { renderMarketPage } from "../pages/market-page.js";
 import { renderPortfolioPage } from "../pages/portfolio-page.js";
-import { renderBusinessPage } from "../pages/business-page.js";
+import { renderBusinessWorkspacePage } from "../pages/business-workspace-page.js";
 import { renderStorePage } from "../pages/store-page.js";
 import { renderMarketplacePage } from "../pages/marketplace-page.js";
 import { renderContractsPage } from "../pages/contracts-page.js";
@@ -55,7 +55,7 @@ const PAGE_RENDERERS = Object.freeze({
   news: renderNewsPage,
   market: renderMarketPage,
   portfolio: renderPortfolioPage,
-  business: renderBusinessPage,
+  business: renderBusinessWorkspacePage,
   store: renderStorePage,
   marketplace: renderMarketplacePage,
   contracts: renderContractsPage,
