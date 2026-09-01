@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.player-business-workspace-pr-681.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 681,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "docs/operations/contracts/player-cross-cutting/pr-681.json",
+    "docs/roadmaps/business-player-workspace-scope-v1.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
+    "player-terminal/package.json",
+    "player-terminal/src/api/backend-routes.js",
+    "player-terminal/src/api/business-banking-backend-routes.js",
+    "player-terminal/src/api/endpoints.js",
+    "player-terminal/src/api/freshness.js",
+    "player-terminal/src/api/resource-plan.js",
+    "player-terminal/src/api/resource-support.js",
+    "player-terminal/src/core/route-renderer.js",
+    "player-terminal/src/pages/business-workspace-page.js",
+    "player-terminal/tests/business-workspace-resources.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-681.json",
+    "docs/roadmaps/business-player-workspace-scope-v1.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
+    "player-terminal/package.json",
+    "player-terminal/src/api/backend-routes.js",
+    "player-terminal/src/api/business-banking-backend-routes.js",
+    "player-terminal/src/api/endpoints.js",
+    "player-terminal/src/api/freshness.js",
+    "player-terminal/src/api/resource-plan.js",
+    "player-terminal/src/api/resource-support.js",
+    "player-terminal/src/core/route-renderer.js",
+    "player-terminal/src/pages/business-workspace-page.js",
+    "player-terminal/tests/business-workspace-resources.mjs"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin"
+  ],
+  "requiredChecks": [
+    "backend-typecheck",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin",
+    "player-api-read-resilience",
+    "player-terminal-verify",
+    "repository-quality"
+  ]
+}
