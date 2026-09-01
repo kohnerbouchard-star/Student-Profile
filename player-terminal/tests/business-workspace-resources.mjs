@@ -14,7 +14,7 @@ import {
 } from "../src/api/resource-plan.js";
 import { createResourceSupport } from "../src/api/resource-support.js";
 import { previewData } from "../src/data/preview-data.js";
-import { renderBusinessWorkspacePage } from "../src/pages/business-workspace-page.js";
+import { renderBusinessWorkspacePage } from "../src/core/route-renderer.js";
 
 assert.deepEqual(PLAYER_ENDPOINTS.businessStockroom, {
   method: "GET",
@@ -142,7 +142,7 @@ data.businessStockroom = {
   businessKey,
   locations: [
     {
-      accountKey: "inv_11111111111111111111111111111111",
+      accountKey: "iac_11111111111111111111111111111111",
       locationKey: "warehouse",
       label: "Warehouse",
       itemCount: 1,
@@ -151,7 +151,7 @@ data.businessStockroom = {
       quantityAvailable: 10,
     },
     {
-      accountKey: "inv_22222222222222222222222222222222",
+      accountKey: "iac_22222222222222222222222222222222",
       locationKey: "work_in_progress",
       label: "Work in Progress",
       itemCount: 0,
@@ -160,7 +160,7 @@ data.businessStockroom = {
       quantityAvailable: 0,
     },
     {
-      accountKey: "inv_33333333333333333333333333333333",
+      accountKey: "iac_33333333333333333333333333333333",
       locationKey: "finished_goods",
       label: "Finished Goods",
       itemCount: 1,
@@ -169,7 +169,7 @@ data.businessStockroom = {
       quantityAvailable: 3,
     },
     {
-      accountKey: "inv_44444444444444444444444444444444",
+      accountKey: "iac_44444444444444444444444444444444",
       locationKey: "in_transit",
       label: "In Transit",
       itemCount: 0,
@@ -180,9 +180,9 @@ data.businessStockroom = {
   ],
   items: [
     {
-      accountKey: "inv_11111111111111111111111111111111",
+      accountKey: "iac_11111111111111111111111111111111",
       locationKey: "warehouse",
-      itemKey: "steel-billet",
+      itemKey: "itm_11111111111111111111111111111111",
       canonicalKey: "steel-billet",
       name: "Steel Billet",
       itemClass: "material",
@@ -195,9 +195,9 @@ data.businessStockroom = {
       version: 3,
     },
     {
-      accountKey: "inv_33333333333333333333333333333333",
+      accountKey: "iac_33333333333333333333333333333333",
       locationKey: "finished_goods",
-      itemKey: "steel-widget",
+      itemKey: "itm_33333333333333333333333333333333",
       canonicalKey: "steel-widget",
       name: "Steel Widget",
       itemClass: "product",
@@ -224,6 +224,8 @@ for (const token of [
   'data-business-workspace-section="sales"',
   'data-business-workspace-section="finance"',
   'data-business-workspace-section="activity"',
+  'id="business-stockroom-warehouse"',
+  'id="business-stockroom-finished_goods"',
   "Steel Billet",
   "Steel Widget",
   "Finished Goods",
