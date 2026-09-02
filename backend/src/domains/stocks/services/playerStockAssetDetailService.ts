@@ -58,19 +58,13 @@ export class PlayerStockAssetDetailService {
 
       const history = orderedHistory.map(toHistoryDto);
       const latest = orderedHistory.at(-1);
-      const tickIndex = latest?.tickIndex ?? 0;
 
       return {
         ok: true,
         generatedAt: scope.effectiveAt,
         availability: "available",
-        tickIndex,
-        asset: toPlayerStockAssetDto(
-          asset,
-          latest?.volume ?? 0,
-          false,
-          tickIndex,
-        ),
+        tickIndex: latest?.tickIndex ?? 0,
+        asset: toPlayerStockAssetDto(asset, latest?.volume ?? 0),
         history,
         historyLimit: query.historyLimit,
         historyReturned: history.length,
