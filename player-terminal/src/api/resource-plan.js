@@ -56,6 +56,7 @@ export const WRITE_INVALIDATIONS = Object.freeze({
     "store",
     "inventory",
   ]),
+  businessStoreWithdrawal: Object.freeze(["business", "store"]),
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking", "bankingFx"]),
   marketWatchlist: Object.freeze(["market"]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
