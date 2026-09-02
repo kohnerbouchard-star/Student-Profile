@@ -313,6 +313,81 @@ function assertRequestBoundary(body, side) {
   }
 }
 
+async function waitForAuthoritativeAssetReview(page, ticker) {
+  const response = await page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === "GET" &&
+      new URL(candidate.url()).pathname.endsWith(`/players/me/stocks/assets/${encodeURIComponent(ticker)}`),
+    { timeout: 60_000 },
+  );
+  const payload = await parseJson(response);
+  const price = Number(payload?.asset?.currentPrice);
+  const tickIndex = Number(payload?.tickIndex);
+  if (
+    response.status() !== 200 || payload?.ok !== true ||
+    String(payload?.asset?.ticker || "").toUpperCase() !== ticker.toUpperCase() ||
+    !(price > 0) || !Number.isSafeInteger(tickIndex) || tickIndex < 0
+  ) {
+    throw new Error(`Authoritative asset review returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
+  }
+  return { price, tickIndex };
+}
+
+async function waitForRenderedPrice(page, ticker, price) {
+  await page.waitForFunction(({ expectedTicker, expectedPrice }) => {
+    const form = document.querySelector('form[data-player-market-order-form="buy-quote"]');
+    if (!form) return false;
+    const tickerInput = form.querySelector('[name="ticker"]');
+    const priceInput = form.querySelector('[name="expectedPrice"]');
+    return String(tickerInput?.value || "").toUpperCase() === expectedTicker &&
+      Math.abs(Number(priceInput?.value) - expectedPrice) < 0.000001;
+  }, { expectedTicker: ticker.toUpperCase(), expectedPrice: price }, { timeout: 30_000 });
+}
+
+async function createBuyQuoteAfterReview(page, form, quoteButton, ticker) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const renderedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+    if (!(renderedPrice > 0)) throw new Error("Buy quote lost its positive reviewed price.");
+    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
+    const quoteResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
+      { timeout: 30_000 },
+    ).catch(() => null);
+    await quoteButton.click();
+    const review = await reviewPromise;
+    if (Math.abs(review.price - renderedPrice) >= 0.000001) {
+      await waitForRenderedPrice(page, ticker, review.price);
+      await selectTicker(page, ticker);
+      continue;
+    }
+    const response = await quoteResponsePromise;
+    if (!response) throw new Error("A stable authoritative Stock review did not emit the buy quote request.");
+    return response;
+  }
+  throw new Error("The Stock price changed during three consecutive buy reviews; no stale mutation was submitted.");
+}
+
+async function openSellReviewAfterAuthoritativeReview(page, form, reviewButton, ticker, ensureDestination) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await ensureDestination();
+    const renderedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+    if (!(renderedPrice > 0)) throw new Error("Sell review lost its positive reviewed price.");
+    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
+    await reviewButton.click();
+    const review = await reviewPromise;
+    if (Math.abs(review.price - renderedPrice) >= 0.000001) {
+      await waitForRenderedPrice(page, ticker, review.price);
+      await selectTicker(page, ticker);
+      continue;
+    }
+    const dialog = page.locator("[data-player-market-order-dialog]");
+    await dialog.waitFor({ state: "visible", timeout: 30_000 });
+    await dialog.getByText("IMMEDIATE SELL REVIEW", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
+    return dialog;
+  }
+  throw new Error("The Stock price changed during three consecutive sell reviews; no stale mutation was submitted.");
+}
+
 async function executeBuy(page, ticker) {
   await openMarket(page);
   await selectTicker(page, ticker);
@@ -342,12 +417,7 @@ async function executeBuy(page, ticker) {
   await selectTicker(page, ticker);
   await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
   if (await quoteButton.isDisabled()) throw new Error("Freshly reviewed buy quote action is disabled by the current Player market capability or market state.");
-  const quoteResponsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
-    { timeout: 60_000 },
-  );
-  await quoteButton.click();
-  const quoteResponse = await quoteResponsePromise;
+  const quoteResponse = await createBuyQuoteAfterReview(page, form, quoteButton, ticker);
   const quotePayload = await parseJson(quoteResponse);
   if (quoteResponse.status() !== 200 || quotePayload?.ok !== true || quotePayload?.action !== "create_buy_quote" || !QUOTE_KEY.test(String(quotePayload?.quote?.quoteKey || ""))) {
     throw new Error(`Buy quote returned ${quoteResponse.status()}: ${redact(JSON.stringify(quotePayload))}`);
@@ -393,28 +463,29 @@ async function executeSell(page, ticker, destinationAccountKey) {
   if (quantity !== 1) throw new Error(`Sell review did not preserve the canonical quantity: ${quantity}.`);
   const destination = form.locator('[name="destinationAccountKey"]');
   const desiredDestination = String(destinationAccountKey || "").trim().toLowerCase();
-  let selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
-  if (ACCOUNT_KEY.test(desiredDestination) && selectedDestination !== desiredDestination) {
-    if (!(await destination.isVisible())) {
-      throw new Error("Sell review hid the Checking destination before the requested owned account could be selected.");
+  let selectedDestination = "";
+  const ensureDestination = async () => {
+    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+    if (ACCOUNT_KEY.test(desiredDestination) && selectedDestination !== desiredDestination) {
+      if (!(await destination.isVisible())) {
+        throw new Error("Sell review hid the Checking destination before the requested owned account could be selected.");
+      }
+      await destination.selectOption(desiredDestination);
+      selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
     }
-    await destination.selectOption(desiredDestination);
-    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
-  }
-  if (!ACCOUNT_KEY.test(selectedDestination)) {
-    if (!(await destination.isVisible())) throw new Error("Sell review did not expose an owned Checking destination.");
-    const first = await destination.locator("option").evaluateAll((options) => options.map((option) => option.value).find(Boolean) || "");
-    if (!ACCOUNT_KEY.test(String(first))) throw new Error("Sell review did not expose an owned Checking destination.");
-    await destination.selectOption(first);
-    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
-  }
+    if (!ACCOUNT_KEY.test(selectedDestination)) {
+      if (!(await destination.isVisible())) throw new Error("Sell review did not expose an owned Checking destination.");
+      const first = await destination.locator("option").evaluateAll((options) => options.map((option) => option.value).find(Boolean) || "");
+      if (!ACCOUNT_KEY.test(String(first))) throw new Error("Sell review did not expose an owned Checking destination.");
+      await destination.selectOption(first);
+      selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+    }
+  };
+  await ensureDestination();
   const reviewButton = form.getByRole("button", { name: /Review sale/i });
   await reviewButton.waitFor({ state: "visible", timeout: 30_000 });
   if (await reviewButton.isDisabled()) throw new Error("Sell review action is disabled by the current Player market capability or market state.");
-  await reviewButton.click();
-  const dialog = page.locator("[data-player-market-order-dialog]");
-  await dialog.waitFor({ state: "visible", timeout: 30_000 });
-  await dialog.getByText("IMMEDIATE SELL REVIEW", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
+  const dialog = await openSellReviewAfterAuthoritativeReview(page, form, reviewButton, ticker, ensureDestination);
   const responsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST" && response.request().postData()?.includes("settle_sell"),
     { timeout: 60_000 },
