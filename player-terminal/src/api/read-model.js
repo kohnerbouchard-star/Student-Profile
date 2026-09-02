@@ -427,6 +427,7 @@ function normalizeMarketAsset(stock, options = {}) {
     sector: text(stock.sector, "Other"),
     countryId: text(stock.countryCode).toLowerCase(),
     price: currentPrice,
+    tickIndex: number(stock.tickIndex, number(options.tickIndex, number(existing.tickIndex))),
     open: number(stock.openPrice, currentPrice),
     dayHigh: number(stock.dayHigh, currentPrice),
     dayLow: number(stock.dayLow, currentPrice),
@@ -499,7 +500,8 @@ function normalizeMarketAssetRead(response, currentMarket) {
   if (!stock.assetId || !existing) return current;
   const updated = normalizeMarketAsset(stock, {
     existing,
-    history: list(body.history)
+    history: list(body.history),
+    tickIndex: number(body.tickIndex, number(existing.tickIndex))
   });
   return {
     ...current,
