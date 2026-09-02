@@ -7,7 +7,6 @@ export function toPlayerStockAssetDto(
   asset: PlayerStockAssetRecord,
   volume: number,
   isWatchlisted = false,
-  tickIndex = 0,
 ): PlayerStockAssetDto {
   const changePct = asset.previousClose > 0
     ? ((asset.currentPrice - asset.previousClose) / asset.previousClose) * 100
@@ -20,7 +19,6 @@ export function toPlayerStockAssetDto(
     sector: asset.sector,
     countryCode: asset.countryCode,
     listingCurrencyCode: asset.listingCurrencyCode,
-    tickIndex,
     currentPrice: asset.currentPrice,
     previousClose: asset.previousClose,
     changePct: round(changePct),
