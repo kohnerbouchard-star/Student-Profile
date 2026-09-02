@@ -194,8 +194,8 @@ async function chooseTradableAsset(page) {
     const text = String(await row.innerText());
     if (/\bINDEX\b|COMPOSITE/i.test(text)) continue;
     await row.click();
-    const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]');
-    const sellForm = page.locator('form[data-player-market-order-form="sell-review"]');
+    const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
+    const sellForm = page.locator('form[data-player-market-order-form="sell-review"]:visible');
     await buyForm.waitFor({ state: "visible", timeout: 30_000 });
     await sellForm.waitFor({ state: "visible", timeout: 30_000 });
     const symbol = String(await buyForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
@@ -209,8 +209,8 @@ async function selectTicker(page, ticker) {
   const row = page.locator("[data-player-market-select]").filter({ hasText: ticker }).first();
   await row.waitFor({ state: "visible", timeout: 30_000 });
   await row.click();
-  const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]');
-  const sellForm = page.locator('form[data-player-market-order-form="sell-review"]');
+  const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
+  const sellForm = page.locator('form[data-player-market-order-form="sell-review"]:visible');
   await buyForm.waitFor({ state: "visible", timeout: 30_000 });
   await sellForm.waitFor({ state: "visible", timeout: 30_000 });
   const expectedTicker = String(ticker || "").trim().toUpperCase();
@@ -310,7 +310,7 @@ function assertRequestBoundary(body, side) {
 async function executeBuy(page, ticker) {
   await openMarket(page);
   await selectTicker(page, ticker);
-  const form = page.locator('form[data-player-market-order-form="buy-quote"]');
+  const form = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
   await form.locator('[name="quantity"]').fill("1");
   const fundingAccountKey = String(await form.locator('[name="sourceAccountKey1"]').inputValue()).trim().toLowerCase();
   if (!ACCOUNT_KEY.test(fundingAccountKey)) throw new Error("Buy quote did not expose an owned Checking funding account.");
@@ -367,7 +367,7 @@ async function executeBuy(page, ticker) {
 async function executeSell(page, ticker, destinationAccountKey) {
   await openMarket(page);
   await selectTicker(page, ticker);
-  const form = page.locator('form[data-player-market-order-form="sell-review"]');
+  const form = page.locator('form[data-player-market-order-form="sell-review"]:visible');
   await form.locator('[name="quantity"]').fill("1");
   const destination = form.locator('[name="destinationAccountKey"]');
   const desiredDestination = String(destinationAccountKey || "").trim().toLowerCase();
