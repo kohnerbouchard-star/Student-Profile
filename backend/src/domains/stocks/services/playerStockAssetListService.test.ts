@@ -41,6 +41,7 @@ Deno.test("player stock asset service returns deterministic player-scoped pagina
   }]);
   assertEquals(result.assets.map((value) => value.assetId), ["AURA", "BETA"]);
   assertEquals(result.assets.map((value) => value.listingCurrencyCode), ["XAL", "XAL"]);
+  assertEquals(result.assets.map((value) => value.tickIndex), [4, 5]);
   assertEquals(result.assets.map((value) => value.volume), [1000, 2000]);
   assertEquals(result.assets.map((value) => value.isWatchlisted), [false, true]);
   assertEquals(result.sectors, ["All", "AI_AEROSPACE", "ENERGY"]);
