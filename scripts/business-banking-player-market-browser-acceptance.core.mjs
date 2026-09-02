@@ -338,6 +338,10 @@ async function executeBuy(page, ticker) {
   await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
   if (await quoteButton.isDisabled()) throw new Error("Buy quote action is disabled by the current Player market capability or market state.");
   const stateBefore = await readReplayState(page, ticker, fundingAccountKey);
+  await reloadMarket(page);
+  await selectTicker(page, ticker);
+  await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await quoteButton.isDisabled()) throw new Error("Freshly reviewed buy quote action is disabled by the current Player market capability or market state.");
   const quoteResponsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
     { timeout: 60_000 },
