@@ -12,6 +12,7 @@ import {
   readPublicKey,
   readStoreItemKey,
 } from "./playerBusinessStoreProcurementRequest.ts";
+import { readBusinessStoreWithdrawalIntent } from "./playerBusinessRequestValidation.ts";
 import {
   toBusinessStoreQuote,
   toBusinessStoreReceipt,
@@ -74,34 +75,15 @@ export async function requestBusinessStoreWithdrawal(
   businessKey: string,
   body: Record<string, unknown>,
 ): Promise<void> {
-  assertExactBodyFields(
-    body,
-    ["offerKey", "mode", "expectedOfferVersion", "idempotencyKey"],
-    ["quantity"],
-  );
-  const mode = typeof body.mode === "string" ? body.mode.trim().toLowerCase() : "";
-  if (mode !== "full" && mode !== "reduce") {
-    throw new TypeError("Business Store withdrawal mode is invalid.");
-  }
-  if (mode === "full" && body.quantity !== null && body.quantity !== undefined && body.quantity !== "") {
-    throw new TypeError("Full Business Store withdrawal cannot include quantity.");
-  }
-  const quantity = mode === "reduce"
-    ? readInteger(body.quantity, "quantity", 1, Number.MAX_SAFE_INTEGER)
-    : null;
+  const intent = readBusinessStoreWithdrawalIntent(body);
   await repository.execute("request_business_store_offer_withdrawal_v2", {
     p_game_session_id: scope.gameSessionId,
     p_business_key: readPublicKey(businessKey, "businessKey", "biz"),
-    p_offer_key: readPublicKey(body.offerKey, "offerKey", "sof"),
-    p_mode: mode,
-    p_quantity: quantity,
-    p_expected_offer_version: readInteger(
-      body.expectedOfferVersion,
-      "expectedOfferVersion",
-      1,
-      Number.MAX_SAFE_INTEGER,
-    ),
-    p_idempotency_key: readIdempotencyKey(body.idempotencyKey),
+    p_offer_key: intent.offerKey,
+    p_mode: intent.mode,
+    p_quantity: intent.quantity,
+    p_expected_offer_version: intent.expectedOfferVersion,
+    p_idempotency_key: intent.idempotencyKey,
   });
 }
 
