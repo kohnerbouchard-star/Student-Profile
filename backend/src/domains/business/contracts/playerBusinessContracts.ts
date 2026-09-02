@@ -46,6 +46,7 @@ export type PlayerBusinessRoute =
   }
   | { readonly kind: "businessStoreQuote" }
   | { readonly kind: "businessStorePurchase" }
+  | { readonly kind: "businessStoreWithdrawal" }
   | { readonly kind: "businessCandidateHire"; readonly candidateKey: string }
   | { readonly kind: "businessProductCreate" }
   | { readonly kind: "businessInputPurchase" }
@@ -424,6 +425,7 @@ const BUSINESS_ROUTE_KINDS = new Set<PlayerBusinessRoute["kind"]>([
   "businessCreate",
   "businessStoreQuote",
   "businessStorePurchase",
+  "businessStoreWithdrawal",
   "businessCandidateHire",
   "businessProductCreate",
   "businessInputPurchase",
