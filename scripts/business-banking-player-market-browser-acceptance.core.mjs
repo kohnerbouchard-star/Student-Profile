@@ -191,8 +191,8 @@ async function chooseTradableAsset(page) {
   const rows = page.locator("[data-player-market-select]");
   for (let index = 0; index < await rows.count(); index += 1) {
     const row = rows.nth(index);
-    const text = String(await row.innerText());
-    if (/\bINDEX\b|COMPOSITE/i.test(text)) continue;
+    const assetId = String(await row.getAttribute("data-player-market-select") || "").trim().toLowerCase();
+    if (assetId === "cel-index") continue;
     await row.click();
     const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
     const sellForm = page.locator('form[data-player-market-order-form="sell-review"]:visible');
