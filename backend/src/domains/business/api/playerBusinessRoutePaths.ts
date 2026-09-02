@@ -148,6 +148,12 @@ export function readPlayerBusinessRoutePath(
     return { kind: "businessStorePurchase" };
   }
   if (
+    tail.length === 3 && tail[0] === "business" && tail[1] === "store" &&
+    tail[2] === "withdrawals"
+  ) {
+    return { kind: "businessStoreWithdrawal" };
+  }
+  if (
     tail.length === 2 && tail[0] === "business" && tail[1] === "products"
   ) {
     return { kind: "businessProductCreate" };
