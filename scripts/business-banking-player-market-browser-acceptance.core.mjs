@@ -209,7 +209,16 @@ async function selectTicker(page, ticker) {
   const row = page.locator("[data-player-market-select]").filter({ hasText: ticker }).first();
   await row.waitFor({ state: "visible", timeout: 30_000 });
   await row.click();
-  await page.locator('form[data-player-market-order-form="buy-quote"] [name="ticker"]').waitFor({ state: "attached", timeout: 30_000 });
+  const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]');
+  const sellForm = page.locator('form[data-player-market-order-form="sell-review"]');
+  await buyForm.waitFor({ state: "visible", timeout: 30_000 });
+  await sellForm.waitFor({ state: "visible", timeout: 30_000 });
+  const expectedTicker = String(ticker || "").trim().toUpperCase();
+  const buyTicker = String(await buyForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
+  const sellTicker = String(await sellForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
+  if (!expectedTicker || buyTicker !== expectedTicker || sellTicker !== expectedTicker) {
+    throw new Error(`Market order tickets did not converge to ${expectedTicker || "the selected ticker"}: buy=${buyTicker || "none"}, sell=${sellTicker || "none"}.`);
+  }
 }
 
 async function position(page) {
