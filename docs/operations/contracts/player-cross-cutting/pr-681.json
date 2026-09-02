@@ -14,6 +14,7 @@
     "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
     "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
     "backend/src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts",
+    "backend/src/domains/business/api/playerBusinessStoreProcurement.ts",
     "backend/src/domains/business/contracts/playerBusinessContracts.ts",
     "backend/src/domains/business/infrastructure/playerBusinessDatabaseErrors.ts",
     "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts",
