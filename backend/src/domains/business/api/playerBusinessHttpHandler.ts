@@ -47,7 +47,7 @@ export async function handlePlayerBusinessRequest(
     const treasuryResponse = await dispatchPlayerBusinessTreasuryRequest({ route, body, client, publicScope, createTreasuryRepository: dependencies.createTreasuryRepository });
     if (treasuryResponse) return treasuryResponse;
 
-    if (route.kind === "businessRead") return handleBusinessRead(route.resource, client, repository, publicScope);
+    if (route.kind === "businessRead") return await handleBusinessRead(route, client, repository, publicScope);
     if (route.kind === "businessManufacturingCollection") {
       if (request.method === "GET") return privateJson(200, { jobs: await readPlayerBusinessManufacturingJobs(client, publicScope, route.businessKey) });
       return privateJson(200, { ok: true, result: await startPlayerBusinessManufacturingJob(client, publicScope, route.businessKey, body), refreshRequired: true });
@@ -71,15 +71,15 @@ export async function handlePlayerBusinessRequest(
 
 type PublicScope = { readonly gameSessionId: string; readonly playerId: string };
 async function handleBusinessRead(
-  resource: "overview" | "stockroom" | "recipes" | "equipment" | "workforceCandidates" | undefined,
+  route: Extract<PlayerBusinessRoute, { readonly kind: "businessRead" }>,
   client: EdgeSupabaseClient,
   repository: PlayerBusinessRepository,
   publicScope: PublicScope,
 ): Promise<Response> {
-  if (resource === "stockroom") return privateJson(200, await readBusinessStockroom(client, publicScope));
-  if (resource === "recipes") return privateJson(200, { recipes: await readBusinessRecipes(client, publicScope) });
-  if (resource === "equipment") return privateJson(200, { equipment: await readBusinessEquipment(client, publicScope) });
-  if (resource === "workforceCandidates") return privateJson(200, await readBusinessWorkforceCandidates(repository, publicScope));
+  if (route.resource === "stockroom") return privateJson(200, await readBusinessStockroom(client, publicScope));
+  if (route.resource === "recipes") return privateJson(200, { recipes: await readBusinessRecipes(client, publicScope) });
+  if (route.resource === "equipment") return privateJson(200, { equipment: await readBusinessEquipment(client, publicScope) });
+  if (route.resource === "workforceCandidates") return privateJson(200, await readBusinessWorkforceCandidates(repository, publicScope));
   const snapshot = await repository.readBusiness(publicScope);
   const manufacturingJobs = snapshot.configured && snapshot.company.id ? await readPlayerBusinessManufacturingJobs(client, publicScope, snapshot.company.id) : [];
   const workspace = snapshot.configured ? await readBusinessWorkspaceProjection(client, publicScope) : { governance: null, productionReadiness: [], salesOffers: [], activity: [] };
