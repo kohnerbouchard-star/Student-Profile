@@ -305,6 +305,7 @@ async function accessibilityIssues(fixture) {
 }
 
 test("Phase 12 Business workspace is keyboard and screen-reader operable across Chromium layouts", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const fixture = await mountWorkspace(page);
   const workspace = fixture.locator("[data-business-workspace-v2]");
   await expect(workspace).toBeVisible();
@@ -365,7 +366,7 @@ test("Phase 12 seller controls expose bounded active intent and lock pending wit
   await expect(reduce.locator('input[name="quantity"]')).toHaveAttribute("max", "6");
   await expect(active.locator('input[name="businessKey"]')).toHaveCount(0);
 
-  const quantity = reduce.getByLabel("REDUCE LISTED QUANTITY");
+  const quantity = reduce.getByLabel("REDUCE BY");
   await quantity.focus();
   await expect(quantity).toBeFocused();
   await page.keyboard.press("Tab");
@@ -374,11 +375,13 @@ test("Phase 12 seller controls expose bounded active intent and lock pending wit
   await expect(full.getByRole("button", { name: "Withdraw listing" })).toBeFocused();
 
   await expect(pending).toContainText("WITHDRAWAL PENDING");
-  await expect(pending).toContainText("Purchases disabled while withdrawal is pending.");
   await expect(pending).toContainText("blocked: inventory_reserved");
   await expect(pending.locator('form[data-endpoint="businessStoreWithdrawal"]')).toHaveCount(0);
   const pendingState = pending.locator("[data-business-withdrawal-effective-at]");
   await expect(pendingState).toHaveAttribute("data-business-withdrawal-effective-at", "2099-09-02T00:05:00.000Z");
-  const remaining = Number(await pendingState.getAttribute("data-business-withdrawal-remaining-seconds"));
-  expect(Number.isSafeInteger(remaining) && remaining > 0).toBe(true);
+  const timer = pending.locator("[data-business-withdrawal-timer]");
+  await expect(timer).toContainText("remaining");
+  await expect(timer).toContainText("purchases disabled while pending");
+  const effectiveAt = Date.parse(String(await pendingState.getAttribute("data-business-withdrawal-effective-at")));
+  expect(Number.isFinite(effectiveAt) && effectiveAt > Date.now()).toBe(true);
 });
