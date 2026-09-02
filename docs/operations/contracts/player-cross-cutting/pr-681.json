@@ -43,6 +43,7 @@
     "player-terminal/tests/business-workspace-resources.mjs",
     "scripts/business-banking-player-market-browser-acceptance.core.mjs",
     "scripts/business-phase10-player-store-browser-acceptance.mjs",
+    "scripts/business-phase10-player-store-cutover-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
