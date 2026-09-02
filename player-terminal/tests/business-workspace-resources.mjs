@@ -282,7 +282,7 @@ for (const token of [
   'WITHDRAWAL PENDING',
   'blocked: inventory_reserved',
   'OWNERSHIP / GOVERNANCE',
-  '60.00%',
+  '60%',
   'business.store.withdrawal.requested',
   'Steel Billet',
   'Industrial Press',
@@ -298,8 +298,10 @@ for (const retired of [
 ]) assert.doesNotMatch(workspace, new RegExp(retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Configured workspace must retire ${retired}.`);
 
 const routeSource = await readFile(new URL("../src/core/route-renderer.js", import.meta.url), "utf8");
-assert.match(routeSource, /configured === true[\s\S]*renderConfiguredBusinessWorkspacePage/u);
-assert.match(routeSource, /return renderBusinessFormationPage\(data\)/u);
+assert.match(routeSource, /configured !== true\) return renderBusinessFormationPage\(data\)/u);
+assert.match(routeSource, /data-business-workspace-v2/u);
+assert.doesNotMatch(routeSource, /business-workspace-page\.js/u);
+assert.doesNotMatch(routeSource, /renderConfiguredBusinessWorkspacePage/u);
 assert.doesNotMatch(routeSource, /const base = renderBusinessFormationPage/u);
 assert.doesNotMatch(routeSource, /anchorBusinessWorkspaceSections/u);
 assert.doesNotMatch(routeSource, /appendBusinessWorkspacePanels/u);
