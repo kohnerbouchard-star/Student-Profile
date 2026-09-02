@@ -66,6 +66,7 @@ export interface PlayerStockAssetDto {
   readonly sector: string;
   readonly countryCode: string;
   readonly listingCurrencyCode: string;
+  readonly tickIndex: number;
   readonly currentPrice: number;
   readonly previousClose: number;
   readonly changePct: number;
