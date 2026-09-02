@@ -248,9 +248,10 @@ async function preservedSubmitValue(locator) {
 }
 
 async function authenticatedContextRequest(page, path, { method = "GET", headers = {}, body } = {}) {
+  const key = await runtimeKey();
   const response = await page.context().request.fetch(`${BASE_URL}${path}`, {
     method,
-    headers,
+    headers: { ...platformHeaders(key), ...headers },
     data: body,
     failOnStatusCode: false,
   });
