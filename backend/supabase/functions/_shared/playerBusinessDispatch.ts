@@ -60,6 +60,7 @@ function endpointKey(
   | "businessTreasuryFxCancel"
   | "businessStoreQuote"
   | "businessStorePurchase"
+  | "businessStoreWithdrawal"
   | "businessCreate"
   | "businessFormationPropose"
   | "businessFormationRespond"
@@ -117,6 +118,7 @@ function endpointKey(
   }
   if (route.kind === "businessStoreQuote") return "businessStoreQuote";
   if (route.kind === "businessStorePurchase") return "businessStorePurchase";
+  if (route.kind === "businessStoreWithdrawal") return "businessStoreWithdrawal";
   return ({
     businessWorkforce: "businessWorkforce",
     businessCandidateHire: "businessCandidateHire",

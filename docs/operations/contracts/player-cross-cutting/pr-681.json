@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
     "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
     "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
     "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
@@ -56,6 +57,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
     "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
     "backend/src/domains/business/api/playerBusinessRoutePaths.test.ts",
     "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
@@ -76,7 +78,6 @@
     "player-terminal/package.json",
     "player-terminal/src/api/backend-routes.js",
     "player-terminal/src/api/business-banking-backend-routes.js",
-    "player-terminal/src/api/capabilities.js",
     "player-terminal/src/api/endpoints.js",
     "player-terminal/src/api/freshness.js",
     "player-terminal/src/api/resource-plan.js",

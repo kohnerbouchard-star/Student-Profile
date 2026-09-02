@@ -23,6 +23,7 @@ export type DelegatedPlayerBusinessRoute = Exclude<
   | { readonly kind: "businessTreasuryFxStandard" }
   | { readonly kind: "businessTreasuryFxInstant" }
   | { readonly kind: "businessTreasuryFxCancel" }
+  | { readonly kind: "businessStoreWithdrawal" }
 >;
 
 export type PlayerBusinessBankingRoute =
