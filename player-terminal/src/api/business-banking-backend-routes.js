@@ -122,6 +122,25 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessCandidateHire"),
     },
   }),
+  businessStoreWithdrawal: ({ payload }) => {
+    const mode = required(payload.mode, "mode", "businessStoreWithdrawal").toLowerCase();
+    if (mode !== "full" && mode !== "reduce") {
+      throw new ApiRequestError("mode is invalid for businessStoreWithdrawal.", {
+        body: { code: "player_route_context_invalid", field: "mode", endpointKey: "businessStoreWithdrawal" },
+      });
+    }
+    return {
+      method: "POST",
+      path: "/players/me/business/store/withdrawals",
+      payload: {
+        offerKey: required(payload.offerKey, "offerKey", "businessStoreWithdrawal"),
+        mode,
+        ...(mode === "reduce" ? { quantity: number(payload.quantity, "quantity", "businessStoreWithdrawal") } : {}),
+        expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreWithdrawal"),
+        idempotencyKey: key(payload, "businessStoreWithdrawal"),
+      },
+    };
+  },
   businessTerminate: ({ params, payload }) => ({
     method: "POST",
     path: `/players/me/business/employees/${encodeURIComponent(required(params.employeeId || payload.employeeKey, "employeeKey", "businessTerminate"))}/terminate`,
