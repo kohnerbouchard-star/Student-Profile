@@ -242,6 +242,11 @@ async function capture(response) {
   };
 }
 
+async function preservedSubmitValue(locator) {
+  const preserved = await locator.getAttribute("data-player-market-submit-value");
+  return preserved === null ? locator.inputValue() : preserved;
+}
+
 async function authenticatedContextRequest(page, path, { method = "GET", headers = {}, body } = {}) {
   const response = await page.context().request.fetch(`${BASE_URL}${path}`, {
     method,
@@ -311,21 +316,32 @@ async function executeBuy(page, ticker) {
   await openMarket(page);
   await selectTicker(page, ticker);
   const form = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
-  await form.locator('[name="quantity"]').fill("1");
-  const fundingAccountKey = String(await form.locator('[name="sourceAccountKey1"]').inputValue()).trim().toLowerCase();
+  const quantity = Number(await preservedSubmitValue(form.locator('[name="quantity"]')));
+  if (quantity !== 1) throw new Error(`Buy quote did not preserve the canonical quantity: ${quantity}.`);
+  const fundingAccountKey = String(await preservedSubmitValue(form.locator('[name="sourceAccountKey1"]'))).trim().toLowerCase();
   if (!ACCOUNT_KEY.test(fundingAccountKey)) throw new Error("Buy quote did not expose an owned Checking funding account.");
-  const expectedPrice = Number(await form.locator('[name="expectedPrice"]').inputValue());
-  await form.locator('[name="targetAmount1"]').fill(String(Math.round(expectedPrice * 10_000) / 10_000));
-  await form.locator('[name="sourceAccountKey2"]').selectOption("");
-  await form.locator('[name="targetAmount2"]').fill("");
-  await form.locator('[name="sourceAccountKey3"]').selectOption("");
-  await form.locator('[name="targetAmount3"]').fill("");
+  const expectedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+  if (!(expectedPrice > 0)) throw new Error("Buy quote did not expose a positive canonical expected price.");
+  const targetAmount = Number(await preservedSubmitValue(form.locator('[name="targetAmount1"]')));
+  if (!(targetAmount > 0)) throw new Error("Buy quote did not preserve a positive canonical funding amount.");
+  const optionalFunding = await Promise.all([
+    preservedSubmitValue(form.locator('[name="sourceAccountKey2"]')),
+    preservedSubmitValue(form.locator('[name="targetAmount2"]')),
+    preservedSubmitValue(form.locator('[name="sourceAccountKey3"]')),
+    preservedSubmitValue(form.locator('[name="targetAmount3"]')),
+  ]);
+  if (optionalFunding.some((value) => String(value || "").trim())) {
+    throw new Error(`Buy quote unexpectedly prefilled optional funding lines: ${redact(JSON.stringify(optionalFunding))}`);
+  }
+  const quoteButton = form.getByRole("button", { name: /Create exact quote/i });
+  await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await quoteButton.isDisabled()) throw new Error("Buy quote action is disabled by the current Player market capability or market state.");
   const stateBefore = await readReplayState(page, ticker, fundingAccountKey);
   const quoteResponsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
     { timeout: 60_000 },
   );
-  await form.locator('button[type="submit"]').click();
+  await quoteButton.click();
   const quoteResponse = await quoteResponsePromise;
   const quotePayload = await parseJson(quoteResponse);
   if (quoteResponse.status() !== 200 || quotePayload?.ok !== true || quotePayload?.action !== "create_buy_quote" || !QUOTE_KEY.test(String(quotePayload?.quote?.quoteKey || ""))) {
@@ -368,17 +384,29 @@ async function executeSell(page, ticker, destinationAccountKey) {
   await openMarket(page);
   await selectTicker(page, ticker);
   const form = page.locator('form[data-player-market-order-form="sell-review"]:visible');
-  await form.locator('[name="quantity"]').fill("1");
+  const quantity = Number(await preservedSubmitValue(form.locator('[name="quantity"]')));
+  if (quantity !== 1) throw new Error(`Sell review did not preserve the canonical quantity: ${quantity}.`);
   const destination = form.locator('[name="destinationAccountKey"]');
   const desiredDestination = String(destinationAccountKey || "").trim().toLowerCase();
-  if (ACCOUNT_KEY.test(desiredDestination)) {
+  let selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+  if (ACCOUNT_KEY.test(desiredDestination) && selectedDestination !== desiredDestination) {
+    if (!(await destination.isVisible())) {
+      throw new Error("Sell review hid the Checking destination before the requested owned account could be selected.");
+    }
     await destination.selectOption(desiredDestination);
-  } else if (!ACCOUNT_KEY.test(String(await destination.inputValue()))) {
+    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+  }
+  if (!ACCOUNT_KEY.test(selectedDestination)) {
+    if (!(await destination.isVisible())) throw new Error("Sell review did not expose an owned Checking destination.");
     const first = await destination.locator("option").evaluateAll((options) => options.map((option) => option.value).find(Boolean) || "");
     if (!ACCOUNT_KEY.test(String(first))) throw new Error("Sell review did not expose an owned Checking destination.");
     await destination.selectOption(first);
+    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
   }
-  await form.locator('button[type="submit"]').click();
+  const reviewButton = form.getByRole("button", { name: /Review sale/i });
+  await reviewButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await reviewButton.isDisabled()) throw new Error("Sell review action is disabled by the current Player market capability or market state.");
+  await reviewButton.click();
   const dialog = page.locator("[data-player-market-order-dialog]");
   await dialog.waitFor({ state: "visible", timeout: 30_000 });
   await dialog.getByText("IMMEDIATE SELL REVIEW", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
@@ -396,7 +424,7 @@ async function executeSell(page, ticker, destinationAccountKey) {
   const original = await capture(response);
   const body = JSON.parse(original.body);
   assertRequestBoundary(body, "sell");
-  if (body.action !== "settle_sell" || body.ticker !== ticker || Number(body.quantity) !== 1 || !(Number(body.expectedPrice) > 0) || !ACCOUNT_KEY.test(String(body.destinationAccountKey || "")) || typeof body.idempotencyKey !== "string") {
+  if (body.action !== "settle_sell" || body.ticker !== ticker || Number(body.quantity) !== 1 || !(Number(body.expectedPrice) > 0) || !ACCOUNT_KEY.test(String(body.destinationAccountKey || "")) || body.destinationAccountKey !== selectedDestination || typeof body.idempotencyKey !== "string") {
     throw new Error(`Sell settlement body did not match the rendered review: ${redact(JSON.stringify(body))}`);
   }
   return { payload, original };
