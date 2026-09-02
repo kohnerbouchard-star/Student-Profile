@@ -37,6 +37,7 @@ const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
   "businessManufacturingJobs",
   "businessManufacturingStart",
   "businessManufacturingCancel",
+  "businessStoreWithdrawal",
 ]);
 
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
