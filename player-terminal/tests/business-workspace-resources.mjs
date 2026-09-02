@@ -42,6 +42,72 @@ for (const [endpointKey, endpointPath, canonicalPath] of [
   });
 }
 
+assert.deepEqual(PLAYER_ENDPOINTS.businessStoreWithdrawal, {
+  method: "POST",
+  path: "/business/store/withdrawals",
+});
+assert.equal(hasPlayerBackendRoute("businessStoreWithdrawal"), true);
+assert.equal(PLAYER_BACKEND_ROUTE_KEYS.includes("businessStoreWithdrawal"), true);
+const fullWithdrawal = resolvePlayerBackendRequest({
+  endpointKey: "businessStoreWithdrawal",
+  method: "POST",
+  path: "/business/store/withdrawals",
+  payload: {
+    offerKey: `sof_${"4".repeat(32)}`,
+    mode: "full",
+    expectedOfferVersion: "5",
+    idempotencyKey: "phase12-withdrawal-full-001",
+  },
+  params: {},
+  session: {},
+});
+assert.deepEqual(fullWithdrawal, {
+  endpointKey: "businessStoreWithdrawal",
+  method: "POST",
+  path: "/players/me/business/store/withdrawals",
+  payload: {
+    offerKey: `sof_${"4".repeat(32)}`,
+    mode: "full",
+    expectedOfferVersion: 5,
+    idempotencyKey: "phase12-withdrawal-full-001",
+  },
+  provisional: {
+    method: "POST",
+    path: "/business/store/withdrawals",
+    payload: {
+      offerKey: `sof_${"4".repeat(32)}`,
+      mode: "full",
+      expectedOfferVersion: "5",
+      idempotencyKey: "phase12-withdrawal-full-001",
+    },
+  },
+});
+assert.equal(Object.hasOwn(fullWithdrawal.payload, "businessKey"), false);
+assert.equal(Object.hasOwn(fullWithdrawal.payload, "gameSessionId"), false);
+assert.equal(Object.hasOwn(fullWithdrawal.payload, "playerId"), false);
+
+const reduceWithdrawal = resolvePlayerBackendRequest({
+  endpointKey: "businessStoreWithdrawal",
+  method: "POST",
+  path: "/business/store/withdrawals",
+  payload: {
+    offerKey: `sof_${"8".repeat(32)}`,
+    mode: "reduce",
+    quantity: "3",
+    expectedOfferVersion: "3",
+    idempotencyKey: "phase12-withdrawal-reduce-001",
+  },
+  params: {},
+  session: {},
+});
+assert.deepEqual(reduceWithdrawal.payload, {
+  offerKey: `sof_${"8".repeat(32)}`,
+  mode: "reduce",
+  quantity: 3,
+  expectedOfferVersion: 3,
+  idempotencyKey: "phase12-withdrawal-reduce-001",
+});
+
 const advertised = createResourceSupport({ session: { capabilityEndpointKeys: ["business"] } });
 assert.equal(advertised.businessStockroom, true);
 assert.equal(advertised.businessRecipes, true);
@@ -65,9 +131,18 @@ for (const endpointKey of ["businessManufacturingStart", "businessManufacturingC
 }
 assert.equal(WRITE_INVALIDATIONS.businessStorePurchase.includes("businessStockroom"), true);
 assert.equal(WRITE_INVALIDATIONS.businessStorePurchase.includes("businessEquipment"), false);
+assert.deepEqual(WRITE_INVALIDATIONS.businessStoreWithdrawal, ["business", "store"]);
 
 const data = structuredClone(previewData);
 const businessKey = `biz_${"a".repeat(32)}`;
+const pendingOfferKey = `sof_${"4".repeat(32)}`;
+const activeOfferKey = `sof_${"8".repeat(32)}`;
+const withdrawalRequestedAt = new Date(Date.now()).toISOString();
+const withdrawalEffectiveAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+data.capabilities = {
+  actions: { storePurchase: true },
+  endpointKeys: null,
+};
 data.business.configured = true;
 data.business.company.id = businessKey;
 data.business.company.name = "Crescent Dynamics";
@@ -144,39 +219,56 @@ data.business.governance = {
   }],
   readOnly: true,
 };
-data.business.salesOffers = [{
-  offerKey: `sof_${"4".repeat(32)}`,
-  itemKey: `itm_${"5".repeat(32)}`,
-  canonicalKey: "steel-widget",
-  itemName: "Steel Widget",
-  status: "withdrawal_pending",
-  unitPrice: 42,
-  currencyCode: "ECO",
-  quantityOwned: 3,
-  quantityReserved: 1,
-  quantityAvailable: 2,
-  purchaseAllowed: false,
-  withdrawal: {
-    requestKey: `swr_${"6".repeat(32)}`,
-    mode: "full",
-    requestedQuantity: null,
-    resumeStatus: "active",
-    requestedAt: "2026-09-02T00:00:00.000Z",
-    effectiveAt: "2026-09-02T00:05:00.000Z",
-    nextAttemptAt: "2026-09-02T00:05:00.000Z",
-    lastAttemptAt: null,
-    lastBlockReason: "inventory_reserved",
-    attemptCount: 1,
+data.business.salesOffers = [
+  {
+    offerKey: pendingOfferKey,
+    itemKey: `itm_${"5".repeat(32)}`,
+    canonicalKey: "steel-widget",
+    itemName: "Steel Widget",
+    status: "withdrawal_pending",
+    unitPrice: 42,
+    currencyCode: "ECO",
+    quantityOwned: 3,
+    quantityReserved: 1,
+    quantityAvailable: 2,
+    purchaseAllowed: false,
+    withdrawal: {
+      requestKey: `swr_${"6".repeat(32)}`,
+      mode: "full",
+      requestedQuantity: null,
+      resumeStatus: "active",
+      requestedAt: withdrawalRequestedAt,
+      effectiveAt: withdrawalEffectiveAt,
+      nextAttemptAt: withdrawalEffectiveAt,
+      lastAttemptAt: null,
+      lastBlockReason: "inventory_reserved",
+      attemptCount: 1,
+    },
+    version: 5,
   },
-  version: 5,
-}];
+  {
+    offerKey: activeOfferKey,
+    itemKey: `itm_${"8".repeat(32)}`,
+    canonicalKey: "steel-widget-premium",
+    itemName: "Steel Widget Premium",
+    status: "active",
+    unitPrice: 48,
+    currencyCode: "ECO",
+    quantityOwned: 7,
+    quantityReserved: 2,
+    quantityAvailable: 5,
+    purchaseAllowed: true,
+    withdrawal: null,
+    version: 3,
+  },
+];
 data.business.activity = [{
   activityKey: `bae_${"7".repeat(32)}`,
   eventType: "business.store.withdrawal.requested",
   reasonCode: "store_offer_withdrawal_requested",
   actorType: "player",
-  referenceKey: `sof_${"4".repeat(32)}`,
-  occurredAt: "2026-09-02T00:00:00.000Z",
+  referenceKey: pendingOfferKey,
+  occurredAt: withdrawalRequestedAt,
 }];
 data.business.storeSales = {
   businessKey,
@@ -281,12 +373,33 @@ for (const token of [
   'bottleneck labor',
   'WITHDRAWAL PENDING',
   'blocked: inventory_reserved',
+  'data-business-withdrawal-state="pending"',
+  'data-business-withdrawal-timer',
+  'remaining · purchases disabled while pending',
+  'data-player-form="business-store-withdrawal-reduce"',
+  'data-player-form="business-store-withdrawal-full"',
+  'data-endpoint="businessStoreWithdrawal"',
+  'Reduce listing',
+  'Withdraw listing',
+  'max="5"',
   'OWNERSHIP / GOVERNANCE',
   '60%',
   'business.store.withdrawal.requested',
   'Steel Billet',
   'Industrial Press',
 ]) assert.match(workspace, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Workspace must render ${token}.`);
+
+const pendingOfferHtml = workspace.match(new RegExp(`<article[^>]+data-business-sales-offer="${pendingOfferKey}"[\\s\\S]*?</article>`, "u"))?.[0] || "";
+assert.ok(pendingOfferHtml, "Pending Store offer must render.");
+assert.doesNotMatch(pendingOfferHtml, /data-endpoint="businessStoreWithdrawal"/u, "Pending withdrawal must not expose a second withdrawal command.");
+
+for (const formName of ["business-store-withdrawal-reduce", "business-store-withdrawal-full"]) {
+  const formHtml = workspace.match(new RegExp(`<form[^>]+data-player-form="${formName}"[\\s\\S]*?</form>`, "u"))?.[0] || "";
+  assert.ok(formHtml, `${formName} must render for an active offer.`);
+  assert.doesNotMatch(formHtml, /name="businessKey"/u, "Seller withdrawal forms must never author Business scope.");
+  assert.match(formHtml, new RegExp(`name="offerKey"[^>]+value="${activeOfferKey}"`, "u"));
+  assert.match(formHtml, /name="expectedOfferVersion"[^>]+value="3"/u);
+}
 
 for (const retired of [
   'data-player-form="business-product-create"',
@@ -319,4 +432,4 @@ const unavailableHtml = renderBusinessWorkspacePage(unavailable);
 assert.match(unavailableHtml, /Canonical Stockroom unavailable/u);
 assert.match(unavailableHtml, /Historical aggregate Business inventory is not substituted/u);
 
-process.stdout.write("Business workspace cutover, canonical projection, and rendering verification passed.\n");
+process.stdout.write("Business workspace cutover, canonical projection, and seller withdrawal verification passed.\n");
