@@ -18,7 +18,7 @@
     "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.ts",
     "backend/supabase/migrations/20260902090000_business_equipment_read_period_projection_v2.sql",
     "backend/supabase/migrations/20260902091000_business_stockroom_numeric_projection_v2.sql",
-    "backend/supabase/migrations/20260902092000_business_workspace_read_projection_v2.sql",
+    "backend/supabase/migrations/20260902092000_business_workspace_read_projections_v2.sql",
     "docs/operations/contracts/button-action-coverage-v1.json",
     "docs/operations/contracts/player-cross-cutting/pr-681.json",
     "docs/roadmaps/business-player-workspace-scope-v1.md",
