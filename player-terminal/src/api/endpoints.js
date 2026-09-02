@@ -28,6 +28,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   },
   businessStoreQuote: { method: "POST", path: "/business/store/quotes" },
   businessStorePurchase: { method: "POST", path: "/business/store/purchases" },
+  businessStoreWithdrawal: { method: "POST", path: "/business/store/withdrawals" },
   businessCreate: { method: "POST", path: "/businesses" },
   businessFormationPropose: { method: "POST", path: "/business/formations" },
   businessFormationRespond: {
