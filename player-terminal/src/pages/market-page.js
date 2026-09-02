@@ -140,7 +140,7 @@ export function renderMarketPage(data, ui) {
           <input type="hidden" name="action" value="create_buy_quote" />
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
-          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(selected.tickIndex ?? market.tickIndex ?? 0))}" />
           <label>BUY QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" value="1" required /></label>
           <fieldset>
             <legend>FUNDING SPLIT · TARGET ${escapeHtml(listingCurrencyCode)}</legend>
@@ -164,7 +164,7 @@ export function renderMarketPage(data, ui) {
           <input type="hidden" name="action" value="settle_sell" />
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
-          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(selected.tickIndex ?? market.tickIndex ?? 0))}" />
           <label>SELL QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
           <label>PROCEEDS DESTINATION<select name="destinationAccountKey" required><option value="">Select Checking account</option>${accountOptions}</select></label>
           <div class="player-terminal-order-review">
