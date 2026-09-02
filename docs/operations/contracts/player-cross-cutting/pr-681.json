@@ -26,6 +26,8 @@
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
     "docs/roadmaps/business-v2-development-execution-log-v1.md",
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "player-terminal/css/business-phase12-touch-targets.css",
+    "player-terminal/index.html",
     "player-terminal/package.json",
     "player-terminal/src/api/backend-routes.js",
     "player-terminal/src/api/business-banking-backend-routes.js",
