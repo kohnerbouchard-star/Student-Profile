@@ -7,6 +7,7 @@ declare const Deno: {
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const PLAYER_ID = "00000000-0000-4000-8000-000000000002";
 const BUSINESS_KEY = `biz_${"a".repeat(32)}`;
+const OFFER_KEY = `sof_${"4".repeat(32)}`;
 
 Deno.test("Business Stockroom HTTP response exposes one coherent public snapshot", async () => {
   const client = new FakeClient({
@@ -70,7 +71,131 @@ Deno.test("Business Equipment HTTP response exposes public finite-capacity evide
   assertNoUuid(JSON.stringify(body));
 });
 
-function dependencies(client: FakeClient) {
+Deno.test("Business Store withdrawal derives the owned Business and returns no raw RPC evidence", async () => {
+  const client = new FakeClient({
+    request_business_store_offer_withdrawal_v2: {
+      requestKey: `swr_${"6".repeat(32)}`,
+      offerKey: OFFER_KEY,
+      offerStatus: "withdrawal_pending",
+    },
+  });
+  let businessReads = 0;
+  const repository = {
+    readBusiness: (scope: unknown) => {
+      businessReads += 1;
+      assertEquals(scope, { gameSessionId: GAME_ID, playerId: PLAYER_ID });
+      return Promise.resolve({ configured: true, company: { id: BUSINESS_KEY } });
+    },
+    execute: () => Promise.reject(new Error("Unexpected Business mutation executor call.")),
+  };
+  const response = await handlePlayerBusinessRequest(
+    withdrawalRequest({
+      offerKey: OFFER_KEY,
+      mode: "reduce",
+      quantity: 2,
+      expectedOfferVersion: 7,
+      idempotencyKey: "phase12-withdrawal-reduce-001",
+    }),
+    { kind: "businessStoreWithdrawal" },
+    dependencies(client, repository),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body, { ok: true, refreshRequired: true });
+  assertEquals(businessReads, 1);
+  assertEquals(client.rpcCalls, [{
+    name: "request_business_store_offer_withdrawal_v2",
+    args: {
+      p_game_session_id: GAME_ID,
+      p_business_key: BUSINESS_KEY,
+      p_offer_key: OFFER_KEY,
+      p_mode: "reduce",
+      p_quantity: 2,
+      p_expected_offer_version: 7,
+      p_idempotency_key: "phase12-withdrawal-reduce-001",
+    },
+  }]);
+  assertNoUuid(JSON.stringify(body));
+});
+
+Deno.test("Business Store withdrawal rejects browser-authored Business scope before ownership resolution", async () => {
+  const client = new FakeClient({});
+  let businessReads = 0;
+  const repository = {
+    readBusiness: () => {
+      businessReads += 1;
+      return Promise.resolve({ configured: true, company: { id: BUSINESS_KEY } });
+    },
+    execute: () => Promise.reject(new Error("Unexpected Business mutation executor call.")),
+  };
+  const response = await handlePlayerBusinessRequest(
+    withdrawalRequest({
+      businessKey: `biz_${"b".repeat(32)}`,
+      offerKey: OFFER_KEY,
+      mode: "full",
+      expectedOfferVersion: 7,
+      idempotencyKey: "phase12-withdrawal-scope-001",
+    }),
+    { kind: "businessStoreWithdrawal" },
+    dependencies(client, repository),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 400);
+  assertEquals(body.error.code, "invalid_business_request");
+  assertEquals(businessReads, 0);
+  assertEquals(client.calls, []);
+});
+
+Deno.test("Business Store withdrawal rejects invalid full quantity before RPC", async () => {
+  const client = new FakeClient({});
+  const response = await handlePlayerBusinessRequest(
+    withdrawalRequest({
+      offerKey: OFFER_KEY,
+      mode: "full",
+      quantity: 1,
+      expectedOfferVersion: 7,
+      idempotencyKey: "phase12-withdrawal-full-001",
+    }),
+    { kind: "businessStoreWithdrawal" },
+    dependencies(client),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 400);
+  assertEquals(body.error.code, "invalid_business_request");
+  assertEquals(client.calls, []);
+});
+
+Deno.test("Business Store withdrawal maps stale offer versions to retryable conflict", async () => {
+  const client = new FakeClient({
+    request_business_store_offer_withdrawal_v2: {
+      $error: "STORE_WITHDRAWAL_OFFER_VERSION_CONFLICT",
+    },
+  });
+  const repository = {
+    readBusiness: () => Promise.resolve({ configured: true, company: { id: BUSINESS_KEY } }),
+    execute: () => Promise.reject(new Error("Unexpected Business mutation executor call.")),
+  };
+  const response = await handlePlayerBusinessRequest(
+    withdrawalRequest({
+      offerKey: OFFER_KEY,
+      mode: "full",
+      expectedOfferVersion: 6,
+      idempotencyKey: "phase12-withdrawal-stale-001",
+    }),
+    { kind: "businessStoreWithdrawal" },
+    dependencies(client, repository),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 409);
+  assertEquals(body.error.code, "store_withdrawal_offer_version_conflict");
+  assertEquals(body.error.retryable, true);
+});
+
+function dependencies(client: FakeClient, repository?: unknown) {
   return {
     createServiceClient: () => client as never,
     readEnvironment: () => ({
@@ -85,10 +210,10 @@ function dependencies(client: FakeClient) {
       gameId: GAME_ID,
       playerUuid: PLAYER_ID,
     }),
-    createRepository: () => ({
+    createRepository: () => (repository ?? {
       readBusiness: () => Promise.reject(new Error("Unexpected Business read.")),
       execute: () => Promise.reject(new Error("Unexpected Business mutation.")),
-    }),
+    }) as never,
   };
 }
 
@@ -98,6 +223,20 @@ function request(resource: "stockroom" | "equipment"): Request {
     {
       method: "GET",
       headers: { "x-player-session-token": "session-token" },
+    },
+  );
+}
+
+function withdrawalRequest(body: Record<string, unknown>): Request {
+  return new Request(
+    "https://example.test/players/me/business/store/withdrawals",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-player-session-token": "session-token",
+      },
+      body: JSON.stringify(body),
     },
   );
 }
@@ -180,13 +319,23 @@ function equipmentRow(): Record<string, unknown> {
 
 class FakeClient {
   readonly calls: string[] = [];
+  readonly rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
   constructor(private readonly responses: Record<string, unknown>) {}
 
-  rpc(name: string) {
+  rpc(name: string, args: Record<string, unknown> = {}) {
     this.calls.push(name);
-    return Promise.resolve(Object.hasOwn(this.responses, name)
-      ? { data: this.responses[name], error: null }
-      : { data: null, error: { message: `UNEXPECTED_RPC:${name}` } });
+    this.rpcCalls.push({ name, args });
+    if (!Object.hasOwn(this.responses, name)) {
+      return Promise.resolve({ data: null, error: { message: `UNEXPECTED_RPC:${name}` } });
+    }
+    const value = this.responses[name];
+    if (value && typeof value === "object" && "$error" in value) {
+      return Promise.resolve({
+        data: null,
+        error: { message: String((value as { $error?: unknown }).$error || "RPC_ERROR") },
+      });
+    }
+    return Promise.resolve({ data: value, error: null });
   }
 }
 
