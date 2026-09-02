@@ -67,13 +67,15 @@ export class PlayerStockAssetListService {
         }
       }
 
-      const assets = page.map((asset) =>
-        toPlayerStockAssetDto(
+      const assets = page.map((asset) => {
+        const latest = latestByAssetUuid.get(asset.internalAssetUuid);
+        return toPlayerStockAssetDto(
           asset,
-          latestByAssetUuid.get(asset.internalAssetUuid)?.volume ?? 0,
+          latest?.volume ?? 0,
           watchlistedAssetUuids.has(asset.internalAssetUuid),
-        )
-      );
+          latest?.tickIndex ?? 0,
+        );
+      });
       const sectors = [...new Set(assets.map((asset) => asset.sector))]
         .sort((left, right) => left.localeCompare(right));
 
