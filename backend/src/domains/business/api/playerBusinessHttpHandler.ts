@@ -8,8 +8,8 @@ import { BusinessTreasuryError, type BusinessTreasuryRepositoryV1 } from "../con
 import { readBusinessEquipment, readBusinessRecipes, readBusinessStockroom, readBusinessWorkspaceProjection } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
 import { executePlayerBusinessMutation } from "./playerBusinessMutationExecutor.ts";
-import { readBusinessRequestBody, readBusinessStoreWithdrawalIntent, validateBusinessRequestEnvelope, validateBusinessRequestMethodAndFields } from "./playerBusinessRequestValidation.ts";
-import { createBusinessStoreQuote, purchaseBusinessStoreQuote } from "./playerBusinessStoreProcurement.ts";
+import { readBusinessRequestBody, validateBusinessRequestEnvelope, validateBusinessRequestMethodAndFields } from "./playerBusinessRequestValidation.ts";
+import { createBusinessStoreQuote, purchaseBusinessStoreQuote, requestBusinessStoreWithdrawal } from "./playerBusinessStoreProcurement.ts";
 import { hireBusinessWorkforceCandidate, readBusinessWorkforceCandidates } from "./playerBusinessWorkforce.ts";
 import { cancelPlayerBusinessManufacturingJob, readPlayerBusinessManufacturingJobs, startPlayerBusinessManufacturingJob } from "./playerBusinessManufacturing.ts";
 import { dispatchPlayerBusinessTreasuryRequest } from "./playerBusinessTreasuryHttpDispatch.ts";
@@ -60,7 +60,20 @@ export async function handlePlayerBusinessRequest(
     if (route.kind === "businessStoreQuote") return privateJson(200, { ok: true, quote: await createBusinessStoreQuote(repository, publicScope, body), refreshRequired: false });
     if (route.kind === "businessStorePurchase") return privateJson(200, { ok: true, receipt: await purchaseBusinessStoreQuote(repository, publicScope, body), refreshRequired: true });
     if (route.kind === "businessStoreWithdrawal") {
-      await requestBusinessStoreWithdrawal(client, repository, publicScope, body);
+      const business = await repository.readBusiness(publicScope);
+      if (!business.configured || !business.company.id) {
+        throw new PlayerBusinessError(
+          "business_not_found",
+          "An active owned Business is required to change a Store offer.",
+          404,
+        );
+      }
+      await requestBusinessStoreWithdrawal(
+        repository,
+        publicScope,
+        business.company.id,
+        body,
+      );
       return privateJson(200, { ok: true, refreshRequired: true });
     }
     const result = await executePlayerBusinessMutation(repository, route, body, publicScope);
@@ -88,46 +101,6 @@ async function handleBusinessRead(
   const manufacturingJobs = snapshot.configured && snapshot.company.id ? await readPlayerBusinessManufacturingJobs(client, publicScope, snapshot.company.id) : [];
   const workspace = snapshot.configured ? await readBusinessWorkspaceProjection(client, publicScope) : { governance: null, productionReadiness: [], salesOffers: [], activity: [] };
   return privateJson(200, { ...snapshot, manufacturingJobs, ...workspace });
-}
-
-async function requestBusinessStoreWithdrawal(
-  client: EdgeSupabaseClient,
-  repository: PlayerBusinessRepository,
-  publicScope: PublicScope,
-  body: Record<string, unknown>,
-): Promise<void> {
-  const intent = readBusinessStoreWithdrawalIntent(body);
-  const business = await repository.readBusiness(publicScope);
-  if (!business.configured || !business.company.id) {
-    throw new PlayerBusinessError(
-      "business_not_found",
-      "An active owned Business is required to change a Store offer.",
-      404,
-    );
-  }
-  const response = await client.rpc("request_business_store_offer_withdrawal_v2", {
-    p_game_session_id: publicScope.gameSessionId,
-    p_business_key: business.company.id,
-    p_offer_key: intent.offerKey,
-    p_mode: intent.mode,
-    p_quantity: intent.quantity,
-    p_expected_offer_version: intent.expectedOfferVersion,
-    p_idempotency_key: intent.idempotencyKey,
-  });
-  if (response.error) throw mapBusinessStoreWithdrawalError(response.error.message);
-}
-
-function mapBusinessStoreWithdrawalError(message: string): PlayerBusinessError {
-  const source = String(message || "").toUpperCase();
-  if (source.includes("STORE_WITHDRAWAL_REQUEST_INVALID")) return new PlayerBusinessError("store_withdrawal_request_invalid", "The Store withdrawal request is invalid.", 400);
-  if (source.includes("STORE_WITHDRAWAL_BUSINESS_NOT_FOUND") || source.includes("STORE_WITHDRAWAL_OFFER_NOT_FOUND")) return new PlayerBusinessError("store_withdrawal_offer_not_found", "This Store offer is not available for the owned Business.", 404);
-  if (source.includes("STORE_WITHDRAWAL_OFFER_VERSION_CONFLICT")) return new PlayerBusinessError("store_withdrawal_offer_version_conflict", "The Store offer changed. Refresh before retrying.", 409, true);
-  if (source.includes("STORE_WITHDRAWAL_IDEMPOTENCY_CONFLICT")) return new PlayerBusinessError("store_withdrawal_idempotency_conflict", "This request key was already used for different withdrawal intent.", 409);
-  if (source.includes("STORE_WITHDRAWAL_REDUCTION_EXCEEDS_AVAILABLE")) return new PlayerBusinessError("store_withdrawal_reduction_exceeds_available", "The requested reduction exceeds unreserved listed quantity.", 409);
-  if (source.includes("STORE_WITHDRAWAL_PENDING_EXISTS") || source.includes("STORE_WITHDRAWAL_OFFER_STATUS_INVALID")) return new PlayerBusinessError("store_withdrawal_offer_unavailable", "This Store offer cannot accept another withdrawal request.", 409);
-  if (source.includes("STORE_WITHDRAWAL_REPLAY_OFFER_MISSING")) return new PlayerBusinessError("store_withdrawal_replay_incomplete", "Stored withdrawal replay evidence is incomplete.", 500, true);
-  if (source.includes("STORE_WITHDRAWAL_BUSINESS_PARTY_NOT_FOUND") || source.includes("STORE_WITHDRAWAL_OFFER_CUSTODY_MISSING") || source.includes("STORE_WITHDRAWAL_ACCOUNT_UNAVAILABLE") || source.includes("STORE_WITHDRAWAL_LISTING_HOLDING_MISSING")) return new PlayerBusinessError("store_withdrawal_custody_unavailable", "Canonical Store listing custody is unavailable.", 409);
-  return new PlayerBusinessError("store_withdrawal_request_failed", "The Store withdrawal request could not be completed.", 500, true);
 }
 
 function retired(code: string, message: string): Response { return jsonError(410, { code, message, retryable: false }); }
