@@ -2247,7 +2247,6 @@ function verifyDatabaseVectors(
   evidence.database.inventoryLineCount = Number(vector.inventoryLineCount);
   evidence.database.purchasedEventCount = Number(vector.purchasedEventCount);
   evidence.database.businessActivityCount = Number(vector.businessActivityCount);
-
   assert(evidence.database.fundingSourcesDebitedExactly, "Selected Buyer funding sources did not debit by their immutable source amounts.");
   assert(evidence.database.targetCheckingUnchangedForAllForeign, "All-foreign funding mutated the Buyer's target-currency Checking account.");
   assert(evidence.database.businessCashCreditedExactly, "Business cash did not credit by the exact receipt total.");
@@ -2590,7 +2589,8 @@ async function main() {
     assert(evidence.runtime.playerBrowserContexts === 2, "Only two Game 1 Player contexts are permitted.");
 
     await openRoute(sellerSession, "business", '[data-page="business"]');
-    await sellerSession.page.locator("[data-business-store-sales]").waitFor({ state: "visible", timeout: 60_000 });
+    const sellerSales = sellerSession.page.locator('[data-business-workspace-section="sales"]');
+    await sellerSales.waitFor({ state: "visible", timeout: 60_000 });
     const sellerNavigationBaseline = sellerSession.audit.navigations;
 
     const storePayload = await openStoreRoute(buyerSession);
@@ -3021,11 +3021,15 @@ async function main() {
 
     await assertBuyerUiConvergence(buyerSession, fixture1, game1After);
 
-    const sellerReceipt = sellerSession.page.locator(`[data-business-store-sale-receipt="${receipt.receiptKey}"]`);
+    const sellerReceipt = sellerSales.locator(".player-terminal-business-product", { hasText: receipt.receiptKey }).first();
     await sellerReceipt.waitFor({ state: "visible", timeout: SELLER_CONVERGENCE_TIMEOUT_MS });
     const activityKey = assertPublic(vector.businessActivityKey, PUBLIC.activity, "Business activity");
-    await sellerReceipt.locator(`[data-business-store-sale-activity="${activityKey}"]`).waitFor({ state: "visible", timeout: 30_000 });
+    const sellerActivity = sellerSession.page
+      .locator('[data-business-workspace-section="activity"]')
+      .locator(`[data-business-activity="${activityKey}"]`);
+    await sellerActivity.waitFor({ state: "visible", timeout: 30_000 });
     const sellerSemanticText = await sellerReceipt.textContent();
+    const sellerActivityText = await sellerActivity.textContent();
     for (const [label, expected] of [
       ["receipt", receipt.receiptKey],
       ["offer", receipt.offerKey],
@@ -3049,7 +3053,7 @@ async function main() {
     assert(sameAmount(uiAmount(sellerFinance.REVENUE), vector.grossRevenue), "Seller revenue did not converge to the receipt.");
     assert(sameAmount(uiAmount(sellerFinance.COGS), vector.costOfGoodsSold), "Seller COGS did not converge to the receipt.");
     assert(sameAmount(uiAmount(sellerFinance.MARGIN), vector.grossMargin), "Seller gross margin did not converge to the receipt.");
-    assert(sellerSemanticText.includes("business_store_offer_purchase"), "Seller activity reason did not converge to the receipt.");
+    assert(sellerActivityText?.includes("business_store_offer_purchase"), "Seller activity reason did not converge to the receipt.");
     assert(sellerSession.audit.navigations === sellerNavigationBaseline, "Seller convergence required a document reload.");
     await assertSameDocument(sellerSession, "Seller");
     evidence.browser.sellerConvergedWithoutReload = true;
