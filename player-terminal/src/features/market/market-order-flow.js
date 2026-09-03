@@ -197,7 +197,7 @@ async function readAuthoritativeTradeReview(api, config, asset, form) {
   if (
     String(reviewed?.ticker || reviewed?.assetId || "").trim().toUpperCase() !== ticker ||
     !Number.isFinite(expectedPrice) || expectedPrice <= 0 ||
-    !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex <= 0
+    !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex < 0
   ) throw new Error("The authoritative Stock price review was incomplete.");
   setReviewValue(form, "expectedPrice", expectedPrice);
   setReviewValue(form, "expectedTickIndex", expectedTickIndex);
