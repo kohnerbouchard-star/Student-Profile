@@ -290,6 +290,18 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     }
   }
 
+  function refreshSingleLineBuyFunding(payload, reviewedPrice) {
+    const previousGross = roundStock(payload.quantity * payload.expectedPrice);
+    const previousFunded = roundStock(payload.allocations.reduce((sum, row) => sum + row.targetAmount, 0));
+    if (payload.allocations.length !== 1 || Math.abs(previousFunded - previousGross) >= 0.00001) return false;
+    const refreshedForm = mount.querySelector('form[data-player-market-order-form="buy-quote"]:visible') ||
+      mount.querySelector('form[data-player-market-order-form="buy-quote"]');
+    if (!refreshedForm) return false;
+    setReviewValue(refreshedForm, "targetAmount1", roundStock(payload.quantity * reviewedPrice));
+    refreshedForm.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+  }
+
   async function createBuyQuote(form) {
     if (pending || destroyed) return;
     const state = terminal.getState();
@@ -311,8 +323,11 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     try {
       const review = await readAuthoritativeTradeReview(api, config, asset, form);
       if (roundStock(review.expectedPrice) !== roundStock(payload.expectedPrice)) {
-        try { await refreshTradeResources(); } catch {}
-        terminal.showToast?.("The Stock price changed. Review the refreshed ticket and submit again.", "amber");
+        try {
+          await refreshTradeResources();
+          refreshSingleLineBuyFunding(payload, review.expectedPrice);
+        } catch {}
+        terminal.showToast?.("The Stock price changed. Review the refreshed price and funding amount before submitting again.", "amber");
         return;
       }
       payload = normalizeWritePayload("marketOrder", rawFormPayload(form));
