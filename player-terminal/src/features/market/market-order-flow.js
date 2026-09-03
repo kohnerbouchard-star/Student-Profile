@@ -330,7 +330,11 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
         terminal.showToast?.("The Stock price changed. Review the refreshed price and funding amount before submitting again.", "amber");
         return;
       }
-      payload = normalizeWritePayload("marketOrder", rawFormPayload(form));
+      payload = {
+        ...payload,
+        expectedPrice: review.expectedPrice,
+        expectedTickIndex: review.expectedTickIndex,
+      };
       const expectedGross = roundStock(payload.quantity * payload.expectedPrice);
       const funded = roundStock(payload.allocations.reduce((sum, row) => sum + row.targetAmount, 0));
       if (Math.abs(funded - expectedGross) >= 0.00001) {
@@ -370,7 +374,11 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     pending = true;
     try {
       const review = await readAuthoritativeTradeReview(api, config, asset, form);
-      payload = normalizeWritePayload("marketOrder", rawFormPayload(form));
+      payload = {
+        ...payload,
+        expectedPrice: review.expectedPrice,
+        expectedTickIndex: review.expectedTickIndex,
+      };
       transaction = { stage: "sell-review", side: "sell", asset: review.asset, ticker: payload.ticker, quantity: payload.quantity, expectedPrice: review.expectedPrice, expectedTickIndex: review.expectedTickIndex, estimatedGross: roundStock(payload.quantity * review.expectedPrice), currencyCode: asset.listingCurrencyCode, destinationAccount, payload, error: "" };
       renderTransaction();
     } catch (error) {
