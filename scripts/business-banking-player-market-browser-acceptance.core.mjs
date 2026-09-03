@@ -252,6 +252,14 @@ async function preservedSubmitValue(locator) {
   return preserved === null ? locator.inputValue() : preserved;
 }
 
+function withIdempotencyHeader(headers, idempotencyKey) {
+  const next = Object.fromEntries(
+    Object.entries(headers || {}).filter(([name]) => name.toLowerCase() !== "idempotency-key"),
+  );
+  next["idempotency-key"] = idempotencyKey;
+  return next;
+}
+
 async function authenticatedContextRequest(page, path, { method = "GET", headers = {}, body } = {}) {
   const key = await runtimeKey();
   const response = await page.context().request.fetch(`${BASE_URL}${path}`, {
@@ -573,13 +581,14 @@ try {
 
   const quotePath = new URL(buy.quoteOriginal.url).pathname;
   const quoteBody = JSON.parse(buy.quoteOriginal.body);
+  const staleIdempotencyKey = `${quoteBody.idempotencyKey}-stale`;
   const stale = await authenticatedContextRequest(page, quotePath, {
     method: "POST",
-    headers: buy.quoteOriginal.headers,
+    headers: withIdempotencyHeader(buy.quoteOriginal.headers, staleIdempotencyKey),
     body: {
       ...quoteBody,
       expectedPrice: Number(quoteBody.expectedPrice) + 1,
-      idempotencyKey: `${quoteBody.idempotencyKey}-stale`,
+      idempotencyKey: staleIdempotencyKey,
     },
   });
   if (stale.status !== 409 || stale.payload?.error?.code !== "stale_stock_price") {
@@ -587,13 +596,14 @@ try {
   }
   evidence.stalePriceRejected = true;
 
+  const forbiddenIdempotencyKey = `${quoteBody.idempotencyKey}-scope`;
   const forbidden = await authenticatedContextRequest(page, quotePath, {
     method: "POST",
-    headers: buy.quoteOriginal.headers,
+    headers: withIdempotencyHeader(buy.quoteOriginal.headers, forbiddenIdempotencyKey),
     body: {
       ...quoteBody,
       playerId: "attacker-controlled",
-      idempotencyKey: `${quoteBody.idempotencyKey}-scope`,
+      idempotencyKey: forbiddenIdempotencyKey,
     },
   });
   if (forbidden.status !== 400 || forbidden.payload?.error?.code !== "invalid_stock_market_trading_request") {
