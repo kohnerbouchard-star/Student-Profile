@@ -43,6 +43,7 @@ jobs:
 
       - name: Reconstruct and apply bounded source repairs
         run: |
+          sed -i '$s/IA$//' scripts/.phase12-bounded-repair/part-00.b64
           cat scripts/.phase12-bounded-repair/part-*.b64 | base64 --decode > /tmp/phase12-bounded-repair.mjs
           node /tmp/phase12-bounded-repair.mjs
           rm -rf scripts/.phase12-bounded-repair .github/workflows/phase12-bounded-repair.yml
