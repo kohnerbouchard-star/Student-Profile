@@ -1,7 +1,7 @@
 {
   "program": "BETA-BUSINESS-V2-001",
-  "status": "PHASE_11_MERGED_PHASE_12_IN_PROGRESS",
-  "audited_at": "2026-09-01T19:14:00+09:00",
+  "status": "PHASE_11_MERGED_PHASE_12_CERTIFICATION_CANDIDATE",
+  "audited_at": "2026-09-03T22:16:00Z",
   "integration_pr": 648,
   "integration_branch": "refactor/business-ux-mechanics-v1",
   "latest_checkpoint": "BUSINESS-V2-11",
@@ -61,7 +61,11 @@
   },
   "active_checkpoint": "BUSINESS-V2-12",
   "active_checkpoint_branch": "feat/player-business-workspace-v2",
+  "active_checkpoint_pr": 681,
   "active_checkpoint_started_at": "2026-09-01T19:14:00+09:00",
+  "active_candidate_implementation_sha": "fdc0713a04c18751f55d3bf8c87c734c54fb19da",
+  "active_candidate_state": "EXACT_HEAD_WORKFLOWS_REQUIRED",
+  "active_candidate_note": "The bounded market negative-probe repair is present and its temporary patch-controller workflow has zero net tree presence. This user-authored checkpoint update exists to trigger executable exact-head verification after GitHub suppressed workflows on the bot-authored implementation commit.",
   "next_authorized_checkpoint": "BUSINESS-V2-12",
   "next_authorized_scope": "Player Business workspace UX convergence. Implement the intended Business V2 operating workspace for Overview, Products / Recipes, Stockroom, Procurement, Production, Workforce, Equipment, Sales, Finance, Ownership / Governance, and Activity. Remove or explicitly retire remaining legacy/free-form simulation-authoring controls; derive products, stock, readiness, treasury, sales, receipts, governance, and activity from canonical server authorities; expose production material/labor/equipment bottlenecks, authoritative stockroom locations and quantities, canonical Business treasury funding, Finished Goods versus Listed stock and Store offer/withdrawal state, withdrawal purchase blocking and delayed stock return, canonical Business accounts/FX evidence, and browser-safe immutable receipts. Preserve public-key-only contracts, authentication, capability checks, CSRF/rate limits, game/Business isolation, no-store behavior, accessibility, responsive acceptance, Store/Inventory/Banking/FX/funding/workforce/equipment authority, and the no merge/deploy/secret/staging-production SQL/live-data boundary.",
   "remaining_dependency_order": [
