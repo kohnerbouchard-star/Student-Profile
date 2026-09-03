@@ -419,7 +419,7 @@ async function executeBuy(page, ticker) {
   if (await quoteButton.isDisabled()) throw new Error("Freshly reviewed buy quote action is disabled by the current Player market capability or market state.");
   const quoteResponse = await createBuyQuoteAfterReview(page, form, quoteButton, ticker);
   const quotePayload = await parseJson(quoteResponse);
-  if (quoteResponse.status() !== 200 || quotePayload?.ok !== true || quotePayload?.action !== "create_buy_quote" || !QUOTE_KEY.test(String(quotePayload?.quote?.quoteKey || ""))) {
+  if (quoteResponse.status() !== 201 || quotePayload?.ok !== true || quotePayload?.action !== "create_buy_quote" || !QUOTE_KEY.test(String(quotePayload?.quote?.quoteKey || ""))) {
     throw new Error(`Buy quote returned ${quoteResponse.status()}: ${redact(JSON.stringify(quotePayload))}`);
   }
   const quoteBody = JSON.parse((await capture(quoteResponse)).body);
