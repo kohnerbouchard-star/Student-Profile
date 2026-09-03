@@ -211,9 +211,28 @@ begin
     raise exception 'Expected history-preserving rollback: %', v_rolled_back;
   end if;
   if exists (select 1 from public.game_session_stock_assets where game_session_id = v_game_one)
-     or exists (select 1 from public.game_session_contracts where game_session_id = v_game_one)
-     or exists (select 1 from public.store_items where game_session_id = v_game_one) then
-    raise exception 'Rollback left game-one release rows behind.';
+     or exists (select 1 from public.game_session_contracts where game_session_id = v_game_one) then
+    raise exception 'Rollback left hard-deletable game-one release rows behind.';
+  end if;
+  if exists (
+    select 1
+    from public.store_items
+    where game_session_id = v_game_one
+      and (status <> 'archived' or visibility <> 'hidden')
+  ) then
+    raise exception 'Rollback left a preserved game-one Store row live.';
+  end if;
+  if exists (
+    select 1
+    from public.store_seller_offers as offer_row
+    join public.store_items as item_row
+      on item_row.game_session_id = offer_row.game_session_id
+     and item_row.id = offer_row.store_item_id
+    where offer_row.game_session_id = v_game_one
+      and offer_row.seller_kind = 'seeded'
+      and offer_row.status <> 'paused'
+  ) then
+    raise exception 'Rollback left a preserved seeded Store offer live.';
   end if;
   if (select count(*) from public.game_session_stock_assets where game_session_id = v_game_two and is_active) <> 240 then
     raise exception 'Game-one rollback affected game-two assets.';
@@ -227,6 +246,21 @@ begin
   if v_reimported->>'outcome' <> 'applied'
      or v_reimported->>'releaseId' <> v_first->>'releaseId' then
     raise exception 'Re-import did not preserve immutable release identity: %', v_reimported;
+  end if;
+  if (select count(*) from public.store_items where game_session_id = v_game_one and status = 'active' and visibility = 'visible') <> 50 then
+    raise exception 'Re-import did not restore 50 active visible Store rows.';
+  end if;
+  if (
+    select count(*)
+    from public.store_seller_offers as offer_row
+    join public.store_items as item_row
+      on item_row.game_session_id = offer_row.game_session_id
+     and item_row.id = offer_row.store_item_id
+    where offer_row.game_session_id = v_game_one
+      and offer_row.seller_kind = 'seeded'
+      and offer_row.status = 'active'
+  ) <> 50 then
+    raise exception 'Re-import did not restore 50 active seeded Store offers.';
   end if;
   select id into v_asset_after
   from public.game_session_stock_assets
@@ -276,6 +310,7 @@ select jsonb_build_object(
   'crossGameIsolation', true,
   'deactivation', true,
   'rollback', true,
+  'storeSoftRollbackCompatible', true,
   'reimportStableIds', true,
   'wrongEnvironmentRejected', true,
   'malformedContentRejected', true,
