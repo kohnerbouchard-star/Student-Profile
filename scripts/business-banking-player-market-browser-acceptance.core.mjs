@@ -22,6 +22,7 @@ const evidence = {
   generatedAt: new Date().toISOString(),
   deterministicCalendarFixtureInstalled: false,
   deterministicCalendarFixtureRestored: false,
+  deterministicSettlementAccountFixtureInstalled: false,
   ticker: "",
   buy: { filled: false, holdingPersisted: false, cashPersisted: false, replaySafe: false },
   sell: { filled: false, holdingPersisted: false, cashPersisted: false, replaySafe: false },
@@ -49,6 +50,71 @@ function psql(sql) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
+}
+
+function installSettlementAccountFixture() {
+  const accountKey = psql(`
+    with scoped_player as (
+      select
+        player_row.game_session_id,
+        player_row.id as player_id
+      from public.players as player_row
+      join public.game_sessions as game_row
+        on game_row.id = player_row.game_session_id
+      where game_row.name = 'Player Multiplayer E2E'
+        and game_row.status = 'active'
+        and lower(player_row.player_identifier) = lower('BROWSER-PLAYER-ALPHA')
+        and player_row.status = 'active'
+      order by player_row.created_at desc, player_row.id desc
+      limit 1
+    ), seeded as (
+      select
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        ledger_result.account_balance_id
+      from scoped_player
+      cross join lateral public.record_player_ledger_entry(
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        'checking',
+        10000,
+        'ECO',
+        'credit',
+        'setup',
+        'initial_balance_seed',
+        null,
+        'system',
+        null,
+        jsonb_build_object(
+          'bankTransactionIdempotencyKey', 'phase12-player-market-eco-checking-v1',
+          'fixture', 'player_multiplayer_market_acceptance',
+          'isolated', true
+        )
+      ) as ledger_result
+    )
+    select account_row.public_key
+    from seeded
+    join public.economic_parties as party_row
+      on party_row.game_session_id = seeded.game_session_id
+     and party_row.party_kind = 'player'
+     and party_row.player_id = seeded.player_id
+     and party_row.status = 'active'
+    join public.bank_accounts as account_row
+      on account_row.game_session_id = seeded.game_session_id
+     and account_row.party_id = party_row.id
+     and account_row.account_kind = 'checking'
+     and account_row.currency_code = 'ECO'
+     and account_row.status = 'active'
+    join public.account_balances as balance_row
+      on balance_row.game_session_id = account_row.game_session_id
+     and balance_row.bank_account_id = account_row.id
+     and balance_row.balance >= 10000
+    limit 1;
+  `);
+  if (!ACCOUNT_KEY.test(accountKey)) {
+    throw new Error("Could not install the isolated ECO Checking settlement fixture.");
+  }
+  evidence.deterministicSettlementAccountFixtureInstalled = true;
 }
 
 function installOpenCalendarFixture() {
@@ -543,6 +609,7 @@ let failure;
 try {
   originalCalendarDefinition = installOpenCalendarFixture();
   const fixture = await gameFixture();
+  installSettlementAccountFixture();
   browser = await chromium.launch({ headless: true });
   const player = await login(browser, fixture.gameCode);
   context = player.context;
