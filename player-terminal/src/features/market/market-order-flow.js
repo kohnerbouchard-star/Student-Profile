@@ -123,14 +123,14 @@ export function renderMarketOrderDialog(transaction) {
       <section class="player-terminal-modal player-terminal-connector-modal" data-player-market-order-dialog role="dialog" aria-modal="true" aria-labelledby="marketOrderModalTitle">
         <header class="player-terminal-modal-head"><div><small>IMMEDIATE SELL REVIEW</small><h3 id="marketOrderModalTitle">${escapeHtml(orderLabel(transaction))}</h3></div><button class="player-terminal-icon-button" type="button" data-player-market-order-close aria-label="Close">${icon("close")}</button></header>
         <div class="player-terminal-modal-body">
-          <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>The backend will revalidate price, tick, holdings, market liquidity, destination ownership, and any required Banking FX conversion.</p></div>
+          <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>The backend will revalidate price, tick, holdings, market liquidity, destination ownership, and an exact listing-currency Checking destination. Stock sale proceeds do not auto-convert.</p></div>
           <dl class="player-terminal-connector-meta">
             <div><dt>QUANTITY</dt><dd>${escapeHtml(formatNumber(transaction.quantity))}</dd></div>
             <div><dt>EXPECTED PRICE</dt><dd>${escapeHtml(formatCurrency(transaction.expectedPrice, code))}</dd></div>
             <div><dt>ESTIMATED PROCEEDS</dt><dd>${escapeHtml(formatCurrency(transaction.estimatedGross, code))}</dd></div>
             <div><dt>PRICE TICK</dt><dd>#${escapeHtml(String(transaction.expectedTickIndex))}</dd></div>
             <div><dt>DESTINATION</dt><dd>${escapeHtml(destination.accountKey || transaction.payload?.destinationAccountKey || "")}</dd></div>
-            <div><dt>DESTINATION CURRENCY</dt><dd>${escapeHtml(String(destination.currencyCode || code).toUpperCase())}${String(destination.currencyCode || code).toUpperCase() === code ? " · no FX" : " · Banking FX"}</dd></div>
+            <div><dt>DESTINATION CURRENCY</dt><dd>${escapeHtml(String(destination.currencyCode || code).toUpperCase())} · no sell-side FX</dd></div>
           </dl>${error}
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-market-order-close>Cancel</button><button class="player-terminal-primary-button" type="button" data-player-market-order-confirm>${icon("send")} Confirm immediate sale</button></footer>
@@ -369,6 +369,11 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     catch (error) { terminal.showToast?.(safeMessage(error, "Check the sale details."), "red"); return; }
     const destinationAccount = stateCheckingAccounts(terminal).find((row) => String(row.accountKey).toLowerCase() === payload.destinationAccountKey);
     if (!destinationAccount) { terminal.showToast?.("Choose a current canonical Checking destination.", "red"); return; }
+    const listingCurrencyCode = String(asset.listingCurrencyCode || state.data?.session?.currencyCode || "ECO").toUpperCase();
+    if (String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode) {
+      terminal.showToast?.(`Choose an active ${listingCurrencyCode} Checking account for proceeds.`, "red");
+      return;
+    }
     const owned = marketPositionForAsset(state.data?.portfolio, asset).owned;
     if (payload.quantity > owned) { terminal.showToast?.(`You currently own ${formatNumber(owned)} shares.`, "red"); return; }
     opener = form.querySelector('button[type="submit"]');
@@ -381,7 +386,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
         expectedPrice: review.expectedPrice,
         expectedTickIndex: review.expectedTickIndex,
       };
-      transaction = { stage: "sell-review", side: "sell", asset: review.asset, ticker: payload.ticker, quantity: payload.quantity, expectedPrice: review.expectedPrice, expectedTickIndex: review.expectedTickIndex, estimatedGross: roundStock(payload.quantity * review.expectedPrice), currencyCode: asset.listingCurrencyCode, destinationAccount, payload, error: "" };
+      transaction = { stage: "sell-review", side: "sell", asset: review.asset, ticker: payload.ticker, quantity: payload.quantity, expectedPrice: review.expectedPrice, expectedTickIndex: review.expectedTickIndex, estimatedGross: roundStock(payload.quantity * review.expectedPrice), currencyCode: listingCurrencyCode, destinationAccount, payload, error: "" };
       renderTransaction();
     } catch (error) {
       if (!dispatchInvalidSession(error, config)) terminal.showToast?.(safeMessage(error, "The Stock sale review could not be refreshed."), "red");

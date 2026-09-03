@@ -482,6 +482,7 @@ async function executeSell(page, ticker, destinationAccountKey) {
     }
   };
   await ensureDestination();
+  const destinationStateBefore = await readReplayState(page, ticker, selectedDestination);
   const reviewButton = form.getByRole("button", { name: /Review sale/i });
   await reviewButton.waitFor({ state: "visible", timeout: 30_000 });
   if (await reviewButton.isDisabled()) throw new Error("Sell review action is disabled by the current Player market capability or market state.");
@@ -503,7 +504,7 @@ async function executeSell(page, ticker, destinationAccountKey) {
   if (body.action !== "settle_sell" || body.ticker !== ticker || Number(body.quantity) !== 1 || !(Number(body.expectedPrice) > 0) || !ACCOUNT_KEY.test(String(body.destinationAccountKey || "")) || body.destinationAccountKey !== selectedDestination || typeof body.idempotencyKey !== "string") {
     throw new Error(`Sell settlement body did not match the rendered review: ${redact(JSON.stringify(body))}`);
   }
-  return { payload, original };
+  return { payload, original, destinationAccountKey: selectedDestination, stateBefore: destinationStateBefore };
 }
 
 async function assertReplaySafe(page, order, accountKey, expectedHolding, expectedCash, action) {
@@ -552,17 +553,17 @@ try {
   await assertReplaySafe(page, buy, fundingAccountKey, holdingAfterBuy, stateAfterBuy.cashBalance, "settle_buy_quote");
   evidence.buy.replaySafe = true;
 
-  const sell = await executeSell(page, asset.symbol, fundingAccountKey);
+  const sell = await executeSell(page, asset.symbol);
   evidence.sell.filled = true;
   await reloadMarket(page);
   await selectTicker(page, asset.symbol);
   const holdingAfterSell = await position(page);
   if (holdingAfterSell !== before.holdingQuantity) throw new Error(`Sell holding did not persist: ${holdingAfterBuy} -> ${holdingAfterSell}.`);
   evidence.sell.holdingPersisted = true;
-  const stateAfterSell = await readReplayState(page, asset.symbol, fundingAccountKey);
-  if (!(stateAfterSell.cashBalance > stateAfterBuy.cashBalance)) throw new Error(`Sell order did not credit cash: ${stateAfterBuy.cashBalance} -> ${stateAfterSell.cashBalance}.`);
+  const stateAfterSell = await readReplayState(page, asset.symbol, sell.destinationAccountKey);
+  if (!(stateAfterSell.cashBalance > sell.stateBefore.cashBalance)) throw new Error(`Sell order did not credit cash: ${sell.stateBefore.cashBalance} -> ${stateAfterSell.cashBalance}.`);
   evidence.sell.cashPersisted = true;
-  await assertReplaySafe(page, sell, fundingAccountKey, holdingAfterSell, stateAfterSell.cashBalance, "settle_sell");
+  await assertReplaySafe(page, sell, sell.destinationAccountKey, holdingAfterSell, stateAfterSell.cashBalance, "settle_sell");
   evidence.sell.replaySafe = true;
 
   const quotePath = new URL(buy.quoteOriginal.url).pathname;
