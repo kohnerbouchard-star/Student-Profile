@@ -172,7 +172,11 @@ assert.ok(source.includes('params: { assetId: ticker }'));
 assert.ok(source.includes('force: true'));
 assert.ok(source.includes('setReviewValue(form, "expectedPrice", expectedPrice)'));
 assert.ok(source.includes('setReviewValue(form, "expectedTickIndex", expectedTickIndex)'));
-assert.ok(source.includes("The Stock price changed. Review the refreshed ticket and submit again."));
+assert.ok(source.includes("function refreshSingleLineBuyFunding(payload, reviewedPrice)"));
+assert.ok(source.includes("payload.allocations.length !== 1"));
+assert.ok(source.includes('setReviewValue(refreshedForm, "targetAmount1", roundStock(payload.quantity * reviewedPrice))'));
+assert.ok(source.includes('refreshedForm.dispatchEvent(new Event("input", { bubbles: true }))'));
+assert.ok(source.includes("The Stock price changed. Review the refreshed price and funding amount before submitting again."));
 assert.ok(source.includes('"stale_stock_tick", "stale_stock_price"'));
 assert.ok(source.includes('else if (form.dataset.playerMarketOrderForm === "sell-review") void prepareSell(form)'));
 assert.ok(source.includes('terminal.refreshResources(["dashboard", "market", "portfolio", "banking", "bankingFx"])'));
@@ -188,4 +192,4 @@ assert.ok(routeCore.includes('action === "settle_sell"'));
 assert.ok(routeCore.includes("destinationAccountKey"));
 assert.ok(!routeCore.includes("stockAssetId:"));
 
-console.log("C3E Market flow passed: asset-scoped price/tick review, immutable buy quote review, expiry, exact funding evidence, sell destination review, public-key receipts, stale-review fail-closed behavior, and bounded refresh are wired to the connected route.");
+console.log("C3E Market flow passed: asset-scoped price/tick review, single-line funding refresh with explicit re-submit, immutable buy quote review, expiry, exact funding evidence, sell destination review, public-key receipts, stale-review fail-closed behavior, and bounded refresh are wired to the connected route.");
