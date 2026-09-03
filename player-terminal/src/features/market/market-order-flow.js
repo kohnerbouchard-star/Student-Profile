@@ -191,11 +191,13 @@ async function readAuthoritativeTradeReview(api, config, asset, form) {
     params: { assetId: ticker },
     force: true,
   });
-  const reviewed = detail?.asset;
-  const expectedPrice = Number(reviewed?.currentPrice);
+  const reviewed = detail?.asset || (Array.isArray(detail?.assets)
+    ? detail.assets.find((candidate) => String(candidate?.symbol || candidate?.ticker || "").trim().toUpperCase() === ticker)
+    : null);
+  const expectedPrice = Number(reviewed?.currentPrice ?? reviewed?.price);
   const expectedTickIndex = Number(detail?.tickIndex);
   if (
-    String(reviewed?.ticker || reviewed?.assetId || "").trim().toUpperCase() !== ticker ||
+    String(reviewed?.ticker || reviewed?.symbol || reviewed?.assetId || "").trim().toUpperCase() !== ticker ||
     !Number.isFinite(expectedPrice) || expectedPrice <= 0 ||
     !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex < 0
   ) throw new Error("The authoritative Stock price review was incomplete.");
