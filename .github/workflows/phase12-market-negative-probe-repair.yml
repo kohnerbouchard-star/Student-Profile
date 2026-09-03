@@ -20,11 +20,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out exact branch head
+      - name: Check out triggering head
         uses: actions/checkout@v7
         with:
-          ref: feat/player-business-workspace-v2
+          ref: ${{ github.sha }}
           fetch-depth: 0
+
+      - name: Confirm branch has not moved
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/feat/player-business-workspace-v2 | cut -f1)" = "$GITHUB_SHA"
 
       - name: Patch idempotency-consistent negative probes
         shell: bash
@@ -36,71 +43,83 @@ jobs:
           path = Path("scripts/business-banking-player-market-browser-acceptance.core.mjs")
           source = path.read_text(encoding="utf-8")
 
-          helper_anchor = '''async function preservedSubmitValue(locator) {
-            const preserved = await locator.getAttribute("data-player-market-submit-value");
-            return preserved === null ? locator.inputValue() : preserved;
-          }
+          helper_before = "\n".join([
+              "async function preservedSubmitValue(locator) {",
+              "  const preserved = await locator.getAttribute(\"data-player-market-submit-value\");",
+              "  return preserved === null ? locator.inputValue() : preserved;",
+              "}",
+              "",
+              "async function authenticatedContextRequest",
+          ])
+          helper_after = "\n".join([
+              "async function preservedSubmitValue(locator) {",
+              "  const preserved = await locator.getAttribute(\"data-player-market-submit-value\");",
+              "  return preserved === null ? locator.inputValue() : preserved;",
+              "}",
+              "",
+              "function withIdempotencyHeader(headers, idempotencyKey) {",
+              "  const next = Object.fromEntries(",
+              "    Object.entries(headers || {}).filter(([name]) => name.toLowerCase() !== \"idempotency-key\"),",
+              "  );",
+              "  next[\"idempotency-key\"] = idempotencyKey;",
+              "  return next;",
+              "}",
+              "",
+              "async function authenticatedContextRequest",
+          ])
 
-          async function authenticatedContextRequest'''
-          helper_replacement = '''async function preservedSubmitValue(locator) {
-            const preserved = await locator.getAttribute("data-player-market-submit-value");
-            return preserved === null ? locator.inputValue() : preserved;
-          }
+          stale_before = "\n".join([
+              "  const stale = await authenticatedContextRequest(page, quotePath, {",
+              "    method: \"POST\",",
+              "    headers: buy.quoteOriginal.headers,",
+              "    body: {",
+              "      ...quoteBody,",
+              "      expectedPrice: Number(quoteBody.expectedPrice) + 1,",
+              "      idempotencyKey: `${quoteBody.idempotencyKey}-stale`,",
+              "    },",
+              "  });",
+          ])
+          stale_after = "\n".join([
+              "  const staleIdempotencyKey = `${quoteBody.idempotencyKey}-stale`;",
+              "  const stale = await authenticatedContextRequest(page, quotePath, {",
+              "    method: \"POST\",",
+              "    headers: withIdempotencyHeader(buy.quoteOriginal.headers, staleIdempotencyKey),",
+              "    body: {",
+              "      ...quoteBody,",
+              "      expectedPrice: Number(quoteBody.expectedPrice) + 1,",
+              "      idempotencyKey: staleIdempotencyKey,",
+              "    },",
+              "  });",
+          ])
 
-          function withIdempotencyHeader(headers, idempotencyKey) {
-            const next = Object.fromEntries(
-              Object.entries(headers || {}).filter(([name]) => name.toLowerCase() !== "idempotency-key"),
-            );
-            next["idempotency-key"] = idempotencyKey;
-            return next;
-          }
-
-          async function authenticatedContextRequest'''
-
-          stale_anchor = '''  const stale = await authenticatedContextRequest(page, quotePath, {
-            method: "POST",
-            headers: buy.quoteOriginal.headers,
-            body: {
-              ...quoteBody,
-              expectedPrice: Number(quoteBody.expectedPrice) + 1,
-              idempotencyKey: `${quoteBody.idempotencyKey}-stale`,
-            },
-          });'''
-          stale_replacement = '''  const staleIdempotencyKey = `${quoteBody.idempotencyKey}-stale`;
-          const stale = await authenticatedContextRequest(page, quotePath, {
-            method: "POST",
-            headers: withIdempotencyHeader(buy.quoteOriginal.headers, staleIdempotencyKey),
-            body: {
-              ...quoteBody,
-              expectedPrice: Number(quoteBody.expectedPrice) + 1,
-              idempotencyKey: staleIdempotencyKey,
-            },
-          });'''
-
-          forbidden_anchor = '''  const forbidden = await authenticatedContextRequest(page, quotePath, {
-            method: "POST",
-            headers: buy.quoteOriginal.headers,
-            body: {
-              ...quoteBody,
-              playerId: "attacker-controlled",
-              idempotencyKey: `${quoteBody.idempotencyKey}-scope`,
-            },
-          });'''
-          forbidden_replacement = '''  const forbiddenIdempotencyKey = `${quoteBody.idempotencyKey}-scope`;
-          const forbidden = await authenticatedContextRequest(page, quotePath, {
-            method: "POST",
-            headers: withIdempotencyHeader(buy.quoteOriginal.headers, forbiddenIdempotencyKey),
-            body: {
-              ...quoteBody,
-              playerId: "attacker-controlled",
-              idempotencyKey: forbiddenIdempotencyKey,
-            },
-          });'''
+          forbidden_before = "\n".join([
+              "  const forbidden = await authenticatedContextRequest(page, quotePath, {",
+              "    method: \"POST\",",
+              "    headers: buy.quoteOriginal.headers,",
+              "    body: {",
+              "      ...quoteBody,",
+              "      playerId: \"attacker-controlled\",",
+              "      idempotencyKey: `${quoteBody.idempotencyKey}-scope`,",
+              "    },",
+              "  });",
+          ])
+          forbidden_after = "\n".join([
+              "  const forbiddenIdempotencyKey = `${quoteBody.idempotencyKey}-scope`;",
+              "  const forbidden = await authenticatedContextRequest(page, quotePath, {",
+              "    method: \"POST\",",
+              "    headers: withIdempotencyHeader(buy.quoteOriginal.headers, forbiddenIdempotencyKey),",
+              "    body: {",
+              "      ...quoteBody,",
+              "      playerId: \"attacker-controlled\",",
+              "      idempotencyKey: forbiddenIdempotencyKey,",
+              "    },",
+              "  });",
+          ])
 
           replacements = [
-              (helper_anchor, helper_replacement, "header helper"),
-              (stale_anchor, stale_replacement, "stale-price probe"),
-              (forbidden_anchor, forbidden_replacement, "ownership-scope probe"),
+              (helper_before, helper_after, "header helper"),
+              (stale_before, stale_after, "stale-price probe"),
+              (forbidden_before, forbidden_after, "ownership-scope probe"),
           ]
           for before, after, label in replacements:
               count = source.count(before)
@@ -120,6 +139,7 @@ jobs:
           node --check scripts/business-banking-player-market-browser-acceptance.core.mjs
           grep -F 'withIdempotencyHeader(buy.quoteOriginal.headers, staleIdempotencyKey)' scripts/business-banking-player-market-browser-acceptance.core.mjs
           grep -F 'withIdempotencyHeader(buy.quoteOriginal.headers, forbiddenIdempotencyKey)' scripts/business-banking-player-market-browser-acceptance.core.mjs
+          test ! -e .github/workflows/phase12-market-negative-probe-repair.yml
           git diff --check
 
       - name: Commit permanent repair
