@@ -200,9 +200,14 @@ async function chooseTradableAsset(page) {
     await sellForm.waitFor({ state: "visible", timeout: 30_000 });
     const symbol = String(await buyForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
     const price = Number(await buyForm.locator('[name="expectedPrice"]').inputValue());
-    if (symbol && Number.isFinite(price) && price > 0) return { symbol, price };
+    const destinationAccountKey = String(await sellForm.locator('[name="destinationAccountKey"] option').evaluateAll(
+      (options) => options.map((option) => String(option.value || "").trim().toLowerCase()).find(Boolean) || "",
+    ));
+    if (symbol && Number.isFinite(price) && price > 0 && ACCOUNT_KEY.test(destinationAccountKey)) {
+      return { symbol, price, destinationAccountKey };
+    }
   }
-  throw new Error("No non-index tradable market asset was rendered.");
+  throw new Error("No non-index tradable market asset with an owned listing-currency Checking destination was rendered.");
 }
 
 async function selectTicker(page, ticker) {
@@ -553,7 +558,7 @@ try {
   await assertReplaySafe(page, buy, fundingAccountKey, holdingAfterBuy, stateAfterBuy.cashBalance, "settle_buy_quote");
   evidence.buy.replaySafe = true;
 
-  const sell = await executeSell(page, asset.symbol);
+  const sell = await executeSell(page, asset.symbol, asset.destinationAccountKey);
   evidence.sell.filled = true;
   await reloadMarket(page);
   await selectTicker(page, asset.symbol);
