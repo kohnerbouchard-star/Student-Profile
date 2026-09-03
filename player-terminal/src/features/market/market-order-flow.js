@@ -142,7 +142,8 @@ export function renderMarketOrderDialog(transaction) {
   const isSell = transaction.side === "sell";
   const replayed = settlement.alreadyCompleted === true;
   const status = transaction.refreshWarning ? "FILLED · REFRESH PENDING" : replayed ? "REPLAYED RECEIPT" : "FILLED";
-  return `<div class="player-terminal-modal-backdrop" data-player-market-order-dialog role="dialog" aria-modal="true" aria-labelledby="marketOrderModalTitle">
+  return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
+    <section class="player-terminal-modal player-terminal-connector-modal" data-player-market-order-dialog role="dialog" aria-modal="true" aria-labelledby="marketOrderModalTitle">
       <header class="player-terminal-modal-head"><div><small>IMMUTABLE STOCK RECEIPT</small><h3 id="marketOrderModalTitle">${escapeHtml(settlement.ticker || transaction.asset?.symbol || "Stock trade")}</h3></div><button class="player-terminal-icon-button" type="button" data-player-market-order-close aria-label="Close">${icon("close")}</button></header>
       <div class="player-terminal-modal-body">
         <div class="player-terminal-connector-status">${renderStatusPill(status, transaction.refreshWarning ? "amber" : "green")}<p>${escapeHtml(transaction.refreshWarning || (replayed ? "The committed result was returned without executing the trade twice." : "The trade settled and the authoritative receipt is shown below."))}</p></div>
