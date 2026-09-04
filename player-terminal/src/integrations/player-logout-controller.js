@@ -88,11 +88,7 @@ function logoutAdvertised(terminal, config) {
 }
 
 function prepareTerminalForSessionExit(terminal, config) {
-  if (typeof terminal?.prepareForSessionExit === "function") {
-    terminal.prepareForSessionExit();
-  } else {
-    terminal?.destroy?.();
-  }
+  terminal?.prepareForSessionExit?.();
   abortPlayerApiSessionRequests(config);
 }
 
