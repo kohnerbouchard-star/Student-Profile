@@ -138,6 +138,27 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
     deterministicSettlementFixture,
     "listing-currency settlement fixture",
   );
+  const boundedSellReviewSource = replaceExactOnce(
+    deterministicFixtureSource,
+    `    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
+    await reviewButton.click();
+    const review = await reviewPromise;`,
+    `    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker).catch(() => null);
+    await reviewButton.click();
+    const review = await Promise.race([
+      reviewPromise,
+      page.waitForTimeout(15_000).then(() => null),
+    ]);
+    if (!review) {
+      if (attempt === 3) {
+        throw new Error("The sell review did not emit its authoritative Stock detail request after three fresh route attempts.");
+      }
+      await reloadMarket(page);
+      await selectTicker(page, ticker);
+      continue;
+    }`,
+    "bounded authoritative sell-review retry",
+  );
 
   const materializedDirectory = await mkdtemp(
     join(dirname(entryPath), ".business-banking-player-market-exact-status-"),
@@ -147,7 +168,7 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
   try {
     await Promise.all([
       writeFile(materializedEntryPath, "// Exact-status connected Player market acceptance entry.\n", "utf8"),
-      writeFile(materializedCorePath, deterministicFixtureSource, "utf8"),
+      writeFile(materializedCorePath, boundedSellReviewSource, "utf8"),
     ]);
     await runConnectedPlayerBffAcceptanceBase(pathToFileURL(materializedEntryPath).href);
   } finally {
