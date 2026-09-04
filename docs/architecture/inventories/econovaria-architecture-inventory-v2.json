@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1208,
+    "sourceFiles": 1212,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 136
@@ -3149,6 +3149,12 @@
         "markers": [
           "fallback",
           "fallbackcurrencycode"
+        ]
+      },
+      {
+        "file": "player-terminal/src/pages/business-workspace-sections.js",
+        "markers": [
+          "fallbackworldmodel"
         ]
       },
       {
