@@ -35,8 +35,16 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
     "        and player_row.player_identifier_normalized = 'BROWSER-PLAYER-ALPHA'",
     "normalized Player identifier",
   );
-  const canonicalBalanceSource = replaceExactOnce(
+  const statementBoundarySource = replaceExactOnce(
     normalizedPlayerSource,
+    "    with scoped_player as (",
+    `    begin;
+    create temporary table phase12_market_settlement_fixture on commit drop as
+    with scoped_player as (`,
+    "settlement fixture statement boundary",
+  );
+  const canonicalBalanceSource = replaceExactOnce(
+    statementBoundarySource,
     `    select account_row.public_key
     from seeded
     join public.economic_parties as party_row
@@ -55,8 +63,14 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
      and balance_row.bank_account_id = account_row.id
      and balance_row.balance >= 10000
     limit 1;`,
-    `    select account_row.public_key
-    from seeded
+    `    select
+      seeded.game_session_id,
+      seeded.player_id,
+      seeded.account_balance_id
+    from seeded;
+
+    select account_row.public_key
+    from phase12_market_settlement_fixture as seeded
     join public.account_balances as balance_row
       on balance_row.id = seeded.account_balance_id
      and balance_row.game_session_id = seeded.game_session_id
@@ -67,7 +81,8 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
      and account_row.account_kind = 'checking'
      and account_row.currency_code = 'ECO'
      and account_row.status = 'active'
-    limit 1;`,
+    limit 1;
+    commit;`,
     "canonical settlement account fixture",
   );
 
