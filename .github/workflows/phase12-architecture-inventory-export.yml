@@ -1,35 +1,62 @@
-name: Phase 12 Architecture Inventory Export
+name: Phase 12 Architecture Inventory Materialization
 
 on:
   push:
     branches:
       - feat/player-business-workspace-v2
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: phase12-architecture-inventory-materialization
+  cancel-in-progress: true
+
 jobs:
-  inventory:
-    if: github.repository == 'kohnerbouchard-star/Student-Profile'
+  materialize:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile' && github.actor != 'github-actions[bot]'
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout exact branch head
+      - name: Check out exact Phase 12 branch
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
+          ref: feat/player-business-workspace-v2
+          fetch-depth: 0
+
       - name: Set up pinned Node
         uses: actions/setup-node@v7
         with:
           node-version: 22.23.1
-          cache: npm
-      - name: Generate architecture inventory
-        run: node scripts/architecture/build-architecture-inventory.mjs
-      - name: Upload generated inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase12-architecture-inventory-${{ github.sha }}
-          path: docs/architecture/inventories/econovaria-architecture-inventory-v2.json
-          if-no-files-found: error
-          retention-days: 1
+
+      - name: Generate and validate deterministic inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "Phase 12 architecture inventory is current."
+            exit 0
+          fi
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != "docs/architecture/inventories/econovaria-architecture-inventory-v2.json" ]; then
+            printf 'Unexpected generated changes:\n%s\n' "${changed[*]}" >&2
+            exit 1
+          fi
+
+      - name: Commit deterministic inventory when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json; then
+            exit 0
+          fi
+          git config user.name "econovaria-phase12-inventory"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "docs(architecture): refresh Phase 12 inventory"
+          git push origin HEAD:feat/player-business-workspace-v2
