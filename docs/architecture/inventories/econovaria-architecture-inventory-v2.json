@@ -14,7 +14,7 @@
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 210,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 136
@@ -3149,12 +3149,6 @@
         "markers": [
           "fallback",
           "fallbackcurrencycode"
-        ]
-      },
-      {
-        "file": "player-terminal/src/pages/business-workspace-sections.js",
-        "markers": [
-          "fallbackworldmodel"
         ]
       },
       {
