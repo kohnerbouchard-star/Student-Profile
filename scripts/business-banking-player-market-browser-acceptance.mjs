@@ -35,8 +35,59 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
     "        and player_row.player_identifier_normalized = 'BROWSER-PLAYER-ALPHA'",
     "normalized Player identifier",
   );
-  const statementBoundarySource = replaceExactOnce(
+  const listingAssetSource = replaceExactOnce(
     normalizedPlayerSource,
+    `    ), seeded as (
+      select
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        ledger_result.account_balance_id
+      from scoped_player
+      cross join lateral public.record_player_ledger_entry(`,
+    `    ), listing_asset as (
+      select
+        asset_row.ticker,
+        asset_row.listing_currency_code
+      from public.game_session_stock_assets as asset_row
+      join scoped_player
+        on scoped_player.game_session_id = asset_row.game_session_id
+      join public.currencies as currency_row
+        on currency_row.code = asset_row.listing_currency_code
+       and currency_row.status = 'active'
+      where asset_row.is_active = true
+        and asset_row.current_price > 0
+      order by asset_row.current_price asc, asset_row.ticker asc, asset_row.id asc
+      limit 1
+    ), seeded as (
+      select
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        listing_asset.ticker,
+        listing_asset.listing_currency_code,
+        ledger_result.account_balance_id
+      from scoped_player
+      cross join listing_asset
+      cross join lateral public.record_player_ledger_entry(`,
+    "listing-currency Stock fixture selection",
+  );
+  const listingCurrencySource = replaceExactOnce(
+    listingAssetSource,
+    `        10000,
+        'ECO',
+        'credit',`,
+    `        10000,
+        listing_asset.listing_currency_code,
+        'credit',`,
+    "listing-currency Checking seed",
+  );
+  const idempotencySource = replaceExactOnce(
+    listingCurrencySource,
+    "'bankTransactionIdempotencyKey', 'phase12-player-market-eco-checking-v1'",
+    "'bankTransactionIdempotencyKey', 'phase12-player-market-listing-checking-v2'",
+    "listing-currency fixture idempotency",
+  );
+  const statementBoundarySource = replaceExactOnce(
+    idempotencySource,
     "    with scoped_player as (",
     `    begin;
     create temporary table phase12_market_settlement_fixture on commit drop as
@@ -66,6 +117,8 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
     `    select
       seeded.game_session_id,
       seeded.player_id,
+      seeded.ticker,
+      seeded.listing_currency_code,
       seeded.account_balance_id
     from seeded;
 
@@ -79,11 +132,17 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
       on account_row.id = balance_row.bank_account_id
      and account_row.game_session_id = seeded.game_session_id
      and account_row.account_kind = 'checking'
-     and account_row.currency_code = 'ECO'
+     and account_row.currency_code = seeded.listing_currency_code
      and account_row.status = 'active'
     limit 1;
     commit;`,
-    "canonical settlement account fixture",
+    "canonical listing-currency settlement account fixture",
+  );
+  const fixtureMessageSource = replaceExactOnce(
+    canonicalBalanceSource,
+    "Could not install the isolated ECO Checking settlement fixture.",
+    "Could not install the isolated listing-currency Checking settlement fixture.",
+    "listing-currency fixture failure",
   );
 
   const materializedDirectory = await mkdtemp(
@@ -94,7 +153,7 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
   try {
     await Promise.all([
       writeFile(materializedEntryPath, "// Exact-status connected Player market acceptance entry.\n", "utf8"),
-      writeFile(materializedCorePath, canonicalBalanceSource, "utf8"),
+      writeFile(materializedCorePath, fixtureMessageSource, "utf8"),
     ]);
     await runConnectedPlayerBffAcceptanceBase(pathToFileURL(materializedEntryPath).href);
   } finally {
