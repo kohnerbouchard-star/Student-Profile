@@ -187,6 +187,7 @@ async function readAuthoritativeTradeReview(api, config, asset, form) {
   const ticker = String(asset?.symbol || "").trim().toUpperCase();
   if (!ticker) throw new Error("The selected Stock is unavailable.");
   api.setSession(config);
+  api.invalidateResources(["marketAsset"]);
   const detail = await api.request("marketAsset", {
     params: { assetId: ticker },
     force: true,

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { PlayerApi } from "../src/api/player-api.js";
 import {
   installPlayerLogoutController,
   PLAYER_LOGOUT_COMPLETED_EVENT,
@@ -52,6 +53,7 @@ function createHarness({ fetchImpl, logoutAdvertised = true } = {}) {
     sessionExitDelayMs: 0
   };
   const terminal = {
+    destroyCalls: 0,
     getState() {
       return {
         data: {
@@ -60,6 +62,9 @@ function createHarness({ fetchImpl, logoutAdvertised = true } = {}) {
           }
         }
       };
+    },
+    destroy() {
+      this.destroyCalls += 1;
     }
   };
   const runtime = {
@@ -143,6 +148,14 @@ function assertLocalStateCleared(harness) {
       });
     }
   });
+  harness.config.apiCall = async () => ({ ok: true });
+  const playerApi = new PlayerApi(harness.config);
+  let sessionAbortCount = 0;
+  const abortSessionRequests = playerApi.abortSessionRequests.bind(playerApi);
+  playerApi.abortSessionRequests = () => {
+    sessionAbortCount += 1;
+    abortSessionRequests();
+  };
   const controller = installPlayerLogoutController({
     terminal: harness.terminal,
     config: harness.config,
@@ -158,6 +171,8 @@ function assertLocalStateCleared(harness) {
     playerSessionId: "must-not-be-forwarded"
   });
 
+  assert.equal(harness.terminal.destroyCalls, 1, "session exit must stop the active terminal before revocation");
+  assert.equal(sessionAbortCount, 2, "session exit must abort Player API work before revocation and before local session clearing");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, `${SESSION_API}/logout`);
   assert.equal(calls[0].options.method, "POST");
