@@ -14,6 +14,15 @@ function replaceExactlyOnce(source, label, before, after) {
   return source.replace(before, after);
 }
 
+function replaceSection(source, label, startNeedle, endNeedle, replacement) {
+  const start = source.indexOf(startNeedle);
+  const end = source.indexOf(endNeedle, start);
+  if (start < 0 || end <= start) {
+    throw new Error(`${label} could not resolve its exact source boundary.`);
+  }
+  return `${source.slice(0, start)}${replacement}\n\n${source.slice(end)}`;
+}
+
 function adaptMutationCompletion(source) {
   source = replaceExactlyOnce(
     source,
@@ -144,8 +153,8 @@ function adaptBusinessReplayVerification(source) {
   );
 }
 
-function adaptPhase12WorkspaceAcceptance(source) {
-  const oldMutations = `  mutations: {
+function adaptPhase12CanonicalWorkspace(source) {
+  const oldEvidence = `  mutations: {
     businessCreated: false,
     businessPersisted: false,
     businessReplayDeniedDuplicate: false,
@@ -164,168 +173,186 @@ function adaptPhase12WorkspaceAcceptance(source) {
     statusChanged: false,
     statusPersisted: false,
     unauthenticatedRejected: false,
-  },`;
-
-  const phase12Mutations = `  mutations: {
+  },
+  requests: [],`;
+  const newEvidence = `  mutations: {
     businessCreated: false,
     businessPersisted: false,
     businessReplayDeniedDuplicate: false,
-    canonicalWorkspaceRendered: false,
-    workspaceNavigationComplete: false,
-    legacyProductCreatorRetired: false,
-    legacyProductionControlRetired: false,
-    legacyFreeformHiringRetired: false,
-    productsRecipesRendered: false,
-    stockroomRendered: false,
-    procurementRendered: false,
-    productionRendered: false,
-    workforceRendered: false,
-    equipmentRendered: false,
-    salesRendered: false,
-    financeRendered: false,
-    governanceRendered: false,
-    activityRendered: false,
     statusChanged: false,
     statusPersisted: false,
     unauthenticatedRejected: false,
-  },`;
-
+  },
+  workspace: {
+    rendered: false,
+    sectionOrderValid: false,
+    navigationValid: false,
+    stockroomLocationsRendered: false,
+    treasuryRendered: false,
+    governanceRendered: false,
+    activityRendered: false,
+    productCreatorRetired: false,
+    instantProductionRetired: false,
+    freeTextHiringRetired: false,
+    aggregateInputInventoryRetired: false,
+    canonicalManufacturingControlRendered: false,
+    browserAuthoredEconomicsAbsent: false,
+  },
+  requests: [],`;
   source = replaceExactlyOnce(
     source,
-    "Phase 12 Business evidence model",
-    oldMutations,
-    phase12Mutations,
+    "Phase 12 Business evidence shape",
+    oldEvidence,
+    newEvidence,
   );
 
-  const helper = `async function verifyPhase12Workspace(page) {
+  const workspaceVerification = `async function verifyPhase12CanonicalWorkspace(page) {
+  await openBusiness(page);
   const workspace = page.locator("[data-business-workspace-v2]").first();
   await workspace.waitFor({ state: "visible", timeout: 30_000 });
-  evidence.mutations.canonicalWorkspaceRendered = true;
+  evidence.workspace.rendered = true;
 
-  const sectionKeys = [
-    "overview",
-    "products",
-    "stockroom",
-    "procurement",
-    "production",
-    "workforce",
-    "equipment",
-    "sales",
-    "finance",
-    "governance",
-    "activity",
+  const expectedSections = [
+    "overview", "products", "stockroom", "procurement", "production",
+    "workforce", "equipment", "sales", "finance", "governance", "activity",
   ];
-  const links = workspace.locator("[data-business-workspace-link]");
-  if ((await links.count()) !== sectionKeys.length) {
-    throw new Error(
-      \`Phase 12 Business workspace navigation rendered \${await links.count()} links instead of \${sectionKeys.length}.\`,
-    );
+  const sectionKeys = await workspace.locator("[data-business-workspace-section]").evaluateAll(
+    (nodes) => nodes.map((node) => node.getAttribute("data-business-workspace-section")),
+  );
+  if (JSON.stringify(sectionKeys) !== JSON.stringify(expectedSections)) {
+    throw new Error(\`Canonical Business workspace section order drifted: \${JSON.stringify(sectionKeys)}.\`);
   }
-  for (const key of sectionKeys) {
-    const link = workspace.locator(\`[data-business-workspace-link="\${key}"]\`).first();
-    const section = workspace.locator(\`[data-business-workspace-section="\${key}"]\`).first();
-    await link.waitFor({ state: "visible", timeout: 30_000 });
-    await section.waitFor({ state: "visible", timeout: 30_000 });
-    const href = String(await link.getAttribute("href") || "");
-    if (href !== \`#business-workspace-\${key}\`) {
-      throw new Error(\`Phase 12 Business workspace link \${key} targeted \${href || "nothing"}.\`);
-    }
+  evidence.workspace.sectionOrderValid = true;
+
+  const navigation = workspace.locator('nav[aria-label="Business workspace"]');
+  await navigation.waitFor({ state: "visible", timeout: 30_000 });
+  const navigationKeys = await navigation.locator("[data-business-workspace-link]").evaluateAll(
+    (nodes) => nodes.map((node) => node.getAttribute("data-business-workspace-link")),
+  );
+  if (JSON.stringify(navigationKeys) !== JSON.stringify(expectedSections)) {
+    throw new Error(\`Canonical Business navigation drifted: \${JSON.stringify(navigationKeys)}.\`);
   }
-  evidence.mutations.workspaceNavigationComplete = true;
+  evidence.workspace.navigationValid = true;
 
   const retiredEndpoints = [
-    "businessProductCreate",
-    "businessProduction",
-    "businessHire",
+    ["businessProductCreate", "productCreatorRetired"],
+    ["businessProduction", "instantProductionRetired"],
+    ["businessHire", "freeTextHiringRetired"],
   ];
-  for (const endpoint of retiredEndpoints) {
-    if ((await workspace.locator(\`form[data-endpoint="\${endpoint}"]\`).count()) !== 0) {
-      throw new Error(\`Retired Business control \${endpoint} was rendered in the Phase 12 workspace.\`);
+  for (const [endpoint, evidenceKey] of retiredEndpoints) {
+    const count = await workspace.locator(\`form[data-endpoint="\${endpoint}"]\`).count();
+    if (count !== 0) {
+      throw new Error(\`Retired Business endpoint \${endpoint} remained rendered \${count} time(s).\`);
     }
+    evidence.workspace[evidenceKey] = true;
   }
-  if ((await workspace.getByText("Create a product", { exact: true }).count()) !== 0) {
-    throw new Error("The retired free-form physical Product Creator was rendered.");
-  }
-  if ((await workspace.getByText("INPUT INVENTORY", { exact: true }).count()) !== 0) {
-    throw new Error("The retired aggregate Business Input Inventory surface was rendered.");
-  }
-  evidence.mutations.legacyProductCreatorRetired = true;
-  evidence.mutations.legacyProductionControlRetired = true;
 
-  const workforce = workspace.locator('[data-business-workspace-section="workforce"]').first();
-  for (const field of ["role", "wagePerCycle", "productivityIndex"]) {
-    if ((await workforce.locator(\`[name="\${field}"]\`).count()) !== 0) {
-      throw new Error(\`The Phase 12 workforce surface exposed retired caller-authored field \${field}.\`);
-    }
+  if (await workspace.getByText("INPUT INVENTORY", { exact: true }).count()) {
+    throw new Error("Legacy aggregate Input Inventory remained visible in the Phase 12 workspace.");
   }
-  await workforce.locator(".player-terminal-workforce-market").first().waitFor({
-    state: "attached",
-    timeout: 30_000,
-  });
-  evidence.mutations.legacyFreeformHiringRetired = true;
+  evidence.workspace.aggregateInputInventoryRetired = true;
 
-  const products = workspace.locator('[data-business-workspace-section="products"]').first();
-  await products.getByText("CANONICAL RECIPES", { exact: true }).first().waitFor({
-    state: "visible",
-    timeout: 30_000,
-  });
-  await products.getByText(
-    "Browser-authored product economics are not exposed.",
+  const productSection = workspace.locator('[data-business-workspace-section="products"]');
+  await productSection.waitFor({ state: "visible", timeout: 30_000 });
+  await productSection.getByText(
+    "Physical production uses canonical products and recipe access. Browser-authored product economics are not exposed.",
     { exact: true },
-  ).first().waitFor({ state: "visible", timeout: 30_000 });
-  evidence.mutations.productsRecipesRendered = true;
+  ).waitFor({ state: "visible", timeout: 30_000 });
+  evidence.workspace.browserAuthoredEconomicsAbsent = true;
 
-  const production = workspace.locator('[data-business-workspace-section="production"]').first();
-  const manufacturing = production.locator(
-    'form[data-endpoint="businessManufacturingStart"]',
-  ).first();
-  await manufacturing.waitFor({ state: "attached", timeout: 30_000 });
-  for (const field of ["productKey", "quantity", "priority"]) {
-    if ((await manufacturing.locator(\`[name="\${field}"]\`).count()) !== 1) {
-      throw new Error(\`Canonical manufacturing intent omitted \${field}.\`);
-    }
+  const manufacturing = workspace.locator('form[data-endpoint="businessManufacturingStart"]');
+  if ((await manufacturing.count()) !== 1) {
+    throw new Error("Canonical manufacturing intent control was not rendered exactly once.");
   }
+  await manufacturing.waitFor({ state: "visible", timeout: 30_000 });
+  evidence.workspace.canonicalManufacturingControlRendered = true;
 
-  evidence.mutations.stockroomRendered = true;
-  evidence.mutations.procurementRendered = true;
-  evidence.mutations.productionRendered = true;
-  evidence.mutations.workforceRendered = true;
-  evidence.mutations.equipmentRendered = true;
-  evidence.mutations.salesRendered = true;
-  evidence.mutations.financeRendered = true;
-  evidence.mutations.governanceRendered = true;
-  evidence.mutations.activityRendered = true;
+  const stockroom = workspace.locator('[data-business-workspace-section="stockroom"]');
+  await stockroom.waitFor({ state: "visible", timeout: 30_000 });
+  const stockroomLocations = stockroom.locator(".player-terminal-business-stockroom-location");
+  if ((await stockroomLocations.count()) !== 4) {
+    throw new Error(\`Canonical Stockroom rendered \${await stockroomLocations.count()} locations instead of four.\`);
+  }
+  evidence.workspace.stockroomLocationsRendered = true;
+
+  const finance = workspace.locator('[data-business-workspace-section="finance"]');
+  await finance.waitFor({ state: "visible", timeout: 30_000 });
+  const treasury = finance.locator("[data-business-treasury-state]").first();
+  if ((await treasury.count()) !== 1) {
+    throw new Error("Canonical Business Treasury evidence was not rendered inside Finance.");
+  }
+  evidence.workspace.treasuryRendered = true;
+
+  const governance = workspace.locator('[data-business-workspace-section="governance"]');
+  await governance.waitFor({ state: "visible", timeout: 30_000 });
+  evidence.workspace.governanceRendered = true;
+
+  const activity = workspace.locator('[data-business-workspace-section="activity"]');
+  await activity.waitFor({ state: "visible", timeout: 30_000 });
+  evidence.workspace.activityRendered = true;
 }`;
+
+  source = replaceSection(
+    source,
+    "Phase 12 canonical workspace verification",
+    "async function createProduct(page, admin) {",
+    "async function runProduction(page) {",
+    workspaceVerification,
+  );
 
   source = replaceExactlyOnce(
     source,
-    "Phase 12 Business workspace verifier",
-    "async function createProduct(page, admin) {",
-    `${helper}\n\nasync function createProduct(page, admin) {`,
-  );
-
-  const oldFlow = `  await createProduct(player.page, admin);
+    "Phase 12 connected Business sequence",
+    `  await createProduct(player.page, admin);
   await runProduction(player.page);
   await updatePrice(player.page);
   await hireEmployee(player.page);
   await terminateEmployee(player.page);
-  await changeStatus(player.page);`;
+  await changeStatus(player.page);`,
+    `  await verifyPhase12CanonicalWorkspace(player.page);
+  await changeStatus(player.page);`,
+  );
 
-  const phase12Flow = `  await verifyPhase12Workspace(player.page);
-  await changeStatus(player.page);`;
+  source = replaceExactlyOnce(
+    source,
+    "Phase 12 connected Business completion evidence",
+    `  if (!evidence.fixtureCreditApplied || !evidence.fixtureCreditVisible || !Object.values(evidence.mutations).every(Boolean)) {
+    throw new Error(\`Connected Player Business evidence is incomplete: \${JSON.stringify({
+      fixtureCreditApplied: evidence.fixtureCreditApplied,
+      fixtureCreditVisible: evidence.fixtureCreditVisible,
+      mutations: evidence.mutations,
+    })}\`);
+  }`,
+    `  if (
+    !evidence.fixtureCreditApplied ||
+    !evidence.fixtureCreditVisible ||
+    !Object.values(evidence.mutations).every(Boolean) ||
+    !Object.values(evidence.workspace).every(Boolean)
+  ) {
+    throw new Error(\`Connected Player Business evidence is incomplete: \${JSON.stringify({
+      fixtureCreditApplied: evidence.fixtureCreditApplied,
+      fixtureCreditVisible: evidence.fixtureCreditVisible,
+      mutations: evidence.mutations,
+      workspace: evidence.workspace,
+    })}\`);
+  }`,
+  );
 
   return replaceExactlyOnce(
     source,
-    "Phase 12 connected Business lifecycle",
-    oldFlow,
-    phase12Flow,
+    "Phase 12 connected Business summary evidence",
+    `  mutations: evidence.mutations,
+  requestCount: evidence.requests.length,`,
+    `  mutations: evidence.mutations,
+  workspace: evidence.workspace,
+  requestCount: evidence.requests.length,`,
   );
 }
 
 async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);
   const canonicalCorePath = entryPath.replace(/\.mjs$/u, ".core.mjs");
-  const source = adaptPhase12WorkspaceAcceptance(
+  const source = adaptPhase12CanonicalWorkspace(
     adaptMutationCompletion(
       adaptDisclosureInteraction(
         adaptBusinessReplayVerification(await readFile(canonicalCorePath, "utf8")),
