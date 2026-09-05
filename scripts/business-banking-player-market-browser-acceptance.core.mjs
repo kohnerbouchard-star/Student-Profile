@@ -13,6 +13,8 @@ const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres
 const PLAYER_ID = "BROWSER-PLAYER-ALPHA";
 const ACCESS_CODE = "BROWSER-ALPHA-ACCESS-001";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/u;
+const QUOTE_KEY = /^sbq_[0-9a-f]{32}$/u;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -20,6 +22,7 @@ const evidence = {
   generatedAt: new Date().toISOString(),
   deterministicCalendarFixtureInstalled: false,
   deterministicCalendarFixtureRestored: false,
+  deterministicSettlementAccountFixtureInstalled: false,
   ticker: "",
   buy: { filled: false, holdingPersisted: false, cashPersisted: false, replaySafe: false },
   sell: { filled: false, holdingPersisted: false, cashPersisted: false, replaySafe: false },
@@ -47,6 +50,71 @@ function psql(sql) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
+}
+
+function installSettlementAccountFixture() {
+  const accountKey = psql(`
+    with scoped_player as (
+      select
+        player_row.game_session_id,
+        player_row.id as player_id
+      from public.players as player_row
+      join public.game_sessions as game_row
+        on game_row.id = player_row.game_session_id
+      where game_row.name = 'Player Multiplayer E2E'
+        and game_row.status = 'active'
+        and lower(player_row.player_identifier) = lower('BROWSER-PLAYER-ALPHA')
+        and player_row.status = 'active'
+      order by player_row.created_at desc, player_row.id desc
+      limit 1
+    ), seeded as (
+      select
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        ledger_result.account_balance_id
+      from scoped_player
+      cross join lateral public.record_player_ledger_entry(
+        scoped_player.game_session_id,
+        scoped_player.player_id,
+        'checking',
+        10000,
+        'ECO',
+        'credit',
+        'setup',
+        'initial_balance_seed',
+        null,
+        'system',
+        null,
+        jsonb_build_object(
+          'bankTransactionIdempotencyKey', 'phase12-player-market-eco-checking-v1',
+          'fixture', 'player_multiplayer_market_acceptance',
+          'isolated', true
+        )
+      ) as ledger_result
+    )
+    select account_row.public_key
+    from seeded
+    join public.economic_parties as party_row
+      on party_row.game_session_id = seeded.game_session_id
+     and party_row.party_kind = 'player'
+     and party_row.player_id = seeded.player_id
+     and party_row.status = 'active'
+    join public.bank_accounts as account_row
+      on account_row.game_session_id = seeded.game_session_id
+     and account_row.party_id = party_row.id
+     and account_row.account_kind = 'checking'
+     and account_row.currency_code = 'ECO'
+     and account_row.status = 'active'
+    join public.account_balances as balance_row
+      on balance_row.game_session_id = account_row.game_session_id
+     and balance_row.bank_account_id = account_row.id
+     and balance_row.balance >= 10000
+    limit 1;
+  `);
+  if (!ACCOUNT_KEY.test(accountKey)) {
+    throw new Error("Could not install the isolated ECO Checking settlement fixture.");
+  }
+  evidence.deterministicSettlementAccountFixtureInstalled = true;
 }
 
 function installOpenCalendarFixture() {
@@ -138,7 +206,7 @@ function instrument(page) {
   page.on("pageerror", (error) => evidence.pageErrors.push(redact(error?.message || error)));
   page.on("response", async (response) => {
     const url = response.url();
-    if (!url.includes("/functions/v1/classroom-api/")) return;
+    if (!url.includes("/functions/v1/classroom-api/") && !url.includes("/functions/v1/player-web-session-api/")) return;
     evidence.requests.push({ method: response.request().method(), path: redact(new URL(url).pathname), status: response.status() });
     const type = response.headers()["content-type"] || "";
     if (!type.includes("application/json")) return;
@@ -184,39 +252,44 @@ async function reloadMarket(page) {
   await openMarket(page);
 }
 
-async function cash(page) {
-  await openRoute(page, "banking", ".player-terminal-banking-page");
-  const card = page.locator('[data-player-banking-balance^="cash:"], [data-player-banking-balance^="checking:"]').first();
-  await card.waitFor({ state: "visible", timeout: 30_000 });
-  const text = String(await card.locator("h3").innerText()).replace(/,/g, "");
-  const amount = Number(text.match(/-?[0-9]+(?:\.[0-9]{1,2})?/)?.[0]);
-  if (!Number.isFinite(amount)) throw new Error(`Could not parse Player cash from ${redact(text)}.`);
-  return amount;
-}
-
 async function chooseTradableAsset(page) {
   await openMarket(page);
   const rows = page.locator("[data-player-market-select]");
   for (let index = 0; index < await rows.count(); index += 1) {
     const row = rows.nth(index);
-    const text = String(await row.innerText());
-    if (/\bINDEX\b|COMPOSITE/i.test(text)) continue;
+    const assetId = String(await row.getAttribute("data-player-market-select") || "").trim().toLowerCase();
+    if (assetId === "cel-index") continue;
     await row.click();
-    const ticket = page.locator('form[data-endpoint="marketOrder"]');
-    await ticket.waitFor({ state: "visible", timeout: 30_000 });
-    const symbol = String(await page.locator(".player-terminal-order-ticket strong").first().innerText()).trim();
-    const priceText = String(await page.locator(".player-terminal-selected-price > strong").innerText()).replace(/,/g, "");
-    const price = Number(priceText.match(/[0-9]+(?:\.[0-9]{1,4})?/)?.[0]);
-    if (symbol && Number.isFinite(price) && price > 0) return { symbol, price };
+    const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
+    const sellForm = page.locator('form[data-player-market-order-form="sell-review"]:visible');
+    await buyForm.waitFor({ state: "visible", timeout: 30_000 });
+    await sellForm.waitFor({ state: "visible", timeout: 30_000 });
+    const symbol = String(await buyForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
+    const price = Number(await buyForm.locator('[name="expectedPrice"]').inputValue());
+    const destinationAccountKey = String(await sellForm.locator('[name="destinationAccountKey"] option').evaluateAll(
+      (options) => options.map((option) => String(option.value || "").trim().toLowerCase()).find(Boolean) || "",
+    ));
+    if (symbol && Number.isFinite(price) && price > 0 && ACCOUNT_KEY.test(destinationAccountKey)) {
+      return { symbol, price, destinationAccountKey };
+    }
   }
-  throw new Error("No non-index tradable market asset was rendered.");
+  throw new Error("No non-index tradable market asset with an owned listing-currency Checking destination was rendered.");
 }
 
 async function selectTicker(page, ticker) {
   const row = page.locator("[data-player-market-select]").filter({ hasText: ticker }).first();
   await row.waitFor({ state: "visible", timeout: 30_000 });
   await row.click();
-  await page.locator(".player-terminal-order-ticket").getByText(ticker, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  const buyForm = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
+  const sellForm = page.locator('form[data-player-market-order-form="sell-review"]:visible');
+  await buyForm.waitFor({ state: "visible", timeout: 30_000 });
+  await sellForm.waitFor({ state: "visible", timeout: 30_000 });
+  const expectedTicker = String(ticker || "").trim().toUpperCase();
+  const buyTicker = String(await buyForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
+  const sellTicker = String(await sellForm.locator('[name="ticker"]').inputValue()).trim().toUpperCase();
+  if (!expectedTicker || buyTicker !== expectedTicker || sellTicker !== expectedTicker) {
+    throw new Error(`Market order tickets did not converge to ${expectedTicker || "the selected ticker"}: buy=${buyTicker || "none"}, sell=${sellTicker || "none"}.`);
+  }
 }
 
 async function position(page) {
@@ -240,18 +313,37 @@ async function capture(response) {
   };
 }
 
-async function replay(page, original) {
-  return page.evaluate(async ({ url, headers, body }) => {
-    const response = await fetch(url, { method: "POST", headers, body, cache: "no-store" });
-    return { status: response.status, payload: await response.json().catch(() => null) };
-  }, original);
+async function preservedSubmitValue(locator) {
+  const preserved = await locator.getAttribute("data-player-market-submit-value");
+  return preserved === null ? locator.inputValue() : preserved;
 }
 
-function replayReadHeaders(original) {
-  const headers = { ...original.headers };
-  delete headers["idempotency-key"];
-  delete headers["content-type"];
-  return headers;
+function withIdempotencyHeader(headers, idempotencyKey) {
+  const next = Object.fromEntries(
+    Object.entries(headers || {}).filter(([name]) => name.toLowerCase() !== "idempotency-key"),
+  );
+  next["idempotency-key"] = idempotencyKey;
+  return next;
+}
+
+async function authenticatedContextRequest(page, path, { method = "GET", headers = {}, body } = {}) {
+  const key = await runtimeKey();
+  const response = await page.context().request.fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: { ...platformHeaders(key), ...headers },
+    data: body,
+    failOnStatusCode: false,
+  });
+  return { status: response.status(), payload: await response.json().catch(() => null) };
+}
+
+async function replay(page, original) {
+  const path = new URL(original.url).pathname;
+  return authenticatedContextRequest(page, path, {
+    method: "POST",
+    headers: original.headers,
+    body: JSON.parse(original.body),
+  });
 }
 
 function assertPublicReplayPayload(payload, label) {
@@ -260,13 +352,11 @@ function assertPublicReplayPayload(payload, label) {
   if (UUID_PATTERN.test(body)) throw new Error(`${label} replay verification exposed an internal UUID.`);
 }
 
-async function readAuthoritativeReplayState(original, ticker) {
-  const headers = replayReadHeaders(original);
+async function readReplayState(page, ticker, accountKey = "") {
   const [portfolio, banking] = await Promise.all([
-    request("/functions/v1/classroom-api/players/me/stocks/portfolio", { headers }),
-    request("/functions/v1/classroom-api/players/me/ledger?limit=50", { headers }),
+    authenticatedContextRequest(page, "/functions/v1/player-web-session-api/proxy/players/me/stocks/portfolio"),
+    authenticatedContextRequest(page, "/functions/v1/player-web-session-api/proxy/players/me/ledger?limit=50"),
   ]);
-
   if (portfolio.status !== 200 || portfolio.payload?.ok !== true || !Array.isArray(portfolio.payload?.holdings)) {
     throw new Error(`Portfolio replay verification returned ${portfolio.status}: ${redact(JSON.stringify(portfolio.payload))}`);
   }
@@ -275,12 +365,11 @@ async function readAuthoritativeReplayState(original, ticker) {
   }
   assertPublicReplayPayload(portfolio.payload, "Portfolio");
   assertPublicReplayPayload(banking.payload, "Banking");
-
-  const holding = portfolio.payload.holdings.find(
-    (item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase(),
-  );
+  const holding = portfolio.payload.holdings.find((item) => String(item?.ticker || "").toUpperCase() === ticker.toUpperCase());
   const checking = banking.payload.currentBalances.find((item) =>
-    String(item?.accountType || "").toLowerCase() === "checking"
+    accountKey
+      ? String(item?.accountKey || "").toLowerCase() === accountKey.toLowerCase()
+      : String(item?.accountType || "").toLowerCase() === "checking"
   );
   const holdingQuantity = Number(holding?.quantity ?? 0);
   const cashBalance = Number(checking?.balance);
@@ -290,59 +379,221 @@ async function readAuthoritativeReplayState(original, ticker) {
   return { holdingQuantity, cashBalance };
 }
 
-async function executeRenderedOrder(page, ticker, side) {
+function assertRequestBoundary(body, side) {
+  const keys = Object.keys(body).sort();
+  const expected = side === "buy"
+    ? ["action", "idempotencyKey", "quoteKey"].sort()
+    : ["action", "destinationAccountKey", "expectedPrice", "expectedTickIndex", "idempotencyKey", "quantity", "ticker"].sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expected)) {
+    throw new Error(`${side} settlement forwarded unexpected fields: ${keys.join(", ")}.`);
+  }
+  for (const forbidden of ["gameSessionId", "gameId", "playerId", "playerSessionId", "stockAssetId", "orderType"]) {
+    if (Object.prototype.hasOwnProperty.call(body, forbidden)) throw new Error(`Market settlement forwarded forbidden field ${forbidden}.`);
+  }
+}
+
+async function waitForAuthoritativeAssetReview(page, ticker) {
+  const response = await page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === "GET" &&
+      new URL(candidate.url()).pathname.endsWith(`/players/me/stocks/assets/${encodeURIComponent(ticker)}`),
+    { timeout: 60_000 },
+  );
+  const payload = await parseJson(response);
+  const price = Number(payload?.asset?.currentPrice);
+  const tickIndex = Number(payload?.tickIndex);
+  if (
+    response.status() !== 200 || payload?.ok !== true ||
+    String(payload?.asset?.ticker || "").toUpperCase() !== ticker.toUpperCase() ||
+    !(price > 0) || !Number.isSafeInteger(tickIndex) || tickIndex < 0
+  ) {
+    throw new Error(`Authoritative asset review returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
+  }
+  return { price, tickIndex };
+}
+
+async function waitForRenderedPrice(page, ticker, price) {
+  await page.waitForFunction(({ expectedTicker, expectedPrice }) => {
+    const form = document.querySelector('form[data-player-market-order-form="buy-quote"]');
+    if (!form) return false;
+    const tickerInput = form.querySelector('[name="ticker"]');
+    const priceInput = form.querySelector('[name="expectedPrice"]');
+    return String(tickerInput?.value || "").toUpperCase() === expectedTicker &&
+      Math.abs(Number(priceInput?.value) - expectedPrice) < 0.000001;
+  }, { expectedTicker: ticker.toUpperCase(), expectedPrice: price }, { timeout: 30_000 });
+}
+
+async function createBuyQuoteAfterReview(page, form, quoteButton, ticker) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const renderedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+    if (!(renderedPrice > 0)) throw new Error("Buy quote lost its positive reviewed price.");
+    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
+    const quoteResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
+      { timeout: 30_000 },
+    ).catch(() => null);
+    await quoteButton.click();
+    const review = await reviewPromise;
+    if (Math.abs(review.price - renderedPrice) >= 0.000001) {
+      await waitForRenderedPrice(page, ticker, review.price);
+      await selectTicker(page, ticker);
+      continue;
+    }
+    const response = await quoteResponsePromise;
+    if (!response) throw new Error("A stable authoritative Stock review did not emit the buy quote request.");
+    return response;
+  }
+  throw new Error("The Stock price changed during three consecutive buy reviews; no stale mutation was submitted.");
+}
+
+async function openSellReviewAfterAuthoritativeReview(page, form, reviewButton, ticker, ensureDestination) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await ensureDestination();
+    const renderedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+    if (!(renderedPrice > 0)) throw new Error("Sell review lost its positive reviewed price.");
+    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
+    await reviewButton.click();
+    const review = await reviewPromise;
+    if (Math.abs(review.price - renderedPrice) >= 0.000001) {
+      await waitForRenderedPrice(page, ticker, review.price);
+      await selectTicker(page, ticker);
+      continue;
+    }
+    const dialog = page.locator("[data-player-market-order-dialog]");
+    await dialog.waitFor({ state: "visible", timeout: 30_000 });
+    await dialog.getByText("IMMEDIATE SELL REVIEW", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
+    return dialog;
+  }
+  throw new Error("The Stock price changed during three consecutive sell reviews; no stale mutation was submitted.");
+}
+
+async function executeBuy(page, ticker) {
   await openMarket(page);
   await selectTicker(page, ticker);
-  const form = page.locator('form[data-endpoint="marketOrder"]');
-  const sideInput = form.locator(`[name="side"][value="${side}"]`);
-  const sideControl = sideInput.locator("xpath=ancestor::label[1]");
-  await sideControl.click();
-  if (!(await sideInput.isChecked())) throw new Error(`Rendered ${side} order control did not select its radio input.`);
-  await form.locator('[name="orderType"]').selectOption("market");
-  await form.locator('[name="quantity"]').fill("1");
-  await form.locator('button[type="submit"]').click();
+  const form = page.locator('form[data-player-market-order-form="buy-quote"]:visible');
+  const quantity = Number(await preservedSubmitValue(form.locator('[name="quantity"]')));
+  if (quantity !== 1) throw new Error(`Buy quote did not preserve the canonical quantity: ${quantity}.`);
+  const fundingAccountKey = String(await preservedSubmitValue(form.locator('[name="sourceAccountKey1"]'))).trim().toLowerCase();
+  if (!ACCOUNT_KEY.test(fundingAccountKey)) throw new Error("Buy quote did not expose an owned Checking funding account.");
+  const expectedPrice = Number(await preservedSubmitValue(form.locator('[name="expectedPrice"]')));
+  if (!(expectedPrice > 0)) throw new Error("Buy quote did not expose a positive canonical expected price.");
+  const targetAmount = Number(await preservedSubmitValue(form.locator('[name="targetAmount1"]')));
+  if (!(targetAmount > 0)) throw new Error("Buy quote did not preserve a positive canonical funding amount.");
+  const optionalFunding = await Promise.all([
+    preservedSubmitValue(form.locator('[name="sourceAccountKey2"]')),
+    preservedSubmitValue(form.locator('[name="targetAmount2"]')),
+    preservedSubmitValue(form.locator('[name="sourceAccountKey3"]')),
+    preservedSubmitValue(form.locator('[name="targetAmount3"]')),
+  ]);
+  if (optionalFunding.some((value) => String(value || "").trim())) {
+    throw new Error(`Buy quote unexpectedly prefilled optional funding lines: ${redact(JSON.stringify(optionalFunding))}`);
+  }
+  const quoteButton = form.getByRole("button", { name: /Create exact quote/i });
+  await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await quoteButton.isDisabled()) throw new Error("Buy quote action is disabled by the current Player market capability or market state.");
+  const stateBefore = await readReplayState(page, ticker, fundingAccountKey);
+  await reloadMarket(page);
+  await selectTicker(page, ticker);
+  await quoteButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await quoteButton.isDisabled()) throw new Error("Freshly reviewed buy quote action is disabled by the current Player market capability or market state.");
+  const quoteResponse = await createBuyQuoteAfterReview(page, form, quoteButton, ticker);
+  const quotePayload = await parseJson(quoteResponse);
+  if (quoteResponse.status() !== 201 || quotePayload?.ok !== true || quotePayload?.action !== "create_buy_quote" || !QUOTE_KEY.test(String(quotePayload?.quote?.quoteKey || ""))) {
+    throw new Error(`Buy quote returned ${quoteResponse.status()}: ${redact(JSON.stringify(quotePayload))}`);
+  }
+  const quoteBody = JSON.parse((await capture(quoteResponse)).body);
+  if (quoteBody.action !== "create_buy_quote" || quoteBody.ticker !== ticker || Number(quoteBody.quantity) !== 1 || !Array.isArray(quoteBody.allocations) || quoteBody.allocations.length !== 1) {
+    throw new Error(`Buy quote body did not match the rendered funding request: ${redact(JSON.stringify(quoteBody))}`);
+  }
+  for (const allocation of quoteBody.allocations) {
+    if (!ACCOUNT_KEY.test(String(allocation?.sourceAccountKey || "")) || !(Number(allocation?.targetAmount) > 0)) {
+      throw new Error(`Buy quote forwarded invalid public funding evidence: ${redact(JSON.stringify(allocation))}`);
+    }
+  }
   const dialog = page.locator("[data-player-market-order-dialog]");
   await dialog.waitFor({ state: "visible", timeout: 30_000 });
+  await dialog.getByText("IMMUTABLE BUY QUOTE", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
+  const settlementResponsePromise = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST" && response.request().postData()?.includes("settle_buy_quote"),
+    { timeout: 60_000 },
+  );
+  await dialog.locator("[data-player-market-order-confirm]").click();
+  const settlementResponse = await settlementResponsePromise;
+  const payload = await parseJson(settlementResponse);
+  if (settlementResponse.status() !== 200 || payload?.ok !== true || payload?.action !== "settle_buy_quote" || payload?.settlement?.ticker !== ticker) {
+    throw new Error(`Buy settlement returned ${settlementResponse.status()}: ${redact(JSON.stringify(payload))}`);
+  }
+  await page.locator("[data-player-market-order-dialog]").getByText("FILLED", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
+  const original = await capture(settlementResponse);
+  const body = JSON.parse(original.body);
+  assertRequestBoundary(body, "buy");
+  if (body.action !== "settle_buy_quote" || body.quoteKey !== quotePayload.quote.quoteKey || typeof body.idempotencyKey !== "string") {
+    throw new Error(`Buy settlement body did not match the immutable quote: ${redact(JSON.stringify(body))}`);
+  }
+  evidence.requestBoundaryValid = true;
+  return { quotePayload, payload, original, quoteOriginal: await capture(quoteResponse), fundingAccountKey, stateBefore };
+}
+
+async function executeSell(page, ticker, destinationAccountKey) {
+  await openMarket(page);
+  await selectTicker(page, ticker);
+  const form = page.locator('form[data-player-market-order-form="sell-review"]:visible');
+  const quantity = Number(await preservedSubmitValue(form.locator('[name="quantity"]')));
+  if (quantity !== 1) throw new Error(`Sell review did not preserve the canonical quantity: ${quantity}.`);
+  const destination = form.locator('[name="destinationAccountKey"]');
+  const desiredDestination = String(destinationAccountKey || "").trim().toLowerCase();
+  let selectedDestination = "";
+  const ensureDestination = async () => {
+    selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+    if (ACCOUNT_KEY.test(desiredDestination) && selectedDestination !== desiredDestination) {
+      if (!(await destination.isVisible())) {
+        throw new Error("Sell review hid the Checking destination before the requested owned account could be selected.");
+      }
+      await destination.selectOption(desiredDestination);
+      selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+    }
+    if (!ACCOUNT_KEY.test(selectedDestination)) {
+      if (!(await destination.isVisible())) throw new Error("Sell review did not expose an owned Checking destination.");
+      const first = await destination.locator("option").evaluateAll((options) => options.map((option) => option.value).find(Boolean) || "");
+      if (!ACCOUNT_KEY.test(String(first))) throw new Error("Sell review did not expose an owned Checking destination.");
+      await destination.selectOption(first);
+      selectedDestination = String(await preservedSubmitValue(destination)).trim().toLowerCase();
+    }
+  };
+  await ensureDestination();
+  const destinationStateBefore = await readReplayState(page, ticker, selectedDestination);
+  const reviewButton = form.getByRole("button", { name: /Review sale/i });
+  await reviewButton.waitFor({ state: "visible", timeout: 30_000 });
+  if (await reviewButton.isDisabled()) throw new Error("Sell review action is disabled by the current Player market capability or market state.");
+  const dialog = await openSellReviewAfterAuthoritativeReview(page, form, reviewButton, ticker, ensureDestination);
   const responsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST" && response.request().postData()?.includes("settle_sell"),
     { timeout: 60_000 },
   );
   await dialog.locator("[data-player-market-order-confirm]").click();
   const response = await responsePromise;
   const payload = await parseJson(response);
-  if (response.status() !== 200 || payload?.ok !== true || payload?.order?.status !== "filled") {
-    throw new Error(`${side} market order returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
+  if (response.status() !== 200 || payload?.ok !== true || payload?.action !== "settle_sell" || payload?.settlement?.ticker !== ticker) {
+    throw new Error(`Sell settlement returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
   await page.locator("[data-player-market-order-dialog]").getByText("FILLED", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
   const original = await capture(response);
   const body = JSON.parse(original.body);
-  const keys = Object.keys(body).sort();
-  if (JSON.stringify(keys) !== JSON.stringify(["expectedPrice", "idempotencyKey", "quantity", "side", "ticker"])) {
-    throw new Error(`Market order forwarded unexpected fields: ${keys.join(", ")}.`);
+  assertRequestBoundary(body, "sell");
+  if (body.action !== "settle_sell" || body.ticker !== ticker || Number(body.quantity) !== 1 || !(Number(body.expectedPrice) > 0) || !ACCOUNT_KEY.test(String(body.destinationAccountKey || "")) || body.destinationAccountKey !== selectedDestination || typeof body.idempotencyKey !== "string") {
+    throw new Error(`Sell settlement body did not match the rendered review: ${redact(JSON.stringify(body))}`);
   }
-  if (body.ticker !== ticker || body.side !== side || body.quantity !== 1 || !(body.expectedPrice > 0) || typeof body.idempotencyKey !== "string") {
-    throw new Error(`Market order body did not match the rendered review: ${redact(JSON.stringify(body))}`);
-  }
-  for (const forbidden of ["gameSessionId", "gameId", "playerId", "playerSessionId", "stockAssetId", "orderType"]) {
-    if (Object.prototype.hasOwnProperty.call(body, forbidden)) throw new Error(`Market order forwarded forbidden field ${forbidden}.`);
-  }
-  UUID_PATTERN.lastIndex = 0;
-  if (UUID_PATTERN.test(original.body) || UUID_PATTERN.test(new URL(original.url).pathname)) throw new Error("Market order exposed an internal UUID.");
-  evidence.requestBoundaryValid = true;
-  return { payload, original };
+  return { payload, original, destinationAccountKey: selectedDestination, stateBefore: destinationStateBefore };
 }
 
-async function assertReplaySafe(page, order, expectedHolding, expectedCash) {
+async function assertReplaySafe(page, order, accountKey, expectedHolding, expectedCash, action) {
   const result = await replay(page, order.original);
-  if (result.status !== 200 || result.payload?.ok !== true || result.payload?.order?.status !== "filled") {
-    throw new Error(`Market order replay failed: ${result.status} ${redact(JSON.stringify(result.payload))}`);
+  if (result.status !== 200 || result.payload?.ok !== true || result.payload?.action !== action || result.payload?.settlement?.alreadyCompleted !== true) {
+    throw new Error(`Market settlement replay failed: ${result.status} ${redact(JSON.stringify(result.payload))}`);
   }
-  if (Number(result.payload?.holding?.quantity) !== expectedHolding || Math.abs(Number(result.payload?.cash?.balance) - expectedCash) > 0.001) {
-    throw new Error("Market order replay returned a different terminal result.");
-  }
-  const authoritative = await readAuthoritativeReplayState(order.original, evidence.ticker);
+  const authoritative = await readReplayState(page, evidence.ticker, accountKey);
   if (authoritative.holdingQuantity !== expectedHolding || Math.abs(authoritative.cashBalance - expectedCash) > 0.001) {
-    throw new Error(`Market order replay duplicated a mutation: ${JSON.stringify({
+    throw new Error(`Market settlement replay duplicated a mutation: ${JSON.stringify({
       holding: authoritative.holdingQuantity,
       cashBalance: authoritative.cashBalance,
       expectedHolding,
@@ -358,6 +609,7 @@ let failure;
 try {
   originalCalendarDefinition = installOpenCalendarFixture();
   const fixture = await gameFixture();
+  installSettlementAccountFixture();
   browser = await chromium.launch({ headless: true });
   const player = await login(browser, fixture.gameCode);
   context = player.context;
@@ -365,71 +617,73 @@ try {
 
   const asset = await chooseTradableAsset(page);
   evidence.ticker = asset.symbol;
-  const holdingBefore = await position(page);
-  const cashBefore = await cash(page);
 
-  const buy = await executeRenderedOrder(page, asset.symbol, "buy");
+  const buy = await executeBuy(page, asset.symbol);
+  const before = buy.stateBefore;
+  const fundingAccountKey = buy.fundingAccountKey;
   evidence.buy.filled = true;
   await reloadMarket(page);
   await selectTicker(page, asset.symbol);
   const holdingAfterBuy = await position(page);
-  if (holdingAfterBuy !== holdingBefore + 1) throw new Error(`Buy holding did not persist: ${holdingBefore} -> ${holdingAfterBuy}.`);
+  if (holdingAfterBuy !== before.holdingQuantity + 1) throw new Error(`Buy holding did not persist: ${before.holdingQuantity} -> ${holdingAfterBuy}.`);
   evidence.buy.holdingPersisted = true;
-  const cashAfterBuy = await cash(page);
-  if (!(cashAfterBuy < cashBefore)) throw new Error(`Buy order did not debit cash: ${cashBefore} -> ${cashAfterBuy}.`);
+  const stateAfterBuy = await readReplayState(page, asset.symbol, fundingAccountKey);
+  if (!(stateAfterBuy.cashBalance < before.cashBalance)) throw new Error(`Buy order did not debit cash: ${before.cashBalance} -> ${stateAfterBuy.cashBalance}.`);
   evidence.buy.cashPersisted = true;
-  await assertReplaySafe(page, buy, holdingAfterBuy, cashAfterBuy);
+  await assertReplaySafe(page, buy, fundingAccountKey, holdingAfterBuy, stateAfterBuy.cashBalance, "settle_buy_quote");
   evidence.buy.replaySafe = true;
 
-  const sell = await executeRenderedOrder(page, asset.symbol, "sell");
+  const sell = await executeSell(page, asset.symbol, asset.destinationAccountKey);
   evidence.sell.filled = true;
   await reloadMarket(page);
   await selectTicker(page, asset.symbol);
   const holdingAfterSell = await position(page);
-  if (holdingAfterSell !== holdingBefore) throw new Error(`Sell holding did not persist: ${holdingAfterBuy} -> ${holdingAfterSell}.`);
+  if (holdingAfterSell !== before.holdingQuantity) throw new Error(`Sell holding did not persist: ${holdingAfterBuy} -> ${holdingAfterSell}.`);
   evidence.sell.holdingPersisted = true;
-  const cashAfterSell = await cash(page);
-  if (!(cashAfterSell > cashAfterBuy)) throw new Error(`Sell order did not credit cash: ${cashAfterBuy} -> ${cashAfterSell}.`);
+  const stateAfterSell = await readReplayState(page, asset.symbol, sell.destinationAccountKey);
+  if (!(stateAfterSell.cashBalance > sell.stateBefore.cashBalance)) throw new Error(`Sell order did not credit cash: ${sell.stateBefore.cashBalance} -> ${stateAfterSell.cashBalance}.`);
   evidence.sell.cashPersisted = true;
-  await assertReplaySafe(page, sell, holdingAfterSell, cashAfterSell);
+  await assertReplaySafe(page, sell, sell.destinationAccountKey, holdingAfterSell, stateAfterSell.cashBalance, "settle_sell");
   evidence.sell.replaySafe = true;
 
-  const orderPath = new URL(buy.original.url).pathname;
-  const buyBody = JSON.parse(buy.original.body);
-  const stale = await request(orderPath, {
+  const quotePath = new URL(buy.quoteOriginal.url).pathname;
+  const quoteBody = JSON.parse(buy.quoteOriginal.body);
+  const staleIdempotencyKey = `${quoteBody.idempotencyKey}-stale`;
+  const stale = await authenticatedContextRequest(page, quotePath, {
     method: "POST",
-    headers: buy.original.headers,
+    headers: withIdempotencyHeader(buy.quoteOriginal.headers, staleIdempotencyKey),
     body: {
-      ...buyBody,
-      expectedPrice: buyBody.expectedPrice + 1,
-      idempotencyKey: `${buyBody.idempotencyKey}-stale`,
+      ...quoteBody,
+      expectedPrice: Number(quoteBody.expectedPrice) + 1,
+      idempotencyKey: staleIdempotencyKey,
     },
   });
   if (stale.status !== 409 || stale.payload?.error?.code !== "stale_stock_price") {
-    throw new Error(`Stale-price order was not rejected: ${stale.status} ${redact(JSON.stringify(stale.payload))}`);
+    throw new Error(`Stale-price quote was not rejected: ${stale.status} ${redact(JSON.stringify(stale.payload))}`);
   }
   evidence.stalePriceRejected = true;
 
-  const forbidden = await request(orderPath, {
+  const forbiddenIdempotencyKey = `${quoteBody.idempotencyKey}-scope`;
+  const forbidden = await authenticatedContextRequest(page, quotePath, {
     method: "POST",
-    headers: buy.original.headers,
+    headers: withIdempotencyHeader(buy.quoteOriginal.headers, forbiddenIdempotencyKey),
     body: {
-      ...buyBody,
+      ...quoteBody,
       playerId: "attacker-controlled",
-      idempotencyKey: `${buyBody.idempotencyKey}-scope`,
+      idempotencyKey: forbiddenIdempotencyKey,
     },
   });
   if (forbidden.status !== 400 || forbidden.payload?.error?.code !== "invalid_stock_market_trading_request") {
-    throw new Error(`Client ownership-field order was not rejected: ${forbidden.status} ${redact(JSON.stringify(forbidden.payload))}`);
+    throw new Error(`Client ownership-field quote was not rejected: ${forbidden.status} ${redact(JSON.stringify(forbidden.payload))}`);
   }
   evidence.forbiddenScopeRejected = true;
 
-  const unauthorized = await request(orderPath, {
+  const unauthorized = await request(quotePath, {
     method: "POST",
     headers: platformHeaders(fixture.key),
-    body: buyBody,
+    body: quoteBody,
   });
-  if (![401, 403].includes(unauthorized.status)) throw new Error(`Unauthenticated market order was not rejected: ${unauthorized.status}.`);
+  if (![401, 403].includes(unauthorized.status)) throw new Error(`Unauthenticated market quote was not rejected: ${unauthorized.status}.`);
   evidence.unauthenticatedRejected = true;
 
   if (evidence.responseUuidLeak) throw new Error("A connected market response exposed a raw internal UUID.");

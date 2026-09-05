@@ -10,7 +10,8 @@ export type ReviewedPlayerRateLimitEndpointKey =
   | PlayerCapabilityEndpointKey
   | "inventoryRedemption"
   | "businessInputPurchase"
-  | "businessRetiredHire";
+  | "businessRetiredHire"
+  | "businessStoreWithdrawal";
 
 const redemptionOperations = byMethod({
   GET: operation("player.inventory.redemptions.read", "read"),
@@ -92,6 +93,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   businessStorePurchase: byMethod({
     POST: operation("player.business.store.purchase", "sensitive"),
+  }),
+  businessStoreWithdrawal: byMethod({
+    POST: operation("player.business.store.withdrawal", "write"),
   }),
   businessCreate: byMethod({
     POST: operation("player.business.create", "sensitive"),

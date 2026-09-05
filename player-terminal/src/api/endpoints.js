@@ -13,6 +13,9 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   residencyRequest: { method: "POST", path: "/residency" },
   portfolio: { method: "GET", path: "/portfolio" },
   business: { method: "GET", path: "/business" },
+  businessStockroom: { method: "GET", path: "/business/stockroom" },
+  businessRecipes: { method: "GET", path: "/business/recipes" },
+  businessEquipment: { method: "GET", path: "/business/equipment" },
   businessWorkforce: { method: "GET", path: "/business/workforce/candidates" },
   businessTreasury: { method: "GET", path: "/business/treasury" },
   businessTreasuryAccountOpen: { method: "POST", path: "/business/treasury/accounts" },
@@ -25,6 +28,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   },
   businessStoreQuote: { method: "POST", path: "/business/store/quotes" },
   businessStorePurchase: { method: "POST", path: "/business/store/purchases" },
+  businessStoreWithdrawal: { method: "POST", path: "/business/store/withdrawals" },
   businessCreate: { method: "POST", path: "/businesses" },
   businessFormationPropose: { method: "POST", path: "/business/formations" },
   businessFormationRespond: {

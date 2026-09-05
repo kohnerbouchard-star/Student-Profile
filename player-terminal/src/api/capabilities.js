@@ -77,6 +77,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
   businessManufacturingCancel: "businessProduction",
   businessStoreQuote: "storePurchase",
   businessStorePurchase: "storePurchase",
+  businessStoreWithdrawal: "storePurchase",
   marketplaceSettlement: "marketplacePurchase",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
@@ -92,6 +93,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
 // bound to that authoritative descriptor instead of requiring a synthetic
 // client operation key that the server never advertises.
 const ENDPOINT_MANIFEST_KEYS = Object.freeze({
+  businessStoreWithdrawal: "businessStorePurchase",
   marketplaceSettlement: "marketplacePurchase"
 });
 

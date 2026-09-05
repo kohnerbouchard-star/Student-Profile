@@ -1,9 +1,11 @@
 import { PLAYER_NAV_GROUPS } from "../components/layout.js";
+import { getWorldRouteViewState } from "../features/world/world-route-view-state.js";
 import { renderDashboardPage } from "../pages/dashboard-page.js";
 import { renderNewsPage } from "../pages/news-page.js";
 import { renderMarketPage } from "../pages/market-page.js";
 import { renderPortfolioPage } from "../pages/portfolio-page.js";
-import { renderBusinessPage } from "../pages/business-page.js";
+import { renderBusinessPage as renderBusinessFormationPage } from "../pages/business-page.js";
+import { renderPhase12BusinessPage } from "../pages/business-workspace.js";
 import { renderStorePage } from "../pages/store-page.js";
 import { renderMarketplacePage } from "../pages/marketplace-page.js";
 import { renderContractsPage } from "../pages/contracts-page.js";
@@ -15,7 +17,14 @@ import { renderMessagesPage } from "../pages/messages-page.js";
 import { renderProgressionPage } from "../pages/progression-page.js";
 import { renderProfilePage } from "../pages/profile-page.js";
 import { renderWorldPage } from "../pages/world-page.js";
-import { getWorldRouteViewState } from "../features/world/world-route-view-state.js";
+
+const BUSINESS_WORKSPACE_MARKER = "data-business-workspace-v2";
+
+export function renderBusinessWorkspacePage(data) {
+  if (data?.business?.configured !== true) return renderBusinessFormationPage(data);
+  void BUSINESS_WORKSPACE_MARKER;
+  return renderPhase12BusinessPage(data);
+}
 
 function fallbackWorldModel(data) {
   const countries = Array.isArray(data?.countries) ? data.countries : [];
@@ -27,7 +36,7 @@ function fallbackWorldModel(data) {
     arrival: { required: false },
     travel: { state: null, activeJourney: null },
     residency: null,
-    world: null
+    world: null,
   };
 }
 
@@ -39,14 +48,16 @@ function renderWorldRoutePage(data) {
     : null;
   const model = view.model || liveModel || fallbackWorldModel(data);
   const unavailable = view.state === "unavailable" && !model;
-  const loading = !model && (view.state === "loading" || data?.resourceStatus?.worldRuntime?.state === "loading");
+  const loading = !model && (
+    view.state === "loading" || data?.resourceStatus?.worldRuntime?.state === "loading"
+  );
   return renderWorldPage(model, {
     state: unavailable ? "unavailable" : loading ? "loading" : "ready",
     message: view.message,
     quote: view.quote,
     offline: globalThis.navigator?.onLine === false,
     stale: Boolean(view.updatedAt && Date.now() - view.updatedAt > 60_000),
-    capabilities: data?.capabilities || { routes: {}, actions: {} }
+    capabilities: data?.capabilities || { routes: {}, actions: {} },
   });
 }
 
@@ -55,7 +66,7 @@ const PAGE_RENDERERS = Object.freeze({
   news: renderNewsPage,
   market: renderMarketPage,
   portfolio: renderPortfolioPage,
-  business: renderBusinessPage,
+  business: renderBusinessWorkspacePage,
   store: renderStorePage,
   marketplace: renderMarketplacePage,
   contracts: renderContractsPage,
@@ -66,11 +77,11 @@ const PAGE_RENDERERS = Object.freeze({
   messages: renderMessagesPage,
   progression: renderProgressionPage,
   world: renderWorldRoutePage,
-  profile: (data, _ui, config) => renderProfilePage(data, config)
+  profile: (data, _ui, config) => renderProfilePage(data, config),
 });
 
 export const ROUTE_TITLES = Object.freeze(Object.fromEntries(
-  PLAYER_NAV_GROUPS.flatMap((group) => group.routes.map((item) => [item.route, item.label]))
+  PLAYER_NAV_GROUPS.flatMap((group) => group.routes.map((item) => [item.route, item.label])),
 ));
 
 export function renderPlayerRoute({ route, data, ui, config }) {

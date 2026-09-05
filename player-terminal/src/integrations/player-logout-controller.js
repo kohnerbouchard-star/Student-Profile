@@ -1,3 +1,4 @@
+import { abortPlayerApiSessionRequests } from "../api/player-api.js";
 import { createRequestId } from "../api/request-context.js";
 
 const DEFAULT_LOGOUT_EVENT = "econovaria:player-logout-requested";
@@ -84,6 +85,11 @@ function logoutAdvertised(terminal, config) {
   if (config?.usePreviewData === true) return false;
   const state = terminal?.getState?.();
   return state?.data?.capabilities?.actions?.logout === true;
+}
+
+function prepareTerminalForSessionExit(terminal, config) {
+  terminal?.prepareForSessionExit?.();
+  abortPlayerApiSessionRequests(config);
 }
 
 function lockTerminal(mount, runtime) {
@@ -247,8 +253,10 @@ export function installPlayerLogoutController({
   async function logout(detail = {}) {
     if (pending) return pending;
     pending = (async () => {
+      prepareTerminalForSessionExit(terminal, config);
       lockTerminal(mount, runtime);
       const result = await revoke();
+      abortPlayerApiSessionRequests(config);
       clearSessionState(config, runtime);
 
       const completion = Object.freeze({

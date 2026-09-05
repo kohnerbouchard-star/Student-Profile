@@ -12,6 +12,7 @@ import {
   readPublicKey,
   readStoreItemKey,
 } from "./playerBusinessStoreProcurementRequest.ts";
+import { readBusinessStoreWithdrawalIntent } from "./playerBusinessRequestValidation.ts";
 import {
   toBusinessStoreQuote,
   toBusinessStoreReceipt,
@@ -66,6 +67,24 @@ export async function purchaseBusinessStoreQuote(
     },
   });
   return toBusinessStoreReceipt(result);
+}
+
+export async function requestBusinessStoreWithdrawal(
+  repository: PlayerBusinessRepository,
+  scope: BusinessStoreScope,
+  businessKey: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  const intent = readBusinessStoreWithdrawalIntent(body);
+  await repository.execute("request_business_store_offer_withdrawal_v2", {
+    p_game_session_id: scope.gameSessionId,
+    p_business_key: readPublicKey(businessKey, "businessKey", "biz"),
+    p_offer_key: intent.offerKey,
+    p_mode: intent.mode,
+    p_quantity: intent.quantity,
+    p_expected_offer_version: intent.expectedOfferVersion,
+    p_idempotency_key: intent.idempotencyKey,
+  });
 }
 
 export {

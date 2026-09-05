@@ -91,7 +91,7 @@ const sellReview = renderMarketOrderDialog({
   expectedTickIndex: 43,
   estimatedGross: 50,
   currencyCode: "XAL",
-  destinationAccount: { accountKey: DESTINATION, currencyCode: "NOR" },
+  destinationAccount: { accountKey: DESTINATION, currencyCode: "XAL" },
   payload: { destinationAccountKey: DESTINATION },
   error: "",
 });
@@ -99,7 +99,8 @@ assert.ok(sellReview.includes("IMMEDIATE SELL REVIEW"));
 assert.ok(sellReview.includes("CONFIRMATION REQUIRED"));
 assert.ok(sellReview.includes("ESTIMATED PROCEEDS"));
 assert.ok(sellReview.includes(DESTINATION));
-assert.ok(sellReview.includes("Banking FX"));
+assert.ok(sellReview.includes("no sell-side FX"));
+assert.ok(!sellReview.includes("Banking FX"));
 assert.ok(!sellReview.includes(ASSET_UUID));
 
 const buyReceipt = renderMarketOrderDialog({
@@ -160,6 +161,7 @@ assert.ok(sellReceipt.includes(SETTLEMENT));
 assert.ok(!sellReceipt.includes(ASSET_UUID));
 
 const source = await readFile(new URL("../src/features/market/market-order-flow.js", import.meta.url), "utf8");
+const marketPage = await readFile(new URL("../src/pages/market-page.js", import.meta.url), "utf8");
 const routeCore = await readFile(new URL("../src/api/backend-routes-core.js", import.meta.url), "utf8");
 const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
 assert.ok(main.includes("installMarketOrderFlow"));
@@ -167,10 +169,38 @@ assert.ok(source.includes('[data-player-market-order-form]'));
 assert.ok(source.includes('addEventListener("submit", handleSubmit, true)'));
 assert.ok(source.includes('action: "settle_buy_quote"'));
 assert.ok(source.includes('api.execute("marketOrder", payload)'));
+assert.ok(source.includes('api.request("marketAsset", {'));
+assert.ok(source.includes('params: { assetId: ticker }'));
+assert.ok(source.includes('force: true'));
+const invalidateIndex = source.indexOf('api.invalidateResources(["marketAsset"]);');
+const authoritativeRequestIndex = source.indexOf('const detail = await api.request("marketAsset", {');
+assert.ok(invalidateIndex >= 0, "Authoritative review must invalidate stale marketAsset reads.");
+assert.ok(authoritativeRequestIndex >= 0, "Authoritative review must request current marketAsset detail.");
+assert.ok(invalidateIndex < authoritativeRequestIndex, "marketAsset invalidation must precede the authoritative detail request.");
+assert.ok(source.includes('setReviewValue(form, "expectedPrice", expectedPrice)'));
+assert.ok(source.includes('setReviewValue(form, "expectedTickIndex", expectedTickIndex)'));
+assert.ok(source.includes("expectedTickIndex < 0"));
+assert.ok(!source.includes("expectedTickIndex <= 0"));
+assert.ok(source.includes("function refreshSingleLineBuyFunding(payload, reviewedPrice)"));
+assert.ok(source.includes("payload.allocations.length !== 1"));
+assert.ok(source.includes('mount.querySelectorAll(\'form[data-player-market-order-form="buy-quote"]\')'));
+assert.ok(!source.includes(':visible'));
+assert.ok(source.includes('setReviewValue(refreshedForm, "targetAmount1", roundStock(payload.quantity * reviewedPrice))'));
+assert.ok(source.includes('refreshedForm.dispatchEvent(new Event("input", { bubbles: true }))'));
+assert.ok(source.includes("The Stock price changed. Review the refreshed price and funding amount before submitting again."));
+assert.ok(source.includes('"stale_stock_tick", "stale_stock_price"'));
+assert.ok(source.includes('else if (form.dataset.playerMarketOrderForm === "sell-review") void prepareSell(form)'));
 assert.ok(source.includes('terminal.refreshResources(["dashboard", "market", "portfolio", "banking", "bankingFx"])'));
 assert.ok(source.includes("normalizeWritePayload"));
 assert.ok(source.includes("marketPositionForAsset"));
 assert.ok(source.includes('market?.status === "CLOSED"'));
+assert.ok(source.includes('String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode'));
+assert.ok(source.includes("Stock sale proceeds do not auto-convert."));
+assert.ok(!source.includes("any required Banking FX conversion"));
+assert.ok(marketPage.includes("listingCurrencyCheckingAccounts"));
+assert.ok(marketPage.includes("sellAccountOptions"));
+assert.ok(marketPage.includes("no sell-side FX"));
+assert.ok(marketPage.includes("Open an active ${escapeHtml(listingCurrencyCode)} Checking account before selling this asset."));
 assert.ok(!source.includes('orderType: "market"'));
 assert.ok(!source.includes("BACKEND INTEGRATION PENDING"));
 assert.ok(!source.includes("playerUuid") && !source.includes("recipientPlayerUuid"));
@@ -180,4 +210,4 @@ assert.ok(routeCore.includes('action === "settle_sell"'));
 assert.ok(routeCore.includes("destinationAccountKey"));
 assert.ok(!routeCore.includes("stockAssetId:"));
 
-console.log("C3E Market flow passed: immutable buy quote review, expiry, exact funding evidence, sell destination review, public-key receipts, and bounded refresh behavior are wired to the connected route.");
+console.log("C3E Market flow passed: asset-scoped price/tick review including valid zero-tick assets, single-line funding refresh with valid DOM selection and explicit re-submit, immutable buy quote review, expiry, exact funding evidence, listing-currency-only sell destination review, public-key receipts, stale-review fail-closed behavior, and bounded refresh are wired to the connected route.");

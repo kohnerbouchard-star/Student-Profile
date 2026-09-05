@@ -36,6 +36,13 @@ const key = Object.freeze({
   transaction: "btx_11111111111111111111111111111111",
 });
 
+const BUSINESS_ROUTE_DEPENDENCIES = Object.freeze([
+  "businessTreasury",
+  "businessStockroom",
+  "businessRecipes",
+  "businessEquipment",
+]);
+
 function money(amount, currencyCode, precision) {
   return { amount, currencyCode, precision };
 }
@@ -541,8 +548,8 @@ assert.match(error, /Retry treasury/u);
 
 assert.deepEqual(
   resourcesForRoute("business").dependent,
-  ["businessTreasury"],
-  "Business treasury must remain a declared route dependency without being fetched speculatively.",
+  BUSINESS_ROUTE_DEPENDENCIES,
+  "Business treasury and Phase 12 physical reads must remain deferred route dependencies without speculative fetches.",
 );
 assert.deepEqual(
   dependentResourcesForRoute("business", { business: { configured: false } }),
@@ -551,8 +558,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   dependentResourcesForRoute("business", { business: { configured: true } }),
-  ["businessTreasury"],
-  "A configured Business must retain its treasury route dependency.",
+  BUSINESS_ROUTE_DEPENDENCIES,
+  "A configured Business must retain Treasury plus Phase 12 physical read dependencies.",
 );
 assert.equal(
   resourcesVisibleOnRoute("business", { business: { configured: false } }).has("businessTreasury"),
@@ -564,6 +571,19 @@ assert.equal(
   true,
   "Realtime visibility must retain treasury for an active Business.",
 );
+
+function emptyBusinessStockroom() {
+  return {
+    businessKey: key.business,
+    locations: [
+      { accountKey: "iac_11111111111111111111111111111111", locationKey: "warehouse", label: "Warehouse", itemCount: 0, quantityOwned: 0, quantityReserved: 0, quantityAvailable: 0 },
+      { accountKey: "iac_22222222222222222222222222222222", locationKey: "work_in_progress", label: "Work in Progress", itemCount: 0, quantityOwned: 0, quantityReserved: 0, quantityAvailable: 0 },
+      { accountKey: "iac_33333333333333333333333333333333", locationKey: "finished_goods", label: "Finished Goods", itemCount: 0, quantityOwned: 0, quantityReserved: 0, quantityAvailable: 0 },
+      { accountKey: "iac_44444444444444444444444444444444", locationKey: "in_transit", label: "In Transit", itemCount: 0, quantityOwned: 0, quantityReserved: 0, quantityAvailable: 0 },
+    ],
+    items: [],
+  };
+}
 
 function businessRouteApi(configuredSource, calls) {
   return new PlayerApi({
@@ -592,6 +612,9 @@ function businessRouteApi(configuredSource, calls) {
       if (endpointKey === "countries") return structuredClone(previewData.countries);
       if (endpointKey === "store") return structuredClone(previewData.store);
       if (endpointKey === "businessTreasury") return structuredClone(snapshotRaw);
+      if (endpointKey === "businessStockroom") return emptyBusinessStockroom();
+      if (endpointKey === "businessRecipes") return { recipes: [] };
+      if (endpointKey === "businessEquipment") return { equipment: [] };
       throw Object.assign(new Error(`Unexpected Business route read: ${endpointKey}`), { status: 404 });
     },
   });
@@ -612,11 +635,17 @@ assert.doesNotMatch(
 const configuredCalls = [];
 const configuredRoute = await businessRouteApi(true, configuredCalls).loadRoute("business", { force: true });
 assert.equal(configuredCalls.filter((entry) => entry === "businessTreasury").length, 1);
-assert.equal(
-  configuredCalls.at(-1),
-  "businessTreasury",
+assert.ok(
+  configuredCalls.indexOf("businessTreasury") > configuredCalls.indexOf("business"),
   "Treasury may be requested only after the canonical Business prerequisite resolves.",
 );
+for (const dependency of BUSINESS_ROUTE_DEPENDENCIES) {
+  assert.equal(
+    configuredCalls.filter((entry) => entry === dependency).length,
+    1,
+    `${dependency} must resolve exactly once after the configured Business prerequisite.`,
+  );
+}
 assert.equal(configuredRoute.resourceStatus.businessTreasury.state, "ready");
 assert.equal(configuredRoute.data.businessTreasury.businessKey, key.business);
 
@@ -648,4 +677,4 @@ assert.equal(
   "The false-to-true formation transition must fetch Treasury exactly once without route re-entry.",
 );
 
-console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, prerequisite-gated route, capability, state, and precision contracts passed.");
+console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, Phase 12 deferred dependencies, capability, state, and precision contracts passed.");

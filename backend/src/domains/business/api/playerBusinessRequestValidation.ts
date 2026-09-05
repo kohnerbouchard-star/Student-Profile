@@ -33,6 +33,14 @@ const FORMATION_OWNER_FIELDS = new Set([
   "capitalContribution",
 ]);
 
+export interface BusinessStoreWithdrawalIntent {
+  readonly offerKey: string;
+  readonly mode: "full" | "reduce";
+  readonly quantity: number | null;
+  readonly expectedOfferVersion: number;
+  readonly idempotencyKey: string;
+}
+
 export function validateBusinessRequestEnvelope(request: Request): void {
   const url = new URL(request.url);
   if (url.search.length > 0) {
@@ -149,6 +157,13 @@ export function validateBusinessRequestMethodAndFields(
       "idempotencyKey",
       "clientSubmittedAt",
     ],
+    businessStoreWithdrawal: [
+      "offerKey",
+      "mode",
+      "quantity",
+      "expectedOfferVersion",
+      "idempotencyKey",
+    ],
     businessCandidateHire: ["businessKey", "idempotencyKey"],
     businessProductCreate: [
       "businessKey",
@@ -210,6 +225,10 @@ export function validateBusinessRequestMethodAndFields(
     }
   }
 
+  if (route.kind === "businessStoreWithdrawal") {
+    readBusinessStoreWithdrawalIntent(body);
+  }
+
   // Keep the retired field parseable so older clients receive the stable 410
   // from the mutation executor, but reject malformed acquisition intent before
   // trusted Player scope resolution. Presence is intentional here: null, an
@@ -221,6 +240,31 @@ export function validateBusinessRequestMethodAndFields(
   ) {
     readKey(body.acquireBusinessKey, "acquireBusinessKey", "biz");
   }
+}
+
+export function readBusinessStoreWithdrawalIntent(
+  body: Record<string, unknown>,
+): BusinessStoreWithdrawalIntent {
+  const mode = readEnum(body.mode, "mode", ["full", "reduce"]);
+  const quantity = readOptionalInteger(body.quantity, "quantity", 1, 1_000_000);
+  if (mode === "full" && quantity !== null) {
+    throw invalidRequest("Full withdrawal must omit quantity.");
+  }
+  if (mode === "reduce" && quantity === null) {
+    throw invalidRequest("Reduction withdrawal requires quantity.");
+  }
+  return {
+    offerKey: readKey(body.offerKey, "offerKey", "sof"),
+    mode: mode as "full" | "reduce",
+    quantity,
+    expectedOfferVersion: readInteger(
+      body.expectedOfferVersion,
+      "expectedOfferVersion",
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    idempotencyKey: readIdempotencyKey(body.idempotencyKey),
+  };
 }
 
 export function readText(

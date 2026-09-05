@@ -123,14 +123,14 @@ export function renderMarketOrderDialog(transaction) {
       <section class="player-terminal-modal player-terminal-connector-modal" data-player-market-order-dialog role="dialog" aria-modal="true" aria-labelledby="marketOrderModalTitle">
         <header class="player-terminal-modal-head"><div><small>IMMEDIATE SELL REVIEW</small><h3 id="marketOrderModalTitle">${escapeHtml(orderLabel(transaction))}</h3></div><button class="player-terminal-icon-button" type="button" data-player-market-order-close aria-label="Close">${icon("close")}</button></header>
         <div class="player-terminal-modal-body">
-          <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>The backend will revalidate price, tick, holdings, market liquidity, destination ownership, and any required Banking FX conversion.</p></div>
+          <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>The backend will revalidate price, tick, holdings, market liquidity, destination ownership, and an exact listing-currency Checking destination. Stock sale proceeds do not auto-convert.</p></div>
           <dl class="player-terminal-connector-meta">
             <div><dt>QUANTITY</dt><dd>${escapeHtml(formatNumber(transaction.quantity))}</dd></div>
             <div><dt>EXPECTED PRICE</dt><dd>${escapeHtml(formatCurrency(transaction.expectedPrice, code))}</dd></div>
             <div><dt>ESTIMATED PROCEEDS</dt><dd>${escapeHtml(formatCurrency(transaction.estimatedGross, code))}</dd></div>
             <div><dt>PRICE TICK</dt><dd>#${escapeHtml(String(transaction.expectedTickIndex))}</dd></div>
             <div><dt>DESTINATION</dt><dd>${escapeHtml(destination.accountKey || transaction.payload?.destinationAccountKey || "")}</dd></div>
-            <div><dt>DESTINATION CURRENCY</dt><dd>${escapeHtml(String(destination.currencyCode || code).toUpperCase())}${String(destination.currencyCode || code).toUpperCase() === code ? " · no FX" : " · Banking FX"}</dd></div>
+            <div><dt>DESTINATION CURRENCY</dt><dd>${escapeHtml(String(destination.currencyCode || code).toUpperCase())} · no sell-side FX</dd></div>
           </dl>${error}
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-market-order-close>Cancel</button><button class="player-terminal-primary-button" type="button" data-player-market-order-confirm>${icon("send")} Confirm immediate sale</button></footer>
@@ -176,6 +176,39 @@ function assetForForm(terminal, form) {
 
 function rawFormPayload(form) {
   return Object.fromEntries(new FormData(form).entries());
+}
+
+function setReviewValue(form, name, value) {
+  const input = form.elements.namedItem(name);
+  if (input && "value" in input) input.value = String(value);
+}
+
+async function readAuthoritativeTradeReview(api, config, asset, form) {
+  const ticker = String(asset?.symbol || "").trim().toUpperCase();
+  if (!ticker) throw new Error("The selected Stock is unavailable.");
+  api.setSession(config);
+  api.invalidateResources(["marketAsset"]);
+  const detail = await api.request("marketAsset", {
+    params: { assetId: ticker },
+    force: true,
+  });
+  const reviewed = detail?.asset || (Array.isArray(detail?.assets)
+    ? detail.assets.find((candidate) => String(candidate?.symbol || candidate?.ticker || "").trim().toUpperCase() === ticker)
+    : null);
+  const expectedPrice = Number(reviewed?.currentPrice ?? reviewed?.price);
+  const expectedTickIndex = Number(detail?.tickIndex);
+  if (
+    String(reviewed?.ticker || reviewed?.symbol || reviewed?.assetId || "").trim().toUpperCase() !== ticker ||
+    !Number.isFinite(expectedPrice) || expectedPrice <= 0 ||
+    !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex < 0
+  ) throw new Error("The authoritative Stock price review was incomplete.");
+  setReviewValue(form, "expectedPrice", expectedPrice);
+  setReviewValue(form, "expectedTickIndex", expectedTickIndex);
+  return {
+    asset: { ...asset, price: expectedPrice },
+    expectedPrice,
+    expectedTickIndex,
+  };
 }
 
 function readBuyAllocations(form) {
@@ -260,6 +293,18 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     }
   }
 
+  function refreshSingleLineBuyFunding(payload, reviewedPrice) {
+    const previousGross = roundStock(payload.quantity * payload.expectedPrice);
+    const previousFunded = roundStock(payload.allocations.reduce((sum, row) => sum + row.targetAmount, 0));
+    if (payload.allocations.length !== 1 || Math.abs(previousFunded - previousGross) >= 0.00001) return false;
+    const forms = [...mount.querySelectorAll('form[data-player-market-order-form="buy-quote"]')];
+    const refreshedForm = forms.find((candidate) => candidate.offsetParent !== null) || forms[0] || null;
+    if (!refreshedForm) return false;
+    setReviewValue(refreshedForm, "targetAmount1", roundStock(payload.quantity * reviewedPrice));
+    refreshedForm.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+  }
+
   async function createBuyQuote(form) {
     if (pending || destroyed) return;
     const state = terminal.getState();
@@ -275,28 +320,46 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
       terminal.showToast?.("Every funding source must be a current canonical Checking account.", "red");
       return;
     }
-    const expectedGross = roundStock(payload.quantity * payload.expectedPrice);
-    const funded = roundStock(payload.allocations.reduce((sum, row) => sum + row.targetAmount, 0));
-    if (Math.abs(funded - expectedGross) >= 0.00001) {
-      terminal.showToast?.("Funding allocations must exactly equal the listing-currency gross value.", "red");
-      return;
-    }
     opener = form.querySelector('button[type="submit"]');
-    const restore = setButtonProcessing(opener, "Creating quote");
+    const restore = setButtonProcessing(opener, "Reviewing price");
     pending = true;
     try {
-      api.setSession(config);
+      const review = await readAuthoritativeTradeReview(api, config, asset, form);
+      if (roundStock(review.expectedPrice) !== roundStock(payload.expectedPrice)) {
+        try {
+          await refreshTradeResources();
+          refreshSingleLineBuyFunding(payload, review.expectedPrice);
+        } catch {}
+        terminal.showToast?.("The Stock price changed. Review the refreshed price and funding amount before submitting again.", "amber");
+        return;
+      }
+      payload = {
+        ...payload,
+        expectedPrice: review.expectedPrice,
+        expectedTickIndex: review.expectedTickIndex,
+      };
+      const expectedGross = roundStock(payload.quantity * payload.expectedPrice);
+      const funded = roundStock(payload.allocations.reduce((sum, row) => sum + row.targetAmount, 0));
+      if (Math.abs(funded - expectedGross) >= 0.00001) {
+        terminal.showToast?.("Funding allocations must exactly equal the listing-currency gross value.", "red");
+        return;
+      }
       const operation = await api.execute("marketOrder", payload);
       const quote = operation.result?.quote;
       if (!quote || !QUOTE_KEY.test(String(quote.quoteKey || "")) || !Number.isFinite(Date.parse(quote.expiresAt))) throw new Error("The Stock quote response was invalid.");
-      transaction = { stage: "buy-quote", side: "buy", asset, quantity: payload.quantity, expectedTickIndex: payload.expectedTickIndex, currencyCode: quote.listingCurrencyCode, quote, allocations: payload.allocations, error: "" };
+      transaction = { stage: "buy-quote", side: "buy", asset: review.asset, quantity: payload.quantity, expectedTickIndex: review.expectedTickIndex, currencyCode: quote.listingCurrencyCode, quote, allocations: payload.allocations, error: "" };
       renderTransaction();
     } catch (error) {
-      if (!dispatchInvalidSession(error, config)) terminal.showToast?.(safeMessage(error, "The exact Stock quote could not be created."), "red");
+      if (dispatchInvalidSession(error, config)) return;
+      if (["stale_stock_tick", "stale_stock_price"].includes(String(error?.code || ""))) {
+        try { await refreshTradeResources(); } catch {}
+        terminal.showToast?.("The Stock market changed during review. Review the refreshed ticket and submit again.", "amber");
+      } else terminal.showToast?.(safeMessage(error, "The exact Stock quote could not be created."), "red");
     } finally { restore(); pending = false; }
   }
 
-  function prepareSell(form) {
+  async function prepareSell(form) {
+    if (pending || destroyed) return;
     const state = terminal.getState();
     if (!isRouteEnabled(state.data?.capabilities, "market") || !isEndpointEnabled(state.data?.capabilities, "marketOrder")) return;
     if (state.data?.market?.status === "CLOSED") { terminal.showToast?.("The Stock market is closed.", "red"); return; }
@@ -307,11 +370,28 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     catch (error) { terminal.showToast?.(safeMessage(error, "Check the sale details."), "red"); return; }
     const destinationAccount = stateCheckingAccounts(terminal).find((row) => String(row.accountKey).toLowerCase() === payload.destinationAccountKey);
     if (!destinationAccount) { terminal.showToast?.("Choose a current canonical Checking destination.", "red"); return; }
+    const listingCurrencyCode = String(asset.listingCurrencyCode || state.data?.session?.currencyCode || "ECO").toUpperCase();
+    if (String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode) {
+      terminal.showToast?.(`Choose an active ${listingCurrencyCode} Checking account for proceeds.`, "red");
+      return;
+    }
     const owned = marketPositionForAsset(state.data?.portfolio, asset).owned;
     if (payload.quantity > owned) { terminal.showToast?.(`You currently own ${formatNumber(owned)} shares.`, "red"); return; }
     opener = form.querySelector('button[type="submit"]');
-    transaction = { stage: "sell-review", side: "sell", asset, ticker: payload.ticker, quantity: payload.quantity, expectedPrice: payload.expectedPrice, expectedTickIndex: payload.expectedTickIndex, estimatedGross: roundStock(payload.quantity * payload.expectedPrice), currencyCode: asset.listingCurrencyCode, destinationAccount, payload, error: "" };
-    renderTransaction();
+    const restore = setButtonProcessing(opener, "Reviewing price");
+    pending = true;
+    try {
+      const review = await readAuthoritativeTradeReview(api, config, asset, form);
+      payload = {
+        ...payload,
+        expectedPrice: review.expectedPrice,
+        expectedTickIndex: review.expectedTickIndex,
+      };
+      transaction = { stage: "sell-review", side: "sell", asset: review.asset, ticker: payload.ticker, quantity: payload.quantity, expectedPrice: review.expectedPrice, expectedTickIndex: review.expectedTickIndex, estimatedGross: roundStock(payload.quantity * review.expectedPrice), currencyCode: listingCurrencyCode, destinationAccount, payload, error: "" };
+      renderTransaction();
+    } catch (error) {
+      if (!dispatchInvalidSession(error, config)) terminal.showToast?.(safeMessage(error, "The Stock sale review could not be refreshed."), "red");
+    } finally { restore(); pending = false; }
   }
 
   async function confirmOrder(button) {
@@ -340,7 +420,8 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
       renderTransaction();
     } catch (error) {
       if (dispatchInvalidSession(error, config)) return;
-      transaction = { ...transaction, error: safeMessage(error, "The Stock settlement could not be completed.") };
+      const staleReview = ["stale_stock_tick", "stale_stock_price"].includes(String(error?.code || ""));
+      transaction = { ...transaction, error: staleReview ? `${safeMessage(error)} Close this review and submit again.` : safeMessage(error, "The Stock settlement could not be completed.") };
       renderTransaction();
     } finally { restore(); pending = false; }
   }
@@ -351,7 +432,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     event.preventDefault();
     event.stopImmediatePropagation();
     if (form.dataset.playerMarketOrderForm === "buy-quote") void createBuyQuote(form);
-    else if (form.dataset.playerMarketOrderForm === "sell-review") prepareSell(form);
+    else if (form.dataset.playerMarketOrderForm === "sell-review") void prepareSell(form);
   }
 
   function handleInput(event) {
