@@ -166,20 +166,70 @@ async function openRoute(page, route, selector) {
     await reviewButton.click();
     const review = await reviewPromise;`,
     `    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker).catch(() => null);
-    await reviewButton.click();
+    const activation = await form.evaluate((candidate) => {
+      const submitter = candidate.querySelector('button[type="submit"]');
+      const invalidControls = [...candidate.elements]
+        .filter((control) => typeof control.checkValidity === "function" && !control.checkValidity())
+        .map((control) => ({
+          name: String(control.name || control.tagName || "control"),
+          value: String(control.value || ""),
+          message: String(control.validationMessage || "invalid"),
+        }));
+      if (!(submitter instanceof HTMLButtonElement)) {
+        return { submitted: false, submitObserved: false, reason: "missing_submitter", invalidControls };
+      }
+      if (submitter.disabled) {
+        return { submitted: false, submitObserved: false, reason: "disabled_submitter", invalidControls };
+      }
+      if (invalidControls.length) {
+        return { submitted: false, submitObserved: false, reason: "invalid_form", invalidControls };
+      }
+      let submitObserved = false;
+      const observeSubmit = (event) => {
+        if (event.target === candidate) submitObserved = true;
+      };
+      document.addEventListener("submit", observeSubmit, { capture: true, once: true });
+      candidate.requestSubmit(submitter);
+      document.removeEventListener("submit", observeSubmit, true);
+      return { submitted: true, submitObserved, reason: "", invalidControls: [] };
+    });
+    if (!activation.submitted || !activation.submitObserved) {
+      throw new Error(\`The sell review form could not be submitted through its native browser contract: \${JSON.stringify(activation)}\`);
+    }
     const review = await Promise.race([
       reviewPromise,
       page.waitForTimeout(15_000).then(() => null),
     ]);
     if (!review) {
       if (attempt === 3) {
-        throw new Error("The sell review did not emit its authoritative Stock detail request after three fresh route attempts.");
+        const diagnostic = await page.evaluate(() => {
+          const terminal = globalThis.Econovaria?.playerTerminal;
+          const state = terminal?.getState?.();
+          const form = document.querySelector('form[data-player-market-order-form="sell-review"]');
+          return {
+            route: String(location.hash || ""),
+            terminalStatus: String(state?.status || ""),
+            marketRouteEnabled: state?.data?.capabilities?.routes?.market === true,
+            marketOrderEnabled: state?.data?.capabilities?.actions?.marketOrder === true,
+            marketEndpointEnabled: state?.data?.capabilities?.endpointKeys?.marketOrder !== false,
+            formConnected: form?.isConnected === true,
+            ticker: String(form?.elements?.namedItem("ticker")?.value || ""),
+            quantity: String(form?.elements?.namedItem("quantity")?.value || ""),
+            destinationAccountKey: String(form?.elements?.namedItem("destinationAccountKey")?.value || ""),
+            visibleMessages: [...document.querySelectorAll('[role="alert"], [role="status"], .player-terminal-toast')]
+              .filter((node) => node.offsetParent !== null)
+              .map((node) => String(node.textContent || "").trim())
+              .filter(Boolean)
+              .slice(-5),
+          };
+        });
+        throw new Error(\`The sell review submitted but did not emit its authoritative Stock detail request after three fresh route attempts: \${JSON.stringify(diagnostic)}\`);
       }
       await reloadMarket(page);
       await selectTicker(page, ticker);
       continue;
     }`,
-    "bounded authoritative sell-review retry",
+    "native authoritative sell-review submission",
   );
 
   const materializedDirectory = await mkdtemp(
