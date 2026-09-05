@@ -138,8 +138,30 @@ async function runConnectedPlayerBffAcceptance(entryUrl) {
     deterministicSettlementFixture,
     "listing-currency settlement fixture",
   );
-  const boundedSellReviewSource = replaceExactOnce(
+  const terminalReadySource = replaceExactOnce(
     deterministicFixtureSource,
+    `async function openRoute(page, route, selector) {
+  await page.locator(\`[data-route="\${route}"]:visible\`).first().click();`,
+    `async function waitForConnectedPlayerTerminal(page) {
+  await page.waitForFunction(() => {
+    const terminal = globalThis.Econovaria?.playerTerminal;
+    const state = terminal?.getState?.();
+    const capabilities = state?.data?.capabilities;
+    const endpointKeys = capabilities?.endpointKeys;
+    return state?.status === "ready" &&
+      capabilities?.routes?.market === true &&
+      capabilities?.actions?.marketOrder === true &&
+      (endpointKeys === null || endpointKeys === undefined || endpointKeys.marketOrder === true);
+  }, null, { timeout: 120_000 });
+}
+
+async function openRoute(page, route, selector) {
+  await waitForConnectedPlayerTerminal(page);
+  await page.locator(\`[data-route="\${route}"]:visible\`).first().click();`,
+    "connected Player terminal readiness",
+  );
+  const boundedSellReviewSource = replaceExactOnce(
+    terminalReadySource,
     `    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker);
     await reviewButton.click();
     const review = await reviewPromise;`,
