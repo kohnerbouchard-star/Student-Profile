@@ -168,6 +168,7 @@ async function openRoute(page, route, selector) {
     `    const reviewPromise = waitForAuthoritativeAssetReview(page, ticker).catch(() => null);
     const activation = await form.evaluate((candidate) => {
       const submitter = candidate.querySelector('button[type="submit"]');
+      const mount = candidate.closest("#playerTerminal");
       const invalidControls = [...candidate.elements]
         .filter((control) => typeof control.checkValidity === "function" && !control.checkValidity())
         .map((control) => ({
@@ -185,17 +186,50 @@ async function openRoute(page, route, selector) {
         return { submitted: false, submitObserved: false, reason: "invalid_form", invalidControls };
       }
       let submitObserved = false;
+      let reachedAfterControllers = false;
       const observeSubmit = (event) => {
         if (event.target === candidate) submitObserved = true;
       };
+      const observeAfterControllers = (event) => {
+        if (event.target === candidate) reachedAfterControllers = true;
+      };
       document.addEventListener("submit", observeSubmit, { capture: true, once: true });
+      mount?.addEventListener("submit", observeAfterControllers, { capture: true, once: true });
       candidate.requestSubmit(submitter);
       document.removeEventListener("submit", observeSubmit, true);
-      return { submitted: true, submitObserved, reason: "", invalidControls: [] };
+      mount?.removeEventListener("submit", observeAfterControllers, true);
+      return { submitted: true, submitObserved, reachedAfterControllers, reason: "", invalidControls: [] };
     });
     if (!activation.submitted || !activation.submitObserved) {
       throw new Error(\`The sell review form could not be submitted through its native browser contract: \${JSON.stringify(activation)}\`);
     }
+    const immediateDiagnostic = await page.waitForTimeout(250).then(() => page.evaluate(() => {
+      const terminal = globalThis.Econovaria?.playerTerminal;
+      const state = terminal?.getState?.();
+      const form = document.querySelector('form[data-player-market-order-form="sell-review"]');
+      const ticker = String(form?.elements?.namedItem("ticker")?.value || "").toUpperCase();
+      const asset = state?.data?.market?.assets?.find(
+        (candidate) => String(candidate?.symbol || "").toUpperCase() === ticker,
+      );
+      const destinationAccountKey = String(form?.elements?.namedItem("destinationAccountKey")?.value || "").toLowerCase();
+      const destination = state?.data?.bankingFx?.balances?.find(
+        (candidate) => String(candidate?.accountKey || "").toLowerCase() === destinationAccountKey,
+      );
+      return {
+        marketStatus: String(state?.data?.market?.status || ""),
+        assetResolved: Boolean(asset),
+        assetOwned: Number(asset?.owned || 0),
+        portfolioRows: Number(state?.data?.portfolio?.holdings?.length || 0),
+        destinationResolved: Boolean(destination),
+        destinationCurrencyCode: String(destination?.currencyCode || ""),
+        listingCurrencyCode: String(asset?.listingCurrencyCode || ""),
+        visibleMessages: [...document.querySelectorAll('[role="alert"], [role="status"], .player-terminal-toast')]
+          .filter((node) => node.offsetParent !== null)
+          .map((node) => String(node.textContent || "").trim())
+          .filter(Boolean)
+          .slice(-5),
+      };
+    }));
     const review = await Promise.race([
       reviewPromise,
       page.waitForTimeout(15_000).then(() => null),
@@ -223,7 +257,7 @@ async function openRoute(page, route, selector) {
               .slice(-5),
           };
         });
-        throw new Error(\`The sell review submitted but did not emit its authoritative Stock detail request after three fresh route attempts: \${JSON.stringify(diagnostic)}\`);
+        throw new Error(\`The sell review submitted but did not emit its authoritative Stock detail request after three fresh route attempts: \${JSON.stringify({ activation, immediateDiagnostic, diagnostic })}\`);
       }
       await reloadMarket(page);
       await selectTicker(page, ticker);
