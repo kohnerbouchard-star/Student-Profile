@@ -81,6 +81,7 @@
     "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-market-browser-acceptance.core.mjs",
     "scripts/business-banking-player-market-browser-acceptance.mjs",
+    "scripts/business-banking-player-world-browser-acceptance.mjs",
     "scripts/multicurrency-stock-buy-settlement-concurrency-database.mjs",
     "scripts/multicurrency-stock-sell-settlement-concurrency-database.mjs",
     "scripts/business-phase10-player-store-browser-acceptance.mjs",
