@@ -260,11 +260,41 @@ function adaptPhase12CanonicalWorkspace(source) {
   ).waitFor({ state: "visible", timeout: 30_000 });
   evidence.workspace.browserAuthoredEconomicsAbsent = true;
 
-  const manufacturing = workspace.locator('form[data-endpoint="businessManufacturingStart"]');
-  if ((await manufacturing.count()) !== 1) {
-    throw new Error("Canonical manufacturing intent control was not rendered exactly once.");
+  const manufacturingIntent = workspace.locator("[data-business-production-intent]");
+  if ((await manufacturingIntent.count()) !== 1) {
+    throw new Error("Canonical manufacturing intent boundary was not rendered exactly once.");
   }
-  await manufacturing.waitFor({ state: "visible", timeout: 30_000 });
+  await manufacturingIntent.waitFor({ state: "visible", timeout: 30_000 });
+  const manufacturingState = await manufacturingIntent.getAttribute("data-business-production-intent");
+  const manufacturing = manufacturingIntent.locator('form[data-endpoint="businessManufacturingStart"]');
+  const manufacturingCount = await manufacturing.count();
+  if (manufacturingState === "blocked") {
+    if (manufacturingCount !== 0) {
+      throw new Error("Blocked manufacturing intent exposed a mutation control.");
+    }
+    await manufacturingIntent.getByText("No runnable production intent", { exact: true })
+      .waitFor({ state: "visible", timeout: 30_000 });
+  } else if (manufacturingState === "ready") {
+    if (manufacturingCount < 1) {
+      throw new Error("Ready manufacturing intent did not expose a runnable product control.");
+    }
+    const invalidManufacturingControls = await manufacturing.evaluateAll((forms) => forms.flatMap((form) => {
+      const productKey = form.querySelector('input[name="productKey"]')?.value || "";
+      const quantity = form.querySelector('input[name="quantity"]');
+      const minimum = Number(quantity?.min);
+      const maximum = Number(quantity?.max);
+      const value = Number(quantity?.value);
+      return productKey && minimum === 1 && Number.isSafeInteger(maximum) && maximum >= 1 &&
+        Number.isSafeInteger(value) && value >= minimum && value <= maximum
+        ? []
+        : [{ productKey, minimum, maximum, value }];
+    }));
+    if (invalidManufacturingControls.length) {
+      throw new Error(\`Ready manufacturing controls were not bound to valid product and quantity limits: \${JSON.stringify(invalidManufacturingControls)}.\`);
+    }
+  } else {
+    throw new Error(\`Unknown manufacturing intent state: \${manufacturingState}.\`);
+  }
   evidence.workspace.canonicalManufacturingControlRendered = true;
 
   const stockroom = workspace.locator('[data-business-workspace-section="stockroom"]');
