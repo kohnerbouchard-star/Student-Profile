@@ -76,6 +76,7 @@
     "player-terminal/tests/business-workspace-resources.mjs",
     "player-terminal/tests/market-order-flow.mjs",
     "player-terminal/tests/player-logout-revocation.mjs",
+    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs",
     ".github/workflows/multicurrency-marketplace-funding-v1.yml",
     "scripts/business-banking-player-business-browser-acceptance.mjs",
     "scripts/business-banking-player-market-browser-acceptance.core.mjs",
