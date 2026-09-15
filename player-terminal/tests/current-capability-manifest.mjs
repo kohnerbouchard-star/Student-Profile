@@ -84,6 +84,16 @@ assert.equal(isEndpointEnabled(resolved, "bankingFxInstant"), true);
 assert.equal(isEndpointEnabled(resolved, "bankingFxCancel"), true);
 assert.equal(isEndpointEnabled(resolved, "messageThreadCreate"), true);
 assert.equal(isEndpointEnabled(resolved, "messageRead"), true);
+for (const endpointKey of [
+  "craftItem",
+  "craftCancel",
+  "craftClaim",
+  "equipmentEquip",
+  "itemEffectUse",
+  "itemSalvage",
+]) {
+  assert.equal(isEndpointEnabled(resolved, endpointKey), true);
+}
 
 const futureManifest = structuredClone(generated);
 futureManifest.capabilities.routes.futureSimulation = true;

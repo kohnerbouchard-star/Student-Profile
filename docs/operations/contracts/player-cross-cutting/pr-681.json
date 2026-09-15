@@ -74,6 +74,7 @@
     "player-terminal/tests/business-multicurrency-treasury.mjs",
     "player-terminal/tests/business-workspace-page-boundary.mjs",
     "player-terminal/tests/business-workspace-resources.mjs",
+    "player-terminal/tests/current-capability-manifest.mjs",
     "player-terminal/tests/market-order-flow.mjs",
     "player-terminal/tests/player-logout-revocation.mjs",
     "player-terminal/tools/connected-banking-loans-bff-adapter.mjs",
