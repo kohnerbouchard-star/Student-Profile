@@ -190,6 +190,8 @@ assert.ok(source.includes('refreshedForm.dispatchEvent(new Event("input", { bubb
 assert.ok(source.includes("The Stock price changed. Review the refreshed price and funding amount before submitting again."));
 assert.ok(source.includes('"stale_stock_tick", "stale_stock_price"'));
 assert.ok(source.includes('else if (form.dataset.playerMarketOrderForm === "sell-review") void prepareSell(form)'));
+assert.ok(source.includes("asset?.listingCurrencyCode || country?.currencyCode || state?.session?.currencyCode"));
+assert.ok(source.includes("const listingCurrencyCode = listingCurrencyForAsset(terminal, asset);"));
 assert.ok(source.includes('terminal.refreshResources(["dashboard", "market", "portfolio", "banking", "bankingFx"])'));
 assert.ok(source.includes("normalizeWritePayload"));
 assert.ok(source.includes("marketPositionForAsset"));

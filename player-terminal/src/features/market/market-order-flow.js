@@ -169,6 +169,12 @@ function stateCheckingAccounts(terminal) {
   return (Array.isArray(balances) ? balances : []).filter((row) => row?.accountKind === "checking" && ACCOUNT_KEY.test(String(row.accountKey || "")));
 }
 
+function listingCurrencyForAsset(terminal, asset) {
+  const state = terminal.getState()?.data;
+  const country = state?.countries?.find((entry) => entry.id === asset?.countryId);
+  return String(asset?.listingCurrencyCode || country?.currencyCode || state?.session?.currencyCode || "ECO").toUpperCase();
+}
+
 function assetForForm(terminal, form) {
   const ticker = String(form.elements.namedItem("ticker")?.value || "").trim().toUpperCase();
   return terminal.getState()?.data?.market?.assets?.find((asset) => String(asset.symbol || "").toUpperCase() === ticker) || null;
@@ -225,7 +231,7 @@ function readBuyAllocations(form) {
 function updateBuySummary(terminal, form) {
   const asset = assetForForm(terminal, form);
   if (!asset) return;
-  const code = String(asset.listingCurrencyCode || terminal.getState()?.data?.session?.currencyCode || "ECO").toUpperCase();
+  const code = listingCurrencyForAsset(terminal, asset);
   const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
   const estimate = roundStock(quantity * Number(asset.price || 0));
   const allocations = readBuyAllocations(form);
@@ -244,7 +250,7 @@ function updateBuySummary(terminal, form) {
 function updateSellSummary(terminal, form) {
   const asset = assetForForm(terminal, form);
   if (!asset) return;
-  const code = String(asset.listingCurrencyCode || terminal.getState()?.data?.session?.currencyCode || "ECO").toUpperCase();
+  const code = listingCurrencyForAsset(terminal, asset);
   const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
   form.querySelector("[data-player-market-sell-proceeds]")?.replaceChildren(document.createTextNode(formatCurrency(roundStock(quantity * Number(asset.price || 0)), code)));
 }
@@ -370,7 +376,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     catch (error) { terminal.showToast?.(safeMessage(error, "Check the sale details."), "red"); return; }
     const destinationAccount = stateCheckingAccounts(terminal).find((row) => String(row.accountKey).toLowerCase() === payload.destinationAccountKey);
     if (!destinationAccount) { terminal.showToast?.("Choose a current canonical Checking destination.", "red"); return; }
-    const listingCurrencyCode = String(asset.listingCurrencyCode || state.data?.session?.currencyCode || "ECO").toUpperCase();
+    const listingCurrencyCode = listingCurrencyForAsset(terminal, asset);
     if (String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode) {
       terminal.showToast?.(`Choose an active ${listingCurrencyCode} Checking account for proceeds.`, "red");
       return;
