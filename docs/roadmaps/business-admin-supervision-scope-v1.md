@@ -6,6 +6,7 @@
 **Stacked base:** `feat/player-business-workspace-v2`
 **Parent Phase 12 implementation identity:** `76539c5cfcff612a322963e303e727e6edc7f7ed`
 **Parent Phase 12 documentation handoff:** `d6ddb52f38da1ad931ba56600b49786f11f11ac6`
+**Phase 13A implementation candidate:** `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`
 **Merge/deployment authorization:** none
 
 ## Objective
@@ -97,7 +98,7 @@ Stop and reopen scope if implementation requires a new economic mutation authori
 - The Admin v2 controller and drawer load detail asynchronously with loading, bounded error/retry, cancellation, and stale-result suppression behavior.
 - Browser requests and Admin responses remain `no-store`; no bearer token, internal UUID, raw owner identity, retired simulated aggregate, or database detail is exposed.
 - No schema, migration, RPC, economic write, scheduler, secret, deployment, or live-data change is part of 13A.
-- Exact implementation SHA and exact-head workflow evidence remain pending; this is not Phase 13 certification.
+- Candidate `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92` passed focused local source, Admin v2, Deno format/check/test, permission-normalization, JSON, and diff gates. Exact-head workflow evidence remains pending; this is not Phase 13 certification.
 
 ## Release boundary
 

@@ -1,7 +1,7 @@
 {
   "program": "BETA-BUSINESS-V2-001",
-  "status": "PHASE_12_IMPLEMENTED_NOT_MERGED",
-  "audited_at": "2026-09-15T04:05:53Z",
+  "status": "PHASE_13_IN_PROGRESS",
+  "audited_at": "2026-09-16T05:10:39Z",
   "integration_pr": 648,
   "integration_branch": "refactor/business-ux-mechanics-v1",
   "latest_checkpoint": "BUSINESS-V2-12",
@@ -82,17 +82,22 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-12",
-  "active_checkpoint_branch": "feat/player-business-workspace-v2",
-  "active_checkpoint_pr": 681,
-  "active_checkpoint_started_at": "2026-09-01T19:14:00+09:00",
-  "active_candidate_implementation_sha": "76539c5cfcff612a322963e303e727e6edc7f7ed",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "All applicable exact-head workflows passed. The three skipped workflows are deployment-only and no required Business, World, funding, settlement, or 30/40-Player load coverage was skipped. This later documentation-only handoff does not replace the exact implementation identity.",
-  "next_authorized_checkpoint": "BUSINESS-V2-13",
-  "next_authorized_scope": "Bounded Admin Business supervision: read-only operational visibility with explicit, permissioned, audited intervention only where already authorized. Do not introduce new simulation or financial authority and do not pull Phase 14 equity/IPO work forward.",
+  "active_checkpoint": "BUSINESS-V2-13A",
+  "active_checkpoint_branch": "feat/admin-business-supervision-v2",
+  "active_checkpoint_pr": 682,
+  "active_checkpoint_started_at": "2026-09-16T05:10:39Z",
+  "active_candidate_parent_sha": "d6ddb52f38da1ad931ba56600b49786f11f11ac6",
+  "active_candidate_implementation_sha": "4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92",
+  "active_candidate_state": "IN_PROGRESS",
+  "active_candidate_note": "Phase 13A adds a read-only, game-scoped, public-key-only Admin Business directory/detail foundation and removes the Admin v2 compliance mutation affordance. Focused Admin v2 and Deno gates pass locally; exact-head workflow evidence is pending, so this candidate is not certified.",
+  "next_authorized_checkpoint": "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
+  "next_authorized_scope": "Publish and verify the Phase 13A candidate without weakening the read-only, game-scope, public-key, privacy, no-store, permission, or rate-limit boundaries. Phase 13B and Phase 14 remain closed until this boundary is green.",
   "remaining_dependency_order": [
-    "BUSINESS-V2-13",
+    "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
+    "BUSINESS-V2-13B",
+    "BUSINESS-V2-13C",
+    "BUSINESS-V2-13D",
+    "BUSINESS-V2-13F",
     "BUSINESS-V2-14"
   ],
   "release_state": {

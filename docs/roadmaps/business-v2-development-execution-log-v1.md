@@ -1317,3 +1317,38 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data changed. Database and connected evidence used disposable local/CI services only.
 - `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker. It does not block the Phase 12 repository certification recorded here and does not authorize production repair from this branch.
 - **`BUSINESS-V2-13` is the next authorized checkpoint** after this clean documentation-only handoff. Phase 13 owns bounded Admin Business supervision; Phase 14 remains planned behind it. Neither phase is implemented by this closeout.
+
+---
+
+## 2026-09-16 — Phase 13A implementation candidate: read-only Admin Business directory/detail foundation
+
+### Repository and ancestry reconciliation
+
+- Existing owner branch: `feat/admin-business-supervision-v2`; existing draft PR: #682.
+- The owner branch had diverged from the final certified Phase 12 handoff. It was advanced by merge commit `e464c4071e7425374f4bac482111602635d3369a` from Phase 12 documentation handoff `d6ddb52f38da1ad931ba56600b49786f11f11ac6`; no rebase, branch replacement, or force-push was used.
+- The three overlaps were resolved to the certified Phase 12 versions of PR #681 authority and the Business/Market connected acceptance harnesses. The Phase 13 scope document remained the unique successor-owned change.
+- Phase 12 remains certified at exact implementation `76539c5cfcff612a322963e303e727e6edc7f7ed` with 48 applicable exact-head workflow successes and three expected deployment-only skips.
+
+### Phase 13A candidate
+
+- **Implementation candidate SHA:** `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`.
+- Added separate read-only `GET /games/:gameId/businesses/:businessKey` detail handling over the existing Admin BFF, with a strict `biz_<32 hex>` key, same-game filtering, bounded not-found response, and public-key-only projection.
+- Extended the bounded directory/detail projection with server-derived operational-readiness and attention flags using canonical status/failure evidence only.
+- Replaced the Admin v2 Business compliance mutation client/controller/dialog with an asynchronous read-only detail drawer that owns loading, retryable error, cancellation, stale-response suppression, and teardown behavior.
+- Kept the existing legacy compliance RPC untouched but unexposed by the Phase 13 supervision surface. Phase 13A adds no mutation or intervention authority.
+- Added PR-bound path authority at `docs/operations/contracts/admin-business-supervision/pr-682.json`.
+
+### Local verification
+
+- Focused Admin v2 Business suite: **6/6 PASS**.
+- Full Admin v2 unit/API suite: **85/85 PASS** after expanding the local sparse checkout to the existing required API and Player asset paths.
+- Focused Admin Business and resource-permission Deno suites: **12/12 PASS**.
+- Deno format check and targeted Deno type checks for the changed Admin operation, tests, and security guard: **PASS**.
+- Backend TypeScript `tsc --noEmit`: **PASS**. The aggregate Edge-root typecheck could not finish locally because its uncached `esm.sh` dependency fetch was refused by the execution network; targeted changed-root Deno checks passed, and exact-head CI remains required.
+- JavaScript syntax, contract JSON parse, and `git diff --check`: **PASS**.
+
+### Boundary and next action
+
+- Status remains `IN_PROGRESS`; the candidate is not exact-head certified and is not Phase 13 completion.
+- No schema, migration, RPC, economic write, scheduler, cron, secret, staging/production SQL, deployment, or live-data change occurred.
+- Next exact item: publish candidate `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92` plus this documentation handoff to PR #682, inspect exact-head workflows, and repair only Phase 13A-owned failures. Phase 13B and Phase 14 remain closed until the 13A verification boundary is green.
