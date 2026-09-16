@@ -547,7 +547,7 @@ Exit: Player can operate Business V2 without legacy Business forms.
 
 Phase 13A deliberately removes the Admin v2 compliance mutation affordance from the supervision route. It does not delete or expand the existing legacy compliance RPC; Phase 13 exposes no mutation unless a later bounded intervention decision separately proves the complete authority and audit contract.
 
-Current Phase 13A implementation candidate: `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`. Focused local gates pass; exact-head workflow certification is pending, so Phase 13B remains closed.
+Current Phase 13A implementation candidate: `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b` (Git tree identical to locally tested `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`). Focused local gates pass; exact-head workflow certification is pending, so Phase 13B remains closed.
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 

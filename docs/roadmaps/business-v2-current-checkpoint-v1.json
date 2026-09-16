@@ -87,11 +87,11 @@
   "active_checkpoint_pr": 682,
   "active_checkpoint_started_at": "2026-09-16T05:10:39Z",
   "active_candidate_parent_sha": "d6ddb52f38da1ad931ba56600b49786f11f11ac6",
-  "active_candidate_implementation_sha": "4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92",
+  "active_candidate_implementation_sha": "d66c9cd6e464ff0b3adcf0869f442d3d67a2166b",
   "active_candidate_state": "IN_PROGRESS",
   "active_candidate_note": "Phase 13A adds a read-only, game-scoped, public-key-only Admin Business directory/detail foundation and removes the Admin v2 compliance mutation affordance. Focused Admin v2 and Deno gates pass locally; exact-head workflow evidence is pending, so this candidate is not certified.",
   "next_authorized_checkpoint": "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
-  "next_authorized_scope": "Publish and verify the Phase 13A candidate without weakening the read-only, game-scope, public-key, privacy, no-store, permission, or rate-limit boundaries. Phase 13B and Phase 14 remain closed until this boundary is green.",
+  "next_authorized_scope": "Verify the published Phase 13A candidate without weakening the read-only, game-scope, public-key, privacy, no-store, permission, or rate-limit boundaries. Phase 13B and Phase 14 remain closed until this boundary is green.",
   "remaining_dependency_order": [
     "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
     "BUSINESS-V2-13B",

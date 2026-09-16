@@ -1325,13 +1325,14 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 ### Repository and ancestry reconciliation
 
 - Existing owner branch: `feat/admin-business-supervision-v2`; existing draft PR: #682.
-- The owner branch had diverged from the final certified Phase 12 handoff. It was advanced by merge commit `e464c4071e7425374f4bac482111602635d3369a` from Phase 12 documentation handoff `d6ddb52f38da1ad931ba56600b49786f11f11ac6`; no rebase, branch replacement, or force-push was used.
+- The owner branch had diverged from the final certified Phase 12 handoff. It was advanced by merge commit `1636ecc56c1b910fe8749b58822db2142783c7de` from Phase 12 documentation handoff `d6ddb52f38da1ad931ba56600b49786f11f11ac6`; no remote history rewrite or force-push was used.
 - The three overlaps were resolved to the certified Phase 12 versions of PR #681 authority and the Business/Market connected acceptance harnesses. The Phase 13 scope document remained the unique successor-owned change.
 - Phase 12 remains certified at exact implementation `76539c5cfcff612a322963e303e727e6edc7f7ed` with 48 applicable exact-head workflow successes and three expected deployment-only skips.
 
 ### Phase 13A candidate
 
-- **Implementation candidate SHA:** `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`.
+- **Implementation candidate SHA:** `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b`.
+- Publication was explicitly authorized by the user. The shell lacked GitHub push credentials, so the configured GitHub integration recreated the three local commits with new metadata while preserving their trees and ordered ancestry. Published merge `1636ecc56c1b910fe8749b58822db2142783c7de`, implementation `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b`, and initial documentation `1d713ab88936c73207fd28d2ef3f61f046671577` have exactly the same Git trees as local `e464c4071e7425374f4bac482111602635d3369a`, `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`, and `4cdb586ca73b5a1a1924ac4d816dcd4e96f8f9f7`, respectively. This documentation follow-up reconciles the candidate references; it changes no implementation.
 - Added separate read-only `GET /games/:gameId/businesses/:businessKey` detail handling over the existing Admin BFF, with a strict `biz_<32 hex>` key, same-game filtering, bounded not-found response, and public-key-only projection.
 - Extended the bounded directory/detail projection with server-derived operational-readiness and attention flags using canonical status/failure evidence only.
 - Replaced the Admin v2 Business compliance mutation client/controller/dialog with an asynchronous read-only detail drawer that owns loading, retryable error, cancellation, stale-response suppression, and teardown behavior.
@@ -1351,4 +1352,4 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 
 - Status remains `IN_PROGRESS`; the candidate is not exact-head certified and is not Phase 13 completion.
 - No schema, migration, RPC, economic write, scheduler, cron, secret, staging/production SQL, deployment, or live-data change occurred.
-- Next exact item: publish candidate `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92` plus this documentation handoff to PR #682, inspect exact-head workflows, and repair only Phase 13A-owned failures. Phase 13B and Phase 14 remain closed until the 13A verification boundary is green.
+- Next exact item: inspect exact-head workflows for the published PR #682 handoff and repair only Phase 13A-owned failures. Phase 13B and Phase 14 remain closed until the 13A verification boundary is green.
