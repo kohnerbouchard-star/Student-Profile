@@ -25,7 +25,7 @@ const CONNECTED_JOURNEYS = Object.freeze([
     label: "Banking and Loans",
   }),
   Object.freeze({
-    mode: "adapt",
+    mode: "direct",
     path: "../player-terminal/tools/connected-marketplace-mutation-runner.mjs",
     label: "Marketplace",
   }),

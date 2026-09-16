@@ -1,10 +1,11 @@
 # Player Business Workspace Scope v1
 
 **Roadmap item:** `BUSINESS-V2-12`
-**Status:** `IN_PROGRESS`
+**Status:** `IMPLEMENTED_NOT_MERGED`
 **Branch:** `feat/player-business-workspace-v2`
 **Base:** merged `main` at `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`
 **Parent implementation identity:** Phase 11 `3cbca309e1e3c55e9b933803d304d2c5cc96f071`
+**Exact implementation and verification source:** `76539c5cfcff612a322963e303e727e6edc7f7ed`
 **Merge/deployment authorization:** none
 
 ## Objective
@@ -84,6 +85,15 @@ The Player Business surface is organized into these bounded views:
 - Connected browser acceptance against disposable/local services only.
 - Exact-head workflow matrix and durable implementation handoff.
 
+## Certification closeout
+
+- The exact implementation source `76539c5cfcff612a322963e303e727e6edc7f7ed` completed all 48 applicable pull-request workflows successfully. The remaining three returned workflows were expected deployment-only skips, not skipped Phase 12 acceptance coverage.
+- Player Multiplayer and Load E2E run `34926342349` / job `104245107219` executed the Market, Business, World, 30-Player, and 40-Player chain and passed its enforcement step. Business and World journeys were not skipped.
+- Stock multicurrency funding run `34926342075` and Marketplace multicurrency funding run `34926342397` passed after their setup paths executed. Their settlement assertions were not bypassed.
+- Local verification passed the complete Player Terminal `npm run verify` gate before the final capability-alias correction; the final source then passed the focused capability-manifest, Crafting mutation, Player smoke, cross-cutting authority, JSON, and diff checks.
+- Superseded connected attempts that encountered transient local-runtime `500`/`503` background responses passed on unchanged-source reruns. No economic invariant, authorization boundary, or acceptance expectation was weakened.
+- This documentation-only closeout does not replace the exact implementation identity and does not authorize merge, staging, production, secrets, scheduler changes, or live-data mutation.
+
 ## Stop conditions
 
 Stop and reopen scope if Phase 12 requires any of the following:
@@ -96,4 +106,4 @@ Stop and reopen scope if Phase 12 requires any of the following:
 
 ## Release boundary
 
-Phase 12 remains unmerged and undeployed until one exact implementation SHA has passed its permanent gate and all required inherited workflows. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker and does not authorize live reconciliation from this branch.
+Phase 12 has one exact implementation SHA with a complete applicable workflow matrix, but remains `IMPLEMENTED_NOT_MERGED` and undeployed. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker and does not invalidate repository certification or authorize live reconciliation from this branch.

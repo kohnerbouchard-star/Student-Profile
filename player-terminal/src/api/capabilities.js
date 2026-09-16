@@ -94,6 +94,10 @@ const ENDPOINT_ACTIONS = Object.freeze({
 // client operation key that the server never advertises.
 const ENDPOINT_MANIFEST_KEYS = Object.freeze({
   businessStoreWithdrawal: "businessStorePurchase",
+  craftItem: "crafting",
+  craftCancel: "craftingJobCancel",
+  craftClaim: "craftingJobClaim",
+  itemSalvage: "equipmentSalvage",
   marketplaceSettlement: "marketplacePurchase"
 });
 

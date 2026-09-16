@@ -75,15 +75,20 @@ const tick = json(`
 `);
 
 const openAt = json(`
+  with exchange_clock as (
+    select make_timestamptz(
+      2026,
+      8,
+      28,
+      8,
+      0,
+      0,
+      public.stock_market_timezone_for_game(${sqlLiteral(game.id)}::uuid)
+    ) as candidate_at
+  )
   select to_jsonb(candidate_at)
-  from generate_series(
-    '2026-08-28T08:00:00Z'::timestamptz,
-    '2026-08-28T16:59:00Z'::timestamptz,
-    interval '1 minute'
-  ) as candidate_at
+  from exchange_clock
   where public.is_stock_market_open_at(${sqlLiteral(game.id)}::uuid, candidate_at)
-  order by candidate_at
-  limit 1
 `);
 assert.ok(openAt, "C3C concurrency acceptance requires an open exchange instant.");
 
