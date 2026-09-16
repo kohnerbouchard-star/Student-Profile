@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.admin-business-supervision-pr-682.v1",
+  "purpose": "authorize-read-only-admin-business-supervision",
+  "pullRequestNumber": 682,
+  "baseRef": "feat/player-business-workspace-v2",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "admin/v2/src/routes/business/BusinessApi.js",
+    "admin/v2/src/routes/business/BusinessController.js",
+    "admin/v2/src/routes/business/BusinessRoute.js",
+    "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+    "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+    "docs/operations/contracts/admin-business-supervision/pr-682.json",
+    "docs/roadmaps/business-admin-supervision-scope-v1.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-v2-business-api.test.mjs"
+  ],
+  "requiredFiles": [
+    "admin/v2/src/routes/business/BusinessApi.js",
+    "admin/v2/src/routes/business/BusinessController.js",
+    "admin/v2/src/routes/business/BusinessRoute.js",
+    "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+    "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+    "docs/roadmaps/business-admin-supervision-scope-v1.md",
+    "scripts/admin-v2-business-api.test.mjs"
+  ],
+  "requiredChecks": [
+    "admin-api-check",
+    "admin-browser-e2e",
+    "backend-typecheck",
+    "repository-quality"
+  ]
+}

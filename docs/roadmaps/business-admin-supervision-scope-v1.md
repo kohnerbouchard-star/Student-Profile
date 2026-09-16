@@ -1,10 +1,11 @@
 # Admin Business Supervision Scope v1
 
-**Roadmap item:** `BUSINESS-V2-13`  
-**Status:** `IN_PROGRESS` — scope authority only  
-**Branch:** `feat/admin-business-supervision-v2`  
-**Stacked base:** `feat/player-business-workspace-v2`  
-**Parent Phase 12 implementation identity:** `d488a9c7011bdd4741623e67b66db3cd50a1a8a2`  
+**Roadmap item:** `BUSINESS-V2-13`
+**Status:** `IN_PROGRESS` — Phase 13A implementation candidate
+**Branch:** `feat/admin-business-supervision-v2`
+**Stacked base:** `feat/player-business-workspace-v2`
+**Parent Phase 12 implementation identity:** `76539c5cfcff612a322963e303e727e6edc7f7ed`
+**Parent Phase 12 documentation handoff:** `d6ddb52f38da1ad931ba56600b49786f11f11ac6`
 **Merge/deployment authorization:** none
 
 ## Objective
@@ -51,9 +52,10 @@ The Business directory and selected-Business detail must expose only trusted, se
 
 ### 13A — Authority contract and directory/detail foundation
 
-- Verify Admin route/capability/rate-limit normalization.
-- Add narrow public-key contracts and service-side directory/detail projection.
-- Add selected-Business route state, loading/error/empty handling, and no-store behavior.
+- [x] Verify Admin route/capability/rate-limit normalization.
+- [x] Add narrow public-key contracts and service-side directory/detail projection.
+- [x] Add selected-Business route state, loading/error/empty handling, and no-store behavior.
+- [x] Remove the Admin v2 compliance mutation affordance from this supervision workspace; the existing legacy authority is not expanded or treated as Phase 13 intervention authority.
 
 ### 13B — Stockroom, production, workforce/payroll, and equipment
 
@@ -87,6 +89,15 @@ Default result: **not implemented**. A mutation may be exposed only if an existi
 ## Stop conditions
 
 Stop and reopen scope if implementation requires a new economic mutation authority, Player impersonation, raw internal identity exposure, direct writes to canonical domain tables from Admin, a scheduler/secret/live-environment change, or weakened auth/MFA/CSRF/rate-limit/isolation/public-key/idempotency/settlement invariants.
+
+## Current Phase 13A candidate
+
+- Directory read remains game-scoped and now returns only a bounded public Business projection plus server-derived operational-readiness evidence.
+- Selected-Business detail is a separate `GET /games/:gameId/businesses/:businessKey` read, revalidating the `biz_<32 hex>` public key and game scope server-side.
+- The Admin v2 controller and drawer load detail asynchronously with loading, bounded error/retry, cancellation, and stale-result suppression behavior.
+- Browser requests and Admin responses remain `no-store`; no bearer token, internal UUID, raw owner identity, retired simulated aggregate, or database detail is exposed.
+- No schema, migration, RPC, economic write, scheduler, secret, deployment, or live-data change is part of 13A.
+- Exact implementation SHA and exact-head workflow evidence remain pending; this is not Phase 13 certification.
 
 ## Release boundary
 

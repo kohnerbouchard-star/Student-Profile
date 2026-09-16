@@ -48,6 +48,21 @@ export async function handleBusinessBankingAdminOperation(
       return success({ businesses: projectBusinessRows(data) });
     }
 
+    const businessDetail = input.suffix.match(
+      /^\/businesses\/(biz_[0-9a-f]{32})$/u,
+    );
+    if (businessDetail && input.request.method === "GET") {
+      const { data, error } = await service.from("business_entities").select(
+        "public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,reputation_score,failure_count,created_at,updated_at,closed_at",
+      ).eq("game_session_id", input.gameId).eq(
+        "public_key",
+        businessDetail[1],
+      ).maybeSingle();
+      if (error) return failure(error.message);
+      if (!data) return failure("BUSINESS_NOT_FOUND");
+      return success({ business: projectBusinessRow(data) });
+    }
+
     if (
       input.suffix === "/loan-applications" && input.request.method === "GET"
     ) {
@@ -253,8 +268,29 @@ function projectBusinessRows(value: unknown): Row[] {
   }
   return value.filter((row): row is Row =>
     Boolean(row && typeof row === "object" && !Array.isArray(row))
-  ).map((row) => ({
-    public_key: row.public_key,
+  ).map(projectBusinessRow);
+}
+
+function projectBusinessRow(row: Row): Row {
+  const status = typeof row.status === "string"
+    ? row.status.trim().toLowerCase()
+    : "";
+  const failureCount = Number(row.failure_count);
+  const attentionFlags: string[] = [];
+  if (status && status !== "active") attentionFlags.push(`status:${status}`);
+  if (Number.isSafeInteger(failureCount) && failureCount > 0) {
+    attentionFlags.push("recorded-failures");
+  }
+  const operationalReadiness = row.closed_at || status === "closed"
+    ? "closed"
+    : status === "active" && attentionFlags.length === 0
+    ? "ready"
+    : status
+    ? "attention"
+    : "unknown";
+
+  return {
+    public_key: publicKey(row.public_key, "biz"),
     legal_name: row.legal_name,
     entity_type: row.entity_type,
     industry_code: row.industry_code,
@@ -267,7 +303,9 @@ function projectBusinessRows(value: unknown): Row[] {
     created_at: row.created_at,
     updated_at: row.updated_at,
     closed_at: row.closed_at,
-  }));
+    operational_readiness: operationalReadiness,
+    attention_flags: attentionFlags,
+  };
 }
 
 function projectLoanApplicationRows(value: unknown): Row[] {

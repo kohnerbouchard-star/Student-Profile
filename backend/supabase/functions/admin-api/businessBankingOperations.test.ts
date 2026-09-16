@@ -34,9 +34,14 @@ function request(method: string, path: string, body?: unknown): Request {
   });
 }
 
-function thenableQuery(data: unknown[]) {
+function thenableQuery(
+  data: unknown[],
+  filters: Array<{ table: string; column: string; value: unknown }>,
+  table: string,
+) {
   const query: any = {
-    eq() {
+    eq(column: string, value: unknown) {
+      filters.push({ table, column, value });
       return query;
     },
     in() {
@@ -65,14 +70,20 @@ function service(fixtures: Record<string, unknown[]> = {}) {
   const calls: Array<{ functionName: string; args: Record<string, unknown> }> =
     [];
   const selects: Array<{ table: string; columns: string }> = [];
+  const filters: Array<{ table: string; column: string; value: unknown }> = [];
   return {
     calls,
     selects,
+    filters,
     from(table: string) {
       return {
         select(columns: string) {
           selects.push({ table, columns });
-          return thenableQuery(fixtures[table] ?? [{ value: GAME_ID }]);
+          return thenableQuery(
+            fixtures[table] ?? [{ value: GAME_ID }],
+            filters,
+            table,
+          );
         },
       };
     },
@@ -121,6 +132,14 @@ Deno.test("Admin Business read is game scoped and strips retired aggregate and o
     (businesses[0] as Record<string, unknown>).public_key,
     BUSINESS_KEY,
   );
+  assertEquals(
+    (businesses[0] as Record<string, unknown>).operational_readiness,
+    "ready",
+  );
+  assertEquals(
+    (businesses[0] as Record<string, unknown>).attention_flags,
+    [],
+  );
   const serialized = JSON.stringify(businesses);
   for (
     const forbidden of [
@@ -156,6 +175,75 @@ Deno.test("Admin Business read is game scoped and strips retired aggregate and o
       `Admin Business read selected ${forbiddenColumn}`,
     );
   }
+});
+
+Deno.test("Admin Business detail is game scoped, public-key-only, and read-only", async () => {
+  const mock = service({
+    business_entities: [{
+      public_key: BUSINESS_KEY,
+      legal_name: "Atlas Works",
+      entity_type: "corporation",
+      industry_code: "manufacturing",
+      country_code: "NRC",
+      currency_code: "NRC",
+      status: "distressed",
+      capitalization: 1_000,
+      reputation_score: 55,
+      failure_count: 2,
+      created_at: NOW,
+      updated_at: NOW,
+      closed_at: null,
+      owner_player_id: PLAYER_ID,
+      revenue_total: "POISON_REVENUE",
+    }],
+  });
+  const result = await handleBusinessBankingAdminOperation(mock, {
+    request: request("GET", `/games/${GAME_ID}/businesses/${BUSINESS_KEY}`),
+    gameId: GAME_ID,
+    staffUserId: STAFF_ID,
+    suffix: `/businesses/${BUSINESS_KEY}`,
+  });
+  assertEquals(result.status, 200);
+  const business =
+    (result.body as { data: { business: Record<string, unknown> } }).data
+      .business;
+  assertEquals(business.public_key, BUSINESS_KEY);
+  assertEquals(business.operational_readiness, "attention");
+  assertEquals(business.attention_flags, [
+    "status:distressed",
+    "recorded-failures",
+  ]);
+  const serialized = JSON.stringify(business);
+  assert(!serialized.includes(PLAYER_ID), "Business detail leaked owner UUID");
+  assert(
+    !serialized.includes("POISON_REVENUE"),
+    "Business detail leaked retired revenue",
+  );
+  assertEquals(mock.calls.length, 0);
+  assertEquals(
+    mock.filters.filter((entry) => entry.table === "business_entities"),
+    [
+      { table: "business_entities", column: "game_session_id", value: GAME_ID },
+      { table: "business_entities", column: "public_key", value: BUSINESS_KEY },
+    ],
+  );
+});
+
+Deno.test("Admin Business detail returns a bounded not-found response", async () => {
+  const mock = service({ business_entities: [] });
+  const result = await handleBusinessBankingAdminOperation(mock, {
+    request: request("GET", `/games/${GAME_ID}/businesses/${BUSINESS_KEY}`),
+    gameId: GAME_ID,
+    staffUserId: STAFF_ID,
+    suffix: `/businesses/${BUSINESS_KEY}`,
+  });
+  assertEquals(result.status, 404);
+  assertEquals(result.body, {
+    code: "business_not_found",
+    message:
+      "The Business, Banking, or Loans administrator operation could not be completed.",
+  });
+  assertEquals(mock.calls.length, 0);
 });
 
 Deno.test("Admin Business cycle settlement returns stable 410 before parsing or persistence", async () => {

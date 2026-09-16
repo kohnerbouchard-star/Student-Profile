@@ -47,6 +47,12 @@ function businessRows(result) {
   return null;
 }
 
+function businessDetailRow(result) {
+  if (isRecord(result?.data?.business)) return result.data.business;
+  if (isRecord(result?.business)) return result.business;
+  return null;
+}
+
 function ownerModel(value) {
   if (!isRecord(value)) return Object.freeze({ displayName: "Owner unavailable", rosterLabel: "", status: "" });
   return Object.freeze({
@@ -62,6 +68,10 @@ function normalizeBusiness(row, index) {
   if (!BUSINESS_KEY_PATTERN.test(businessKey)) return null;
   const statusValue = String(row.status || "").trim().toLowerCase();
   const typeValue = String(row.entity_type ?? row.entityType ?? "").trim().toLowerCase();
+  const readinessValue = String(row.operational_readiness ?? row.operationalReadiness ?? "").trim().toLowerCase();
+  const attentionFlags = Array.isArray(row.attention_flags ?? row.attentionFlags)
+    ? (row.attention_flags ?? row.attentionFlags).map((value) => safeText(value, 80)).filter(Boolean).slice(0, 20)
+    : [];
   return Object.freeze({
     rowKey: businessKey || `business-${index + 1}`,
     businessKey,
@@ -78,6 +88,8 @@ function normalizeBusiness(row, index) {
     createdAt: safeText(row.created_at ?? row.createdAt, 80),
     updatedAt: safeText(row.updated_at ?? row.updatedAt, 80),
     closedAt: safeText(row.closed_at ?? row.closedAt, 80),
+    operationalReadiness: ["ready", "attention", "closed", "unknown"].includes(readinessValue) ? readinessValue : "unknown",
+    attentionFlags: Object.freeze(attentionFlags),
     owner: ownerModel(row.owner),
   });
 }
@@ -102,13 +114,20 @@ export function normalizeBusinessReadModel(result) {
     summary: {
       totalCount: businesses.length,
       activeCount: businesses.filter((business) => business.status === "active").length,
-      attentionCount: businesses.filter((business) => ["restructuring", "distressed"].includes(business.status)).length,
+      attentionCount: businesses.filter((business) => business.operationalReadiness === "attention").length,
       averageReputation: reputationValues.length
         ? Math.round(reputationValues.reduce((sum, value) => sum + value, 0) / reputationValues.length)
         : null,
     },
     isEmpty: businesses.length === 0,
   });
+}
+
+export function normalizeBusinessDetail(result) {
+  const row = businessDetailRow(result);
+  const business = normalizeBusiness(row, 0);
+  if (!business) throw createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true });
+  return deepFreeze(business);
 }
 
 function safeError(error) {
@@ -120,22 +139,16 @@ export function createBusinessController({
   selectedGameId,
   hasPermission = () => false,
   onChange = () => {},
-  notify = () => {},
-  cryptoObject = globalThis.crypto,
 } = {}) {
-  for (const method of ["readBusinesses", "setBusinessCompliance"]) {
+  for (const method of ["readBusinesses", "readBusiness"]) {
     if (typeof api?.[method] !== "function") throw new TypeError(`Business API ${method} is unavailable.`);
   }
 
   let state = createAdminDataState();
   let filters = Object.freeze({ query: "", status: "all", country: "all" });
   let requestVersion = 0;
-  let mutationSequence = 0;
   let destroyed = false;
   let currentView = null;
-  const pendingKeys = new Map();
-  const activeMutations = new Set();
-  const refreshTimers = new Set();
 
   function publish() {
     if (!destroyed) onChange(state);
@@ -161,60 +174,21 @@ export function createBusinessController({
     return state;
   }
 
-  function nextKey() {
-    mutationSequence += 1;
-    const uuid = String(cryptoObject?.randomUUID?.() || "").trim().toLowerCase();
-    if (!UUID_IN_TEXT_PATTERN.test(uuid)) throw createAdminErrorEnvelope({ code: "INVALID_REQUEST", retryable: false });
-    return `admin.business.compliance.${uuid}.${mutationSequence}`.slice(0, 159);
-  }
-
-  function scheduleRefresh() {
-    const timer = globalThis.setTimeout(() => {
-      refreshTimers.delete(timer);
-      if (!destroyed) void load();
-    }, 0);
-    refreshTimers.add(timer);
-  }
-
-  async function setCompliance(business, input) {
+  async function loadDetail(business) {
     if (destroyed || !hasPermission("business.manage")) {
-      return { ok: false, error: createAdminErrorEnvelope({ code: "PERMISSION_DENIED", retryable: false }) };
+      throw createAdminErrorEnvelope({ code: "PERMISSION_DENIED", retryable: false });
     }
-    if (!business?.businessKey) {
-      return { ok: false, error: createAdminErrorEnvelope({ code: "NOT_FOUND", retryable: false }) };
+    if (!BUSINESS_KEY_PATTERN.test(String(business?.businessKey || ""))) {
+      throw createAdminErrorEnvelope({ code: "NOT_FOUND", retryable: false });
     }
-    const fingerprint = JSON.stringify({ businessKey: business.businessKey, input });
-    if (activeMutations.has(fingerprint)) {
-      return { ok: false, busy: true, error: createAdminErrorEnvelope({ code: "CONFLICT", retryable: false }) };
-    }
-    let key = pendingKeys.get(fingerprint);
     try {
-      if (!key) {
-        key = nextKey();
-        pendingKeys.set(fingerprint, key);
-      }
-    } catch (error) {
-      return { ok: false, error: safeError(error) };
-    }
-    activeMutations.add(fingerprint);
-    try {
-      const result = await api.setBusinessCompliance({
+      const result = await api.readBusiness({
         gameId: selectedGameId,
         businessKey: business.businessKey,
-        input,
-        idempotencyKey: key,
       });
-      pendingKeys.delete(fingerprint);
-      notify({ tone: "success", title: "Compliance updated", message: `${business.legalName} compliance was updated.` });
-      scheduleRefresh();
-      return { ok: true, result };
+      return normalizeBusinessDetail(result);
     } catch (error) {
-      const envelope = safeError(error);
-      if (!envelope.retryable) pendingKeys.delete(fingerprint);
-      notify({ tone: "error", title: "Compliance was not updated", message: envelope.userMessage });
-      return { ok: false, error: envelope };
-    } finally {
-      activeMutations.delete(fingerprint);
+      throw safeError(error);
     }
   }
 
@@ -225,7 +199,7 @@ export function createBusinessController({
       filters,
       onFiltersChange(next) { filters = Object.freeze({ ...filters, ...next }); },
       onRefresh: load,
-      onCompliance: setCompliance,
+      onLoadDetail: loadDetail,
     });
     return currentView;
   }
@@ -235,7 +209,7 @@ export function createBusinessController({
     render,
     getState: () => state,
     getFilters: () => filters,
-    setCompliance,
+    loadDetail,
     deactivate() {
       api.cancelBusinessRequest?.();
       currentView?.destroy?.();
@@ -248,10 +222,6 @@ export function createBusinessController({
       api.cancelBusinessRequest?.();
       currentView?.destroy?.();
       currentView = null;
-      refreshTimers.forEach((timer) => globalThis.clearTimeout(timer));
-      refreshTimers.clear();
-      pendingKeys.clear();
-      activeMutations.clear();
     },
   });
 }

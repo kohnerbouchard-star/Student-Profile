@@ -536,10 +536,16 @@ Exit: Player can operate Business V2 without legacy Business forms.
 
 ## Phase 13 — Admin Business supervision
 
-**Status:** `PLANNED` — next authorized checkpoint after the Phase 12 documentation-only handoff; runtime implementation has not started
+**Status:** `IN_PROGRESS` — existing owner `feat/admin-business-supervision-v2`, draft PR #682, advanced from the certified Phase 12 documentation handoff without history rewrite
 
-- [ ] Add read-only operational visibility for stockrooms, jobs, employees, payroll, equipment, Store offers, withdrawal-pending stock, financial health, tax, ownership and audit.
+- [x] Phase 13A: establish the game-scoped, public-key-only, read-only Business directory and selected-Business detail foundation with loading/error/empty/no-store behavior.
+- [ ] Phase 13B: add canonical stockroom, manufacturing, workforce/payroll and equipment supervision.
+- [ ] Phase 13C: add canonical Store/sales, treasury, financial-health, operating-period and tax supervision.
+- [ ] Phase 13D: add privacy-safe ownership/governance plus immutable activity/audit evidence.
+- [ ] Phase 13F: run the full exact-head retained matrix and record one durable implementation identity and handoff.
 - [ ] Keep emergency intervention explicit, bounded, permissioned and audited.
+
+Phase 13A deliberately removes the Admin v2 compliance mutation affordance from the supervision route. It does not delete or expand the existing legacy compliance RPC; Phase 13 exposes no mutation unless a later bounded intervention decision separately proves the complete authority and audit contract.
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
