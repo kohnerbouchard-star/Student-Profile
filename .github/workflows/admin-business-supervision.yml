@@ -1,0 +1,117 @@
+name: Admin Business Supervision
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/admin-business-supervision.yml"
+      - "admin/v2/src/routes/business/**"
+      - "admin/v2/styles/routes/business.css"
+      - "backend/supabase/functions/admin-api/business*"
+      - "backend/supabase/migrations/**"
+      - "scripts/admin-business-supervision-*"
+      - "scripts/admin-v2-business-*"
+      - "docs/operations/contracts/**/pr-682.json"
+      - "docs/roadmaps/business-admin-supervision-*.md"
+      - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
+      - "docs/roadmaps/business-v2-development-execution-log-v1.md"
+      - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: admin-business-supervision-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    name: admin-business-supervision-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+      - name: Verify exact head and full-phase authority
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/player-business-workspace-v2' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '682' }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/phase13-changed.txt
+          node scripts/verify-player-cross-cutting-authority.mjs --changed-files /tmp/phase13-changed.txt --pr-number "$PR_NUMBER" --base-ref "$BASE_REF"
+          node scripts/admin-business-supervision-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          node --test scripts/admin-v2-business-api.test.mjs scripts/player-cross-cutting-authority.test.mjs
+          deno fmt --check backend/supabase/functions/admin-api/businessSupervisionProjection*.ts
+          deno test backend/supabase/functions/admin-api/businessBankingOperations.test.ts backend/supabase/functions/admin-api/businessSupervisionProjection.test.ts
+          git diff --check
+  database:
+    name: admin-business-supervision-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+      - name: Replay disposable zero-to-head twice and enforce read-only acceptance
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+          for PASS in 1 2; do
+            npx supabase db reset --workdir backend --local
+            node scripts/admin-business-supervision-database.mjs
+          done
+      - name: Stop disposable service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup
+  browser:
+    name: admin-business-supervision-browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned browser tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+      - name: Desktop and mobile supervision acceptance
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ADMIN_V2_EVIDENCE_DIR: /tmp/admin-business-supervision-evidence
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node scripts/admin-v2-business-browser-smoke.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: admin-business-supervision-browser-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/admin-business-supervision-evidence
+          if-no-files-found: error
+          retention-days: 14

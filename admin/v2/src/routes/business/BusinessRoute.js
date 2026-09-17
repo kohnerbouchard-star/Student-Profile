@@ -11,6 +11,7 @@ import {
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
+import { BusinessSupervisionView } from "./BusinessSupervisionView.js";
 
 function titleCase(value, fallback = "Not available") {
   const text = String(value || "").trim();
@@ -51,7 +52,7 @@ function summary(model) {
     attrs: { "aria-label": "Business summary" },
     children: [
       metric("Businesses", number(model.summary.totalCount), "Current game"),
-      metric("Active", number(model.summary.activeCount), "Operating normally"),
+      metric("Active", number(model.summary.activeCount), "Recorded Business status"),
       metric("Needs attention", number(model.summary.attentionCount), "Distressed or restructuring"),
       metric("Avg. reputation", number(model.summary.averageReputation), "0–100 when available"),
     ],
@@ -116,10 +117,11 @@ function detailContent(business) {
         children: [
           AdminIcon({ name: "info", size: 18 }),
           createElement("p", {
-            text: "This read-only foundation shows only the authoritative Business detail currently exposed by the Admin contract. Operational sections are added only when their canonical projections are available.",
+            text: "Identity and attention indicators are not cached profit or valuation. Financial evidence is separated by currency and source; ownership is shown without private Player identifiers.",
           }),
         ],
       }),
+      BusinessSupervisionView(business.supervision),
     ],
   });
 }
@@ -217,6 +219,7 @@ function catalog({ model, filters, onFiltersChange, onDetail }) {
   applyFilters();
 
   const root = createElement("div", { className: "admin-business-route__resolved", children: [summary(model), controls] });
+  if (model.truncated) root.append(createElement("p", { attrs: { role: "status" }, text: "Showing the first 2,000 businesses. Summary counts and filters cover only these rows; additional businesses exist." }));
   root.append(model.isEmpty
     ? AdminEmptyState({ title: "No businesses yet", message: "No player business entities exist in the current game." })
     : createElement("section", { className: "admin-business-route__catalog", attrs: { "aria-label": "Business directory" }, children: table.element }));
@@ -256,6 +259,7 @@ export function BusinessRoute({
       title: business.legalName,
       description: "Read-only, game-scoped authoritative Business detail.",
       size: "large",
+      protectUnsavedChanges: false,
       content: loadingDetail(business),
       onClose() {
         detailSequence += 1;

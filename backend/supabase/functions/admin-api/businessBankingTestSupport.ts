@@ -87,7 +87,21 @@ function service(fixtures: Record<string, unknown[]> = {}) {
     },
     rpc(functionName: string, args: Record<string, unknown>) {
       calls.push({ functionName, args });
-      return Promise.resolve({ data: [{ outcome: "applied" }], error: null });
+      const data: unknown =
+        functionName === "read_admin_business_supervision_v2"
+          ? fixtures.business_entities?.[0]
+            ? {
+              business: fixtures.business_entities[0],
+              supervision: {
+                schemaVersion: 1,
+                businessKey: args.p_business_key,
+                readOnly: true,
+                sections: {},
+              },
+            }
+            : null
+          : [{ outcome: "applied" }];
+      return Promise.resolve({ data, error: null });
     },
   };
 }

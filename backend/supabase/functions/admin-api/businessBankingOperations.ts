@@ -1,5 +1,9 @@
 import { handleRetiredBusinessSettlement } from "./businessSettlementRetirementDispatch.ts";
 import { readLoanSupervision } from "./businessBankingLoanSupervision.ts";
+import {
+  projectBusinessSupervision,
+  safeBusinessValue,
+} from "./businessSupervisionProjection.ts";
 
 interface OperationResult {
   readonly handled: boolean;
@@ -43,24 +47,40 @@ export async function handleBusinessBankingAdminOperation(
         "public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,reputation_score,failure_count,created_at,updated_at,closed_at",
       ).eq("game_session_id", input.gameId).order("updated_at", {
         ascending: false,
-      });
+      }).order("public_key", { ascending: true }).limit(2001);
       if (error) return failure(error.message);
-      return success({ businesses: projectBusinessRows(data) });
+      return success({
+        businesses: projectBusinessRows(data).slice(0, 2000),
+        truncated: Array.isArray(data) && data.length > 2000,
+      });
     }
 
     const businessDetail = input.suffix.match(
       /^\/businesses\/(biz_[0-9a-f]{32})$/u,
     );
     if (businessDetail && input.request.method === "GET") {
-      const { data, error } = await service.from("business_entities").select(
-        "public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,reputation_score,failure_count,created_at,updated_at,closed_at",
-      ).eq("game_session_id", input.gameId).eq(
-        "public_key",
-        businessDetail[1],
-      ).maybeSingle();
+      const { data, error } = await service.rpc(
+        "read_admin_business_supervision_v2",
+        {
+          p_game_session_id: input.gameId,
+          p_staff_user_id: input.staffUserId,
+          p_business_key: businessDetail[1],
+        },
+      );
       if (error) return failure(error.message);
       if (!data) return failure("BUSINESS_NOT_FOUND");
-      return success({ business: projectBusinessRow(data) });
+      const snapshot = data as Row;
+      const business = projectBusinessRow(snapshot.business as Row);
+      if (business.public_key !== businessDetail[1]) {
+        throw new Error("BUSINESS_SUPERVISION_RESPONSE_INVALID");
+      }
+      return success({
+        business,
+        supervision: projectBusinessSupervision(
+          snapshot.supervision,
+          businessDetail[1],
+        ),
+      });
     }
 
     if (
@@ -284,28 +304,32 @@ function projectBusinessRow(row: Row): Row {
   const operationalReadiness = row.closed_at || status === "closed"
     ? "closed"
     : status === "active" && attentionFlags.length === 0
-    ? "ready"
+    ? "unknown"
     : status
     ? "attention"
     : "unknown";
 
-  return {
-    public_key: publicKey(row.public_key, "biz"),
-    legal_name: row.legal_name,
-    entity_type: row.entity_type,
-    industry_code: row.industry_code,
-    country_code: row.country_code,
-    currency_code: row.currency_code,
-    status: row.status,
-    capitalization: row.capitalization,
-    reputation_score: row.reputation_score,
-    failure_count: row.failure_count,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    closed_at: row.closed_at,
-    operational_readiness: operationalReadiness,
-    attention_flags: attentionFlags,
-  };
+  return Object.fromEntries(
+    Object.entries({
+      public_key: publicKey(row.public_key, "biz"),
+      legal_name: row.legal_name,
+      entity_type: row.entity_type,
+      industry_code: row.industry_code,
+      country_code: row.country_code,
+      currency_code: row.currency_code,
+      status: row.status,
+      capitalization: row.capitalization,
+      reputation_score: row.reputation_score,
+      failure_count: row.failure_count,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      closed_at: row.closed_at,
+      operational_readiness: operationalReadiness,
+      attention_flags: attentionFlags,
+    }).map((
+      [key, value],
+    ) => [key, key === "attention_flags" ? value : safeBusinessValue(value)]),
+  );
 }
 
 function projectLoanApplicationRows(value: unknown): Row[] {

@@ -82,22 +82,18 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-13A",
+  "active_checkpoint": "BUSINESS-V2-13F",
   "active_checkpoint_branch": "feat/admin-business-supervision-v2",
   "active_checkpoint_pr": 682,
   "active_checkpoint_started_at": "2026-09-16T05:10:39Z",
   "active_candidate_parent_sha": "d6ddb52f38da1ad931ba56600b49786f11f11ac6",
-  "active_candidate_implementation_sha": "d66c9cd6e464ff0b3adcf0869f442d3d67a2166b",
+  "active_candidate_implementation_sha": null,
   "active_candidate_state": "IN_PROGRESS",
-  "active_candidate_note": "Phase 13A adds a read-only, game-scoped, public-key-only Admin Business directory/detail foundation and removes the Admin v2 compliance mutation affordance. Focused Admin v2 and Deno gates pass locally; exact-head workflow evidence is pending, so this candidate is not certified.",
-  "next_authorized_checkpoint": "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
-  "next_authorized_scope": "Verify the published Phase 13A candidate without weakening the read-only, game-scope, public-key, privacy, no-store, permission, or rate-limit boundaries. Phase 13B and Phase 14 remain closed until this boundary is green.",
+  "active_candidate_note": "Full Phase 13 read-only supervision candidate is under exact-head verification. Phase 13A repair 435f04775f9a5fd229ada71afc9054f3cc90a10f passed all 30 triggered workflows; no full Phase 13 certification is claimed yet.",
+  "next_authorized_checkpoint": "BUSINESS-V2-13F-EXACT-HEAD-VERIFICATION",
+  "next_authorized_scope": "Finish and certify all Phase 13 read-only supervision on existing draft PR #682. No merge, deployment, live SQL, economic intervention, or Phase 14 authorization.",
   "remaining_dependency_order": [
-    "BUSINESS-V2-13A-EXACT-HEAD-VERIFICATION",
-    "BUSINESS-V2-13B",
-    "BUSINESS-V2-13C",
-    "BUSINESS-V2-13D",
-    "BUSINESS-V2-13F",
+    "BUSINESS-V2-13F-EXACT-HEAD-VERIFICATION",
     "BUSINESS-V2-14"
   ],
   "release_state": {

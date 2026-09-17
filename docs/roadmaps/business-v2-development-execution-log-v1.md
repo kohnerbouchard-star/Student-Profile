@@ -1362,3 +1362,13 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - Added `docs/operations/contracts/player-cross-cutting/pr-682.json` using the existing strict verifier, exact base/PR/path bindings, retained critical checks, and unchanged production/secret denials. Added negative identity, base, and unreviewed-path regression coverage.
 - Extracted reusable mock/assertion support into `businessBankingTestSupport.ts`, retaining all nine operation tests while returning the original test module below the existing 500-line threshold. Refreshed deterministic architecture inventory; oversized-file count remains 100 and every ratchet maximum is unchanged.
 - Local evidence: focused Deno tests 9/9; retained authority tests; exact changed-path verification; architecture inventory and debt ratchet; format and diff checks. Exact-head CI remains required before the next implementation tranche.
+
+## 2026-09-17 — Full Phase 13 supervision implementation candidate
+
+- 13A repair source `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 triggered workflows; the previously failed retained checks are green.
+- Implemented 13B–D as 22 bounded, selected-game canonical evidence sections. Shared private read helpers preserve exact prior Player calculation bodies; public Player wrappers still resolve ownership. Admin never supplies a Player identity.
+- Added one service-only Admin snapshot RPC, defense-in-depth owner/staff/role/capability checks, no-store existing transport, explicit DTO allowlists, decimal-text preservation, closed-business history, and a responsive keyboard-accessible read-only section selector.
+- 13E decision: no intervention. No table, write authority, scheduler, secret, dependency or live-environment change. Two forward-only read-function migrations were generated through the Supabase CLI and remain unapplied to live environments.
+- Added canonical-body/source/privacy contracts, projection tests, read-only transaction database acceptance, desktop/mobile browser acceptance, and exact-head workflow. Extended retained Admin Browser E2E to this stacked base rather than accepting its previous absence.
+- Focused Deno operation 9/9 and projection 3/3 tests, Admin API/controller tests, migration validation (420 unique migrations), source contract, and architecture ratchet pass locally. Local aggregate Edge typecheck is blocked by refused esm.sh download; dedicated CI typecheck is mandatory. Browser/database exact-head verification is pending, not counted as passed.
+- Next: publish the full-phase candidate on existing draft #682, resolve failures, and record one exact implementation identity only after all applicable gates are green. No Phase 14, merge, deployment or live SQL is authorized.

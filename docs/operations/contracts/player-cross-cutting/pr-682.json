@@ -9,32 +9,54 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/admin-browser-e2e.yml",
+    ".github/workflows/admin-business-supervision.yml",
     "admin/v2/src/routes/business/BusinessApi.js",
     "admin/v2/src/routes/business/BusinessController.js",
     "admin/v2/src/routes/business/BusinessRoute.js",
+    "admin/v2/src/routes/business/BusinessSupervisionModel.js",
+    "admin/v2/src/routes/business/BusinessSupervisionView.js",
+    "admin/v2/styles/routes/business.css",
     "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
     "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+    "backend/supabase/functions/admin-api/businessBankingTestSupport.ts",
+    "backend/supabase/functions/admin-api/businessSupervisionProjection.test.ts",
+    "backend/supabase/functions/admin-api/businessSupervisionProjection.ts",
+    "backend/supabase/migrations/20260917214421_admin_business_supervision_v2.sql",
+    "backend/supabase/migrations/20260917214558_admin_business_supervision_snapshot_v2.sql",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/admin-business-supervision/pr-682.json",
+    "docs/operations/contracts/player-cross-cutting/pr-682.json",
     "docs/roadmaps/business-admin-supervision-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
     "docs/roadmaps/business-v2-development-execution-log-v1.md",
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-business-supervision-contract.mjs",
+    "scripts/admin-business-supervision-database.mjs",
     "scripts/admin-v2-business-api.test.mjs",
-    "backend/supabase/functions/admin-api/businessBankingTestSupport.ts",
-    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-    "docs/operations/contracts/player-cross-cutting/pr-682.json",
-    "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/admin-v2-business-browser-smoke.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/admin-business-supervision.yml",
     "admin/v2/src/routes/business/BusinessApi.js",
     "admin/v2/src/routes/business/BusinessController.js",
     "admin/v2/src/routes/business/BusinessRoute.js",
+    "admin/v2/src/routes/business/BusinessSupervisionModel.js",
+    "admin/v2/src/routes/business/BusinessSupervisionView.js",
     "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
     "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+    "backend/supabase/functions/admin-api/businessSupervisionProjection.test.ts",
+    "backend/supabase/functions/admin-api/businessSupervisionProjection.ts",
+    "backend/supabase/migrations/20260917214421_admin_business_supervision_v2.sql",
+    "backend/supabase/migrations/20260917214558_admin_business_supervision_snapshot_v2.sql",
     "docs/roadmaps/business-admin-supervision-scope-v1.md",
-    "scripts/admin-v2-business-api.test.mjs"
+    "scripts/admin-business-supervision-contract.mjs",
+    "scripts/admin-business-supervision-database.mjs",
+    "scripts/admin-v2-business-api.test.mjs",
+    "scripts/admin-v2-business-browser-smoke.mjs"
   ],
   "requiredChecks": [
     "admin-api-check",
@@ -48,12 +70,16 @@
     "business-player-store-fx-final-v2-source",
     "business-player-store-fx-final-v2-player-browser",
     "business-store-sales-convergence-v2-source",
-    "business-store-sales-convergence-v2-player-admin"
+    "business-store-sales-convergence-v2-player-admin",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
   ],
   "criticalJobChecks": [
     "business-player-store-fx-final-v2-source",
     "business-player-store-fx-final-v2-player-browser",
     "business-store-sales-convergence-v2-source",
     "business-store-sales-convergence-v2-player-admin"
-  ]
+  ],
+  "authorizationNote": "Owner authorized completion of all Phase 13 on 2026-09-17. Only bounded read-only projections, unchanged canonical Player calculations, evidence and verification workflows; no live mutation, merge, deployment, or Phase 14."
 }

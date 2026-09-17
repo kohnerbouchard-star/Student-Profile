@@ -6,11 +6,12 @@ import {
 } from "../../core/data-state.js";
 import { createAdminErrorEnvelope, isAdminErrorEnvelope, normalizeAdminError } from "../../core/error-envelope.js";
 import { BusinessRoute } from "./BusinessRoute.js";
+import { normalizeBusinessSupervision } from "./BusinessSupervisionModel.js";
 
 const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const BUSINESS_KEY_PATTERN = /^biz_[0-9a-f]{32}$/i;
 const BUSINESS_STATUSES = new Set(["active", "restructuring", "distressed", "closed"]);
-const BUSINESS_TYPES = new Set(["sole_proprietorship", "partnership", "corporation", "cooperative"]);
+const BUSINESS_TYPES = new Set(["sole_proprietorship", "partnership", "llc", "c_corporation", "corporation", "cooperative"]);
 
 function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -120,6 +121,7 @@ export function normalizeBusinessReadModel(result) {
         : null,
     },
     isEmpty: businesses.length === 0,
+    truncated: result?.data?.truncated === true || result?.truncated === true || rows.length > 2000,
   });
 }
 
@@ -127,7 +129,7 @@ export function normalizeBusinessDetail(result) {
   const row = businessDetailRow(result);
   const business = normalizeBusiness(row, 0);
   if (!business) throw createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true });
-  return deepFreeze(business);
+  return deepFreeze({ ...business, supervision: normalizeBusinessSupervision(result?.data?.supervision ?? result?.supervision, business.businessKey) });
 }
 
 function safeError(error) {
@@ -186,7 +188,9 @@ export function createBusinessController({
         gameId: selectedGameId,
         businessKey: business.businessKey,
       });
-      return normalizeBusinessDetail(result);
+      const detail = normalizeBusinessDetail(result);
+      if (detail.businessKey !== business.businessKey) throw createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true });
+      return detail;
     } catch (error) {
       throw safeError(error);
     }

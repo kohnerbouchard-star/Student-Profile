@@ -60,7 +60,7 @@ Deno.test("Admin Business read is game scoped and strips retired aggregate and o
   );
   assertEquals(
     (businesses[0] as Record<string, unknown>).operational_readiness,
-    "ready",
+    "unknown",
   );
   assertEquals(
     (businesses[0] as Record<string, unknown>).attention_flags,
@@ -145,14 +145,15 @@ Deno.test("Admin Business detail is game scoped, public-key-only, and read-only"
     !serialized.includes("POISON_REVENUE"),
     "Business detail leaked retired revenue",
   );
-  assertEquals(mock.calls.length, 0);
-  assertEquals(
-    mock.filters.filter((entry) => entry.table === "business_entities"),
-    [
-      { table: "business_entities", column: "game_session_id", value: GAME_ID },
-      { table: "business_entities", column: "public_key", value: BUSINESS_KEY },
-    ],
-  );
+  assertEquals(mock.selects, []);
+  assertEquals(mock.calls, [{
+    functionName: "read_admin_business_supervision_v2",
+    args: {
+      p_game_session_id: GAME_ID,
+      p_staff_user_id: STAFF_ID,
+      p_business_key: BUSINESS_KEY,
+    },
+  }]);
 });
 
 Deno.test("Admin Business detail returns a bounded not-found response", async () => {
@@ -169,7 +170,7 @@ Deno.test("Admin Business detail returns a bounded not-found response", async ()
     message:
       "The Business, Banking, or Loans administrator operation could not be completed.",
   });
-  assertEquals(mock.calls.length, 0);
+  assertEquals(mock.calls.length, 1);
 });
 
 Deno.test("Admin Business cycle settlement returns stable 410 before parsing or persistence", async () => {
