@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.admin-business-supervision-pr-682.v1",
-  "purpose": "authorize-read-only-admin-business-supervision",
+  "authorityId": "econovaria.admin-business-supervision-retained-pr-682.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 682,
   "baseRef": "feat/player-business-workspace-v2",
   "scopeLock": "exact-path-allowlist",
@@ -14,9 +14,6 @@
     "admin/v2/src/routes/business/BusinessRoute.js",
     "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
     "backend/supabase/functions/admin-api/businessBankingOperations.ts",
-    "backend/supabase/functions/admin-api/businessBankingTestSupport.ts",
-    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-    "docs/operations/contracts/player-cross-cutting/pr-682.json",
     "docs/operations/contracts/admin-business-supervision/pr-682.json",
     "docs/roadmaps/business-admin-supervision-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
@@ -24,6 +21,10 @@
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/admin-v2-business-api.test.mjs",
+    "backend/supabase/functions/admin-api/businessBankingTestSupport.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-682.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
@@ -39,6 +40,20 @@
     "admin-api-check",
     "admin-browser-e2e",
     "backend-typecheck",
-    "repository-quality"
+    "repository-quality",
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin"
   ]
 }

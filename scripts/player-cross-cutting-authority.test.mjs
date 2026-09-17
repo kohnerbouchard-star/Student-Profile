@@ -13,6 +13,18 @@ const AUTHORIZED_BASE = "feat/canonical-fx-authority-v1";
 const AUTHORITY_ID = `econovaria.banking-fx-clearing-pr-${AUTHORIZED_PR}.v1`;
 const AUTHORITY_PATH = authorityPathForPullRequest(AUTHORIZED_PR);
 
+test("Phase 13 retained verification is bound to PR 682 and its exact paths", async () => {
+  const manifestPath = authorityPathForPullRequest(682);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 682, baseRef: "feat/player-business-workspace-v2", manifestPath };
+  assert.ok(verifyAuthority(input).changedPathCount > 0);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 681 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "main" }), /base ref/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "unreviewed.sql"] }), /does not allow/u);
+  assert.equal(value.productionDeploymentAllowed, false);
+  assert.equal(value.productionMutationAllowed, false);
+});
+
 function manifest() {
   const paths = [
     "backend/supabase/functions/player-api/runtime.ts",

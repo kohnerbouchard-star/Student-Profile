@@ -1353,3 +1353,12 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - Status remains `IN_PROGRESS`; the candidate is not exact-head certified and is not Phase 13 completion.
 - No schema, migration, RPC, economic write, scheduler, cron, secret, staging/production SQL, deployment, or live-data change occurred.
 - Next exact item: inspect exact-head workflows for the published PR #682 handoff and repair only Phase 13A-owned failures. Phase 13B and Phase 14 remain closed until the 13A verification boundary is green.
+
+## 2026-09-17 — Phase 13 continuation and 13A verification repair
+
+- Product owner authorized the entire Phase 13 through certification on existing draft PR #682. No merge, manual deployment, live mutation, or Phase 14 work is authorized.
+- Re-fetched main and both Phase 12/13 owners. PR #682 remains open, draft, mergeable, and unmerged at `4b0158e56394d373942dbcdfcf913a7a2de893e5`; its stacked base remains `d6ddb52f38da1ad931ba56600b49786f11f11ac6`.
+- Seven failed workflows reduce to two causes: generated architecture-inventory drift and missing PR-bound retained-verification authority. All five authority failures explicitly report that the Player authority identifier is not bound to this pull request; they do not demonstrate five separate runtime regressions.
+- Added `docs/operations/contracts/player-cross-cutting/pr-682.json` using the existing strict verifier, exact base/PR/path bindings, retained critical checks, and unchanged production/secret denials. Added negative identity, base, and unreviewed-path regression coverage.
+- Extracted reusable mock/assertion support into `businessBankingTestSupport.ts`, retaining all nine operation tests while returning the original test module below the existing 500-line threshold. Refreshed deterministic architecture inventory; oversized-file count remains 100 and every ratchet maximum is unchanged.
+- Local evidence: focused Deno tests 9/9; retained authority tests; exact changed-path verification; architecture inventory and debt ratchet; format and diff checks. Exact-head CI remains required before the next implementation tranche.
