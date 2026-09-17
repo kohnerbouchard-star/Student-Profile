@@ -44,7 +44,7 @@ export async function handleBusinessBankingAdminOperation(
 
     if (input.suffix === "/businesses" && input.request.method === "GET") {
       const { data, error } = await service.from("business_entities").select(
-        "public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization,reputation_score,failure_count,created_at,updated_at,closed_at",
+        "public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capitalization::text,reputation_score,failure_count,created_at,updated_at,closed_at",
       ).eq("game_session_id", input.gameId).order("updated_at", {
         ascending: false,
       }).order("public_key", { ascending: true }).limit(2001);

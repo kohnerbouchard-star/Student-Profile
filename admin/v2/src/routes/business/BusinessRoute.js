@@ -23,9 +23,8 @@ function number(value, options = {}) {
 }
 
 function amount(value, currencyCode) {
-  if (!Number.isFinite(value)) return "—";
-  const formatted = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
-  return currencyCode ? `${formatted} ${currencyCode}` : formatted;
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value)) return "—";
+  return currencyCode ? `${value} ${currencyCode}` : value;
 }
 
 function dateTime(value) {
@@ -182,7 +181,7 @@ function catalog({ model, filters, onFiltersChange, onDetail }) {
         label: "Status",
         render: (value) => createElement("span", { className: "admin-business-route__status", dataset: { status: value || "unknown" }, text: titleCase(value) }),
       },
-      { key: "capitalization", label: "Capitalization", align: "end", render: (value, business) => amount(value, business.currencyCode) },
+      { key: "capitalization", label: "Capitalization", align: "end", sortable: false, render: (value, business) => amount(value, business.currencyCode) },
       { key: "reputationScore", label: "Reputation", align: "end", render: (value) => number(value) },
       {
         key: "actions",

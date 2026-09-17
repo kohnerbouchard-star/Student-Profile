@@ -8,7 +8,7 @@ import { createAdminErrorEnvelope, isAdminErrorEnvelope, normalizeAdminError } f
 import { BusinessRoute } from "./BusinessRoute.js";
 import { normalizeBusinessSupervision } from "./BusinessSupervisionModel.js";
 
-const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const BUSINESS_KEY_PATTERN = /^biz_[0-9a-f]{32}$/i;
 const BUSINESS_STATUSES = new Set(["active", "restructuring", "distressed", "closed"]);
 const BUSINESS_TYPES = new Set(["sole_proprietorship", "partnership", "llc", "c_corporation", "corporation", "cooperative"]);
@@ -38,6 +38,12 @@ function nonnegative(value) {
 function integer(value) {
   const number = nonnegative(value);
   return Number.isSafeInteger(number) ? number : null;
+}
+
+function decimalText(value) {
+  if (typeof value === "number" && !Number.isSafeInteger(value)) return null;
+  const text = safeText(value);
+  return /^\d+(?:\.\d+)?$/.test(text) ? text : null;
 }
 
 function businessRows(result) {
@@ -82,7 +88,7 @@ function normalizeBusiness(row, index) {
     countryCode: safeText(row.country_code ?? row.countryCode, 32).toUpperCase(),
     currencyCode: safeText(row.currency_code ?? row.currencyCode, 16).toUpperCase(),
     status: BUSINESS_STATUSES.has(statusValue) ? statusValue : "",
-    capitalization: nonnegative(row.capitalization),
+    capitalization: decimalText(row.capitalization),
     reputationScore: integer(row.reputation_score ?? row.reputationScore),
     capacityUnits: integer(row.capacity_units ?? row.capacityUnits),
     failureCount: integer(row.failure_count ?? row.failureCount),

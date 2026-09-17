@@ -99,6 +99,16 @@ test("Business read model excludes owner UUID and retired cached financial and d
   assert.equal(JSON.stringify(many).includes("owner_player_id"), false);
 });
 
+test("Business identity preserves decimal precision and strips every UUID version", () => {
+  const exact = "9007199254740993.123456789123456789";
+  const row = business({ capitalization: exact, legal_name: "private 10000000-0000-7000-8000-000000000001" });
+  const model = normalizeBusinessReadModel({ data: { businesses: [row] } });
+  assert.equal(model.businesses[0].capitalization, exact);
+  assert.equal(model.businesses[0].legalName, "Unnamed business");
+  assert.equal(normalizeBusinessDetail({ business: row }).capitalization, exact);
+  assert.equal(normalizeBusinessDetail({ business: business({ capitalization: Number.MAX_SAFE_INTEGER + 1 }) }).capitalization, null);
+});
+
 test("Business route does not render retired cached aggregates", () => {
   const source = readFileSync(
     new URL("../admin/v2/src/routes/business/BusinessRoute.js", import.meta.url),

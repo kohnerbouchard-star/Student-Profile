@@ -10,7 +10,7 @@ const OUT = process.env.ADMIN_V2_EVIDENCE_DIR || "/tmp/admin-business-supervisio
 const KEY = "biz_" + "a".repeat(32);
 const PRIVATE = "30000000-0000-4000-8000-000000000003";
 mkdirSync(OUT,{recursive:true});
-const business = { public_key:KEY, legal_name:"한강 Robotic Manufacturing Cooperative — "+ "Long name ".repeat(8), entity_type:"llc", country_code:"TST", currency_code:"ECO", status:"active", capitalization:"1000", reputation_score:80, failure_count:0, operational_readiness:"unknown", owner_player_id:PRIVATE };
+const business = { public_key:KEY, legal_name:"한강 Robotic Manufacturing Cooperative — "+ "Long name ".repeat(8), entity_type:"llc", country_code:"TST", currency_code:"ECO", status:"active", capitalization:"9007199254740993.123456789123456789", reputation_score:80, failure_count:0, operational_readiness:"unknown", owner_player_id:PRIVATE };
 function payload(empty=false) {
   return { business, supervision: { schemaVersion:1, readOnly:true, businessKey:KEY, generatedAt:"2026-09-17T22:00:00Z", healthFlags:["unpaid-tax-evidence"],
     sections:Object.fromEntries(Object.entries(FIELDS).map(([name,fields])=>[name, {
@@ -87,7 +87,7 @@ try {
           const opener=page.getByRole("button",{name:"Details",exact:true}).first();
           await opener.waitFor();
           if(scenario==="stale") {
-            await page.getByRole("button",{name:"Refresh",exact:true}).click();
+            await page.locator('[data-business-action="refresh"]').click();
             await page.locator('.admin-business-route[data-admin-v2-state="stale"]').waitFor();
           }
           await opener.click();
@@ -115,6 +115,7 @@ try {
               }
               await selector.selectOption("checking");
               assert.ok((await dialog.innerText()).includes("9007199254740993.123456789123456789"));
+              assert.ok((await dialog.locator(".admin-business-detail__grid").innerText()).includes("9007199254740993.123456789123456789 ECO"));
               await page.screenshot({path:path.join(OUT,"business-"+viewport.width+".png"),fullPage:true});
               await selector.focus();
               for(let tab=0;tab<12;tab++) {

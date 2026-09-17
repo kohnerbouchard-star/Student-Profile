@@ -30,7 +30,7 @@ Deno.test("Admin Business read is game scoped and strips retired aggregate and o
       country_code: "NRC",
       currency_code: "NRC",
       status: "active",
-      capitalization: 1_000,
+      capitalization: "9007199254740993.123456789123456789",
       reputation_score: 80,
       failure_count: 0,
       created_at: NOW,
@@ -86,6 +86,14 @@ Deno.test("Admin Business read is game scoped and strips retired aggregate and o
   const selection =
     mock.selects.find((entry) => entry.table === "business_entities")
       ?.columns ?? "";
+  assert(
+    selection.split(",").includes("capitalization::text"),
+    "Capitalization must cross the database boundary as decimal text",
+  );
+  assertEquals(
+    (businesses[0] as Record<string, unknown>).capitalization,
+    "9007199254740993.123456789123456789",
+  );
   for (
     const forbiddenColumn of [
       "owner_player_id",
