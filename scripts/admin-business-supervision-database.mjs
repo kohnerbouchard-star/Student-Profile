@@ -68,6 +68,9 @@ expectSqlError(`begin read only; set local role service_role; select public.read
 const closed = runJson(`begin; update public.business_entities set status='closed', closed_at=now() where id='${one.businessId}'; set local role service_role; select ${call()}::text; rollback;`);
 assert.equal(closed.business.status,"closed");
 assert.ok(closed.supervision.healthFlags.includes("business-not-active"));
+assert.equal(closed.supervision.sections.readiness.status,"unavailable");
+assert.equal(closed.supervision.sections.activity.rows.length,100);
+assert.equal(Object.keys(closed.supervision.sections).length,22);
 const exact = runJson(`select economy_private.business_supervision_section_v2('[{"amount":9007199254740993.123456789123456789}]'::jsonb)::text;`);
 assert.equal(exact.rows[0].amount,"9007199254740993.123456789123456789");
 console.log("Phase 13 database: 22 sections, read-only enforcement, two-game scope, multi-owner percentages, grants/roles, closed history, Player ownership, and exact decimal precision pass");

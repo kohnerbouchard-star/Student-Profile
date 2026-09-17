@@ -104,6 +104,7 @@ try {
             if(scenario==="retry") await page.getByRole("button",{name:"Retry detail",exact:true}).click();
             const selector=dialog.getByLabel("Supervision section",{exact:true});
             await selector.waitFor();
+            assert.equal(await dialog.evaluate(node=>node.contains(document.activeElement)),true,"detail refresh lost keyboard focus");
             if(scenario==="emptySections") await dialog.getByText("No recorded evidence",{exact:true}).waitFor();
             if(scenario==="ready") {
               for(const [name,title] of Object.entries(LABELS)) {

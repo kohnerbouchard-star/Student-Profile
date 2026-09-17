@@ -149,11 +149,19 @@ begin
   v_sections := v_sections || jsonb_build_object('offers', economy_private.business_supervision_section_v2(v_rows));
 
   v_workforce := economy_private.read_business_workforce_utilization_v2(p_game_session_id, v_business.id);
-  v_readiness := economy_private.read_business_production_readiness_v2(p_game_session_id, v_business.id);
+  -- The canonical readiness calculation intentionally applies only to active businesses.
+  -- Preserve that contract while retaining every historical section for closed businesses.
+  if v_business.status = 'active' then
+    v_readiness := economy_private.read_business_production_readiness_v2(p_game_session_id, v_business.id);
+  else
+    v_readiness := '[]'::jsonb;
+  end if;
   v_sections := v_sections || jsonb_build_object(
     'workforce', economy_private.business_supervision_section_v2(v_workforce->'employees'),
-    'readiness', economy_private.business_supervision_section_v2(
-      v_readiness));
+    'readiness', case when v_business.status = 'active'
+      then economy_private.business_supervision_section_v2(v_readiness)
+      else jsonb_build_object('status', 'unavailable', 'rows', '[]'::jsonb, 'truncated', false)
+    end);
   v_treasury := economy_private.get_business_treasury_overview_v1(p_game_session_id, v_business.id);
   v_sections := v_sections || jsonb_build_object(
     'checking', economy_private.business_supervision_section_v2(v_treasury->'accounts'),

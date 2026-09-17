@@ -238,17 +238,25 @@ export function BusinessRoute({
   let detailSequence = 0;
   let destroyed = false;
 
+  function setDetailContent(content) {
+    if (!detailDrawer) return;
+    const replacesFocus = detailDrawer.body.contains(document.activeElement);
+    detailDrawer.setContent(content);
+    // Removing the focused Retry button otherwise leaves focus on document.body.
+    if (replacesFocus && detailDrawer.isOpen()) detailDrawer.panel.focus({ preventScroll: true });
+  }
+
   async function loadDetailIntoDrawer(business) {
     const sequence = ++detailSequence;
     selectedBusiness = business;
-    detailDrawer?.setContent(loadingDetail(business));
+    setDetailContent(loadingDetail(business));
     try {
       const detail = await onLoadDetail(business);
       if (destroyed || sequence !== detailSequence || selectedBusiness !== business || !detailDrawer?.isOpen()) return;
-      detailDrawer.setContent(detailContent(detail));
+      setDetailContent(detailContent(detail));
     } catch (error) {
       if (destroyed || sequence !== detailSequence || selectedBusiness !== business || !detailDrawer?.isOpen()) return;
-      detailDrawer.setContent(detailError(error, () => loadDetailIntoDrawer(business)));
+      setDetailContent(detailError(error, () => loadDetailIntoDrawer(business)));
     }
   }
 
