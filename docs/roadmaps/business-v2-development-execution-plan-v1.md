@@ -536,18 +536,18 @@ Exit: Player can operate Business V2 without legacy Business forms.
 
 ## Phase 13 — Admin Business supervision
 
-**Status:** `IN_PROGRESS` — existing owner `feat/admin-business-supervision-v2`, draft PR #682, advanced from the certified Phase 12 documentation handoff without history rewrite
+**Status:** `IMPLEMENTED_NOT_MERGED` — existing owner `feat/admin-business-supervision-v2`, draft PR #682, certified implementation `949da9f91990eeeee2cd815541446a5b64130664`
 
 - [x] Phase 13A: establish the game-scoped, public-key-only, read-only Business directory and selected-Business detail foundation with loading/error/empty/no-store behavior.
-- [x] Phase 13B: implement canonical stockroom, manufacturing, workforce/payroll and equipment supervision; full-phase verification pending.
-- [x] Phase 13C: implement canonical Store/sales, treasury, financial-health, operating-period and tax supervision; full-phase verification pending.
-- [x] Phase 13D: implement privacy-safe ownership/governance plus immutable activity/audit evidence; full-phase verification pending.
-- [ ] Phase 13F: run the full exact-head retained matrix and record one durable implementation identity and handoff.
+- [x] Phase 13B: canonical stockroom, manufacturing, workforce/payroll and equipment supervision, verified.
+- [x] Phase 13C: canonical Store/sales, treasury, financial-health, operating-period and tax supervision, verified.
+- [x] Phase 13D: privacy-safe ownership/governance plus immutable activity/audit evidence, verified.
+- [x] Phase 13F: all 33 exact-source workflows passed; one immutable implementation identity and durable handoff recorded.
 - [x] Phase 13E: explicit no-intervention decision; no emergency mutation authority or UI added.
 
 Phase 13A deliberately removes the Admin v2 compliance mutation affordance from the supervision route. It does not delete or expand the existing legacy compliance RPC; Phase 13 exposes no mutation unless a later bounded intervention decision separately proves the complete authority and audit contract.
 
-Phase 13A repair head `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 triggered workflows on 2026-09-17. The owner authorized all Phase 13; 13B–E are implemented as a candidate and 13F exact-head certification is in progress. The Admin browser workflow also covers the stacked base so its retained gate is not silently omitted. No Phase 14, merge, deployment or live database work is authorized.
+Phase 13A repair head `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 workflows then triggered. Full Phase 13 implementation `949da9f91990eeeee2cd815541446a5b64130664` subsequently passed all 33 workflows on 2026-09-17, including two fresh database replays and all 16 desktop/mobile supervision scenarios. The [implementation handoff](business-admin-supervision-implementation-handoff-v1.md) is the durable certification ledger. The Admin browser workflow covers the stacked base. No Phase 14, merge, deployment or live database work is authorized; next dependency is Phase 14A after separate owner direction.
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 

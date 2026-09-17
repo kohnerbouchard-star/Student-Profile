@@ -1,12 +1,13 @@
 # Admin Business Supervision Scope v1
 
 **Roadmap item:** `BUSINESS-V2-13`
-**Status:** `IN_PROGRESS` — full Phase 13 candidate, certification pending
+**Status:** `IMPLEMENTED_NOT_MERGED` — full Phase 13 repository certification recorded
 **Branch:** `feat/admin-business-supervision-v2`
 **Stacked base:** `feat/player-business-workspace-v2`
 **Parent Phase 12 implementation identity:** `76539c5cfcff612a322963e303e727e6edc7f7ed`
 **Parent Phase 12 documentation handoff:** `d6ddb52f38da1ad931ba56600b49786f11f11ac6`
 **Phase 13A implementation candidate:** `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b`
+**Full Phase 13 certified implementation:** `949da9f91990eeeee2cd815541446a5b64130664`
 **Merge/deployment authorization:** none
 
 ## Objective
@@ -91,7 +92,7 @@ Default result: **not implemented**. A mutation may be exposed only if an existi
 
 Stop and reopen scope if implementation requires a new economic mutation authority, Player impersonation, raw internal identity exposure, direct writes to canonical domain tables from Admin, a scheduler/secret/live-environment change, or weakened auth/MFA/CSRF/rate-limit/isolation/public-key/idempotency/settlement invariants.
 
-## Current Phase 13A candidate
+## Historical Phase 13A candidate
 
 - Directory read remains game-scoped and now returns only a bounded public Business projection plus server-derived operational-readiness evidence.
 - Selected-Business detail is a separate `GET /games/:gameId/businesses/:businessKey` read, revalidating the `biz_<32 hex>` public key and game scope server-side.
@@ -104,7 +105,13 @@ Stop and reopen scope if implementation requires a new economic mutation authori
 
 The owner authorized completion of 13A–F. Repaired 13A source `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 triggered workflows. Subsequent implementation adds 22 bounded canonical evidence sections, a service-only game-owner/active-staff/permission-checked read RPC, shared read-only Business helpers with unchanged Player calculation bodies and preserved Player ownership resolution, exact decimal text, and privacy-safe responsive read-only selection. Directory readiness is unknown unless actually established; partial lists and historical attention evidence are labelled explicitly.
 
-13E decision: **no intervention implemented**. No new write authority, table, scheduler, secret, or runtime dependency. The only migrations are forward-only read function definitions and grants; no live application is authorized. Full exact-head database/browser/retained gates remain pending.
+13E decision: **no intervention implemented**. No new write authority, table, scheduler, secret, or runtime dependency. The only migrations are forward-only read function definitions and grants; no live application is authorized.
+
+## Full Phase 13 certification — 2026-09-17
+
+13A–13F are repository-certified at `949da9f91990eeeee2cd815541446a5b64130664`. All 33 exact-source workflows passed, including all three permanent Phase 13 jobs, two fresh database replays, 16 desktop/mobile browser scenarios and the retained economic/Player/Admin matrix. Two jobs outside this PR's scope were expected skips; no required Phase 13 gate was skipped. Closed-history readiness, async retry focus, exact identity capitalization and all-version UUID suppression are covered by permanent regressions.
+
+The [implementation handoff](business-admin-supervision-implementation-handoff-v1.md) records files, migrations/RPCs, exact run/job/artifact identities, limits, repairs and rollout boundaries. Phase 14A is the next dependency, awaiting separate owner direction.
 
 ## Release boundary
 
