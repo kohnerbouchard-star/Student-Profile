@@ -96,6 +96,7 @@ try {
           if(scenario==="loading") {
             await page.getByLabel("Loading authoritative Business detail").waitFor();
             await page.keyboard.press("Escape");
+            await dialog.waitFor({ state: "hidden", timeout: 5000 });
             releaseDetail();
             await page.waitForTimeout(100);
             assert.equal(await page.getByRole("dialog").count(),0,"late detail reopened drawer");
@@ -122,6 +123,7 @@ try {
               assert.equal(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),true);
             }
             await page.keyboard.press("Escape");
+            await dialog.waitFor({ state: "hidden", timeout: 5000 });
             assert.equal(await page.getByRole("dialog").count(),0,"read-only selector should not trigger unsaved warning");
             assert.equal(await opener.evaluate(node=>node===document.activeElement),true,"opener focus not restored");
           }
@@ -130,6 +132,19 @@ try {
         assert.deepEqual(errors,[]);
         assert.ok(requests.every(r=>r.method==="GET"));
         checks.push({viewport:viewport.width,scenario,status:"pass"});
+      } catch (error) {
+        const diagnostic = await page.evaluate(() => ({
+          dialogs: [...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')].map(node => ({
+            role: node.getAttribute("role"), title: node.querySelector("h2")?.textContent?.slice(0,60),
+            hidden: node.closest(".admin-dialog")?.hidden,
+            inert: node.closest(".admin-dialog")?.inert,
+            open: node.closest(".admin-dialog")?.dataset.open,
+          })),
+          activeTag: document.activeElement?.tagName,
+          activeName: document.activeElement?.getAttribute("name"),
+        }));
+        checks.push({viewport:viewport.width,scenario,status:"fail",error:String(error),diagnostic});
+        throw error;
       } finally {releaseDetail();await context.close();}
     }
   }

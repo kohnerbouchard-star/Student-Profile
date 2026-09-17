@@ -51,7 +51,7 @@ for (const role of ["anon","authenticated"]) {
   expectSqlError(`begin; set local role ${role}; select ${call()}; rollback;`,/permission denied/i);
 }
 expectSqlError(`begin; delete from public.staff_permission_grants where staff_user_id='${FIXTURE.staffId}' and permission='business.manage'; set local role service_role; select ${call()}; rollback;`,/BUSINESS_SUPERVISION_DENIED/);
-expectSqlError(`begin; update public.staff_users set status='suspended' where id='${FIXTURE.staffId}'; set local role service_role; select ${call()}; rollback;`,/BUSINESS_SUPERVISION_DENIED/);
+expectSqlError(`begin; update public.staff_users set status='suspended', suspended_at=statement_timestamp() where id='${FIXTURE.staffId}'; set local role service_role; select ${call()}; rollback;`,/BUSINESS_SUPERVISION_DENIED/);
 expectSqlError(`begin; update public.staff_users set role='security_operator' where id='${FIXTURE.staffId}'; set local role service_role; select ${call()}; rollback;`,/BUSINESS_SUPERVISION_DENIED/);
 expectSqlError(`begin; update public.game_sessions set owner_staff_user_id='10000000-0000-0000-0000-000000000009' where id='${one.id}'; set local role service_role; select ${call()}; rollback;`,/BUSINESS_SUPERVISION_DENIED/);
 
