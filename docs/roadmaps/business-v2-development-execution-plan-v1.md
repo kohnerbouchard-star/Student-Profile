@@ -1,8 +1,8 @@
 # Business V2 Development Execution Plan v1
 
-**Status:** ACTIVE — execution source of truth  
-**Integration branch:** `refactor/business-ux-mechanics-v1`  
-**Integration PR:** #648 — Redesign Business mechanics and authority model  
+**Status:** Phase 14 repository-certified — integration/release boundaries remain
+**Integration branch:** `main`; Phase 14 draft stack #684–#687
+**Historical integration PR:** #648 — closed and superseded by merged main
 **Plan baseline:** `28cea05c4c3328430c3491e8a0c163bc0c0d96de`  
 **Plan date:** 2026-08-19  
 
@@ -551,14 +551,14 @@ Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b6413066
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** `IN_PROGRESS` for full Phase 14. Phase 14A is `IMPLEMENTED_NOT_MERGED` on draft PR #684, exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. All 50 applicable workflows, 90 checks and Vercel passed, including two reporting database replays/advisors, six desktop/mobile browser cases and connected Business/World with 30/40-player load. One staging-only workflow and eight manual/historical jobs skipped as documented in the [checkpoint](business-v2-current-checkpoint-v1.json). No live deployment or SQL occurred.
+**Status:** `IMPLEMENTED_NOT_MERGED` for all Phase 14A–D. Draft stack #684 → #685 → #686 → #687 is repository-certified. Final D source `dee709fcbe5bfdf23c66347447eeb70c1408dcd9` passed 43 workflows, 86 applicable jobs and Vercel, two fresh database replays/advisors, 14 desktop/mobile cases and retained Business/World with 30/40-player load. 4 manual/historical jobs skipped as recorded in the [checkpoint](business-v2-current-checkpoint-v1.json). Full source, migration, artifact and rollout details are in the [Market handoff](business-financial-market-scope-v1.md). No Phase 14 merge, deployment or live SQL occurred.
 
 - [x] Implement and repository-certify Business statements/fundamentals from canonical operating evidence; see [scope and handoff](business-financial-reporting-scope-v1.md).
 - [x] Preserve the original 14A1 certificate while completing labor capitalization, period-end reconciliation and authenticated Player/Admin reporting.
 - [x] Repository-certify common-share invariants (`BUSINESS-V2-14B`), draft #685 at `197caa4034214e21b8033a3f4363dc07a13b5dcf`: 28 workflows, 53 jobs and Vercel passed, including two fresh database replays and full connected/load acceptance. Still unmerged.
 - [x] Repository-certify fixed-price primary IPO (`14C`), draft #686 at `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: 43 workflows, 84 jobs, two fresh replays, 12 browser cases and full connected/load acceptance passed. Still unmerged.
-- [ ] Publish versioned Business events to a Market-owned consumer (`14D`).
-- [ ] Verify the existing Financial Market/Portfolio as the secondary trading surface after listing, without Business writing Market internals.
+- [x] Publish versioned Business events to a Market-owned consumer (`14D`).
+- [x] Verify existing Financial Market/Portfolio secondary trading, authoritative Dashboard positions, finite custody and Banking settlement without Business writing Market internals.
 - [ ] Merge/release only under applicable owner authorization and satisfy the separate live-parity/runtime boundary before `VERIFIED_COMPLETE`.
 
 ---
@@ -626,20 +626,14 @@ Form Business
 
 # Development/PR strategy
 
-PR #648 remains the Business V2 integration PR and stays draft until full convergence.
+PR #648 and the old Business integration stack are closed. Main already contains Phase 11 and the owner-authorized Phase 12/13 merges. Phase 14 remains a bounded, repository-certified draft stack in dependency order:
 
-Prefer bounded stacked tranches rather than uncontrolled broad additions:
+1. #684 `feat/business-financial-reporting-v2` — financial reporting.
+2. #685 `feat/business-common-equity-v2` — common equity.
+3. #686 `feat/business-ipo-issuance-v2` — fixed-price primary IPO.
+4. #687 `feat/business-financial-market-integration-v2` — Market consumption and secondary trading.
 
-```text
-fix/business-v2-schema-convergence
-  -> refactor/business-domain-boundary-v2
-  -> feat/business-manufacturing-authority-v2
-  -> feat/business-store-seller-offers-v2
-  -> refactor/player-business-workspace-v2
-  -> feat/business-ipo-market-v1
-```
-
-If work is committed directly to the existing integration branch because of execution-environment constraints, every commit must still correspond to one bounded tranche and this document must record the boundary and verification.
+Each owner starts from its exact green predecessor handoff. Any ordered integration requires applicable owner authorization and renewed gates on the actual merge candidates; no live release follows from repository certification. `BETA-LIVE-MIGRATION-PARITY-001` remains separate. Earlier execution-log references to #648 are historical.
 
 ---
 

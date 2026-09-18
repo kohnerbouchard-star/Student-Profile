@@ -1,6 +1,6 @@
 # Phase 14D — Business integration with the Financial Market
 
-Roadmap item `BUSINESS-V2-14D`, within `BETA-BUSINESS-V2-001`. Status `IN_PROGRESS`, draft PR #687. Owner `feat/business-financial-market-integration-v2`, from green Phase 14C documentation handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`: 43 workflows, 84 jobs and Vercel passed; four manual/historical skips. Predecessor implementation remains `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`, draft #686.
+Roadmap item `BUSINESS-V2-14D`, within `BETA-BUSINESS-V2-001`. Status `IMPLEMENTED_NOT_MERGED`, repository-certified at `dee709fcbe5bfdf23c66347447eeb70c1408dcd9`, draft PR #687. Owner `feat/business-financial-market-integration-v2`, from green Phase 14C documentation handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`: 43 workflows, 84 jobs and Vercel passed; four manual/historical skips. Predecessor implementation remains `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`, draft #686.
 
 The owner authorized implementation and verification through Phase 14D. This work does not authorize Phase 14 merge, deployment, live SQL, scheduler or secret changes. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
 
@@ -25,3 +25,13 @@ Forward migrations add Business ports, Market linkage/consumption and bounded se
 ## Candidate verification follow-up
 
 Candidate `55d26fefddf44510d693205886c77b12d1b48c59` replayed all migrations successfully. Retained IPO run `35331471197` / job `105556554568` observed the new schema fingerprints: registry `7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3` (207), FK `fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329` (456), order `19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897` (206), final cursor 207. Its purge assertion correctly rejected the prior fingerprints. A forward migration advances only these constants, with complete frozen writer-body comparison. Retained Portfolio HTTP fixtures now use the authoritative positions RPC. Dashboard preserves the ECO portfolio summary, separately values national positions and reports unconverted currencies. None of these pending corrections is certification.
+
+## Repository certification — 2026-09-18
+
+Exact implementation `dee709fcbe5bfdf23c66347447eeb70c1408dcd9` passed all 43 workflows, 86 applicable jobs and Vercel; 4 manual/historical jobs skipped as intended. Market run `35332193613` passed source `105558816165`, database `105558816130` and browser `105558815838`. Two fresh replays, database advisors, canonical formation/Store/close/IPO/secondary settlement, finite cash/shares, ten injected rollback stages, custody race, replay, zero-share manager/reentry, closure, game isolation and populated purge passed. All 14 desktop/mobile cases passed (eight Market/Portfolio plus six retained IPO). Browser artifact `10541437059`, digest `sha256:5eaa3ad3df1f27361b60677afd860770b2a36984c752720e3b41c4ee57ab0556`, expires `2026-10-02T09:59:40Z`.
+
+Connected run `35332193485` / `105558939578` passed retained Business/World journeys, 30/40-player load and final enforcement. All retained reporting/common-equity/IPO, Store, Banking, Player, Admin, source, security and repository gates applicable to this source passed. Exact workflow/job identities are retained in `phase14d_certification` in the current checkpoint. The prior failed candidate and its bounded repairs remain documented above.
+
+The five D migrations are `20260918092720` (Business ports), `20260918093021` (Market consumer/projections), `20260918093133` (existing settlement adapters), `20260918093319` (purge registry) and `20260918095220` (observed purge convergence). Browser acceptance uses bounded public DTO fixtures against the shipped Player code; separate disposable-database acceptance proves canonical transactions, while the retained connected suite proves existing integrated journeys and classroom load. This is repository evidence, not staging/production certification.
+
+Phase 14A–D are all repository-certified on draft PRs #684 → #685 → #686 → #687. No Phase 14 merge, deployment, live SQL, scheduler or secret change occurred. `BETA-LIVE-MIGRATION-PARITY-001` remains separate. The next step is owner-authorized ordered stack integration and release/runtime verification, not another Phase 14 implementation checkpoint.
