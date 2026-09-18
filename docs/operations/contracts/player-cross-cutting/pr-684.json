@@ -37,7 +37,11 @@
     ".github/workflows/business-financial-reporting.yml",
     "docs/operations/contracts/player-cross-cutting/pr-684.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/admin-business-supervision-database.mjs",
+    "backend/supabase/migrations/20260918035524_business_reporting_purge_convergence_v1.sql",
+    "player-terminal/tests/browser/player-business-workspace.spec.mjs",
+    "scripts/business-banking-player-business-browser-acceptance.mjs"
   ],
   "requiredFiles": [
     "backend/supabase/migrations/20260918014630_business_financial_reporting_v1.sql",
@@ -63,7 +67,8 @@
     "business-store-sales-convergence-v2-source",
     "business-store-sales-convergence-v2-player-admin",
     "business-financial-reporting-source",
-    "business-financial-reporting-database"
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser"
   ],
   "criticalJobChecks": [
     "business-player-store-fx-final-v2-source",
@@ -71,7 +76,8 @@
     "business-store-sales-convergence-v2-source",
     "business-store-sales-convergence-v2-player-admin",
     "business-financial-reporting-source",
-    "business-financial-reporting-database"
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser"
   ],
   "authorizationNote": "Owner authorized completing Phase 14A through 14D on 2026-09-18. This existing draft owns Phase 14A financial statements, canonical accounting evidence and authenticated reporting, with retained verification. Equity, IPO and Market integration retain separate successor owners after a green predecessor. No deployment, live database mutation or secret handling."
 }

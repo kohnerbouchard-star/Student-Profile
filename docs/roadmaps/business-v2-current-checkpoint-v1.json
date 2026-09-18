@@ -67,14 +67,14 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14A1",
+  "active_checkpoint": "BUSINESS-V2-14A",
   "active_checkpoint_branch": "feat/business-financial-reporting-v2",
   "active_checkpoint_pr": 684,
   "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
   "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
   "active_candidate_implementation_sha": "c3647db988f2be8edd52b1656e640b388b2fc00f",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "Phase 14A1 closed-period reporting is implemented and repository-verified in draft PR #684. Phase 14A remains IN_PROGRESS: complete statements, consuming UI/adapters, equity and IPO are not implemented by this tranche. No deployment or live SQL occurred.",
+  "active_candidate_state": "IN_PROGRESS",
+  "active_candidate_note": "Phase 14A statements and authenticated Player/Admin views are published at 7e346973879e277c6f2230b51bf2dd99ecc03f93. Reporting passed; retained Admin section/format checks and canonical purge convergence are under repair. The 14A1 certificate remains unchanged. Equity/IPO/Market successors await a certified 14A handoff.",
   "next_authorized_checkpoint": "BUSINESS-V2-14A",
   "next_authorized_scope": "Continue Phase 14A by reconciling labor capitalization and period-end asset/liability/cash-flow evidence before implementing complete statements and authenticated Player/Admin adapters/views. Later equity/IPO work remains dependent on complete reporting. No deployment, live SQL, secret or scheduler change.",
   "remaining_dependency_order": [

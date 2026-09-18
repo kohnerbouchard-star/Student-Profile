@@ -36,12 +36,12 @@ export function renderBusinessFinancialReporting(model, resourceState = "ready")
       const tables = Object.entries(HEADINGS).map(([key, label]) => {
         const rows = Object.entries(currency[key] || {}).filter(([field]) => LABELS[field])
           .map(([field, value]) => `<tr><th scope="row">${LABELS[field]}</th><td>${decimal(value)}</td></tr>`).join("");
-        return `<table><caption>${label} · ${escapeHtml(currency.currencyCode)}</caption><tbody>${rows}</tbody></table>`;
+        return `<div class="player-terminal-holdings-table" tabindex="0" role="region" aria-label="${label} ${escapeHtml(currency.currencyCode)}"><table><caption>${label} · ${escapeHtml(currency.currencyCode)}</caption><tbody>${rows}</tbody></table></div>`;
       }).join("");
       const reconciliation = currency.reconciliation || {};
       return `<section aria-label="${escapeHtml(currency.currencyCode)} financial statements">${tables}<p>Equity difference: ${decimal(reconciliation.equityDifference)}. Cash difference: ${decimal(reconciliation.cashDifference)}.</p></section>`;
     }).join("");
-    return `<details class="player-terminal-disclosure" data-business-statement><summary>Period ${escapeHtml(statement.periodNumber)} · ${escapeHtml(statement.dueAt)} · ${state}</summary>${complete ? "" : '<p role="status">These figures need reconciliation before they can support an IPO.</p>'}${currencies}</details>`;
+    return `<details class="player-terminal-disclosure" data-business-statement><summary>Period ${escapeHtml(statement.periodNumber)} · <time datetime="${escapeHtml(statement.dueAt)}">${escapeHtml(String(statement.dueAt).slice(0, 10))}</time> · ${state}</summary>${complete ? "" : '<p role="status">These figures need reconciliation before they can support an IPO.</p>'}${currencies}</details>`;
   }).join("");
   return `<section class="player-terminal-panel" data-business-financial-reporting>${title}<p>Accrual statements at each period due date. Later cash payments appear in the next period. Currencies are shown separately; amounts retain their recorded precision.</p>${historical}${content || '<p role="status">No closed-period financial statements yet.</p>'}${model.truncated ? "<p>Showing the latest 50 periods.</p>" : ""}</section>`;
 }

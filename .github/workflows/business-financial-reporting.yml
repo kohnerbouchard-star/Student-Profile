@@ -86,3 +86,35 @@ jobs:
       - name: Stop disposable service
         if: always()
         run: npx supabase stop --workdir backend --no-backup
+  browser:
+    name: business-financial-reporting-browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned browser tooling
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix player-terminal ci --ignore-scripts
+          npx playwright install --with-deps chromium
+      - name: Verify reporting and retained workspace in desktop and mobile browsers
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI: true
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          cd player-terminal
+          npx playwright test tests/browser/player-business-workspace.spec.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: business-financial-reporting-browser-${{ github.event.pull_request.head.sha || github.sha }}
+          path: player-terminal/playwright-report/
+          if-no-files-found: error
+          retention-days: 14

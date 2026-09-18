@@ -52,3 +52,20 @@ for (const required of ["after insert on public.business_operating_period_close_
   assert.ok(statements.includes(required), required);
 assert.doesNotMatch(statements, /grant (?:insert|update|delete)|to_jsonb\s*\(/iu);
 console.log("Phase 14A canonical position capture, accrual, currency evidence, fail-closed reconciliation and bounded reads: pass");
+
+// New reporting tables alter the frozen purge schema contract. Verify that the
+// forward correction changes only schema fingerprints/cursor counts in its writers.
+const purge = readFileSync(new URL("20260918035524_business_reporting_purge_convergence_v1.sql", directory), "utf8");
+const priorPurge = readFileSync(new URL("20260831232719_business_store_sales_convergence_assertions_v1.sql", directory), "utf8");
+const normalizePurge = (body) => body
+  .replaceAll("d3a0e132271485f7c5edf434021a56a1c1ec3768cb003041d227b4775ceecafe", "68695d3995661af72de99b01fffe0ed301071f1131e6a8e6b92f03febfedb960")
+  .replaceAll("cb08e151c693cd018fec0fb7fe2a1d700cc34b0f5704c1b4a7bf1c560f2aa6af", "779750e69db0f918d3c54dc47765ac12a04d635bcc32760d529d571fd4041ec0")
+  .replaceAll("b04f1ca4956a17a89e9afe29255c467bcb1b071978da35aaef76e85e19c2dbf5", "ef50615cdc9e9191b149f45746d639d196aa0cd1eb1d308dfd2fd80ea43a7fa4")
+  .replace(/\b(204|205|452)\b/gu, (value) => ({ 204: "201", 205: "202", 452: "448" })[value]);
+for (const name of ["execute_game_data_purge_db_batch_v2", "finalize_game_data_purge_v1"]) {
+  const expression = new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$function\\$;`, "u");
+  assert.equal(normalizePurge(purge.match(expression)?.[0] || ""), priorPurge.match(expression)?.[0], name);
+}
+assert.match(purge, /GAME_PURGE_CURSOR_RECONCILIATION_REQUIRED/u);
+assert.equal((purge.match(/private\.is_game_data_purge_delete_authorized_v1\(/gu) || []).length, 2);
+console.log("Phase 14A purge retains exact request-bound authority and both observer deletion guards: pass");
