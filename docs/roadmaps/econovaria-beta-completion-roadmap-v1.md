@@ -21,6 +21,11 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14D` — Financial Market integration (2026-09-18)**
+  - Status: `IN_PROGRESS`, owner `feat/business-financial-market-integration-v2`, from exact green Phase 14C handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`. Its 43 workflows, 84 jobs, Vercel and connected/load checks passed.
+  - Scope: versioned Business events through a Market-owned consumer; completed-IPO listing; canonical common-share custody/secondary transfers; existing Banking/Market settlement; public Market/Portfolio reads with currency separation. See `business-financial-market-scope-v1.md` for authority, evidence and forward rollout.
+  - Certification pending. No merge, deployment, live SQL, scheduler or secret action. Phase 14 remains in progress until this final repository checkpoint passes.
+
 - **`BUSINESS-V2-14C` — Fixed-price primary IPO (2026-09-18)**
   - Status: `IMPLEMENTED_NOT_MERGED`, exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`, draft PR #686 / `feat/business-ipo-issuance-v2`, from green Phase 14B handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`.
   - Canonical reconciled-statement eligibility, immutable approved terms, atomic Checking-to-Business common issuance, explicit operating mandates and authenticated Player review are implemented. Four forward migrations end at `20260918083200_business_primary_ipo_purge_convergence_v1.sql`. Scope, files, RPCs, corrections and rollout are recorded in `business-primary-ipo-scope-v1.md`.
@@ -38,7 +43,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Status: `IN_PROGRESS`. The owner instructed “continue until phase 14 is done,” authorizing all four implementation and verification stages. Existing reporting owner PR #684 remains authoritative; successors retain the exact-green-predecessor sequence below. No deployment, live SQL, secret or scheduler change is authorized.
   - Phase 14A: `IMPLEMENTED_NOT_MERGED` on draft PR #684 at exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. Five CLI-generated forward migrations (`20260918014630` through `20260918035524`) implement closed-period evidence, immutable inventory/loan observations, reconciled income/balance/cash-flow statements, authenticated Player/Admin reads and canonical purge convergence. Player Finance and Admin's 25 read-only sections preserve exact decimal text, separate currencies, historical coverage, privacy and stale/error states. Implementation files, RPCs, rollout and acceptance limits are in `business-financial-reporting-scope-v1.md`.
   - Verification at that source: all 50 applicable workflows, 90 checks and Vercel passed. One staging-only workflow and eight manual/historical jobs skipped as expected. Reporting run `35314969708` passed source/database/browser, two fresh replays and advisors; all six desktop/mobile cases passed. Connected run `35314969894` passed Business/World, both classroom load profiles and final enforcement. Full workflow/job/artifact identities and skip reasons are in the checkpoint. No required economic or connected gate was skipped.
-  - Next exact item: `BUSINESS-V2-14D` Market event consumption/secondary trading after the green Phase 14C documentation handoff. Phase 14C is repository-certified on draft PR #686; 14D remains unimplemented.
+  - Next exact item: `BUSINESS-V2-14D` Market event consumption/secondary trading after the green Phase 14C documentation handoff. Phase 14C is repository-certified on draft PR #686; 14D is in progress on its own successor branch.
   - The prior reporting handoff's retained Store browser failure passed unchanged on rerun (run `35298549687`, job `105468946753`); no retained assertion was weakened. Live parity remains a separate release/runtime blocker.
 
 - **`BUSINESS-V2-14A1` — Closed-period financial reporting foundation**

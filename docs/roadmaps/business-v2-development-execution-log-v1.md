@@ -1444,3 +1444,9 @@ Opened draft PR #686 from exact green common-equity handoff `bab8393cd8f0d30a84b
 - Connected `35326213393` / `105539888140` passed retained Business/World journeys, 30/40-player load, zero server errors and enforcement. Browser artifact `10539480034`, SHA-256 `533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b`. Evidence limits and forward rollout remain in the scope document.
 - Repairs preserve explicit mixed-facade delegation, canonical resolver ambiguity, observed purge fingerprints, valid paused-game fixtures and retained Deno formatting; no assertion/security boundary or architecture ceiling was weakened. Advisors retain three pre-existing duplicate-index warnings.
 - Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next authorized item after green documentation handoff: `BUSINESS-V2-14D` Market-owned events, listing and common-share secondary trading.
+
+## 2026-09-18 — Phase 14D opened from green IPO handoff
+
+- Exact predecessor documentation `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea` passed all 43 workflows, 84 jobs and Vercel; four expected manual/historical skips. The checkpoint retains all identities. C implementation remains `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`.
+- Opened `feat/business-financial-market-integration-v2` for `BUSINESS-V2-14D`; no existing open owner was found. Business quantity/custody authority, Market event consumption/listing, retained Banking settlement and public Portfolio currency separation are bounded by `business-financial-market-scope-v1.md`.
+- Status `IN_PROGRESS`; source/economic/browser certification pending. No merge, deployment, live SQL, scheduler or secret change. This is the final authorized Phase 14 implementation checkpoint.
