@@ -22,7 +22,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 ## Scope Intake
 
 - **`BUSINESS-V2-14B` — Common-equity invariants (2026-09-18)**
-  - Status: `IN_PROGRESS`. Owner `feat/business-common-equity-v2`, exact green predecessor handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; no replacement reporting owner.
+  - Status: `IN_PROGRESS`. Owner draft PR #685 / `feat/business-common-equity-v2`, exact green predecessor handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; no replacement reporting owner.
   - CLI-created forward enforcement migration, permanent source/two-replay database/race acceptance and retained stack CI filters are prepared. Canonical positions, immutable receipts and corporate share structure remain sole authorities; common shares reconcile one share/one vote, receipts and authorized capacity. Raw service cap-table writes are revoked; existing definer commands and request-bound game purge remain intact.
   - Files, behavior, compatibility audit, verification and rollout: `business-common-equity-scope-v1.md`. No new table/FK, Market/money/Inventory writer, HTTP route, merge, deployment or live SQL. Exact published source and workflow results remain required before `IMPLEMENTED_NOT_MERGED`.
   - Next exact item after green certification: `BUSINESS-V2-14C` fixed-price primary IPO, followed by `14D` Market integration. IPO ownership must not confer operating/treasury authority.

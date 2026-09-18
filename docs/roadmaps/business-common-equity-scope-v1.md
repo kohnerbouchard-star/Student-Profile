@@ -5,7 +5,7 @@ Status: `IN_PROGRESS`; no completion or live-runtime claim.
 
 ## Ownership and dependency
 
-The owner is `feat/business-common-equity-v2`, stacked on the exact green Phase 14A documentation handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. The predecessor's implementation certificate remains `aed8c3f6462d927cec3ebc55602854d48a460a9b` on draft PR #684. This tranche receives its own bounded draft PR. Phase 14C and 14D retain separate successor owners.
+The owner is `feat/business-common-equity-v2`, stacked on the exact green Phase 14A documentation handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. The predecessor's implementation certificate remains `aed8c3f6462d927cec3ebc55602854d48a460a9b` on draft PR #684. This tranche owns draft PR #685. Phase 14C and 14D retain separate successor owners.
 
 The owner authorized completion of all Phase 14 implementation and verification. Merge, deployment, live SQL, scheduler and secret changes remain outside this draft-stack scope. Live migration parity is a separate release blocker.
 

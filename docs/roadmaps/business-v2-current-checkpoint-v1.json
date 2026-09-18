@@ -86,7 +86,7 @@
   },
   "active_checkpoint": "BUSINESS-V2-14B",
   "active_checkpoint_branch": "feat/business-common-equity-v2",
-  "active_checkpoint_pr": null,
+  "active_checkpoint_pr": 685,
   "active_checkpoint_started_at": "2026-09-18T07:03:31.660465+00:00",
   "active_candidate_parent_sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
   "active_candidate_implementation_sha": null,
