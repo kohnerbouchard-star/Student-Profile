@@ -551,10 +551,10 @@ Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b6413066
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** `IN_PROGRESS` — owner authorized merge/start on 2026-09-18. Financial reporting owner `feat/business-financial-reporting-v2` starts from merged main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`.
+**Status:** `IN_PROGRESS` — owner authorized merge/start on 2026-09-18. Financial reporting owner `feat/business-financial-reporting-v2`, draft PR #684, starts from merged main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. First tranche `14A1` is `IMPLEMENTED_NOT_MERGED` at verified source `c3647db988f2be8edd52b1656e640b388b2fc00f`: 25 applicable workflows, 50 checks and Vercel passed, including two fresh reporting database replays and both classroom load profiles. One staging-only workflow and six non-applicable checks skipped. Full Phase 14 remains open.
 
 - [ ] Stabilize Business financial statements/fundamentals from real operating activity.
-- [ ] 14A1: closed-period evidence foundation; see [scope](business-financial-reporting-scope-v1.md). Complete statements require labor capitalization and period-end reconciliation.
+- [ ] 14A1: merge/release the verified closed-period evidence foundation only when authorized; see [scope](business-financial-reporting-scope-v1.md). No live application occurred. Next implementation is the remainder of `BUSINESS-V2-14A`: labor capitalization and period-end reconciliation before complete statements and authenticated adapters/views.
 - [ ] Complete common-share equity invariants for C corporations.
 - [ ] Add IPO eligibility/terms/issuance.
 - [ ] Publish versioned Business events to Stocks/Financial Markets integration.

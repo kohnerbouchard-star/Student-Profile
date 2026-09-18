@@ -1,9 +1,14 @@
 {
   "program": "BETA-BUSINESS-V2-001",
   "status": "PHASE_14_IN_PROGRESS",
-  "audited_at": "2026-09-18T01:41:00.734Z",
-  "integration_pr": 648,
-  "integration_branch": "refactor/business-ux-mechanics-v1",
+  "audited_at": "2026-09-18T02:11:55.401Z",
+  "integration_pr": null,
+  "integration_branch": "main",
+  "historical_integration": {
+    "pr": 648,
+    "branch": "refactor/business-ux-mechanics-v1",
+    "state": "CLOSED_SUPERSEDED_BY_MERGED_MAIN"
+  },
   "latest_checkpoint": "BUSINESS-V2-13",
   "latest_checkpoint_branch": "feat/admin-business-supervision-v2",
   "latest_checkpoint_pr": 682,
@@ -67,11 +72,11 @@
   "active_checkpoint_pr": 684,
   "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
   "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
-  "active_candidate_implementation_sha": null,
-  "active_candidate_state": "IN_PROGRESS",
-  "active_candidate_note": "Phase 12 and Phase 13 merged with passing repository verification. Phase 14A1 starts a bounded closed-period financial reporting foundation; no full statement, UI, equity, IPO or release completion is claimed.",
-  "next_authorized_checkpoint": "BUSINESS-V2-14A1",
-  "next_authorized_scope": "Owner authorized merging and starting Phase 14 on 2026-09-18. Implement and verify read-only closed-period reporting first; complete statements before equity/IPO. No deployment, live SQL, secret or scheduler change.",
+  "active_candidate_implementation_sha": "c3647db988f2be8edd52b1656e640b388b2fc00f",
+  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
+  "active_candidate_note": "Phase 14A1 closed-period reporting is implemented and repository-verified in draft PR #684. Phase 14A remains IN_PROGRESS: complete statements, consuming UI/adapters, equity and IPO are not implemented by this tranche. No deployment or live SQL occurred.",
+  "next_authorized_checkpoint": "BUSINESS-V2-14A",
+  "next_authorized_scope": "Continue Phase 14A by reconciling labor capitalization and period-end asset/liability/cash-flow evidence before implementing complete statements and authenticated Player/Admin adapters/views. Later equity/IPO work remains dependent on complete reporting. No deployment, live SQL, secret or scheduler change.",
   "remaining_dependency_order": [
     "BUSINESS-V2-14A",
     "BUSINESS-V2-14B",
@@ -188,6 +193,196 @@
     "vercel_status": "success",
     "connected_load_run": 35294831336,
     "connected_load_job": 105445120974,
-    "evidence": "docs/operations/evidence/business-phase12-phase13-merge-2026-09-18.json"
+    "evidence": "docs/operations/evidence/business-phase12-phase13-merge-2026-09-18.json",
+    "post_merge_workflow_success_count": 26,
+    "post_merge_expected_skipped_workflow_count": 3
+  },
+  "phase14a1_certification": {
+    "exact_implementation_sha": "c3647db988f2be8edd52b1656e640b388b2fc00f",
+    "recorded_at": "2026-09-18T02:11:55.401Z",
+    "status": "IMPLEMENTED_NOT_MERGED",
+    "workflow_success_count": 25,
+    "expected_skipped_workflow_count": 1,
+    "check_success_count": 50,
+    "expected_skipped_check_count": 6,
+    "vercel_status": "success",
+    "reporting": {
+      "workflow_run": 35297504381,
+      "source_job": 105452976974,
+      "database_job": 105452976705,
+      "fresh_database_replays_passed": 2,
+      "advisors_gate": "success"
+    },
+    "connected_load": {
+      "workflow_run": 35297504137,
+      "job": 105453070102,
+      "business_world_and_30_40_player_load": "success"
+    },
+    "workflow_runs": [
+      {
+        "id": 35297504381,
+        "name": "Business Financial Reporting",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504330,
+        "name": "Admin Business Supervision",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504241,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 35297504355,
+        "name": "Release Integrity",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504224,
+        "name": "Required Game Market Timezone",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504325,
+        "name": "Staging Readiness Preflight",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504169,
+        "name": "Supply Chain Security",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504408,
+        "name": "Admin API Check",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504486,
+        "name": "Production Runtime Promotion Contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504442,
+        "name": "Repository Quality",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504406,
+        "name": "Release Promote Exact Artifacts",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504216,
+        "name": "Backend Typecheck",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504341,
+        "name": "Exchange Calendar Runtime",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504196,
+        "name": "Game Creation Provisioning",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504122,
+        "name": "Crafting Activation Connected V2",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504329,
+        "name": "Database Replay",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504303,
+        "name": "Seed Executable Beta Pack",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504213,
+        "name": "Admin Browser E2E",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504518,
+        "name": "business-multicurrency-treasury-v1",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504338,
+        "name": "business-player-store-fx-final-v2",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504132,
+        "name": "business-store-sales-convergence-v2",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504322,
+        "name": "banking-fx-clearing-v1",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504340,
+        "name": "multicurrency-stock-funding-v1",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504137,
+        "name": "Player Multiplayer and Load E2E",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297504334,
+        "name": "Business Player Store Cutover V2",
+        "conclusion": "success"
+      },
+      {
+        "id": 35297499499,
+        "name": "PR #684",
+        "conclusion": "success"
+      }
+    ],
+    "expected_skipped_checks": [
+      {
+        "id": 105453423713,
+        "name": "Execute connected isolated-staging release and rollback",
+        "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35297504303/job/105453423713"
+      },
+      {
+        "id": 105453076040,
+        "name": "Inspect staging and production parity read-only",
+        "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35297504355/job/105453076040"
+      },
+      {
+        "id": 105452977681,
+        "name": "Verify and authorize unchanged artifacts",
+        "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35297504406/job/105452977681"
+      },
+      {
+        "id": 105452977465,
+        "name": "Repair isolated staging and verify new-game provisioning",
+        "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35297504241/job/105452977465"
+      },
+      {
+        "id": 105452977116,
+        "name": "Fail-closed staging evidence check",
+        "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35297504325/job/105452977116"
+      },
+      {
+        "id": 105452955931,
+        "name": "Supabase Preview",
+        "url": "https://supabase.com/dashboard/project/cgiukdjwicykrmtkhudh/branches"
+      }
+    ],
+    "skip_reason": "Manual release/staging evidence and Supabase Preview are not applicable to this unmerged draft. No required reporting, connected journey, browser or load gate was skipped.",
+    "documentation_handoff_note": "Documentation-only followups preserve this exact tested implementation identity; they are not a new implementation certification."
   }
 }

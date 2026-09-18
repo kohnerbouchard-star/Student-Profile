@@ -1,6 +1,7 @@
 # Business V2 Phase 14A — Financial reporting
 
 Status: `IN_PROGRESS`. Item `BUSINESS-V2-14A`; first bounded tranche `BUSINESS-V2-14A1`.
+14A1 implementation status: `IMPLEMENTED_NOT_MERGED`; exact verified source `c3647db988f2be8edd52b1656e640b388b2fc00f`.
 Draft PR: #684. Forward migration: `20260918014630_business_financial_reporting_v1.sql`.
 Permanent verification: `.github/workflows/business-financial-reporting.yml`, source contract and disposable database acceptance in `scripts/business-financial-reporting-*.mjs`.
 Owner: `feat/business-financial-reporting-v2`, based on the merged and verified Phase 13 predecessor. The owner authorized merging Phases 12/13 and starting Phase 14 on 2026-09-18. Publication is a draft PR; no deployment or live database application is authorized.
@@ -31,6 +32,15 @@ The existing Player resolver allows current owners of nonclosed Businesses. Clos
 - Existing Phase 11–13, Player, Admin, Store, Banking/FX and repository workflows remain required where triggered. No retained assertion or architecture ceiling is relaxed.
 
 Apply the additive forward migration only through a separately authorized release. It adds functions only, with no new table, table privilege, economic writer, scheduler, dependency or purge-registry change. An eventual consuming API must deploy after the migration; corrections after live application require another forward migration.
+
+## Verified starting checkpoint — 2026-09-18
+
+At source `c3647db988f2be8edd52b1656e640b388b2fc00f`, all 25 applicable workflows, 50 applicable checks and Vercel status passed. One staging-only workflow and six manual release/staging/preview checks skipped as expected; no reporting or retained journey/browser/load gate was skipped. Exact workflow identities are retained in `business-v2-current-checkpoint-v1.json`.
+
+- Reporting run `35297504381`: source job `105452976974` and database job `105452976705` passed. The full reporting acceptance ran successfully twice after independent zero-to-head replays. The advisors gate passed; this is not a claim that the repository has no inherited advisor findings.
+- Retained connected run `35297504137`, job `105453070102`, executed and passed Business/World journeys, both 30/40-player load profiles and final enforcement. Retained Store, Banking/FX, Admin supervision/browser, database replay/lint, typecheck and repository quality also passed.
+- The first database attempt correctly rejected a test fixture that rewound a completed sales period. The repaired fixture seeds overdue history once and allows canonical closes to advance 51 contiguous periods. No receipt-assignment guard, economic writer or historical migration was changed.
+- Phase 12/13 are merged. Their merged main passed all 26 applicable post-merge workflows; three expected skips kept release writers idle. Phase 14A1 remains a draft, with no staging/production deployment or live SQL. Documentation followups retain the exact tested source above rather than becoming replacement implementation identities.
 
 ## Remaining Phase 14 sequence
 
