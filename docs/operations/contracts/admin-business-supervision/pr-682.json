@@ -9,6 +9,9 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "docs/operations/contracts/button-action-coverage-v1.json",
+    "scripts/button-action-coverage-contract.mjs",
+    "scripts/admin-v2-news-events-permission-smoke.mjs",
     ".github/workflows/admin-v2-production-cutover.yml",
     "scripts/vercel-git-release-contract.test.mjs",
     "docs/operations/production-change-control.md",

@@ -135,6 +135,12 @@ This certified implementation SHA is immutable. Documentation/controller commits
 
 A future separately authorized deployment must apply the two migrations before the changed Admin API. Existing Player wrapper signatures remain compatible. Any correction after deployment must be a new forward migration; do not edit applied history or execute ad hoc live SQL.
 
-PR #682 remains draft, unmerged and undeployed. No PR merge, production/staging deployment, live SQL/data change, scheduler/secret change, or Phase 14 work is authorized. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker, so this checkpoint cannot be `VERIFIED_COMPLETE`.
+At the original certification checkpoint PR #682 was draft, unmerged and undeployed. On 2026-09-18 the owner explicitly authorized merging and starting Phase 14. This supersedes the earlier merge/Phase 14 hold. Deployment, live SQL/data changes and scheduler/secret changes remain outside that direction. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker, so this checkpoint cannot be `VERIFIED_COMPLETE`.
 
-Next dependency: `BUSINESS-V2-14A` financial reporting, only after a clean certified Phase 13 handoff and separate owner direction. No Phase 14 branch or implementation is created by this handoff.
+Next dependency: `BUSINESS-V2-14A` financial reporting after the Phase 13 merge checks pass. Owner direction to start it is now recorded; this handoff itself does not implement Phase 14.
+
+## Main-target merge verification follow-up
+
+Phase 12 merged as `b09905c066016ae1523d2f0a991e86f2f60c70db`; PR #682 now targets `main`. Release workflows require explicit manual deployment authorization, including the Admin production cutover path. Merging alone must not deploy.
+
+The expanded main-target checks exposed two stale verification inputs. The button ledger now counts 38 active Admin mutations after Phase 13E removed `business.setBusinessCompliance`; the permanent Business API/route tests still enforce that action's absence. News & Events permission smoke now supplies the complete active-game bootstrap and verifies that the server bootstrap was intercepted. Its permission-denial, zero protected reads, UUID privacy and browser assertions remain intact. Neither repair changes application or database behavior.
