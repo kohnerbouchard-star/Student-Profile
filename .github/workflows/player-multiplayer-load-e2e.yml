@@ -257,6 +257,11 @@ jobs:
             --port 4173 \
             > /tmp/player-runtime-gateway.log 2>&1 &
           echo $! > /tmp/player-runtime-gateway.pid
+          # Warm and recover the disposable Edge runtime with the same bounded,
+          # localhost-only readiness contract used by the other connected suites.
+          # Keep the strict gateway checks and every journey/load gate below.
+          node --input-type=module --eval \
+            'import { restartLocalEdgeRuntime } from "./scripts/local-edge-runtime-isolation.mjs"; await restartLocalEdgeRuntime();'
           for ATTEMPT in $(seq 1 90); do
             STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               http://127.0.0.1:4173/ || true)"

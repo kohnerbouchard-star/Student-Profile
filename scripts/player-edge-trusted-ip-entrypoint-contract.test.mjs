@@ -134,3 +134,20 @@ test("connected functional journeys and load handoff use stable isolated Edge ru
   assert.match(isolation, /restricted to the local acceptance gateway/u);
   assert.doesNotMatch(isolation, /sb_publishable_[A-Za-z0-9_-]{20,}/u);
 });
+
+test("multiplayer workflow warms its disposable runtime before strict startup probes", async () => {
+  const workflow = await readFile(".github/workflows/player-multiplayer-load-e2e.yml", "utf8");
+  const start = workflow.indexOf("- name: Start same-origin Player gateway");
+  const journey = workflow.indexOf("- name: Execute connected two-browser Player journey", start);
+  assert.ok(start >= 0 && journey > start);
+  const startup = workflow.slice(start, journey);
+  const gateway = startup.indexOf("echo $! > /tmp/player-runtime-gateway.pid");
+  const recovery = startup.indexOf("await restartLocalEdgeRuntime();");
+  const probes = startup.indexOf("for ATTEMPT in $(seq 1 90)");
+  assert.ok(gateway >= 0 && recovery > gateway && probes > recovery);
+  assert.match(startup, /local-edge-runtime-isolation\.mjs/u);
+  assert.match(startup, /\[ "\$PLAYER_STATUS" = "204" \]/u);
+  assert.match(startup, /\[ "\$BOOTSTRAP_STATUS" = "204" \]/u);
+  assert.match(startup, /exit 1/u);
+  assert.match(workflow, /- name: Enforce connected Player results/u);
+});

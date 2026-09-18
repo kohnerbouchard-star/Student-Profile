@@ -9,6 +9,8 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
     "docs/operations/contracts/button-action-coverage-v1.json",
     "scripts/button-action-coverage-contract.mjs",
     "scripts/admin-v2-news-events-permission-smoke.mjs",
