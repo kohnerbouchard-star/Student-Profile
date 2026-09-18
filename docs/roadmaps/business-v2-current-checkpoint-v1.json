@@ -1,7 +1,7 @@
 {
   "program": "BETA-BUSINESS-V2-001",
-  "status": "PHASE_13_IMPLEMENTED_NOT_MERGED",
-  "audited_at": "2026-09-17T22:45:19.226Z",
+  "status": "PHASE_14_IN_PROGRESS",
+  "audited_at": "2026-09-18T01:41:00.734Z",
   "integration_pr": 648,
   "integration_branch": "refactor/business-ux-mechanics-v1",
   "latest_checkpoint": "BUSINESS-V2-13",
@@ -9,7 +9,7 @@
   "latest_checkpoint_pr": 682,
   "exact_implementation_sha": "949da9f91990eeeee2cd815541446a5b64130664",
   "documentation_parent_sha": "949da9f91990eeeee2cd815541446a5b64130664",
-  "merged_main_sha": "9dc7906bb278b7eee9ceef6d3624fb088a6b5a97",
+  "merged_main_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
   "parent_checkpoint": "BUSINESS-V2-12",
   "parent_implementation_sha": "76539c5cfcff612a322963e303e727e6edc7f7ed",
   "required_workflow_runs": {
@@ -62,16 +62,16 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-13",
-  "active_checkpoint_branch": "feat/admin-business-supervision-v2",
-  "active_checkpoint_pr": 682,
-  "active_checkpoint_started_at": "2026-09-16T05:10:39Z",
-  "active_candidate_parent_sha": "d6ddb52f38da1ad931ba56600b49786f11f11ac6",
-  "active_candidate_implementation_sha": "949da9f91990eeeee2cd815541446a5b64130664",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "Full Phase 13A-F repository certification passed all 33 exact-source workflows and 68 applicable jobs. No required gate skipped. Draft, unmerged and undeployed; Phase 14 not started.",
-  "next_authorized_checkpoint": null,
-  "next_authorized_scope": "No further implementation or release action authorized by this Phase 13 closeout. Await owner direction for Phase 14A; no merge, deployment, live SQL or intervention.",
+  "active_checkpoint": "BUSINESS-V2-14A1",
+  "active_checkpoint_branch": "feat/business-financial-reporting-v2",
+  "active_checkpoint_pr": null,
+  "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
+  "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
+  "active_candidate_implementation_sha": null,
+  "active_candidate_state": "IN_PROGRESS",
+  "active_candidate_note": "Phase 12 and Phase 13 merged with passing repository verification. Phase 14A1 starts a bounded closed-period financial reporting foundation; no full statement, UI, equity, IPO or release completion is claimed.",
+  "next_authorized_checkpoint": "BUSINESS-V2-14A1",
+  "next_authorized_scope": "Owner authorized merging and starting Phase 14 on 2026-09-18. Implement and verify read-only closed-period reporting first; complete statements before equity/IPO. No deployment, live SQL, secret or scheduler change.",
   "remaining_dependency_order": [
     "BUSINESS-V2-14A",
     "BUSINESS-V2-14B",
@@ -79,13 +79,15 @@
     "BUSINESS-V2-14D"
   ],
   "release_state": {
-    "phase12_merged_to_main": false,
+    "phase12_merged_to_main": true,
     "baseline_merged_to_main": true,
     "baseline_merged_main_sha": "9dc7906bb278b7eee9ceef6d3624fb088a6b5a97",
     "staging_deployed": false,
     "production_deployed": false,
     "production_authorized": false,
-    "phase13_merged_to_main": false
+    "phase13_merged_to_main": true,
+    "phase12_merge_sha": "b09905c066016ae1523d2f0a991e86f2f60c70db",
+    "phase13_merge_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6"
   },
   "known_global_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
   "known_global_blocker_scope": "Separate release/runtime evidence; does not block Phase 13 repository certification and does not authorize live reconciliation from this branch.",
@@ -175,5 +177,17 @@
     "job_success_count": 68,
     "expected_skipped_job_count": 2,
     "handoff": "docs/roadmaps/business-admin-supervision-implementation-handoff-v1.md"
+  },
+  "phase13_merge_certification": {
+    "exact_source_sha": "6ba9b3d6e53eb00052c220bea2a04191c9fb913f",
+    "merge_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
+    "workflow_success_count": 51,
+    "expected_skipped_workflow_count": 1,
+    "check_success_count": 93,
+    "expected_skipped_check_count": 13,
+    "vercel_status": "success",
+    "connected_load_run": 35294831336,
+    "connected_load_job": 105445120974,
+    "evidence": "docs/operations/evidence/business-phase12-phase13-merge-2026-09-18.json"
   }
 }
