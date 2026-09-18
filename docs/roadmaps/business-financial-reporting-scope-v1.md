@@ -1,6 +1,8 @@
 # Business V2 Phase 14A — Financial reporting
 
 Status: `IN_PROGRESS`. Item `BUSINESS-V2-14A`; first bounded tranche `BUSINESS-V2-14A1`.
+Draft PR: #684. Forward migration: `20260918014630_business_financial_reporting_v1.sql`.
+Permanent verification: `.github/workflows/business-financial-reporting.yml`, source contract and disposable database acceptance in `scripts/business-financial-reporting-*.mjs`.
 Owner: `feat/business-financial-reporting-v2`, based on the merged and verified Phase 13 predecessor. The owner authorized merging Phases 12/13 and starting Phase 14 on 2026-09-18. Publication is a draft PR; no deployment or live database application is authorized.
 
 ## First tranche: closed-period evidence

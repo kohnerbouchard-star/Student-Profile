@@ -64,7 +64,7 @@
   },
   "active_checkpoint": "BUSINESS-V2-14A1",
   "active_checkpoint_branch": "feat/business-financial-reporting-v2",
-  "active_checkpoint_pr": null,
+  "active_checkpoint_pr": 684,
   "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
   "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
   "active_candidate_implementation_sha": null,

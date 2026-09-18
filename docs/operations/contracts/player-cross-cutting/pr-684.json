@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.business-financial-reporting-pr-684.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 684,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "docs/operations/evidence/business-phase12-phase13-merge-2026-09-18.json",
+    "docs/roadmaps/business-admin-supervision-implementation-handoff-v1.md",
+    "docs/roadmaps/business-financial-reporting-scope-v1.md",
+    "docs/roadmaps/business-v2-current-checkpoint-v1.json",
+    "docs/roadmaps/business-v2-development-execution-log-v1.md",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "backend/supabase/migrations/20260918014630_business_financial_reporting_v1.sql",
+    "scripts/business-financial-reporting-database.mjs",
+    "scripts/business-financial-reporting-contract.mjs",
+    ".github/workflows/business-financial-reporting.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-684.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/supabase/migrations/20260918014630_business_financial_reporting_v1.sql",
+    "scripts/business-financial-reporting-database.mjs",
+    "scripts/business-financial-reporting-contract.mjs",
+    ".github/workflows/business-financial-reporting.yml",
+    "docs/roadmaps/business-financial-reporting-scope-v1.md"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "repository-quality",
+    "backend-typecheck",
+    "admin-api-check",
+    "admin-browser-e2e",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database"
+  ],
+  "authorizationNote": "Owner authorized merge and Phase 14 start on 2026-09-18. This draft starts BUSINESS-V2-14A1 from merged main 4a9674ed9ca0565c828093fe100aa658ef4faaa6 with read-only closed-period reporting and retained verification. No full financial statements, equity/IPO, deployment, live database mutation or secret handling."
+}
