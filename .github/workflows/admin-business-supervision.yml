@@ -40,7 +40,7 @@ jobs:
       - name: Verify exact head and full-phase authority
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/player-business-workspace-v2' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
           PR_NUMBER: ${{ github.event.pull_request.number || '682' }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"

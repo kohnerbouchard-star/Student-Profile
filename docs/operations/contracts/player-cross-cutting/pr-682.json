@@ -3,7 +3,7 @@
   "authorityId": "econovaria.admin-business-supervision-retained-pr-682.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 682,
-  "baseRef": "feat/player-business-workspace-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -82,5 +82,5 @@
     "business-store-sales-convergence-v2-source",
     "business-store-sales-convergence-v2-player-admin"
   ],
-  "authorizationNote": "Owner authorized completion of all Phase 13 on 2026-09-17. Only bounded read-only projections, unchanged canonical Player calculations, evidence and verification workflows; no live mutation, merge, deployment, or Phase 14."
+  "authorizationNote": "Owner authorized merge of certified Phase 13 and start of Phase 14 on 2026-09-18. Phase 12 merged as b09905c066016ae1523d2f0a991e86f2f60c70db; PR 682 now targets main. This PR remains bounded read-only supervision plus merge reconciliation and verification; no deployment or live mutation."
 }
