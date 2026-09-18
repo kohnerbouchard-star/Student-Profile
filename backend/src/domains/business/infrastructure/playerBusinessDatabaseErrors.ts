@@ -186,6 +186,60 @@ export function mapPlayerBusinessDatabaseError(
     STORE_QUOTE_QUANTITY_INVALID: [400, "Store quote quantity is invalid."],
     IDEMPOTENCY_KEY_REQUIRED: [400, "A valid idempotency key is required."],
     STORE_ITEM_NOT_FOUND: [404, "Store item is not available."],
+    STORE_WITHDRAWAL_REQUEST_INVALID: [
+      400,
+      "The Store withdrawal request is invalid.",
+    ],
+    STORE_WITHDRAWAL_BUSINESS_NOT_FOUND: [
+      404,
+      "The active owned Business was not found for this Store offer.",
+    ],
+    STORE_WITHDRAWAL_OFFER_NOT_FOUND: [
+      404,
+      "The Business Store offer was not found.",
+    ],
+    STORE_WITHDRAWAL_OFFER_VERSION_CONFLICT: [
+      409,
+      "The Store offer changed. Refresh before retrying.",
+      true,
+    ],
+    STORE_WITHDRAWAL_IDEMPOTENCY_CONFLICT: [
+      409,
+      "This idempotency key was already used for different withdrawal intent.",
+    ],
+    STORE_WITHDRAWAL_REDUCTION_EXCEEDS_AVAILABLE: [
+      409,
+      "The requested reduction exceeds currently available listing stock.",
+    ],
+    STORE_WITHDRAWAL_PENDING_EXISTS: [
+      409,
+      "A withdrawal request is already pending for this Store offer.",
+    ],
+    STORE_WITHDRAWAL_OFFER_STATUS_INVALID: [
+      409,
+      "This Store offer cannot enter withdrawal from its current state.",
+    ],
+    STORE_WITHDRAWAL_REPLAY_OFFER_MISSING: [
+      500,
+      "Withdrawal replay evidence is incomplete.",
+      true,
+    ],
+    STORE_WITHDRAWAL_BUSINESS_PARTY_NOT_FOUND: [
+      409,
+      "The Business seller identity is unavailable for this Store offer.",
+    ],
+    STORE_WITHDRAWAL_OFFER_CUSTODY_MISSING: [
+      409,
+      "The Store offer is missing canonical listing custody.",
+    ],
+    STORE_WITHDRAWAL_ACCOUNT_UNAVAILABLE: [
+      409,
+      "The Store offer listing account is unavailable.",
+    ],
+    STORE_WITHDRAWAL_LISTING_HOLDING_MISSING: [
+      409,
+      "The Store offer listing holding is unavailable.",
+    ],
     BUSINESS_COUNTRY_PROFILE_NOT_FOUND: [
       409,
       "The Business country is not configured for Store pricing.",

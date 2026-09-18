@@ -21,6 +21,10 @@ Deno.test("Business route authority owns every Player Business URL", () => {
     kind: "businessRead",
     resource: "recipes",
   });
+  assertEquals(readPlayerBusinessRoutePath("/players/me/business/equipment"), {
+    kind: "businessRead",
+    resource: "equipment",
+  });
   assertEquals(readPlayerBusinessRoutePath("/players/me/business/treasury"), {
     kind: "businessTreasuryRead",
   });
@@ -57,6 +61,10 @@ Deno.test("Business route authority owns every Player Business URL", () => {
   assertEquals(
     readPlayerBusinessRoutePath("/players/me/business/store/purchases"),
     { kind: "businessStorePurchase" },
+  );
+  assertEquals(
+    readPlayerBusinessRoutePath("/players/me/business/store/withdrawals"),
+    { kind: "businessStoreWithdrawal" },
   );
   assertEquals(readPlayerBusinessRoutePath("/players/me/businesses"), {
     kind: "businessCreate",
@@ -142,6 +150,15 @@ Deno.test("Business route authority recognizes Edge service prefixes", () => {
     },
   );
   assertEquals(
+    readPlayerBusinessRoutePath(
+      "/player-api/players/me/business/equipment",
+    ),
+    {
+      kind: "businessRead",
+      resource: "equipment",
+    },
+  );
+  assertEquals(
     readPlayerBusinessRoutePath("/player-api/players/me/business/store/quotes"),
     { kind: "businessStoreQuote" },
   );
@@ -150,6 +167,12 @@ Deno.test("Business route authority recognizes Edge service prefixes", () => {
       "/functions/v1/classroom-api/players/me/business/store/purchases",
     ),
     { kind: "businessStorePurchase" },
+  );
+  assertEquals(
+    readPlayerBusinessRoutePath(
+      "/functions/v1/classroom-api/players/me/business/store/withdrawals",
+    ),
+    { kind: "businessStoreWithdrawal" },
   );
   assertEquals(
     readPlayerBusinessRoutePath(
@@ -197,11 +220,19 @@ Deno.test("Business route authority rejects Banking and malformed URLs", () => {
     null,
   );
   assertEquals(
+    readPlayerBusinessRoutePath("/players/me/business/equipment/extra"),
+    null,
+  );
+  assertEquals(
     readPlayerBusinessRoutePath("/players/me/business/store/quotes/extra"),
     null,
   );
   assertEquals(
     readPlayerBusinessRoutePath("/players/me/business/store/purchases/extra"),
+    null,
+  );
+  assertEquals(
+    readPlayerBusinessRoutePath("/players/me/business/store/withdrawals/extra"),
     null,
   );
   assertEquals(

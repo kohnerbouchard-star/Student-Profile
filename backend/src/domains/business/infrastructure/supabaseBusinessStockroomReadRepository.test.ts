@@ -1,5 +1,8 @@
 import { PlayerBusinessError } from "../contracts/playerBusinessContracts.ts";
-import { readBusinessStockroom } from "./supabaseBusinessStockroomReadRepository.ts";
+import {
+  readBusinessEquipment,
+  readBusinessStockroom,
+} from "./supabaseBusinessStockroomReadRepository.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -16,7 +19,10 @@ const ACCOUNT_KEYS = {
 } as const;
 
 Deno.test("Business Stockroom reads one coherent canonical snapshot", async () => {
-  const client = new FakeClient({ data: snapshotEnvelope(), error: null });
+  const client = new FakeClient(
+    "read_owned_business_stockroom_snapshot_v2",
+    { data: snapshotEnvelope(), error: null },
+  );
   const snapshot = await readBusinessStockroom(client as never, {
     gameSessionId: GAME_ID,
     playerId: PLAYER_ID,
@@ -82,7 +88,10 @@ Deno.test("Business Stockroom fails closed on malformed snapshot envelopes", asy
   ];
 
   for (const envelope of invalidEnvelopes) {
-    const client = new FakeClient({ data: envelope, error: null });
+    const client = new FakeClient(
+      "read_owned_business_stockroom_snapshot_v2",
+      { data: envelope, error: null },
+    );
     const error = await capture(() => readBusinessStockroom(client as never, {
       gameSessionId: GAME_ID,
       playerId: PLAYER_ID,
@@ -101,13 +110,95 @@ Deno.test("Business Stockroom preserves scoped and invariant RPC errors", async 
       500,
     ],
   ] as const) {
-    const client = new FakeClient({ data: null, error: { message } });
+    const client = new FakeClient(
+      "read_owned_business_stockroom_snapshot_v2",
+      { data: null, error: { message } },
+    );
     const error = await capture(() => readBusinessStockroom(client as never, {
       gameSessionId: GAME_ID,
       playerId: PLAYER_ID,
     }));
     assertEquals(error.code, code);
     assertEquals(error.status, status);
+  }
+});
+
+Deno.test("Business Equipment reads installed and offline capacity evidence", async () => {
+  const client = new FakeClient(
+    "read_owned_business_equipment_v2",
+    { data: equipmentRows(), error: null },
+  );
+  const equipment = await readBusinessEquipment(client as never, {
+    gameSessionId: GAME_ID,
+    playerId: PLAYER_ID,
+  });
+
+  assertEquals(equipment[0], {
+    businessKey: BUSINESS_KEY,
+    installationKey: `bei_${"1".repeat(32)}`,
+    equipmentKey: `eqp_${"1".repeat(32)}`,
+    itemKey: `itm_${"e".repeat(32)}`,
+    canonicalKey: "machine.press.v1",
+    itemName: "Hydraulic Press",
+    equipmentSlot: "operations",
+    capabilityKeys: ["press", "forming"],
+    installationStatus: "installed",
+    periodKey: "equipment:12",
+    capacityMinutes: 480,
+    reservedMinutes: 120,
+    consumedMinutes: 60,
+    availableMinutes: 300,
+    idleMinutes: 300,
+    utilizationBasisPoints: 3750,
+    durabilitySupported: false,
+    repairSupported: false,
+  });
+  assertEquals(equipment[1].installationStatus, "offline");
+  assertEquals(equipment[1].capacityMinutes, 0);
+  assertEquals(equipment[1].consumedMinutes, 60);
+  assertEquals(equipment[1].availableMinutes, 0);
+  assertEquals(client.calls, [{
+    name: "read_owned_business_equipment_v2",
+    args: {
+      p_game_session_id: GAME_ID,
+      p_player_id: PLAYER_ID,
+    },
+  }]);
+  assertNoUuid(JSON.stringify(equipment));
+});
+
+Deno.test("Business Equipment rejects malformed public and capacity evidence", async () => {
+  const mutations = [
+    (rows: Array<Record<string, unknown>>) => {
+      rows[0].equipment_key = "00000000-0000-4000-8000-000000000099";
+    },
+    (rows: Array<Record<string, unknown>>) => {
+      rows[0].available_minutes = 301;
+    },
+    (rows: Array<Record<string, unknown>>) => {
+      rows[0].installation_key = rows[1].installation_key;
+    },
+    (rows: Array<Record<string, unknown>>) => {
+      rows[1].reserved_minutes = 1;
+    },
+    (rows: Array<Record<string, unknown>>) => {
+      rows[1].period_key = "payroll:12";
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const rows = equipmentRows();
+    mutate(rows);
+    const client = new FakeClient(
+      "read_owned_business_equipment_v2",
+      { data: rows, error: null },
+    );
+    const error = await capture(() => readBusinessEquipment(client as never, {
+      gameSessionId: GAME_ID,
+      playerId: PLAYER_ID,
+    }));
+    assertEquals(error.code, "business_equipment_result_invalid");
+    assertEquals(error.status, 500);
   }
 });
 
@@ -187,10 +278,56 @@ function item(
   };
 }
 
+function equipmentRows(): Array<Record<string, unknown>> {
+  return [
+    {
+      business_key: BUSINESS_KEY,
+      installation_key: `bei_${"1".repeat(32)}`,
+      equipment_key: `eqp_${"1".repeat(32)}`,
+      item_key: `itm_${"e".repeat(32)}`,
+      canonical_key: "machine.press.v1",
+      item_name: "Hydraulic Press",
+      equipment_slot: "operations",
+      capability_keys: ["press", "forming"],
+      installation_status: "installed",
+      period_key: "equipment:12",
+      capacity_minutes: 480,
+      reserved_minutes: 120,
+      consumed_minutes: 60,
+      available_minutes: 300,
+      idle_minutes: 300,
+      utilization_basis_points: 3750,
+      durability_supported: false,
+      repair_supported: false,
+    },
+    {
+      business_key: BUSINESS_KEY,
+      installation_key: `bei_${"2".repeat(32)}`,
+      equipment_key: `eqp_${"2".repeat(32)}`,
+      item_key: `itm_${"f".repeat(32)}`,
+      canonical_key: "machine.lathe.v1",
+      item_name: "Precision Lathe",
+      equipment_slot: "operations",
+      capability_keys: ["turning"],
+      installation_status: "offline",
+      period_key: "equipment:12",
+      capacity_minutes: 0,
+      reserved_minutes: 0,
+      consumed_minutes: 60,
+      available_minutes: 0,
+      idle_minutes: 0,
+      utilization_basis_points: 0,
+      durability_supported: false,
+      repair_supported: false,
+    },
+  ];
+}
+
 class FakeClient {
   readonly calls: Array<{ name: string; args: unknown }> = [];
 
   constructor(
+    private readonly expectedRpc: string,
     private readonly response: {
       readonly data: unknown;
       readonly error: { readonly message: string } | null;
@@ -199,7 +336,7 @@ class FakeClient {
 
   rpc(name: string, args: unknown) {
     this.calls.push({ name, args });
-    return Promise.resolve(name === "read_owned_business_stockroom_snapshot_v2"
+    return Promise.resolve(name === this.expectedRpc
       ? this.response
       : {
         data: null,

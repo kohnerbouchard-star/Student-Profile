@@ -28,12 +28,16 @@ import {
 // core route-key list predates their public endpoint identities. Keep the
 // bridge exact and bounded until Business owns a composed backend-route module.
 const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
+  "businessStockroom",
+  "businessRecipes",
+  "businessEquipment",
   "businessFormationPropose",
   "businessFormationRespond",
   "businessFormationActivate",
   "businessManufacturingJobs",
   "businessManufacturingStart",
   "businessManufacturingCancel",
+  "businessStoreWithdrawal",
 ]);
 
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([

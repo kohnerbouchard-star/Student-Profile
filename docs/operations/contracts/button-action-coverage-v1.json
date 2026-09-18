@@ -24,6 +24,22 @@
       "evidence": "connected_browser",
       "domain": "banking"
     },
+    "bankingFxCancel": {
+      "evidence": "connected_browser",
+      "domain": "banking"
+    },
+    "bankingFxInstant": {
+      "evidence": "connected_browser",
+      "domain": "banking"
+    },
+    "bankingFxQuote": {
+      "evidence": "connected_browser",
+      "domain": "banking"
+    },
+    "bankingFxStandard": {
+      "evidence": "connected_browser",
+      "domain": "banking"
+    },
     "businessCreate": {
       "evidence": "connected_browser",
       "domain": "business"
@@ -61,6 +77,26 @@
       "domain": "business"
     },
     "businessStatus": {
+      "evidence": "connected_browser",
+      "domain": "business"
+    },
+    "businessTreasuryAccountOpen": {
+      "evidence": "connected_browser",
+      "domain": "business"
+    },
+    "businessTreasuryFxCancel": {
+      "evidence": "connected_browser",
+      "domain": "business"
+    },
+    "businessTreasuryFxInstant": {
+      "evidence": "connected_browser",
+      "domain": "business"
+    },
+    "businessTreasuryFxQuote": {
+      "evidence": "connected_browser",
+      "domain": "business"
+    },
+    "businessTreasuryFxStandard": {
       "evidence": "connected_browser",
       "domain": "business"
     },

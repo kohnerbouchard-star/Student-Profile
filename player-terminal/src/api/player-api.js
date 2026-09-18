@@ -22,6 +22,8 @@ import {
   resourcesForRoute
 } from "./resource-plan.js";
 
+const PLAYER_APIS_BY_CONFIG = new WeakMap();
+
 function resolvedPath(endpointKey, params) {
   const endpoint = PLAYER_ENDPOINTS[endpointKey];
   if (!endpoint) throw new ApiRequestError("The requested player resource is not registered.", { code: "UNKNOWN_ENDPOINT", endpointKey });
@@ -122,6 +124,14 @@ function mergeResourceResults(primary, dependent) {
   };
 }
 
+export function abortPlayerApiSessionRequests(config) {
+  if (!config || typeof config !== "object") return false;
+  const apis = PLAYER_APIS_BY_CONFIG.get(config);
+  if (!apis?.size) return false;
+  for (const api of apis) api.abortSessionRequests();
+  return true;
+}
+
 export class PlayerApi {
   constructor(config) {
     this.config = config;
@@ -141,6 +151,24 @@ export class PlayerApi {
     this.sessionFingerprint = sessionFingerprint(config);
     this.sessionController = new AbortController();
     this.resourceSupport = createResourceSupport({ preview: config.usePreviewData === true });
+    const apis = PLAYER_APIS_BY_CONFIG.get(config) || new Set();
+    apis.add(this);
+    PLAYER_APIS_BY_CONFIG.set(config, apis);
+  }
+
+  abortSessionRequests() {
+    this.sessionController.abort();
+    this.sessionController = new AbortController();
+    this.sessionVersion += 1;
+    this.readCache.clear();
+    this.readCacheUpdatedAt.clear();
+    this.readGenerations.clear();
+    this.inFlightReads.clear();
+    this.inFlightWrites.clear();
+    this.writeCompletedAt.clear();
+    this.retryIdempotencyKeys.clear();
+    this.resourceSupport = createResourceSupport({ preview: this.config.usePreviewData === true });
+    clearAllResourceInvalidations();
   }
 
   setSession(session) {
@@ -154,19 +182,8 @@ export class PlayerApi {
     delete this.config.accessToken;
     const nextFingerprint = sessionFingerprint(this.config);
     if (nextFingerprint !== this.sessionFingerprint) {
-      this.sessionController.abort();
-      this.sessionController = new AbortController();
+      this.abortSessionRequests();
       this.sessionFingerprint = nextFingerprint;
-      this.sessionVersion += 1;
-      this.readCache.clear();
-      this.readCacheUpdatedAt.clear();
-      this.readGenerations.clear();
-      this.inFlightReads.clear();
-      this.inFlightWrites.clear();
-      this.writeCompletedAt.clear();
-      this.retryIdempotencyKeys.clear();
-      this.resourceSupport = createResourceSupport({ preview: this.config.usePreviewData === true });
-      clearAllResourceInvalidations();
     }
   }
 

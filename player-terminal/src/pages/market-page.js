@@ -63,18 +63,22 @@ export function renderMarketPage(data, ui) {
     ? []
     : (Array.isArray(data.bankingFx?.balances) ? data.bankingFx.balances : [])
       .filter((account) => account.accountKind === "checking" && account.accountKey);
-  const matchingListingAccount = checkingAccounts.find((account) => account.currencyCode === listingCurrencyCode);
-  const primaryFundingKey = matchingListingAccount?.accountKey || checkingAccounts[0]?.accountKey || "";
-  const accountOptions = checkingAccountOptions(checkingAccounts, primaryFundingKey);
+  const listingCurrencyCheckingAccounts = checkingAccounts
+    .filter((account) => String(account.currencyCode || "").toUpperCase() === listingCurrencyCode);
+  const primaryFundingKey = listingCurrencyCheckingAccounts[0]?.accountKey || checkingAccounts[0]?.accountKey || "";
+  const buyAccountOptions = checkingAccountOptions(checkingAccounts, primaryFundingKey);
+  const sellDestinationKey = listingCurrencyCheckingAccounts[0]?.accountKey || "";
+  const sellAccountOptions = checkingAccountOptions(listingCurrencyCheckingAccounts, sellDestinationKey);
   const defaultTargetAmount = Math.round(Number(selected.price || 0) * 10_000) / 10_000;
   const accountSummary = checkingAccounts.length
     ? checkingAccounts.map((account) => `${account.currencyCode} ${formatCurrency(account.availableAmount, account.currencyCode)}`).join(" · ")
     : "Unavailable";
-  const tradeDisabled = !checkingAccounts.length || market.status === "CLOSED";
+  const buyDisabled = !checkingAccounts.length || market.status === "CLOSED";
+  const sellDisabled = !listingCurrencyCheckingAccounts.length || market.status === "CLOSED" || position.owned <= 0;
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
-      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, fund immediate purchases from canonical Checking accounts, and route sale proceeds to the Checking account you choose.</p></div>
+      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, fund immediate purchases from canonical Checking accounts, and route sale proceeds only to an active Checking account in the Stock listing currency.</p></div>
       <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${renderStatusPill(`${market.status} · ${market.nextClose}`, "green")}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
     </header>
 
@@ -144,7 +148,7 @@ export function renderMarketPage(data, ui) {
           <label>BUY QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" value="1" required /></label>
           <fieldset>
             <legend>FUNDING SPLIT · TARGET ${escapeHtml(listingCurrencyCode)}</legend>
-            <label>CHECKING ACCOUNT 1<select name="sourceAccountKey1" required><option value="">Select Checking account</option>${accountOptions}</select></label>
+            <label>CHECKING ACCOUNT 1<select name="sourceAccountKey1" required><option value="">Select Checking account</option>${buyAccountOptions}</select></label>
             <label>TARGET AMOUNT 1<input name="targetAmount1" type="number" min="0.0001" step="0.0001" value="${escapeHtml(String(defaultTargetAmount))}" required /></label>
             <label>CHECKING ACCOUNT 2<select name="sourceAccountKey2"><option value="">Optional second account</option>${checkingAccountOptions(checkingAccounts)}</select></label>
             <label>TARGET AMOUNT 2<input name="targetAmount2" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
@@ -157,7 +161,7 @@ export function renderMarketPage(data, ui) {
             <span><small>REMAINING</small><strong data-player-market-remaining-total>${escapeHtml(formatCurrency(0, listingCurrencyCode))}</strong></span>
           </div>
           <div class="player-terminal-order-estimate"><span>Quote before settlement</span><small>The server locks the exact C3B price, tick, funding split, FX rates, and expiry. Review that immutable quote before authorizing C3C settlement.</small></div>
-          <button class="player-terminal-primary-button" type="submit"${tradeDisabled ? " disabled" : ""}>${icon("send")} Create exact quote</button>
+          <button class="player-terminal-primary-button" type="submit"${buyDisabled ? " disabled" : ""}>${icon("send")} Create exact quote</button>
         </form>
 
         <form data-player-form="market-sell" data-player-market-order-form="sell-review" data-endpoint="marketOrder">
@@ -166,14 +170,15 @@ export function renderMarketPage(data, ui) {
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
           <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
           <label>SELL QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
-          <label>PROCEEDS DESTINATION<select name="destinationAccountKey" required><option value="">Select Checking account</option>${accountOptions}</select></label>
+          <label>PROCEEDS DESTINATION · ${escapeHtml(listingCurrencyCode)}<select name="destinationAccountKey" required><option value="">Select ${escapeHtml(listingCurrencyCode)} Checking account</option>${sellAccountOptions}</select></label>
           <div class="player-terminal-order-review">
             <span><small>ESTIMATED PROCEEDS</small><strong data-player-market-sell-proceeds>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
             <span><small>OWNED</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></span>
-            <span><small>DESTINATION FX</small><strong>${checkingAccounts.some((account) => account.currencyCode !== listingCurrencyCode) ? "B2 enabled" : "Not required"}</strong></span>
+            <span><small>SETTLEMENT CURRENCY</small><strong>${escapeHtml(listingCurrencyCode)} · no sell-side FX</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Sell settlement</span><small>C3D debits shares once, settles proceeds through canonical market liquidity, and credits the selected Checking account. A destination in another currency is converted by the authoritative Banking FX boundary.</small></div>
-          <button class="player-terminal-secondary-button" type="submit"${tradeDisabled || position.owned <= 0 ? " disabled" : ""}>${icon("send")} Review sale</button>
+          <div class="player-terminal-order-estimate"><span>Sell settlement</span><small>C3D debits shares once, settles proceeds through canonical market liquidity, and credits one active ${escapeHtml(listingCurrencyCode)} Checking account. Cross-currency sale conversion is not part of this settlement.</small></div>
+          ${listingCurrencyCheckingAccounts.length ? "" : `<p class="player-terminal-inline-empty" role="status">Open an active ${escapeHtml(listingCurrencyCode)} Checking account before selling this asset.</p>`}
+          <button class="player-terminal-secondary-button" type="submit"${sellDisabled ? " disabled" : ""}>${icon("send")} Review sale</button>
         </form>
 
         ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}

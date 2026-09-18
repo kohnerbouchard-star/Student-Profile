@@ -52,6 +52,13 @@ const worldRuntime = installWorldRuntimeFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config, mount });
 const liveStatus = installLiveStatusPresenter({ mount, terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
+let coreTerminalDestroyed = false;
+const stopCoreTerminal = () => {
+  if (coreTerminalDestroyed) return;
+  coreTerminalDestroyed = true;
+  destroyTerminal();
+};
+terminal.prepareForSessionExit = stopCoreTerminal;
 terminal.destroy = () => {
   logout.destroy();
   sessionSafeExit.destroy();
@@ -74,7 +81,7 @@ terminal.destroy = () => {
   toastHost.destroy();
   countryFocus.destroy();
   skipLink.destroy();
-  destroyTerminal();
+  stopCoreTerminal();
 };
 
 globalThis.Econovaria = globalThis.Econovaria || {};

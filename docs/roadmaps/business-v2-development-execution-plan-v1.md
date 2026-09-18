@@ -486,27 +486,27 @@ The controlling scope for `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` is `docs/roadm
 
 The controlling scope for `BUSINESS-V2-10A4B2` is `docs/roadmaps/banking-fx-clearing-scope-v1.md`, established from exact B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d` before any B2 runtime implementation. Its explicit transition rule preserves pre-B2 ledger economic identity and amounts as immutable `legacy_v1` evidence while backfilling only deterministic account/transaction linkage metadata and requiring every post-cutover write, including compatibility wrappers, to be a hold-aware per-currency-balanced `balanced_v2` transaction.
 
-Phase 11 remains closed until 10A.4D has one exact implementation SHA, all required exact-head evidence is green, and a clean documentation-only handoff is recorded. No item in this inserted sequence is `VERIFIED_COMPLETE` before merge to `main` and any required runtime evidence.
+Phase 11 satisfied the 10A.4D dependency, exact-head evidence, and clean-handoff boundary and is the merged `main` baseline for Phase 12. No unmerged item in this inserted sequence is `VERIFIED_COMPLETE`.
 
 ## Phase 11 — Converge Business demand/sales onto Store offers
 
-**Status:** `SCOPED_NOT_IMPLEMENTED`
+**Status:** `VERIFIED_COMPLETE` — merged baseline `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`; exact implementation source `3cbca309e1e3c55e9b933803d304d2c5cc96f071`
 
-**Owner:** `refactor/business-store-sales-convergence-v2` / draft PR #680, based on exact 10A.4D checkpoint/controller `f92a61a61bdf336d608936577d8e5e48de11ae94`.
+**Owner:** merged PR #680 from `refactor/business-store-sales-convergence-v2`, based on exact 10A.4D checkpoint/controller `f92a61a61bdf336d608936577d8e5e48de11ae94`.
 
-- [ ] Forward-retire new simulated cycle sales and the Admin outcome-authoring settlement route while preserving historical sale/cycle evidence immutably.
-- [ ] Derive every new physical-goods sale, inventory consumption, revenue, COGS, gross margin, and gross-receipts tax source only from committed Store offer purchase receipts. No simulated/NPC consumer path remains.
-- [ ] Backfill legacy/open Business periods to the versioned seven-day cadence, persist server-owned `next_due_at`, and apply policy changes only to later unopened periods.
-- [ ] Add due-only bounded leases, exact-once claims, replay/conflict guards, and anchored successor periods using database time.
-- [ ] Close payroll before Store-derived tax through canonical held-funds-aware Banking and retain unpaid tax as a liability without rolling back the period.
-- [ ] Add an internal-runner-only Business operations worker with no scheduler/cron or secret configuration change.
-- [ ] Stop treating cached Business totals, valuation, demand, or browser-authored economic inputs as current authority.
+- [x] Forward-retire new simulated cycle sales and the Admin outcome-authoring settlement route while preserving historical sale/cycle evidence immutably.
+- [x] Derive every new physical-goods sale, inventory consumption, revenue, COGS, gross margin, and gross-receipts tax source only from committed Store offer purchase receipts. No simulated/NPC consumer path remains.
+- [x] Backfill legacy/open Business periods to the versioned seven-day cadence, persist server-owned `next_due_at`, and apply policy changes only to later unopened periods.
+- [x] Add due-only bounded leases, exact-once claims, replay/conflict guards, and anchored successor periods using database time.
+- [x] Close payroll before Store-derived tax through canonical held-funds-aware Banking and retain unpaid tax as a liability without rolling back the period.
+- [x] Add an internal-runner-only Business operations worker with no scheduler/cron or secret configuration change.
+- [x] Stop treating cached Business totals, valuation, demand, or browser-authored economic inputs as current authority.
 
 Exit: Store settlement is the only new physical-goods sale, inventory-consumption, revenue, and COGS path; due payroll/tax cannot advance early or twice.
 
 ## Phase 12 — Player Business workspace UX convergence
 
-**Status:** NOT STARTED
+**Status:** `IMPLEMENTED_NOT_MERGED` — exact implementation and verification source `76539c5cfcff612a322963e303e727e6edc7f7ed`; draft PR #681 remains unmerged and undeployed
 
 Target modules:
 
@@ -523,25 +523,27 @@ Target modules:
 
 Requirements:
 
-- [ ] No simulation-engine numeric authoring.
-- [ ] Product selection comes from exact available recipes/catalog items.
-- [ ] Production readiness shows material/labor/equipment bottleneck.
-- [ ] Stockroom exposes actual locations and quantities.
-- [ ] Sales exposes Finished Goods, Listed stock, price, offer state, and withdrawal timer.
-- [ ] Cancellation UI clearly states purchases are disabled while stock is processing back to the storeroom.
+- [x] No simulation-engine numeric authoring.
+- [x] Product selection comes from exact available recipes/catalog items.
+- [x] Production readiness shows material/labor/equipment bottleneck.
+- [x] Stockroom exposes actual locations and quantities.
+- [x] Sales exposes Finished Goods, Listed stock, price, offer state, and withdrawal timer.
+- [x] Cancellation UI clearly states purchases are disabled while stock is processing back to the storeroom.
+
+Certification: all 48 applicable pull-request workflows passed at the exact implementation source. Three deployment-only workflows returned expected skips. Player Multiplayer and Load E2E run `34926342349` executed Market, Business, World, and both 30/40-Player load profiles before passing enforcement. Stock funding run `34926342075` and Marketplace funding run `34926342397` both executed and passed their connected acceptance paths.
 
 Exit: Player can operate Business V2 without legacy Business forms.
 
 ## Phase 13 — Admin Business supervision
 
-**Status:** NOT STARTED
+**Status:** `PLANNED` — next authorized checkpoint after the Phase 12 documentation-only handoff; runtime implementation has not started
 
 - [ ] Add read-only operational visibility for stockrooms, jobs, employees, payroll, equipment, Store offers, withdrawal-pending stock, financial health, tax, ownership and audit.
 - [ ] Keep emergency intervention explicit, bounded, permissioned and audited.
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** NOT STARTED
+**Status:** `PLANNED` — remains behind Phase 13 and is not authorized by this closeout
 
 - [ ] Stabilize Business financial statements/fundamentals from real operating activity.
 - [ ] Complete common-share equity invariants for C corporations.

@@ -33,7 +33,7 @@ export function createRequestId() {
 
 export function createIdempotencyKey(endpointKey) {
   const safeEndpoint = String(endpointKey || "write").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 48);
-  return `ptr_${safeEndpoint}_${randomToken()}`;
+  return `ptr_${safeEndpoint}_${randomToken().replaceAll("-", "")}`;
 }
 
 export function parseRetryAfter(value, now = Date.now()) {
