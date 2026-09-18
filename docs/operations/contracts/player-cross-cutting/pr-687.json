@@ -59,6 +59,7 @@
     "scripts/business-primary-ipo-purge.mjs",
     "scripts/business-store-sales-convergence-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/player-runtime-load-profile-core.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [

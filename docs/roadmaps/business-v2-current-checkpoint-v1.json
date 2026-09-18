@@ -4840,7 +4840,7 @@
         "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
       }
     ],
-    "documentation_handoff_note": "The following documentation-only handoff preserves this exact implementation identity; its complete checks must also be green before final handoff."
+    "documentation_handoff_note": "Final handoff retains the exact certified application implementation. One acceptance-only diagnostic adds sanitized failed-request details to the existing load error, without altering requests, limits, retry behavior or assertions. Complete handoff checks remain required."
   },
   "phase14_repository_stack": [
     {
@@ -4866,6 +4866,25 @@
       "pr": 687,
       "implementation": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
       "status": "IMPLEMENTED_NOT_MERGED"
+    }
+  ],
+  "phase14d_handoff_attempts": [
+    {
+      "sha": "796d343c101100a78fe0b2b45dcc517e82dd2ccf",
+      "run": 35333910369,
+      "job": 105564251269,
+      "status": "failure",
+      "evidence": "State-control requests returned 500/503; local runtime reported a retired worker. No application change was made.",
+      "artifact_id": 10542441035
+    },
+    {
+      "sha": "796d343c101100a78fe0b2b45dcc517e82dd2ccf",
+      "run": 35333910369,
+      "job": 105566575691,
+      "status": "failure",
+      "evidence": "All connected journeys passed; 40-player read wave recorded one server error. Logs include Edge CPU soft-limit messages, but do not identify the failed endpoint. No root cause is claimed.",
+      "artifact_id": 10543526113,
+      "artifact_sha256": "d61e946308d536d47be2f337c8734d39757c513cac25a20283675a56fbdc98e9"
     }
   ]
 }
