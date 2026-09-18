@@ -148,7 +148,18 @@ async function adminContext() {
   }
   const players = PLAYERS.map((expected) => {
     const record = findPlayer(playersResponse.payload, expected);
-    if (!record) throw new Error(`Admin fixture could not resolve ${expected.label}.`);
+    if (!record) {
+      const candidates = walkObjects(playersResponse.payload).filter((candidate) =>
+        candidate.id || candidate.playerId
+      );
+      const identity = candidates.map((candidate) => ({
+        nameLength: String(candidate.displayName || candidate.display_name || "").length,
+        alphaName: candidate.displayName === PLAYERS[0].displayName,
+        betaName: candidate.displayName === PLAYERS[1].displayName,
+        hasIdentifier: Boolean(candidate.playerIdentifier || candidate.player_identifier),
+      }));
+      throw new Error(`Admin fixture could not resolve ${expected.label}: ${JSON.stringify(identity)}`);
+    }
     return {
       ...expected,
       internalId: String(record.id || record.playerId),

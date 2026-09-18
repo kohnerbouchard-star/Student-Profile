@@ -315,6 +315,18 @@ async function createPlayer(page, player) {
   await form.locator('[data-admin-terminal-action="create-player"], button[type="submit"]').first().click();
   const response = await responsePromise;
   if (response.status() !== 201) throw new Error(`Create Player returned ${response.status()}.`);
+  const submitted = response.request().postDataJSON();
+  const created = await response.json();
+  const actual = created?.player || created?.data?.player;
+  const identity = {
+    submittedNameMatches: submitted?.displayName === player.displayName,
+    submittedIdentifierMatches: submitted?.playerIdentifier === player.playerIdentifier,
+    savedNameMatches: actual?.displayName === player.displayName,
+    savedIdentifierMatches: actual?.playerIdentifier === player.playerIdentifier,
+  };
+  if (Object.values(identity).some((matches) => !matches)) {
+    throw new Error(`Rendered Player creation changed fixture identity: ${JSON.stringify(identity)}`);
+  }
   assertNoFailedRequests(`Create ${player.displayName}`, evidence.adminRequests, requestStart);
 
   const confirmation = page.locator("[data-admin-player-created-confirmation]");
