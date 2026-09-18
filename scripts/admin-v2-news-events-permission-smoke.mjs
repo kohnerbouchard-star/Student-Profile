@@ -77,7 +77,7 @@ try {
     waitUntil: "domcontentloaded",
     timeout: 15_000,
   });
-  await page.getByRole("heading", { name: "News & Events access restricted" }).waitFor({
+  await page.getByRole("heading", { name: "News & Event Monitor access restricted", exact: true }).waitFor({
     state: "visible",
     timeout: 10_000,
   });
