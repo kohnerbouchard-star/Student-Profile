@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { prepareContributedInventory, verifyFinancialStatements } from "./business-financial-reporting-statement-acceptance.mjs";
 import {
   FIXTURE, resetFixture, runSql, runJson, expectSqlError,
   sqlLiteral as q, snapshot, createQuote, settle,
@@ -14,6 +15,7 @@ runSql(`insert into public.business_ownership_positions(
 ) values
   ('${one.id}','${one.businessId}','${one.ownerId}','membership_interest',100,100),
   ('${two.id}','${two.businessId}','${two.ownerId}','membership_interest',100,100);`);
+prepareContributedInventory(one);
 const call = (game = one, player = game.ownerId) =>
   `public.read_owned_business_financial_reports_v1(${q(game.id)}::uuid,${q(player)}::uuid)`;
 const read = (game = one) => runJson(
@@ -168,3 +170,4 @@ assert.deepEqual(read(), first);
 expectSqlError(`begin; update public.business_entities set status='closed',closed_at=now()
   where id='${one.businessId}'; set local role service_role; select ${call()}; rollback;`, /BUSINESS_NOT_FOUND/);
 console.log("Phase 14A1: closed Store evidence, replay, empty/zero-sale periods, read-only scope/grants, decimal precision, privacy and bounded history pass.");
+verifyFinancialStatements(one, two, firstClose.close_receipt_key);

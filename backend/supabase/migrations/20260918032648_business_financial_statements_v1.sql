@@ -301,7 +301,7 @@ begin
     'truncated',(select count(*)>50 from candidates),
     'statements',coalesce((select jsonb_agg(s.statement order by s.period_number desc)
       from (select * from candidates order by period_number desc limit 50) s),'[]'::jsonb),
-    'legacyPeriodsUnavailable',exists(select 1 from public.business_operating_period_close_receipts r
+    'unavailableHistoricalPeriods',exists(select 1 from public.business_operating_period_close_receipts r
       where r.game_session_id=p_game and r.business_id=p_business
         and not exists(select 1 from public.business_financial_statements s where s.close_receipt_id=r.id))
   ) into v_result;

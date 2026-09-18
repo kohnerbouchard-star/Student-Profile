@@ -2232,6 +2232,7 @@ function proveExecutableWholeGamePurge() {
 }
 
 const prospectivePurgeFacts = readProspectivePurgeFacts();
+console.log(JSON.stringify({ prospectivePurgeFacts }));
 assert.equal(
   prospectivePurgeFacts.registrySha256,
   purgeFingerprint.registrySha256,

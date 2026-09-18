@@ -4,6 +4,11 @@ on:
     paths:
       - ".github/workflows/business-financial-reporting.yml"
       - "backend/supabase/migrations/**"
+      - "backend/src/domains/business/**"
+      - "backend/supabase/functions/admin-api/businessSupervisionProjection*"
+      - "player-terminal/src/pages/business-financial-reporting.js"
+      - "player-terminal/src/pages/business-workspace-sections.js"
+      - "admin/v2/src/routes/business/**"
       - "scripts/business-financial-reporting-*.mjs"
       - "docs/roadmaps/business-financial-reporting-*.md"
       - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
@@ -27,6 +32,9 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.23.1
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
       - name: Verify exact source and retained authority
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -36,6 +44,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           node scripts/business-financial-reporting-contract.mjs
           node --check scripts/business-financial-reporting-database.mjs
+          node --test scripts/business-financial-reporting-view.test.mjs
+          deno test --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/business/application/businessFinancialReportingProjection.test.ts
           node scripts/validate-supabase-migrations.mjs
           if [ -n "$PR_NUMBER" ]; then
             git fetch --no-tags origin "$BASE_REF"

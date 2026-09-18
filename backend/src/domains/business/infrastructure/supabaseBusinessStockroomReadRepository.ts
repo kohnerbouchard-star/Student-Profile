@@ -6,6 +6,7 @@ import {
   parseStockroomLocations,
 } from "../application/stockroom/businessStockroomResultParser.ts";
 import { buildBusinessStockroomSnapshot } from "../application/stockroom/businessStockroomSnapshot.ts";
+import { projectBusinessFinancialReporting } from "../application/businessFinancialReportingProjection.ts";
 import {
   type BusinessEquipmentDto,
   type BusinessRecipeAccessDto,
@@ -88,6 +89,9 @@ export async function readBusinessWorkspaceProjection(client: EdgeSupabaseClient
   validateProductionReadiness(projection.productionReadiness);
   validateSalesOffers(projection.salesOffers);
   validateBusinessActivity(projection.activity);
+  if (projection.financialReporting !== undefined) {
+    projection.financialReporting = projectBusinessFinancialReporting(projection.financialReporting);
+  }
   return projection;
 }
 

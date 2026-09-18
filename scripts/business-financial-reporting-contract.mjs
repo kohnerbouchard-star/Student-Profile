@@ -36,3 +36,19 @@ for (const evidence of ["begin read only", "BUSINESS_NOT_FOUND", "permission den
 const workflow = readFileSync(new URL(".github/workflows/business-financial-reporting.yml", root), "utf8");
 for (const gate of ["for PASS in 1 2", "supabase db reset", "business-financial-reporting-database.mjs", "supabase db advisors", "--fail-on error", "github.event.pull_request.head.sha"]) assert.ok(workflow.includes(gate), gate);
 console.log(`Phase 14A1 source contract passes: ${fileURLToPath(new URL(files[0], directory))}`);
+
+const evidence = readFileSync(new URL("20260918032342_business_accounting_evidence_v1.sql", directory), "utf8");
+const statements = readFileSync(new URL("20260918032648_business_financial_statements_v1.sql", directory), "utf8");
+for (const table of ["business_accounting_coverage", "business_accounting_position_events", "business_financial_statements"]) {
+  assert.ok(evidence.includes(`alter table public.${table} enable row level security`));
+  assert.ok(evidence.includes(`alter table public.${table} force row level security`));
+  assert.ok(evidence.includes(`('public','${table}')`));
+}
+assert.doesNotMatch(evidence + statements, /(?:insert into|update|delete from) public\.(?:ledger_entries|bank_accounts|bank_account_balances|inventory_holdings|player_loans)\b/iu);
+for (const required of ["after insert on public.business_operating_period_close_receipts", "observed_at<p_cutoff",
+  "source_action='owner_inventory_contribution'", "r.labor_cost_basis", "accrual_at_period_due",
+  "source_action='store-procurement'", "l.reference_rate", "unclassified_count=0", "equity_difference=0",
+  "incomplete_history", "unreconciled", "limit 51", "limit 50", "net_income::text", "currency_reallocation::text"])
+  assert.ok(statements.includes(required), required);
+assert.doesNotMatch(statements, /grant (?:insert|update|delete)|to_jsonb\s*\(/iu);
+console.log("Phase 14A canonical position capture, accrual, currency evidence, fail-closed reconciliation and bounded reads: pass");

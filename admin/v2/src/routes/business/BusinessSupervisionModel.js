@@ -1,4 +1,7 @@
 export const BUSINESS_SUPERVISION_FIELDS = Object.freeze({
+  statementIncome: "period_number status due_at currency_code equity_difference cash_difference revenue cost_of_goods_sold gross_profit payroll_expense capitalized_labor tax_expense exchange_expense interest_and_loan_fees net_income".split(" "),
+  statementBalance: "period_number status due_at currency_code equity_difference cash_difference cash inventory equipment total_assets loan_principal interest_payable wages_payable tax_payable total_liabilities opening_equity cash_contributions noncash_contributions currency_reallocation period_earnings total_equity".split(" "),
+  statementCash: "period_number status due_at currency_code equity_difference cash_difference opening_cash operating investing financing currency_exchange unclassified closing_cash".split(" "),
   locations: "business_key account_key location_key location_label item_count quantity_owned quantity_reserved quantity_available".split(" "),
   stockroom: "business_key account_key location_key item_key canonical_key item_name item_class item_subtype quantity_owned quantity_reserved quantity_available average_unit_cost cost_currency_code holding_version".split(" "),
   equipment: "business_key installation_key equipment_key item_key canonical_key item_name equipment_slot capability_keys installation_status period_key capacity_minutes reserved_minutes consumed_minutes available_minutes idle_minutes utilization_basis_points durability_supported repair_supported".split(" "),
@@ -24,6 +27,9 @@ export const BUSINESS_SUPERVISION_FIELDS = Object.freeze({
 });
 
 export const BUSINESS_SUPERVISION_LABELS = Object.freeze({
+  statementIncome: "Income statements",
+  statementBalance: "Balance sheets",
+  statementCash: "Cash flow statements",
   "locations": "Stockroom locations",
   "stockroom": "Stockroom items",
   "equipment": "Equipment capacity",
